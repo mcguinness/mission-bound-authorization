@@ -50,13 +50,15 @@ The drafts are organized into four layers. Each layer has a specific role.
 | 10 | `draft-mcguinness-mission-migration` | Mission-Bound Authorization Migration Guide | Informational | Informational | 15-20 |
 | 11 | `draft-mcguinness-mission-capability-model` | Mission-Bound Authorization Capability Model | Informational | Informational | 20-25 |
 
-**Specs the OAuth Profile composes with that are already drafted separately:**
+**Specs the Mission-Bound work composes with that are already drafted separately:**
 
-- [`draft-mcguinness-oauth-id-continuation-assertion`](https://mcguinness.github.io/draft-mcguinness-oauth-id-continuation-assertion/draft-mcguinness-oauth-id-continuation-assertion.html) (Karl's existing draft) for same-IdP SaaS-to-SaaS continuation. The Mission-Bound OAuth Profile (Draft 2) declares this as an Informative reference and specifies how Mission claims thread through Identity Continuation Assertions; no new spec is needed.
+- [`draft-mcguinness-oauth-id-continuation-assertion`](https://mcguinness.github.io/draft-mcguinness-oauth-id-continuation-assertion/draft-mcguinness-oauth-id-continuation-assertion.html) — same-IdP SaaS-to-SaaS continuation via Identity Continuation Assertion. The Mission-Bound OAuth Profile (Draft 2) specifies how Mission claims thread through.
+- [`draft-mcguinness-oauth-actor-profile`](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-actor-profile/) — OAuth Actor Profile for Delegation. Defines the `act` claim structure with `sub_profile` for entity-type classification across JWT assertion grants, JWT access tokens, and Transaction Tokens. The Mission-Bound OAuth Profile (Draft 2) and Runtime Enforcement Profile (Draft 8) compose with this draft for actor context. **This covers what was previously sketched as the "Actor Provenance" Optional Module; no new spec needed.**
+- [`draft-mcguinness-oauth-client-instance-assertion`](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion/) — Client Instance Assertion for representing OAuth 2.0 client instance identity. Registers `urn:ietf:params:oauth:token-type:client-instance-jwt` as an `actor_token_type` for Token Exchange. The Mission-Bound OAuth Profile (Draft 2) composes with this for instance identity in sub-agent delegation.
 
 **Future drafts (separate as they mature; not part of initial set):**
 
-- Tool Binding, Decision Receipt, Purpose Registry, Actor Provenance, Attestation, Policy Projection (each as a Runtime Enforcement composition extension, when implementation interest justifies).
+- Tool Binding, Decision Receipt, Purpose Registry, Attestation, Policy Projection (each as a Runtime Enforcement composition extension, when implementation interest justifies).
 - Resumable Suspension (currently sketched in the AAuth Profile; promote to its own feature spec if applicable beyond AAuth).
 
 ## Naming Convention
@@ -460,12 +462,13 @@ These extensions are part of the architecture but defer to separate drafts as ea
 | `draft-mcguinness-mission-tool-binding` | Mission Tool Binding | Drafts 1, 8 |
 | `draft-mcguinness-mission-decision-receipt` | Mission Decision Receipt | Drafts 1, 8 |
 | `draft-mcguinness-mission-purpose-registry` | Mission Purpose Registry | Drafts 1, 8 |
-| `draft-mcguinness-mission-actor-provenance` | Mission Actor Provenance | Drafts 1, 8 |
 | `draft-mcguinness-mission-attestation` | Mission Attestation Profile | Drafts 1, 8, ACAP |
 | `draft-mcguinness-mission-policy-projection` | Mission Policy Projection | Drafts 1, 8 |
 | `draft-mcguinness-mission-resumable-suspension` | Resumable Suspension | Drafts 1, 6 (if scope broadens beyond AAuth) |
 
 Each gets its own draft when there is sufficient implementation interest and the design is stable.
+
+**Actor Provenance** is not in this list because it is already covered by [`draft-mcguinness-oauth-actor-profile`](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-actor-profile/) (the OAuth Actor Profile for Delegation). The Mission-Bound OAuth Profile and Runtime Enforcement Profile compose with that draft for actor context; no separate Mission-prefixed Actor Provenance spec is needed.
 
 ---
 
@@ -593,10 +596,10 @@ Four ways to handle the modules; I'm recommending option A. Tradeoffs:
 - *Con:* Not all modules are equally ready:
   - **Tool Binding**: design is stable (binds tool invocation to actor identity via `tool_id`). Ready to spec.
   - **Purpose Registry**: small and well-defined (registry of purposes referenced by `purpose` URI in Mission Intent). Ready to spec.
-  - **Actor Provenance**: small (composes RFC 8693 `act` claim with Mission). Mostly composes existing standards; could be done.
   - **Decision Receipt**: overlaps with W3C verifiable-credential work and existing receipt formats. Design needs coordination with adjacent communities. Not yet ready.
   - **Attestation**: depends on ACAP (`draft-yakung-oauth-agent-attestation`) advancing. Can't ship faster than ACAP.
   - **Policy Projection**: most architecturally open (Cedar vs OpenFGA vs canonical input bundle vs engine-native artifact). Specifying before implementers have picked an approach picks a winner that may be wrong.
+  - **Actor Provenance**: not in the Optional Modules list; already covered by `draft-mcguinness-oauth-actor-profile`. The Runtime Enforcement Profile composes with that existing draft.
 - *Con:* Drafting modules before implementation interest produces mediocre specs that get rewritten.
 
 **Option C: include the mature subset; defer the speculative ones (14 drafts).**
