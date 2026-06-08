@@ -50,11 +50,7 @@ The drafts are organized into four layers. Each layer has a specific role.
 | 10 | `draft-mcguinness-mission-migration` | Mission-Bound Authorization Migration Guide | Informational | Informational | 15-20 |
 | 11 | `draft-mcguinness-mission-capability-model` | Mission-Bound Authorization Capability Model | Informational | Informational | 20-25 |
 
-**Specs the Mission-Bound work composes with that are already drafted separately:**
-
-- [`draft-mcguinness-oauth-id-continuation-assertion`](https://mcguinness.github.io/draft-mcguinness-oauth-id-continuation-assertion/draft-mcguinness-oauth-id-continuation-assertion.html) — same-IdP SaaS-to-SaaS continuation via Identity Continuation Assertion. The Mission-Bound OAuth Profile (Draft 2) specifies how Mission claims thread through.
-- [`draft-mcguinness-oauth-actor-profile`](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-actor-profile/) — OAuth Actor Profile for Delegation. Defines the `act` claim structure with `sub_profile` for entity-type classification across JWT assertion grants, JWT access tokens, and Transaction Tokens. The Mission-Bound OAuth Profile (Draft 2) and Runtime Enforcement Profile (Draft 8) compose with this draft for actor context. **This covers what was previously sketched as the "Actor Provenance" Optional Module; no new spec needed.**
-- [`draft-mcguinness-oauth-client-instance-assertion`](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion/) — Client Instance Assertion for representing OAuth 2.0 client instance identity. Registers `urn:ietf:params:oauth:token-type:client-instance-jwt` as an `actor_token_type` for Token Exchange. The Mission-Bound OAuth Profile (Draft 2) composes with this for instance identity in sub-agent delegation.
+**Specs the Mission-Bound work composes with.** See the Composition Surface section below for the full list.
 
 **Future drafts (separate as they mature; not part of initial set):**
 
@@ -64,6 +60,102 @@ The drafts are organized into four layers. Each layer has a specific role.
 ## Naming Convention
 
 All drafts use `draft-mcguinness-mission-*` (no "bound" prefix). The architecture is named "Mission-Bound Authorization" but the drafts are about Missions. "Mission-Bound" remains the architecture name in titles and prose; short names use `mission-*`.
+
+## Composition Surface
+
+The Mission-Bound work composes with the following published RFCs, adopted IETF/OpenID work, and existing individual drafts. The principle that "profiles compose existing standards" is satisfied by treating each of these as Normative or Informative references in the relevant Mission-Bound draft.
+
+### OAuth 2.0 substrate (published RFCs)
+
+| RFC | Title | Used by |
+| --- | --- | --- |
+| RFC 6749 | OAuth 2.0 Authorization Framework | Drafts 2, 3 |
+| RFC 6750 | OAuth 2.0 Bearer Token Usage | Draft 2 (baseline) |
+| RFC 7009 | OAuth 2.0 Token Revocation | Draft 2 (Mission revocation), Draft 7 (MAS) |
+| RFC 7519 | JSON Web Token (JWT) | Drafts 1, 2 (Mission claim format) |
+| RFC 7591 | OAuth 2.0 Dynamic Client Registration | Draft 2 (client declaring Mission Intent capabilities) |
+| RFC 7592 | OAuth 2.0 Dynamic Client Registration Management | Draft 2 (informative) |
+| RFC 7662 | OAuth 2.0 Token Introspection | Draft 2 (Mission Status OAuth binding) |
+| RFC 8414 | OAuth 2.0 Authorization Server Metadata | Draft 2 (Mission capability advertisement) |
+| RFC 8693 | OAuth 2.0 Token Exchange | Drafts 2, 6 (Mission-state-gated derivation) |
+| RFC 8705 | OAuth 2.0 Mutual-TLS Client Authentication | Drafts 2, 6 (sender constraint) |
+| RFC 9068 | JWT Profile for OAuth 2.0 Access Tokens | Draft 2 (`mission` claim placement) |
+| RFC 9126 | OAuth 2.0 Pushed Authorization Requests | Draft 2 (`mission_intent` submission) |
+| RFC 9396 | OAuth 2.0 Rich Authorization Requests | Drafts 1, 2 (`mission_resource_access` RAR type) |
+| RFC 9449 | OAuth 2.0 Demonstrating Proof of Possession (DPoP) | Drafts 2, 6 (sender constraint) |
+| RFC 9700 | Best Current Practice for OAuth 2.0 Security | Draft 2 Security Considerations |
+| RFC 9728 | OAuth 2.0 Protected Resource Metadata | Drafts 2, 8 (RS tier advertisement); also relates to `draft-mcguinness-oauth-rfc9728bis` |
+
+### Step-up and identity chaining
+
+| Spec | Title | Used by |
+| --- | --- | --- |
+| RFC 9470 | OAuth 2.0 Step-up Authentication Challenge | Drafts 2, 3 (AAL-driven Mission Expansion), Draft 1 (`aal` constraint) |
+| `draft-ietf-oauth-identity-chaining` | Identity Chaining across Trust Domains | Drafts 2, 7 (cross-trust-domain Mission carriage) |
+| `draft-ietf-oauth-identity-assertion-authz-grant` (ID-JAG) | Identity Assertion Authorization Grant | Draft 2 (cross-IdP identity assertion) |
+
+### Cryptographic and serialization primitives
+
+| RFC | Title | Used by |
+| --- | --- | --- |
+| RFC 6234 | US Secure Hash Algorithms (SHA-256) | Draft 1 (integrity anchor algorithm) |
+| RFC 7515 | JSON Web Signature (JWS) | Drafts 1, 2 (signed Mission Status, signed evidence) |
+| RFC 7517 | JSON Web Key (JWK) | Drafts 1, 2, 7 (key publication for state authorities and MAS) |
+| RFC 8174 | Ambiguity of Uppercase vs Lowercase in BCP 14 | All Standards Track drafts |
+| RFC 8785 | JSON Canonicalization Scheme (JCS) | Draft 1 (canonicalization for integrity anchors) |
+
+### Continuous evaluation and event propagation
+
+| Spec | Title | Used by |
+| --- | --- | --- |
+| OpenID Shared Signals Framework (SSF) | Shared Signals event delivery | Drafts 2, 7, 8 (Mission lifecycle event propagation) |
+| OpenID Continuous Access Evaluation Profile (CAEP) | CAEP subject and event definitions | Drafts 2, 7, 8 (Mission state change events) |
+| `draft-ietf-secevent-subject-identifiers` | Subject Identifiers for SETs | Drafts 1, 7 (pairwise identifier framework, MAS) |
+
+### Authorization decision and policy
+
+| Spec | Title | Used by |
+| --- | --- | --- |
+| AuthZEN Authorization API | Substrate-neutral PDP interface | Draft 8 (PDP composition) |
+| AuthZEN Access Request | Requestable denial workflow | Drafts 3, 8 (Mission Expansion request submission) |
+
+### Cross-substrate
+
+| Spec | Title | Used by |
+| --- | --- | --- |
+| `draft-hardt-oauth-aauth-protocol` (AAuth `-01`) | AAuth Protocol | Draft 6 (composition substrate) |
+
+### Adjacent emerging work (compose when each matures)
+
+| Spec | Title | Used by |
+| --- | --- | --- |
+| `draft-fletcher-transaction-token-chaining-profile` | Transaction Token Chaining Profile | Draft 5 (Mission-Bound Txn Token Chaining composition) |
+| `draft-yakung-oauth-agent-attestation` (ACAP) | Agent Attestation Profile | Future Mission Attestation module |
+| `draft-ietf-oauth-selective-disclosure-jwt` (SD-JWT) | Selective Disclosure for JWTs | Potential composition for privacy-preserving Mission Status |
+
+### Karl's existing individual drafts
+
+| Draft | Title | Composes with |
+| --- | --- | --- |
+| [`draft-mcguinness-oauth-actor-profile`](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-actor-profile/) | OAuth Actor Profile for Delegation | Drafts 2, 8 (actor context). Covers Actor Provenance; no separate spec needed. |
+| [`draft-mcguinness-oauth-client-instance-assertion`](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion/) | Client Instance Assertion | Draft 2 (instance identity in Token Exchange `actor_token`) |
+| [`draft-mcguinness-oauth-id-continuation-assertion`](https://mcguinness.github.io/draft-mcguinness-oauth-id-continuation-assertion/draft-mcguinness-oauth-id-continuation-assertion.html) | Identity Continuation Assertion | Draft 2 (same-IdP SaaS continuation). Covers Same-IdP Chain Continuation; no separate spec needed. |
+| [`draft-mcguinness-authzen-access-request`](https://datatracker.ietf.org/doc/draft-mcguinness-authzen-access-request/) | AuthZEN Access Request | Drafts 3, 8 (Mission Expansion request and runtime escalation) |
+| [`draft-mcguinness-oauth-rfc9728bis`](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-rfc9728bis/) | RFC 9728bis (Protected Resource Metadata update) | Drafts 2, 8 (RS tier advertisement) |
+| [`draft-mcguinness-oauth-insufficient-claims`](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-insufficient-claims/) | Insufficient Claims Error | Drafts 2, 8 (runtime denial classification) |
+| [`draft-mcguinness-oauth-deferred-code`](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-deferred-code/) | Deferred Code Flow | Drafts 2, 6 (potentially: deferred Mission approval, Resumable Suspension) |
+| [`draft-mcguinness-oauth-resource-token-resp`](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-resource-token-resp/) | Resource Token Response | Draft 6 (AAuth-aligned resource-token response) |
+| [`draft-mcguinness-token-xchg-target-svc-disco`](https://datatracker.ietf.org/doc/draft-mcguinness-token-xchg-target-svc-disco/) | Token Exchange Target Service Discovery | Draft 2 (Multi-AS Token Exchange discovery) |
+
+### Specs intentionally not composed with
+
+These are adjacent or speculative; not in scope for the initial set:
+
+- W3C Verifiable Credentials Data Model 2.0 — adjacent (Decision Receipt may compose later).
+- W3C DID Core — out of scope (per project memory: avoid VC/DID adjacency for agent identity).
+- FAPI 2.0 Security Profile — a deployment may layer Mission-Bound work over FAPI 2.0, but the Mission-Bound drafts do not require FAPI 2.0.
+- OpenID Connect Core — Mission-Bound work is OAuth 2.0-based; OIDC composition is deployment-level, not specification-level.
+- OAuth 2.1 (`draft-ietf-oauth-v2-1`) — when this advances, references to RFC 6749 may be updated to OAuth 2.1; no behavioral change to Mission-Bound work.
 
 ---
 
