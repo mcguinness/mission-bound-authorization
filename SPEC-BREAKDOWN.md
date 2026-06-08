@@ -2,6 +2,23 @@
 
 This document defines what becomes a standards-track Internet-Draft, what stays in the [blog series](https://notes.karlmcguinness.com/series/mission-bound-authorization/), and the dependency order for drafting.
 
+## Drafting Goal
+
+**These specs exist to enable implementation. They are not being submitted to IETF in their current form. Submission is deferred until they have baked through implementation.**
+
+The bar at each version:
+
+- Concrete enough that someone can build a conforming implementation from the spec alone (JSON schemas, exact wire shapes, error codes, validation rules, worked examples, reference test vectors).
+- Internally consistent across the set so an implementer can pick up Framework + OAuth Profile and have them compose without ambiguity.
+- Iterating with implementer feedback. Each spec ships as `-00` when implementable; `-01`, `-02` follow based on what implementations expose.
+
+**Implications:**
+
+- IETF process concerns (workgroup targeting, IESG review, BCP 14 polish, IANA registry expert review) are deferred. Drafts use kramdown-rfc so they're ready when submission time comes, but submission is not imminent.
+- Implementer ergonomics is the primary quality metric. Worked examples, reference test vectors, and conformance checklists take priority over normative language polish.
+- A reference implementation alongside the drafts is part of the deliverable. Specs without a corresponding reference implementation are unverified.
+- Drafting order leads with what builders need first, not with what's foundational architecturally.
+
 ## Architectural Principles
 
 The split obeys three principles:
@@ -654,19 +671,37 @@ Drafts 3-5 (Features) are composable extensions. The substrate profiles (Drafts 
 
 Drafts 10 and 11 are terminal.
 
-## Recommended Drafting Order
+## Drafting Order (phased by implementer need)
 
-1. **Draft 1: Mission Framework.** Foundational. Establishes the abstract model every profile and feature references. Highest priority.
-2. **Draft 2: Mission-Bound OAuth Profile.** First substrate composition. Sets the pattern for how profiles compose existing standards with the Framework. Defines OAuth-wire bindings for Mission Expansion eligibility and Mission Status.
-3. **Draft 3: Mission Expansion.** Substrate-neutral feature; most-referenced extension.
-4. **Draft 8: Mission-Bound Runtime Enforcement Profile.** Substrate-independent; can advance in parallel with Drafts 2 and 3 once the Framework's runtime contracts are stable.
-5. **Draft 6: Mission-Bound AAuth Composition Profile.** Second substrate composition.
-6. **Draft 7: Mission Authority Server.** Depends on Drafts 2 and 6.
-7. **Draft 4: Delegated Authority Validation.** Builds on Mission Expansion (Draft 3) and OAuth Profile (Draft 2).
-8. **Draft 5: Mission-Bound Transaction Token Chaining.** Composes with Fletcher's draft; lower priority until that work matures.
-9. **Draft 9: Mission Shaper Profile.** Client-side; lower priority for standardization.
-10. **Draft 10: Migration Guide.** After substrate profiles stabilize.
-11. **Draft 11: Capability Model.** Last; categorizes the others.
+The order leads with what builders need first to ship a Mission-Bound deployment.
+
+**Phase 1: the implementable pair.** What an OAuth AS implementer needs to ship Mission-Bound issuance.
+
+1. **Draft 1: Mission Framework.** Concrete data model, JSON schemas, hash algorithms, lifecycle state machine, Mission Status interface, integrity-anchor algorithm. Includes reference test vectors so implementers can validate their canonicalization and hash output. Foundational.
+2. **Draft 2: Mission-Bound OAuth Profile.** Concrete OAuth wire bindings: `mission_intent` PAR parameter, `mission_resource_access` RAR type, `mission` claim, Mission Status introspection extension. Composes Framework + RFCs 6749, 9126, 9396, 9068, 9449, 7662, 8693. Implementable by an OAuth AS builder.
+
+A reference implementation of the Framework + OAuth Profile pair lives alongside, validating that the specs are concrete enough to build from.
+
+**Phase 2: extending the implementable pair.** Builders running into denial or wanting runtime enforcement.
+
+3. **Draft 3: Mission Expansion.** Most-referenced feature. Substrate-neutral semantics; OAuth wire binding lives in Draft 2.
+4. **Draft 8: Mission-Bound Runtime Enforcement Profile.** Substrate-independent PDP contract. Builders integrating Mission state into AuthZEN decisions need this.
+
+**Phase 3: substrate breadth.** Tests the substrate-neutrality of the Framework.
+
+5. **Draft 6: Mission-Bound AAuth Composition Profile.** Second substrate composition. If the Framework's abstractions don't fit AAuth, this phase is where we discover it and revise the Framework.
+6. **Draft 7: Mission Authority Server.** Drafted when cross-substrate demand exists. Until then, sketched as a -00 that the breakdown points to.
+
+**Phase 4: features as deployment patterns emerge.**
+
+7. **Draft 4: Delegated Authority Validation.** When open-world tool deployments emerge.
+8. **Draft 5: Mission-Bound Txn Token Chaining.** When Fletcher's chaining draft and Transaction Tokens mature enough to compose with.
+
+**Phase 5: adoption guidance.**
+
+9. **Draft 9: Mission Shaper Profile.** When a reference Shaper implementation is ready to back the guidance.
+10. **Draft 10: Migration Guide.** After at least one team has actually migrated.
+11. **Draft 11: Capability Model.** After multiple deployments at different capability levels exist to categorize.
 
 ---
 
@@ -684,7 +719,7 @@ Drafts 10 and 11 are terminal.
 10. ✅ **Naming convention**: `draft-mcguinness-mission-*` (no "bound" prefix on short names). "Mission-Bound" remains the architecture name in titles.
 11. ✅ **Token Size at Depth**: operational guidance in OAuth Profile and MAS specs; not its own draft.
 12. ✅ **Author**: `Karl McGuinness / Independent / public@karlmcguinness.com`.
-13. ✅ **Workgroup targeting**: independent submission across the board for now. No drafts target a specific WG at the initial submission stage. WG targeting can be revisited per-draft after publication and implementation interest signals.
+13. ✅ **Workgroup targeting**: deferred. These specs are not being submitted to IETF in their current form; the goal is to enable implementation first. Workgroup targeting becomes relevant when a spec has implementer support and a submission is being prepared.
 14. ✅ **Shaper Profile category**: Informational. Client-side processing spec with loose conformance; Standards Track would overclaim. The trace artifact and refusal protocol are guidance, not enforceable wire contracts.
 15. ✅ **Worked examples**: each draft carries a minimal illustrative example (~5-10 lines). The full worked board-packet example stays in the blog and is referenced by each draft.
 16. ✅ **Resumable Suspension placement**: currently sketched inside the AAuth Profile (Draft 6). If it generalizes beyond AAuth during drafting, promote to its own feature spec; otherwise keep as an AAuth-specific section.
@@ -738,6 +773,20 @@ If you have a specific module with near-term implementation interest (e.g., a To
 
 ## Next Step
 
-All decisions are now resolved. I will start with Draft 1 (Mission Framework) as the foundational spec and quality bar.
+All decisions are now resolved. The drafting plan starts with Phase 1: the implementable pair (Framework + OAuth Profile). Goal is implementation-readiness, not IETF submission.
 
-A fully fleshed-out, IETF-reviewable draft for the Framework is roughly a week of focused work (35-45 pages, complete IANA Considerations, substantive Security Considerations, normative throughout). I will not try to compress that into one session at the cost of quality. Plan: produce a first complete draft for review, iterate based on your feedback, then move to Draft 2.
+Draft 1 (Mission Framework) ships when an implementer can read it and build:
+
+- The Mission record with the three integrity hashes (correct JCS canonicalization, SHA-256 output).
+- The Mission Intent JSON validator.
+- The lifecycle state machine.
+- The Common Constraints catalog entries.
+- The abstract Mission Status interface.
+
+The deliverable includes reference test vectors: a canonical Mission Intent input, the expected `proposal_hash` output, the expected canonical bytes, the expected state-machine transitions. Without test vectors, "implementable" is aspirational.
+
+Draft 2 (OAuth Profile) ships when an implementer can read it and build a Mission-Bound OAuth AS that accepts `mission_intent` at PAR, issues `mission`-claim tokens, gates refresh and exchange on Mission state, and surfaces Mission Status via introspection. Both drafts use the worked board-packet scenario from the blog as the consistent example.
+
+Reference implementation alongside: a thin OAuth AS + Framework library that passes the test vectors and demonstrates the wire shapes. The implementation is the test that the specs are concrete enough to build from. Specs without an implementation that exercises them are not yet baked.
+
+I will start with Draft 1. First version produces a complete `-00` for review; subsequent versions iterate based on what implementation exposes.
