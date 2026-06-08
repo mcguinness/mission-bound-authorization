@@ -46,7 +46,7 @@ The drafts are organized into four layers. Each layer has a specific role.
 | 6 | `draft-mcguinness-mission-aauth-profile` | Mission-Bound AAuth Composition Profile | Profile | Standards Track | 25-35 |
 | 7 | `draft-mcguinness-mission-authority-server` | Mission Authority Server | Server / Topology | Standards Track | 30-40 |
 | 8 | `draft-mcguinness-mission-runtime-profile` | Mission-Bound Runtime Enforcement Profile | Profile | Standards Track | 35-45 |
-| 9 | `draft-mcguinness-mission-shaper-profile` | Mission Shaper Profile | Profile | Standards Track | 20-30 |
+| 9 | `draft-mcguinness-mission-shaper-profile` | Mission Shaper Profile | Profile | Informational | 20-30 |
 | 10 | `draft-mcguinness-mission-migration` | Mission-Bound Authorization Migration Guide | Informational | Informational | 15-20 |
 | 11 | `draft-mcguinness-mission-capability-model` | Mission-Bound Authorization Capability Model | Informational | Informational | 20-25 |
 
@@ -384,7 +384,7 @@ This profile defines how a deployment composes the AuthZEN Authorization API wit
 
 **Mission Shaper Profile**
 
-**Layer:** Profile. **Category:** Standards Track. **Target WG:** OAUTH or independent. **Depends on:** Draft 1.
+**Layer:** Profile. **Category:** Informational. **Submission type:** Independent. **Depends on:** Draft 1.
 
 ### Abstract
 
@@ -566,29 +566,60 @@ Drafts 10 and 11 are terminal.
 10. ✅ **Naming convention**: `draft-mcguinness-mission-*` (no "bound" prefix on short names). "Mission-Bound" remains the architecture name in titles.
 11. ✅ **Token Size at Depth**: operational guidance in OAuth Profile and MAS specs; not its own draft.
 12. ✅ **Author**: `Karl McGuinness / Independent / public@karlmcguinness.com`.
+13. ✅ **Workgroup targeting**: independent submission across the board for now. No drafts target a specific WG at the initial submission stage. WG targeting can be revisited per-draft after publication and implementation interest signals.
+14. ✅ **Shaper Profile category**: Informational. Client-side processing spec with loose conformance; Standards Track would overclaim. The trace artifact and refusal protocol are guidance, not enforceable wire contracts.
+15. ✅ **Worked examples**: each draft carries a minimal illustrative example (~5-10 lines). The full worked board-packet example stays in the blog and is referenced by each draft.
+16. ✅ **Resumable Suspension placement**: currently sketched inside the AAuth Profile (Draft 6). If it generalizes beyond AAuth during drafting, promote to its own feature spec; otherwise keep as an AAuth-specific section.
 
-## Remaining Open Questions
+## Tradeoff: Runtime Optional Modules Deferred
 
-These need answers before drafting starts. They are less load-bearing than the resolved decisions but should be settled.
+The Runtime Enforcement Profile (Draft 8) describes a substrate-independent PDP contract that can be extended with six Optional Modules: Tool Binding, Decision Receipt, Purpose Registry, Actor Provenance, Attestation, Policy Projection. The initial 11-spec set ships without these modules. They become per-module drafts as each matures.
 
-1. **Workgroup targeting.** Most defaults are clear:
-   - Drafts 1, 2: OAUTH WG.
-   - Draft 3 (Mission Expansion): OAUTH or AUTHZEN (composes both). Lean OAUTH with AUTHZEN coordination.
-   - Drafts 4, 5: OAUTH WG.
-   - Draft 6 (AAuth): independent submission.
-   - Draft 7 (MAS): independent submission (cross-substrate).
-   - Draft 8 (Runtime): AUTHZEN WG.
-   - Draft 9 (Shaper): OAUTH WG or independent.
-   - Drafts 10, 11: independent submission.
+Four ways to handle the modules; I'm recommending option A. Tradeoffs:
 
-2. **Shaper Profile category**: Standards Track or Informational? Client-side spec; conformance is loosely defined. Recommendation: Standards Track with explicit conformance for trace artifact and refusal protocol.
+**Option A: defer all six modules (current plan, 11 drafts).**
 
-3. **Runtime Optional Modules deferred**: Confirm the initial 11-spec set ships without them and each becomes its own spec as it matures.
+- *Pro:* Smallest initial set; faster path to first publication and implementer review.
+- *Pro:* Each module advances independently as implementation interest emerges.
+- *Pro:* Capability Level 5 ("verifiable governance") can describe the abstract requirement without committing to specific module specs that may not survive contact with implementers.
+- *Con:* Implementers targeting Level 5 have no concrete module specs to point at.
+- *Con:* Runtime Enforcement Profile (Draft 8) describes module-extensible enforcement but the extension points have no specs at submission time.
+- *Con:* The "interoperable optional capability" language in the Capability Model (Draft 11) describes Level 5 with deferred concrete requirements.
 
-4. **Resumable Suspension placement**: Currently sketched inside the AAuth Profile (Draft 6). If it generalizes beyond AAuth, promote to its own feature spec. Decide later (when drafting Draft 6).
+**Option B: include all six modules in the initial set (17 drafts).**
 
-5. **Worked examples in drafts vs blog**: Each draft carries a minimal illustrative example (~5-10 lines). The full worked board-packet example stays in the blog and is referenced by each draft. Confirm.
+- *Pro:* Complete picture from day one; Level 5 is implementable from the spec set.
+- *Con:* 17 drafts from a single independent author is a lot. IESG and area directors typically prefer focused submissions.
+- *Con:* Not all modules are equally ready:
+  - **Tool Binding**: design is stable (binds tool invocation to actor identity via `tool_id`). Ready to spec.
+  - **Purpose Registry**: small and well-defined (registry of purposes referenced by `purpose` URI in Mission Intent). Ready to spec.
+  - **Actor Provenance**: small (composes RFC 8693 `act` claim with Mission). Mostly composes existing standards; could be done.
+  - **Decision Receipt**: overlaps with W3C verifiable-credential work and existing receipt formats. Design needs coordination with adjacent communities. Not yet ready.
+  - **Attestation**: depends on ACAP (`draft-yakung-oauth-agent-attestation`) advancing. Can't ship faster than ACAP.
+  - **Policy Projection**: most architecturally open (Cedar vs OpenFGA vs canonical input bundle vs engine-native artifact). Specifying before implementers have picked an approach picks a winner that may be wrong.
+- *Con:* Drafting modules before implementation interest produces mediocre specs that get rewritten.
+
+**Option C: include the mature subset; defer the speculative ones (14 drafts).**
+
+- *Pro:* Ships modules with stable designs (Tool Binding, Purpose Registry, Actor Provenance); defers the speculative ones (Decision Receipt, Attestation, Policy Projection).
+- *Pro:* Level 5 has concrete spec targets for the three included modules.
+- *Pro:* Initial set grows to 14, still manageable.
+- *Con:* Picking the cutoff is a judgment call. "Mature enough" is subjective.
+- *Con:* Three additional drafts to write before initial publication.
+
+**Option D: bundle all six modules into one combined "Runtime Optional Modules" draft (12 drafts).**
+
+- *Pro:* One additional draft instead of six.
+- *Con:* Combined drafts get long and harder to review.
+- *Con:* Each module advances at a different pace; bundling slows the fast ones.
+- *Con:* IESG typically prefers focused drafts over omnibus.
+
+**Recommendation: Option A.** The Optional Modules are an architectural extension point; specifying them before there are implementers using them produces specs that won't survive contact with reality. The Runtime Enforcement Profile (Draft 8) describes the extension contract; the Capability Model (Draft 11) describes Level 5 in terms of "interoperable specifications for each claimed optional capability." That's an honest description: when a module reaches enough maturity for interop claims, it gets its own spec.
+
+If you have a specific module with near-term implementation interest (e.g., a Tool Binding deployment that wants a spec to align on), we can promote that module to the initial set without changing the rest of the plan.
 
 ## Next Step
 
-Confirm the resolutions above and answer the remaining open questions. Once you sign off, I will start with Draft 1 (Mission Framework) as the foundational spec and quality bar.
+All decisions are now resolved. I will start with Draft 1 (Mission Framework) as the foundational spec and quality bar.
+
+A fully fleshed-out, IETF-reviewable draft for the Framework is roughly a week of focused work (35-45 pages, complete IANA Considerations, substantive Security Considerations, normative throughout). I will not try to compress that into one session at the cost of quality. Plan: produce a first complete draft for review, iterate based on your feedback, then move to Draft 2.
