@@ -129,23 +129,46 @@ The Mission-Bound work composes with the following published RFCs, adopted IETF/
 
 | Spec | Title | Used by |
 | --- | --- | --- |
-| `draft-fletcher-transaction-token-chaining-profile` | Transaction Token Chaining Profile | Draft 5 (Mission-Bound Txn Token Chaining composition) |
+| `draft-ietf-oauth-transaction-tokens` | Transaction Tokens (intra-trust-domain call-chain context) | Drafts 2, 5 (Mission-bound access token seeds Transaction Token Service) |
+| `draft-fletcher-transaction-token-chaining-profile` | Transaction Token Chaining Profile (cross-trust-domain) | Draft 5 (Mission-Bound Txn Token Chaining composition) |
 | `draft-yakung-oauth-agent-attestation` (ACAP) | Agent Attestation Profile | Future Mission Attestation module |
+| `draft-anandakrishnan-rats-ptv-agent-identity` | RATS Prove-Transform-Verify Agent Identity | Future Mission Attestation module (sender-key binding to attested identity) |
+| WIMSE (IETF Workload Identity in Multi-System Environments WG) | Workload Identity Multi-System Environments | Future Mission Attestation module (alongside RATS PTV) |
+| `draft-zehavi-oauth-rar-metadata` | OAuth RAR Metadata | Draft 2 (`authorization_details_types_metadata_endpoint` for RAR type discovery) |
+| `draft-chen-oauth-rar-agent-extensions` | OAuth RAR Agent Extensions | Adjacent to `mission_resource_access`; may converge |
+| `draft-cecchetti-oauth-rar-cedar` | Cedar-in-RAR | Draft 8 (AS-to-RS policy carriage for materialized policy view) |
 | `draft-ietf-oauth-selective-disclosure-jwt` (SD-JWT) | Selective Disclosure for JWTs | Potential composition for privacy-preserving Mission Status |
+| OpenID CIBA Core | Client-Initiated Backchannel Authentication | Drafts 2, 3 (out-of-band approval channel for Mission bootstrap or expansion; not a Mission state model) |
+| `draft-ietf-gnap-core-protocol` (GNAP) | Grant Negotiation and Authorization Protocol | Future MAS consumer; the MAS role contract is substrate-agnostic and could be consumed by GNAP-based deployments |
 
 ### Karl's existing individual drafts
+
+Drafts on the IETF Datatracker:
 
 | Draft | Title | Composes with |
 | --- | --- | --- |
 | [`draft-mcguinness-oauth-actor-profile`](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-actor-profile/) | OAuth Actor Profile for Delegation | Drafts 2, 8 (actor context). Covers Actor Provenance; no separate spec needed. |
 | [`draft-mcguinness-oauth-client-instance-assertion`](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion/) | Client Instance Assertion | Draft 2 (instance identity in Token Exchange `actor_token`) |
 | [`draft-mcguinness-oauth-id-continuation-assertion`](https://mcguinness.github.io/draft-mcguinness-oauth-id-continuation-assertion/draft-mcguinness-oauth-id-continuation-assertion.html) | Identity Continuation Assertion | Draft 2 (same-IdP SaaS continuation). Covers Same-IdP Chain Continuation; no separate spec needed. |
-| [`draft-mcguinness-authzen-access-request`](https://datatracker.ietf.org/doc/draft-mcguinness-authzen-access-request/) | AuthZEN Access Request | Drafts 3, 8 (Mission Expansion request and runtime escalation) |
 | [`draft-mcguinness-oauth-rfc9728bis`](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-rfc9728bis/) | RFC 9728bis (Protected Resource Metadata update) | Drafts 2, 8 (RS tier advertisement) |
 | [`draft-mcguinness-oauth-insufficient-claims`](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-insufficient-claims/) | Insufficient Claims Error | Drafts 2, 8 (runtime denial classification) |
-| [`draft-mcguinness-oauth-deferred-code`](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-deferred-code/) | Deferred Code Flow | Drafts 2, 6 (potentially: deferred Mission approval, Resumable Suspension) |
 | [`draft-mcguinness-oauth-resource-token-resp`](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-resource-token-resp/) | Resource Token Response | Draft 6 (AAuth-aligned resource-token response) |
 | [`draft-mcguinness-token-xchg-target-svc-disco`](https://datatracker.ietf.org/doc/draft-mcguinness-token-xchg-target-svc-disco/) | Token Exchange Target Service Discovery | Draft 2 (Multi-AS Token Exchange discovery) |
+
+Drafts in development (GitHub repo, not yet on Datatracker):
+
+| Draft | Title | Composes with |
+| --- | --- | --- |
+| [`draft-mcguinness-authzen-access-request`](https://github.com/mcguinness/draft-mcguinness-authzen-access-request) | AuthZEN Access Request | Drafts 3, 8 (Mission Expansion request and runtime escalation) |
+| [`draft-mcguinness-oauth-deferred-code`](https://github.com/mcguinness/draft-mcguinness-oauth-deferred-code) | Deferred Code Flow | Drafts 2, 6 (deferred Mission approval; potentially Resumable Suspension) |
+| [`draft-mcguinness-oauth-identity-assertion-trust-policy`](https://github.com/mcguinness/draft-mcguinness-oauth-identity-assertion-trust-policy) | Identity Assertion Trust Policy | Drafts 2, 7 (Resource AS validates MAS issuer; Resource AS validates assertion issuer) |
+
+Referenced in the architecture but not yet published as drafts:
+
+| Spec name | Role | Composes with |
+| --- | --- | --- |
+| `draft-mcguinness-oauth-domain-authorized-issuer-discovery` | Domain-Authorized Issuer Discovery | Drafts 2, 7 (pairs with Identity Assertion Trust Policy for issuer trust discovery) |
+| `draft-mcguinness-oauth-actor-receipts` | Actor Receipts | Draft 8 (portable per-action evidence composition with Decision Evidence Object) |
 
 ### Specs intentionally not composed with
 
