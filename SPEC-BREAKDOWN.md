@@ -42,13 +42,25 @@ The drafts are organized into four layers. Each layer has a specific role.
 | --- | --- | --- | --- | --- | --- |
 | 1 | `draft-mcguinness-mission-bound-framework` | Mission Model and Framework | Framework | Standards Track | 30-40 |
 | 2 | `draft-mcguinness-mission-bound-oauth` | Mission-Bound OAuth Profile | Profile | Standards Track | 35-45 |
-| 3 | `draft-mcguinness-mission-bound-oauth-extensions` | Mission-Bound OAuth Extensions | Feature | Standards Track | 30-40 |
-| 4 | `draft-mcguinness-mission-bound-aauth` | Mission-Bound AAuth Composition Profile | Profile | Standards Track | 25-35 |
-| 5 | `draft-mcguinness-mission-authority-server` | Mission Authority Server | Server/Topology | Standards Track | 30-40 |
-| 6 | `draft-mcguinness-mission-bound-runtime` | Mission-Bound Runtime Enforcement Profile | Profile | Standards Track | 35-45 |
-| 7 | `draft-mcguinness-mission-shaper-profile` | Mission Shaper Profile | Profile | Standards Track | 20-30 |
-| 8 | `draft-mcguinness-mission-bound-migration` | Mission-Bound Authorization Migration Guide | Informational | Informational | 15-20 |
-| 9 | `draft-mcguinness-mission-bound-capability-model` | Mission-Bound Authorization Capability Model | Informational | Informational | 20-25 |
+| 3 | `draft-mcguinness-mission-expansion` | Mission Expansion | Feature | Standards Track | 20-30 |
+| 4 | `draft-mcguinness-mission-delegated-authority-validation` | Delegated Authority Validation | Feature | Standards Track | 15-20 |
+| 5 | `draft-mcguinness-mission-same-idp-chain-continuation` | Same-IdP Chain Continuation Assertion | Feature | Standards Track | 15-20 |
+| 6 | `draft-mcguinness-mission-txn-token-chaining` | Mission-Bound Transaction Token Chaining Composition | Feature | Standards Track | 10-15 |
+| 7 | `draft-mcguinness-mission-bound-aauth` | Mission-Bound AAuth Composition Profile | Profile | Standards Track | 25-35 |
+| 8 | `draft-mcguinness-mission-authority-server` | Mission Authority Server | Server/Topology | Standards Track | 30-40 |
+| 9 | `draft-mcguinness-mission-bound-runtime` | Mission-Bound Runtime Enforcement Profile | Profile | Standards Track | 35-45 |
+| 10 | `draft-mcguinness-mission-shaper-profile` | Mission Shaper Profile | Profile | Standards Track | 20-30 |
+| 11 | `draft-mcguinness-mission-bound-migration` | Mission-Bound Authorization Migration Guide | Informational | Informational | 15-20 |
+| 12 | `draft-mcguinness-mission-bound-capability-model` | Mission-Bound Authorization Capability Model | Informational | Informational | 20-25 |
+
+The OAuth Extensions catchall is gone. Each feature is its own spec that profiles compose:
+
+- **Mission Expansion** (Draft 3): the governance expansion mechanism. Includes Concurrent Expansion reconciliation as a section.
+- **Delegated Authority Validation** (Draft 4): the Resource-AS authority validation pattern for open-world tools.
+- **Same-IdP Chain Continuation Assertion** (Draft 5): the JWT assertion type for cross-resource SaaS continuation.
+- **Mission-Bound Transaction Token Chaining Composition** (Draft 6): the composition between Mission-Bound OAuth and `draft-fletcher-transaction-token-chaining-profile`.
+
+Token Size at Depth (mitigations like audience-filtered Authority Set projection) is operational guidance, not a new wire feature. It folds into the OAuth Profile Security Considerations and the MAS audience-pairwise-identifier section.
 
 Future drafts (separate as they mature; not part of initial set):
 
@@ -140,14 +152,14 @@ This profile defines how a deployment composes OAuth 2.0 (RFC 6749), Rich Author
 
 ### What this profile does NOT define
 
-- Mission Expansion wire mechanics → Mission-Bound OAuth Extensions (Draft 3).
-- Delegated Authority Validation → Mission-Bound OAuth Extensions.
-- Concurrent Expansion reconciliation → Mission-Bound OAuth Extensions.
-- Same-IdP Chain Continuation → Mission-Bound OAuth Extensions.
-- Transaction Token Chaining composition → Mission-Bound OAuth Extensions.
+- Mission Expansion → Mission Expansion (Draft 3).
+- Delegated Authority Validation → Delegated Authority Validation (Draft 4).
+- Same-IdP Chain Continuation → Same-IdP Chain Continuation Assertion (Draft 5).
+- Transaction Token Chaining composition → Mission-Bound Transaction Token Chaining (Draft 6).
 - Multi-AS ID-JAG composition → composes with `draft-ietf-oauth-identity-assertion-authz-grant` directly.
-- Runtime per-action enforcement → Mission-Bound Runtime Enforcement Profile (Draft 6).
-- MAS topology → Mission Authority Server spec (Draft 5).
+- Runtime per-action enforcement → Mission-Bound Runtime Enforcement Profile (Draft 9).
+- MAS topology → Mission Authority Server (Draft 8).
+- Token Size at Depth mitigations → covered as Security and Operational Considerations in this profile and in the MAS spec.
 
 ### IANA Considerations
 
@@ -165,42 +177,118 @@ This profile defines how a deployment composes OAuth 2.0 (RFC 6749), Rich Author
 
 ---
 
-## Draft 3: `draft-mcguinness-mission-bound-oauth-extensions`
+## Draft 3: `draft-mcguinness-mission-expansion`
 
-**Mission-Bound OAuth Extensions**
+**Mission Expansion**
 
-**Layer:** Feature (Extensions). **Category:** Standards Track. **Target WG:** OAUTH. **Status:** New. **Depends on:** Drafts 1 and 2.
+**Layer:** Feature. **Category:** Standards Track. **Target WG:** OAUTH (composes with OAuth Profile) or AUTHZEN (composes with AuthZEN Access Request). **Status:** New. **Depends on:** Draft 1, AuthZEN Access Request.
 
 ### Abstract
 
-This document defines composition extensions to the Mission-Bound OAuth Profile (Draft 2). Each extension is independently adoptable and addresses a wire surface the Profile does not cover at the base level: Mission Expansion, Delegated Authority Validation for open-world tools, Concurrent Mission Expansion reconciliation, Token Size at Depth mitigations, Same-IdP Chain Continuation Assertions, and Transaction Token Chaining composition.
+This document defines the governance expansion mechanism for Mission-Bound Authorization. When an action falls outside the Authority Set of an active Mission but is eligible for governed expansion, this spec defines the eligibility signaling, the expansion request workflow, the binding of the successor Mission to the prior Mission, and the reconciliation rules for concurrent expansion requests. The expansion mechanism is substrate-neutral; substrate profiles (OAuth, AAuth) compose with this spec to surface expansion eligibility on their wires.
 
-### Extensions defined
+### What this spec defines
 
-1. **Mission Expansion**: eligibility signaling on denial (`expansion.eligible`, `access_request_uri`, `ticket`, `requested_authority`), AuthZEN Access Request composition for the expansion request, workflow outcomes, and binding the successor Mission via `mission.supersedes`.
-2. **Delegated Authority Validation**: wire mechanics for Resource ASes that need to validate authority for tools the originating AS lacks the ontology for.
-3. **Concurrent Mission Expansion**: reconciliation rules when more than one expansion request is in flight for the same Mission.
-4. **Token Size at Depth**: audience-filtered Authority Set projection, reference-dereferencing, and other mitigations for credential growth in deep delegation chains.
-5. **Same-IdP Chain Continuation Assertions**: continuation tokens that carry Mission context across SaaS authorization boundaries inside one IdP.
-6. **Transaction Token Chaining Composition**: how Mission handles and Authority Sets transcribe through `txn_claims` in JWT Authorization Grants per `draft-fletcher-transaction-token-chaining-profile`.
+- Expansion eligibility signaling on denial: the `expansion` block with `eligible`, `access_request_uri`, `ticket`, and `requested_authority`.
+- Expansion request workflow via AuthZEN Access Request: how the orchestrator submits the access request with the ticket, how the state authority adjudicates, how the result is communicated.
+- Workflow outcomes: synchronous approved, asynchronous approved, denied, expired.
+- Successor-Mission binding: `mission.supersedes`, expiry inheritance rules, atomic transition between prior and successor Mission.
+- Concurrent expansion reconciliation: rules for when more than one expansion request is in flight for the same Mission.
 
 ### What this spec does NOT define
 
-- Common Constraints vocabulary → Mission Model and Framework (Draft 1). Constraints are not OAuth-specific; they are Framework primitives.
-- Migration story for incremental adoption → Mission-Bound Authorization Migration Guide (Draft 8).
-- Runtime enforcement modules (Tool Binding, Decision Receipt, etc.) → separate per-module specs.
+- Substrate-specific wire formats for the denial signal → covered by the OAuth Profile (Draft 2) and AAuth Profile (Draft 7) as composition rules.
+- How Resource ASes detect out-of-bounds requests → covered by Delegated Authority Validation (Draft 4).
 
 ### IANA Considerations
 
 - Mission Expansion error fields and response shape.
-- Successor-Mission claim or attribute (`mission.supersedes`).
-- Delegated Authority Validation error and request shapes.
-- Same-IdP Chain Continuation Assertion type.
-- Transaction Token RAR transcription rule.
+- `mission.supersedes` claim or attribute.
+- Expansion ticket and access-request shapes (in coordination with AUTHZEN).
+- Concurrent expansion reconciliation status codes.
 
 ---
 
-## Draft 4: `draft-mcguinness-mission-bound-aauth`
+## Draft 4: `draft-mcguinness-mission-delegated-authority-validation`
+
+**Delegated Authority Validation**
+
+**Layer:** Feature. **Category:** Standards Track. **Target WG:** OAUTH or independent. **Status:** New. **Depends on:** Drafts 1 and 3 (Mission Expansion for the eligibility-signaling contract).
+
+### Abstract
+
+This document defines the authority validation pattern for open-world tool semantics. When an agent attempts an action at a Resource AS whose ontology the originating AS does not know, the Resource AS validates the request against the Mission's Authority Set and returns either a permit, a hard denial, or an expansion-eligible denial. This spec defines the protocol between the Resource AS and the originating state authority, the eligibility-discovery rules, and how the validation result composes with Mission Expansion.
+
+### What this spec defines
+
+- The Resource-AS-as-validator pattern: when an originating AS issues a credential whose Authority Set the Resource AS can interpret beyond the AS's own ontology.
+- Resource AS responsibilities: examine the Mission Intent's `objects` field, determine action eligibility against local ontology, distinguish in-bounds / out-of-bounds / out-of-bounds-but-eligible.
+- The expansion-eligibility signaling protocol: how a Resource AS marks a denial as expandable in coordination with Mission Expansion (Draft 3).
+- Trust boundaries: what the Resource AS is trusted to determine vs. what requires the originating AS's confirmation.
+
+### What this spec does NOT define
+
+- The expansion workflow itself → Mission Expansion (Draft 3).
+- Mission Intent shape → Mission Model and Framework (Draft 1).
+
+### IANA Considerations
+
+- Delegated Authority Validation request and response shapes.
+- Eligibility-discovery error codes.
+
+---
+
+## Draft 5: `draft-mcguinness-mission-same-idp-chain-continuation`
+
+**Same-IdP Chain Continuation Assertion**
+
+**Layer:** Feature. **Category:** Standards Track. **Target WG:** OAUTH. **Status:** New. **Depends on:** Drafts 1 and 2, RFC 7519 (JWT), Identity Chaining drafts.
+
+### Abstract
+
+This document defines a JWT-based Continuation Assertion that carries Mission-bound governance context across SaaS authorization boundaries inside one identity provider's trust domain. The Continuation Assertion is consumed by downstream Authorization Servers to validate that an exchanged credential is part of the same Mission-governed task. It composes with `draft-ietf-oauth-identity-assertion-authz-grant` (ID-JAG) and is similar in structure but specialized for same-IdP continuation rather than cross-domain identity assertion.
+
+### What this spec defines
+
+- The Continuation Assertion JWT type.
+- Required claims: `mission.id`, `mission.origin`, root delegation context, chain authority trust statement, IdP validation reference.
+- Validation rules at the receiving AS.
+- Discovery and error handling.
+- Composition with ID-JAG: when to use Continuation Assertion vs ID-JAG.
+
+### IANA Considerations
+
+- Continuation Assertion JWT type and `typ` value.
+- Claim names if not already in the JWT Claim Registry.
+- Error codes for invalid or expired continuation.
+
+---
+
+## Draft 6: `draft-mcguinness-mission-txn-token-chaining`
+
+**Mission-Bound Transaction Token Chaining Composition**
+
+**Layer:** Feature. **Category:** Standards Track. **Target WG:** OAUTH (coordinated with `draft-fletcher-transaction-token-chaining-profile`). **Status:** New. **Depends on:** Drafts 1 and 2, `draft-fletcher-transaction-token-chaining-profile`.
+
+### Abstract
+
+This document defines the composition between Mission-Bound Authorization and Transaction Token Chaining. Appendix B of `draft-fletcher-transaction-token-chaining-profile` notes that RAR transcription across trust domains is future work. This spec specifies how Mission handles and AS-derived `mission_resource_access` entries flow through the `txn_claims` object in JWT Authorization Grants, including which entries are audience-filtered for the downstream Authorization Server.
+
+### What this spec defines
+
+- How `mission.id` and `mission.origin` carry in `txn_claims`.
+- How the Authority Set transcribes from `mission_resource_access` into the JWT Grant, with audience filtering.
+- Validation rules at the receiving AS in the downstream trust domain.
+- Trust-boundary considerations between transaction token issuers.
+
+### IANA Considerations
+
+- `txn_claims` Mission-bound members.
+- Transcription rules registry entry.
+
+---
+
+## Draft 7: `draft-mcguinness-mission-bound-aauth`
 
 **Mission-Bound AAuth Composition Profile**
 
@@ -235,11 +323,11 @@ This profile defines how a deployment composes AAuth `-01` with the Mission Mode
 
 ---
 
-## Draft 5: `draft-mcguinness-mission-authority-server`
+## Draft 8: `draft-mcguinness-mission-authority-server`
 
 **Mission Authority Server**
 
-**Layer:** Server / Topology. **Category:** Standards Track. **Target WG:** OAUTH or independent. **Depends on:** Drafts 1, 2, 4.
+**Layer:** Server / Topology. **Category:** Standards Track. **Target WG:** OAUTH or independent. **Depends on:** Drafts 1, 2, 7.
 
 ### Abstract
 
@@ -272,11 +360,11 @@ A Mission Authority Server (MAS) holds the canonical Mission record so multiple 
 
 ---
 
-## Draft 6: `draft-mcguinness-mission-bound-runtime`
+## Draft 9: `draft-mcguinness-mission-bound-runtime`
 
 **Mission-Bound Runtime Enforcement Profile**
 
-**Layer:** Profile. **Category:** Standards Track. **Target WG:** AUTHZEN. **Depends on:** Drafts 1, 2 and/or 4, AuthZEN Authorization API.
+**Layer:** Profile. **Category:** Standards Track. **Target WG:** AUTHZEN. **Depends on:** Drafts 1, 2 and/or 7, AuthZEN Authorization API.
 
 ### Abstract
 
@@ -314,7 +402,7 @@ This profile defines how a deployment composes the AuthZEN Authorization API wit
 
 ---
 
-## Draft 7: `draft-mcguinness-mission-shaper-profile`
+## Draft 10: `draft-mcguinness-mission-shaper-profile`
 
 **Mission Shaper Profile**
 
@@ -351,11 +439,11 @@ Is "Profile" the right word for a client-side processing spec that doesn't compo
 
 ---
 
-## Draft 8: `draft-mcguinness-mission-bound-migration`
+## Draft 11: `draft-mcguinness-mission-bound-migration`
 
 **Mission-Bound Authorization Migration Guide**
 
-**Layer:** Informational. **Category:** Informational. **Depends on:** Drafts 1, 2, 3, 4.
+**Layer:** Informational. **Category:** Informational. **Depends on:** Drafts 1, 2, 7.
 
 ### Abstract
 
@@ -377,11 +465,11 @@ The migration path is operational guidance. It does not introduce new wire eleme
 
 ---
 
-## Draft 9: `draft-mcguinness-mission-bound-capability-model`
+## Draft 12: `draft-mcguinness-mission-bound-capability-model`
 
 **Mission-Bound Authorization Capability Model**
 
-**Layer:** Informational. **Category:** Informational. **Depends on:** Drafts 1-7 for capability mapping.
+**Layer:** Informational. **Category:** Informational. **Depends on:** Drafts 1-10 for capability mapping.
 
 ### Abstract
 
@@ -422,72 +510,76 @@ The blog series carries the conceptual argument, worked examples, and applied an
 | --- | --- |
 | Part 1: Missing Abstraction | Argument for why a Mission is needed. Links to Draft 1 (Framework). Stays in the blog. |
 | Part 2: Mission Model | Affirmative argument for the Mission primitive. Reader-friendly explainer for Draft 1. |
-| Part 3: Mission Shaper | Reader-friendly explainer; links to Draft 7. |
+| Part 3: Mission Shaper | Reader-friendly explainer; links to Draft 10. |
 | Part 4: Mission-Bound OAuth Profile | Reader-friendly explainer; links to Drafts 1 and 2. Worked example stays here. |
-| Part 4 Extensions: OAuth Extensions companion | Reader-friendly explainer; links to Draft 3. |
-| Part 5: AAuth Composition | Reader-friendly explainer; links to Draft 4. |
-| Part 6: Mission Authority Server | Reader-friendly explainer; links to Draft 5. |
-| Part 7: Runtime Enforcement | Reader-friendly explainer; links to Draft 6 and the future Optional Module drafts. |
-| Part 8: MCP Application | Applied use case. Stays in the blog. Links to Drafts 1, 2, 6 for protocol detail. |
-| Part 9: Capability Model | Reader-friendly explainer; links to Draft 9. |
+| Part 4 Extensions: OAuth Extensions companion | Reader-friendly explainer; links to Drafts 3, 4, 5, 6 (the former-extension specs). |
+| Part 5: AAuth Composition | Reader-friendly explainer; links to Draft 7. |
+| Part 6: Mission Authority Server | Reader-friendly explainer; links to Draft 8. |
+| Part 7: Runtime Enforcement | Reader-friendly explainer; links to Draft 9 and the future Optional Module drafts. |
+| Part 8: MCP Application | Applied use case. Stays in the blog. Links to Drafts 1, 2, 9 for protocol detail. |
+| Part 9: Capability Model | Reader-friendly explainer; links to Draft 12. |
 
 The blog posts retain their arguments, diagrams, worked examples, TL;DR and spine framing. They drop normative MUST/SHOULD/MAY language; those move to the drafts.
 
 ## Dependency Graph
 
 ```
-                                  ┌──────────────────────────────┐
-                                  │ Draft 1: Framework           │
-                                  │ Mission Model & Framework    │
-                                  └──────────────┬───────────────┘
-                                                 │
-                ┌────────────────┬───────────────┼───────────────┬──────────────────────┐
-                │                │               │               │                      │
-                ▼                ▼               ▼               ▼                      ▼
-       ┌─────────────────┐ ┌────────────┐ ┌─────────────┐ ┌─────────────┐  ┌─────────────────────┐
-       │ Draft 2: OAuth  │ │ Draft 4:   │ │ Draft 7:    │ │ Draft 6:    │  │ Draft 5: MAS        │
-       │ Profile         │ │ AAuth      │ │ Shaper      │ │ Runtime     │  │                     │
-       └────────┬────────┘ └─────┬──────┘ └─────────────┘ └─────────────┘  └──────────┬──────────┘
-                │                │                                                     │
-                ▼                │                                                     │
-       ┌─────────────────┐       │                                                     │
-       │ Draft 3: OAuth  │       │                                                     │
-       │ Extensions      │       │                                                     │
-       └─────────────────┘       │                                                     │
-                                 │                                                     │
-                                 │     ┌────────────────────────────┐                  │
-                                 └────▶│ Draft 5 references both    │◀─────────────────┘
-                                       │ OAuth & AAuth profiles     │
-                                       └────────────────────────────┘
+                          ┌──────────────────────────────────────┐
+                          │ Draft 1: Mission Model & Framework   │
+                          └──────────────────┬───────────────────┘
+                                             │
+        ┌────────────────────┬───────────────┼────────────────────┬───────────────────┐
+        │                    │               │                    │                   │
+        ▼                    ▼               ▼                    ▼                   ▼
+┌───────────────┐  ┌─────────────────┐  ┌──────────┐  ┌─────────────────┐  ┌─────────────────┐
+│ Draft 2:      │  │ Draft 7: AAuth  │  │ Draft 10:│  │ Draft 9:        │  │ Draft 8: MAS    │
+│ OAuth Profile │  │ Profile         │  │ Shaper   │  │ Runtime         │  │                 │
+└───────┬───────┘  └────────┬────────┘  └──────────┘  └─────────────────┘  └─────────────────┘
+        │                   │
+        │     ┌─────────────┴──────────────────────────────────┐
+        │     │ Features composed by OAuth and AAuth Profiles: │
+        │     │   Draft 3: Mission Expansion                   │
+        │     │   Draft 4: Delegated Authority Validation      │
+        │     │   Draft 5: Same-IdP Chain Continuation         │
+        │     │   Draft 6: Transaction Token Chaining          │
+        │     └────────────────────────────────────────────────┘
+        │
+        ▼
+┌───────────────────────────────────────────────────────┐
+│ Draft 8 (MAS) composes both OAuth and AAuth Profiles  │
+└───────────────────────────────────────────────────────┘
 
-                                  ┌──────────────────────────────┐
-                                  │ Draft 8: Migration           │
-                                  │ (references Drafts 1-4)      │
-                                  └──────────────────────────────┘
+                          ┌──────────────────────────────────────┐
+                          │ Draft 11: Migration                  │
+                          │ (references Drafts 1, 2, 7)          │
+                          └──────────────────────────────────────┘
 
-                                  ┌──────────────────────────────┐
-                                  │ Draft 9: Capability Model    │
-                                  │ (references Drafts 1-7)      │
-                                  └──────────────────────────────┘
+                          ┌──────────────────────────────────────┐
+                          │ Draft 12: Capability Model           │
+                          │ (references Drafts 1-10)             │
+                          └──────────────────────────────────────┘
 ```
 
 Draft 1 (Framework) is foundational: every other draft references it for the Mission Model.
 
-Draft 3 (OAuth Extensions) extends Draft 2.
+Drafts 3-6 (Features) are composable extensions. Each profile (OAuth, AAuth) chooses which features to compose with at each capability level.
 
-Drafts 8 and 9 are terminal: Migration references the profiles; Capability Model categorizes deployments by which other drafts they implement.
+Drafts 11 and 12 are terminal: Migration is operational guidance; Capability Model categorizes deployments by which other drafts they implement.
 
 ## Recommended Drafting Order
 
-1. **Draft 1: Mission Model and Framework.** Foundational. Establishes the abstract model every profile and extension references. Highest priority.
+1. **Draft 1: Mission Model and Framework.** Foundational. Establishes the abstract model every profile and feature references. Highest priority.
 2. **Draft 2: Mission-Bound OAuth Profile.** First substrate composition. Sets the pattern for how profiles compose existing standards with the Framework.
-3. **Draft 6: Mission-Bound Runtime Enforcement Profile.** Substrate-independent; can advance in parallel with Draft 2 once the Framework's runtime contracts are stable.
-4. **Draft 4: Mission-Bound AAuth Composition Profile.** Second substrate composition. Depends on the Framework for governance vocabulary and on AAuth `-01`.
-5. **Draft 5: Mission Authority Server.** Depends on Drafts 2 and 4 for substrate-local baseline.
-6. **Draft 3: Mission-Bound OAuth Extensions.** Each extension is independently adoptable; can advance after Draft 2 stabilizes.
-7. **Draft 7: Mission Shaper Profile.** Client-side; lower priority for standardization.
-8. **Draft 8: Migration Guide.** After substrate profiles stabilize.
-9. **Draft 9: Capability Model.** Last; categorizes the others.
+3. **Draft 3: Mission Expansion.** Substrate-neutral feature; the most-referenced extension; profiles will compose with it at Level 2+.
+4. **Draft 9: Mission-Bound Runtime Enforcement Profile.** Substrate-independent; can advance in parallel with Drafts 2 and 3 once the Framework's runtime contracts are stable.
+5. **Draft 7: Mission-Bound AAuth Composition Profile.** Second substrate composition. Depends on the Framework for governance vocabulary and on AAuth `-01`.
+6. **Draft 8: Mission Authority Server.** Depends on Drafts 2 and 7 for substrate-local baseline.
+7. **Draft 4: Delegated Authority Validation.** Builds on Mission Expansion (Draft 3) and the OAuth Profile (Draft 2).
+8. **Draft 5: Same-IdP Chain Continuation Assertion.** OAuth substrate extension; lower priority unless SaaS continuation is a near-term deployment need.
+9. **Draft 6: Mission-Bound Transaction Token Chaining.** Composes with Fletcher's chaining draft; lowest priority until that work matures.
+10. **Draft 10: Mission Shaper Profile.** Client-side; lower priority for standardization.
+11. **Draft 11: Migration Guide.** After substrate profiles stabilize.
+12. **Draft 12: Capability Model.** Last; categorizes the others.
 
 ---
 
@@ -497,7 +589,7 @@ Before I start writing Draft 1, please confirm or redirect on each:
 
 1. **Common Constraints Catalog: Mission Model (Draft 1) or OAuth Profile Core (Draft 2)?** The catalog defines abstract bounds on Missions (`max_calls`, `geo`, `data_classification`, etc.) that apply across substrates. My recommendation: in Draft 1 (Framework), with substrate profiles defining wire serialization. You said "constraints belong in core" — confirm core means Framework (Draft 1), not OAuth Profile Core.
 
-2. **OAuth Extensions: one spec or each extension its own spec?** My recommendation: one spec (Draft 3) bundling six related OAuth extensions. Each could split into its own draft if it reaches independent maturity. Alternative: six separate Standards Track drafts (Mission Expansion, Delegated Authority Validation, Concurrent Expansion, Token Size at Depth, Same-IdP Chain Continuation, Transaction Token Chaining).
+2. ~~**OAuth Extensions: one spec or each extension its own spec?**~~ Resolved: each feature is its own spec. The former OAuth Extensions catchall is split into Mission Expansion (Draft 3, substrate-neutral, includes Concurrent Expansion), Delegated Authority Validation (Draft 4), Same-IdP Chain Continuation Assertion (Draft 5), and Mission-Bound Transaction Token Chaining Composition (Draft 6). Token Size at Depth becomes operational guidance inside the OAuth Profile and MAS specs rather than its own draft.
 
 3. **Runtime Optional Modules: deferred to separate per-module drafts.** Each becomes its own Standards Track draft when it reaches enough maturity. Confirm? The initial set ships without them.
 
@@ -507,16 +599,20 @@ Before I start writing Draft 1, please confirm or redirect on each:
 
 6. **Workgroup targeting.**
    - Draft 1 (Framework): OAUTH WG or independent submission? It's foundational and substrate-neutral; could go to either.
-   - Drafts 2, 3 (OAuth Profile and Extensions): OAUTH WG.
-   - Draft 4 (AAuth Composition): independent submission (since AAuth itself is independent).
-   - Draft 5 (MAS): OAUTH WG or independent. Cross-substrate so could be either; I lean independent because OAUTH WG may not want to chartering cross-substrate work.
-   - Draft 6 (Runtime Enforcement): AUTHZEN WG.
-   - Draft 7 (Shaper): OAUTH WG or independent. Lean independent.
-   - Drafts 8, 9 (Migration, Capability Model): independent submission.
+   - Draft 2 (OAuth Profile): OAUTH WG.
+   - Draft 3 (Mission Expansion): OAUTH WG or AUTHZEN (since it composes AuthZEN Access Request).
+   - Draft 4 (Delegated Authority Validation): OAUTH WG or independent.
+   - Draft 5 (Same-IdP Chain Continuation Assertion): OAUTH WG.
+   - Draft 6 (Transaction Token Chaining Composition): OAUTH WG, coordinated with Fletcher's draft.
+   - Draft 7 (AAuth Composition): independent submission (since AAuth itself is independent).
+   - Draft 8 (MAS): OAUTH WG or independent. Cross-substrate; lean independent because OAUTH WG may not want to charter cross-substrate work.
+   - Draft 9 (Runtime Enforcement): AUTHZEN WG.
+   - Draft 10 (Shaper): OAUTH WG or independent. Lean independent.
+   - Drafts 11, 12 (Migration, Capability Model): independent submission.
 
 7. **Mission Authority Server as "Server / Topology" layer.** The MAS defines a new server role, which is more than just composing existing standards. I put it in its own layer. Alternative: call it a profile too. Recommendation: keep "Server / Topology" since the MAS role is genuinely new architecture.
 
-8. **Capability advertisement metadata registry.** Lives in Draft 9 (Capability Model), since the model defines the vocabulary. Confirm.
+8. **Capability advertisement metadata registry.** Lives in Draft 12 (Capability Model), since the model defines the vocabulary. Confirm.
 
 ## Recommended Next Step
 
