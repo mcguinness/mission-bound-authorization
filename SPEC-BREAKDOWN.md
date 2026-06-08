@@ -4,6 +4,18 @@ This document defines what becomes a standards-track Internet-Draft, what stays 
 
 The breakdown is open for revision before drafting begins. Comments inline; see the open questions at the end.
 
+## Author and Organization
+
+All drafts in this set use the following author block:
+
+```yaml
+author:
+ -
+    fullname: Karl McGuinness
+    organization: Independent
+    email: public@karlmcguinness.com
+```
+
 ## Summary
 
 Seven candidate I-Ds, split along substrate boundaries and architectural layers. Six Standards Track, one Informational.
@@ -346,7 +358,7 @@ Before I start writing Draft 1, please confirm or redirect on each:
 
 2. **Workgroup targeting.** OAUTH for Drafts 1, 2, 6; AUTHZEN for Draft 5; independent submission for Drafts 3, 4, 7; or different targeting?
 
-3. **Author and organization fields.** Confirm `Karl McGuinness / ConductorOne` as author. Co-authors?
+3. ~~**Author and organization fields.**~~ Confirmed: `Karl McGuinness / Independent / public@karlmcguinness.com`. No co-authors at this stage.
 
 4. **AAuth composition (Draft 3): Standards Track or Informational?** The substrate is itself a draft; standardizing a composition profile against a draft creates dependency risk. Recommendation: Standards Track, with a normative dependency declared on AAuth -01 stabilizing.
 
