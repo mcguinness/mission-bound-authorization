@@ -1433,7 +1433,21 @@ substrates and pick the concrete protection mechanism.<a href="#section-abstract
             <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-principal-model" class="internal xref">Principal Model</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
-                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-principal-model-json-schema" class="internal xref">Principal Model JSON Schema</a></p>
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-mission-principal" class="internal xref">Mission Principal</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1.2.1">
+                    <p id="section-toc.1-1.8.2.1.2.1.1"><a href="#section-8.1.1" class="auto internal xref">8.1.1</a>.  <a href="#name-mission-principal-json-sche" class="internal xref">Mission Principal JSON Schema</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1.2.2">
+                    <p id="section-toc.1-1.8.2.1.2.2.1"><a href="#section-8.1.2" class="auto internal xref">8.1.2</a>.  <a href="#name-examples-2" class="internal xref">Examples</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-principal-model-json-schema" class="internal xref">Principal Model JSON Schema</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.3">
+                <p id="section-toc.1-1.8.2.3.1"><a href="#section-8.3" class="auto internal xref">8.3</a>.  <a href="#name-equality-of-principals" class="internal xref">Equality of principals</a></p>
 </li>
             </ul>
 </li>
@@ -2486,9 +2500,28 @@ unreserved-char = ALPHA / DIGIT / "-" / "_"
       "sha-256:nB2xK5qY7vM3rL9pT4cE6sZ8wQ1bN0fH5jX9kV2sRdM"
   },
   "principals": {
-    "subject": "user_3p2q8mN1a0kV7tR",
-    "approving_principal": "user_3p2q8mN1a0kV7tR",
-    "requesting_client": "client_erp-recon-agent",
+    "subject": {
+      "format": "iss_sub",
+      "iss": "https://idp.example.com",
+      "sub": "user_3p2q8mN1a0kV7tR",
+      "sub_profile": { "type": "human" }
+    },
+    "approving_principal": {
+      "format": "iss_sub",
+      "iss": "https://idp.example.com",
+      "sub": "user_3p2q8mN1a0kV7tR",
+      "sub_profile": { "type": "human" }
+    },
+    "requesting_client": {
+      "format": "iss_sub",
+      "iss": "https://as.example.com",
+      "sub": "client_erp-recon-agent",
+      "sub_profile": { "type": "service" },
+      "instance": {
+        "iss": "https://as.example.com",
+        "instance_id": "inst_8YfX2qV9rL3"
+      }
+    },
     "tenant": "tenant_acme",
     "state_authority": "https://as.example.com",
     "delegation_policy": "urn:mbo:delegation:default-v1"
@@ -4278,34 +4311,34 @@ under the <code>principals</code> member of the Mission Record schema (see
 <a href="#mission-record-schema" class="auto internal xref">Section 3.2.2</a>):<a href="#section-8-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-8-2.1">
-          <p id="section-8-2.1.1"><code>subject</code> (string, required): the principal on whose behalf the
-task is approved. Format is substrate-specific (e.g., subject
-identifier per RFC 7519 in OAuth profiles, AAuth <code>approver</code> in
-AAuth profiles).<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.1.1"><code>subject</code> (Mission Principal, required): the principal on whose
+behalf the task is approved.<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.2">
-          <p id="section-8-2.2.1"><code>approving_principal</code> (string, required): the principal who
-approved the Mission. <span class="bcp14">MAY</span> equal <code>subject</code>. For delegated
-approval (administrator approval, headless approval anchors)
-<code>approving_principal</code> differs from <code>subject</code>.<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.2.1"><code>approving_principal</code> (Mission Principal, required): the
+principal who approved the Mission. <span class="bcp14">MAY</span> be equal to <code>subject</code>
+by value. For delegated approval (administrator approval,
+headless approval anchors) <code>approving_principal</code> differs from
+<code>subject</code>.<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.3">
-          <p id="section-8-2.3.1"><code>requesting_client</code> (string, required): the OAuth client
-identifier or AAuth agent identifier that submitted the Mission
-Proposal.<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.3.1"><code>requesting_client</code> (Mission Principal, required): the OAuth
+client, AAuth agent, or other software entity that submitted
+the Mission Proposal.<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.4">
           <p id="section-8-2.4.1"><code>tenant</code> (string, required): the tenant or authorization-domain
-identifier the Mission lives in.<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
+identifier the Mission lives in. Tenant is a scope identifier,
+not an identity.<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.5">
-          <p id="section-8-2.5.1"><code>state_authority</code> (URL, required): the issuer URL of the state
-authority. Equal to <code>mission.origin</code>.<a href="#section-8-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.5.1"><code>state_authority</code> (string, required, URI format): the issuer URL
+of the state authority. Equal to <code>mission.origin</code>.<a href="#section-8-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.6">
-          <p id="section-8-2.6.1"><code>delegation_policy</code> (string, required): a URI or named profile
-identifying the stable Mission-level bounds governing which actors
-may derive or exercise authority.<a href="#section-8-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.6.1"><code>delegation_policy</code> (string, required, URI format): a URI or
+named profile identifying the stable Mission-level bounds
+governing which actors may derive or exercise authority.<a href="#section-8-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-8-3">The principal model is recorded at the approval event and is
@@ -4315,15 +4348,205 @@ and other principal fields <span class="bcp14">MUST NOT</span> change after acti
 artifact) is carried on projections (derived credentials) and
 runtime requests, not stored on the Mission record. The OAuth
 Profile and AAuth Profile bind dynamic actor context to derived
-credentials via the actor profile (e.g.,
-<code>draft-mcguinness-oauth-actor-profile</code>).<a href="#section-8-4" class="pilcrow">¶</a></p>
-<div id="principal-model-json-schema">
+credentials via the actor profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-actor-profile" class="cite xref">I-D.draft-mcguinness-oauth-actor-profile</a>]</span>).<a href="#section-8-4" class="pilcrow">¶</a></p>
+<div id="mission-principal">
 <section id="section-8.1">
-        <h3 id="name-principal-model-json-schema">
-<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-principal-model-json-schema" class="section-name selfRef">Principal Model JSON Schema</a>
+        <h3 id="name-mission-principal">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-mission-principal" class="section-name selfRef">Mission Principal</a>
         </h3>
-<p id="section-8.1-1">The canonical JSON Schema for the principal-model object is:<a href="#section-8.1-1" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-8.1-2">
+<p id="section-8.1-1">A Mission Principal is an identity-bearing object composing
+<span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span> Subject Identifiers for Security Event Tokens (the
+identity layer) with the optional Actor Profile <code>sub_profile</code>
+member (<span>[<a href="#I-D.draft-mcguinness-oauth-actor-profile" class="cite xref">I-D.draft-mcguinness-oauth-actor-profile</a>]</span>, the
+entity-type layer) and an optional client-instance member
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>, for
+software entities with multiple instances).<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-2">The Mission Principal object has the following members:<a href="#section-8.1-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.1-3.1">
+            <p id="section-8.1-3.1.1"><code>format</code> (string, required): the subject identifier format
+per <span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span>. The Framework permits the following formats:
+<code>iss_sub</code>, <code>email</code>, <code>account</code>, <code>phone_number</code>, <code>opaque</code>,
+<code>decentralized_id</code>, <code>uri</code>, <code>aliases</code>. Format-specific members
+(defined by <span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span>) accompany the <code>format</code> value.<a href="#section-8.1-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-3.2">
+            <p id="section-8.1-3.2.1"><code>sub_profile</code> (object, optional): entity-type classification per
+<span>[<a href="#I-D.draft-mcguinness-oauth-actor-profile" class="cite xref">I-D.draft-mcguinness-oauth-actor-profile</a>]</span>. When present,
+carries at minimum a <code>type</code> member with one of <code>human</code>,
+<code>service</code>, <code>agent</code> (or any extension type registered by the
+Actor Profile).<a href="#section-8.1-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-3.3">
+            <p id="section-8.1-3.3.1"><code>instance</code> (object, optional): client-instance identity per
+<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>. Used
+only for software-entity principals (typically
+<code>requesting_client</code>); carries the instance issuer and
+<code>instance_id</code>.<a href="#section-8.1-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-8.1-4">The <code>iss_sub</code> format is <span class="bcp14">RECOMMENDED</span> for principals naming a
+subject within an identity provider's namespace. Deployments
+<span class="bcp14">MAY</span> use other RFC 9493 formats when the deployment's identity
+infrastructure prefers a different representation.<a href="#section-8.1-4" class="pilcrow">¶</a></p>
+<div id="mission-principal-schema">
+<section id="section-8.1.1">
+          <h4 id="name-mission-principal-json-sche">
+<a href="#section-8.1.1" class="section-number selfRef">8.1.1. </a><a href="#name-mission-principal-json-sche" class="section-name selfRef">Mission Principal JSON Schema</a>
+          </h4>
+<div class="breakable lang-json sourcecode" id="section-8.1.1-1">
+<pre>
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mbo:schema:mission-principal:1",
+  "title": "Mission Principal",
+  "type": "object",
+  "required": ["format"],
+  "properties": {
+    "format": {
+      "type": "string",
+      "enum": [
+        "iss_sub", "email", "account", "phone_number",
+        "opaque", "decentralized_id", "uri", "aliases"
+      ]
+    },
+    "iss": { "type": "string", "format": "uri" },
+    "sub": { "type": "string", "minLength": 1 },
+    "email": { "type": "string", "format": "email" },
+    "account": { "type": "string", "format": "uri" },
+    "phone_number": { "type": "string" },
+    "id": { "type": "string", "minLength": 1 },
+    "uri": { "type": "string", "format": "uri" },
+    "identifiers": { "type": "array" },
+    "sub_profile": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "instance": {
+      "type": "object",
+      "required": ["iss", "instance_id"],
+      "properties": {
+        "iss": { "type": "string", "format": "uri" },
+        "instance_id": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": {
+        "format": { "const": "iss_sub" }
+      }, "required": ["format"] },
+      "then": { "required": ["iss", "sub"] }
+    },
+    {
+      "if": { "properties": {
+        "format": { "const": "email" }
+      }, "required": ["format"] },
+      "then": { "required": ["email"] }
+    },
+    {
+      "if": { "properties": {
+        "format": { "const": "phone_number" }
+      }, "required": ["format"] },
+      "then": { "required": ["phone_number"] }
+    },
+    {
+      "if": { "properties": {
+        "format": { "const": "opaque" }
+      }, "required": ["format"] },
+      "then": { "required": ["id"] }
+    },
+    {
+      "if": { "properties": {
+        "format": { "const": "decentralized_id" }
+      }, "required": ["format"] },
+      "then": { "required": ["uri"] }
+    },
+    {
+      "if": { "properties": {
+        "format": { "const": "uri" }
+      }, "required": ["format"] },
+      "then": { "required": ["uri"] }
+    },
+    {
+      "if": { "properties": {
+        "format": { "const": "account" }
+      }, "required": ["format"] },
+      "then": { "required": ["uri"] }
+    },
+    {
+      "if": { "properties": {
+        "format": { "const": "aliases" }
+      }, "required": ["format"] },
+      "then": { "required": ["identifiers"] }
+    }
+  ]
+}
+</pre><a href="#section-8.1.1-1" class="pilcrow">¶</a>
+</div>
+<p id="section-8.1.1-2">For the full semantics of each <code>format</code> and its associated members,
+consult <span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span>.<a href="#section-8.1.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="examples-1">
+<section id="section-8.1.2">
+          <h4 id="name-examples-2">
+<a href="#section-8.1.2" class="section-number selfRef">8.1.2. </a><a href="#name-examples-2" class="section-name selfRef">Examples</a>
+          </h4>
+<p id="section-8.1.2-1"><strong><code>iss_sub</code> subject with type classification</strong>:<a href="#section-8.1.2-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-8.1.2-2">
+<pre>
+{
+  "format": "iss_sub",
+  "iss": "https://idp.example.com",
+  "sub": "user_3p2q8mN1a0kV7tR",
+  "sub_profile": { "type": "human" }
+}
+</pre><a href="#section-8.1.2-2" class="pilcrow">¶</a>
+</div>
+<p id="section-8.1.2-3"><strong><code>iss_sub</code> service principal with client instance</strong>:<a href="#section-8.1.2-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-8.1.2-4">
+<pre>
+{
+  "format": "iss_sub",
+  "iss": "https://as.example.com",
+  "sub": "client_erp-recon-agent",
+  "sub_profile": { "type": "service" },
+  "instance": {
+    "iss": "https://as.example.com",
+    "instance_id": "inst_8YfX2qV9rL3"
+  }
+}
+</pre><a href="#section-8.1.2-4" class="pilcrow">¶</a>
+</div>
+<p id="section-8.1.2-5"><strong><code>email</code> principal</strong> (e.g., for an out-of-band approving
+administrator):<a href="#section-8.1.2-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-8.1.2-6">
+<pre>
+{
+  "format": "email",
+  "email": "admin@example.com",
+  "sub_profile": { "type": "human" }
+}
+</pre><a href="#section-8.1.2-6" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="principal-model-json-schema">
+<section id="section-8.2">
+        <h3 id="name-principal-model-json-schema">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-principal-model-json-schema" class="section-name selfRef">Principal Model JSON Schema</a>
+        </h3>
+<p id="section-8.2-1">The canonical JSON Schema for the principal-model object is:<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-8.2-2">
 <pre>
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -4336,18 +4559,40 @@ credentials via the actor profile (e.g.,
   ],
   "additionalProperties": false,
   "properties": {
-    "subject": { "type": "string", "minLength": 1 },
-    "approving_principal": { "type": "string", "minLength": 1 },
-    "requesting_client": { "type": "string", "minLength": 1 },
+    "subject": { "$ref": "urn:mbo:schema:mission-principal:1" },
+    "approving_principal": {
+      "$ref": "urn:mbo:schema:mission-principal:1"
+    },
+    "requesting_client": {
+      "$ref": "urn:mbo:schema:mission-principal:1"
+    },
     "tenant": { "type": "string", "minLength": 1 },
     "state_authority": { "type": "string", "format": "uri" },
     "delegation_policy": { "type": "string", "format": "uri" }
   }
 }
-</pre><a href="#section-8.1-2" class="pilcrow">¶</a>
+</pre><a href="#section-8.2-2" class="pilcrow">¶</a>
 </div>
-<p id="section-8.1-3">The <code>state_authority</code> value <span class="bcp14">MUST</span> equal the Mission's
-<code>mission.origin</code>.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
+<p id="section-8.2-3">The <code>state_authority</code> value <span class="bcp14">MUST</span> equal the Mission's
+<code>mission.origin</code>.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="equality-of-principals">
+<section id="section-8.3">
+        <h3 id="name-equality-of-principals">
+<a href="#section-8.3" class="section-number selfRef">8.3. </a><a href="#name-equality-of-principals" class="section-name selfRef">Equality of principals</a>
+        </h3>
+<p id="section-8.3-1">Two Mission Principals are equal when their <code>format</code> values match
+and the format-specific identifier members are byte-equal under
+the registered Normalization Profile for the format. The
+<code>sub_profile</code> and <code>instance</code> members are evidence, not identity;
+they <span class="bcp14">MAY</span> differ between two otherwise-equal principals without
+affecting equality.<a href="#section-8.3-1" class="pilcrow">¶</a></p>
+<p id="section-8.3-2">When comparing a Mission's <code>subject</code> to an authentication event's
+subject identifier at credential derivation time, implementations
+<span class="bcp14">MUST</span> compare under the same equality rule. The Mission Principal
+referenced as <code>subject</code> is the identity bound at approval and the
+target identity for any subject-matching policy.<a href="#section-8.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -5529,14 +5774,18 @@ decisions without embedding additional PII.<a href="#section-13.2-3" class="pilc
 <a href="#section-13.3" class="section-number selfRef">13.3. </a><a href="#name-subject-and-approving-princ" class="section-name selfRef">Subject and approving-principal identifiers</a>
         </h3>
 <p id="section-13.3-1">The Mission record's <code>principals.subject</code> and
-<code>principals.approving_principal</code> are stable identifiers within
-the state authority's namespace. They appear in Mission Status
-responses to authorized callers and in derived credentials.<a href="#section-13.3-1" class="pilcrow">¶</a></p>
-<p id="section-13.3-2">Subject and approving-principal identifiers <span class="bcp14">SHOULD NOT</span> be email
-addresses or other widely-correlatable identifiers unless the
-deployment's privacy posture explicitly accommodates such
-identifiers. Deployments <span class="bcp14">SHOULD</span> prefer opaque or pseudonymous
-identifiers and <span class="bcp14">SHOULD</span> map them to PII through a separate,
+<code>principals.approving_principal</code> are Mission Principal objects
+(<a href="#mission-principal" class="auto internal xref">Section 8.1</a>) carrying <span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span> Subject Identifiers.
+They appear in Mission Status responses to authorized callers
+and in derived credentials.<a href="#section-13.3-1" class="pilcrow">¶</a></p>
+<p id="section-13.3-2">When the deployment's privacy posture permits opaque or
+pseudonymous identifiers, the <code>iss_sub</code> format with an opaque
+<code>sub</code> value is <span class="bcp14">RECOMMENDED</span>. The <code>email</code> and <code>phone_number</code>
+formats are widely-correlatable identifiers and <span class="bcp14">SHOULD NOT</span> be
+used for <code>principals.subject</code> or <code>principals.approving_principal</code>
+unless the deployment's privacy posture explicitly accommodates
+them. Deployments <span class="bcp14">SHOULD</span> map principal identifiers to PII
+through a separate,
 access-controlled directory service rather than embedding PII
 in the Mission record.<a href="#section-13.3-2" class="pilcrow">¶</a></p>
 </section>
@@ -5585,8 +5834,9 @@ itself to be garbage-collected.<a href="#section-13.5-2" class="pilcrow">¶</a><
 <p id="section-13.6-1">In regulatory regimes where data subjects have access rights to
 records concerning them (e.g., GDPR Article 15), the Mission
 record is in scope. Deployments <span class="bcp14">MUST</span> be able to enumerate and
-disclose Mission records for a given subject identifier on
-authorized request; the subject identifier is the join key.<a href="#section-13.6-1" class="pilcrow">¶</a></p>
+disclose Mission records for a given Mission Principal on
+authorized request; the principal's identity (the
+format-specific identifier per <span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span>) is the join key.<a href="#section-13.6-1" class="pilcrow">¶</a></p>
 <p id="section-13.6-2">Deployments <span class="bcp14">MUST</span> be able to delete or anonymize Mission records
 on lawful erasure request, subject to overriding retention
 obligations. The garbage-collection stub of <a href="#mission-record-garbage-collection-and-audit-chains" class="auto internal xref">Section 12.16</a>
@@ -5975,8 +6225,12 @@ this specification.<a href="#section-15-1" class="pilcrow">¶</a></p>
 <span class="refAuthor">Nottingham, M.</span>, <span class="refTitle">"Well-Known Uniform Resource Identifiers (URIs)"</span>, <span class="seriesInfo">RFC 8615</span>, <span class="seriesInfo">DOI 10.17487/RFC8615</span>, <time datetime="2019-05" class="refDate">May 2019</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8615">https://www.rfc-editor.org/rfc/rfc8615</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8785">[RFC8785]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">Rundgren, A.</span>, <span class="refAuthor">Jordan, B.</span>, and <span class="refAuthor">S. Erdtman</span>, <span class="refTitle">"JSON Canonicalization Scheme (JCS)"</span>, <span class="seriesInfo">RFC 8785</span>, <span class="seriesInfo">DOI 10.17487/RFC8785</span>, <time datetime="2020-06" class="refDate">June 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8785">https://www.rfc-editor.org/rfc/rfc8785</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9493">[RFC9493]</dt>
+      <dd>
+<span class="refAuthor">Backman, A., Ed.</span>, <span class="refAuthor">Scurtescu, M.</span>, and <span class="refAuthor">P. Jain</span>, <span class="refTitle">"Subject Identifiers for Security Event Tokens"</span>, <span class="seriesInfo">RFC 9493</span>, <span class="seriesInfo">DOI 10.17487/RFC9493</span>, <time datetime="2023-12" class="refDate">December 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9493">https://www.rfc-editor.org/rfc/rfc9493</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
@@ -5998,6 +6252,14 @@ this specification.<a href="#section-15-1" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-mission-runtime-profile">[I-D.draft-mcguinness-mission-runtime-profile]</dt>
         <dd>
 <span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-actor-profile">[I-D.draft-mcguinness-oauth-actor-profile]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth Actor Profile for Delegation"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-actor-profile-00</span>, <time datetime="2026-04-30" class="refDate">30 April 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-profile-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-profile-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-client-instance-assertion">[I-D.draft-mcguinness-oauth-client-instance-assertion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Instance Assertions using Actor Tokens"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-assertion-00</span>, <time datetime="2026-05-05" class="refDate">5 May 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-00</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="NIST-SP-800-63">[NIST-SP-800-63]</dt>
         <dd>
