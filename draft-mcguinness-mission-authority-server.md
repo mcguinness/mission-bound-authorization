@@ -1,0 +1,1618 @@
+---
+title: "Mission Authority Server"
+abbrev: "Mission Authority Server"
+category: std
+
+docname: draft-mcguinness-mission-authority-server-latest
+submissiontype: independent
+number:
+date:
+consensus: true
+v: 3
+keyword:
+ - mission
+ - authorization
+ - governance
+ - oauth
+ - aauth
+ - mas
+ - cross-substrate
+
+venue:
+  group: "Independent Submission"
+  type: "Independent"
+  github: "mcguinness/mission-bound-authorization"
+  latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html"
+
+author:
+ -
+    fullname: Karl McGuinness
+    organization: Independent
+    email: public@karlmcguinness.com
+
+normative:
+  RFC2119:
+  RFC8174:
+  RFC6234:
+  RFC8615:
+  RFC8785:
+  RFC7515:
+  RFC7517:
+  RFC7519:
+  RFC8705:
+  RFC9449:
+  I-D.draft-mcguinness-mission-framework:
+  I-D.draft-mcguinness-mission-oauth-profile:
+
+informative:
+  RFC6749:
+  RFC8414:
+  RFC9396:
+  RFC9126:
+  RFC9701:
+  RFC7591:
+  I-D.draft-hardt-oauth-aauth-protocol:
+  I-D.draft-ietf-secevent-subject-identifiers:
+  I-D.draft-ietf-oauth-identity-chaining:
+
+--- abstract
+
+A Mission Authority Server (MAS) holds the canonical Mission record so
+that multiple OAuth Authorization Servers, AAuth Person Servers, and
+future substrate state authorities can project credentials and
+governance state from one shared governance object. This document
+defines the MAS role and topology, the MAS metadata document, the
+Mission submission and lifecycle endpoints, the MAS-side Mission
+Status binding for the abstract interface defined in the Mission
+Framework, a substrate-neutral Authority Set serialization, an
+audience-pairwise Mission identifier protocol that supports both
+pairwise and canonical identifier modes per consumer, and the
+cross-substrate revocation propagation contract using OpenID Shared
+Signals events with a polling fallback. Cross-MAS federation and
+MAS-to-MAS Mission migration are out of scope for this revision.
+
+--- middle
+
+# Introduction
+
+The Mission Framework {{I-D.draft-mcguinness-mission-framework}}
+defines the Mission as a durable, integrity-anchored,
+lifecycle-governed governance object. The framework permits the
+Mission record to live at any of three classes of state authority: an
+OAuth Authorization Server (AS), an AAuth Person Server (PS), or a
+**Mission Authority Server** (MAS) dedicated to governance.
+
+A Mission Authority Server holds the canonical Mission record so that
+multiple OAuth Authorization Servers, AAuth Person Servers, and future
+substrate state authorities can project from one shared governance
+object. The MAS topology is the topology a deployment chooses when a
+single approved task must be projected onto more than one credential
+substrate, or when governance is operationally separated from any one
+credential issuer.
+
+This document defines:
+
+- The MAS role, the consumer roles (OAuth AS, AAuth PS, future
+  substrates), and the trust relationship between them.
+- The MAS metadata document extension of the Framework's
+  `/.well-known/mission-authority` discovery anchor.
+- The Mission submission endpoint, with a consumer-mediated default
+  flow and an optional direct-to-MAS flow.
+- The Mission lifecycle endpoint: revoke, suspend, resume, and
+  complete.
+- The MAS-side transport binding of the abstract Mission Status
+  interface, using JWS-signed responses.
+- A substrate-neutral Authority Set serialization with per-substrate
+  projection at consumer time.
+- An audience-pairwise Mission identifier protocol. A MAS MUST be
+  able to support pairwise and canonical identifier modes
+  simultaneously, declared per consumer.
+- Cross-substrate revocation propagation through OpenID Shared
+  Signals Framework (SSF) and Continuous Access Evaluation Profile
+  (CAEP) events, with a polling fallback for consumers that do not
+  receive event streams.
+- Consumer-binding sections specifying how an OAuth AS and an AAuth
+  Person Server consume MAS state.
+
+This document does NOT redefine the abstract Mission Status interface
+(which lives in the Framework), substrate-local Mission state (which
+lives in the OAuth Profile
+{{I-D.draft-mcguinness-mission-oauth-profile}} and the AAuth
+Profile), runtime per-action enforcement, or cross-MAS federation.
+
+## Scope statement (Resolved Decision 23)
+
+This revision assumes a committed MAS implementer. The MAS role
+contract is substrate-neutral; the OAuth and AAuth consumer bindings
+in this document depend on the OAuth Profile
+{{I-D.draft-mcguinness-mission-oauth-profile}} and the AAuth Profile
+respectively. The following are explicitly OUT of scope for this
+revision:
+
+- **Cross-MAS federation.** A MAS does not consume Mission state
+  from another MAS in this revision. Mission state is authoritative
+  at exactly one MAS.
+- **MAS-to-MAS Mission migration.** A Mission record cannot be
+  transferred from one MAS to another in this revision. A Mission's
+  state authority is fixed at the approval event.
+
+The following IS in scope:
+
+- A MAS supporting both pairwise and canonical Mission identifier
+  modes simultaneously, declared per consumer in MAS-side consumer
+  registration. Two consumers of the same MAS MAY operate in
+  different modes against the same Mission.
+
+# Conventions and Definitions
+
+{::boilerplate bcp14-tagged}
+
+Terms defined in the Mission Framework
+{{I-D.draft-mcguinness-mission-framework}} are inherited. The
+following additional terms apply.
+
+**Mission Authority Server (MAS)**:
+: A dedicated state authority server that holds the canonical Mission
+record and exposes Mission submission, lifecycle, and Mission Status
+operations to one or more consumers. A MAS is one realization of the
+Framework's abstract state authority role.
+
+**Consumer**:
+: A credential-issuing or governance-evaluating server that consumes
+Mission state from a MAS. The two consumer roles defined by this
+document are an OAuth Authorization Server consuming Mission state
+from a MAS, and an AAuth Person Server consuming Mission state from
+a MAS. Additional substrate consumer roles MAY be defined in future
+specifications.
+
+**Projection issuer**:
+: A consumer that derives substrate-specific credentials or
+assertions from MAS-held Mission state. An OAuth AS in this role
+issues access tokens carrying the `mission` claim; an AAuth PS in
+this role issues AAuth resource and auth tokens carrying the
+Mission reference appropriate to AAuth.
+
+**Consumer registration**:
+: A MAS-side record binding a registered consumer identity to its
+authentication keys, audience identifier, declared identifier mode
+(pairwise or canonical), and authorized operations. The MAS uses the
+consumer registration to authenticate consumer requests and to
+project Mission state appropriately.
+
+**Pairwise sector (MAS)**:
+: As defined by the Framework, a pairwise sector is the audience
+boundary across which Pairwise Mission References are stable. In a
+MAS deployment the sector is typically "consumer", that is, each
+registered consumer is its own sector. A MAS MAY advertise an
+alternative sector grouping consistent with the Framework.
+
+**Consumer-mediated submission (Flow A)**:
+: The default Mission submission flow. The client interacts with a
+consumer (typically an OAuth AS) using that consumer's substrate-
+native submission interface; the consumer forwards the Mission Intent
+to the MAS for atomic approval.
+
+**Direct-to-MAS submission (Flow B)**:
+: An optional submission flow in which a registered client interacts
+directly with the MAS Mission submission endpoint, bypassing any
+substrate-local consumer at submission time.
+
+# MAS Role and Topology
+
+## MAS as state authority
+
+A MAS is a state authority per the Mission Framework
+{{I-D.draft-mcguinness-mission-framework}}. As state authority the
+MAS:
+
+- Owns the canonical Mission record, its lifecycle state, integrity
+  anchors, and principal-model evidence.
+- Performs the approval event atomically, transitioning a Mission
+  Proposal to a Mission.
+- Owns the canonical `mission.id` and the canonical-to-pairwise
+  resolution map for any consumer operating in pairwise mode.
+- Publishes integrity-protected Mission Status responses.
+- Performs the lifecycle operations (revoke, suspend, resume,
+  complete) and propagates state changes to consumers.
+
+A MAS MUST NOT delegate any of these responsibilities to a consumer.
+A consumer in a MAS topology is a projection issuer, not a state
+authority for that Mission.
+
+## Consumer roles
+
+Two consumer roles are defined by this document:
+
+- **OAuth AS as MAS consumer**: an OAuth Authorization Server that
+  binds the `mission` claim on its issued credentials to a Mission
+  whose state authority is the MAS rather than the AS itself. The
+  AS does not hold the Mission record; it holds a substrate-local
+  projection of MAS state.
+- **AAuth PS as MAS consumer**: an AAuth Person Server that issues
+  AAuth resource tokens and auth tokens whose underlying Mission
+  record lives at a MAS. The PS does not hold the Mission record.
+
+Future substrate consumers (for example, a GNAP grant server, a
+WIMSE workload identity issuer, or other emerging credential
+substrates) MAY adopt the consumer contract defined in this document.
+
+A consumer MUST advertise that it is operating as a MAS consumer in
+its own substrate-local metadata (the AS metadata document for an
+OAuth AS; the PS metadata for an AAuth PS) by carrying the MAS
+issuer URL it is bound to. Consumers MUST NOT issue credentials
+referencing a MAS for which they have no current registration.
+
+## Trust establishment
+
+Trust between a MAS and a consumer is established out of band through
+**consumer registration** at the MAS. Consumer registration binds:
+
+- A stable consumer identifier (registered at the MAS).
+- The consumer's authentication keys (JWKS URL or static JWK Set).
+- The consumer's audience identifier (the value the MAS uses for the
+  `aud` claim on signed responses to that consumer).
+- The consumer's declared identifier mode (`pairwise` or `canonical`)
+  for Mission references emitted to that consumer.
+- The consumer's authorized operations (submission, status,
+  lifecycle, event subscription).
+- The consumer's substrate identifier (`oauth_as`, `aauth_ps`, or
+  another registered substrate name).
+
+Consumer registration is a deployment operation, not a wire protocol
+defined by this document. Dynamic consumer registration MAY be
+offered by the MAS using a registration protocol similar to RFC 7591
+{{RFC7591}}; deployment policy decides whether dynamic registration
+is permitted.
+
+The MAS MUST authenticate every consumer request and MUST refuse
+requests from consumers whose registrations do not authorize the
+requested operation or the requested Mission's tenant.
+
+## Trust establishment from the consumer side
+
+A consumer MUST validate signed MAS responses against the MAS's
+published keys at the MAS `jwks_uri`. The consumer MUST treat the
+MAS issuer URL as the authoritative `iss` value on signed responses
+and MUST refuse responses whose `iss` does not match a configured
+MAS registration.
+
+Consumers SHOULD pin the MAS's TLS certificate or use a deployment-
+local certificate validation policy as defense in depth against
+DNS or routing attacks against the discovery URL.
+
+## Topology constraints
+
+In a MAS topology:
+
+- Exactly one MAS is the state authority for a given Mission.
+- A Mission MAY be projected onto multiple substrates simultaneously
+  by multiple consumers.
+- A Mission's tenant identifier is owned by the MAS. Consumers
+  inherit the tenant; consumers MUST NOT redefine the tenant
+  identifier on projections.
+- The `mission.origin` carried on projections is the MAS issuer URL,
+  not the consumer's URL.
+
+# MAS Metadata and Discovery
+
+## Well-known URL
+
+The MAS metadata document is published at the well-known URL
+`/.well-known/mission-authority` per RFC 8615 {{RFC8615}}. This is
+the same well-known URL the Framework specifies for any state
+authority; the MAS does not introduce a new well-known URL. A
+deployment that operates a MAS at the issuer URL `https://mas.example.com`
+publishes its metadata document at
+`https://mas.example.com/.well-known/mission-authority`.
+
+The MAS metadata document is the Framework metadata document with
+MAS-specific extensions; it does not replace the Framework fields.
+
+## Required Framework metadata fields
+
+The MAS metadata document MUST carry all fields required by the
+Framework metadata document
+({{I-D.draft-mcguinness-mission-framework}} Section 7.3):
+
+- `issuer` (URL): the MAS issuer URL.
+- `jwks_uri` (URL): the MAS's public keys for response signing.
+- `mission_status_endpoint` (URL): MAS-side Mission Status operation.
+- `mission_lifecycle_endpoint` (URL): MAS Mission lifecycle
+  operations.
+- `mission_intent_schema_uri` (URL): JSON Schema for Mission Intent.
+- `authority_set_types_supported` (array): the Authority Set entry
+  types this MAS issues.
+- `mission_pairwise_supported` (boolean): MUST be `true` for a MAS
+  that supports any pairwise consumer; otherwise `false`.
+- `mission_pairwise_sector` (string, conditional): typically
+  `"consumer"`, indicating each registered consumer is its own
+  sector. Other registered sector values are permitted.
+- `mission_framework_versions_supported` (array).
+
+## MAS-specific metadata fields
+
+A MAS metadata document MUST additionally carry:
+
+- `mission_submission_endpoint` (URL, required): the MAS endpoint
+  accepting Mission submissions in Flow A and Flow B (Section 6).
+- `mission_supported_consumer_substrates` (array of strings,
+  required): registered substrate consumer names the MAS supports,
+  for example `["oauth_as", "aauth_ps"]`.
+- `mission_identifier_modes_supported` (array of strings, required):
+  the identifier modes the MAS can serve. A MAS implementing this
+  specification MUST advertise `["canonical", "pairwise"]`, in
+  conformance with Section 8.
+- `mission_event_delivery_modes_supported` (array of strings,
+  required): subset of `["ssf_push", "ssf_poll", "status_poll"]`
+  identifying the cross-substrate event delivery modes the MAS
+  supports per Section 9.
+- `mission_event_stream_endpoint` (URL, conditional): the MAS event
+  stream endpoint, required if any SSF mode is advertised.
+- `mission_status_polling_max_interval_seconds` (integer, required
+  when `status_poll` is advertised): the maximum interval in seconds
+  the MAS recommends consumers poll Mission Status to detect state
+  changes when no event stream is used.
+- `mission_submission_flow_b_supported` (boolean, required): whether
+  the MAS accepts direct-to-MAS submission (Flow B). Default
+  deployments MAY publish `false`.
+- `mission_retention_policy_uri` (URL, required): a URL identifying
+  the MAS's retention policy applied to Mission records and
+  Proposal records, per Framework Section 5.3 and Resolved Decision
+  20.
+- `mission_consumer_registration_endpoint` (URL, optional): a URL
+  the MAS publishes if it offers dynamic consumer registration.
+- `mission_response_media_type` (string, required): the MAS-side
+  signed Mission Status response media type registered by this
+  document, namely `application/mas-mission-status-response+jwt`.
+
+## JWKS publication
+
+The MAS MUST publish its public keys at `jwks_uri` per RFC 7517
+{{RFC7517}}. The MAS MUST sign every Mission Status response, every
+lifecycle response that carries state, and every SSF Security Event
+Token (SET) it emits with a key whose `kid` resolves in the
+currently published JWKS.
+
+Key rotation rules:
+
+- The MAS MAY publish multiple active signing keys at any time.
+- The MAS MUST retain a rotated-out public key in `jwks_uri` for at
+  least the maximum tolerated stale interval the MAS advertises for
+  consumers operating in `status_poll` mode, plus the largest
+  Mission Status response `expires_at` window the MAS issues.
+- The MAS MUST NOT reuse `kid` values.
+- Consumers MUST refresh the MAS `jwks_uri` periodically and on any
+  unrecognized `kid`.
+
+# Mission Submission Endpoint
+
+The MAS exposes a Mission submission endpoint at the URL advertised
+by `mission_submission_endpoint`. Two flows are defined: Flow A
+(consumer-mediated, default) and Flow B (direct-to-MAS, optional).
+
+A MAS MUST support Flow A. A MAS MAY support Flow B. A MAS that
+supports Flow B advertises `mission_submission_flow_b_supported: true`.
+
+## Flow A: Consumer-mediated submission (default)
+
+In Flow A the client submits Mission Intent to a consumer through
+that consumer's substrate-native interface (for example, OAuth PAR
+carrying `mission_intent`
+{{I-D.draft-mcguinness-mission-oauth-profile}}). The consumer
+forwards the submission to the MAS for the approval event. The
+consumer is the intermediary; the MAS performs the approval and
+commits the canonical record.
+
+### Step 1: client submits to consumer
+
+The client submits Mission Intent to a consumer using the consumer's
+substrate-native interface. The consumer is, in this document, the
+OAuth AS or AAuth PS that is registered at the MAS for the relevant
+tenant.
+
+### Step 2: consumer forwards to MAS
+
+The consumer authenticates to the MAS submission endpoint and
+forwards a Mission Intent forwarding request. The request is an
+HTTPS POST to `mission_submission_endpoint` with content type
+`application/json`.
+
+Required body fields:
+
+- `mission_intent` (object, required): the Submitted Mission Intent
+  the client provided, normalized per Framework
+  {{I-D.draft-mcguinness-mission-framework}} Section 6.1.
+- `tenant` (string, required): the tenant identifier under which
+  the Mission is being proposed. MUST match a tenant the consumer
+  is registered for at the MAS.
+- `requesting_client` (string, required): the substrate-local
+  client identifier (the OAuth `client_id` or AAuth agent
+  identifier) that submitted to the consumer.
+- `submitting_consumer` (string, required): the consumer identifier
+  as registered at the MAS.
+- `subject` (string, required): the principal on whose behalf the
+  task is approved, in a form the MAS can map to its tenant subject
+  namespace.
+- `approving_principal` (string, optional): if the approving
+  principal is known to the consumer at submission, the value is
+  forwarded; otherwise it is recorded by the MAS at the approval
+  event.
+- `proposal_correlation_id` (string, required): a consumer-generated
+  opaque value used to bind the consumer's local Proposal record to
+  the MAS Proposal record. Used for idempotency.
+
+Consumer authentication: the consumer MUST authenticate using one
+of:
+
+- mTLS {{RFC8705}} with a client certificate whose identity binds
+  to the consumer registration; or
+- a signed JWT bearer assertion whose signing key resolves in the
+  consumer's registered JWKS.
+
+The MAS MUST refuse forwarding requests that fail consumer
+authentication or that name a `submitting_consumer` not authorized
+for the named `tenant`.
+
+### Step 3: MAS validates and creates a Proposal
+
+The MAS validates the forwarded Mission Intent against the published
+`mission_intent_schema_uri` and against MAS-side deployment policy.
+On success the MAS creates a Mission Proposal record bound to:
+
+- The forwarded `mission_intent`.
+- The `tenant`, `requesting_client`, `subject`, and
+  `submitting_consumer`.
+- A MAS-minted `proposal_id`.
+- The consumer's `proposal_correlation_id` (recorded for idempotency
+  and for consumer-side correlation).
+
+The MAS returns the `proposal_id` to the consumer. The Proposal is
+in state `pending_approval`.
+
+Submission is idempotent on the pair
+`(submitting_consumer, proposal_correlation_id)`. A repeat submission
+with the same pair MUST return the original `proposal_id`.
+
+### Step 4: approval event
+
+The consumer drives the consent rendering and approval interaction
+appropriate to its substrate (the OAuth AS uses its authorization
+endpoint and consent UX; the AAuth PS uses its native approval
+interface). On receiving a binding consent signal the consumer
+POSTs an approval request to `mission_submission_endpoint` carrying
+`action=approve`, the `proposal_id`, and the consent disclosure
+object recorded at the consumer. The submission endpoint thus
+accepts two `action` values: `submit` (Step 2) and `approve`
+(Step 4). Withdrawals and rejections at the Proposal stage use
+`action=withdraw` or `action=reject` at the same endpoint. After
+approval the Mission is governed exclusively through the lifecycle
+endpoint (Section 7).
+
+The MAS performs the atomic approval event per Framework
+{{I-D.draft-mcguinness-mission-framework}} Section 5.2 and creates
+the Mission record. The MAS returns the Mission record reference to
+the consumer in the identifier mode declared in that consumer's
+registration (canonical `mission.id` or pairwise `mission.ref`).
+
+If the MAS refuses the Proposal at any step, declines the approval,
+or fails the atomic commit, the MAS returns a structured error
+(Section 6.3). The consumer MUST NOT issue any credential
+referencing a Mission whose MAS approval has not completed.
+
+### Step 5: consumer projection issuance
+
+The consumer issues substrate-specific credentials carrying the
+Mission reference returned by the MAS. The consumer-side projection
+binds the credential to the Mission per the consumer's substrate
+profile (OAuth `mission` claim per
+{{I-D.draft-mcguinness-mission-oauth-profile}}; AAuth-specific
+binding per the AAuth Profile).
+
+## Flow B: Direct-to-MAS submission (optional)
+
+A MAS MAY accept Mission submissions directly from a registered
+client, bypassing any substrate-local consumer at submission time.
+Flow B is appropriate where a client governs work across multiple
+substrates and prefers a single submission interaction with the
+governing MAS.
+
+A MAS that supports Flow B advertises
+`mission_submission_flow_b_supported: true` and accepts authenticated
+client requests at `mission_submission_endpoint`.
+
+### Client authentication for Flow B
+
+A client submitting through Flow B MUST authenticate. The MAS MUST
+support at least one of:
+
+- mTLS-authenticated request {{RFC8705}}.
+- DPoP-bound bearer token {{RFC9449}} issued by the MAS for
+  submission scope.
+- Signed JWT bearer assertion using a client-registered JWKS.
+
+The MAS MUST refuse anonymous or insufficiently authenticated
+submissions.
+
+### Direct submission request
+
+The request is an HTTPS POST to `mission_submission_endpoint` with
+content type `application/json`. Required fields:
+
+- `mission_intent` (object, required).
+- `tenant` (string, required).
+- `requesting_client` (string, required): the registered client
+  identifier at the MAS; MUST match the authenticated client.
+- `subject` (string, required).
+- `proposal_correlation_id` (string, required).
+- `approval_channel` (string, required): identifies how the consent
+  signal will be supplied. Defined values are `"mas_native"`
+  (the MAS renders consent itself, for example to a registered
+  approving principal at the MAS) and `"out_of_band"` (the consent
+  signal is supplied later through a separate authenticated request
+  channel that the MAS deployment defines).
+
+Direct submission produces a Mission Proposal at the MAS. The
+Proposal lifecycle is identical to Flow A; only the submission and
+consent channel differ.
+
+### Consent under Flow B
+
+Under `approval_channel: "mas_native"` the MAS renders the consent
+disclosure object to the approving principal directly. The MAS owns
+the consent UX and the AAL recording.
+
+Under `approval_channel: "out_of_band"` the deployment is
+responsible for ensuring the consent signal is bound to the
+Proposal and carries the AAL evidence required by deployment policy.
+A MAS MUST refuse out-of-band signals that do not carry recorded
+AAL evidence sufficient for the Mission class.
+
+### Direct projection issuance
+
+Once a Mission is created through Flow B, projection issuers
+(OAuth ASes and AAuth PSes registered as MAS consumers for the
+same tenant) may discover the Mission state and issue credentials
+referencing the Mission. The mechanism by which a projection
+issuer learns of a new Mission is either:
+
+- Subscription to the MAS event stream
+  (`mission.lifecycle-change` event with `state=active`); or
+- Polling Mission Status on demand when a client presents a
+  Mission reference for substrate-local credential issuance.
+
+## Submission errors
+
+The MAS uses the following structured error response form for both
+flows. The response body is JSON with content type
+`application/json`.
+
+~~~ json
+{
+  "error": "<symbol>",
+  "error_description": "<human readable>",
+  "proposal_id": "<if assigned>",
+  "tenant": "<if known>"
+}
+~~~
+
+Defined error symbols:
+
+- `invalid_request`: malformed body, missing required fields.
+- `invalid_mission_intent`: the Mission Intent failed schema or
+  policy validation.
+- `unauthorized_consumer`: the submitting consumer is not authorized
+  for the named tenant or operation.
+- `unauthorized_client`: the submitting client (Flow B) is not
+  authorized.
+- `tenant_not_found`: the named tenant is unknown.
+- `policy_refused`: deployment policy refuses the Proposal.
+- `conflict`: the `proposal_correlation_id` was reused with a
+  conflicting payload.
+- `unavailable`: the MAS temporarily cannot accept submissions.
+
+# Mission Lifecycle Endpoint
+
+The MAS publishes a Mission lifecycle endpoint at the URL advertised
+by `mission_lifecycle_endpoint`. The endpoint accepts authenticated
+POST requests for the four operations: revoke, suspend, resume, and
+complete.
+
+## Operations
+
+Each lifecycle request is an HTTPS POST with content type
+`application/json` carrying:
+
+- `action` (string, required): one of `revoke`, `suspend`,
+  `resume`, `complete`.
+- `mission` (string, required): the Mission reference. The form
+  (canonical or pairwise) follows the caller's registered mode at
+  the MAS.
+- `reason` (string, optional): a human-readable reason recorded in
+  audit.
+- `request_id` (string, required): a caller-generated unique
+  identifier used for idempotency.
+
+The MAS MUST authenticate the requester. Permitted authentication
+mechanisms are identical to those for Flow A consumer authentication
+(mTLS or signed JWT bearer assertion) or, for an end-user-driven
+revocation, an authenticated MAS administrative interface that maps
+to the same lifecycle operations internally.
+
+## State transitions
+
+The MAS performs the requested transition per the Framework
+Mission lifecycle ({{I-D.draft-mcguinness-mission-framework}}
+Section 5.1):
+
+- `revoke`: `active`, `suspended` -> `revoked`. Terminal.
+- `suspend`: `active` -> `suspended`. Reversible by `resume`.
+- `resume`: `suspended` -> `active`.
+- `complete`: `active`, `suspended` -> `completed`. Terminal.
+
+Transitions that are not permitted by the Mission's current state
+MUST be refused with `invalid_state`.
+
+## Lifecycle response
+
+On success the MAS returns a JWS-signed Mission Status response per
+Section 7 reflecting the new state. The signed response binds the
+caller, the requested Mission reference, and the requester-supplied
+`request_id`.
+
+## Audit recording
+
+The MAS MUST atomically record:
+
+- The transition (old state, new state).
+- The caller identity (authenticated consumer or administrator).
+- The wall-clock timestamp.
+- The reason (if provided).
+- The `request_id` (for idempotency).
+
+Concurrent lifecycle operations are serialized at the MAS with
+compare-and-set semantics. Repeat operations with the same
+`request_id` are idempotent and MUST return the original response.
+
+## Propagation obligation
+
+After committing a lifecycle transition the MAS MUST trigger
+cross-substrate revocation propagation per Section 9 to all
+registered consumers for the Mission's tenant.
+
+A consumer MUST treat MAS lifecycle propagation as authoritative.
+A consumer MUST NOT independently transition the underlying Mission
+state; consumers may revoke their own substrate-local projections
+in response to MAS state changes, but the MAS owns the Mission
+state machine.
+
+# MAS-Side Mission Status Binding
+
+This section defines the MAS-side transport binding for the abstract
+Mission Status interface defined by the Framework
+({{I-D.draft-mcguinness-mission-framework}} Section 8). The MAS
+binding uses JWS-signed responses per RFC 7515 {{RFC7515}}.
+
+The MAS Mission Status binding is the transport contract every MAS
+consumer (OAuth AS, AAuth PS, future substrates) uses to obtain
+authenticated Mission state. The dedicated OAuth Mission Status
+operation defined in
+{{I-D.draft-mcguinness-mission-oauth-profile}} is a parallel
+substrate-local operation at an OAuth AS; the MAS operation defined
+here is its cross-substrate counterpart at the MAS.
+
+## Request
+
+The request is an HTTPS POST to `mission_status_endpoint` with body
+content type `application/x-www-form-urlencoded`. Required parameters:
+
+- `mission` (string, required): the Mission reference, in the
+  identifier mode declared for the caller's consumer registration.
+- `audience` (string, required): the consumer's registered audience
+  identifier. MUST match the caller's registration.
+- `nonce` (string, required): a caller-generated unique nonce for
+  request-binding.
+
+The request MUST be authenticated using the consumer's registered
+authentication mechanism (mTLS or signed JWT bearer assertion).
+
+## Response media type
+
+The MAS Mission Status response uses the media type
+`application/mas-mission-status-response+jwt` registered by this
+document in {{iana}}. This media type is distinct from the OAuth
+Profile's `application/mission-status-response+jwt` because the MAS
+response payload carries the cross-substrate Authority Set projection
+shape defined in Section 8 of this document, whereas the OAuth
+profile response carries the OAuth-substrate projection.
+
+A consumer MUST NOT treat a MAS Mission Status response as
+interchangeable with an OAuth AS Mission Status response. The media
+type distinguishes them.
+
+## Response payload
+
+The response is a JWS Compact Serialization with `typ` value
+`application/mas-mission-status-response+jwt`. The JWS payload is a
+JSON object with the following claims:
+
+- `iss` (string, required): the MAS issuer URL.
+- `aud` (string, required): the caller's registered audience
+  identifier.
+- `sub` (string, required): the registered consumer identifier of
+  the caller.
+- `nonce` (string, required): the caller-provided nonce, echoed.
+- `iat` (number, required): issuance time, seconds since epoch.
+- `exp` (number, required): expiration time, seconds since epoch.
+- `mas_mission_status` (object, required): the structured Mission
+  Status body, defined below.
+
+The `mas_mission_status` body:
+
+~~~ json
+{
+  "state": "active",
+  "mission_id_or_ref": { "ref": "opq_mW8Jx_pairwise_value" },
+  "origin": "https://mas.example.com",
+  "tenant": "tenant_01J9...",
+  "proposal_hash":           "sha-256:...",
+  "authority_hash":          "sha-256:...",
+  "consent_disclosure_hash": "sha-256:...",
+  "policy_version":          "mas.example.com:standard@2026-06-01",
+  "version":                 1,
+  "authority_set_projection": {
+    "neutral": [ /* cross-substrate Authority Set per Section 8 */ ],
+    "substrate_view": {
+      "substrate":  "oauth_as",
+      "projection": [ /* OAuth-specific projection per Section 8.3 */ ]
+    }
+  },
+  "freshness_indicator": {
+    "as_of":          "2026-06-09T15:00:00Z",
+    "max_stale_secs": 60
+  }
+}
+~~~
+
+The `mission_id_or_ref` carries `id` when the caller is registered
+in canonical mode and `ref` when the caller is registered in
+pairwise mode. The MAS MUST NOT emit both `id` and `ref` in the same
+response.
+
+The `authority_set_projection.neutral` array contains the
+substrate-neutral Authority Set serialization defined in Section 8.
+The `authority_set_projection.substrate_view` object MAY be present
+when the calling consumer is bound to a single substrate and the
+MAS pre-computes the substrate projection.
+
+## Properties
+
+The MAS Mission Status response satisfies the Framework's required
+properties for Mission Status:
+
+- **Authentication**: the JWS signature is produced by a key
+  resolvable in the MAS `jwks_uri`.
+- **Freshness**: `iat`, `exp`, and `freshness_indicator.as_of` are
+  required.
+- **Audience**: `aud` binds the caller's registered audience.
+- **Integrity**: the three integrity anchors are carried and
+  signed.
+- **Anti-oracle**: unknown Mission references and known-but-
+  unauthorized references produce indistinguishable responses
+  (HTTP 404 `not_found`).
+- **Request-binding**: `iss`, `aud`, `sub`, `nonce`, and the
+  Mission reference are all in the signed payload.
+- **Caching**: `iat`, `exp`, and `freshness_indicator.max_stale_secs`
+  are required. Consumers MUST fail closed after `exp`.
+
+## Error model
+
+The MAS uses the Framework error model mapped to HTTP:
+
+| Symbol | HTTP | Description |
+|---|---|---|
+| `ok` | 200 | Mission found and visible. Signed body returned. |
+| `unauthorized` | 401 | Request not authenticated. |
+| `not_found` | 404 | Reference unknown OR not visible to caller. |
+| `terminated` | 410 | Mission in terminal state. Signed body returned. |
+| `suspended` | 423 | Mission suspended. Signed body returned. |
+| `rate_limited` | 429 | Caller rate limited. |
+| `unavailable` | 503 | MAS cannot serve status temporarily. |
+
+A `not_found` response MUST be indistinguishable between unknown
+references and authorized-only references.
+
+# Substrate-Neutral Authority Set Serialization
+
+The Authority Set on a MAS Mission is the canonical, substrate-
+neutral container per the Framework. The MAS serves the Authority
+Set in a substrate-neutral form on its Mission Status responses,
+plus an optional per-substrate projection shaped for the receiving
+consumer.
+
+## Neutral serialization
+
+The neutral Authority Set serialization is the JSON array of
+Authority Set entries as defined by the Framework
+({{I-D.draft-mcguinness-mission-framework}} Section 7). Each entry
+carries `type`, `specification_uri` or `schema_digest`,
+`schema_version`, `authority`, and `narrowing_profile`.
+
+The neutral serialization is the same shape covered by
+`authority_hash` and is the canonical form for content-addressable
+integrity verification.
+
+A MAS MUST produce JCS-canonical {{RFC8785}} output for the neutral
+Authority Set when computing `authority_hash` and SHOULD use the
+same canonical bytes when emitting the neutral serialization on
+status responses.
+
+The neutral serialization media type registered by this document is
+`application/mission-authority-set+json`.
+
+## Per-substrate projection at consumer time
+
+A consumer that holds an authoritative claim of substrate identity
+(`oauth_as`, `aauth_ps`, etc.) MAY request a substrate-specific
+projection by including the `substrate` form field in the Mission
+Status request:
+
+- `substrate` (string, optional): a registered substrate identifier
+  matching one of the values declared in
+  `mission_supported_consumer_substrates`.
+
+When `substrate` is supplied and matches the caller's registration,
+the MAS MAY include `authority_set_projection.substrate_view` in
+the signed response.
+
+Substrate projections defined by this document:
+
+- `oauth_as`: each `mission_resource_access` entry in the neutral
+  Authority Set is projected to an OAuth RAR
+  `authorization_details` object {{RFC9396}} suitable for the OAuth
+  AS to use as the seed for derivation. Other neutral entry types
+  not registered for OAuth projection MUST be either passed through
+  unchanged or dropped per consumer registration policy.
+- `aauth_ps`: each Authority Set entry is projected to the AAuth-
+  native authority representation per the AAuth Profile. Where the
+  AAuth Profile does not yet bind a type, the MAS MUST drop that
+  type from the AAuth projection and MUST flag the drop in the
+  response.
+
+## Projection integrity
+
+The substrate projection MUST be derivable from the neutral Authority
+Set under deterministic rules registered for the substrate. The MAS
+MUST NOT introduce authority on the substrate projection that does
+not appear in the neutral Authority Set.
+
+The `authority_hash` integrity anchor is computed over the neutral
+serialization only. Substrate projections are derived, not anchored;
+their fidelity to the neutral form is the registration's
+responsibility.
+
+## Unknown types
+
+If a consumer registration declares a substrate for which one or
+more neutral Authority Set entry types have no registered
+projection rule, the MAS MUST omit those types from the substrate
+projection AND MUST include a `dropped_types` array in the
+`substrate_view` listing the omitted type names. Consumers receiving
+`dropped_types` MUST refuse to derive credentials covering authority
+the consumer cannot project faithfully.
+
+# Audience-Pairwise Mission Identifier Protocol
+
+The Framework
+{{I-D.draft-mcguinness-mission-framework}} defines a canonical
+Mission identifier (`mission.id`) and an audience-pairwise Mission
+reference (`mission.ref`). A MAS conforming to this document MUST
+support both modes simultaneously, declared per consumer.
+
+## Per-consumer mode declaration
+
+Each consumer registration at the MAS declares one of:
+
+- `canonical`: the MAS emits canonical `mission.id` in all
+  responses to this consumer (signed Mission Status responses,
+  lifecycle responses, and event payloads). The consumer carries
+  the canonical ID on its substrate-local credentials.
+- `pairwise`: the MAS emits Pairwise Mission References
+  (`mission.ref`) in all responses to this consumer. The consumer
+  carries the pairwise reference on its substrate-local
+  credentials.
+
+The MAS MUST refuse to emit canonical identifiers to a consumer
+registered as `pairwise`, and vice versa.
+
+Two consumers operating under the same MAS for the same Mission
+MAY have different modes. A canonical-mode OAuth AS and a pairwise-
+mode AAuth PS, both registered at the same MAS for the same Mission,
+each receive Mission references in their declared mode.
+
+## Pairwise sector
+
+The MAS pairwise sector is typically `"consumer"`: each registered
+consumer is its own sector, so a pairwise reference is stable for
+that consumer alone and is not correlatable with the same Mission
+as projected to another consumer. The MAS advertises its sector
+choice in `mission_pairwise_sector`.
+
+A MAS MAY advertise an alternative sector (for example, `"tenant"`
+to make pairwise references stable across all consumers within a
+tenant). Implementations SHOULD prefer the `"consumer"` sector
+unless deployment policy requires a coarser sector.
+
+## Pairwise reference generation
+
+A MAS MUST generate Pairwise Mission References meeting the
+Framework's properties:
+
+- At least 128 bits of entropy.
+- URL-safe.
+- Containing no audience label, tenant name, canonical-ID
+  derivative, or other correlatable input.
+
+The MAS holds the canonical-to-pairwise map. No other party can
+derive a canonical ID from a pairwise reference or correlate
+pairwise references across sectors.
+
+## Resolution
+
+A pairwise reference is resolved only at the MAS, and only for the
+consumer for whose sector it was minted. A MAS MUST refuse a
+Mission Status request that carries a pairwise reference under a
+caller registration whose sector does not own that reference. The
+refusal MUST be `not_found` to preserve the anti-oracle property
+(an attacker presenting a pairwise reference belonging to another
+sector MUST NOT learn that the reference is valid in any sector).
+
+## Cross-consumer non-correlation
+
+Two pairwise references emitted to two different consumers for the
+same Mission MUST NOT be linkable by either consumer or by an
+intermediary network observer. Two consumers comparing pairwise
+references see no equality; only the MAS can join them.
+
+A consumer MUST NOT emit a pairwise reference outside its own
+substrate-local boundary in a form that could leak to another
+consumer (for example, in HTTP-visible URL paths shared by both
+consumers' Resource Servers). Sender constraint at the substrate
+profile mitigates exfiltration risk.
+
+## Rotation
+
+A MAS MAY rotate a pairwise reference for operational reasons
+(suspected exposure, key migration). On rotation:
+
+- The new pairwise reference is minted for the same Mission and the
+  same sector.
+- The MAS MUST advertise an alias period sufficient for outstanding
+  credentials to drain, during which both the old and new
+  references resolve.
+- After the alias period the old reference MUST cease to resolve.
+- Retired references MUST NOT be reassigned.
+- The MAS MUST emit a `mission.reference-rotated` SSF event
+  (Section 9) to the affected consumer.
+
+## Identifier mode changes
+
+A consumer's mode (`pairwise` or `canonical`) is part of consumer
+registration. Changing a consumer's mode mid-relationship is a
+re-registration operation. The new mode applies only to Missions
+created after the registration change. The MAS MUST NOT
+retroactively change the identifier mode for credentials already
+issued by the consumer.
+
+# Cross-Substrate Revocation Propagation
+
+The MAS is the source of truth for Mission lifecycle. Consumers
+project Mission state and issue substrate-local credentials whose
+continued validity depends on the underlying Mission remaining in
+`active` state. Mission state changes MUST be propagated to all
+registered consumers for the affected tenant.
+
+## Event delivery modes
+
+A MAS MUST advertise the event delivery modes it supports in
+`mission_event_delivery_modes_supported`. Defined values:
+
+- `ssf_push`: the MAS pushes Security Event Tokens (SETs) to a
+  consumer's registered SSF receiver endpoint, per the OpenID
+  Shared Signals Framework.
+- `ssf_poll`: the MAS makes SETs available for the consumer to poll
+  per SSF.
+- `status_poll`: the consumer polls the MAS Mission Status endpoint
+  for state, at no greater than
+  `mission_status_polling_max_interval_seconds` intervals.
+
+A MAS MUST advertise at least one of these modes. A MAS that
+advertises `status_poll` only is a valid implementation but trades
+propagation latency for operational simplicity.
+
+A consumer registration declares which mode the consumer uses. The
+MAS MUST respect the consumer's declared mode and MUST NOT silently
+fall back to a less-timely mode.
+
+## Lifecycle events
+
+The MAS emits the following CAEP-aligned event types within SSF SETs.
+Event type URIs registered by this document:
+
+- `https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change`
+- `https://schemas.karlmcguinness.com/secevent/mission/reference-rotated`
+
+### `mission.lifecycle-change` event
+
+Emitted when the MAS commits any Mission lifecycle transition or
+the approval event. Required event claims:
+
+- `mission`: the Mission reference, in the recipient consumer's
+  declared identifier mode.
+- `mission_origin`: the MAS issuer URL.
+- `tenant`: the Mission's tenant.
+- `prior_state`: the state immediately before the transition;
+  absent on the approval-event emission.
+- `state`: the new state, one of `active`, `suspended`, `revoked`,
+  `completed`, `expired`.
+- `version`: the new Mission record version.
+- `committed_at`: RFC 3339 timestamp of the commit.
+- `reason`: optional human-readable reason.
+
+### `mission.reference-rotated` event
+
+Emitted when the MAS rotates a Pairwise Mission Reference for a
+consumer (Section 8.6). Required event claims:
+
+- `mission_old_ref`: the prior pairwise reference.
+- `mission_new_ref`: the new pairwise reference.
+- `mission_origin`: the MAS issuer URL.
+- `tenant`.
+- `rotation_alias_expires_at`: RFC 3339 timestamp at which the old
+  reference ceases to resolve.
+
+This event is emitted only to consumers operating in `pairwise`
+mode.
+
+## SET protection
+
+Each SET is a JWS Compact Serialization signed with a MAS key
+resolvable in `jwks_uri`. Consumers MUST verify the signature
+against the MAS issuer and MUST refuse SETs whose `iss` does not
+match the registered MAS.
+
+The SET `aud` MUST be the receiving consumer's registered audience
+identifier.
+
+## Polling fallback
+
+Consumers in `status_poll` mode (and consumers in any mode using
+polling as defense in depth) MUST poll the MAS Mission Status
+endpoint at intervals no greater than
+`mission_status_polling_max_interval_seconds`.
+
+A consumer that fails to receive an expected event within the
+advertised polling interval MUST issue a fresh Mission Status
+request; consumers MUST NOT continue issuing credentials based on
+stale state past the advertised maximum stale interval.
+
+## Consumer-side responsibilities on receipt
+
+On receiving a `mission.lifecycle-change` event, a consumer MUST:
+
+- Refuse new credential issuance under the affected Mission if the
+  new state is anything other than `active`.
+- Where the consumer advertises substrate-local enforcement classes
+  beyond `issuance` (introspection invalidation, event-driven push
+  to its own Resource Servers, per-request status checks), apply
+  them per the consumer's substrate profile.
+- Acknowledge the event per the SSF delivery mode in use.
+
+A consumer MUST NOT independently change the MAS-held Mission state
+in response to a propagation event. If a consumer believes the MAS
+state is wrong, the consumer escalates through the MAS lifecycle
+endpoint or out-of-band operational channels; it does not invent a
+new state.
+
+# OAuth AS as a MAS Consumer
+
+This section binds the consumer contract to an OAuth Authorization
+Server. The OAuth AS implements
+{{I-D.draft-mcguinness-mission-oauth-profile}} as its substrate
+profile and additionally implements the MAS-consumer behavior in
+this section.
+
+## AS registration at the MAS
+
+The OAuth AS is registered at the MAS as a consumer with
+`substrate=oauth_as`. The registration declares the AS's audience
+identifier, the AS's JWKS URL (for AS-to-MAS request authentication
+and SET verification keys), the tenant or tenants the AS may
+operate on, and the identifier mode (`canonical` or `pairwise`).
+
+## AS metadata extensions
+
+An OAuth AS operating as a MAS consumer MUST carry the following
+additional members in its AS metadata document {{RFC8414}}:
+
+- `mission_state_authority` (URL): the MAS issuer URL.
+- `mission_state_authority_mode` (string): `mas_consumer`,
+  identifying that the AS holds Mission state through a MAS rather
+  than locally.
+- `mission_state_authority_identifier_mode` (string): `canonical`
+  or `pairwise`, matching the AS's registration at the MAS.
+
+An OAuth AS MUST NOT carry both
+`mission_state_authority_mode: mas_consumer` and a self-hosted
+`mission_lifecycle_endpoint` for the same Mission class; lifecycle
+operations on MAS-held Missions MUST be routed through the MAS.
+
+## Mission Intent forwarding (Flow A)
+
+When a client submits `mission_intent` to the AS through PAR
+{{RFC9126}} per
+{{I-D.draft-mcguinness-mission-oauth-profile}}, the AS:
+
+1. Validates the Mission Intent at the OAuth layer.
+2. Generates a `proposal_correlation_id`.
+3. Forwards the Mission Intent to the MAS Mission submission
+   endpoint per Section 6.1.
+4. Records the MAS-minted `proposal_id` against the OAuth
+   authorization request.
+5. Drives the OAuth consent UX at the authorization endpoint as
+   normal.
+6. On consent signal, sends the approval request to the MAS, then
+   creates the Mission Proposal's promotion as recorded by the MAS.
+7. Receives the MAS-minted Mission reference (canonical or pairwise
+   per AS registration) and uses that reference on subsequent
+   credential issuance.
+
+The AS MUST NOT mint a Mission identifier locally. The AS uses the
+MAS-minted identifier on the `mission.id` or `mission.ref` of the
+`mission` claim per
+{{I-D.draft-mcguinness-mission-oauth-profile}} Section 9, with
+`mission.origin` set to the MAS issuer URL.
+
+## Issuance gating
+
+The AS gates token issuance, refresh, and Token Exchange on Mission
+state per
+{{I-D.draft-mcguinness-mission-oauth-profile}}. In a MAS-consumer
+topology the Mission state is obtained from the MAS, either:
+
+- Lazily, by querying the MAS Mission Status endpoint at each
+  derivation event (the simplest implementation, but adds latency
+  per request); or
+- From a locally cached projection refreshed by SSF events and by
+  background polling within
+  `mission_status_polling_max_interval_seconds`.
+
+When the MAS reports any non-`active` Mission state at a derivation
+event the AS MUST refuse derivation per the OAuth Profile error
+model (`invalid_grant` with `mission_state`).
+
+## Mission Status responses for AS consumers
+
+A Resource Server that queries the AS's Mission Status endpoint
+receives an OAuth-substrate Mission Status response per
+{{I-D.draft-mcguinness-mission-oauth-profile}}. The AS MAY proxy
+the underlying MAS state; the AS MUST NOT claim that the AS itself
+is the state authority. The OAuth Profile response carries the
+MAS issuer URL as `origin` and the AS's audience as `aud`.
+
+An AS that proxies MAS state to a Resource Server MUST refresh the
+MAS state freshly when the request requires per-request enforcement.
+
+## Lifecycle operations on MAS-held Missions
+
+A revocation, suspension, resumption, or completion request received
+at the AS for a MAS-held Mission MUST be forwarded to the MAS
+Mission lifecycle endpoint (Section 7). The AS MUST NOT mark the
+Mission terminal in its substrate-local projection ahead of MAS
+confirmation; the AS marks its local projection terminal only on
+MAS confirmation or on receipt of an authenticated
+`mission.lifecycle-change` event.
+
+## Cascaded credential revocation
+
+On receipt of an authenticated `mission.lifecycle-change` event
+with `state` other than `active`, the AS MUST:
+
+- Refuse new derivations under the affected Mission.
+- Apply the AS-advertised enforcement classes (issuance,
+  introspection, event-driven push to RSes, per-request status) per
+  {{I-D.draft-mcguinness-mission-oauth-profile}} Section 11.
+
+# AAuth Person Server as a MAS Consumer
+
+This section binds the consumer contract to an AAuth Person Server.
+The AAuth PS implements the Mission-Bound AAuth Composition Profile
+(`draft-mcguinness-mission-aauth-profile`, in development) as its
+substrate profile and additionally implements the MAS-consumer
+behavior in this section.
+
+## PS registration at the MAS
+
+The AAuth PS is registered at the MAS as a consumer with
+`substrate=aauth_ps`. The registration declares the PS's audience
+identifier, the PS's authentication keys, the tenant or tenants
+the PS may operate on, and the identifier mode.
+
+A MAS deployment serving AAuth consumers MAY observe that the AAuth
+substrate profile, per Resolved Decision 17 of the spec breakdown,
+ships canonical-only identifiers initially. AAuth consumers
+operating in pairwise mode are nevertheless valid at the MAS
+boundary; the consumer's substrate profile is responsible for
+preserving the pairwise property end to end. A MAS deployment SHOULD
+default AAuth consumers to `canonical` unless the AAuth Profile
+revision the consumer implements supports pairwise references
+end-to-end.
+
+## PS metadata extensions
+
+An AAuth PS operating as a MAS consumer carries the following
+identifiers in its AAuth metadata:
+
+- `mission_state_authority` (URL): the MAS issuer URL.
+- `mission_state_authority_mode` (string): `mas_consumer`.
+- `mission_state_authority_identifier_mode` (string).
+
+## AAuth lifecycle mapping
+
+The AAuth substrate exposes two native states (`active` and
+`terminated`) per the AAuth Profile. When a MAS-held Mission
+transitions to `suspended`, the PS projects the suspension as
+AAuth `terminated` for the suspension duration. On resumption the
+MAS issues a `mission.lifecycle-change` event with `state=active`;
+the PS triggers a new AAuth approval flow as required by the AAuth
+Profile to issue new credentials.
+
+The Mission's `revoked`, `completed`, and `expired` states all
+project to AAuth `terminated` at the PS, with the MAS-held
+fine-grained state observable through Mission Status responses
+that the PS forwards upstream when consumers (auditors,
+governance processes) request it.
+
+## Approval forwarding (Flow A) at the PS
+
+When an AAuth agent submits a task through the PS's native
+submission interface, the PS:
+
+1. Validates the submission at the AAuth layer.
+2. Forwards the Mission Intent to the MAS per Section 6.1, using
+   the AAuth agent identifier as `requesting_client` and the AAuth
+   approver as `approving_principal`.
+3. Receives the MAS Proposal ID and binds it to the PS-side AAuth
+   submission record.
+4. Drives the AAuth-native consent and approval flow.
+5. On consent, sends the approval request to the MAS; receives the
+   Mission reference.
+6. Issues AAuth resource or auth tokens carrying the Mission
+   reference as the AAuth Profile binds it.
+
+## Mission Status responses for PS consumers
+
+Resource consumers querying the PS receive AAuth-substrate Mission
+state per the AAuth Profile. The PS forwards or proxies MAS-held
+state for consumers needing the substrate-neutral form, with
+`origin` set to the MAS issuer URL.
+
+## Cascaded credential revocation
+
+On receipt of an authenticated `mission.lifecycle-change` event,
+the PS MUST refuse new AAuth derivations under the affected
+Mission and apply the AAuth Profile's defined substrate-local
+revocation behavior (typically by transitioning AAuth records to
+`terminated`).
+
+# Out of Scope
+
+The following are explicitly out of scope for this revision (per
+Resolved Decision 23):
+
+- **Cross-MAS federation.** A consumer in this revision is bound to
+  exactly one MAS. Two MASes do not exchange Mission state. Any
+  future cross-MAS federation requires a separate specification
+  defining the trust model, mapping rules, and conflict resolution
+  between authoritative MAS records.
+- **MAS-to-MAS Mission migration.** A Mission's state authority is
+  fixed at the approval event. Migration of a Mission from one MAS
+  to another is not defined in this revision and is not permitted
+  under conformance to this document.
+
+A future revision MAY define federation or migration if deployment
+demand justifies the design work.
+
+# Security Considerations
+
+## MAS compromise blast radius
+
+The MAS is a concentrated state authority. A compromised MAS can:
+
+- Fabricate Mission records and integrity anchors.
+- Project arbitrary Authority Sets to multiple substrate consumers
+  simultaneously, multiplying the substrate-local credential damage.
+- Emit fraudulent `mission.lifecycle-change` events to cause
+  consumers to refuse legitimate credential derivations
+  (denial of service) or to omit revocations.
+- Reveal pairwise-to-canonical mappings to colluding consumers,
+  collapsing the privacy property.
+
+Because a MAS aggregates governance across substrates, the blast
+radius of a MAS compromise is larger than that of a substrate-local
+state authority. Deployments mitigate MAS compromise by:
+
+- Hardware-protected signing keys for the MAS JWKS.
+- Independent audit logging with cross-organization anchoring of
+  integrity hashes.
+- Operational separation of MAS administrative interfaces from
+  substrate consumer interfaces.
+- Periodic comparison of MAS-emitted state against substrate-local
+  evidence (the Resource Server's recorded transactions, the
+  consumer's recorded derivations) for after-the-fact detection of
+  fabricated state.
+
+Independent attestation, optional and recommended for MAS
+deployments handling regulated or high-stakes Missions, is a
+deployment concern and is not specified here.
+
+## Trust establishment between MAS and consumers
+
+Consumer registration is the trust root for every operational
+interaction. A weak consumer registration (poorly authenticated
+keys, lax tenant authorization) collapses the security of the
+overall topology.
+
+Deployments MUST:
+
+- Authenticate consumer registration through an authoritative out-
+  of-band channel.
+- Restrict each consumer registration to the smallest set of
+  tenants and operations the consumer needs.
+- Rotate consumer authentication keys on a defined schedule and
+  invalidate compromised keys immediately.
+
+Dynamic consumer registration {{RFC7591}}, where offered, MUST be
+gated by deployment policy.
+
+## Pairwise identifier exposure across consumers
+
+The pairwise identifier property is defeated if the MAS or any
+consumer leaks the canonical-to-pairwise map. Specifically:
+
+- The MAS MUST NOT emit canonical Mission identifiers to a
+  pairwise-mode consumer.
+- A consumer in pairwise mode MUST NOT expose pairwise references
+  in URL paths, logs, or analytics shared with other consumers.
+- A consumer's Resource Servers MUST treat pairwise references as
+  confidential to the consumer's substrate-local boundary.
+
+A subtler attack: an attacker who controls two consumers operating
+on the same MAS-held Mission may compare the pairwise references
+the MAS emits to each. Under the recommended `"consumer"` pairwise
+sector, the two references differ and are not correlatable. Under a
+coarser sector (for example, `"tenant"`), references emitted to
+different consumers within the same tenant ARE correlatable; this
+is the deliberate trade-off of the coarser sector. Deployments
+selecting a coarser sector MUST document the correlation surface.
+
+## Cross-substrate token-leak surface
+
+A Mission projected onto two substrates is exposed to the union of
+both substrates' credential leak surfaces. A token leaked at the
+OAuth substrate does not compromise the AAuth substrate's
+credentials directly (each substrate sender-constrains its
+credentials independently), but a leaked token may be replayable
+against the OAuth substrate's Resource Servers until the Mission is
+revoked or the token expires.
+
+Cross-substrate revocation propagation per Section 9 is the primary
+mitigation. Deployments that require tight propagation MUST advertise
+and use `ssf_push` mode and SHOULD complement it with
+`per_request` enforcement at high-assurance Resource Servers.
+
+## Submission idempotency abuse
+
+Both Flow A and Flow B rely on `proposal_correlation_id` for
+idempotent submission. A consumer that reuses `proposal_correlation_id`
+with conflicting payloads MUST be refused with `conflict` and MUST
+NOT cause the MAS to create a second Proposal under the same
+correlation key.
+
+A consumer MUST treat `proposal_correlation_id` as deployment-secret
+within its tenant boundary; predictable values invite collisions
+under adversarial conditions.
+
+## Event propagation timing
+
+A consumer in `status_poll`-only mode learns of Mission lifecycle
+changes only as fast as it polls. Deployments where prompt
+revocation matters MUST NOT advertise `status_poll`-only for those
+Missions; they MUST require `ssf_push` or `ssf_poll` and SHOULD
+set substrate-local enforcement classes to include event-driven or
+per-request modes per
+{{I-D.draft-mcguinness-mission-oauth-profile}} Section 11.
+
+## Direct-to-MAS submission (Flow B) risk
+
+Flow B permits a client to submit Mission Intent directly to the
+MAS, bypassing any substrate-local consumer at submission time.
+This relaxes the substrate-local validation surface; the MAS becomes
+solely responsible for input validation and policy enforcement on
+the submitted Mission Intent.
+
+Deployments enabling Flow B MUST:
+
+- Authenticate the submitting client to MAS-grade standards (mTLS,
+  signed assertion, or DPoP-bound bearer).
+- Apply MAS-side validation at least as strict as the
+  substrate-local validation a consumer would have performed.
+- Record the `requesting_client` identity prominently in audit and
+  in the Mission record.
+
+A MAS that does not support Flow B advertises
+`mission_submission_flow_b_supported: false` and MUST refuse direct
+submissions.
+
+## Anti-oracle preservation
+
+Pairwise references presented to the wrong-sector caller MUST
+produce `not_found`, indistinguishable from genuinely unknown
+references. Implementations that return distinct error codes or
+distinct response timing for wrong-sector references defeat the
+anti-oracle property and expose the Mission space to enumeration.
+
+## Replay across consumers
+
+The MAS Mission Status response binds the recipient consumer's
+audience and registered identifier. A signed response addressed to
+consumer A MUST NOT be accepted by consumer B; consumer B's audience
+identifier does not match. Consumers MUST validate `aud` before
+trusting the body.
+
+## Key rotation continuity
+
+A consumer that depends on cached MAS-signed evidence (proxying
+Mission Status responses to its own Resource Servers, for example)
+MUST honor MAS key rotation. The MAS retains rotated keys per
+Section 5.3; consumers MUST refresh the MAS JWKS on cache miss and
+MUST NOT pin a single MAS key for the lifetime of a Mission.
+
+# IANA Considerations {#iana}
+
+This document creates registrations across several existing
+registries and one new registry. Where the registration depends on
+the Framework's registries, this document adds entries; the
+registries themselves are created by the Framework.
+
+## MAS Metadata Document and Well-Known URL
+
+This document defines the MAS metadata document as an extension of
+the Framework metadata document at the well-known URI
+`/.well-known/mission-authority`, registered by the Framework. This
+document does not register a new well-known URI; it adds members to
+the metadata document.
+
+The following member names are added to the Mission Capability-
+Advertisement Metadata registry created by the Framework:
+
+- `mission_submission_endpoint`
+- `mission_supported_consumer_substrates`
+- `mission_identifier_modes_supported`
+- `mission_event_delivery_modes_supported`
+- `mission_event_stream_endpoint`
+- `mission_status_polling_max_interval_seconds`
+- `mission_submission_flow_b_supported`
+- `mission_retention_policy_uri`
+- `mission_consumer_registration_endpoint`
+- `mission_response_media_type`
+- `mission_state_authority`
+- `mission_state_authority_mode`
+- `mission_state_authority_identifier_mode`
+
+Each entry's change controller is IETF; the reference is this
+document; value semantics are as defined in Sections 5 and 11.
+
+## Mission Status MAS Binding Media Type
+
+This document registers the media type
+`application/mas-mission-status-response+jwt` per RFC 6838.
+
+- Type: `application`
+- Subtype: `mas-mission-status-response+jwt`
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: identical to those of `application/jwt`.
+- Security considerations: see Section 12 of this document; in
+  particular the response is JWS-signed and the signature is
+  required for the consumer to trust the body.
+- Interoperability considerations: distinct from the OAuth Profile's
+  `application/mission-status-response+jwt` because the MAS payload
+  carries the cross-substrate Authority Set serialization shape;
+  the two media types are not interchangeable.
+- Published specification: this document.
+- Applications that use this media type: Mission Authority Servers
+  and consumers per this specification.
+- Change controller: IETF.
+
+## Cross-Substrate Authority Set Serialization Media Type
+
+This document registers the media type
+`application/mission-authority-set+json` per RFC 6838 for the
+substrate-neutral Authority Set serialization (Section 8.1).
+
+- Type: `application`
+- Subtype: `mission-authority-set+json`
+- Required parameters: none
+- Optional parameters: `schema_version`
+- Encoding considerations: UTF-8 JSON, JCS-canonical when used for
+  integrity-anchor computation.
+- Security considerations: see Section 12; integrity is provided
+  via `authority_hash`, not by the media type itself.
+- Published specification: this document.
+- Applications that use this media type: Mission Authority Servers
+  and consumers per this specification, and any other Mission-Bound
+  Authorization component exchanging a substrate-neutral Authority
+  Set.
+- Change controller: IETF.
+
+## Mission Pairwise Identifier Protocols Registry
+
+This document creates a new IANA registry, **Mission Pairwise
+Identifier Protocols**, that names concrete protocols realizing the
+Framework's abstract pairwise reference framework
+({{I-D.draft-mcguinness-mission-framework}} Section 7.2). The
+Framework defines the abstract properties; this registry names the
+concrete protocols that implement them.
+
+- **Registration Policy**: Specification Required.
+- **Required fields per entry**: protocol name, specification
+  reference, sector vocabulary (the sector type values the protocol
+  supports), reference entropy floor (in bits), reference rotation
+  semantics, resolution authority statement, change controller.
+
+Initial entry registered by this document:
+
+- Protocol name: `mas_audience_pairwise_v1`.
+- Specification reference: this document, Section 8.
+- Sector vocabulary: `consumer` (recommended default), `tenant`.
+- Reference entropy floor: 128 bits.
+- Reference rotation: as defined in Section 8.6 of this document.
+- Resolution authority: the MAS, exclusively.
+- Change controller: IETF.
+
+## MAS Lifecycle Event Shapes for SSF/CAEP Propagation
+
+This document registers the following Security Event Token (SET)
+event type URIs:
+
+- `https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change`:
+  event type for any Mission lifecycle transition or approval-event
+  emission from a MAS. Required claims: `mission`, `mission_origin`,
+  `tenant`, `prior_state`, `state`, `version`, `committed_at`.
+  Optional claim: `reason`.
+- `https://schemas.karlmcguinness.com/secevent/mission/reference-rotated`:
+  event type for Pairwise Mission Reference rotation. Required
+  claims: `mission_old_ref`, `mission_new_ref`, `mission_origin`,
+  `tenant`, `rotation_alias_expires_at`.
+
+Both event types follow the OpenID Shared Signals Framework SET
+shape and the Continuous Access Evaluation Profile subject and event
+conventions. The event-type URIs are stable identifiers under the
+`schemas.karlmcguinness.com/secevent` namespace, recorded in the IANA Mission
+Capability-Advertisement Metadata registry as event-type members.
+Coordination with the OpenID Foundation Shared Signals and CAEP
+working groups is anticipated for these event-type registrations
+when this document is submitted; until then, the URIs are owned by
+the author and may be aliased to OpenID-registered URIs by a
+subsequent revision of this document.
+
+# Acknowledgments
+{:numbered="false"}
+
+The author thanks the implementers and reviewers of the
+Mission-Bound Authorization architecture for feedback that shaped
+this specification. The MAS topology surfaced through the
+Mission-Bound Authorization blog series and the spec breakdown's
+Phase 3 substrate-breadth resolution.
+
+--- back
