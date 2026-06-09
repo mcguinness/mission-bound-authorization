@@ -151,7 +151,7 @@ The Mission-Bound work composes with the following published RFCs, adopted IETF/
 | RFC | Title | Used by |
 | --- | --- | --- |
 | RFC 6234 | US Secure Hash Algorithms (SHA-256) | Draft 1 (integrity anchor algorithm) |
-| RFC 7515 | JSON Web Signature (JWS) | Drafts 2, 7 (profile-level signed responses; OAuth Profile uses RFC 9701; MAS uses JWS-signed Mission Status). Framework defines abstract signing requirements only. |
+| RFC 7515 | JSON Web Signature (JWS) | Drafts 2, 7 (profile-level signed responses). OAuth Profile uses RFC 9701 only for the optional token-introspection projection; the dedicated Mission Status operation defines its own response media type and protection profile. MAS uses JWS-signed Mission Status. Framework defines abstract signing requirements only. |
 | RFC 7517 | JSON Web Key (JWK) | Drafts 2, 7 (profile-level key publication) |
 | RFC 8174 | Ambiguity of Uppercase vs Lowercase in BCP 14 | All Standards Track drafts |
 | RFC 8785 | JSON Canonicalization Scheme (JCS) | Draft 1 (canonicalization for integrity anchors) |
@@ -271,6 +271,8 @@ This document defines the Mission as a durable, integrity-anchored, lifecycle-go
   ```
   The Framework defines a type registry. Each registered type provides an immutable specification reference or schema digest plus deterministic normalization, equality, subset, intersection, and unknown-field rules. Loose `resource/actions/constraints` is the payload shape of one type (`mission_resource_access`), not the universal shape.
 
+  **`schema_digest` format.** The value is `"sha-256:" || base64url(SHA-256(canonical schema bytes))`, parallel to the integrity-anchor hash format. The "canonical schema bytes" are the JCS-canonicalized representation of the JSON Schema document. Future digest algorithms register with prefixes like `sha-384:`; consumers MUST reject digests using unregistered prefixes.
+
 - **Lifecycle state machines** (two, not one):
   - **Mission Proposal lifecycle**: `pending_approval` → (`approved` → transitions to Mission) | `rejected` | `withdrawn` | `expired_as_pending`.
   - **Mission lifecycle**: `active` → (`suspended` ⇄ `active`) | `revoked` | `completed` | `expired`. Mission begins at `active` on activation; there is no Mission record in any earlier state.
@@ -355,6 +357,8 @@ Resolution: a consumer presents a pairwise reference to `mission.origin` over an
 - MAS: MAS-mediated consent rendering.
 
 At the approval event the state authority records the principal-model evidence (approving principal identity, AAL, timestamp, consent disclosure object) atomically with Mission record creation. The operation is idempotent on `proposal_id` and approval-event identifier. Exactly one Mission may be created from a Proposal. Concurrent approve, reject, withdraw, and expiry operations are serialized with compare-and-set semantics. If the state authority cannot complete the atomic commit, the Proposal remains `pending_approval`; no partial Mission record exists. The resulting Mission permanently records its source `proposal_id`.
+
+The Proposal record is retained alongside its resulting Mission for the same audit retention window as the Mission (per the retention rule in Resolved Decisions). After retention, the Proposal record MAY be garbage-collected with the Mission record. `proposal_id` MUST NOT be reused after garbage collection. Terminal-state Proposals (rejected, withdrawn, expired_as_pending) follow a deployment-defined Proposal-only retention policy that is independent of Mission retention.
 
 **`policy_version`**: a string in the Mission record indicating the version of the state authority's derivation policy that was applied at approval. Format: `{policy_namespace}:{policy_id}@{version}` (e.g., `as.example.com:standard@2026-06-01`). Distinct from Resource policy version (which lives at the Resource AS) and PDP policy materialization version (which lives at the PDP). The Mission record's `policy_version` is the derivation policy that produced the Authority Set.
 
@@ -528,7 +532,7 @@ What this spec does NOT register here:
 - Hash equality leakage and cross-tenant transplantation.
 - **JCS implementation correctness as a deployment risk.** Implementations that produce byte-divergent canonical output produce divergent hashes and break the content-addressability that the rest of the architecture depends on. Mitigation: the spec's reference test vectors. An implementation that does not reproduce the test vectors byte-for-byte is non-conformant. Where possible, deployments SHOULD use known-good JCS libraries rather than rolling their own.
 - **Protection-key management.** Profile-selected signing or authentication keys are load-bearing for Mission Status authenticity. Profiles define publication, rotation, identifier, and continuity rules appropriate to their protection mechanism.
-- **Number precision under JCS.** IEEE 754 double precision applies to JSON numbers under JCS. Constraint values where precision matters MUST use string representation (e.g., `"max_value": "100.00"`), not number representation.
+- **Number precision under JCS.** IEEE 754 double precision applies to JSON numbers under JCS. Constraint values where precision matters MUST use string representation (e.g., `"max_derivations": "100"`), not number representation.
 
 ### Normative references
 
@@ -578,6 +582,8 @@ This profile defines how a deployment composes OAuth 2.0 (RFC 6749), Rich Author
   - **Per-request status**: high-assurance Resource Servers query or validate sufficiently fresh Mission state for each consequential request.
 
   A deployment advertises its supported enforcement classes and maximum tolerated stale interval. Mission revocation does not claim to invalidate an offline self-contained token immediately unless event-driven or per-request enforcement is deployed.
+
+  **Recommended access-token TTL.** For deployments where Mission revocation propagation matters but only issuance gating is deployed (i.e., no event-driven or per-request enforcement), Mission-Bound access tokens SHOULD use a TTL shorter than the deployment's maximum tolerated stale interval. Standard OAuth defaults (1 hour) may be too long; deployments that rely on revocation propagation through token expiry SHOULD use TTLs aligned with their stated stale-interval bound, typically minutes. Deployments with event-driven or per-request enforcement may use longer TTLs because revocation propagates out-of-band.
 
 ### What this profile composes with (existing or separate drafts)
 
@@ -1112,7 +1118,7 @@ Blog updates required to align with these terms are listed in the Operational Pl
 
 - **Mission Proposal.** Pre-approval record carrying Validated Mission Intent. Has its own lifecycle: `pending_approval`, `rejected`, `withdrawn`, `expired_as_pending`. Created at submission; either promoted to Mission at the approval event, or terminated. Carries a `proposal_id` distinct from `mission.id`.
 - **Mission.** The durable, integrity-anchored, lifecycle-governed governance object that records an approved task. Created at the approval event from a Mission Proposal. Lifecycle: `active`, `suspended`, `revoked`, `completed`, `expired`. Carries Validated Mission Intent, Authority Set, integrity anchors, principal-model fields, lifecycle state, consent disclosure reference, and a stable identifier. ([Part 2](https://notes.karlmcguinness.com/notes/the-mission-model/#normative-vocabulary))
-- **Approval event.** The atomic state-authority transition from Mission Proposal to Mission upon a binding consent signal. Records principal-model evidence (approving principal identity, AAL, timestamp, consent disclosure object) atomically with Mission record creation. Idempotent on retry.
+- **Approval event.** The atomic state-authority transition from Mission Proposal to Mission upon a binding consent signal. Records principal-model evidence (approving principal identity, AAL, timestamp, consent disclosure object) atomically with Mission record creation. Idempotent on `proposal_id`; concurrent approve/reject/withdraw/expiry operations are serialized with compare-and-set semantics; exactly one Mission per Proposal. Full semantics in [Framework Concrete shapes / Approval event semantics](#concrete-shapes-for-the-vertical-slice) above.
 - **Mission record.** The server-side record holding a Mission. Lives at the OAuth AS, AAuth PS, or MAS depending on topology. ([Part 1](https://notes.karlmcguinness.com/notes/the-mission-is-the-missing-abstraction/#terminology-key))
 - **State authority.** The server that holds the Mission record: AS, PS, or MAS. Authoritative for Mission state and the only party that can resolve Pairwise Mission References to the canonical `mission.id`. ([Part 1](https://notes.karlmcguinness.com/notes/the-mission-is-the-missing-abstraction/#terminology-key))
 - **`mission` claim.** Object claim carried on credentials. Canonical mode uses `id`; pairwise mode uses `ref`; the two are mutually exclusive. Both modes carry `origin`, `authority_hash`, and `version`.
@@ -1174,6 +1180,8 @@ Each Standards Track spec in this set includes a conformance section that enumer
 
 Test vector reproduction is the conformance floor for the Framework: an implementation that does not reproduce the published test vectors byte-for-byte is not conformant to that vector class.
 
+**Conformance shape for Informational drafts.** Migration Guide (Draft 10), Shaper Profile (Draft 9), and Capability Model (Draft 11) are Informational and do not carry testable conformance. An implementation claiming alignment with an Informational draft describes how its implementation maps to the draft's guidance; conformance is descriptive, not testable. Implementations of Standards Track drafts that incidentally reflect Informational-draft guidance MAY note that alignment in their conformance claim but MUST NOT claim "conformance to" an Informational draft.
+
 ## License
 
 - **Spec text** (kramdown-rfc sources, rendered HTML/text drafts): IETF Trust License Provisions, per standard Internet-Draft submission norms.
@@ -1204,6 +1212,8 @@ When the Framework spec advances (e.g., `-00` → `-01`) with changes that affec
 - Backward-incompatible Framework changes require dependent profiles to revise; the changelog records the cascade.
 - Implementations advertise their supported version sets in state-authority metadata; consumers select compatible versions during composition.
 - During the implementation-readiness phase (before IETF submission), backward incompatibility is acceptable; once submitted, backward compatibility within a major version is required.
+
+**Test vector versioning.** Test vectors ship with each spec revision in the `vectors/` directory, tagged with the spec revision they validate (e.g., `vectors/draft-mcguinness-mission-framework-00/`). When a spec revision changes vector outputs, the new revision ships a new vector directory; older vector directories are retained as historical reference. Implementations declare which spec revision (and therefore which vector directory) they validate against in their conformance claim. The reference implementation tracks the current spec revision; CI runs against the matching vector directory.
 
 ## Operational Plan
 
@@ -1248,6 +1258,7 @@ Current breakdown/blog deltas requiring blog updates:
 
 | Date | Change |
 |---|---|
+| 2026-06-08 | Fresh-read polish: clarified Composition Surface RFC 7515 two-mode usage; updated `max_value` example to `max_derivations` (`max_value` is future work); pinned `proposal_id` lifecycle (Proposal retained alongside Mission for the same retention window; no reuse after garbage collection); added test-vector versioning rule (per-revision vector directories); added conformance shape for Informational drafts (descriptive, not testable); added recommended access-token TTL guidance (shorter for issuance-gating-only deployments); cross-referenced Approval event glossary entry to Framework body semantics; pinned `schema_digest` format (`sha-256:` prefix + base64url, canonical schema bytes via JCS). |
 | 2026-06-08 | Second stress-test resolution: reduced Phase 1 to one AS/one client/two Resource Servers; moved actor chains out of Mission state; added semantic normalization and authorization-domain-bound hashes; split derivation and invocation budgets; hardened Mission Status against enumeration and replay; defined a distinct status response profile; completed the `mission` claim; added revocation enforcement classes; made Authority Set type references immutable; defined replacement vs branch expansion; minimized Resource-AS disclosure; corrected dependencies; split runtime decision and execution evidence; required runtime enforcement-scope manifests; and removed wire/IANA claims from the Informational Shaper Profile. |
 | 2026-06-08 | Stress-test resolution: stale references fixed; concrete shapes pinned for pairwise reference, `narrowing_profile`, approval event, `policy_version`, `mission.origin` resolution, Mission Expansion ticket, consent disclosure schema, `mission` claim, `mission_resource_access` payload, Mission Status request auth + error model, spec versioning, test vector enumeration. Decisions 17-23 closed (AAuth pairwise, AAuth lifecycle, approving AAL, retention, schema evolution, atomicity, MAS scope). Added Glossary (with improved terms over blog), Conformance, License, Reference Implementation, Cross-spec versioning, Operational Plan, Changelog sections. |
 | 2026-06-08 | Reviewer's 14-item stress test addressed (Proposal/Mission split, JWS pulled to profile level, Mission Status distinct from introspection, ID-JAG roles corrected, principal model added, canonical+pairwise identifier scheme, typed Authority Set, constraint extension framework + 2 worked entries, domain-separated hashes, IANA audit, RFC 7009/9470 claims tightened, profile principle rewritten, Draft 4 narrowed, AuthZEN OpenID attribution). |
