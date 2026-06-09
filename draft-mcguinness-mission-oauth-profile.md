@@ -36,8 +36,10 @@ normative:
   RFC7515:
   RFC7517:
   RFC7519:
+  RFC7521:
   RFC7591:
   RFC7662:
+  RFC7800:
   RFC8126:
   RFC8259:
   RFC8414:
@@ -591,35 +593,79 @@ narrowing profile), derived `mission_resource_access` entries are
 accepted at credential derivation only when they are subsets of
 some Mission Authority Set entry per the subset rule above.
 
-# The `mission` Claim
+# The `mission` Claim {#the-mission-claim}
 
 Access tokens issued under this profile carry a `mission` claim.
 The claim value is a JSON object identifying the Mission record the
 credential was derived under.
 
-## Canonical mode
+## `mission` claim schema {#mission-claim-schema}
 
-In canonical mode the claim is:
+The canonical JSON Schema for the `mission` claim value is:
+
+~~~ json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mbo:schema:oauth-mission-claim:1",
+  "title": "OAuth mission claim",
+  "type": "object",
+  "required": ["origin", "authority_hash", "version"],
+  "oneOf": [
+    { "required": ["id"] },
+    { "required": ["ref"] }
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id":     { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,256}$" },
+    "ref":    { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,256}$" },
+    "origin": { "type": "string", "format": "uri" },
+    "authority_hash": {
+      "type": "string",
+      "pattern": "^sha-(256|384|512):[A-Za-z0-9_-]+$"
+    },
+    "version": { "type": "integer", "minimum": 1 }
+  }
+}
+~~~
+
+Members:
+
+- `id` (string, required in canonical mode, mutually exclusive
+  with `ref`): canonical `mission.id` per the Framework.
+- `ref` (string, required in pairwise mode, mutually exclusive
+  with `id`): the audience-sector pairwise Mission Reference per
+  the Framework.
+- `origin` (string, required, URI format): the AS issuer URL.
+  Equal to `mission.origin`. Consumers resolve via
+  `{origin}/.well-known/mission-authority` per {{RFC8615}}.
+- `authority_hash` (string, required): the integrity anchor for
+  the Authority Set from which this credential was derived. Format
+  per the Framework's integrity-anchor encoded form.
+- `version` (integer, required, minimum 1): Mission record version
+  at issuance. Increments on each AS-recorded state change to the
+  Mission record's content; used by consumers to detect stale
+  evidence.
+
+The AS MUST emit exactly one of `id` or `ref`; both MUST NOT
+appear in the same claim.
+
+## Canonical mode {#mission-claim-canonical-mode}
+
+When the audience consumes canonical identifiers, the claim is:
 
 ~~~ json
 {
   "mission": {
-    "id": "msn_01J9Z2P8BQ4Y3F0V0K9D6Z7M1",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com",
-    "authority_hash": "sha-256:fS8h4w7Z3Lq...",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "version": 1
   }
 }
 ~~~
 
-- `id` (string, required in canonical mode): canonical Mission ID.
-- `origin` (URL, required): the AS issuer URL; resolves via
-  `{origin}/.well-known/mission-authority`.
-- `authority_hash` (string, required): the integrity anchor for the
-  Authority Set from which this credential was derived.
-- `version` (integer, required): Mission record version at issuance.
-
-## Pairwise mode
+## Pairwise mode {#mission-claim-pairwise-mode}
 
 When the AS emits pairwise references for this audience-sector, the
 claim is:
@@ -627,27 +673,30 @@ claim is:
 ~~~ json
 {
   "mission": {
-    "ref": "opq_mW8Jx0qN9PfBdC4LqRy2Xg",
+    "ref": "mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
     "origin": "https://as.example.com",
-    "authority_hash": "sha-256:fS8h4w7Z3Lq...",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "version": 1
   }
 }
 ~~~
 
-- `ref` (string, required in pairwise mode): the audience-sector
-  pairwise Mission Reference.
-
-`id` and `ref` are mutually exclusive. The AS MUST NOT emit both on
-the same access token.
-
 ## Mode selection
 
 The AS selects mode per audience-sector advertised in its metadata
 document. The token audience determines which sector applies and
-therefore which mode.
+therefore which mode. The AS MUST NOT vary mode for the same
+(Mission, audience) pair within a sector for the Mission's
+lifetime, except via pairwise reference rotation per the Framework.
 
-## Refresh and exchange continuity
+## Refresh and exchange continuity {#refresh-token-binding}
+
+A Mission-bound refresh token is bound to the Mission whose `id` or
+`ref` appears in the refresh token's `mission` claim (when the
+refresh token is a JWT) or in the AS's per-token state (when the
+refresh token is opaque). The AS MUST refuse a refresh-token
+rotation when the bound Mission's state is not `active`.
 
 When refresh produces a new credential for the same audience and
 sector, the AS MUST preserve the chosen mode and the chosen
@@ -659,8 +708,150 @@ reference into a different sector.
 
 ## Opaque access tokens
 
-Opaque access tokens expose the same `mission` claim members through
-the token introspection extension (Section 9.2).
+Opaque access tokens carry the `mission` claim only through the
+token introspection extension ({{token-introspection-mission-projection}}).
+The opaque token itself is not parseable by Resource Servers; RSes
+that need `mission` MUST introspect.
+
+# Authorization Code Redemption {#authorization-code-redemption}
+
+After the PAR exchange of {{par-exchange}} and approval-event
+completion, the client redeems the authorization code at the token
+endpoint:
+
+**Token request** from the client:
+
+~~~ http-message
+POST /as/token HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic czZCaGRSa3F0Mzo3RmpmcDBaQnIxS3REUmJuZlZkbUl3
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2IiwiandrIjp7...
+
+grant_type=authorization_code
+&code=SplxlOBeZQQYbYS6WxSbIA
+&redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb
+&code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
+~~~
+
+**Token response** from the AS:
+
+~~~ http-message
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "access_token": "eyJhbGciOiJFUzI1NiIsImtpZCI6...",
+  "token_type": "DPoP",
+  "expires_in": 300,
+  "refresh_token": "rt_8sR3pYwL2qX5tZ7vB1nM4kF9eT0jC6yH",
+  "scope": "openid",
+  "authorization_details": [
+    {
+      "type": "mission_resource_access",
+      "specification_uri":
+        "https://datatracker.ietf.org/doc/draft-mcguinness-mission-oauth-profile",
+      "schema_version": "1",
+      "authority": {
+        "resource": "https://erp.example.com",
+        "actions": ["invoices.read", "journal-entries.write"]
+      },
+      "narrowing_profile": "urn:mbo:narrowing:default-v1"
+    }
+  ]
+}
+~~~
+
+The `access_token` is a JWT per {{RFC9068}} carrying the `mission`
+claim. The decoded payload:
+
+~~~ json
+{
+  "iss": "https://as.example.com",
+  "sub": "user_3p2q8mN1a0kV7tR",
+  "aud": "https://erp.example.com",
+  "client_id": "s6BhdRkqt3",
+  "iat": 1797840000,
+  "exp": 1797840300,
+  "jti": "tok_8K2nP4qV9rL3tY6sB1z",
+  "scope": "openid",
+  "authorization_details": [
+    {
+      "type": "mission_resource_access",
+      "schema_version": "1",
+      "authority": {
+        "resource": "https://erp.example.com",
+        "actions": ["invoices.read", "journal-entries.write"]
+      },
+      "narrowing_profile": "urn:mbo:narrowing:default-v1"
+    }
+  ],
+  "cnf": {
+    "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I"
+  },
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "version": 1
+  }
+}
+~~~
+
+The `cnf` claim per {{!RFC7800}} carries the DPoP JWK thumbprint
+binding the token to the client's DPoP key; under mTLS the `cnf`
+claim carries `x5t#S256` per {{RFC8705}}. Resource Servers MUST
+verify the binding before honoring the token.
+
+# Token Exchange {#token-exchange}
+
+A client (or downstream service acting as a client) MAY use Token
+Exchange {{RFC8693}} to obtain a new credential for a different
+audience. The exchange MUST gate on Mission state.
+
+**Token exchange request**:
+
+~~~ http-message
+POST /as/token HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic czZCaGRSa3F0Mzo3RmpmcDBaQnIxS3REUmJuZlZkbUl3
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
+&subject_token=eyJhbGciOiJFUzI1NiIsImtpZCI6...
+&subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token
+&audience=https%3A%2F%2Fdownstream.example.com
+&requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token
+~~~
+
+**Token exchange response**:
+
+~~~ http-message
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "issued_token_type":
+    "urn:ietf:params:oauth:token-type:access_token",
+  "access_token": "eyJhbGciOiJFUzI1NiIsImtpZCI6...",
+  "token_type": "DPoP",
+  "expires_in": 300
+}
+~~~
+
+The new access token carries the `mission` claim referencing the
+same Mission as the `subject_token`. If the new audience is in a
+different pairwise sector, the AS uses that sector's `mission.ref`;
+if the new audience is in the same sector or consumes canonical
+identifiers, the AS preserves the upstream form per
+{{refresh-token-binding}}.
+
+If the Mission's state at exchange time is not `active`, the AS
+MUST refuse the exchange with the `mission_inactive` error response
+defined in {{lifecycle-gating}}.
 
 # Mission Record at the AS
 
@@ -683,7 +874,7 @@ A cross-substrate deployment that introduces a Mission Authority
 Server (see the MAS specification) makes the MAS the state
 authority; the AS becomes a projection issuer per that profile.
 
-# Lifecycle Gating
+# Lifecycle Gating {#lifecycle-gating}
 
 The AS MUST gate the following operations on Mission state:
 
@@ -718,7 +909,7 @@ Profile-specific error code: `mission_inactive` (registered for
 deployments preferring a distinct error code rather than reusing
 `invalid_grant`).
 
-# Mission Status
+# Mission Status {#mission-status}
 
 This profile binds the Framework's abstract Mission Status interface
 to two OAuth operations:
@@ -728,105 +919,292 @@ to two OAuth operations:
 2. An **optional Mission-snapshot projection** on token introspection
    {{RFC7662}}.
 
-These are distinct operations.
+These are distinct operations: the dedicated operation is
+by-mission-reference; the introspection projection is by-token.
 
-## Dedicated Mission Status operation
+## Dedicated Mission Status operation {#dedicated-mission-status-operation}
 
 The AS publishes a `mission_status_endpoint` URL in its AS metadata
-document.
+document. The endpoint MUST be served over TLS 1.2 or later (TLS
+1.3 RECOMMENDED) per the Framework's transport security requirement.
 
-### Request
+### Request {#mission-status-request}
 
-The request is an HTTPS POST with `application/x-www-form-urlencoded`
-body containing:
+The request is an HTTPS POST with
+`application/x-www-form-urlencoded` body containing:
 
 - `mission` (string, required): the Mission reference. Either a
   canonical `mission.id` or a pairwise `mission.ref`.
 - `audience` (string, required): the audience identifier of the
   requesting consumer.
 - `nonce` (string, required): a client-generated nonce for
-  request-binding.
+  request-binding. ABNF per
+  {{I-D.draft-mcguinness-mission-framework}}.
 
-The request MUST be authenticated. The AS MUST accept at least one
-of:
+### Authentication {#mission-status-authentication}
 
-- `client_credentials` client authentication with the AS.
-- mTLS-authenticated request {{RFC8705}}.
-- DPoP-bound bearer token issued by the AS for status queries
-  {{RFC9449}}.
+The request MUST be authenticated. The AS MUST support and the
+client MUST use exactly one of the following mechanisms per
+request:
 
-### Response
+1. **mTLS client authentication** {{RFC8705}}. The AS validates
+   the client's X.509 certificate against the configured trust
+   anchors and against the client's registered
+   `tls_client_auth_subject_dn` or related metadata.
+2. **DPoP-bound bearer token** {{RFC9449}}. The client presents
+   a Mission Status-scoped DPoP-bound token in the
+   `Authorization` header along with a `DPoP` proof header. The
+   token's `cnf.jkt` MUST match the proof key thumbprint.
+3. **Private-key-JWT client authentication** {{RFC7521}}. The
+   client presents a signed JWT assertion as
+   `client_assertion`.
 
-On success the AS returns a JWS signed with a key published in the
-AS's `jwks_uri`. The JWS uses `typ` value
+Plain Basic or POST client authentication MUST NOT be used for
+this endpoint. The AS MUST refuse a request that does not
+authenticate via one of the three mechanisms with
+`unauthorized` (HTTP 401).
+
+The AS MUST advertise the supported mechanisms in AS metadata
+under `mission_status_auth_methods_supported` (an array of
+`mtls`, `dpop_bearer`, `private_key_jwt`).
+
+### Worked request example
+
+~~~ http-message
+POST /as/mission/status HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2IiwiandrIjp7...
+
+mission=mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w
+&audience=https%3A%2F%2Ferp.example.com
+&nonce=nonce_K9pV4nT2sR7mB1xQ
+~~~
+
+### Response {#mission-status-response-wire-form}
+
+On success the AS returns a JWS Compact Serialization {{RFC7515}}
+signed with a key published in the AS's `jwks_uri`. The JWS
+header carries `typ` =
 `application/mission-status-response+jwt` (registered in
-{{iana}}). The JWS payload is:
+{{iana}}) and `kid` identifying the signing key.
+
+**HTTP response wrapping**:
+
+~~~ http-message
+HTTP/1.1 200 OK
+Content-Type: application/mission-status-response+jwt
+Cache-Control: no-store
+Pragma: no-cache
+
+eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIiwidHlwIjoiYXBwbGlj
+YXRpb24vbWlzc2lvbi1zdGF0dXMtcmVzcG9uc2Urand0In0.eyJpc3MiOiJodHRwczo...
+~~~
+
+**Decoded JWS header**:
+
+~~~ json
+{
+  "alg": "ES256",
+  "kid": "sa-key-2026-q3",
+  "typ": "application/mission-status-response+jwt"
+}
+~~~
+
+**Decoded JWS payload** (matching the Framework's abstract
+Mission Status Response object):
 
 ~~~ json
 {
   "iss": "https://as.example.com",
-  "aud": "https://docs.example.com",
-  "sub": "client_id_of_requester",
-  "nonce": "client-provided-nonce",
-  "iat": 1718380800,
-  "exp": 1718380860,
-  "mission_status": {
-    "state": "active",
-    "mission_id_or_ref": { "id": "msn_01J9Z2..." },
-    "origin": "https://as.example.com",
-    "proposal_hash": "sha-256:...",
-    "authority_hash": "sha-256:...",
-    "consent_disclosure_hash": "sha-256:...",
-    "policy_version": "as.example.com:standard@2026-06-01",
-    "authority_set_projection": [
-      { "type": "mission_resource_access", "...": "..." }
-    ],
-    "issued_at": "2026-06-09T15:00:00Z",
-    "expires_at": "2026-06-09T15:01:00Z",
-    "version": 1
-  }
+  "aud": "https://erp.example.com",
+  "sub": "client_erp-recon-agent",
+  "nonce": "nonce_K9pV4nT2sR7mB1xQ",
+  "iat": 1797840000,
+  "exp": 1797840060,
+  "mission": {
+    "ref": "mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
+    "origin": "https://as.example.com"
+  },
+  "state": "active",
+  "integrity_anchors": {
+    "proposal_hash":
+      "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "consent_disclosure_hash":
+      "sha-256:nB2xK5qY7vM3rL9pT4cE6sZ8wQ1bN0fH5jX9kV2sRdM"
+  },
+  "authority_projection": [
+    {
+      "type": "mission_resource_access",
+      "specification_uri":
+        "https://datatracker.ietf.org/doc/draft-mcguinness-mission-oauth-profile",
+      "schema_version": "1",
+      "authority": {
+        "resource": "https://erp.example.com",
+        "actions": ["invoices.read", "journal-entries.write"]
+      },
+      "narrowing_profile": "urn:mbo:narrowing:default-v1"
+    }
+  ],
+  "policy_version": "deploy-policy:v17",
+  "issued_at":     "2026-11-02T08:14:00Z",
+  "expires_at":    "2026-11-02T08:15:00Z",
+  "freshness_at":  "2026-11-02T08:14:00Z",
+  "mission_expiry":"2026-12-31T23:59:59Z",
+  "audience":      "https://erp.example.com",
+  "version":       1
 }
 ~~~
+
+The standard JWT claims `iss`, `aud`, `sub`, `nonce`, `iat`, `exp`
+carry the Framework's authentication, audience, and request-binding
+properties. The remaining members carry the Framework's Mission
+Status Response object verbatim. The `version` claim mirrors
+`mission.version` for caller convenience.
+
+Consumers MUST verify:
+
+1. JWS signature against a current `jwks_uri` entry for the
+   `origin` AS.
+2. `iss` equals the expected AS issuer URL.
+3. `aud` equals the consumer's own audience identifier.
+4. `sub` equals the requesting client's identifier.
+5. `nonce` equals the request's nonce.
+6. `iat` is not in the future and `exp` is not in the past
+   (with up to 30 seconds clock skew tolerance per the
+   Framework).
+
+### Caching {#mission-status-caching}
+
+Consumers SHOULD cache the response keyed on
+(mission reference, audience) until `expires_at`. Consumers MUST
+NOT use a cached response after `expires_at` (with up to 30s
+skew tolerance for `active` state only; no tolerance for
+terminal states).
+
+Consumers SHOULD honor a stale-while-revalidate window of up to
+2x the response lifetime when the AS is unreachable, provided
+the consumer's deployment policy permits degraded-mode operation
+under the `mission_max_stale_seconds` advertisement.
 
 ### Anti-oracle property
 
 The AS MUST authenticate the requester and authorize the requester
-for the requested Mission reference and audience. A Mission reference
-is never a bearer capability.
+for the requested Mission reference and audience. A Mission
+reference is never a bearer capability.
 
 Unknown Mission references and known-but-unauthorized references
-MUST produce indistinguishable responses (HTTP 404 with no
-identifying body content beyond a generic `not_found` error symbol).
+MUST produce indistinguishable responses (HTTP 404 with a generic
+not-found body shape; see {{mission-status-error-responses}}). The
+AS MUST NOT vary response timing, payload size, or headers in a
+way that distinguishes the two cases.
 
-### Errors
+### Error responses {#mission-status-error-responses}
 
-Mission Status responses use the following error symbols, mapped to
-HTTP status codes:
+Mission Status responses use the following error symbols, mapped
+to HTTP status codes. The response body is a JSON object
+({{RFC8259}}) matching the abstract error shape of the Framework:
 
 | Symbol | HTTP | Description |
 |---|---|---|
 | `ok` | 200 | Mission found and visible. |
 | `unauthorized` | 401 | Request not authenticated. |
 | `not_found` | 404 | Mission reference does not exist OR is not visible to this consumer. |
-| `terminated` | 410 | Mission is in a terminal state. Response includes state. |
-| `suspended` | 423 | Mission is suspended. Response includes state. |
+| `terminated` | 200 | Mission is in a terminal state (state ∈ {`revoked`, `completed`, `expired`}). |
+| `suspended` | 200 | Mission is suspended. |
 | `rate_limited` | 429 | Consumer is rate-limited. |
-| `unavailable` | 503 | AS temporarily can't serve status. |
+| `unavailable` | 503 | AS temporarily cannot serve status. |
 
-## Token introspection Mission projection
+Terminal and suspended states return HTTP 200 with the standard
+signed Mission Status Response carrying `state`. Hard errors
+(`unauthorized`, `not_found`, `rate_limited`, `unavailable`)
+return the matching HTTP status with a JSON body:
+
+~~~ http-message
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "error": "not_found",
+  "error_description":
+    "Mission reference is not found or not visible.",
+  "nonce": "nonce_K9pV4nT2sR7mB1xQ"
+}
+~~~
+
+The body MUST contain `error`, `error_description`, and `nonce`.
+The body MUST NOT contain any member that would allow distinguishing
+unknown from unauthorized references.
+
+For `rate_limited`, the response SHOULD additionally include a
+`Retry-After` header per {{RFC9110}} and a `retry_after` body
+member in seconds.
+
+## Token introspection Mission projection {#token-introspection-mission-projection}
 
 When a consumer presents an access token to the AS's introspection
-endpoint {{RFC7662}}, the AS MAY include a `mission` claim in the
+endpoint {{RFC7662}}, the AS MAY include a `mission` member in the
 introspection response containing a Mission snapshot.
 
 This profile RECOMMENDS that introspection responses carrying a
-Mission projection use RFC 9701 {{RFC9701}} signed responses.
+Mission projection use {{RFC9701}} signed responses to satisfy
+the Framework's authentication and integrity properties without
+relying on TLS alone.
 
-The introspection projection is an OPTIMIZATION for consumers that
-already query by token. It does NOT replace the dedicated Mission
-Status operation. Consumers needing by-mission-reference lookups,
-audience-pairwise resolution, or signed evidence independent of a
-specific token MUST use the dedicated operation.
+**Introspection request**:
+
+~~~ http-message
+POST /as/introspect HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+Accept: application/token-introspection+jwt
+Authorization: Basic czZCaGRSa3F0Mzo3RmpmcDBaQnIxS3REUmJuZlZkbUl3
+
+token=eyJhbGciOiJFUzI1NiIsImtpZCI6...
+~~~
+
+**Introspection response** (RFC 9701 signed, decoded payload):
+
+~~~ json
+{
+  "iss":     "https://as.example.com",
+  "aud":     "https://erp.example.com",
+  "iat":     1797840000,
+  "exp":     1797840060,
+  "active":  true,
+  "client_id": "s6BhdRkqt3",
+  "sub":     "user_3p2q8mN1a0kV7tR",
+  "scope":   "openid",
+  "mission": {
+    "ref": "mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "version": 1,
+    "state":   "active",
+    "expires_at": "2026-11-02T08:15:00Z"
+  }
+}
+~~~
+
+The projection adds `state` and `expires_at` to the standard
+`mission` claim shape so the consumer can act on Mission
+lifecycle without a separate Mission Status round-trip. The
+projection's `state` and `expires_at` are derived from the AS's
+current Mission record at introspection time; the consumer MAY
+use them up to `expires_at` per the caching rule of
+{{mission-status-caching}}.
+
+The introspection projection is an OPTIMIZATION for consumers
+that already query by token. It does NOT replace the dedicated
+Mission Status operation. Consumers needing by-mission-reference
+lookups, audience-pairwise resolution, or signed evidence
+independent of a specific token MUST use the dedicated
+operation.
 
 # Mission Lifecycle Endpoint
 
