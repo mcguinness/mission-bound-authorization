@@ -110,7 +110,7 @@ Table of Contents
    11. IANA Considerations
      11.1.  Media Types
      11.2.  Mission Authority Validation Classification Result Codes
-     11.3.  Mission Capability-Advertisement Metadata
+     11.3.  AS metadata member
    Acknowledgments
    References
      Normative References
@@ -812,15 +812,17 @@ Content-Type: application/mission-authority-validation-request+json
          recognize the requested action.  The originating AS MUST
          refuse.
 
-11.3.  Mission Capability-Advertisement Metadata
+11.3.  AS metadata member
 
-   This document registers the following entry in the Mission
-   Capability-Advertisement Metadata registry created by
-   [I-D.draft-mcguinness-mission-framework]:
+   This document registers the following member in the OAuth
+   Authorization Server Metadata registry ([RFC8414]):
 
    *  mission_authority_validation_endpoint: URL at which a Resource AS
       accepts delegated authority validation requests per this document.
-      Advertised in Authorization Server metadata.
+
+   *  *Change controller*: IETF
+
+   *  *Reference*: this document
 
 Acknowledgments
 
@@ -846,6 +848,11 @@ Normative References
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC8414]  Jones, M., Sakimura, N., and J. Bradley, "OAuth 2.0
+              Authorization Server Metadata", RFC 8414,
+              DOI 10.17487/RFC8414, June 2018,
+              <https://www.rfc-editor.org/rfc/rfc8414>.
 
 Informative References
 

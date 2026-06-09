@@ -1286,7 +1286,7 @@ is out of scope here.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
                 <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-mission-authority-validatio" class="internal xref">Mission Authority Validation Classification Result Codes</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.3">
-                <p id="section-toc.1-1.11.2.3.1"><a href="#section-11.3" class="auto internal xref">11.3</a>.  <a href="#name-mission-capability-advertis" class="internal xref">Mission Capability-Advertisement Metadata</a></p>
+                <p id="section-toc.1-1.11.2.3.1"><a href="#section-11.3" class="auto internal xref">11.3</a>.  <a href="#name-as-metadata-member" class="internal xref">AS metadata member</a></p>
 </li>
             </ul>
 </li>
@@ -2218,19 +2218,24 @@ recognize the requested action. The originating AS <span class="bcp14">MUST</spa
         </ul>
 </section>
 </div>
-<div id="mission-capability-advertisement-metadata">
+<div id="as-metadata-member">
 <section id="section-11.3">
-        <h3 id="name-mission-capability-advertis">
-<a href="#section-11.3" class="section-number selfRef">11.3. </a><a href="#name-mission-capability-advertis" class="section-name selfRef">Mission Capability-Advertisement Metadata</a>
+        <h3 id="name-as-metadata-member">
+<a href="#section-11.3" class="section-number selfRef">11.3. </a><a href="#name-as-metadata-member" class="section-name selfRef">AS metadata member</a>
         </h3>
-<p id="section-11.3-1">This document registers the following entry in the Mission
-Capability-Advertisement Metadata registry created by
-<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>:<a href="#section-11.3-1" class="pilcrow">¶</a></p>
+<p id="section-11.3-1">This document registers the following member in the OAuth
+Authorization Server Metadata registry (<span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>):<a href="#section-11.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-11.3-2.1">
             <p id="section-11.3-2.1.1"><code>mission_authority_validation_endpoint</code>: URL at which a Resource
 AS accepts delegated authority validation requests per this
-document. Advertised in Authorization Server metadata.<a href="#section-11.3-2.1.1" class="pilcrow">¶</a></p>
+document.<a href="#section-11.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.3-2.2">
+            <p id="section-11.3-2.2.1"><strong>Change controller</strong>: IETF<a href="#section-11.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.3-2.3">
+            <p id="section-11.3-2.3.1"><strong>Reference</strong>: this document<a href="#section-11.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -2271,8 +2276,12 @@ specification.<a href="#section-12-1" class="pilcrow">¶</a></p>
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8174">[RFC8174]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8414">[RFC8414]</dt>
+      <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8414">https://www.rfc-editor.org/rfc/rfc8414</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>

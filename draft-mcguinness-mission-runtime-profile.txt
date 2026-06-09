@@ -105,7 +105,7 @@ Table of Contents
      16.1.  Decision Evidence Object Media Type
      16.2.  Execution Evidence Object Media Type
      16.3.  Mission Common Constraints Registry
-     16.4.  Mission Capability-Advertisement Metadata
+     16.4.  Runtime metadata members
    Acknowledgments
    References
      Normative References
@@ -638,21 +638,26 @@ Table of Contents
 
    *  Narrowing: derived constraints MAY specify smaller values.
 
-16.4.  Mission Capability-Advertisement Metadata
+16.4.  Runtime metadata members
 
-   This document registers the following metadata values in the Mission
-   Capability-Advertisement Metadata registry:
-
-   *  mission_optional_modules_supported values: tool_binding,
-      decision_receipt, purpose_registry, attestation,
-      policy_projection.  (The modules themselves are separate
-      specifications.)
+   Deployments that implement this profile advertise runtime
+   capabilities through substrate-specific AS or PS metadata documents.
+   This document defines the following member names; each substrate
+   profile (OAuth, AAuth, MAS) registers these in its own substrate
+   metadata registry as needed.
 
    *  mission_freshness_mode_supported: array of fresh, cached,
       event_driven.
 
    *  mission_enforcement_scope_manifest_uri: URL of the deployment's
       enforcement-scope manifest.
+
+   Optional Runtime modules (tool_binding, decision_receipt,
+   purpose_registry, attestation, policy_projection) are defined in
+   separate companion specifications; each module specification
+   registers its own metadata member at its substrate's metadata
+   registry.  The Runtime Profile does not maintain a central registry
+   of optional-module identifiers.
 
 Acknowledgments
 

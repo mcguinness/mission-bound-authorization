@@ -20,11 +20,11 @@ Abstract
    Mission lifecycles, the Mission Intent JSON schema, typed Authority
    Set, integrity anchors with domain-separated hash inputs, a canonical
    and pairwise identifier model, common constraints framework, Mission
-   Status interface, principal model, evidence binding, and capability-
-   advertisement metadata.  The framework is substrate-neutral on
-   semantics; profile specifications for OAuth, AAuth, and the Mission
-   Authority Server compose this framework with their respective wire
-   substrates and pick the concrete protection mechanism.
+   Status interface, principal model, and evidence binding.  The
+   framework is substrate-neutral on semantics; profile specifications
+   for OAuth, AAuth, and the Mission Authority Server compose this
+   framework with their respective wire substrates and pick the concrete
+   protection mechanism.
 
 About This Document
 
@@ -171,59 +171,51 @@ Table of Contents
        10.1.1.  max_derivations
        10.1.2.  aal
      10.2.  Future-work entries
-   11. Capability-Advertisement Metadata
-     11.1.  Initial members
-     11.2.  Worked example
-     11.3.  Registration template
-     11.4.  Cross-reference to Capability Model
-   12. Reference Test Vectors
-   13. Security Considerations
-     13.1.  State authority compromise
-     13.2.  Integrity anchor non-guarantees
-     13.3.  JCS implementation correctness
-     13.4.  Number precision under JCS
-     13.5.  Pairwise identifier privacy and correlation
-     13.6.  Hash equality leakage and cross-tenant transplantation
-     13.7.  Mission Status enumeration and authorization-oracle
+   11. Reference Test Vectors
+   12. Security Considerations
+     12.1.  State authority compromise
+     12.2.  Integrity anchor non-guarantees
+     12.3.  JCS implementation correctness
+     12.4.  Number precision under JCS
+     12.5.  Pairwise identifier privacy and correlation
+     12.6.  Hash equality leakage and cross-tenant transplantation
+     12.7.  Mission Status enumeration and authorization-oracle
              resistance
-     13.8.  Trust-boundary violations
-     13.9.  Approving principal AAL
-     13.10. Transport security (TLS)
-     13.11. State-authority signing-key rotation
-     13.12. Denial of service against the state authority
-     13.13. Clock skew
-     13.14. Replay of Mission Status responses
-     13.15. Side channels via pairwise references
-     13.16. Log injection via consent disclosure content
-     13.17. Mission record garbage collection and audit chains
-   14. Privacy Considerations
-     14.1.  Pairwise references and correlation
-     14.2.  Consent disclosure content and PII
-     14.3.  Subject and approving-principal identifiers
-     14.4.  Tenant correlation
-     14.5.  Audit logging and retention
-     14.6.  Mission record content and data subject access
-   15. IANA Considerations
-     15.1.  Well-Known URI: mission-authority
-     15.2.  Mission Common Constraints Registry
-       15.2.1.  Registration template
-       15.2.2.  Initial entries
-     15.3.  Mission Authority Set Type Registry
-       15.3.1.  Registration template
-       15.3.2.  Initial entries
-     15.4.  Mission Capability-Advertisement Metadata Registry
-       15.4.1.  Registration template
-       15.4.2.  Initial entries
-     15.5.  Mission Normalization Profile Registry
-       15.5.1.  Registration template
-       15.5.2.  Initial entries
-     15.6.  Mission AAL Identifier Registry
-       15.6.1.  Registration template
-       15.6.2.  Initial entries
-     15.7.  Mission Lifecycle State Enumerations
-     15.8.  Mission Pairwise Sector Type Enumeration
-     15.9.  Mission Status Response Media Types
-     15.10. What this document does NOT register
+     12.8.  Trust-boundary violations
+     12.9.  Approving principal AAL
+     12.10. Transport security (TLS)
+     12.11. State-authority signing-key rotation
+     12.12. Denial of service against the state authority
+     12.13. Clock skew
+     12.14. Replay of Mission Status responses
+     12.15. Side channels via pairwise references
+     12.16. Log injection via consent disclosure content
+     12.17. Mission record garbage collection and audit chains
+   13. Privacy Considerations
+     13.1.  Pairwise references and correlation
+     13.2.  Consent disclosure content and PII
+     13.3.  Subject and approving-principal identifiers
+     13.4.  Tenant correlation
+     13.5.  Audit logging and retention
+     13.6.  Mission record content and data subject access
+   14. IANA Considerations
+     14.1.  Well-Known URI: mission-authority
+     14.2.  Mission Common Constraints Registry
+       14.2.1.  Registration template
+       14.2.2.  Initial entries
+     14.3.  Mission Authority Set Type Registry
+       14.3.1.  Registration template
+       14.3.2.  Initial entries
+     14.4.  Mission Normalization Profile Registry
+       14.4.1.  Registration template
+       14.4.2.  Initial entries
+     14.5.  Mission AAL Identifier Registry
+       14.5.1.  Registration template
+       14.5.2.  Initial entries
+     14.6.  Mission Lifecycle State Enumerations
+     14.7.  Mission Pairwise Sector Type Enumeration
+     14.8.  Mission Status Response Media Types
+     14.9.  What this document does NOT register
    Acknowledgments
    References
      Normative References
@@ -317,15 +309,12 @@ Table of Contents
    Section 10 defines the Common Constraints registry framework and two
    initial entries (max_derivations and aal).
 
-   Section 11 defines the state-authority capability-advertisement
-   metadata document and its registry.
+   Section 11 declares the required test vector classes.
 
-   Section 12 declares the required test vector classes.
-
-   Section 13 and Section 14 address security and privacy threats and
+   Section 12 and Section 13 address security and privacy threats and
    mitigations.
 
-   Section 15 requests the IANA actions creating registries and initial
+   Section 14 requests the IANA actions creating registries and initial
    entries.
 
 1.3.  Scope and non-scope
@@ -350,8 +339,6 @@ Table of Contents
 
    *  The Common Constraints framework and initial entries
       (max_derivations, aal).
-
-   *  Capability-advertisement metadata.
 
    *  Domain-separated, authorization-domain-bound hash envelopes for
       integrity anchors.
@@ -1526,7 +1513,7 @@ Table of Contents
       constitutes a compatible vs incompatible revision).
 
    *  *Normalization rules*: the registered Normalization Profile (see
-      Section 15.5) that applies to entries of this type prior to
+      Section 14.4) that applies to entries of this type prior to
       integrity-anchor computation.
 
    *  *Equality rule*: when two entries are semantically equal.  The
@@ -1701,7 +1688,7 @@ Table of Contents
    *  *Number representation*: numeric fields requiring precision beyond
       IEEE 754 double precision MUST use the JSON string representation.
       The profile declares which fields are precision-sensitive (see
-      Section 13.4).
+      Section 12.4).
 
    *  *Absent versus empty members*: per-field rule.  An absent member
       and an empty value (e.g., [] or "") are by default not equivalent;
@@ -1712,7 +1699,7 @@ Table of Contents
       NOT silently lower-case or alias field names.
 
    The Framework creates the *Mission Normalization Profile* IANA
-   registry (see Section 15.5).  Each registered type in the Authority
+   registry (see Section 14.4).  Each registered type in the Authority
    Set Type registry MUST declare its applicable Normalization Profile.
 
 6.2.1.  Initial Normalization Profile: Mission Intent
@@ -1911,7 +1898,7 @@ Table of Contents
    in the same way over their respective envelopes.
 
    Conformant implementations MUST reproduce the test vectors in
-   Section 12 byte-for-byte; the illustrative bytes above are not
+   Section 11 byte-for-byte; the illustrative bytes above are not
    authoritative.
 
 6.6.  Three integrity anchors
@@ -1930,7 +1917,7 @@ Table of Contents
    The integrity anchors collectively commit the state authority's
    recorded approval.  They do not prove faithful rendering to the
    approving principal; that property requires trustworthy consent UX
-   above the protocol layer (see Section 13.2).
+   above the protocol layer (see Section 12.2).
 
 7.  Identifier Model
 
@@ -2157,10 +2144,7 @@ Table of Contents
 
    *  mission_normalization_profiles_supported (array of strings,
       required): registered Normalization Profile identifiers
-      (Section 15.5) the state authority understands.
-
-   *  mission_capability_advertisement (object, optional): the
-      capability-advertisement object defined in Section 11.
+      (Section 14.4) the state authority understands.
 
 7.3.1.  Worked example metadata document
 
@@ -2189,15 +2173,7 @@ Table of Contents
        "urn:mbo:norm:mission-intent:1",
        "urn:mbo:norm:mission-authority-set:1",
        "urn:mbo:norm:mission-consent-disclosure:1"
-     ],
-     "mission_capability_advertisement": {
-       "mission_authorization_domain_tiers_supported": ["AD-2"],
-       "mission_ladder_levels_supported": [1, 2, 3],
-       "mission_profiles_supported": [
-         "oauth", "runtime_enforcement"
-       ],
-       "mission_optional_modules_supported": []
-     }
+     ]
    }
 
    Profile specifications MAY extend this metadata document with
@@ -2741,7 +2717,7 @@ Table of Contents
    *Value type*: JSON string representing a non-negative decimal
    integer.  Maximum value "18446744073709551615" (2^64 − 1).  String
    form is chosen for IEEE 754 precision safety under JCS (see
-   Section 13.4).
+   Section 12.4).
 
    *Authoritative counter*: the state authority.  Each credential
    derivation event MUST increment the counter atomically as part of the
@@ -2864,90 +2840,7 @@ Table of Contents
    These will register as the design stabilizes and implementer interest
    emerges.
 
-11.  Capability-Advertisement Metadata
-
-   The Framework creates a *Mission Capability-Advertisement Metadata*
-   registry.  State authorities advertise their capabilities through the
-   following metadata fields.  These fields appear under the
-   mission_capability_advertisement member of the state-authority
-   metadata document (Section 7.3).
-
-11.1.  Initial members
-
-   *  mission_authorization_domain_tiers_supported (array of strings,
-      required): subset of registered Authorization Domain Tier
-      identifiers.  Identifiers are defined in
-      [I-D.draft-mcguinness-mission-capability-model].
-
-   *  mission_ladder_levels_supported (array of integers, required):
-      subset of Capability Ladder levels (0 through 5) supported.
-      Levels are defined in
-      [I-D.draft-mcguinness-mission-capability-model].
-
-   *  mission_profiles_supported (array of strings, required): substrate
-      profiles supported.  Initial values are "oauth", "aauth", "mas",
-      "runtime_enforcement".
-
-   *  mission_optional_modules_supported (array of strings, required):
-      registered optional modules supported.  May be empty.
-
-   *  mission_framework_versions_supported (array of strings, required):
-      spec revisions of this Framework that the state authority
-      supports.
-
-11.2.  Worked example
-
-   A state authority that implements the OAuth Profile and the Runtime
-   Enforcement Profile, at Authorization Domain Tier AD-2, Capability
-   Ladder Levels 1 through 3, with no optional modules, advertises:
-
-   {
-     "mission_capability_advertisement": {
-       "mission_authorization_domain_tiers_supported": ["AD-2"],
-       "mission_ladder_levels_supported": [1, 2, 3],
-       "mission_profiles_supported": [
-         "oauth", "runtime_enforcement"
-       ],
-       "mission_optional_modules_supported": [],
-       "mission_framework_versions_supported": [
-         "draft-mcguinness-mission-framework-00"
-       ]
-     }
-   }
-
-11.3.  Registration template
-
-   The *Mission Capability-Advertisement Metadata* IANA registry holds
-   the member names that may appear under
-   mission_capability_advertisement.  Each registration MUST include:
-
-   *  *Member name* (string).
-
-   *  *Value type and structure* (JSON type and shape).
-
-   *  *Defining specification* (RFC, Internet-Draft, or stable URL).
-
-   *  *Closed-set status*: whether the value space is a closed
-      enumeration registered in another IANA registry, or open.
-
-   *  *Change controller*.
-
-   *  *Reference*.
-
-   Profile and feature specifications MAY add registry entries following
-   this template.
-
-11.4.  Cross-reference to Capability Model
-
-   The Mission-Bound Authorization Capability Model
-   ([I-D.draft-mcguinness-mission-capability-model]) defines the
-   Capability Ladder levels, Resource Server Tiers, and Authorization
-   Domain Tiers.  This document creates the metadata registry that names
-   them and the initial members above; the Capability Model
-   specification registers concrete tier and level identifiers in their
-   own registries.
-
-12.  Reference Test Vectors
+11.  Reference Test Vectors
 
    This specification includes reference test vectors as a first-class
    deliverable.  Test vectors are published in the vectors/ directory of
@@ -2988,9 +2881,9 @@ Table of Contents
        including canonical and pairwise variants.  (Defined in the OAuth
        Profile; vector class declared here.)
 
-13.  Security Considerations
+12.  Security Considerations
 
-13.1.  State authority compromise
+12.1.  State authority compromise
 
    A compromised state authority can fabricate Mission records, backdate
    evidence, and issue Mission Status responses without constraint.  The
@@ -3001,7 +2894,7 @@ Table of Contents
    of state-authority operations, and cross-organization audit
    anchoring.
 
-13.2.  Integrity anchor non-guarantees
+12.2.  Integrity anchor non-guarantees
 
    The integrity anchors prove the state authority committed to specific
    canonical objects at the approval event.  They do not prove:
@@ -3028,7 +2921,7 @@ Table of Contents
    under cross-substrate governance, and transparency-log anchoring of
    integrity hashes.
 
-13.3.  JCS implementation correctness
+12.3.  JCS implementation correctness
 
    Implementations that produce byte-divergent canonical output produce
    divergent hashes and break content-addressability.
@@ -3038,14 +2931,14 @@ Table of Contents
    conformant.  Where possible, deployments SHOULD use known-good JCS
    libraries rather than rolling their own.
 
-13.4.  Number precision under JCS
+12.4.  Number precision under JCS
 
    IEEE 754 double precision applies to JSON numbers under JCS.
    Constraint values where precision matters MUST use string
    representation (e.g., "max_derivations": "100"), not number
    representation.
 
-13.5.  Pairwise identifier privacy and correlation
+12.5.  Pairwise identifier privacy and correlation
 
    The pairwise reference framework prevents direct correlation of
    Mission identifiers across audiences in the same sector.  It does not
@@ -3053,7 +2946,7 @@ Table of Contents
    identifiers, timing, request patterns).  Deployments SHOULD assess
    the correlation surface of their chosen sector.
 
-13.6.  Hash equality leakage and cross-tenant transplantation
+12.6.  Hash equality leakage and cross-tenant transplantation
 
    Without authorization-domain binding in the hash envelope, two
    identical Validated Mission Intents in different tenants would
@@ -3065,7 +2958,7 @@ Table of Contents
    Implementations MUST include these fields; omitting them produces
    non-conformant hashes.
 
-13.7.  Mission Status enumeration and authorization-oracle resistance
+12.7.  Mission Status enumeration and authorization-oracle resistance
 
    Mission Status responses MUST treat unknown references and
    unauthorized references as observationally equivalent.  An attacker
@@ -3077,7 +2970,7 @@ Table of Contents
    specifications MUST preserve both in transport, including timing and
    payload-size invariance.
 
-13.8.  Trust-boundary violations
+12.8.  Trust-boundary violations
 
    Profile specifications populate the trust boundary roles (Shaper,
    state authority, credential issuer, PDP, evidence emitter).
@@ -3085,7 +2978,7 @@ Table of Contents
    component.  Output of the Shaper MUST be treated as untrusted by the
    state authority.
 
-13.9.  Approving principal AAL
+12.9.  Approving principal AAL
 
    This specification requires the AAL to be recorded in binding
    evidence.  It does not mandate an AAL floor for approval; deployment
@@ -3094,7 +2987,7 @@ Table of Contents
    Identifier registry (Section 10.1.2.1) provides a coordinated
    identifier space.
 
-13.10.  Transport security (TLS)
+12.10.  Transport security (TLS)
 
    All state-authority interfaces specified by this document (/.well-
    known/mission-authority, mission_status_endpoint,
@@ -3108,7 +3001,7 @@ Table of Contents
    Consumers MUST NOT pin to the state authority's signing keys
    (jwks_uri keys) for TLS purposes; the two key roles are separate.
 
-13.11.  State-authority signing-key rotation
+12.11.  State-authority signing-key rotation
 
    State authorities MUST rotate the signing keys used for Mission
    Status and Mission Lifecycle response signatures on a deployment-
@@ -3126,7 +3019,7 @@ Table of Contents
    entry.  The Framework does not standardize the wire form; profile
    specifications bind the kid carriage.
 
-13.12.  Denial of service against the state authority
+12.12.  Denial of service against the state authority
 
    Mission Status is on the consumption path of every Mission-bound
    credential validation in deployments that consult it synchronously.
@@ -3147,7 +3040,7 @@ Table of Contents
    expires_at rather than re-querying for every credential validation;
    profiles bind this caching behavior.
 
-13.13.  Clock skew
+12.13.  Clock skew
 
    Mission Status responses carry RFC 3339 timestamps in issued_at,
    expires_at, freshness_at, and mission_expiry.  Clock skew between the
@@ -3162,7 +3055,7 @@ Table of Contents
    relaxation.  Consumers MUST NOT extend skew tolerance for terminal-
    state responses (revoked, expired, completed).
 
-13.14.  Replay of Mission Status responses
+12.14.  Replay of Mission Status responses
 
    A Mission Status response signed and bound to a caller, audience, and
    nonce is reusable only within its expires_at window and only by the
@@ -3174,7 +3067,7 @@ Table of Contents
    same nonce within a short window.  Nonces are anti-replay binding,
    not authentication tokens; consumers MUST NOT rely on nonce secrecy.
 
-13.15.  Side channels via pairwise references
+12.15.  Side channels via pairwise references
 
    Even with the non-correlation property of Section 7.2.4, side
    channels can leak that two mission.ref values identify the same
@@ -3193,7 +3086,7 @@ Table of Contents
    Deployments SHOULD assess the side-channel surface specific to their
    sector type and threat model.
 
-13.16.  Log injection via consent disclosure content
+12.16.  Log injection via consent disclosure content
 
    The consent disclosure object contains user-facing strings (typically
    derived from the Mission Intent's goal, constraints, and
@@ -3207,7 +3100,7 @@ Table of Contents
    serialization for integrity-anchor purposes; it is not safe to inject
    into other contexts unescaped.
 
-13.17.  Mission record garbage collection and audit chains
+12.17.  Mission record garbage collection and audit chains
 
    After Mission record garbage collection (Section 3.6), the state
    authority MUST retain a stub indicating that the mission.id and
@@ -3220,13 +3113,13 @@ Table of Contents
    stub MUST NOT contain the Mission Intent, Authority Set, or consent
    disclosure object.
 
-14.  Privacy Considerations
+13.  Privacy Considerations
 
    This section discusses privacy threats and mitigations specific to
-   the Mission Framework.  Section 13 addresses security threats; this
+   the Mission Framework.  Section 12 addresses security threats; this
    section addresses privacy threats that are not subsumed by security.
 
-14.1.  Pairwise references and correlation
+13.1.  Pairwise references and correlation
 
    The pairwise reference framework (Section 7.2) is designed to prevent
    direct cross-sector correlation of Mission identifiers.  It is not a
@@ -3246,7 +3139,7 @@ Table of Contents
       associate Mission references.
 
    *  *Side channels through the state authority*: as described in
-      Section 13.15.
+      Section 12.15.
 
    Deployments SHOULD assess which correlation channels are relevant to
    their threat model and select pairwise sector type (Section 7.2.1)
@@ -3254,7 +3147,7 @@ Table of Contents
    the strongest pairwise unlinkability within the framework; wider
    sectors are correlation-permissive by design.
 
-14.2.  Consent disclosure content and PII
+13.2.  Consent disclosure content and PII
 
    The consent disclosure object can contain personally identifiable
    information (PII) drawn from the Mission Intent's user-facing strings
@@ -3276,7 +3169,7 @@ Table of Contents
    readable evidence of policy decisions without embedding additional
    PII.
 
-14.3.  Subject and approving-principal identifiers
+13.3.  Subject and approving-principal identifiers
 
    The Mission record's principals.subject and
    principals.approving_principal are stable identifiers within the
@@ -3291,7 +3184,7 @@ Table of Contents
    controlled directory service rather than embedding PII in the Mission
    record.
 
-14.4.  Tenant correlation
+13.4.  Tenant correlation
 
    The principals.tenant value identifies the authorization domain the
    Mission lives in.  Tenant identifiers SHOULD be opaque and SHOULD NOT
@@ -3305,7 +3198,7 @@ Table of Contents
    other than A; the tenant-isolation property is a fundamental privacy
    boundary.
 
-14.5.  Audit logging and retention
+13.5.  Audit logging and retention
 
    State-authority audit logs SHOULD record per-Mission events
    (approval, suspension, revocation, expiry) for the audit retention
@@ -3320,7 +3213,7 @@ Table of Contents
    and approval-event metadata) to a separate audit anchor store while
    permitting the Mission record itself to be garbage-collected.
 
-14.6.  Mission record content and data subject access
+13.6.  Mission record content and data subject access
 
    In regulatory regimes where data subjects have access rights to
    records concerning them (e.g., GDPR Article 15), the Mission record
@@ -3330,17 +3223,17 @@ Table of Contents
 
    Deployments MUST be able to delete or anonymize Mission records on
    lawful erasure request, subject to overriding retention obligations.
-   The garbage-collection stub of Section 13.17 provides the retention-
+   The garbage-collection stub of Section 12.17 provides the retention-
    side residual; deployments needing full erasure rather than
    retirement MUST extend the garbage-collection flow to remove the stub
    when lawfully required.
 
-15.  IANA Considerations
+14.  IANA Considerations
 
    This document requests IANA to create five new registries and to add
    the Well-Known URI registration for mission-authority.
 
-15.1.  Well-Known URI: mission-authority
+14.1.  Well-Known URI: mission-authority
 
    IANA is requested to register the following Well-Known URI per
    [RFC8615]:
@@ -3355,7 +3248,7 @@ Table of Contents
       metadata document at {mission.origin}/.well-known/mission-
       authority (see Section 7.3).
 
-15.2.  Mission Common Constraints Registry
+14.2.  Mission Common Constraints Registry
 
    IANA is requested to create the *Mission Common Constraints*
    registry.
@@ -3369,7 +3262,7 @@ Table of Contents
       the Mission lifecycle model, and (d) whether the constraint name
       does not collide with existing registered names.
 
-15.2.1.  Registration template
+14.2.1.  Registration template
 
    Each registration MUST include:
 
@@ -3404,7 +3297,7 @@ Table of Contents
 
    *  *Reference*.
 
-15.2.2.  Initial entries
+14.2.2.  Initial entries
 
    The Framework registers the two constraints defined in Section 10:
 
@@ -3412,7 +3305,7 @@ Table of Contents
 
    *  aal — this document.
 
-15.3.  Mission Authority Set Type Registry
+14.3.  Mission Authority Set Type Registry
 
    IANA is requested to create the *Mission Authority Set Type*
    registry.  See Section 5.3 for the specification text.
@@ -3426,41 +3319,17 @@ Table of Contents
       the Normalization Profile is registered or co-registered, and (e)
       the type name does not collide.
 
-15.3.1.  Registration template
+14.3.1.  Registration template
 
    See Section 5.3 for the registration template.
 
-15.3.2.  Initial entries
+14.3.2.  Initial entries
 
    The Framework reserves mission_resource_access for registration by
    the OAuth Profile ([I-D.draft-mcguinness-mission-oauth-profile]).  No
    type is registered by this document.
 
-15.4.  Mission Capability-Advertisement Metadata Registry
-
-   IANA is requested to create the *Mission Capability-Advertisement
-   Metadata* registry.  See Section 11 for the specification text.
-
-   *  *Registration Policy*: Specification Required ([RFC8126]).
-
-   *  *Designated Expert review criteria*: experts evaluate whether (a)
-      the metadata member's value type and structure are unambiguous,
-      (b) the closed-set status is well-defined, and (c) the member name
-      does not collide.
-
-15.4.1.  Registration template
-
-   See Section 11.3.
-
-15.4.2.  Initial entries
-
-   This document registers the five initial members defined in
-   Section 11: mission_authorization_domain_tiers_supported,
-   mission_ladder_levels_supported, mission_profiles_supported,
-   mission_optional_modules_supported,
-   mission_framework_versions_supported.
-
-15.5.  Mission Normalization Profile Registry
+14.4.  Mission Normalization Profile Registry
 
    IANA is requested to create the *Mission Normalization Profile*
    registry.
@@ -3474,7 +3343,7 @@ Table of Contents
       empty members, and field-name canonical form (per Section 6.2),
       and (c) the profile identifier does not collide.
 
-15.5.1.  Registration template
+14.4.1.  Registration template
 
    *  *Profile identifier* (URI): the registered identifier (e.g.,
       urn:mbo:norm:mission-intent:1).
@@ -3488,7 +3357,7 @@ Table of Contents
 
    *  *Reference*.
 
-15.5.2.  Initial entries
+14.4.2.  Initial entries
 
    This document registers the three Normalization Profiles defined in
    Section 6.2:
@@ -3499,7 +3368,7 @@ Table of Contents
 
    *  urn:mbo:norm:mission-consent-disclosure:1 — this document.
 
-15.6.  Mission AAL Identifier Registry
+14.5.  Mission AAL Identifier Registry
 
    IANA is requested to create the *Mission AAL Identifier* registry.
    See Section 10.1.2.1 for the specification text.
@@ -3511,7 +3380,7 @@ Table of Contents
       assurance framework, (b) the ordering relative to existing entries
       is well-defined, and (c) the identifier does not collide.
 
-15.6.1.  Registration template
+14.5.1.  Registration template
 
    *  *Identifier* (URI or short string).
 
@@ -3525,7 +3394,7 @@ Table of Contents
 
    *  *Change controller*.
 
-15.6.2.  Initial entries
+14.5.2.  Initial entries
 
    This document registers the three identifiers of Section 10.1.2.1:
 
@@ -3535,7 +3404,7 @@ Table of Contents
 
    *  urn:mbo:aal:3 — this document.
 
-15.7.  Mission Lifecycle State Enumerations
+14.6.  Mission Lifecycle State Enumerations
 
    This document defines closed enumerations for Mission Proposal states
    (pending_approval, rejected, withdrawn, expired_as_pending) and
@@ -3544,14 +3413,14 @@ Table of Contents
    extensibility is later required, dedicated IANA registries SHOULD be
    created via a subsequent revision of this Framework.
 
-15.8.  Mission Pairwise Sector Type Enumeration
+14.7.  Mission Pairwise Sector Type Enumeration
 
    This document defines a closed enumeration for the
    mission_pairwise_sector metadata value: resource_server, resource_as,
    tenant, trust_domain.  If extensibility is later required, a
    dedicated IANA registry SHOULD be created via a subsequent revision.
 
-15.9.  Mission Status Response Media Types
+14.8.  Mission Status Response Media Types
 
    Where a profile specification needs a new media type for Mission
    Status responses (e.g., application/mission-status-response+json or
@@ -3559,7 +3428,7 @@ Table of Contents
    media type per [RFC6838].  This document does NOT register media
    types; profiles do.
 
-15.10.  What this document does NOT register
+14.9.  What this document does NOT register
 
    *  RAR type values: [RFC9396] does not establish an IANA registry for
       every RAR type.  The mission_resource_access RAR type is
@@ -3645,9 +3514,6 @@ Normative References
               <https://www.rfc-editor.org/rfc/rfc8785>.
 
 Informative References
-
-   [I-D.draft-mcguinness-mission-capability-model]
-              "*** BROKEN REFERENCE ***".
 
    [I-D.draft-mcguinness-mission-expansion]
               "*** BROKEN REFERENCE ***".

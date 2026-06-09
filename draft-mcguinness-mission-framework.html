@@ -14,8 +14,8 @@ specifications map onto specific substrates: Mission Proposal and
 Mission lifecycles, the Mission Intent JSON schema, typed Authority
 Set, integrity anchors with domain-separated hash inputs, a canonical
 and pairwise identifier model, common constraints framework, Mission
-Status interface, principal model, evidence binding, and
-capability-advertisement metadata. The framework is substrate-neutral
+Status interface, principal model, and evidence binding. The
+framework is substrate-neutral
 on semantics; profile specifications for OAuth, AAuth, and the Mission
 Authority Server compose this framework with their respective wire
 substrates and pick the concrete protection mechanism. 
@@ -1102,8 +1102,8 @@ specifications map onto specific substrates: Mission Proposal and
 Mission lifecycles, the Mission Intent JSON schema, typed Authority
 Set, integrity anchors with domain-separated hash inputs, a canonical
 and pairwise identifier model, common constraints framework, Mission
-Status interface, principal model, evidence binding, and
-capability-advertisement metadata. The framework is substrate-neutral
+Status interface, principal model, and evidence binding. The
+framework is substrate-neutral
 on semantics; profile specifications for OAuth, AAuth, and the Mission
 Authority Server compose this framework with their respective wire
 substrates and pick the concrete protection mechanism.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
@@ -1523,195 +1523,167 @@ substrates and pick the concrete protection mechanism.<a href="#section-abstract
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
-            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-capability-advertisement-me" class="internal xref">Capability-Advertisement Metadata</a></p>
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-reference-test-vectors" class="internal xref">Reference Test Vectors</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
-                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-initial-members" class="internal xref">Initial members</a></p>
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
+                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-state-authority-compromise" class="internal xref">State authority compromise</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
-                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-worked-example" class="internal xref">Worked example</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.2">
+                <p id="section-toc.1-1.12.2.2.1"><a href="#section-12.2" class="auto internal xref">12.2</a>.  <a href="#name-integrity-anchor-non-guaran" class="internal xref">Integrity anchor non-guarantees</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.3">
-                <p id="section-toc.1-1.11.2.3.1"><a href="#section-11.3" class="auto internal xref">11.3</a>.  <a href="#name-registration-template-2" class="internal xref">Registration template</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.3">
+                <p id="section-toc.1-1.12.2.3.1"><a href="#section-12.3" class="auto internal xref">12.3</a>.  <a href="#name-jcs-implementation-correctn" class="internal xref">JCS implementation correctness</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.4">
-                <p id="section-toc.1-1.11.2.4.1"><a href="#section-11.4" class="auto internal xref">11.4</a>.  <a href="#name-cross-reference-to-capabili" class="internal xref">Cross-reference to Capability Model</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.4">
+                <p id="section-toc.1-1.12.2.4.1"><a href="#section-12.4" class="auto internal xref">12.4</a>.  <a href="#name-number-precision-under-jcs" class="internal xref">Number precision under JCS</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.5">
+                <p id="section-toc.1-1.12.2.5.1"><a href="#section-12.5" class="auto internal xref">12.5</a>.  <a href="#name-pairwise-identifier-privacy" class="internal xref">Pairwise identifier privacy and correlation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.6">
+                <p id="section-toc.1-1.12.2.6.1"><a href="#section-12.6" class="auto internal xref">12.6</a>.  <a href="#name-hash-equality-leakage-and-c" class="internal xref">Hash equality leakage and cross-tenant transplantation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.7">
+                <p id="section-toc.1-1.12.2.7.1"><a href="#section-12.7" class="auto internal xref">12.7</a>.  <a href="#name-mission-status-enumeration-" class="internal xref">Mission Status enumeration and authorization-oracle resistance</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.8">
+                <p id="section-toc.1-1.12.2.8.1"><a href="#section-12.8" class="auto internal xref">12.8</a>.  <a href="#name-trust-boundary-violations" class="internal xref">Trust-boundary violations</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.9">
+                <p id="section-toc.1-1.12.2.9.1"><a href="#section-12.9" class="auto internal xref">12.9</a>.  <a href="#name-approving-principal-aal" class="internal xref">Approving principal AAL</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.10">
+                <p id="section-toc.1-1.12.2.10.1"><a href="#section-12.10" class="auto internal xref">12.10</a>. <a href="#name-transport-security-tls" class="internal xref">Transport security (TLS)</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.11">
+                <p id="section-toc.1-1.12.2.11.1"><a href="#section-12.11" class="auto internal xref">12.11</a>. <a href="#name-state-authority-signing-key" class="internal xref">State-authority signing-key rotation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.12">
+                <p id="section-toc.1-1.12.2.12.1"><a href="#section-12.12" class="auto internal xref">12.12</a>. <a href="#name-denial-of-service-against-t" class="internal xref">Denial of service against the state authority</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.13">
+                <p id="section-toc.1-1.12.2.13.1"><a href="#section-12.13" class="auto internal xref">12.13</a>. <a href="#name-clock-skew" class="internal xref">Clock skew</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.14">
+                <p id="section-toc.1-1.12.2.14.1"><a href="#section-12.14" class="auto internal xref">12.14</a>. <a href="#name-replay-of-mission-status-re" class="internal xref">Replay of Mission Status responses</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.15">
+                <p id="section-toc.1-1.12.2.15.1"><a href="#section-12.15" class="auto internal xref">12.15</a>. <a href="#name-side-channels-via-pairwise-" class="internal xref">Side channels via pairwise references</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.16">
+                <p id="section-toc.1-1.12.2.16.1"><a href="#section-12.16" class="auto internal xref">12.16</a>. <a href="#name-log-injection-via-consent-d" class="internal xref">Log injection via consent disclosure content</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.17">
+                <p id="section-toc.1-1.12.2.17.1"><a href="#section-12.17" class="auto internal xref">12.17</a>. <a href="#name-mission-record-garbage-coll" class="internal xref">Mission record garbage collection and audit chains</a></p>
 </li>
             </ul>
 </li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
-            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-reference-test-vectors" class="internal xref">Reference Test Vectors</a></p>
-</li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
-            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
-                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-state-authority-compromise" class="internal xref">State authority compromise</a></p>
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-pairwise-references-and-cor" class="internal xref">Pairwise references and correlation</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
-                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-integrity-anchor-non-guaran" class="internal xref">Integrity anchor non-guarantees</a></p>
+                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-consent-disclosure-content-" class="internal xref">Consent disclosure content and PII</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.3">
-                <p id="section-toc.1-1.13.2.3.1"><a href="#section-13.3" class="auto internal xref">13.3</a>.  <a href="#name-jcs-implementation-correctn" class="internal xref">JCS implementation correctness</a></p>
+                <p id="section-toc.1-1.13.2.3.1"><a href="#section-13.3" class="auto internal xref">13.3</a>.  <a href="#name-subject-and-approving-princ" class="internal xref">Subject and approving-principal identifiers</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.4">
-                <p id="section-toc.1-1.13.2.4.1"><a href="#section-13.4" class="auto internal xref">13.4</a>.  <a href="#name-number-precision-under-jcs" class="internal xref">Number precision under JCS</a></p>
+                <p id="section-toc.1-1.13.2.4.1"><a href="#section-13.4" class="auto internal xref">13.4</a>.  <a href="#name-tenant-correlation" class="internal xref">Tenant correlation</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.5">
-                <p id="section-toc.1-1.13.2.5.1"><a href="#section-13.5" class="auto internal xref">13.5</a>.  <a href="#name-pairwise-identifier-privacy" class="internal xref">Pairwise identifier privacy and correlation</a></p>
+                <p id="section-toc.1-1.13.2.5.1"><a href="#section-13.5" class="auto internal xref">13.5</a>.  <a href="#name-audit-logging-and-retention" class="internal xref">Audit logging and retention</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.6">
-                <p id="section-toc.1-1.13.2.6.1"><a href="#section-13.6" class="auto internal xref">13.6</a>.  <a href="#name-hash-equality-leakage-and-c" class="internal xref">Hash equality leakage and cross-tenant transplantation</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.7">
-                <p id="section-toc.1-1.13.2.7.1"><a href="#section-13.7" class="auto internal xref">13.7</a>.  <a href="#name-mission-status-enumeration-" class="internal xref">Mission Status enumeration and authorization-oracle resistance</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.8">
-                <p id="section-toc.1-1.13.2.8.1"><a href="#section-13.8" class="auto internal xref">13.8</a>.  <a href="#name-trust-boundary-violations" class="internal xref">Trust-boundary violations</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.9">
-                <p id="section-toc.1-1.13.2.9.1"><a href="#section-13.9" class="auto internal xref">13.9</a>.  <a href="#name-approving-principal-aal" class="internal xref">Approving principal AAL</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.10">
-                <p id="section-toc.1-1.13.2.10.1"><a href="#section-13.10" class="auto internal xref">13.10</a>. <a href="#name-transport-security-tls" class="internal xref">Transport security (TLS)</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.11">
-                <p id="section-toc.1-1.13.2.11.1"><a href="#section-13.11" class="auto internal xref">13.11</a>. <a href="#name-state-authority-signing-key" class="internal xref">State-authority signing-key rotation</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.12">
-                <p id="section-toc.1-1.13.2.12.1"><a href="#section-13.12" class="auto internal xref">13.12</a>. <a href="#name-denial-of-service-against-t" class="internal xref">Denial of service against the state authority</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.13">
-                <p id="section-toc.1-1.13.2.13.1"><a href="#section-13.13" class="auto internal xref">13.13</a>. <a href="#name-clock-skew" class="internal xref">Clock skew</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.14">
-                <p id="section-toc.1-1.13.2.14.1"><a href="#section-13.14" class="auto internal xref">13.14</a>. <a href="#name-replay-of-mission-status-re" class="internal xref">Replay of Mission Status responses</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.15">
-                <p id="section-toc.1-1.13.2.15.1"><a href="#section-13.15" class="auto internal xref">13.15</a>. <a href="#name-side-channels-via-pairwise-" class="internal xref">Side channels via pairwise references</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.16">
-                <p id="section-toc.1-1.13.2.16.1"><a href="#section-13.16" class="auto internal xref">13.16</a>. <a href="#name-log-injection-via-consent-d" class="internal xref">Log injection via consent disclosure content</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.17">
-                <p id="section-toc.1-1.13.2.17.1"><a href="#section-13.17" class="auto internal xref">13.17</a>. <a href="#name-mission-record-garbage-coll" class="internal xref">Mission record garbage collection and audit chains</a></p>
+                <p id="section-toc.1-1.13.2.6.1"><a href="#section-13.6" class="auto internal xref">13.6</a>.  <a href="#name-mission-record-content-and-" class="internal xref">Mission record content and data subject access</a></p>
 </li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
-            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
-                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-pairwise-references-and-cor" class="internal xref">Pairwise references and correlation</a></p>
+                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-well-known-uri-mission-auth" class="internal xref">Well-Known URI: <code>mission-authority</code></a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2">
-                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-consent-disclosure-content-" class="internal xref">Consent disclosure content and PII</a></p>
+                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-mission-common-constraints-" class="internal xref">Mission Common Constraints Registry</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2.2.1">
+                    <p id="section-toc.1-1.14.2.2.2.1.1"><a href="#section-14.2.1" class="auto internal xref">14.2.1</a>.  <a href="#name-registration-template-2" class="internal xref">Registration template</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2.2.2">
+                    <p id="section-toc.1-1.14.2.2.2.2.1"><a href="#section-14.2.2" class="auto internal xref">14.2.2</a>.  <a href="#name-initial-entries-3" class="internal xref">Initial entries</a></p>
+</li>
+                </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.3">
-                <p id="section-toc.1-1.14.2.3.1"><a href="#section-14.3" class="auto internal xref">14.3</a>.  <a href="#name-subject-and-approving-princ" class="internal xref">Subject and approving-principal identifiers</a></p>
+                <p id="section-toc.1-1.14.2.3.1"><a href="#section-14.3" class="auto internal xref">14.3</a>.  <a href="#name-mission-authority-set-type-r" class="internal xref">Mission Authority Set Type Registry</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.3.2.1">
+                    <p id="section-toc.1-1.14.2.3.2.1.1"><a href="#section-14.3.1" class="auto internal xref">14.3.1</a>.  <a href="#name-registration-template-3" class="internal xref">Registration template</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.3.2.2">
+                    <p id="section-toc.1-1.14.2.3.2.2.1"><a href="#section-14.3.2" class="auto internal xref">14.3.2</a>.  <a href="#name-initial-entries-4" class="internal xref">Initial entries</a></p>
+</li>
+                </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.4">
-                <p id="section-toc.1-1.14.2.4.1"><a href="#section-14.4" class="auto internal xref">14.4</a>.  <a href="#name-tenant-correlation" class="internal xref">Tenant correlation</a></p>
+                <p id="section-toc.1-1.14.2.4.1"><a href="#section-14.4" class="auto internal xref">14.4</a>.  <a href="#name-mission-normalization-profi" class="internal xref">Mission Normalization Profile Registry</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.4.2.1">
+                    <p id="section-toc.1-1.14.2.4.2.1.1"><a href="#section-14.4.1" class="auto internal xref">14.4.1</a>.  <a href="#name-registration-template-4" class="internal xref">Registration template</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.4.2.2">
+                    <p id="section-toc.1-1.14.2.4.2.2.1"><a href="#section-14.4.2" class="auto internal xref">14.4.2</a>.  <a href="#name-initial-entries-5" class="internal xref">Initial entries</a></p>
+</li>
+                </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.5">
-                <p id="section-toc.1-1.14.2.5.1"><a href="#section-14.5" class="auto internal xref">14.5</a>.  <a href="#name-audit-logging-and-retention" class="internal xref">Audit logging and retention</a></p>
+                <p id="section-toc.1-1.14.2.5.1"><a href="#section-14.5" class="auto internal xref">14.5</a>.  <a href="#name-mission-aal-identifier-regi" class="internal xref">Mission AAL Identifier Registry</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.5.2.1">
+                    <p id="section-toc.1-1.14.2.5.2.1.1"><a href="#section-14.5.1" class="auto internal xref">14.5.1</a>.  <a href="#name-registration-template-5" class="internal xref">Registration template</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.5.2.2">
+                    <p id="section-toc.1-1.14.2.5.2.2.1"><a href="#section-14.5.2" class="auto internal xref">14.5.2</a>.  <a href="#name-initial-entries-6" class="internal xref">Initial entries</a></p>
+</li>
+                </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.6">
-                <p id="section-toc.1-1.14.2.6.1"><a href="#section-14.6" class="auto internal xref">14.6</a>.  <a href="#name-mission-record-content-and-" class="internal xref">Mission record content and data subject access</a></p>
+                <p id="section-toc.1-1.14.2.6.1"><a href="#section-14.6" class="auto internal xref">14.6</a>.  <a href="#name-mission-lifecycle-state-enu" class="internal xref">Mission Lifecycle State Enumerations</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.7">
+                <p id="section-toc.1-1.14.2.7.1"><a href="#section-14.7" class="auto internal xref">14.7</a>.  <a href="#name-mission-pairwise-sector-typ" class="internal xref">Mission Pairwise Sector Type Enumeration</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.8">
+                <p id="section-toc.1-1.14.2.8.1"><a href="#section-14.8" class="auto internal xref">14.8</a>.  <a href="#name-mission-status-response-med" class="internal xref">Mission Status Response Media Types</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.9">
+                <p id="section-toc.1-1.14.2.9.1"><a href="#section-14.9" class="auto internal xref">14.9</a>.  <a href="#name-what-this-document-does-not" class="internal xref">What this document does NOT register</a></p>
 </li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
-            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.1">
-                <p id="section-toc.1-1.15.2.1.1"><a href="#section-15.1" class="auto internal xref">15.1</a>.  <a href="#name-well-known-uri-mission-auth" class="internal xref">Well-Known URI: <code>mission-authority</code></a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.2">
-                <p id="section-toc.1-1.15.2.2.1"><a href="#section-15.2" class="auto internal xref">15.2</a>.  <a href="#name-mission-common-constraints-" class="internal xref">Mission Common Constraints Registry</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.2.2.1">
-                    <p id="section-toc.1-1.15.2.2.2.1.1"><a href="#section-15.2.1" class="auto internal xref">15.2.1</a>.  <a href="#name-registration-template-3" class="internal xref">Registration template</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.2.2.2">
-                    <p id="section-toc.1-1.15.2.2.2.2.1"><a href="#section-15.2.2" class="auto internal xref">15.2.2</a>.  <a href="#name-initial-entries-3" class="internal xref">Initial entries</a></p>
-</li>
-                </ul>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.3">
-                <p id="section-toc.1-1.15.2.3.1"><a href="#section-15.3" class="auto internal xref">15.3</a>.  <a href="#name-mission-authority-set-type-r" class="internal xref">Mission Authority Set Type Registry</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.3.2.1">
-                    <p id="section-toc.1-1.15.2.3.2.1.1"><a href="#section-15.3.1" class="auto internal xref">15.3.1</a>.  <a href="#name-registration-template-4" class="internal xref">Registration template</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.3.2.2">
-                    <p id="section-toc.1-1.15.2.3.2.2.1"><a href="#section-15.3.2" class="auto internal xref">15.3.2</a>.  <a href="#name-initial-entries-4" class="internal xref">Initial entries</a></p>
-</li>
-                </ul>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.4">
-                <p id="section-toc.1-1.15.2.4.1"><a href="#section-15.4" class="auto internal xref">15.4</a>.  <a href="#name-mission-capability-advertis" class="internal xref">Mission Capability-Advertisement Metadata Registry</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.4.2.1">
-                    <p id="section-toc.1-1.15.2.4.2.1.1"><a href="#section-15.4.1" class="auto internal xref">15.4.1</a>.  <a href="#name-registration-template-5" class="internal xref">Registration template</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.4.2.2">
-                    <p id="section-toc.1-1.15.2.4.2.2.1"><a href="#section-15.4.2" class="auto internal xref">15.4.2</a>.  <a href="#name-initial-entries-5" class="internal xref">Initial entries</a></p>
-</li>
-                </ul>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.5">
-                <p id="section-toc.1-1.15.2.5.1"><a href="#section-15.5" class="auto internal xref">15.5</a>.  <a href="#name-mission-normalization-profi" class="internal xref">Mission Normalization Profile Registry</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.5.2.1">
-                    <p id="section-toc.1-1.15.2.5.2.1.1"><a href="#section-15.5.1" class="auto internal xref">15.5.1</a>.  <a href="#name-registration-template-6" class="internal xref">Registration template</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.5.2.2">
-                    <p id="section-toc.1-1.15.2.5.2.2.1"><a href="#section-15.5.2" class="auto internal xref">15.5.2</a>.  <a href="#name-initial-entries-6" class="internal xref">Initial entries</a></p>
-</li>
-                </ul>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.6">
-                <p id="section-toc.1-1.15.2.6.1"><a href="#section-15.6" class="auto internal xref">15.6</a>.  <a href="#name-mission-aal-identifier-regi" class="internal xref">Mission AAL Identifier Registry</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.6.2.1">
-                    <p id="section-toc.1-1.15.2.6.2.1.1"><a href="#section-15.6.1" class="auto internal xref">15.6.1</a>.  <a href="#name-registration-template-7" class="internal xref">Registration template</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.6.2.2">
-                    <p id="section-toc.1-1.15.2.6.2.2.1"><a href="#section-15.6.2" class="auto internal xref">15.6.2</a>.  <a href="#name-initial-entries-7" class="internal xref">Initial entries</a></p>
-</li>
-                </ul>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.7">
-                <p id="section-toc.1-1.15.2.7.1"><a href="#section-15.7" class="auto internal xref">15.7</a>.  <a href="#name-mission-lifecycle-state-enu" class="internal xref">Mission Lifecycle State Enumerations</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.8">
-                <p id="section-toc.1-1.15.2.8.1"><a href="#section-15.8" class="auto internal xref">15.8</a>.  <a href="#name-mission-pairwise-sector-typ" class="internal xref">Mission Pairwise Sector Type Enumeration</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.9">
-                <p id="section-toc.1-1.15.2.9.1"><a href="#section-15.9" class="auto internal xref">15.9</a>.  <a href="#name-mission-status-response-med" class="internal xref">Mission Status Response Media Types</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.10">
-                <p id="section-toc.1-1.15.2.10.1"><a href="#section-15.10" class="auto internal xref">15.10</a>. <a href="#name-what-this-document-does-not" class="internal xref">What this document does NOT register</a></p>
-</li>
-            </ul>
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
-            <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
-</li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
-            <p id="section-toc.1-1.17.1"><a href="#section-17" class="auto internal xref"></a><a href="#name-references" class="internal xref">References</a></p>
+            <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref"></a><a href="#name-references" class="internal xref">References</a></p>
 <ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.1">
-                <p id="section-toc.1-1.17.2.1.1"><a href="#section-17.1" class="auto internal xref"></a><a href="#name-normative-references" class="internal xref">Normative References</a></p>
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.1">
+                <p id="section-toc.1-1.16.2.1.1"><a href="#section-16.1" class="auto internal xref"></a><a href="#name-normative-references" class="internal xref">Normative References</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.2">
-                <p id="section-toc.1-1.17.2.2.1"><a href="#section-17.2" class="auto internal xref"></a><a href="#name-informative-references" class="internal xref">Informative References</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.2">
+                <p id="section-toc.1-1.16.2.2.1"><a href="#section-16.2" class="auto internal xref"></a><a href="#name-informative-references" class="internal xref">Informative References</a></p>
 </li>
             </ul>
 </li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
-            <p id="section-toc.1-1.18.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1805,13 +1777,11 @@ error model.<a href="#section-1.2-8" class="pilcrow">¶</a></p>
 <p id="section-1.2-9"><a href="#common-constraints-framework" class="auto internal xref">Section 10</a> defines the Common Constraints
 registry framework and two initial entries (<code>max_derivations</code> and
 <code>aal</code>).<a href="#section-1.2-9" class="pilcrow">¶</a></p>
-<p id="section-1.2-10"><a href="#capability-advertisement-metadata" class="auto internal xref">Section 11</a> defines the state-authority
-capability-advertisement metadata document and its registry.<a href="#section-1.2-10" class="pilcrow">¶</a></p>
-<p id="section-1.2-11"><a href="#reference-test-vectors" class="auto internal xref">Section 12</a> declares the required test vector classes.<a href="#section-1.2-11" class="pilcrow">¶</a></p>
-<p id="section-1.2-12"><a href="#security-considerations" class="auto internal xref">Section 13</a> and <a href="#privacy-considerations" class="auto internal xref">Section 14</a> address
-security and privacy threats and mitigations.<a href="#section-1.2-12" class="pilcrow">¶</a></p>
-<p id="section-1.2-13"><a href="#iana-considerations" class="auto internal xref">Section 15</a> requests the IANA actions creating registries
-and initial entries.<a href="#section-1.2-13" class="pilcrow">¶</a></p>
+<p id="section-1.2-10"><a href="#reference-test-vectors" class="auto internal xref">Section 11</a> declares the required test vector classes.<a href="#section-1.2-10" class="pilcrow">¶</a></p>
+<p id="section-1.2-11"><a href="#security-considerations" class="auto internal xref">Section 12</a> and <a href="#privacy-considerations" class="auto internal xref">Section 13</a> address
+security and privacy threats and mitigations.<a href="#section-1.2-11" class="pilcrow">¶</a></p>
+<p id="section-1.2-12"><a href="#iana-considerations" class="auto internal xref">Section 14</a> requests the IANA actions creating registries
+and initial entries.<a href="#section-1.2-12" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="scope-and-non-scope">
@@ -1848,11 +1818,8 @@ anti-oracle, request-binding, caching).<a href="#section-1.3-2.6.1" class="pilcr
 (<code>max_derivations</code>, <code>aal</code>).<a href="#section-1.3-2.7.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.3-2.8">
-            <p id="section-1.3-2.8.1">Capability-advertisement metadata.<a href="#section-1.3-2.8.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-1.3-2.9">
-            <p id="section-1.3-2.9.1">Domain-separated, authorization-domain-bound hash envelopes for
-integrity anchors.<a href="#section-1.3-2.9.1" class="pilcrow">¶</a></p>
+            <p id="section-1.3-2.8.1">Domain-separated, authorization-domain-bound hash envelopes for
+integrity anchors.<a href="#section-1.3-2.8.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-1.3-3">This document does NOT define:<a href="#section-1.3-3" class="pilcrow">¶</a></p>
@@ -3480,7 +3447,7 @@ constitutes a compatible vs incompatible revision).<a href="#section-5.3.1-2.4.1
 </li>
             <li class="normal" id="section-5.3.1-2.5">
               <p id="section-5.3.1-2.5.1"><strong>Normalization rules</strong>: the registered Normalization Profile
-(see <a href="#normalization-profile-registry" class="auto internal xref">Section 15.5</a>) that applies to entries
+(see <a href="#normalization-profile-registry" class="auto internal xref">Section 14.4</a>) that applies to entries
 of this type prior to integrity-anchor computation.<a href="#section-5.3.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-5.3.1-2.6">
@@ -3733,7 +3700,7 @@ byte-exact).<a href="#section-6.2-2.5.1" class="pilcrow">¶</a></p>
             <p id="section-6.2-2.6.1"><strong>Number representation</strong>: numeric fields requiring precision
 beyond IEEE 754 double precision <span class="bcp14">MUST</span> use the JSON string
 representation. The profile declares which fields are
-precision-sensitive (see <a href="#number-precision-under-jcs" class="auto internal xref">Section 13.4</a>).<a href="#section-6.2-2.6.1" class="pilcrow">¶</a></p>
+precision-sensitive (see <a href="#number-precision-under-jcs" class="auto internal xref">Section 12.4</a>).<a href="#section-6.2-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.2-2.7">
             <p id="section-6.2-2.7.1"><strong>Absent versus empty members</strong>: per-field rule. An absent
@@ -3747,7 +3714,7 @@ profile <span class="bcp14">MUST NOT</span> silently lower-case or alias field n
 </li>
         </ul>
 <p id="section-6.2-3">The Framework creates the <strong>Mission Normalization Profile</strong> IANA
-registry (see <a href="#normalization-profile-registry" class="auto internal xref">Section 15.5</a>). Each registered
+registry (see <a href="#normalization-profile-registry" class="auto internal xref">Section 14.4</a>). Each registered
 type in the Authority Set Type registry <span class="bcp14">MUST</span> declare its applicable
 Normalization Profile.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
 <div id="initial-normalization-profile-mission-intent">
@@ -4024,7 +3991,7 @@ sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY
 <p id="section-6.5.3-8">The values of <code>authority_hash</code> and <code>consent_disclosure_hash</code> are
 computed in the same way over their respective envelopes.<a href="#section-6.5.3-8" class="pilcrow">¶</a></p>
 <p id="section-6.5.3-9">Conformant implementations <span class="bcp14">MUST</span> reproduce the test vectors in
-<a href="#reference-test-vectors" class="auto internal xref">Section 12</a> byte-for-byte; the illustrative bytes
+<a href="#reference-test-vectors" class="auto internal xref">Section 11</a> byte-for-byte; the illustrative bytes
 above are not authoritative.<a href="#section-6.5.3-9" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -4055,7 +4022,7 @@ event.<a href="#section-6.6-1.3.1" class="pilcrow">¶</a></p>
 <p id="section-6.6-2">The integrity anchors collectively commit the state authority's
 recorded approval. They do not prove faithful rendering to the
 approving principal; that property requires trustworthy consent UX
-above the protocol layer (see <a href="#integrity-anchor-non-guarantees" class="auto internal xref">Section 13.2</a>).<a href="#section-6.6-2" class="pilcrow">¶</a></p>
+above the protocol layer (see <a href="#integrity-anchor-non-guarantees" class="auto internal xref">Section 12.2</a>).<a href="#section-6.6-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -4369,13 +4336,8 @@ authority supports.<a href="#section-7.3-2.10.1" class="pilcrow">¶</a></p>
           <li class="normal" id="section-7.3-2.11">
             <p id="section-7.3-2.11.1"><code>mission_normalization_profiles_supported</code> (array of strings,
 required): registered Normalization Profile identifiers
-(<a href="#normalization-profile-registry" class="auto internal xref">Section 15.5</a>) the state authority
+(<a href="#normalization-profile-registry" class="auto internal xref">Section 14.4</a>) the state authority
 understands.<a href="#section-7.3-2.11.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-7.3-2.12">
-            <p id="section-7.3-2.12.1"><code>mission_capability_advertisement</code> (object, optional): the
-capability-advertisement object defined in
-<a href="#capability-advertisement-metadata" class="auto internal xref">Section 11</a>.<a href="#section-7.3-2.12.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <div id="worked-example-metadata-document">
@@ -4410,15 +4372,7 @@ capability-advertisement object defined in
     "urn:mbo:norm:mission-intent:1",
     "urn:mbo:norm:mission-authority-set:1",
     "urn:mbo:norm:mission-consent-disclosure:1"
-  ],
-  "mission_capability_advertisement": {
-    "mission_authorization_domain_tiers_supported": ["AD-2"],
-    "mission_ladder_levels_supported": [1, 2, 3],
-    "mission_profiles_supported": [
-      "oauth", "runtime_enforcement"
-    ],
-    "mission_optional_modules_supported": []
-  }
+  ]
 }
 </pre><a href="#section-7.3.1-1" class="pilcrow">¶</a>
 </div>
@@ -5153,7 +5107,7 @@ enforced.<a href="#section-10-3.9.1" class="pilcrow">¶</a></p>
 <p id="section-10.1.1-2"><strong>Value type</strong>: JSON string representing a non-negative decimal
 integer. Maximum value <code>"18446744073709551615"</code> (2^64 − 1). String
 form is chosen for IEEE 754 precision safety under JCS (see
-<a href="#number-precision-under-jcs" class="auto internal xref">Section 13.4</a>).<a href="#section-10.1.1-2" class="pilcrow">¶</a></p>
+<a href="#number-precision-under-jcs" class="auto internal xref">Section 12.4</a>).<a href="#section-10.1.1-2" class="pilcrow">¶</a></p>
 <p id="section-10.1.1-3"><strong>Authoritative counter</strong>: the state authority. Each credential
 derivation event <span class="bcp14">MUST</span> increment the counter atomically as part
 of the credential-issuance commit. The counter <span class="bcp14">MUST NOT</span> exceed
@@ -5319,761 +5273,639 @@ interest emerges.<a href="#section-10.2-3" class="pilcrow">¶</a></p>
 </div>
 </section>
 </div>
-<div id="capability-advertisement-metadata">
-<section id="section-11">
-      <h2 id="name-capability-advertisement-me">
-<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-capability-advertisement-me" class="section-name selfRef">Capability-Advertisement Metadata</a>
-      </h2>
-<p id="section-11-1">The Framework creates a <strong>Mission Capability-Advertisement Metadata</strong>
-registry. State authorities advertise their capabilities through the
-following metadata fields. These fields appear under the
-<code>mission_capability_advertisement</code> member of the state-authority
-metadata document (<a href="#state-authority-metadata-document" class="auto internal xref">Section 7.3</a>).<a href="#section-11-1" class="pilcrow">¶</a></p>
-<div id="initial-members">
-<section id="section-11.1">
-        <h3 id="name-initial-members">
-<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-initial-members" class="section-name selfRef">Initial members</a>
-        </h3>
-<ul class="normal">
-<li class="normal" id="section-11.1-1.1">
-            <p id="section-11.1-1.1.1"><code>mission_authorization_domain_tiers_supported</code> (array of strings,
-required): subset of registered Authorization Domain Tier
-identifiers. Identifiers are defined in
-<span>[<a href="#I-D.draft-mcguinness-mission-capability-model" class="cite xref">I-D.draft-mcguinness-mission-capability-model</a>]</span>.<a href="#section-11.1-1.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-11.1-1.2">
-            <p id="section-11.1-1.2.1"><code>mission_ladder_levels_supported</code> (array of integers, required):
-subset of Capability Ladder levels (0 through 5) supported.
-Levels are defined in
-<span>[<a href="#I-D.draft-mcguinness-mission-capability-model" class="cite xref">I-D.draft-mcguinness-mission-capability-model</a>]</span>.<a href="#section-11.1-1.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-11.1-1.3">
-            <p id="section-11.1-1.3.1"><code>mission_profiles_supported</code> (array of strings, required):
-substrate profiles supported. Initial values are <code>"oauth"</code>,
-<code>"aauth"</code>, <code>"mas"</code>, <code>"runtime_enforcement"</code>.<a href="#section-11.1-1.3.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-11.1-1.4">
-            <p id="section-11.1-1.4.1"><code>mission_optional_modules_supported</code> (array of strings,
-required): registered optional modules supported. May be empty.<a href="#section-11.1-1.4.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-11.1-1.5">
-            <p id="section-11.1-1.5.1"><code>mission_framework_versions_supported</code> (array of strings,
-required): spec revisions of this Framework that the state
-authority supports.<a href="#section-11.1-1.5.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-</section>
-</div>
-<div id="worked-example">
-<section id="section-11.2">
-        <h3 id="name-worked-example">
-<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-worked-example" class="section-name selfRef">Worked example</a>
-        </h3>
-<p id="section-11.2-1">A state authority that implements the OAuth Profile and the
-Runtime Enforcement Profile, at Authorization Domain Tier AD-2,
-Capability Ladder Levels 1 through 3, with no optional modules,
-advertises:<a href="#section-11.2-1" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-11.2-2">
-<pre>
-{
-  "mission_capability_advertisement": {
-    "mission_authorization_domain_tiers_supported": ["AD-2"],
-    "mission_ladder_levels_supported": [1, 2, 3],
-    "mission_profiles_supported": [
-      "oauth", "runtime_enforcement"
-    ],
-    "mission_optional_modules_supported": [],
-    "mission_framework_versions_supported": [
-      "draft-mcguinness-mission-framework-00"
-    ]
-  }
-}
-</pre><a href="#section-11.2-2" class="pilcrow">¶</a>
-</div>
-</section>
-</div>
-<div id="capability-metadata-registration-template">
-<section id="section-11.3">
-        <h3 id="name-registration-template-2">
-<a href="#section-11.3" class="section-number selfRef">11.3. </a><a href="#name-registration-template-2" class="section-name selfRef">Registration template</a>
-        </h3>
-<p id="section-11.3-1">The <strong>Mission Capability-Advertisement Metadata</strong> IANA registry
-holds the member names that may appear under
-<code>mission_capability_advertisement</code>. Each registration <span class="bcp14">MUST</span> include:<a href="#section-11.3-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-11.3-2.1">
-            <p id="section-11.3-2.1.1"><strong>Member name</strong> (string).<a href="#section-11.3-2.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-11.3-2.2">
-            <p id="section-11.3-2.2.1"><strong>Value type and structure</strong> (JSON type and shape).<a href="#section-11.3-2.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-11.3-2.3">
-            <p id="section-11.3-2.3.1"><strong>Defining specification</strong> (RFC, Internet-Draft, or stable URL).<a href="#section-11.3-2.3.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-11.3-2.4">
-            <p id="section-11.3-2.4.1"><strong>Closed-set status</strong>: whether the value space is a closed
-enumeration registered in another IANA registry, or open.<a href="#section-11.3-2.4.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-11.3-2.5">
-            <p id="section-11.3-2.5.1"><strong>Change controller</strong>.<a href="#section-11.3-2.5.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-11.3-2.6">
-            <p id="section-11.3-2.6.1"><strong>Reference</strong>.<a href="#section-11.3-2.6.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-<p id="section-11.3-3">Profile and feature specifications <span class="bcp14">MAY</span> add registry entries
-following this template.<a href="#section-11.3-3" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="cross-reference-to-capability-model">
-<section id="section-11.4">
-        <h3 id="name-cross-reference-to-capabili">
-<a href="#section-11.4" class="section-number selfRef">11.4. </a><a href="#name-cross-reference-to-capabili" class="section-name selfRef">Cross-reference to Capability Model</a>
-        </h3>
-<p id="section-11.4-1">The Mission-Bound Authorization Capability Model
-(<span>[<a href="#I-D.draft-mcguinness-mission-capability-model" class="cite xref">I-D.draft-mcguinness-mission-capability-model</a>]</span>) defines the
-Capability Ladder levels, Resource Server Tiers, and Authorization
-Domain Tiers. This document creates the metadata registry that
-names them and the initial members above; the Capability Model
-specification registers concrete tier and level identifiers in
-their own registries.<a href="#section-11.4-1" class="pilcrow">¶</a></p>
-</section>
-</div>
-</section>
-</div>
 <div id="reference-test-vectors">
-<section id="section-12">
+<section id="section-11">
       <h2 id="name-reference-test-vectors">
-<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-reference-test-vectors" class="section-name selfRef">Reference Test Vectors</a>
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-reference-test-vectors" class="section-name selfRef">Reference Test Vectors</a>
       </h2>
-<p id="section-12-1">This specification includes reference test vectors as a first-class
+<p id="section-11-1">This specification includes reference test vectors as a first-class
 deliverable. Test vectors are published in the <code>vectors/</code> directory
 of the specification repository, tagged with the spec revision
-(e.g., <code>vectors/draft-mcguinness-mission-framework-00/</code>).<a href="#section-12-1" class="pilcrow">¶</a></p>
-<p id="section-12-2">An implementation that does not reproduce the published test vectors
-byte-for-byte is non-conformant to that vector class.<a href="#section-12-2" class="pilcrow">¶</a></p>
-<p id="section-12-3">The required vector classes are:<a href="#section-12-3" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-12-4">
-<li id="section-12-4.1">
-          <p id="section-12-4.1.1"><strong>Semantic-normalization and JCS vectors</strong>: 20 or more input
+(e.g., <code>vectors/draft-mcguinness-mission-framework-00/</code>).<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-11-2">An implementation that does not reproduce the published test vectors
+byte-for-byte is non-conformant to that vector class.<a href="#section-11-2" class="pilcrow">¶</a></p>
+<p id="section-11-3">The required vector classes are:<a href="#section-11-3" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-11-4">
+<li id="section-11-4.1">
+          <p id="section-11-4.1.1"><strong>Semantic-normalization and JCS vectors</strong>: 20 or more input
 JSON objects with expected normalized data model and expected
 JCS bytes. Covers array ordering, duplicate elements, duplicate
 object member rejection, absent versus empty members, URI
 comparison, number formatting, key ordering, escapes, Unicode
-policy, nested objects, arrays, and nulls.<a href="#section-12-4.1.1" class="pilcrow">¶</a></p>
+policy, nested objects, arrays, and nulls.<a href="#section-11-4.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-12-4.2">
-          <p id="section-12-4.2.1"><strong>Domain-separated and authorization-domain-bound hash vectors</strong>:
+        <li id="section-11-4.2">
+          <p id="section-11-4.2.1"><strong>Domain-separated and authorization-domain-bound hash vectors</strong>:
 input value, normalized wrapped input, and expected SHA-256
 hash. Includes negative cross-tenant and cross-authority
-transplantation cases.<a href="#section-12-4.2.1" class="pilcrow">¶</a></p>
+transplantation cases.<a href="#section-11-4.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-12-4.3">
-          <p id="section-12-4.3.1"><strong>State-transition vectors</strong>: full state-machine traversals for
+        <li id="section-11-4.3">
+          <p id="section-11-4.3.1"><strong>State-transition vectors</strong>: full state-machine traversals for
 Mission Proposal and Mission lifecycles, including invalid
-transitions that <span class="bcp14">MUST</span> be refused.<a href="#section-12-4.3.1" class="pilcrow">¶</a></p>
+transitions that <span class="bcp14">MUST</span> be refused.<a href="#section-11-4.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-12-4.4">
-          <p id="section-12-4.4.1"><strong>Authority Set narrowing vectors</strong> per registered type. For
+        <li id="section-11-4.4">
+          <p id="section-11-4.4.1"><strong>Authority Set narrowing vectors</strong> per registered type. For
 <code>mission_resource_access</code>: approved entry + derived entry →
-expected accept/refuse classification.<a href="#section-12-4.4.1" class="pilcrow">¶</a></p>
+expected accept/refuse classification.<a href="#section-11-4.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-12-4.5">
-          <p id="section-12-4.5.1"><strong>Mission Status vectors</strong>: authenticated request → expected
+        <li id="section-11-4.5">
+          <p id="section-11-4.5.1"><strong>Mission Status vectors</strong>: authenticated request → expected
 response shape for success, stale state, replayed nonce, wrong
 audience, unknown reference, and unauthorized reference.
 Unknown and unauthorized cases <span class="bcp14">MUST</span> be observationally
-equivalent.<a href="#section-12-4.5.1" class="pilcrow">¶</a></p>
+equivalent.<a href="#section-11-4.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-12-4.6">
-          <p id="section-12-4.6.1"><strong><code>mission</code> claim vectors</strong>: Mission record → expected claim
+        <li id="section-11-4.6">
+          <p id="section-11-4.6.1"><strong><code>mission</code> claim vectors</strong>: Mission record → expected claim
 shape including canonical and pairwise variants. (Defined in
-the OAuth Profile; vector class declared here.)<a href="#section-12-4.6.1" class="pilcrow">¶</a></p>
+the OAuth Profile; vector class declared here.)<a href="#section-11-4.6.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
 </section>
 </div>
 <div id="security-considerations">
-<section id="section-13">
+<section id="section-12">
       <h2 id="name-security-considerations">
-<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
       </h2>
 <div id="state-authority-compromise">
-<section id="section-13.1">
+<section id="section-12.1">
         <h3 id="name-state-authority-compromise">
-<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-state-authority-compromise" class="section-name selfRef">State authority compromise</a>
+<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-state-authority-compromise" class="section-name selfRef">State authority compromise</a>
         </h3>
-<p id="section-13.1-1">A compromised state authority can fabricate Mission records,
+<p id="section-12.1-1">A compromised state authority can fabricate Mission records,
 backdate evidence, and issue Mission Status responses without
 constraint. The Framework assumes the state authority is trusted;
 compromise of the state authority is outside the protection model
 of this specification. Deployments mitigate state-authority
 compromise through key hardware modules, audit logging,
 independent attestation of state-authority operations, and
-cross-organization audit anchoring.<a href="#section-13.1-1" class="pilcrow">¶</a></p>
+cross-organization audit anchoring.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="integrity-anchor-non-guarantees">
-<section id="section-13.2">
+<section id="section-12.2">
         <h3 id="name-integrity-anchor-non-guaran">
-<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-integrity-anchor-non-guaran" class="section-name selfRef">Integrity anchor non-guarantees</a>
+<a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-integrity-anchor-non-guaran" class="section-name selfRef">Integrity anchor non-guarantees</a>
         </h3>
-<p id="section-13.2-1">The integrity anchors prove the state authority committed to
+<p id="section-12.2-1">The integrity anchors prove the state authority committed to
 specific canonical objects at the approval event. They do not
-prove:<a href="#section-13.2-1" class="pilcrow">¶</a></p>
+prove:<a href="#section-12.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-13.2-2.1">
-            <p id="section-13.2-2.1.1"><strong>Faithful rendering</strong>: the approving principal saw the consent
+<li class="normal" id="section-12.2-2.1">
+            <p id="section-12.2-2.1.1"><strong>Faithful rendering</strong>: the approving principal saw the consent
 disclosure object as the state authority recorded it. A
 compromised renderer can present different content while the
-state authority's record remains untouched.<a href="#section-13.2-2.1.1" class="pilcrow">¶</a></p>
+state authority's record remains untouched.<a href="#section-12.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-13.2-2.2">
-            <p id="section-13.2-2.2.1"><strong>Human comprehension</strong>: the approving principal understood the
+          <li class="normal" id="section-12.2-2.2">
+            <p id="section-12.2-2.2.1"><strong>Human comprehension</strong>: the approving principal understood the
 rendered content. Consent UX assurance lives above the protocol
-layer.<a href="#section-13.2-2.2.1" class="pilcrow">¶</a></p>
+layer.<a href="#section-12.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-13.2-2.3">
-            <p id="section-13.2-2.3.1"><strong>State authority honesty in real time</strong>: an honest auditor
+          <li class="normal" id="section-12.2-2.3">
+            <p id="section-12.2-2.3.1"><strong>State authority honesty in real time</strong>: an honest auditor
 examining records after the fact cannot distinguish honest
 state-authority operation from in-the-moment fabrication that
-records itself consistently.<a href="#section-13.2-2.3.1" class="pilcrow">¶</a></p>
+records itself consistently.<a href="#section-12.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-13.2-2.4">
-            <p id="section-13.2-2.4.1"><strong>Approving-principal authenticity</strong>: the approving principal
+          <li class="normal" id="section-12.2-2.4">
+            <p id="section-12.2-2.4.1"><strong>Approving-principal authenticity</strong>: the approving principal
 was authentically the named person, beyond the AAL evidence
-recorded.<a href="#section-13.2-2.4.1" class="pilcrow">¶</a></p>
+recorded.<a href="#section-12.2-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-13.2-3">Deployments needing stronger guarantees compose with trustworthy
+<p id="section-12.2-3">Deployments needing stronger guarantees compose with trustworthy
 consent UX, principal authentication assurance, MAS-rendered
 consent under cross-substrate governance, and transparency-log
-anchoring of integrity hashes.<a href="#section-13.2-3" class="pilcrow">¶</a></p>
+anchoring of integrity hashes.<a href="#section-12.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="jcs-implementation-correctness">
-<section id="section-13.3">
+<section id="section-12.3">
         <h3 id="name-jcs-implementation-correctn">
-<a href="#section-13.3" class="section-number selfRef">13.3. </a><a href="#name-jcs-implementation-correctn" class="section-name selfRef">JCS implementation correctness</a>
+<a href="#section-12.3" class="section-number selfRef">12.3. </a><a href="#name-jcs-implementation-correctn" class="section-name selfRef">JCS implementation correctness</a>
         </h3>
-<p id="section-13.3-1">Implementations that produce byte-divergent canonical output
-produce divergent hashes and break content-addressability.<a href="#section-13.3-1" class="pilcrow">¶</a></p>
-<p id="section-13.3-2">Mitigation: the spec's reference test vectors. An implementation
+<p id="section-12.3-1">Implementations that produce byte-divergent canonical output
+produce divergent hashes and break content-addressability.<a href="#section-12.3-1" class="pilcrow">¶</a></p>
+<p id="section-12.3-2">Mitigation: the spec's reference test vectors. An implementation
 that does not reproduce the test vectors byte-for-byte is
 non-conformant. Where possible, deployments <span class="bcp14">SHOULD</span> use known-good
-JCS libraries rather than rolling their own.<a href="#section-13.3-2" class="pilcrow">¶</a></p>
+JCS libraries rather than rolling their own.<a href="#section-12.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="number-precision-under-jcs">
-<section id="section-13.4">
+<section id="section-12.4">
         <h3 id="name-number-precision-under-jcs">
-<a href="#section-13.4" class="section-number selfRef">13.4. </a><a href="#name-number-precision-under-jcs" class="section-name selfRef">Number precision under JCS</a>
+<a href="#section-12.4" class="section-number selfRef">12.4. </a><a href="#name-number-precision-under-jcs" class="section-name selfRef">Number precision under JCS</a>
         </h3>
-<p id="section-13.4-1">IEEE 754 double precision applies to JSON numbers under JCS.
+<p id="section-12.4-1">IEEE 754 double precision applies to JSON numbers under JCS.
 Constraint values where precision matters <span class="bcp14">MUST</span> use string
 representation (e.g., <code>"max_derivations": "100"</code>), not number
-representation.<a href="#section-13.4-1" class="pilcrow">¶</a></p>
+representation.<a href="#section-12.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="pairwise-identifier-privacy-and-correlation">
-<section id="section-13.5">
+<section id="section-12.5">
         <h3 id="name-pairwise-identifier-privacy">
-<a href="#section-13.5" class="section-number selfRef">13.5. </a><a href="#name-pairwise-identifier-privacy" class="section-name selfRef">Pairwise identifier privacy and correlation</a>
+<a href="#section-12.5" class="section-number selfRef">12.5. </a><a href="#name-pairwise-identifier-privacy" class="section-name selfRef">Pairwise identifier privacy and correlation</a>
         </h3>
-<p id="section-13.5-1">The pairwise reference framework prevents direct correlation of
+<p id="section-12.5-1">The pairwise reference framework prevents direct correlation of
 Mission identifiers across audiences in the same sector. It does
 not prevent indirect correlation through audience-side state
 (e.g., user identifiers, timing, request patterns). Deployments
-<span class="bcp14">SHOULD</span> assess the correlation surface of their chosen sector.<a href="#section-13.5-1" class="pilcrow">¶</a></p>
+<span class="bcp14">SHOULD</span> assess the correlation surface of their chosen sector.<a href="#section-12.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="hash-equality-leakage-and-cross-tenant-transplantation">
-<section id="section-13.6">
+<section id="section-12.6">
         <h3 id="name-hash-equality-leakage-and-c">
-<a href="#section-13.6" class="section-number selfRef">13.6. </a><a href="#name-hash-equality-leakage-and-c" class="section-name selfRef">Hash equality leakage and cross-tenant transplantation</a>
+<a href="#section-12.6" class="section-number selfRef">12.6. </a><a href="#name-hash-equality-leakage-and-c" class="section-name selfRef">Hash equality leakage and cross-tenant transplantation</a>
         </h3>
-<p id="section-13.6-1">Without authorization-domain binding in the hash envelope, two
+<p id="section-12.6-1">Without authorization-domain binding in the hash envelope, two
 identical Validated Mission Intents in different tenants would
 produce identical <code>proposal_hash</code> values, leaking equality across
-tenants and creating a transplantation surface.<a href="#section-13.6-1" class="pilcrow">¶</a></p>
-<p id="section-13.6-2">This specification mitigates by binding <code>authorization_domain</code> and
+tenants and creating a transplantation surface.<a href="#section-12.6-1" class="pilcrow">¶</a></p>
+<p id="section-12.6-2">This specification mitigates by binding <code>authorization_domain</code> and
 <code>state_authority</code> into the hash envelope (see
 <a href="#integrity-envelope" class="auto internal xref">Section 6.3</a>). Implementations <span class="bcp14">MUST</span> include these fields;
-omitting them produces non-conformant hashes.<a href="#section-13.6-2" class="pilcrow">¶</a></p>
+omitting them produces non-conformant hashes.<a href="#section-12.6-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-status-enumeration-and-authorization-oracle-resistance">
-<section id="section-13.7">
+<section id="section-12.7">
         <h3 id="name-mission-status-enumeration-">
-<a href="#section-13.7" class="section-number selfRef">13.7. </a><a href="#name-mission-status-enumeration-" class="section-name selfRef">Mission Status enumeration and authorization-oracle resistance</a>
+<a href="#section-12.7" class="section-number selfRef">12.7. </a><a href="#name-mission-status-enumeration-" class="section-name selfRef">Mission Status enumeration and authorization-oracle resistance</a>
         </h3>
-<p id="section-13.7-1">Mission Status responses <span class="bcp14">MUST</span> treat unknown references and
+<p id="section-12.7-1">Mission Status responses <span class="bcp14">MUST</span> treat unknown references and
 unauthorized references as observationally equivalent. An
 attacker that can distinguish "unknown" from "unauthorized" can
-enumerate the state authority's Mission space.<a href="#section-13.7-1" class="pilcrow">¶</a></p>
-<p id="section-13.7-2">This specification mitigates via the anti-oracle property of
+enumerate the state authority's Mission space.<a href="#section-12.7-1" class="pilcrow">¶</a></p>
+<p id="section-12.7-2">This specification mitigates via the anti-oracle property of
 <a href="#mission-status-required-properties" class="auto internal xref">Section 9.4</a> and the not-found error
 shape of <a href="#error-model" class="auto internal xref">Section 9.5</a>. Profile specifications <span class="bcp14">MUST</span> preserve
-both in transport, including timing and payload-size invariance.<a href="#section-13.7-2" class="pilcrow">¶</a></p>
+both in transport, including timing and payload-size invariance.<a href="#section-12.7-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="trust-boundary-violations">
-<section id="section-13.8">
+<section id="section-12.8">
         <h3 id="name-trust-boundary-violations">
-<a href="#section-13.8" class="section-number selfRef">13.8. </a><a href="#name-trust-boundary-violations" class="section-name selfRef">Trust-boundary violations</a>
+<a href="#section-12.8" class="section-number selfRef">12.8. </a><a href="#name-trust-boundary-violations" class="section-name selfRef">Trust-boundary violations</a>
         </h3>
-<p id="section-13.8-1">Profile specifications populate the trust boundary roles (Shaper,
+<p id="section-12.8-1">Profile specifications populate the trust boundary roles (Shaper,
 state authority, credential issuer, PDP, evidence emitter).
 Implementations <span class="bcp14">MUST NOT</span> permit a Shaper to act as an authorization
 component. Output of the Shaper <span class="bcp14">MUST</span> be treated as untrusted by the
-state authority.<a href="#section-13.8-1" class="pilcrow">¶</a></p>
+state authority.<a href="#section-12.8-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="approving-principal-aal">
-<section id="section-13.9">
+<section id="section-12.9">
         <h3 id="name-approving-principal-aal">
-<a href="#section-13.9" class="section-number selfRef">13.9. </a><a href="#name-approving-principal-aal" class="section-name selfRef">Approving principal AAL</a>
+<a href="#section-12.9" class="section-number selfRef">12.9. </a><a href="#name-approving-principal-aal" class="section-name selfRef">Approving principal AAL</a>
         </h3>
-<p id="section-13.9-1">This specification requires the AAL to be recorded in binding
+<p id="section-12.9-1">This specification requires the AAL to be recorded in binding
 evidence. It does not mandate an AAL floor for approval; deployment
 policy declares the minimum AAL per Mission class. Deployments
 <span class="bcp14">SHOULD</span> set appropriate AAL floors and document them. The Mission
 AAL Identifier registry (<a href="#aal-identifier-registry" class="auto internal xref">Section 10.1.2.1</a>) provides a
-coordinated identifier space.<a href="#section-13.9-1" class="pilcrow">¶</a></p>
+coordinated identifier space.<a href="#section-12.9-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="transport-security-tls">
-<section id="section-13.10">
+<section id="section-12.10">
         <h3 id="name-transport-security-tls">
-<a href="#section-13.10" class="section-number selfRef">13.10. </a><a href="#name-transport-security-tls" class="section-name selfRef">Transport security (TLS)</a>
+<a href="#section-12.10" class="section-number selfRef">12.10. </a><a href="#name-transport-security-tls" class="section-name selfRef">Transport security (TLS)</a>
         </h3>
-<p id="section-13.10-1">All state-authority interfaces specified by this document
+<p id="section-12.10-1">All state-authority interfaces specified by this document
 (<code>/.well-known/mission-authority</code>, <code>mission_status_endpoint</code>,
 <code>mission_lifecycle_endpoint</code>, <code>jwks_uri</code>,
 <code>mission_intent_schema_uri</code>) <span class="bcp14">MUST</span> be served over TLS 1.2 or
 later, with TLS 1.3 <span class="bcp14">RECOMMENDED</span>. State authorities <span class="bcp14">MUST</span> refuse
-plaintext requests on these endpoints.<a href="#section-13.10-1" class="pilcrow">¶</a></p>
-<p id="section-13.10-2">Consumers fetching state-authority metadata or making Mission
+plaintext requests on these endpoints.<a href="#section-12.10-1" class="pilcrow">¶</a></p>
+<p id="section-12.10-2">Consumers fetching state-authority metadata or making Mission
 Status / Mission Lifecycle requests <span class="bcp14">MUST</span> validate the TLS server
 certificate against the trust anchors established by the
 deployment's PKI. Consumers <span class="bcp14">MUST NOT</span> pin to the state
 authority's signing keys (<code>jwks_uri</code> keys) for TLS purposes; the
-two key roles are separate.<a href="#section-13.10-2" class="pilcrow">¶</a></p>
+two key roles are separate.<a href="#section-12.10-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="state-authority-signing-key-rotation">
-<section id="section-13.11">
+<section id="section-12.11">
         <h3 id="name-state-authority-signing-key">
-<a href="#section-13.11" class="section-number selfRef">13.11. </a><a href="#name-state-authority-signing-key" class="section-name selfRef">State-authority signing-key rotation</a>
+<a href="#section-12.11" class="section-number selfRef">12.11. </a><a href="#name-state-authority-signing-key" class="section-name selfRef">State-authority signing-key rotation</a>
         </h3>
-<p id="section-13.11-1">State authorities <span class="bcp14">MUST</span> rotate the signing keys used for Mission
+<p id="section-12.11-1">State authorities <span class="bcp14">MUST</span> rotate the signing keys used for Mission
 Status and Mission Lifecycle response signatures on a
 deployment-policy schedule. Consumers <span class="bcp14">MUST</span> refresh their cached
 JWKS view at least every 24 hours and on signature-verification
-failure.<a href="#section-13.11-1" class="pilcrow">¶</a></p>
-<p id="section-13.11-2">Compromised signing keys <span class="bcp14">MUST</span> be revoked by removing them from
+failure.<a href="#section-12.11-1" class="pilcrow">¶</a></p>
+<p id="section-12.11-2">Compromised signing keys <span class="bcp14">MUST</span> be revoked by removing them from
 <code>jwks_uri</code> and by recording the revocation event in the state
 authority's audit trail. Mission Status responses signed by a
 revoked key are not valid even when they appear well-formed; the
-state authority's JWKS document is authoritative.<a href="#section-13.11-2" class="pilcrow">¶</a></p>
-<p id="section-13.11-3">Mission Status responses <span class="bcp14">MUST</span> carry the <code>kid</code> of the signing key
+state authority's JWKS document is authoritative.<a href="#section-12.11-2" class="pilcrow">¶</a></p>
+<p id="section-12.11-3">Mission Status responses <span class="bcp14">MUST</span> carry the <code>kid</code> of the signing key
 in the wire form so consumers can match the signature to the
 current JWKS entry. The Framework does not standardize the wire
-form; profile specifications bind the <code>kid</code> carriage.<a href="#section-13.11-3" class="pilcrow">¶</a></p>
+form; profile specifications bind the <code>kid</code> carriage.<a href="#section-12.11-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="denial-of-service-against-the-state-authority">
-<section id="section-13.12">
+<section id="section-12.12">
         <h3 id="name-denial-of-service-against-t">
-<a href="#section-13.12" class="section-number selfRef">13.12. </a><a href="#name-denial-of-service-against-t" class="section-name selfRef">Denial of service against the state authority</a>
+<a href="#section-12.12" class="section-number selfRef">12.12. </a><a href="#name-denial-of-service-against-t" class="section-name selfRef">Denial of service against the state authority</a>
         </h3>
-<p id="section-13.12-1">Mission Status is on the consumption path of every Mission-bound
+<p id="section-12.12-1">Mission Status is on the consumption path of every Mission-bound
 credential validation in deployments that consult it
 synchronously. A flood of Mission Status requests, or a
 flood of Mission Proposal submissions, can degrade or disable
-the state authority and thereby every consumer of its Missions.<a href="#section-13.12-1" class="pilcrow">¶</a></p>
-<p id="section-13.12-2">State authorities <span class="bcp14">MUST</span> implement per-consumer rate limits on
+the state authority and thereby every consumer of its Missions.<a href="#section-12.12-1" class="pilcrow">¶</a></p>
+<p id="section-12.12-2">State authorities <span class="bcp14">MUST</span> implement per-consumer rate limits on
 both Mission Status (<code>rate_limited</code> error per
 <a href="#error-model" class="auto internal xref">Section 9.5</a>) and Mission Proposal submission. Rate limits
 <span class="bcp14">MUST</span> account for the consumer identity (authenticated client)
 rather than IP address alone, since legitimate consumers may
-share network infrastructure.<a href="#section-13.12-2" class="pilcrow">¶</a></p>
-<p id="section-13.12-3">State authorities <span class="bcp14">SHOULD</span> implement the <code>Retry-After</code> header
+share network infrastructure.<a href="#section-12.12-2" class="pilcrow">¶</a></p>
+<p id="section-12.12-3">State authorities <span class="bcp14">SHOULD</span> implement the <code>Retry-After</code> header
 on rate-limited responses to allow well-behaved consumers to
-back off.<a href="#section-13.12-3" class="pilcrow">¶</a></p>
-<p id="section-13.12-4">Consumers <span class="bcp14">SHOULD</span> cache Mission Status responses up to the
+back off.<a href="#section-12.12-3" class="pilcrow">¶</a></p>
+<p id="section-12.12-4">Consumers <span class="bcp14">SHOULD</span> cache Mission Status responses up to the
 response's <code>expires_at</code> rather than re-querying for every
-credential validation; profiles bind this caching behavior.<a href="#section-13.12-4" class="pilcrow">¶</a></p>
+credential validation; profiles bind this caching behavior.<a href="#section-12.12-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="clock-skew">
-<section id="section-13.13">
+<section id="section-12.13">
         <h3 id="name-clock-skew">
-<a href="#section-13.13" class="section-number selfRef">13.13. </a><a href="#name-clock-skew" class="section-name selfRef">Clock skew</a>
+<a href="#section-12.13" class="section-number selfRef">12.13. </a><a href="#name-clock-skew" class="section-name selfRef">Clock skew</a>
         </h3>
-<p id="section-13.13-1">Mission Status responses carry RFC 3339 timestamps in
+<p id="section-12.13-1">Mission Status responses carry RFC 3339 timestamps in
 <code>issued_at</code>, <code>expires_at</code>, <code>freshness_at</code>, and <code>mission_expiry</code>.
 Clock skew between the state authority and consumer can cause
 either premature acceptance (consumer believes a response is
-still fresh when it is not) or premature rejection.<a href="#section-13.13-1" class="pilcrow">¶</a></p>
-<p id="section-13.13-2">Implementations <span class="bcp14">MUST</span> use NTP or an equivalent time-synchronization
+still fresh when it is not) or premature rejection.<a href="#section-12.13-1" class="pilcrow">¶</a></p>
+<p id="section-12.13-2">Implementations <span class="bcp14">MUST</span> use NTP or an equivalent time-synchronization
 mechanism. Consumers <span class="bcp14">SHOULD</span> accept responses whose <code>expires_at</code>
 has elapsed by up to 30 seconds of skew tolerance for <code>active</code>
 state responses; this is a defense against clock drift, not a
 security relaxation. Consumers <span class="bcp14">MUST NOT</span> extend skew tolerance
-for terminal-state responses (<code>revoked</code>, <code>expired</code>, <code>completed</code>).<a href="#section-13.13-2" class="pilcrow">¶</a></p>
+for terminal-state responses (<code>revoked</code>, <code>expired</code>, <code>completed</code>).<a href="#section-12.13-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="replay-of-mission-status-responses">
-<section id="section-13.14">
+<section id="section-12.14">
         <h3 id="name-replay-of-mission-status-re">
-<a href="#section-13.14" class="section-number selfRef">13.14. </a><a href="#name-replay-of-mission-status-re" class="section-name selfRef">Replay of Mission Status responses</a>
+<a href="#section-12.14" class="section-number selfRef">12.14. </a><a href="#name-replay-of-mission-status-re" class="section-name selfRef">Replay of Mission Status responses</a>
         </h3>
-<p id="section-13.14-1">A Mission Status response signed and bound to a caller, audience,
+<p id="section-12.14-1">A Mission Status response signed and bound to a caller, audience,
 and nonce is reusable only within its <code>expires_at</code> window and
 only by the same caller in the same audience. The bindings of
 <a href="#mission-status-required-properties" class="auto internal xref">Section 9.4</a> prevent cross-caller,
-cross-audience, and stale replay.<a href="#section-13.14-1" class="pilcrow">¶</a></p>
-<p id="section-13.14-2">State authorities <span class="bcp14">MUST</span> treat nonce reuse from the same caller as
+cross-audience, and stale replay.<a href="#section-12.14-1" class="pilcrow">¶</a></p>
+<p id="section-12.14-2">State authorities <span class="bcp14">MUST</span> treat nonce reuse from the same caller as
 a per-caller anti-abuse signal; profiles <span class="bcp14">MAY</span> refuse repeated use
 of the same nonce within a short window. Nonces are anti-replay
 binding, not authentication tokens; consumers <span class="bcp14">MUST NOT</span> rely on
-nonce secrecy.<a href="#section-13.14-2" class="pilcrow">¶</a></p>
+nonce secrecy.<a href="#section-12.14-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="side-channels-via-pairwise-references">
-<section id="section-13.15">
+<section id="section-12.15">
         <h3 id="name-side-channels-via-pairwise-">
-<a href="#section-13.15" class="section-number selfRef">13.15. </a><a href="#name-side-channels-via-pairwise-" class="section-name selfRef">Side channels via pairwise references</a>
+<a href="#section-12.15" class="section-number selfRef">12.15. </a><a href="#name-side-channels-via-pairwise-" class="section-name selfRef">Side channels via pairwise references</a>
         </h3>
-<p id="section-13.15-1">Even with the non-correlation property of
+<p id="section-12.15-1">Even with the non-correlation property of
 <a href="#pairwise-resolution-non-correlation" class="auto internal xref">Section 7.2.4</a>, side channels can leak
 that two <code>mission.ref</code> values identify the same Mission. Examples
-include:<a href="#section-13.15-1" class="pilcrow">¶</a></p>
+include:<a href="#section-12.15-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-13.15-2.1">
-            <p id="section-13.15-2.1.1">Timing correlation when the state authority's Mission Status
+<li class="normal" id="section-12.15-2.1">
+            <p id="section-12.15-2.1.1">Timing correlation when the state authority's Mission Status
 endpoint serves two queries from collaborating audiences for
-the same Mission.<a href="#section-13.15-2.1.1" class="pilcrow">¶</a></p>
+the same Mission.<a href="#section-12.15-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-13.15-2.2">
-            <p id="section-13.15-2.2.1">Mission Status response staleness alignment in
-eventually-consistent state authorities.<a href="#section-13.15-2.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-12.15-2.2">
+            <p id="section-12.15-2.2.1">Mission Status response staleness alignment in
+eventually-consistent state authorities.<a href="#section-12.15-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-13.15-2.3">
-            <p id="section-13.15-2.3.1">Pairwise sector boundaries crossed during rotation
+          <li class="normal" id="section-12.15-2.3">
+            <p id="section-12.15-2.3.1">Pairwise sector boundaries crossed during rotation
 (<a href="#pairwise-reference-rotation" class="auto internal xref">Section 7.2.3</a>) before all sector members
-have refreshed their cached references.<a href="#section-13.15-2.3.1" class="pilcrow">¶</a></p>
+have refreshed their cached references.<a href="#section-12.15-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-13.15-3">Deployments <span class="bcp14">SHOULD</span> assess the side-channel surface specific to
-their sector type and threat model.<a href="#section-13.15-3" class="pilcrow">¶</a></p>
+<p id="section-12.15-3">Deployments <span class="bcp14">SHOULD</span> assess the side-channel surface specific to
+their sector type and threat model.<a href="#section-12.15-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="log-injection-via-consent-disclosure-content">
-<section id="section-13.16">
+<section id="section-12.16">
         <h3 id="name-log-injection-via-consent-d">
-<a href="#section-13.16" class="section-number selfRef">13.16. </a><a href="#name-log-injection-via-consent-d" class="section-name selfRef">Log injection via consent disclosure content</a>
+<a href="#section-12.16" class="section-number selfRef">12.16. </a><a href="#name-log-injection-via-consent-d" class="section-name selfRef">Log injection via consent disclosure content</a>
         </h3>
-<p id="section-13.16-1">The consent disclosure object contains user-facing strings
+<p id="section-12.16-1">The consent disclosure object contains user-facing strings
 (typically derived from the Mission Intent's <code>goal</code>,
 <code>constraints</code>, and <code>success_criteria</code>). These strings reach
-audit logs, dashboards, and possibly downstream notifications.<a href="#section-13.16-1" class="pilcrow">¶</a></p>
-<p id="section-13.16-2">Implementations <span class="bcp14">MUST</span> treat consent-disclosure content as
+audit logs, dashboards, and possibly downstream notifications.<a href="#section-12.16-1" class="pilcrow">¶</a></p>
+<p id="section-12.16-2">Implementations <span class="bcp14">MUST</span> treat consent-disclosure content as
 untrusted when emitting it to log sinks: HTML/template escape on
 HTML sinks, JSON-escape on JSON sinks, and so on. The state
 authority's recording of the consent disclosure object is a
 verbatim JSON serialization for integrity-anchor purposes; it is
-not safe to inject into other contexts unescaped.<a href="#section-13.16-2" class="pilcrow">¶</a></p>
+not safe to inject into other contexts unescaped.<a href="#section-12.16-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-record-garbage-collection-and-audit-chains">
-<section id="section-13.17">
+<section id="section-12.17">
         <h3 id="name-mission-record-garbage-coll">
-<a href="#section-13.17" class="section-number selfRef">13.17. </a><a href="#name-mission-record-garbage-coll" class="section-name selfRef">Mission record garbage collection and audit chains</a>
+<a href="#section-12.17" class="section-number selfRef">12.17. </a><a href="#name-mission-record-garbage-coll" class="section-name selfRef">Mission record garbage collection and audit chains</a>
         </h3>
-<p id="section-13.17-1">After Mission record garbage collection (<a href="#retention" class="auto internal xref">Section 3.6</a>), the
+<p id="section-12.17-1">After Mission record garbage collection (<a href="#retention" class="auto internal xref">Section 3.6</a>), the
 state authority <span class="bcp14">MUST</span> retain a stub indicating that the
 <code>mission.id</code> and <code>proposal_id</code> are retired. Audit logs
 referencing a garbage-collected Mission's identifier <span class="bcp14">MUST</span> resolve
 to the stub rather than to "not found", which would be
-indistinguishable from never having existed.<a href="#section-13.17-1" class="pilcrow">¶</a></p>
-<p id="section-13.17-2">The stub <span class="bcp14">MUST</span> contain at minimum: <code>mission.id</code>, <code>proposal_id</code>,
+indistinguishable from never having existed.<a href="#section-12.17-1" class="pilcrow">¶</a></p>
+<p id="section-12.17-2">The stub <span class="bcp14">MUST</span> contain at minimum: <code>mission.id</code>, <code>proposal_id</code>,
 <code>created_at</code>, <code>retired_at</code>, and the terminal state at retirement.
 The stub <span class="bcp14">MUST NOT</span> contain the Mission Intent, Authority Set, or
-consent disclosure object.<a href="#section-13.17-2" class="pilcrow">¶</a></p>
+consent disclosure object.<a href="#section-12.17-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="privacy-considerations">
-<section id="section-14">
+<section id="section-13">
       <h2 id="name-privacy-considerations">
-<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
-<p id="section-14-1">This section discusses privacy threats and mitigations specific
-to the Mission Framework. <a href="#security-considerations" class="auto internal xref">Section 13</a> addresses
+<p id="section-13-1">This section discusses privacy threats and mitigations specific
+to the Mission Framework. <a href="#security-considerations" class="auto internal xref">Section 12</a> addresses
 security threats; this section addresses privacy threats that
-are not subsumed by security.<a href="#section-14-1" class="pilcrow">¶</a></p>
+are not subsumed by security.<a href="#section-13-1" class="pilcrow">¶</a></p>
 <div id="pairwise-references-and-correlation">
-<section id="section-14.1">
+<section id="section-13.1">
         <h3 id="name-pairwise-references-and-cor">
-<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-pairwise-references-and-cor" class="section-name selfRef">Pairwise references and correlation</a>
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-pairwise-references-and-cor" class="section-name selfRef">Pairwise references and correlation</a>
         </h3>
-<p id="section-14.1-1">The pairwise reference framework (<a href="#pairwise-mission-reference" class="auto internal xref">Section 7.2</a>)
+<p id="section-13.1-1">The pairwise reference framework (<a href="#pairwise-mission-reference" class="auto internal xref">Section 7.2</a>)
 is designed to prevent direct cross-sector correlation of
 Mission identifiers. It is not a complete defense against
 correlation; in particular, audiences may correlate Missions
-indirectly through:<a href="#section-14.1-1" class="pilcrow">¶</a></p>
+indirectly through:<a href="#section-13.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-14.1-2.1">
-            <p id="section-14.1-2.1.1"><strong>Shared subject identifiers</strong>: when audiences in distinct
+<li class="normal" id="section-13.1-2.1">
+            <p id="section-13.1-2.1.1"><strong>Shared subject identifiers</strong>: when audiences in distinct
 sectors observe credentials for the same subject (<code>sub</code> claim
 in OAuth, <code>subject</code> in AAuth), they can correlate Mission
-references through the subject.<a href="#section-14.1-2.1.1" class="pilcrow">¶</a></p>
+references through the subject.<a href="#section-13.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.1-2.2">
-            <p id="section-14.1-2.2.1"><strong>Shared client identifiers</strong>: when audiences observe
+          <li class="normal" id="section-13.1-2.2">
+            <p id="section-13.1-2.2.1"><strong>Shared client identifiers</strong>: when audiences observe
 credentials with the same <code>requesting_client</code>, they can
-correlate.<a href="#section-14.1-2.2.1" class="pilcrow">¶</a></p>
+correlate.<a href="#section-13.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.1-2.3">
-            <p id="section-14.1-2.3.1"><strong>Timing and request-pattern fingerprinting</strong>: when audiences
+          <li class="normal" id="section-13.1-2.3">
+            <p id="section-13.1-2.3.1"><strong>Timing and request-pattern fingerprinting</strong>: when audiences
 observe correlated request patterns, they can probabilistically
-associate Mission references.<a href="#section-14.1-2.3.1" class="pilcrow">¶</a></p>
+associate Mission references.<a href="#section-13.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.1-2.4">
-            <p id="section-14.1-2.4.1"><strong>Side channels through the state authority</strong>: as described in
-<a href="#side-channels-via-pairwise-references" class="auto internal xref">Section 13.15</a>.<a href="#section-14.1-2.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-13.1-2.4">
+            <p id="section-13.1-2.4.1"><strong>Side channels through the state authority</strong>: as described in
+<a href="#side-channels-via-pairwise-references" class="auto internal xref">Section 12.15</a>.<a href="#section-13.1-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-14.1-3">Deployments <span class="bcp14">SHOULD</span> assess which correlation channels are relevant
+<p id="section-13.1-3">Deployments <span class="bcp14">SHOULD</span> assess which correlation channels are relevant
 to their threat model and select pairwise sector type
 (<a href="#pairwise-sectors" class="auto internal xref">Section 7.2.1</a>) accordingly. The narrowest sector type
 (<code>resource_server</code>) provides the strongest pairwise unlinkability
 within the framework; wider sectors are correlation-permissive by
-design.<a href="#section-14.1-3" class="pilcrow">¶</a></p>
+design.<a href="#section-13.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="consent-disclosure-content-and-pii">
-<section id="section-14.2">
+<section id="section-13.2">
         <h3 id="name-consent-disclosure-content-">
-<a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-consent-disclosure-content-" class="section-name selfRef">Consent disclosure content and PII</a>
+<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-consent-disclosure-content-" class="section-name selfRef">Consent disclosure content and PII</a>
         </h3>
-<p id="section-14.2-1">The consent disclosure object can contain personally identifiable
+<p id="section-13.2-1">The consent disclosure object can contain personally identifiable
 information (PII) drawn from the Mission Intent's user-facing
 strings (<code>goal</code>, <code>constraints</code>, <code>success_criteria</code>) and from
 deployment-supplied template text. The state authority records
-this object verbatim for integrity-anchor purposes.<a href="#section-14.2-1" class="pilcrow">¶</a></p>
-<p id="section-14.2-2">Implementations <span class="bcp14">MUST</span> treat the consent disclosure object as a PII
+this object verbatim for integrity-anchor purposes.<a href="#section-13.2-1" class="pilcrow">¶</a></p>
+<p id="section-13.2-2">Implementations <span class="bcp14">MUST</span> treat the consent disclosure object as a PII
 sink and apply data-protection controls (access control, audit,
 encryption at rest, and retention discipline per
 <a href="#retention" class="auto internal xref">Section 3.6</a>) consistent with the deployment's regulatory
-environment (e.g., GDPR, HIPAA, CCPA).<a href="#section-14.2-2" class="pilcrow">¶</a></p>
-<p id="section-14.2-3">The Framework does not specify minimization of consent
+environment (e.g., GDPR, HIPAA, CCPA).<a href="#section-13.2-2" class="pilcrow">¶</a></p>
+<p id="section-13.2-3">The Framework does not specify minimization of consent
 disclosure content; deployments <span class="bcp14">SHOULD</span> review the content their
 state authority records to ensure that integrity-anchor
 guarantees do not require recording disproportionately sensitive
 content. The narrowing decisions of <a href="#narrowing-rules" class="auto internal xref">Section 4.5</a> provide a
 hook to record bounded, machine-readable evidence of policy
-decisions without embedding additional PII.<a href="#section-14.2-3" class="pilcrow">¶</a></p>
+decisions without embedding additional PII.<a href="#section-13.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="subject-and-approving-principal-identifiers">
-<section id="section-14.3">
+<section id="section-13.3">
         <h3 id="name-subject-and-approving-princ">
-<a href="#section-14.3" class="section-number selfRef">14.3. </a><a href="#name-subject-and-approving-princ" class="section-name selfRef">Subject and approving-principal identifiers</a>
+<a href="#section-13.3" class="section-number selfRef">13.3. </a><a href="#name-subject-and-approving-princ" class="section-name selfRef">Subject and approving-principal identifiers</a>
         </h3>
-<p id="section-14.3-1">The Mission record's <code>principals.subject</code> and
+<p id="section-13.3-1">The Mission record's <code>principals.subject</code> and
 <code>principals.approving_principal</code> are stable identifiers within
 the state authority's namespace. They appear in Mission Status
-responses to authorized callers and in derived credentials.<a href="#section-14.3-1" class="pilcrow">¶</a></p>
-<p id="section-14.3-2">Subject and approving-principal identifiers <span class="bcp14">SHOULD NOT</span> be email
+responses to authorized callers and in derived credentials.<a href="#section-13.3-1" class="pilcrow">¶</a></p>
+<p id="section-13.3-2">Subject and approving-principal identifiers <span class="bcp14">SHOULD NOT</span> be email
 addresses or other widely-correlatable identifiers unless the
 deployment's privacy posture explicitly accommodates such
 identifiers. Deployments <span class="bcp14">SHOULD</span> prefer opaque or pseudonymous
 identifiers and <span class="bcp14">SHOULD</span> map them to PII through a separate,
 access-controlled directory service rather than embedding PII
-in the Mission record.<a href="#section-14.3-2" class="pilcrow">¶</a></p>
+in the Mission record.<a href="#section-13.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="tenant-correlation">
-<section id="section-14.4">
+<section id="section-13.4">
         <h3 id="name-tenant-correlation">
-<a href="#section-14.4" class="section-number selfRef">14.4. </a><a href="#name-tenant-correlation" class="section-name selfRef">Tenant correlation</a>
+<a href="#section-13.4" class="section-number selfRef">13.4. </a><a href="#name-tenant-correlation" class="section-name selfRef">Tenant correlation</a>
         </h3>
-<p id="section-14.4-1">The <code>principals.tenant</code> value identifies the authorization domain
+<p id="section-13.4-1">The <code>principals.tenant</code> value identifies the authorization domain
 the Mission lives in. Tenant identifiers <span class="bcp14">SHOULD</span> be opaque and
 <span class="bcp14">SHOULD NOT</span> carry the consuming organization's name, regulatory
 classification, or other deployment-side correlatable attributes
 when those attributes leak through the value to audiences other
-than the tenant itself.<a href="#section-14.4-1" class="pilcrow">¶</a></p>
-<p id="section-14.4-2">State authorities serving multi-tenant deployments <span class="bcp14">MUST</span> not allow
+than the tenant itself.<a href="#section-13.4-1" class="pilcrow">¶</a></p>
+<p id="section-13.4-2">State authorities serving multi-tenant deployments <span class="bcp14">MUST</span> not allow
 a Mission Status query in tenant A to return information about
 tenants other than A; the tenant-isolation property is a
-fundamental privacy boundary.<a href="#section-14.4-2" class="pilcrow">¶</a></p>
+fundamental privacy boundary.<a href="#section-13.4-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="audit-logging-and-retention">
-<section id="section-14.5">
+<section id="section-13.5">
         <h3 id="name-audit-logging-and-retention">
-<a href="#section-14.5" class="section-number selfRef">14.5. </a><a href="#name-audit-logging-and-retention" class="section-name selfRef">Audit logging and retention</a>
+<a href="#section-13.5" class="section-number selfRef">13.5. </a><a href="#name-audit-logging-and-retention" class="section-name selfRef">Audit logging and retention</a>
         </h3>
-<p id="section-14.5-1">State-authority audit logs <span class="bcp14">SHOULD</span> record per-Mission events
+<p id="section-13.5-1">State-authority audit logs <span class="bcp14">SHOULD</span> record per-Mission events
 (approval, suspension, revocation, expiry) for the audit
 retention window of <a href="#retention" class="auto internal xref">Section 3.6</a>. Audit logs are themselves a
 PII sink and <span class="bcp14">SHOULD</span> be access-controlled, encrypted at rest, and
 retained no longer than the deployment's policy or regulatory
-floor requires, whichever is shorter.<a href="#section-14.5-1" class="pilcrow">¶</a></p>
-<p id="section-14.5-2">When the deployment's policy or regulatory floor prescribes
+floor requires, whichever is shorter.<a href="#section-13.5-1" class="pilcrow">¶</a></p>
+<p id="section-13.5-2">When the deployment's policy or regulatory floor prescribes
 retention longer than the audit window the state authority can
 sustain, the deployment <span class="bcp14">SHOULD</span> export audit anchors (the
 integrity-anchor values and approval-event metadata) to a
 separate audit anchor store while permitting the Mission record
-itself to be garbage-collected.<a href="#section-14.5-2" class="pilcrow">¶</a></p>
+itself to be garbage-collected.<a href="#section-13.5-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-record-content-and-data-subject-access">
-<section id="section-14.6">
+<section id="section-13.6">
         <h3 id="name-mission-record-content-and-">
-<a href="#section-14.6" class="section-number selfRef">14.6. </a><a href="#name-mission-record-content-and-" class="section-name selfRef">Mission record content and data subject access</a>
+<a href="#section-13.6" class="section-number selfRef">13.6. </a><a href="#name-mission-record-content-and-" class="section-name selfRef">Mission record content and data subject access</a>
         </h3>
-<p id="section-14.6-1">In regulatory regimes where data subjects have access rights to
+<p id="section-13.6-1">In regulatory regimes where data subjects have access rights to
 records concerning them (e.g., GDPR Article 15), the Mission
 record is in scope. Deployments <span class="bcp14">MUST</span> be able to enumerate and
 disclose Mission records for a given subject identifier on
-authorized request; the subject identifier is the join key.<a href="#section-14.6-1" class="pilcrow">¶</a></p>
-<p id="section-14.6-2">Deployments <span class="bcp14">MUST</span> be able to delete or anonymize Mission records
+authorized request; the subject identifier is the join key.<a href="#section-13.6-1" class="pilcrow">¶</a></p>
+<p id="section-13.6-2">Deployments <span class="bcp14">MUST</span> be able to delete or anonymize Mission records
 on lawful erasure request, subject to overriding retention
-obligations. The garbage-collection stub of <a href="#mission-record-garbage-collection-and-audit-chains" class="auto internal xref">Section 13.17</a>
+obligations. The garbage-collection stub of <a href="#mission-record-garbage-collection-and-audit-chains" class="auto internal xref">Section 12.17</a>
 provides the retention-side residual; deployments needing full
 erasure rather than retirement <span class="bcp14">MUST</span> extend the garbage-collection
-flow to remove the stub when lawfully required.<a href="#section-14.6-2" class="pilcrow">¶</a></p>
+flow to remove the stub when lawfully required.<a href="#section-13.6-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="iana-considerations">
-<section id="section-15">
+<section id="section-14">
       <h2 id="name-iana-considerations">
-<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-15-1">This document requests IANA to create five new registries and
+<p id="section-14-1">This document requests IANA to create five new registries and
 to add the Well-Known URI registration for
-<code>mission-authority</code>.<a href="#section-15-1" class="pilcrow">¶</a></p>
+<code>mission-authority</code>.<a href="#section-14-1" class="pilcrow">¶</a></p>
 <div id="well-known-uri-mission-authority">
-<section id="section-15.1">
+<section id="section-14.1">
         <h3 id="name-well-known-uri-mission-auth">
-<a href="#section-15.1" class="section-number selfRef">15.1. </a><a href="#name-well-known-uri-mission-auth" class="section-name selfRef">Well-Known URI: <code>mission-authority</code></a>
+<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-well-known-uri-mission-auth" class="section-name selfRef">Well-Known URI: <code>mission-authority</code></a>
         </h3>
-<p id="section-15.1-1">IANA is requested to register the following Well-Known URI per
-<span>[<a href="#RFC8615" class="cite xref">RFC8615</a>]</span>:<a href="#section-15.1-1" class="pilcrow">¶</a></p>
+<p id="section-14.1-1">IANA is requested to register the following Well-Known URI per
+<span>[<a href="#RFC8615" class="cite xref">RFC8615</a>]</span>:<a href="#section-14.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-15.1-2.1">
-            <p id="section-15.1-2.1.1"><strong>URI suffix</strong>: <code>mission-authority</code><a href="#section-15.1-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-14.1-2.1">
+            <p id="section-14.1-2.1.1"><strong>URI suffix</strong>: <code>mission-authority</code><a href="#section-14.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-15.1-2.2">
-            <p id="section-15.1-2.2.1"><strong>Change controller</strong>: IETF<a href="#section-15.1-2.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-14.1-2.2">
+            <p id="section-14.1-2.2.1"><strong>Change controller</strong>: IETF<a href="#section-14.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-15.1-2.3">
-            <p id="section-15.1-2.3.1"><strong>Specification document(s)</strong>: this document<a href="#section-15.1-2.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-14.1-2.3">
+            <p id="section-14.1-2.3.1"><strong>Specification document(s)</strong>: this document<a href="#section-14.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-15.1-2.4">
-            <p id="section-15.1-2.4.1"><strong>Related information</strong>: identifies the Mission state-authority
+          <li class="normal" id="section-14.1-2.4">
+            <p id="section-14.1-2.4.1"><strong>Related information</strong>: identifies the Mission state-authority
 metadata document at <code>{mission.origin}/.well-known/mission-authority</code>
-(see <a href="#state-authority-metadata-document" class="auto internal xref">Section 7.3</a>).<a href="#section-15.1-2.4.1" class="pilcrow">¶</a></p>
+(see <a href="#state-authority-metadata-document" class="auto internal xref">Section 7.3</a>).<a href="#section-14.1-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
 </div>
 <div id="iana-common-constraints-registry">
-<section id="section-15.2">
+<section id="section-14.2">
         <h3 id="name-mission-common-constraints-">
-<a href="#section-15.2" class="section-number selfRef">15.2. </a><a href="#name-mission-common-constraints-" class="section-name selfRef">Mission Common Constraints Registry</a>
+<a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-mission-common-constraints-" class="section-name selfRef">Mission Common Constraints Registry</a>
         </h3>
-<p id="section-15.2-1">IANA is requested to create the <strong>Mission Common Constraints</strong>
-registry.<a href="#section-15.2-1" class="pilcrow">¶</a></p>
+<p id="section-14.2-1">IANA is requested to create the <strong>Mission Common Constraints</strong>
+registry.<a href="#section-14.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-15.2-2.1">
-            <p id="section-15.2-2.1.1"><strong>Registration Policy</strong>: Specification Required (<span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span>).<a href="#section-15.2-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-14.2-2.1">
+            <p id="section-14.2-2.1.1"><strong>Registration Policy</strong>: Specification Required (<span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span>).<a href="#section-14.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-15.2-2.2">
-            <p id="section-15.2-2.2.1"><strong>Designated Expert review criteria</strong>: experts evaluate (a)
+          <li class="normal" id="section-14.2-2.2">
+            <p id="section-14.2-2.2.1"><strong>Designated Expert review criteria</strong>: experts evaluate (a)
 whether the constraint semantics are well-defined and
 testable, (b) whether the normalization and narrowing rules
 are deterministic, (c) whether the runtime enforcement
 contract is consistent with the Mission lifecycle model, and
 (d) whether the constraint name does not collide with
-existing registered names.<a href="#section-15.2-2.2.1" class="pilcrow">¶</a></p>
+existing registered names.<a href="#section-14.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <div id="registration-template-1">
-<section id="section-15.2.1">
-          <h4 id="name-registration-template-3">
-<a href="#section-15.2.1" class="section-number selfRef">15.2.1. </a><a href="#name-registration-template-3" class="section-name selfRef">Registration template</a>
+<section id="section-14.2.1">
+          <h4 id="name-registration-template-2">
+<a href="#section-14.2.1" class="section-number selfRef">14.2.1. </a><a href="#name-registration-template-2" class="section-name selfRef">Registration template</a>
           </h4>
-<p id="section-15.2.1-1">Each registration <span class="bcp14">MUST</span> include:<a href="#section-15.2.1-1" class="pilcrow">¶</a></p>
+<p id="section-14.2.1-1">Each registration <span class="bcp14">MUST</span> include:<a href="#section-14.2.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-15.2.1-2.1">
-              <p id="section-15.2.1-2.1.1"><strong>Name</strong> (string): the key in <code>mission_intent.context</code>.<a href="#section-15.2.1-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-14.2.1-2.1">
+              <p id="section-14.2.1-2.1.1"><strong>Name</strong> (string): the key in <code>mission_intent.context</code>.<a href="#section-14.2.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.2.1-2.2">
-              <p id="section-15.2.1-2.2.1"><strong>JSON type and structure</strong>: scalar, object, or array; if
-structured, the member shape.<a href="#section-15.2.1-2.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.2.1-2.2">
+              <p id="section-14.2.1-2.2.1"><strong>JSON type and structure</strong>: scalar, object, or array; if
+structured, the member shape.<a href="#section-14.2.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.2.1-2.3">
-              <p id="section-15.2.1-2.3.1"><strong>Defining specification</strong>: stable reference (RFC, Internet-
-Draft, or stable URL).<a href="#section-15.2.1-2.3.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.2.1-2.3">
+              <p id="section-14.2.1-2.3.1"><strong>Defining specification</strong>: stable reference (RFC, Internet-
+Draft, or stable URL).<a href="#section-14.2.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.2.1-2.4">
-              <p id="section-15.2.1-2.4.1"><strong><code>schema_version</code></strong> if applicable.<a href="#section-15.2.1-2.4.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.2.1-2.4">
+              <p id="section-14.2.1-2.4.1"><strong><code>schema_version</code></strong> if applicable.<a href="#section-14.2.1-2.4.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.2.1-2.5">
-              <p id="section-15.2.1-2.5.1"><strong><code>schema_digest</code></strong> if applicable.<a href="#section-15.2.1-2.5.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.2.1-2.5">
+              <p id="section-14.2.1-2.5.1"><strong><code>schema_digest</code></strong> if applicable.<a href="#section-14.2.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.2.1-2.6">
-              <p id="section-15.2.1-2.6.1"><strong>Normalization rule</strong>: the Normalization Profile that applies
-to this constraint's value.<a href="#section-15.2.1-2.6.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.2.1-2.6">
+              <p id="section-14.2.1-2.6.1"><strong>Normalization rule</strong>: the Normalization Profile that applies
+to this constraint's value.<a href="#section-14.2.1-2.6.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.2.1-2.7">
-              <p id="section-15.2.1-2.7.1"><strong>Equality rule</strong>.<a href="#section-15.2.1-2.7.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.2.1-2.7">
+              <p id="section-14.2.1-2.7.1"><strong>Equality rule</strong>.<a href="#section-14.2.1-2.7.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.2.1-2.8">
-              <p id="section-15.2.1-2.8.1"><strong>Subset rule</strong>: when one constraint value is a strict
-narrowing of another.<a href="#section-15.2.1-2.8.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.2.1-2.8">
+              <p id="section-14.2.1-2.8.1"><strong>Subset rule</strong>: when one constraint value is a strict
+narrowing of another.<a href="#section-14.2.1-2.8.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.2.1-2.9">
-              <p id="section-15.2.1-2.9.1"><strong>Narrowing rule</strong> at credential derivation.<a href="#section-15.2.1-2.9.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.2.1-2.9">
+              <p id="section-14.2.1-2.9.1"><strong>Narrowing rule</strong> at credential derivation.<a href="#section-14.2.1-2.9.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.2.1-2.10">
-              <p id="section-15.2.1-2.10.1"><strong>Runtime enforcement contract</strong>: where in the runtime the
+            <li class="normal" id="section-14.2.1-2.10">
+              <p id="section-14.2.1-2.10.1"><strong>Runtime enforcement contract</strong>: where in the runtime the
 constraint is enforced (issuance, introspection, per-action,
 event-driven; see
 <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span> and
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span>).<a href="#section-15.2.1-2.10.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span>).<a href="#section-14.2.1-2.10.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.2.1-2.11">
-              <p id="section-15.2.1-2.11.1"><strong>Change controller</strong>.<a href="#section-15.2.1-2.11.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.2.1-2.11">
+              <p id="section-14.2.1-2.11.1"><strong>Change controller</strong>.<a href="#section-14.2.1-2.11.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.2.1-2.12">
-              <p id="section-15.2.1-2.12.1"><strong>Reference</strong>.<a href="#section-15.2.1-2.12.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.2.1-2.12">
+              <p id="section-14.2.1-2.12.1"><strong>Reference</strong>.<a href="#section-14.2.1-2.12.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </section>
 </div>
 <div id="initial-entries-2">
-<section id="section-15.2.2">
+<section id="section-14.2.2">
           <h4 id="name-initial-entries-3">
-<a href="#section-15.2.2" class="section-number selfRef">15.2.2. </a><a href="#name-initial-entries-3" class="section-name selfRef">Initial entries</a>
+<a href="#section-14.2.2" class="section-number selfRef">14.2.2. </a><a href="#name-initial-entries-3" class="section-name selfRef">Initial entries</a>
           </h4>
-<p id="section-15.2.2-1">The Framework registers the two constraints defined in
-<a href="#common-constraints-framework" class="auto internal xref">Section 10</a>:<a href="#section-15.2.2-1" class="pilcrow">¶</a></p>
+<p id="section-14.2.2-1">The Framework registers the two constraints defined in
+<a href="#common-constraints-framework" class="auto internal xref">Section 10</a>:<a href="#section-14.2.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-15.2.2-2.1">
-              <p id="section-15.2.2-2.1.1"><code>max_derivations</code> — this document.<a href="#section-15.2.2-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-14.2.2-2.1">
+              <p id="section-14.2.2-2.1.1"><code>max_derivations</code> — this document.<a href="#section-14.2.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.2.2-2.2">
-              <p id="section-15.2.2-2.2.1"><code>aal</code> — this document.<a href="#section-15.2.2-2.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.2.2-2.2">
+              <p id="section-14.2.2-2.2.1"><code>aal</code> — this document.<a href="#section-14.2.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </section>
@@ -6081,156 +5913,112 @@ event-driven; see
 </section>
 </div>
 <div id="iana-authority-set-type-registry">
-<section id="section-15.3">
+<section id="section-14.3">
         <h3 id="name-mission-authority-set-type-r">
-<a href="#section-15.3" class="section-number selfRef">15.3. </a><a href="#name-mission-authority-set-type-r" class="section-name selfRef">Mission Authority Set Type Registry</a>
+<a href="#section-14.3" class="section-number selfRef">14.3. </a><a href="#name-mission-authority-set-type-r" class="section-name selfRef">Mission Authority Set Type Registry</a>
         </h3>
-<p id="section-15.3-1">IANA is requested to create the <strong>Mission Authority Set Type</strong>
+<p id="section-14.3-1">IANA is requested to create the <strong>Mission Authority Set Type</strong>
 registry. See <a href="#authority-set-type-registry" class="auto internal xref">Section 5.3</a> for the
-specification text.<a href="#section-15.3-1" class="pilcrow">¶</a></p>
+specification text.<a href="#section-14.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-15.3-2.1">
-            <p id="section-15.3-2.1.1"><strong>Registration Policy</strong>: Specification Required (<span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span>).<a href="#section-15.3-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-14.3-2.1">
+            <p id="section-14.3-2.1.1"><strong>Registration Policy</strong>: Specification Required (<span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span>).<a href="#section-14.3-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-15.3-2.2">
-            <p id="section-15.3-2.2.1"><strong>Designated Expert review criteria</strong>: experts evaluate
+          <li class="normal" id="section-14.3-2.2">
+            <p id="section-14.3-2.2.1"><strong>Designated Expert review criteria</strong>: experts evaluate
 whether (a) the type's <code>authority</code> payload shape is
 unambiguous, (b) equality, subset, and intersection rules are
 total and deterministic, (c) unknown-field handling does not
 default to silent acceptance, (d) the Normalization Profile is
 registered or co-registered, and (e) the type name does not
-collide.<a href="#section-15.3-2.2.1" class="pilcrow">¶</a></p>
+collide.<a href="#section-14.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <div id="registration-template-2">
-<section id="section-15.3.1">
-          <h4 id="name-registration-template-4">
-<a href="#section-15.3.1" class="section-number selfRef">15.3.1. </a><a href="#name-registration-template-4" class="section-name selfRef">Registration template</a>
+<section id="section-14.3.1">
+          <h4 id="name-registration-template-3">
+<a href="#section-14.3.1" class="section-number selfRef">14.3.1. </a><a href="#name-registration-template-3" class="section-name selfRef">Registration template</a>
           </h4>
-<p id="section-15.3.1-1">See <a href="#authority-set-type-registry" class="auto internal xref">Section 5.3</a> for the registration
-template.<a href="#section-15.3.1-1" class="pilcrow">¶</a></p>
+<p id="section-14.3.1-1">See <a href="#authority-set-type-registry" class="auto internal xref">Section 5.3</a> for the registration
+template.<a href="#section-14.3.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="initial-entries-3">
-<section id="section-15.3.2">
+<section id="section-14.3.2">
           <h4 id="name-initial-entries-4">
-<a href="#section-15.3.2" class="section-number selfRef">15.3.2. </a><a href="#name-initial-entries-4" class="section-name selfRef">Initial entries</a>
+<a href="#section-14.3.2" class="section-number selfRef">14.3.2. </a><a href="#name-initial-entries-4" class="section-name selfRef">Initial entries</a>
           </h4>
-<p id="section-15.3.2-1">The Framework reserves <code>mission_resource_access</code> for
+<p id="section-14.3.2-1">The Framework reserves <code>mission_resource_access</code> for
 registration by the OAuth Profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>). No type is
-registered by this document.<a href="#section-15.3.2-1" class="pilcrow">¶</a></p>
-</section>
-</div>
-</section>
-</div>
-<div id="iana-capability-metadata-registry">
-<section id="section-15.4">
-        <h3 id="name-mission-capability-advertis">
-<a href="#section-15.4" class="section-number selfRef">15.4. </a><a href="#name-mission-capability-advertis" class="section-name selfRef">Mission Capability-Advertisement Metadata Registry</a>
-        </h3>
-<p id="section-15.4-1">IANA is requested to create the <strong>Mission Capability-Advertisement
-Metadata</strong> registry. See
-<a href="#capability-advertisement-metadata" class="auto internal xref">Section 11</a> for the specification
-text.<a href="#section-15.4-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-15.4-2.1">
-            <p id="section-15.4-2.1.1"><strong>Registration Policy</strong>: Specification Required (<span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span>).<a href="#section-15.4-2.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-15.4-2.2">
-            <p id="section-15.4-2.2.1"><strong>Designated Expert review criteria</strong>: experts evaluate
-whether (a) the metadata member's value type and structure are
-unambiguous, (b) the closed-set status is well-defined, and
-(c) the member name does not collide.<a href="#section-15.4-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-<div id="registration-template-3">
-<section id="section-15.4.1">
-          <h4 id="name-registration-template-5">
-<a href="#section-15.4.1" class="section-number selfRef">15.4.1. </a><a href="#name-registration-template-5" class="section-name selfRef">Registration template</a>
-          </h4>
-<p id="section-15.4.1-1">See <a href="#capability-metadata-registration-template" class="auto internal xref">Section 11.3</a>.<a href="#section-15.4.1-1" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="initial-entries-4">
-<section id="section-15.4.2">
-          <h4 id="name-initial-entries-5">
-<a href="#section-15.4.2" class="section-number selfRef">15.4.2. </a><a href="#name-initial-entries-5" class="section-name selfRef">Initial entries</a>
-          </h4>
-<p id="section-15.4.2-1">This document registers the five initial members defined in
-<a href="#capability-advertisement-metadata" class="auto internal xref">Section 11</a>:
-<code>mission_authorization_domain_tiers_supported</code>,
-<code>mission_ladder_levels_supported</code>,
-<code>mission_profiles_supported</code>,
-<code>mission_optional_modules_supported</code>,
-<code>mission_framework_versions_supported</code>.<a href="#section-15.4.2-1" class="pilcrow">¶</a></p>
+registered by this document.<a href="#section-14.3.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="normalization-profile-registry">
-<section id="section-15.5">
+<section id="section-14.4">
         <h3 id="name-mission-normalization-profi">
-<a href="#section-15.5" class="section-number selfRef">15.5. </a><a href="#name-mission-normalization-profi" class="section-name selfRef">Mission Normalization Profile Registry</a>
+<a href="#section-14.4" class="section-number selfRef">14.4. </a><a href="#name-mission-normalization-profi" class="section-name selfRef">Mission Normalization Profile Registry</a>
         </h3>
-<p id="section-15.5-1">IANA is requested to create the <strong>Mission Normalization Profile</strong>
-registry.<a href="#section-15.5-1" class="pilcrow">¶</a></p>
+<p id="section-14.4-1">IANA is requested to create the <strong>Mission Normalization Profile</strong>
+registry.<a href="#section-14.4-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-15.5-2.1">
-            <p id="section-15.5-2.1.1"><strong>Registration Policy</strong>: Specification Required (<span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span>).<a href="#section-15.5-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-14.4-2.1">
+            <p id="section-14.4-2.1.1"><strong>Registration Policy</strong>: Specification Required (<span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span>).<a href="#section-14.4-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-15.5-2.2">
-            <p id="section-15.5-2.2.1"><strong>Designated Expert review criteria</strong>: experts evaluate
+          <li class="normal" id="section-14.4-2.2">
+            <p id="section-14.4-2.2.1"><strong>Designated Expert review criteria</strong>: experts evaluate
 whether (a) the profile's rules are deterministic and total,
 (b) the rule set covers JSON parsing, array semantics, set
 semantics, Unicode normalization, URI normalization, number
 representation, absent vs empty members, and field-name
 canonical form (per <a href="#semantic-normalization" class="auto internal xref">Section 6.2</a>), and (c) the
-profile identifier does not collide.<a href="#section-15.5-2.2.1" class="pilcrow">¶</a></p>
+profile identifier does not collide.<a href="#section-14.4-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<div id="registration-template-4">
-<section id="section-15.5.1">
-          <h4 id="name-registration-template-6">
-<a href="#section-15.5.1" class="section-number selfRef">15.5.1. </a><a href="#name-registration-template-6" class="section-name selfRef">Registration template</a>
+<div id="registration-template-3">
+<section id="section-14.4.1">
+          <h4 id="name-registration-template-4">
+<a href="#section-14.4.1" class="section-number selfRef">14.4.1. </a><a href="#name-registration-template-4" class="section-name selfRef">Registration template</a>
           </h4>
 <ul class="normal">
-<li class="normal" id="section-15.5.1-1.1">
-              <p id="section-15.5.1-1.1.1"><strong>Profile identifier</strong> (URI): the registered identifier (e.g.,
-<code>urn:mbo:norm:mission-intent:1</code>).<a href="#section-15.5.1-1.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-14.4.1-1.1">
+              <p id="section-14.4.1-1.1.1"><strong>Profile identifier</strong> (URI): the registered identifier (e.g.,
+<code>urn:mbo:norm:mission-intent:1</code>).<a href="#section-14.4.1-1.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.5.1-1.2">
-              <p id="section-15.5.1-1.2.1"><strong>Defining specification</strong>: stable reference.<a href="#section-15.5.1-1.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.4.1-1.2">
+              <p id="section-14.4.1-1.2.1"><strong>Defining specification</strong>: stable reference.<a href="#section-14.4.1-1.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.5.1-1.3">
-              <p id="section-15.5.1-1.3.1"><strong>Per-field rules</strong>: full enumeration of the fields the profile
-governs and the rule applied to each.<a href="#section-15.5.1-1.3.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.4.1-1.3">
+              <p id="section-14.4.1-1.3.1"><strong>Per-field rules</strong>: full enumeration of the fields the profile
+governs and the rule applied to each.<a href="#section-14.4.1-1.3.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.5.1-1.4">
-              <p id="section-15.5.1-1.4.1"><strong>Change controller</strong>.<a href="#section-15.5.1-1.4.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.4.1-1.4">
+              <p id="section-14.4.1-1.4.1"><strong>Change controller</strong>.<a href="#section-14.4.1-1.4.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.5.1-1.5">
-              <p id="section-15.5.1-1.5.1"><strong>Reference</strong>.<a href="#section-15.5.1-1.5.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.4.1-1.5">
+              <p id="section-14.4.1-1.5.1"><strong>Reference</strong>.<a href="#section-14.4.1-1.5.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </section>
 </div>
-<div id="initial-entries-5">
-<section id="section-15.5.2">
-          <h4 id="name-initial-entries-6">
-<a href="#section-15.5.2" class="section-number selfRef">15.5.2. </a><a href="#name-initial-entries-6" class="section-name selfRef">Initial entries</a>
+<div id="initial-entries-4">
+<section id="section-14.4.2">
+          <h4 id="name-initial-entries-5">
+<a href="#section-14.4.2" class="section-number selfRef">14.4.2. </a><a href="#name-initial-entries-5" class="section-name selfRef">Initial entries</a>
           </h4>
-<p id="section-15.5.2-1">This document registers the three Normalization Profiles defined
-in <a href="#semantic-normalization" class="auto internal xref">Section 6.2</a>:<a href="#section-15.5.2-1" class="pilcrow">¶</a></p>
+<p id="section-14.4.2-1">This document registers the three Normalization Profiles defined
+in <a href="#semantic-normalization" class="auto internal xref">Section 6.2</a>:<a href="#section-14.4.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-15.5.2-2.1">
-              <p id="section-15.5.2-2.1.1"><code>urn:mbo:norm:mission-intent:1</code> — this document.<a href="#section-15.5.2-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-14.4.2-2.1">
+              <p id="section-14.4.2-2.1.1"><code>urn:mbo:norm:mission-intent:1</code> — this document.<a href="#section-14.4.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.5.2-2.2">
-              <p id="section-15.5.2-2.2.1"><code>urn:mbo:norm:mission-authority-set:1</code> — this document.<a href="#section-15.5.2-2.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.4.2-2.2">
+              <p id="section-14.4.2-2.2.1"><code>urn:mbo:norm:mission-authority-set:1</code> — this document.<a href="#section-14.4.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.5.2-2.3">
-              <p id="section-15.5.2-2.3.1"><code>urn:mbo:norm:mission-consent-disclosure:1</code> — this document.<a href="#section-15.5.2-2.3.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.4.2-2.3">
+              <p id="section-14.4.2-2.3.1"><code>urn:mbo:norm:mission-consent-disclosure:1</code> — this document.<a href="#section-14.4.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </section>
@@ -6238,68 +6026,68 @@ in <a href="#semantic-normalization" class="auto internal xref">Section 6.2</a>:
 </section>
 </div>
 <div id="iana-aal-identifier-registry">
-<section id="section-15.6">
+<section id="section-14.5">
         <h3 id="name-mission-aal-identifier-regi">
-<a href="#section-15.6" class="section-number selfRef">15.6. </a><a href="#name-mission-aal-identifier-regi" class="section-name selfRef">Mission AAL Identifier Registry</a>
+<a href="#section-14.5" class="section-number selfRef">14.5. </a><a href="#name-mission-aal-identifier-regi" class="section-name selfRef">Mission AAL Identifier Registry</a>
         </h3>
-<p id="section-15.6-1">IANA is requested to create the <strong>Mission AAL Identifier</strong>
+<p id="section-14.5-1">IANA is requested to create the <strong>Mission AAL Identifier</strong>
 registry. See <a href="#aal-identifier-registry" class="auto internal xref">Section 10.1.2.1</a> for the
-specification text.<a href="#section-15.6-1" class="pilcrow">¶</a></p>
+specification text.<a href="#section-14.5-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-15.6-2.1">
-            <p id="section-15.6-2.1.1"><strong>Registration Policy</strong>: Specification Required (<span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span>).<a href="#section-15.6-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-14.5-2.1">
+            <p id="section-14.5-2.1.1"><strong>Registration Policy</strong>: Specification Required (<span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span>).<a href="#section-14.5-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-15.6-2.2">
-            <p id="section-15.6-2.2.1"><strong>Designated Expert review criteria</strong>: experts evaluate
+          <li class="normal" id="section-14.5-2.2">
+            <p id="section-14.5-2.2.1"><strong>Designated Expert review criteria</strong>: experts evaluate
 whether (a) the identifier maps cleanly to a recognized
 authentication-assurance framework, (b) the ordering relative
 to existing entries is well-defined, and (c) the identifier
-does not collide.<a href="#section-15.6-2.2.1" class="pilcrow">¶</a></p>
+does not collide.<a href="#section-14.5-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<div id="registration-template-5">
-<section id="section-15.6.1">
-          <h4 id="name-registration-template-7">
-<a href="#section-15.6.1" class="section-number selfRef">15.6.1. </a><a href="#name-registration-template-7" class="section-name selfRef">Registration template</a>
+<div id="registration-template-4">
+<section id="section-14.5.1">
+          <h4 id="name-registration-template-5">
+<a href="#section-14.5.1" class="section-number selfRef">14.5.1. </a><a href="#name-registration-template-5" class="section-name selfRef">Registration template</a>
           </h4>
 <ul class="normal">
-<li class="normal" id="section-15.6.1-1.1">
-              <p id="section-15.6.1-1.1.1"><strong>Identifier</strong> (URI or short string).<a href="#section-15.6.1-1.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-14.5.1-1.1">
+              <p id="section-14.5.1-1.1.1"><strong>Identifier</strong> (URI or short string).<a href="#section-14.5.1-1.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.6.1-1.2">
-              <p id="section-15.6.1-1.2.1"><strong>Description</strong>.<a href="#section-15.6.1-1.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.5.1-1.2">
+              <p id="section-14.5.1-1.2.1"><strong>Description</strong>.<a href="#section-14.5.1-1.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.6.1-1.3">
-              <p id="section-15.6.1-1.3.1"><strong>Reference</strong> to the defining authentication-assurance
+            <li class="normal" id="section-14.5.1-1.3">
+              <p id="section-14.5.1-1.3.1"><strong>Reference</strong> to the defining authentication-assurance
 specification (NIST SP 800-63, ISO/IEC 29115, RFC 9470 <code>acr</code>,
-or similar).<a href="#section-15.6.1-1.3.1" class="pilcrow">¶</a></p>
+or similar).<a href="#section-14.5.1-1.3.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.6.1-1.4">
-              <p id="section-15.6.1-1.4.1"><strong>Ordering</strong>: position relative to existing registered
-identifiers, when an ordering is meaningful.<a href="#section-15.6.1-1.4.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.5.1-1.4">
+              <p id="section-14.5.1-1.4.1"><strong>Ordering</strong>: position relative to existing registered
+identifiers, when an ordering is meaningful.<a href="#section-14.5.1-1.4.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.6.1-1.5">
-              <p id="section-15.6.1-1.5.1"><strong>Change controller</strong>.<a href="#section-15.6.1-1.5.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.5.1-1.5">
+              <p id="section-14.5.1-1.5.1"><strong>Change controller</strong>.<a href="#section-14.5.1-1.5.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </section>
 </div>
-<div id="initial-entries-6">
-<section id="section-15.6.2">
-          <h4 id="name-initial-entries-7">
-<a href="#section-15.6.2" class="section-number selfRef">15.6.2. </a><a href="#name-initial-entries-7" class="section-name selfRef">Initial entries</a>
+<div id="initial-entries-5">
+<section id="section-14.5.2">
+          <h4 id="name-initial-entries-6">
+<a href="#section-14.5.2" class="section-number selfRef">14.5.2. </a><a href="#name-initial-entries-6" class="section-name selfRef">Initial entries</a>
           </h4>
-<p id="section-15.6.2-1">This document registers the three identifiers of
-<a href="#aal-identifier-registry" class="auto internal xref">Section 10.1.2.1</a>:<a href="#section-15.6.2-1" class="pilcrow">¶</a></p>
+<p id="section-14.5.2-1">This document registers the three identifiers of
+<a href="#aal-identifier-registry" class="auto internal xref">Section 10.1.2.1</a>:<a href="#section-14.5.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-15.6.2-2.1">
-              <p id="section-15.6.2-2.1.1"><code>urn:mbo:aal:1</code> — this document.<a href="#section-15.6.2-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-14.5.2-2.1">
+              <p id="section-14.5.2-2.1.1"><code>urn:mbo:aal:1</code> — this document.<a href="#section-14.5.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.6.2-2.2">
-              <p id="section-15.6.2-2.2.1"><code>urn:mbo:aal:2</code> — this document.<a href="#section-15.6.2-2.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.5.2-2.2">
+              <p id="section-14.5.2-2.2.1"><code>urn:mbo:aal:2</code> — this document.<a href="#section-14.5.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-15.6.2-2.3">
-              <p id="section-15.6.2-2.3.1"><code>urn:mbo:aal:3</code> — this document.<a href="#section-15.6.2-2.3.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-14.5.2-2.3">
+              <p id="section-14.5.2-2.3.1"><code>urn:mbo:aal:3</code> — this document.<a href="#section-14.5.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </section>
@@ -6307,72 +6095,72 @@ identifiers, when an ordering is meaningful.<a href="#section-15.6.1-1.4.1" clas
 </section>
 </div>
 <div id="mission-lifecycle-state-enumerations">
-<section id="section-15.7">
+<section id="section-14.6">
         <h3 id="name-mission-lifecycle-state-enu">
-<a href="#section-15.7" class="section-number selfRef">15.7. </a><a href="#name-mission-lifecycle-state-enu" class="section-name selfRef">Mission Lifecycle State Enumerations</a>
+<a href="#section-14.6" class="section-number selfRef">14.6. </a><a href="#name-mission-lifecycle-state-enu" class="section-name selfRef">Mission Lifecycle State Enumerations</a>
         </h3>
-<p id="section-15.7-1">This document defines closed enumerations for Mission Proposal
+<p id="section-14.6-1">This document defines closed enumerations for Mission Proposal
 states (<code>pending_approval</code>, <code>rejected</code>, <code>withdrawn</code>,
 <code>expired_as_pending</code>) and Mission states (<code>active</code>, <code>suspended</code>,
 <code>revoked</code>, <code>completed</code>, <code>expired</code>). These enumerations are not
 externally extensible by this revision; if extensibility is
 later required, dedicated IANA registries <span class="bcp14">SHOULD</span> be created via
-a subsequent revision of this Framework.<a href="#section-15.7-1" class="pilcrow">¶</a></p>
+a subsequent revision of this Framework.<a href="#section-14.6-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-pairwise-sector-type-enumeration">
-<section id="section-15.8">
+<section id="section-14.7">
         <h3 id="name-mission-pairwise-sector-typ">
-<a href="#section-15.8" class="section-number selfRef">15.8. </a><a href="#name-mission-pairwise-sector-typ" class="section-name selfRef">Mission Pairwise Sector Type Enumeration</a>
+<a href="#section-14.7" class="section-number selfRef">14.7. </a><a href="#name-mission-pairwise-sector-typ" class="section-name selfRef">Mission Pairwise Sector Type Enumeration</a>
         </h3>
-<p id="section-15.8-1">This document defines a closed enumeration for the
+<p id="section-14.7-1">This document defines a closed enumeration for the
 <code>mission_pairwise_sector</code> metadata value:
 <code>resource_server</code>, <code>resource_as</code>, <code>tenant</code>, <code>trust_domain</code>. If
 extensibility is later required, a dedicated IANA registry
-<span class="bcp14">SHOULD</span> be created via a subsequent revision.<a href="#section-15.8-1" class="pilcrow">¶</a></p>
+<span class="bcp14">SHOULD</span> be created via a subsequent revision.<a href="#section-14.7-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-status-response-media-types">
-<section id="section-15.9">
+<section id="section-14.8">
         <h3 id="name-mission-status-response-med">
-<a href="#section-15.9" class="section-number selfRef">15.9. </a><a href="#name-mission-status-response-med" class="section-name selfRef">Mission Status Response Media Types</a>
+<a href="#section-14.8" class="section-number selfRef">14.8. </a><a href="#name-mission-status-response-med" class="section-name selfRef">Mission Status Response Media Types</a>
         </h3>
-<p id="section-15.9-1">Where a profile specification needs a new media type for Mission
+<p id="section-14.8-1">Where a profile specification needs a new media type for Mission
 Status responses (e.g.,
 <code>application/mission-status-response+json</code> or
 <code>application/mission-status-response+jwt</code>), the profile
 registers the media type per <span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>. This document does
-NOT register media types; profiles do.<a href="#section-15.9-1" class="pilcrow">¶</a></p>
+NOT register media types; profiles do.<a href="#section-14.8-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="what-this-document-does-not-register">
-<section id="section-15.10">
+<section id="section-14.9">
         <h3 id="name-what-this-document-does-not">
-<a href="#section-15.10" class="section-number selfRef">15.10. </a><a href="#name-what-this-document-does-not" class="section-name selfRef">What this document does NOT register</a>
+<a href="#section-14.9" class="section-number selfRef">14.9. </a><a href="#name-what-this-document-does-not" class="section-name selfRef">What this document does NOT register</a>
         </h3>
 <ul class="normal">
-<li class="normal" id="section-15.10-1.1">
-            <p id="section-15.10-1.1.1">RAR <code>type</code> values: <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> does not establish an IANA
+<li class="normal" id="section-14.9-1.1">
+            <p id="section-14.9-1.1.1">RAR <code>type</code> values: <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> does not establish an IANA
 registry for every RAR <code>type</code>. The <code>mission_resource_access</code>
 RAR type is registered by the OAuth Profile in the Mission
 Authority Set Type Registry created by this document, not in
-a (nonexistent) RFC 9396 type registry.<a href="#section-15.10-1.1.1" class="pilcrow">¶</a></p>
+a (nonexistent) RFC 9396 type registry.<a href="#section-14.9-1.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-15.10-1.2">
-            <p id="section-15.10-1.2.1">Generic JWT <code>typ</code> values: there is no IANA "JWT Media Type
+          <li class="normal" id="section-14.9-1.2">
+            <p id="section-14.9-1.2.1">Generic JWT <code>typ</code> values: there is no IANA "JWT Media Type
 Registry" for arbitrary <code>typ</code> values. Where a profile needs a
 specific JWT <code>typ</code>, it registers a media type per
-<span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>.<a href="#section-15.10-1.2.1" class="pilcrow">¶</a></p>
+<span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>.<a href="#section-14.9-1.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-15.10-1.3">
-            <p id="section-15.10-1.3.1">Mission Lifecycle and Mission Proposal state enumerations:
-closed sets, as noted above.<a href="#section-15.10-1.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-14.9-1.3">
+            <p id="section-14.9-1.3.1">Mission Lifecycle and Mission Proposal state enumerations:
+closed sets, as noted above.<a href="#section-14.9-1.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-15.10-1.4">
-            <p id="section-15.10-1.4.1">Specific deployment-side AAL identifiers (e.g., <code>acr</code> values
+          <li class="normal" id="section-14.9-1.4">
+            <p id="section-14.9-1.4.1">Specific deployment-side AAL identifiers (e.g., <code>acr</code> values
 used by individual identity providers): out of scope for this
 document's IANA actions; deployments compose with their own
-identifier spaces.<a href="#section-15.10-1.4.1" class="pilcrow">¶</a></p>
+identifier spaces.<a href="#section-14.9-1.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -6380,22 +6168,22 @@ identifier spaces.<a href="#section-15.10-1.4.1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="acknowledgments">
-<section id="section-16">
+<section id="section-15">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="section-16-1">The author thanks the implementers and reviewers of the
+<p id="section-15-1">The author thanks the implementers and reviewers of the
 Mission-Bound Authorization architecture for feedback that shaped
-this specification.<a href="#section-16-1" class="pilcrow">¶</a></p>
+this specification.<a href="#section-15-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
-<section id="section-17">
+<section id="section-16">
       <h2 id="name-references">
 <a href="#name-references" class="section-name selfRef">References</a>
       </h2>
 <div id="sec-normative-references">
-<section id="section-17.1">
+<section id="section-16.1">
         <h3 id="name-normative-references">
 <a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
@@ -6452,15 +6240,11 @@ this specification.<a href="#section-16-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-informative-references">
-<section id="section-17.2">
+<section id="section-16.2">
         <h3 id="name-informative-references">
 <a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
-<dt id="I-D.draft-mcguinness-mission-capability-model">[I-D.draft-mcguinness-mission-capability-model]</dt>
-        <dd>
-<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
-<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-expansion">[I-D.draft-mcguinness-mission-expansion]</dt>
         <dd>
 <span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>

@@ -15,13 +15,12 @@ Tiers (AD-1 through AD-3). The document names three adoption claims
 (Mission-Bound Issuance, Mission-Bound Runtime Enforcement, and
 Mission-Bound Cross-Domain Projection) that map onto the coordinate,
 and describes how OAuth-only, AAuth-only, and cross-substrate
-deployments report against the coordinate. The capability-advertisement
-metadata registry is created by the Mission Framework; this document
-provides the formal registry entries for the four metadata fields and
-the closed enumerations for the three axes. This document is
-Informational: conformance is claimed against substrate or runtime
-profile specifications, and the coordinate here is a reporting
-vocabulary. 
+deployments report against the coordinate. This document is
+Informational: it defines a descriptive vocabulary for
+deployment maturity, not a protocol-actionable advertisement.
+Conformance is claimed against substrate or runtime profile
+specifications; the coordinate here is a reporting vocabulary
+used in documentation, migration roadmaps, and positioning. 
     " name="description">
 <meta content="xml2rfc 3.33.0" name="generator">
 <meta content="mission" name="keyword">
@@ -1106,13 +1105,12 @@ Tiers (AD-1 through AD-3). The document names three adoption claims
 (Mission-Bound Issuance, Mission-Bound Runtime Enforcement, and
 Mission-Bound Cross-Domain Projection) that map onto the coordinate,
 and describes how OAuth-only, AAuth-only, and cross-substrate
-deployments report against the coordinate. The capability-advertisement
-metadata registry is created by the Mission Framework; this document
-provides the formal registry entries for the four metadata fields and
-the closed enumerations for the three axes. This document is
-Informational: conformance is claimed against substrate or runtime
-profile specifications, and the coordinate here is a reporting
-vocabulary.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+deployments report against the coordinate. This document is
+Informational: it defines a descriptive vocabulary for
+deployment maturity, not a protocol-actionable advertisement.
+Conformance is claimed against substrate or runtime profile
+specifications; the coordinate here is a reporting vocabulary
+used in documentation, migration roadmaps, and positioning.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1290,24 +1288,7 @@ vocabulary.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
-            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-capability-advertisement" class="internal xref">Capability Advertisement</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
-                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-mission_authorization_domai" class="internal xref">mission_authorization_domain_tiers_supported</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
-                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-mission_ladder_levels_suppo" class="internal xref">mission_ladder_levels_supported</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
-                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-mission_profiles_supported" class="internal xref">mission_profiles_supported</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.4">
-                <p id="section-toc.1-1.10.2.4.1"><a href="#section-10.4" class="auto internal xref">10.4</a>.  <a href="#name-mission_optional_modules_su" class="internal xref">mission_optional_modules_supported</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.5">
-                <p id="section-toc.1-1.10.2.5.1"><a href="#section-10.5" class="auto internal xref">10.5</a>.  <a href="#name-metadata-location" class="internal xref">Metadata location</a></p>
-</li>
-            </ul>
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-using-the-vocabulary" class="internal xref">Using the Vocabulary</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
             <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-reading-paths-by-capability" class="internal xref">Reading Paths by Capability Goal</a></p>
@@ -1319,30 +1300,13 @@ vocabulary.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
-                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-mission-capability-advertis" class="internal xref">Mission Capability-Advertisement Metadata Registry entries</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1.2.1">
-                    <p id="section-toc.1-1.13.2.1.2.1.1"><a href="#section-13.1.1" class="auto internal xref">13.1.1</a>.  <a href="#name-entry-mission_authorization" class="internal xref">Entry: mission_authorization_domain_tiers_supported</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1.2.2">
-                    <p id="section-toc.1-1.13.2.1.2.2.1"><a href="#section-13.1.2" class="auto internal xref">13.1.2</a>.  <a href="#name-entry-mission_ladder_levels" class="internal xref">Entry: mission_ladder_levels_supported</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1.2.3">
-                    <p id="section-toc.1-1.13.2.1.2.3.1"><a href="#section-13.1.3" class="auto internal xref">13.1.3</a>.  <a href="#name-entry-mission_profiles_supp" class="internal xref">Entry: mission_profiles_supported</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1.2.4">
-                    <p id="section-toc.1-1.13.2.1.2.4.1"><a href="#section-13.1.4" class="auto internal xref">13.1.4</a>.  <a href="#name-entry-mission_optional_modu" class="internal xref">Entry: mission_optional_modules_supported</a></p>
-</li>
-                </ul>
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-capability-ladder-levels-vo" class="internal xref">Capability Ladder Levels (vocabulary)</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
-                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-capability-ladder-level-ide" class="internal xref">Capability Ladder Level Identifiers</a></p>
+                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-resource-server-tiers-vocab" class="internal xref">Resource Server Tiers (vocabulary)</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.3">
-                <p id="section-toc.1-1.13.2.3.1"><a href="#section-13.3" class="auto internal xref">13.3</a>.  <a href="#name-resource-server-tier-identi" class="internal xref">Resource Server Tier Identifiers</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.4">
-                <p id="section-toc.1-1.13.2.4.1"><a href="#section-13.4" class="auto internal xref">13.4</a>.  <a href="#name-authorization-domain-tier-i" class="internal xref">Authorization Domain Tier Identifiers</a></p>
+                <p id="section-toc.1-1.13.2.3.1"><a href="#section-13.3" class="auto internal xref">13.3</a>.  <a href="#name-authorization-domain-tiers-" class="internal xref">Authorization Domain Tiers (vocabulary)</a></p>
 </li>
             </ul>
 </li>
@@ -1425,10 +1389,8 @@ Enforcement Profile. The Capability Ladder, the Resource Server
 Tiers, and the Authorization Domain Tiers are reporting tools. An
 implementation describes its position on the coordinate; it does not
 "conform" to a level or tier as if these were independent wire
-contracts. IANA actions in this document are limited to formal entry
-definitions in the Mission Capability-Advertisement Metadata
-Registry created by the Mission Framework and to the closed
-enumerations for the three axes.<a href="#section-1-6" class="pilcrow">¶</a></p>
+contracts. This document has no IANA actions; the tiers and levels
+are vocabulary, not protocol identifiers.<a href="#section-1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conventions-and-definitions">
@@ -2375,127 +2337,45 @@ consuming domain's tier, and the per-substrate scope statement.<a href="#section
 </div>
 </section>
 </div>
-<div id="capability-advertisement">
+<div id="using-the-vocabulary">
 <section id="section-10">
-      <h2 id="name-capability-advertisement">
-<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-capability-advertisement" class="section-name selfRef">Capability Advertisement</a>
+      <h2 id="name-using-the-vocabulary">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-using-the-vocabulary" class="section-name selfRef">Using the Vocabulary</a>
       </h2>
-<p id="section-10-1">A state authority <span class="bcp14">MAY</span> advertise its capabilities through metadata.
-The Mission Framework <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>
-creates the <strong>Mission Capability-Advertisement Metadata Registry</strong>
-and names four metadata fields for that registry. This document
-provides the formal registry entries for those fields and the
-closed enumerations the field values reference. The IANA actions
-appear in <a href="#iana-considerations" class="auto internal xref">Section 13</a>.<a href="#section-10-1" class="pilcrow">¶</a></p>
-<p id="section-10-2">The four metadata fields are:<a href="#section-10-2" class="pilcrow">¶</a></p>
-<div id="missionauthorizationdomaintierssupported">
-<section id="section-10.1">
-        <h3 id="name-mission_authorization_domai">
-<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-mission_authorization_domai" class="section-name selfRef">mission_authorization_domain_tiers_supported</a>
-        </h3>
-<p id="section-10.1-1">Array of Authorization Domain Tier identifiers (a subset of the
-closed enumeration in <a href="#authorization-domain-tier-identifiers" class="auto internal xref">Section 13.4</a>)
-that the advertising authorization domain implements.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
-<p id="section-10.1-2">Example value: <code>["AD-1", "AD-2", "AD-3"]</code>.<a href="#section-10.1-2" class="pilcrow">¶</a></p>
-<p id="section-10.1-3">The advertised tiers represent claimed capability at the
-authorization domain. A consumer <span class="bcp14">SHOULD</span> treat the highest tier in
-the array as the upper bound of the domain's claim and <span class="bcp14">SHOULD NOT</span>
-assume capabilities beyond the listed tiers.<a href="#section-10.1-3" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="missionladderlevelssupported">
-<section id="section-10.2">
-        <h3 id="name-mission_ladder_levels_suppo">
-<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-mission_ladder_levels_suppo" class="section-name selfRef">mission_ladder_levels_supported</a>
-        </h3>
-<p id="section-10.2-1">Array of integer Capability Ladder level identifiers (a subset of
-the closed enumeration in
-<a href="#capability-ladder-level-identifiers" class="auto internal xref">Section 13.2</a>) that the advertising
-deployment supports.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
-<p id="section-10.2-2">Example value: <code>[1, 2, 3]</code>.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
-<p id="section-10.2-3">A deployment <span class="bcp14">SHOULD</span> advertise the highest level it can support
-end-to-end within a defined scope, together with each lower level
-it remains compatible with. A <code>mission_ladder_levels_supported</code>
-value is a deployment-level claim, not a per-Resource-Server
-claim; per-Resource-Server tier reporting belongs at the Resource
-Server's own metadata surface.<a href="#section-10.2-3" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="missionprofilessupported">
-<section id="section-10.3">
-        <h3 id="name-mission_profiles_supported">
-<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-mission_profiles_supported" class="section-name selfRef">mission_profiles_supported</a>
-        </h3>
-<p id="section-10.3-1">Array of substrate or runtime profile identifiers the advertising
-authorization domain implements. The initial registered string
-values are:<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+<p id="section-10-1">The Capability Ladder, Resource Server Tiers, and Authorization
+Domain Tiers defined in this document are a <strong>reporting
+vocabulary</strong>, not a wire contract. Deployments use these labels in:<a href="#section-10-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-10.3-2.1">
-            <p id="section-10.3-2.1.1"><code>"oauth"</code>: the OAuth Profile
-<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>.<a href="#section-10.3-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-10-2.1">
+          <p id="section-10-2.1.1">Release notes, case studies, and documentation describing what
+the deployment delivers.<a href="#section-10-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.3-2.2">
-            <p id="section-10.3-2.2.1"><code>"aauth"</code>: the AAuth Composition Profile
-<span>[<a href="#I-D.draft-mcguinness-mission-aauth-profile" class="cite xref">I-D.draft-mcguinness-mission-aauth-profile</a>]</span>.<a href="#section-10.3-2.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-10-2.2">
+          <p id="section-10-2.2.1">Migration roadmaps mapping current state to a target coordinate.<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.3-2.3">
-            <p id="section-10.3-2.3.1"><code>"mas"</code>: the Mission Authority Server Profile
-<span>[<a href="#I-D.draft-mcguinness-mission-mas" class="cite xref">I-D.draft-mcguinness-mission-mas</a>]</span>.<a href="#section-10.3-2.3.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-10-2.3">
+          <p id="section-10-2.3.1">Audit narratives describing where governance evidence is and
+is not enforced.<a href="#section-10-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-10.3-2.4">
-            <p id="section-10.3-2.4.1"><code>"runtime_enforcement"</code>: the Runtime Enforcement Profile
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span>.<a href="#section-10.3-2.4.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-10-2.4">
+          <p id="section-10-2.4.1">Vendor positioning describing comparative capability.<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        </ul>
-<p id="section-10.3-3">Additional profile identifiers <span class="bcp14">MAY</span> be added to the
-Capability-Advertisement Metadata Registry per the policy in
-<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>.<a href="#section-10.3-3" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="missionoptionalmodulessupported">
-<section id="section-10.4">
-        <h3 id="name-mission_optional_modules_su">
-<a href="#section-10.4" class="section-number selfRef">10.4. </a><a href="#name-mission_optional_modules_su" class="section-name selfRef">mission_optional_modules_supported</a>
-        </h3>
-<p id="section-10.4-1">Array of registered Mission Runtime Enforcement Profile optional
-module identifiers the advertising authorization domain or runtime
-implements. The set of registered optional modules is defined by
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span> and its
-follow-on module specifications. Example values include
-<code>"tool_binding"</code>, <code>"decision_receipt"</code>, <code>"purpose_registry"</code>,
-<code>"actor_provenance"</code>, <code>"attestation"</code>, and <code>"policy_projection"</code>.<a href="#section-10.4-1" class="pilcrow">¶</a></p>
-<p id="section-10.4-2">Each value <span class="bcp14">MUST</span> correspond to a registered optional module with a
-defining specification. Unregistered tokens are not
-interoperable and <span class="bcp14">SHOULD NOT</span> be advertised.<a href="#section-10.4-2" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="metadata-location">
-<section id="section-10.5">
-        <h3 id="name-metadata-location">
-<a href="#section-10.5" class="section-number selfRef">10.5. </a><a href="#name-metadata-location" class="section-name selfRef">Metadata location</a>
-        </h3>
-<p id="section-10.5-1">The metadata location is substrate-specific:<a href="#section-10.5-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-10.5-2.1">
-            <p id="section-10.5-2.1.1">OAuth uses the AS metadata document.<a href="#section-10.5-2.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-10.5-2.2">
-            <p id="section-10.5-2.2.1">AAuth uses the PS metadata document.<a href="#section-10.5-2.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-10.5-2.3">
-            <p id="section-10.5-2.3.1">MAS uses its own metadata document defined in
-<span>[<a href="#I-D.draft-mcguinness-mission-mas" class="cite xref">I-D.draft-mcguinness-mission-mas</a>]</span>.<a href="#section-10.5-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-<p id="section-10.5-3">Resource Server tier and PDP capability are advertised at the
-Resource Server through PRM <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> (or
-<span>[<a href="#I-D.draft-mcguinness-oauth-rfc9728bis" class="cite xref">I-D.draft-mcguinness-oauth-rfc9728bis</a>]</span> when available) for
-OAuth-substrate Resource Servers, and through the AAuth Resource
-metadata for AAuth Resource Servers. The exact field names for
-per-Resource-Server tier advertisement are defined by the relevant
-substrate profile and are out of scope for this document.<a href="#section-10.5-3" class="pilcrow">¶</a></p>
-</section>
-</div>
+      </ul>
+<p id="section-10-3">Protocol-level capability negotiation between consumers and state
+authorities is performed through the substrate-specific
+<code>*_supported</code> metadata members defined by each profile (e.g.,
+<code>mission_status_endpoint</code>, <code>mission_enforcement_classes_supported</code>,
+<code>mission_sender_constraints_supported</code>,
+<code>authority_set_types_supported</code>). Consumers <span class="bcp14">MUST</span> make protocol
+decisions from those concrete feature advertisements, not from
+the labels defined here.<a href="#section-10-3" class="pilcrow">¶</a></p>
+<p id="section-10-4">This separation is deliberate. Tiers and Levels invite scoring
+and gaming when used as protocol signals; they are stable and
+useful when used as descriptive vocabulary. The substrate
+profiles capture every protocol-actionable capability through
+concrete flags. This document captures the human-facing
+positioning vocabulary that organizes those flags into
+recognizable maturity points.<a href="#section-10-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="reading-paths-by-capability-goal">
@@ -2581,11 +2461,12 @@ contracts.<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
 A capability coordinate is not itself a conformance claim. An
 implementation <span class="bcp14">MUST NOT</span> claim "conformance to" this document; an
 implementation describes its position on the coordinate.<a href="#section-12-3" class="pilcrow">¶</a></p>
-<p id="section-12-4">IANA actions in this document are confined to formal entries in
-the Capability-Advertisement Metadata Registry created by the
-Mission Framework and to closed enumerations for the three axes.
-This document defines no new wire surface. For these reasons, the
-Informational category is the appropriate publication track.<a href="#section-12-4" class="pilcrow">¶</a></p>
+<p id="section-12-4">This document has no IANA actions and defines no new wire surface.
+The tiers and levels are vocabulary; protocol-level capability
+advertisement is performed through the substrate-specific
+<code>*_supported</code> metadata members each profile already defines.
+For these reasons, the Informational category is the appropriate
+publication track.<a href="#section-12-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana-considerations">
@@ -2593,142 +2474,20 @@ Informational category is the appropriate publication track.<a href="#section-12
       <h2 id="name-iana-considerations">
 <a href="#section-13" class="section-number selfRef">13. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-13-1">This document requests IANA registrations in registries created
-by <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> and establishes
-three closed enumerations.<a href="#section-13-1" class="pilcrow">¶</a></p>
-<div id="mission-capability-advertisement-metadata-registry-entries">
-<section id="section-13.1">
-        <h3 id="name-mission-capability-advertis">
-<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-mission-capability-advertis" class="section-name selfRef">Mission Capability-Advertisement Metadata Registry entries</a>
-        </h3>
-<p id="section-13.1-1"><span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> creates the
-<strong>Mission Capability-Advertisement Metadata Registry</strong> with
-Specification Required registration policy. Each entry <span class="bcp14">MUST</span>
-include:<a href="#section-13.1-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-13.1-2.1">
-            <p id="section-13.1-2.1.1"><code>name</code><a href="#section-13.1-2.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-13.1-2.2">
-            <p id="section-13.1-2.2.1">value semantics<a href="#section-13.1-2.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-13.1-2.3">
-            <p id="section-13.1-2.3.1">defining specification<a href="#section-13.1-2.3.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-13.1-2.4">
-            <p id="section-13.1-2.4.1">change controller<a href="#section-13.1-2.4.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-<p id="section-13.1-3">This document registers four entries in that registry. Each entry
-references the closed enumerations defined later in this section.<a href="#section-13.1-3" class="pilcrow">¶</a></p>
-<div id="entry-missionauthorizationdomaintierssupported">
-<section id="section-13.1.1">
-          <h4 id="name-entry-mission_authorization">
-<a href="#section-13.1.1" class="section-number selfRef">13.1.1. </a><a href="#name-entry-mission_authorization" class="section-name selfRef">Entry: mission_authorization_domain_tiers_supported</a>
-          </h4>
-<ul class="normal">
-<li class="normal" id="section-13.1.1-1.1">
-              <p id="section-13.1.1-1.1.1"><strong>Name</strong>: <code>mission_authorization_domain_tiers_supported</code><a href="#section-13.1.1-1.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-13.1.1-1.2">
-              <p id="section-13.1.1-1.2.1"><strong>Value semantics</strong>: JSON array of strings. Each value <span class="bcp14">MUST</span> be
-a registered identifier from
-<a href="#authorization-domain-tier-identifiers" class="auto internal xref">Section 13.4</a>.<a href="#section-13.1.1-1.2.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-13.1.1-1.3">
-              <p id="section-13.1.1-1.3.1"><strong>Defining specification</strong>: this document, <a href="#capability-advertisement" class="auto internal xref">Section 10</a>.<a href="#section-13.1.1-1.3.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-13.1.1-1.4">
-              <p id="section-13.1.1-1.4.1"><strong>Change controller</strong>: IETF.<a href="#section-13.1.1-1.4.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-</section>
-</div>
-<div id="entry-missionladderlevelssupported">
-<section id="section-13.1.2">
-          <h4 id="name-entry-mission_ladder_levels">
-<a href="#section-13.1.2" class="section-number selfRef">13.1.2. </a><a href="#name-entry-mission_ladder_levels" class="section-name selfRef">Entry: mission_ladder_levels_supported</a>
-          </h4>
-<ul class="normal">
-<li class="normal" id="section-13.1.2-1.1">
-              <p id="section-13.1.2-1.1.1"><strong>Name</strong>: <code>mission_ladder_levels_supported</code><a href="#section-13.1.2-1.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-13.1.2-1.2">
-              <p id="section-13.1.2-1.2.1"><strong>Value semantics</strong>: JSON array of non-negative integers. Each
-value <span class="bcp14">MUST</span> be a registered identifier from
-<a href="#capability-ladder-level-identifiers" class="auto internal xref">Section 13.2</a>.<a href="#section-13.1.2-1.2.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-13.1.2-1.3">
-              <p id="section-13.1.2-1.3.1"><strong>Defining specification</strong>: this document, <a href="#capability-advertisement" class="auto internal xref">Section 10</a>.<a href="#section-13.1.2-1.3.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-13.1.2-1.4">
-              <p id="section-13.1.2-1.4.1"><strong>Change controller</strong>: IETF.<a href="#section-13.1.2-1.4.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-</section>
-</div>
-<div id="entry-missionprofilessupported">
-<section id="section-13.1.3">
-          <h4 id="name-entry-mission_profiles_supp">
-<a href="#section-13.1.3" class="section-number selfRef">13.1.3. </a><a href="#name-entry-mission_profiles_supp" class="section-name selfRef">Entry: mission_profiles_supported</a>
-          </h4>
-<ul class="normal">
-<li class="normal" id="section-13.1.3-1.1">
-              <p id="section-13.1.3-1.1.1"><strong>Name</strong>: <code>mission_profiles_supported</code><a href="#section-13.1.3-1.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-13.1.3-1.2">
-              <p id="section-13.1.3-1.2.1"><strong>Value semantics</strong>: JSON array of strings. Each value <span class="bcp14">MUST</span> be
-a registered profile identifier. Initial registered values are
-<code>"oauth"</code>, <code>"aauth"</code>, <code>"mas"</code>, <code>"runtime_enforcement"</code>.
-Additional values <span class="bcp14">MAY</span> be registered in the
-Capability-Advertisement Metadata Registry under the policy in
-<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>.<a href="#section-13.1.3-1.2.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-13.1.3-1.3">
-              <p id="section-13.1.3-1.3.1"><strong>Defining specification</strong>: this document, <a href="#capability-advertisement" class="auto internal xref">Section 10</a>.<a href="#section-13.1.3-1.3.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-13.1.3-1.4">
-              <p id="section-13.1.3-1.4.1"><strong>Change controller</strong>: IETF.<a href="#section-13.1.3-1.4.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-</section>
-</div>
-<div id="entry-missionoptionalmodulessupported">
-<section id="section-13.1.4">
-          <h4 id="name-entry-mission_optional_modu">
-<a href="#section-13.1.4" class="section-number selfRef">13.1.4. </a><a href="#name-entry-mission_optional_modu" class="section-name selfRef">Entry: mission_optional_modules_supported</a>
-          </h4>
-<ul class="normal">
-<li class="normal" id="section-13.1.4-1.1">
-              <p id="section-13.1.4-1.1.1"><strong>Name</strong>: <code>mission_optional_modules_supported</code><a href="#section-13.1.4-1.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-13.1.4-1.2">
-              <p id="section-13.1.4-1.2.1"><strong>Value semantics</strong>: JSON array of strings. Each value <span class="bcp14">MUST</span>
-correspond to a registered Mission Runtime Enforcement Profile
-optional module with a defining specification. The registry of
-optional module identifiers is maintained by
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span> and its
-follow-on module specifications.<a href="#section-13.1.4-1.2.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-13.1.4-1.3">
-              <p id="section-13.1.4-1.3.1"><strong>Defining specification</strong>: this document, <a href="#capability-advertisement" class="auto internal xref">Section 10</a>.<a href="#section-13.1.4-1.3.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-13.1.4-1.4">
-              <p id="section-13.1.4-1.4.1"><strong>Change controller</strong>: IETF.<a href="#section-13.1.4-1.4.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-</section>
-</div>
-</section>
-</div>
+<p id="section-13-1">This document has no IANA actions. The Capability Ladder Levels,
+Resource Server Tiers, and Authorization Domain Tiers defined
+here are a vocabulary for documentation and positioning, not a
+protocol-actionable advertisement. They are listed below for
+reference; consumers <span class="bcp14">MUST NOT</span> make protocol decisions from the
+labels.<a href="#section-13-1" class="pilcrow">¶</a></p>
+<p id="section-13-2">Protocol-level capability advertisement is performed through the
+substrate-specific <code>*_supported</code> metadata members defined by
+each profile (see <a href="#using-the-vocabulary" class="auto internal xref">Section 10</a>).<a href="#section-13-2" class="pilcrow">¶</a></p>
 <div id="capability-ladder-level-identifiers">
-<section id="section-13.2">
-        <h3 id="name-capability-ladder-level-ide">
-<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-capability-ladder-level-ide" class="section-name selfRef">Capability Ladder Level Identifiers</a>
+<section id="section-13.1">
+        <h3 id="name-capability-ladder-levels-vo">
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-capability-ladder-levels-vo" class="section-name selfRef">Capability Ladder Levels (vocabulary)</a>
         </h3>
-<p id="section-13.2-1">This document defines a closed enumeration of Capability Ladder
-level identifiers. Conformant deployments reporting a coordinate
-under this document <span class="bcp14">MUST</span> use these identifiers.<a href="#section-13.2-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-4">
           <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
 <thead>
@@ -2795,19 +2554,13 @@ under this document <span class="bcp14">MUST</span> use these identifiers.<a hre
             </tr>
           </tbody>
         </table>
-<p id="section-13.2-3">The enumeration is closed. Extensions or new levels require a
-revision of this document or a successor specification. IANA is
-not asked to maintain a separate registry for these identifiers.<a href="#section-13.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="resource-server-tier-identifiers">
-<section id="section-13.3">
-        <h3 id="name-resource-server-tier-identi">
-<a href="#section-13.3" class="section-number selfRef">13.3. </a><a href="#name-resource-server-tier-identi" class="section-name selfRef">Resource Server Tier Identifiers</a>
+<section id="section-13.2">
+        <h3 id="name-resource-server-tiers-vocab">
+<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-resource-server-tiers-vocab" class="section-name selfRef">Resource Server Tiers (vocabulary)</a>
         </h3>
-<p id="section-13.3-1">This document defines a closed enumeration of Resource Server Tier
-identifiers. Conformant deployments reporting a coordinate under
-this document <span class="bcp14">MUST</span> use these identifiers.<a href="#section-13.3-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-5">
           <caption><a href="#table-5" class="selfRef">Table 5</a></caption>
 <thead>
@@ -2856,18 +2609,13 @@ this document <span class="bcp14">MUST</span> use these identifiers.<a href="#se
             </tr>
           </tbody>
         </table>
-<p id="section-13.3-3">The enumeration is closed. Extensions or new tiers require a
-revision of this document or a successor specification.<a href="#section-13.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authorization-domain-tier-identifiers">
-<section id="section-13.4">
-        <h3 id="name-authorization-domain-tier-i">
-<a href="#section-13.4" class="section-number selfRef">13.4. </a><a href="#name-authorization-domain-tier-i" class="section-name selfRef">Authorization Domain Tier Identifiers</a>
+<section id="section-13.3">
+        <h3 id="name-authorization-domain-tiers-">
+<a href="#section-13.3" class="section-number selfRef">13.3. </a><a href="#name-authorization-domain-tiers-" class="section-name selfRef">Authorization Domain Tiers (vocabulary)</a>
         </h3>
-<p id="section-13.4-1">This document defines a closed enumeration of Authorization Domain
-Tier identifiers. Conformant deployments reporting a coordinate
-under this document <span class="bcp14">MUST</span> use these identifiers.<a href="#section-13.4-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-6">
           <caption><a href="#table-6" class="selfRef">Table 6</a></caption>
 <thead>
@@ -2907,8 +2655,6 @@ under this document <span class="bcp14">MUST</span> use these identifiers.<a hre
             </tr>
           </tbody>
         </table>
-<p id="section-13.4-3">The enumeration is closed. Extensions or new tiers require a
-revision of this document or a successor specification.<a href="#section-13.4-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2937,14 +2683,14 @@ mediate (debug shells, unsanctioned egress routes, direct
 connectors outside the named scope, agent-side invocations not
 gated by an orchestrator PEP) fall outside the claim and may
 invalidate its operational value.<a href="#section-14-3" class="pilcrow">¶</a></p>
-<p id="section-14-4"><strong>Self-reported capability.</strong> Capability advertisement through
-state-authority metadata is self-reported. A relying party
-receiving a <code>mission_ladder_levels_supported</code> value of <code>[1, 2, 3,
-4]</code> learns what the issuer claims to support; it does not learn
-that any particular request or Mission was handled at that level.
-The Mission Framework's integrity-anchor and Mission Status
-contracts provide the per-Mission and per-decision evidence
-mechanisms; the capability advertisement is orthogonal.<a href="#section-14-4" class="pilcrow">¶</a></p>
+<p id="section-14-4"><strong>Self-reported capability.</strong> A deployment claim of "Capability
+Ladder Level 4" in documentation or marketing is self-reported.
+Readers learn what the deployment claims to support; they do not
+learn that any particular request or Mission was handled at that
+level. The Mission Framework's integrity-anchor and Mission
+Status contracts provide the per-Mission and per-decision
+evidence mechanisms; the vocabulary defined here is descriptive
+and orthogonal.<a href="#section-14-4" class="pilcrow">¶</a></p>
 <p id="section-14-5"><strong>Misaligned tiers can mislead.</strong> A deployment reporting
 <code>L4 / RS-A / AD-1</code> is internally inconsistent. Relying parties
 <span class="bcp14">SHOULD</span> reject inconsistent coordinates rather than choosing one

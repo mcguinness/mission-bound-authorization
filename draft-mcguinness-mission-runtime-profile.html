@@ -1279,7 +1279,7 @@ classes and execution boundaries.<a href="#section-abstract-1" class="pilcrow">�
                 <p id="section-toc.1-1.16.2.3.1"><a href="#section-16.3" class="auto internal xref">16.3</a>.  <a href="#name-mission-common-constraints-" class="internal xref">Mission Common Constraints Registry</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.4">
-                <p id="section-toc.1-1.16.2.4.1"><a href="#section-16.4" class="auto internal xref">16.4</a>.  <a href="#name-mission-capability-advertis" class="internal xref">Mission Capability-Advertisement Metadata</a></p>
+                <p id="section-toc.1-1.16.2.4.1"><a href="#section-16.4" class="auto internal xref">16.4</a>.  <a href="#name-runtime-metadata-members" class="internal xref">Runtime metadata members</a></p>
 </li>
             </ul>
 </li>
@@ -2101,29 +2101,32 @@ Constraints registry created by
         </ul>
 </section>
 </div>
-<div id="mission-capability-advertisement-metadata">
+<div id="runtime-metadata-members">
 <section id="section-16.4">
-        <h3 id="name-mission-capability-advertis">
-<a href="#section-16.4" class="section-number selfRef">16.4. </a><a href="#name-mission-capability-advertis" class="section-name selfRef">Mission Capability-Advertisement Metadata</a>
+        <h3 id="name-runtime-metadata-members">
+<a href="#section-16.4" class="section-number selfRef">16.4. </a><a href="#name-runtime-metadata-members" class="section-name selfRef">Runtime metadata members</a>
         </h3>
-<p id="section-16.4-1">This document registers the following metadata values in the
-Mission Capability-Advertisement Metadata registry:<a href="#section-16.4-1" class="pilcrow">¶</a></p>
+<p id="section-16.4-1">Deployments that implement this profile advertise runtime
+capabilities through substrate-specific AS or PS metadata
+documents. This document defines the following member names; each
+substrate profile (OAuth, AAuth, MAS) registers these in its own
+substrate metadata registry as needed.<a href="#section-16.4-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-16.4-2.1">
-            <p id="section-16.4-2.1.1"><code>mission_optional_modules_supported</code> values: <code>tool_binding</code>,
-<code>decision_receipt</code>, <code>purpose_registry</code>, <code>attestation</code>,
-<code>policy_projection</code>. (The modules themselves are separate
-specifications.)<a href="#section-16.4-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-16.4-2.1.1"><code>mission_freshness_mode_supported</code>: array of <code>fresh</code>, <code>cached</code>,
+<code>event_driven</code>.<a href="#section-16.4-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-16.4-2.2">
-            <p id="section-16.4-2.2.1"><code>mission_freshness_mode_supported</code>: array of <code>fresh</code>, <code>cached</code>,
-<code>event_driven</code>.<a href="#section-16.4-2.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-16.4-2.3">
-            <p id="section-16.4-2.3.1"><code>mission_enforcement_scope_manifest_uri</code>: URL of the deployment's
-enforcement-scope manifest.<a href="#section-16.4-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-16.4-2.2.1"><code>mission_enforcement_scope_manifest_uri</code>: URL of the
+deployment's enforcement-scope manifest.<a href="#section-16.4-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
+<p id="section-16.4-3">Optional Runtime modules (<code>tool_binding</code>, <code>decision_receipt</code>,
+<code>purpose_registry</code>, <code>attestation</code>, <code>policy_projection</code>) are
+defined in separate companion specifications; each module
+specification registers its own metadata member at its
+substrate's metadata registry. The Runtime Profile does not
+maintain a central registry of optional-module identifiers.<a href="#section-16.4-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
