@@ -2527,7 +2527,7 @@ credentials under this Mission.
 }
 ~~~
 
-**AAL identifier registry** {#aal-identifier-registry}:
+#### AAL identifier registry {#aal-identifier-registry}
 
 The Framework creates the **Mission AAL Identifier** IANA registry
 to coordinate AAL values across deployments.
