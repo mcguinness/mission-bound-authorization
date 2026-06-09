@@ -1185,107 +1185,508 @@ Deployments requiring stricter schemas MAY publish a deployment-
 specific stricter schema via `mission_intent_schema_uri` in
 state-authority metadata.
 
-# Authority Set
+# Authority Set {#authority-set}
 
 The Authority Set is a substrate-neutral canonical container for the
 maximum authority the state authority approved at the approval
 event. The Authority Set is composed of **typed entries**.
 
+## Authority Set entry shape
+
 Each Authority Set entry MUST carry the following fields:
 
 - `type` (string, required): the registered type name.
-- `specification_uri` (URI, required) OR `schema_digest` (string,
-  required): an immutable reference to the type's specification. If
-  both are present, `schema_digest` is authoritative.
+- `specification_uri` (string, required) OR `schema_digest` (string,
+  required): an immutable reference to the type's specification.
+  If both are present, `schema_digest` is authoritative for
+  byte-level integrity.
 - `schema_version` (string, required): the version of the type's
   schema.
 - `authority` (object, required): the type-specific payload.
-- `narrowing_profile` (URI, required): the narrowing rules applied
-  to this entry. Default: `urn:mbo:narrowing:default-v1`.
+- `narrowing_profile` (string, required): a URI identifying the
+  narrowing rules applied to this entry. Default
+  `urn:mbo:narrowing:default-v1` (see {{default-narrowing-profile}}).
 
-The Framework defines a **Mission Authority Set Type** registry.
-Each registered type provides:
+### Authority Set entry JSON Schema {#authority-set-entry-schema}
 
-- Specification reference (immutable).
-- Schema digest (where applicable).
-- Semantic normalization rules.
-- Equality rules (when are two entries semantically equal).
-- Subset rules (when does one entry's authority narrow another's).
-- Intersection rules (the largest authority both entries permit).
-- Unknown-field handling at narrowing time.
+The canonical JSON Schema for an Authority Set entry is:
 
-Profile specifications MAY register additional Authority Set entry
-types. The OAuth Profile registers `mission_resource_access` as one
-type with `resource`, `actions`, and `constraints` fields.
+~~~ json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mbo:schema:authority-set-entry:1",
+  "title": "Authority Set Entry",
+  "type": "object",
+  "required": [
+    "type", "schema_version", "authority", "narrowing_profile"
+  ],
+  "anyOf": [
+    { "required": ["specification_uri"] },
+    { "required": ["schema_digest"] }
+  ],
+  "additionalProperties": false,
+  "patternProperties": {
+    "^x_[A-Za-z0-9_-]+$": {}
+  },
+  "properties": {
+    "type": { "type": "string", "minLength": 1 },
+    "specification_uri": { "type": "string", "format": "uri" },
+    "schema_digest": {
+      "type": "string",
+      "pattern": "^sha-(256|384|512):[A-Za-z0-9_-]+$"
+    },
+    "schema_version": { "type": "string" },
+    "authority": { "type": "object" },
+    "narrowing_profile": { "type": "string", "format": "uri" }
+  }
+}
+~~~
 
-## Schema digest format
+### Example Authority Set entry
 
-The `schema_digest` value MUST be `"sha-256:" || base64url(SHA-256(
-JCS-canonical schema bytes))`. This format parallels the integrity-
-anchor hash format. Future digest algorithms register prefixes like
-`sha-384:`; consumers MUST reject digests using unregistered
-prefixes.
+~~~ json
+{
+  "type": "mission_resource_access",
+  "specification_uri":
+    "https://datatracker.ietf.org/doc/draft-mcguinness-mission-oauth-profile",
+  "schema_version": "1",
+  "authority": {
+    "resource": "https://erp.example.com",
+    "actions": ["invoices.read", "journal-entries.write"],
+    "constraints": {
+      "max_amount_usd": 500
+    }
+  },
+  "narrowing_profile": "urn:mbo:narrowing:default-v1"
+}
+~~~
 
-# Integrity Anchors
+## `schema_digest` format
+
+The `schema_digest` value identifies the bytes of a type's schema.
+ABNF:
+
+~~~
+schema-digest = digest-algorithm ":" digest-value
+digest-algorithm = "sha-256" / "sha-384" / "sha-512"
+digest-value  = 1*( ALPHA / DIGIT / "-" / "_" )
+~~~
+
+The `digest-value` is the base64url-no-pad encoding (see
+{{notation}}) of the digest output computed over the JCS-canonical
+bytes of the type's schema document. Consumers MUST reject digests
+using algorithms outside the registered set.
+
+This format parallels the integrity-anchor hash format
+({{integrity-anchors}}). It enables content-addressable
+verification of a specific schema document.
+
+## Mission Authority Set Type Registry {#authority-set-type-registry}
+
+The Framework creates the **Mission Authority Set Type** IANA
+registry. Each registered type provides the elements below; profile
+specifications and feature specifications MAY register additional
+types.
+
+Registration policy: Specification Required (RFC 8126 Section 4.6).
+
+### Registration template
+
+Registration MUST include the following elements:
+
+- **Type name** (`type` field value).
+- **Defining specification** (RFC, Internet-Draft, or stable URL).
+- **`schema_digest` value** (where the schema is stable bytes) and
+  **schema document URL**.
+- **`schema_version` semantics** (how versions are compared; what
+  constitutes a compatible vs incompatible revision).
+- **Normalization rules**: the registered Normalization Profile
+  (see {{normalization-profile-registry}}) that applies to entries
+  of this type prior to integrity-anchor computation.
+- **Equality rule**: when two entries are semantically equal. The
+  rule MUST be a deterministic function over normalized inputs.
+- **Subset rule**: when entry A's authority is a subset of entry
+  B's authority (used by narrowing).
+- **Intersection rule**: the largest authority permitted by both A
+  and B. Used by narrowing to constrain a Mission's authority by
+  the intersection of policy bounds and submitted intent.
+- **Unknown-field handling**: how entries with unrecognized
+  `authority`-member keys are treated at narrowing time. The
+  default behavior is "refuse"; types MAY register a different rule
+  with justification.
+- **Change controller**.
+- **Reference**: pointer to the defining specification.
+
+### Initial entries
+
+The Framework reserves the following type for future registration
+by the OAuth Profile:
+
+- `mission_resource_access` — defined by
+  {{?I-D.draft-mcguinness-mission-oauth-profile}}, with members
+  `resource`, `actions`, and `constraints`. The OAuth Profile
+  performs the registration; this document does not.
+
+The Framework establishes the registry skeleton; profile and
+feature specifications register concrete entries.
+
+## Default narrowing profile {#default-narrowing-profile}
+
+The default narrowing profile is identified by
+`urn:mbo:narrowing:default-v1`. It applies to any Authority Set
+entry that does not declare a more specific `narrowing_profile`.
+The default profile imposes the following rules.
+
+### Subset rule
+
+Entry A is a subset of entry B if all of the following hold:
+
+1. A.`type` equals B.`type`.
+2. A.`schema_version` equals B.`schema_version` (or A is a strict
+   semantic-version successor that the registered type's
+   `schema_version` semantics declare backward-compatible).
+3. The per-type subset rule, applied to A.`authority` and
+   B.`authority`, returns true. The per-type rule is supplied by
+   the Authority Set Type registry entry.
+
+The default profile delegates step 3 to the type-specific rule.
+Types that do not supply one MUST be treated as equality-only
+(only identical authority payloads narrow).
+
+### Equality rule
+
+Two entries are equal if both are subsets of each other.
+
+### Intersection rule
+
+The intersection of entries A and B is computed as:
+
+1. If A.`type` ≠ B.`type` or A.`schema_version` ≠ B.`schema_version`,
+   the intersection is empty (no entry produced).
+2. Otherwise, the per-type intersection rule from the registry
+   entry is applied. If no per-type rule exists, the intersection
+   is empty unless A and B are equal (in which case A is returned).
+
+### Unknown-field handling
+
+The default profile refuses entries whose `authority` payload
+contains keys not declared in the registered schema for the type.
+A type MAY register an explicit pass-through rule for specific
+extension fields; absent that, refusal is the default.
+
+### Narrowing operation
+
+At credential derivation, the requested narrowed entry MUST be a
+subset of an entry in the Mission's Authority Set under the
+applicable per-entry `narrowing_profile`. If no Mission entry has
+a `narrowing_profile` matching the requested derivation's narrowing
+profile, the default profile applies.
+
+Implementations MUST refuse derivation when the requested narrowing
+cannot be proven to be a subset under the applicable profile.
+
+## Registration of alternate narrowing profiles
+
+The Mission Authority Set Type registry MAY accept entries whose
+`narrowing_profile` is a substrate-specific or vendor-specific
+URI. Alternate narrowing profiles MUST be registered with their
+own subset, equality, intersection, and unknown-field rules, and
+MUST NOT be more permissive than the default profile would be
+for the same input.
+
+# Integrity Anchors {#integrity-anchors}
 
 A Mission record carries three integrity anchors that commit the
 state authority to canonical objects: `proposal_hash`,
 `authority_hash`, `consent_disclosure_hash`.
 
-Integrity anchors are computed in three steps:
+## Computation pipeline {#integrity-anchor-pipeline}
 
-1. **Semantic normalization** under the registered normalization
-   profile for the object's type.
+Integrity anchors are computed in three steps applied in order:
+
+1. **Semantic normalization** of the input value under the
+   registered Normalization Profile for the input's type (see
+   {{semantic-normalization}}).
 2. **Domain-separated, authorization-domain-bound envelope** wraps
-   the normalized value.
-3. **JCS canonicalization** {{RFC8785}}, **SHA-256** {{RFC6234}},
-   **base64url encoding**.
+   the normalized value (see {{integrity-envelope}}).
+3. **JCS canonicalization** {{RFC8785}} of the envelope, **SHA-256**
+   {{RFC6234}} of the JCS bytes, **base64url-no-pad** encoding of
+   the digest, with the digest-algorithm prefix `sha-256:`.
 
-## Semantic normalization
+Pseudocode:
+
+~~~
+function compute_anchor(value, type, schema_version,
+                        authorization_domain, state_authority):
+    profile = lookup_normalization_profile(type)
+    normalized = profile.normalize(value)
+    envelope = {
+        "type":                 type,
+        "schema_version":       schema_version,
+        "authorization_domain": authorization_domain,
+        "state_authority":      state_authority,
+        "value":                normalized
+    }
+    jcs_bytes = jcs_canonicalize(envelope)
+    digest    = sha256(jcs_bytes)
+    return "sha-256:" + base64url_no_pad(digest)
+~~~
+
+## Semantic normalization {#semantic-normalization}
 
 JCS canonicalizes JSON syntax but does not make semantically
 equivalent values identical. Before JCS, each committed object MUST
-be normalized under its registered normalization profile. The
-profile defines:
+be normalized under its registered Normalization Profile. A
+Normalization Profile defines:
 
-- Array ordering and duplicate handling.
-- Unicode normalization policy (NFC by default).
-- URI normalization or exact-comparison rules per field.
-- Absent-member versus empty-member semantics.
-- Rejection of duplicate JSON object member names before parsing
-  into the data model.
+- **JSON parsing**: how source bytes are parsed into a data model.
+  Implementations MUST reject inputs containing duplicate JSON
+  object member names at parse time, prior to applying any
+  member-level rule.
+- **Array semantics**: per-field rule. Each array-typed field is
+  declared as either *order-sensitive* (member order preserved
+  verbatim) or *order-insensitive* (members sorted under a
+  declared total order before JCS).
+- **Set semantics**: for order-insensitive arrays, duplicate
+  members are removed under the declared equality rule prior to
+  ordering.
+- **Unicode normalization**: strings are normalized to Unicode
+  Normalization Form C (NFC) per {{W3C-UNICODE-NORM}} unless the
+  profile declares another form for a specific field. Combining
+  character sequences in user-facing strings (e.g., `goal`) are
+  rendered to a canonical NFC form before JCS.
+- **URI normalization**: each URI-valued field is declared with one
+  of three rules: *syntactic-only* (preserve case and percent-encoding
+  as supplied), *RFC 3986 normalization* (apply syntax-based
+  normalization per {{RFC3986}} Section 6.2.2), or *exact-match*
+  (no normalization; bytes preserved verbatim, comparison is
+  byte-exact).
+- **Number representation**: numeric fields requiring precision
+  beyond IEEE 754 double precision MUST use the JSON string
+  representation. The profile declares which fields are
+  precision-sensitive (see {{number-precision-under-jcs}}).
+- **Absent versus empty members**: per-field rule. An absent
+  member and an empty value (e.g., `[]` or `""`) are by default
+  not equivalent; the profile MAY declare otherwise per field.
+- **Field-name canonical form**: field names MUST appear in the
+  case and spelling declared by the registered schema; the
+  profile MUST NOT silently lower-case or alias field names.
 
-Implementations MUST normalize before computing any integrity anchor.
+The Framework creates the **Mission Normalization Profile** IANA
+registry (see {{normalization-profile-registry}}). Each registered
+type in the Authority Set Type registry MUST declare its applicable
+Normalization Profile.
 
-## Domain-separated, authorization-domain-bound envelope
+### Initial Normalization Profile: Mission Intent
 
-After normalization, the hash input is wrapped in an envelope:
+The Mission Intent type uses the Normalization Profile identified
+by `urn:mbo:norm:mission-intent:1`, with these field rules:
 
-~~~
-SHA-256(JCS({
-  "type":                "mission-intent" | "mission-authority-set"
-                         | "mission-consent-disclosure",
-  "schema_version":      <integer>,
-  "authorization_domain": <tenant or authorization-domain identifier>,
-  "state_authority":     <mission.origin URL>,
-  "value":               <normalized content>
-}))
+- `goal` (string): NFC. Whitespace preserved.
+- `objects` (array of string): order-insensitive. Members sorted
+  lexicographically by NFC bytes. Duplicates removed.
+- `constraints` (array of string): order-sensitive. Members
+  preserved in submitted order. Duplicates rejected at
+  validation time.
+- `success_criteria` (array of string): order-sensitive.
+  Duplicates rejected at validation time.
+- `mission_expiry` (string): RFC 3339, normalized to UTC ("Z" zone
+  designator) with seconds resolution. Fractional seconds preserved
+  if present.
+- `purpose` (string): exact-match (no URI normalization).
+- `language` (string): exact-match.
+- `context` (object): each member's rule is supplied by the
+  registered Common Constraint for that member name. Members
+  whose names are extension keys (`x_*`) are normalized as
+  opaque values: their byte representation under JCS applies.
+
+### Initial Normalization Profile: Authority Set
+
+The Authority Set type uses
+`urn:mbo:norm:mission-authority-set:1`. The Authority Set is an
+array of typed entries; the profile delegates per-entry
+normalization to each entry's per-type Normalization Profile
+(declared in the Authority Set Type registry entry). The array
+itself is order-sensitive in the Validated Mission Intent's
+recorded form.
+
+### Initial Normalization Profile: consent disclosure
+
+The consent disclosure object uses
+`urn:mbo:norm:mission-consent-disclosure:1`. Its schema is the
+state authority's consent template; the profile applies a default
+NFC + duplicate-rejection rule to all string fields and delegates
+URI normalization to the consent template's declared rules.
+
+## Domain-separated, authorization-domain-bound envelope {#integrity-envelope}
+
+After normalization, the hash input is wrapped in an envelope with
+the following members in this order (member order in the JCS output
+is determined by JCS's algorithm; the order here is for human
+readability):
+
+- `type` (string, required): one of the registered envelope types
+  (see below).
+- `schema_version` (string, required): the version identifier of
+  the input's schema, in the schema-defined version space.
+- `authorization_domain` (string, required): the tenant or
+  authorization-domain identifier the Mission lives in. Equal to
+  the Mission's `principals.tenant`.
+- `state_authority` (string, required): the state authority's
+  issuer URL. Equal to `mission.origin`.
+- `value` (any, required): the normalized input value.
+
+Envelope JSON shape:
+
+~~~ json
+{
+  "type":                 "mission-intent",
+  "schema_version":       "urn:mbo:schema:mission-intent:1",
+  "authorization_domain": "tenant_acme",
+  "state_authority":      "https://as.example.com",
+  "value":                <normalized content>
+}
 ~~~
 
 The `type` field provides domain separation between object types.
 The `authorization_domain` and `state_authority` fields bind the
 hash to the authorization domain and to the issuing state authority,
-preventing cross-tenant or cross-authority transplantation. Two
+preventing cross-tenant and cross-authority transplantation. Two
 identical Validated Mission Intents in different tenants produce
 different `proposal_hash` values.
 
-The resulting hash is base64url-encoded without padding.
+### Registered envelope types
+
+The Framework registers three initial envelope `type` values:
+
+- `mission-intent` — for `proposal_hash` over the Validated Mission
+  Intent.
+- `mission-authority-set` — for `authority_hash` over the Authority
+  Set.
+- `mission-consent-disclosure` — for `consent_disclosure_hash` over
+  the consent disclosure object.
+
+The Mission Authority Set Type registry MAY introduce additional
+envelope types for new integrity anchors as future features require;
+each new type follows the same envelope shape.
+
+## Encoded form {#integrity-anchor-encoded-form}
+
+Each integrity anchor value is the digest's algorithm-prefixed
+base64url-no-pad encoding. ABNF:
+
+~~~
+integrity-anchor   = digest-algorithm ":" digest-value
+digest-algorithm   = "sha-256" / "sha-384" / "sha-512"
+digest-value       = 1*( ALPHA / DIGIT / "-" / "_" )
+~~~
+
+For SHA-256 the `digest-value` is exactly 43 octets (256 bits
+base64url-no-pad encoded). Consumers MUST reject anchors with
+unregistered `digest-algorithm` values or with malformed
+`digest-value` encodings.
+
+## Worked pipeline example {#integrity-anchor-example}
+
+Given the Validated Mission Intent of {{mission-intent}} and the
+Mission's tenant `tenant_acme` and state authority
+`https://as.example.com`:
+
+### Step 1: Semantic normalization
+
+The Mission Intent's `objects` array is order-insensitive; sort by
+NFC bytes:
+
+~~~
+[
+  "https://erp.example.com/api/invoices",
+  "https://erp.example.com/api/journal-entries"
+]
+~~~
+
+Already sorted; no change. All other fields are order-sensitive or
+scalar and remain as supplied. `goal`, `constraints[*]`, and
+`success_criteria[*]` are NFC-normalized (in this example they
+are already NFC). The Validated Mission Intent after normalization
+has the same byte content as the Validated example in
+{{mission-intent}}.
+
+### Step 2: Envelope construction
+
+~~~ json
+{
+  "type":                 "mission-intent",
+  "schema_version":       "urn:mbo:schema:mission-intent:1",
+  "authorization_domain": "tenant_acme",
+  "state_authority":      "https://as.example.com",
+  "value": {
+    "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+    "objects": [
+      "https://erp.example.com/api/invoices",
+      "https://erp.example.com/api/journal-entries"
+    ],
+    "constraints": [
+      "Read only invoices issued in 2026-Q3.",
+      "Post journal entries with absolute amount < $500."
+    ],
+    "success_criteria": [
+      "All Q3 invoices processed.",
+      "Each posted entry references a source invoice."
+    ],
+    "mission_expiry": "2026-12-31T23:59:59Z",
+    "purpose": "urn:erp.example.com:purposes:quarterly-reconcile",
+    "language": "en",
+    "context": {
+      "max_derivations": "200",
+      "aal": {
+        "value": "urn:mbo:aal:2",
+        "freshness_seconds": 1800
+      }
+    }
+  }
+}
+~~~
+
+### Step 3: JCS canonicalization, SHA-256, base64url-no-pad
+
+JCS sorts object members by Unicode code-point order at each level.
+The resulting canonical bytes (truncated for display, with member
+order: `authorization_domain`, `schema_version`, `state_authority`,
+`type`, `value`):
+
+~~~
+{"authorization_domain":"tenant_acme","schema_version":"urn:m...
+~~~
+
+(Implementations MUST compute the full byte sequence using a
+conformant JCS library; this document does not reproduce the full
+canonical form in display.)
+
+SHA-256 of the canonical bytes (illustrative):
+
+~~~
+0x c1 0e e9 e0 b1 e7 5f d6 6b 7d ... (32 octets)
+~~~
+
+base64url-no-pad encoded with the algorithm prefix yields the
+`proposal_hash` value recorded on the Mission:
+
+~~~
+sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY
+~~~
+
+The values of `authority_hash` and `consent_disclosure_hash` are
+computed in the same way over their respective envelopes.
+
+Conformant implementations MUST reproduce the test vectors in
+{{reference-test-vectors}} byte-for-byte; the illustrative bytes
+above are not authoritative.
 
 ## Three integrity anchors
 
 - `proposal_hash`: over the Validated Mission Intent (envelope
-  `type=mission-intent`). Committed at the approval event; stable for
-  the Mission's lifetime.
+  `type=mission-intent`). Committed at the approval event; stable
+  for the Mission's lifetime.
 - `authority_hash`: over the Authority Set (envelope
   `type=mission-authority-set`). Committed at the approval event.
 - `consent_disclosure_hash`: over the consent disclosure object
@@ -1296,77 +1697,333 @@ The resulting hash is base64url-encoded without padding.
 The integrity anchors collectively commit the state authority's
 recorded approval. They do not prove faithful rendering to the
 approving principal; that property requires trustworthy consent UX
-above the protocol layer.
+above the protocol layer (see {{integrity-anchor-non-guarantees}}).
 
-# Identifier Model
+# Identifier Model {#identifier-model}
 
 A Mission has a **canonical Mission ID** (`mission.id`) held by the
 state authority. Consumers MAY interact with a Mission through the
 canonical ID or through an audience-sector-specific
 **Pairwise Mission Reference** (`mission.ref`).
 
-## Canonical Mission ID
+## Canonical Mission ID {#canonical-mission-id}
 
 The canonical `mission.id` is a stable opaque identifier minted by
-the state authority. It is URL-safe ASCII, maximum 256 octets. It
-MUST be unique within the state authority's namespace and MUST NOT
-be reused after Mission record garbage collection.
+the state authority at the approval event. ABNF (matching the
+field ABNF in {{mission-id-format}}):
+
+~~~
+mission-id      = 1*256( unreserved-char )
+unreserved-char = ALPHA / DIGIT / "-" / "_"
+~~~
+
+The `mission.id` MUST:
+
+- Contain at least 128 bits of entropy.
+- Be unique within the state authority's namespace.
+- NOT contain audience label, tenant name, principal identifier,
+  policy version, or any other deployment-side correlatable
+  attribute. Implementations MAY use a cryptographically random
+  prefix; if a deployment-side stable prefix is used (e.g.,
+  `msn_`), it MUST NOT carry semantic content.
+- NOT be reused after Mission record garbage collection.
+
+The canonical `mission.id` MUST NOT be disclosed to a consumer
+unless that consumer's audience explicitly consumes canonical
+identifiers (see {{when-to-use-canonical-vs-pairwise}}).
+
+### `mission.origin`
 
 The `mission.origin` value is the state authority's issuer URL. It
-resolves via the well-known URI `/.well-known/mission-authority` per
-{{RFC8615}}.
+is the value a consumer uses to locate the state authority's
+metadata document via the well-known URI
+`/.well-known/mission-authority` per {{RFC8615}}. The
+`mission.origin` value is the absolute URL of the state authority's
+issuer, with no query or fragment.
 
-## Pairwise Mission Reference
+## Pairwise Mission Reference {#pairwise-mission-reference}
 
 A Pairwise Mission Reference (`mission.ref`) is an opaque URL-safe
-string containing at least 128 bits of entropy. It MUST contain no
-audience label, tenant name, canonical-ID derivative, or other
-correlatable input. The state authority binds the opaque reference
-to an advertised **pairwise sector** in its metadata.
+string. ABNF:
 
-The pairwise sector type is one of:
+~~~
+mission-ref     = 1*256( unreserved-char )
+unreserved-char = ALPHA / DIGIT / "-" / "_"
+~~~
 
-- Resource Server
-- Resource AS
-- Tenant
-- Trust domain
+The `mission.ref` MUST:
 
-The state authority advertises its sector choice in
-`mission_pairwise_sector` in its metadata document.
+- Contain at least 128 bits of entropy.
+- Be deterministically derivable, at the state authority, from
+  the pair (canonical `mission.id`, sector identifier) using a
+  state-authority-internal mechanism. State authorities MAY
+  implement this as keyed lookup, keyed hash, or pre-generated
+  table; the choice is not externally observable.
+- NOT contain audience label, tenant name, canonical-`mission.id`
+  derivative, or any other deployment-side correlatable input
+  visible to external parties.
+- Be stable for the Mission's lifetime within its sector, except
+  during rotation (see {{pairwise-reference-rotation}}).
 
-Pairwise references are stable for the Mission's lifetime within a
-sector. Reference rotation creates an alias period sufficient for
-outstanding credentials to drain, then retires the old reference.
-Retired references MUST NOT be reassigned.
+### Pairwise sectors {#pairwise-sectors}
 
-The state authority is the only party that can resolve a Pairwise
-Mission Reference to the canonical `mission.id`. Other parties MUST
+A **pairwise sector** is the boundary across which a single
+`mission.ref` is constant. Within a sector, the same Mission
+resolves to the same `mission.ref` for every consumer in that
+sector. Across sectors, the same Mission resolves to distinct
+`mission.ref` values.
+
+The Framework registers the following sector types:
+
+- `resource_server`: the sector boundary is the Resource Server
+  identifier (as defined by Protected Resource Metadata
+  {{?RFC9728}} or the deployment's RS identifier scheme). Each
+  Resource Server sees a distinct `mission.ref`.
+- `resource_as`: the sector boundary is the Resource Authorization
+  Server (a Resource AS in OAuth 2.1 multi-AS deployments). Each
+  Resource AS sees a distinct `mission.ref`.
+- `tenant`: the sector boundary is the consuming tenant. All
+  audiences belonging to the same consuming tenant share a single
+  `mission.ref`; audiences in different tenants see distinct
+  references.
+- `trust_domain`: the sector boundary is a SPIFFE-style or
+  deployment-declared trust-domain identifier.
+
+Deployments select the sector type that matches their threat model:
+narrower sectors (e.g., `resource_server`) provide stronger
+correlation resistance at the cost of state-authority bookkeeping
+overhead; wider sectors (e.g., `tenant`) ease bookkeeping at the
+cost of larger correlation surfaces.
+
+The state authority advertises its sector type in
+`mission_pairwise_sector` in its metadata document
+({{state-authority-metadata-document}}).
+
+### Assignment {#pairwise-reference-assignment}
+
+The state authority assigns a `mission.ref` for a (Mission, sector
+member) pair at the latest of:
+
+- Mission creation (eager assignment), or
+- First request by that sector member that references the Mission
+  (lazy assignment).
+
+Lazy assignment is RECOMMENDED for state-authority deployments
+where the number of potential sector members is large; eager
+assignment is RECOMMENDED for deployments where sector members are
+fixed at Mission creation.
+
+Once assigned, a `mission.ref` MUST NOT change for the sector
+member except via rotation
+({{pairwise-reference-rotation}}). Assignment MUST be idempotent:
+two queries from the same sector member for the same Mission MUST
+return the same `mission.ref`.
+
+### Rotation and alias period {#pairwise-reference-rotation}
+
+A state authority MAY rotate `mission.ref` values for a sector for
+operational reasons (e.g., compromise of the reference-generation
+seed). Rotation MUST proceed as follows:
+
+1. The state authority begins emitting the new `mission.ref` for
+   all new credential derivation events and Mission Status
+   responses for the affected sector.
+2. The state authority continues to accept the old `mission.ref`
+   as an alias for the same Mission for a deployment-declared
+   **alias period**. The alias period MUST be no shorter than the
+   maximum credential lifetime in the affected sector, and SHOULD
+   be at least 24 hours.
+3. After the alias period elapses, the state authority MUST
+   refuse the old `mission.ref` (responses MUST be
+   indistinguishable from the not-found response of
+   {{error-model}}).
+4. Retired `mission.ref` values MUST NOT be reassigned to any
+   Mission.
+
+State authorities SHOULD publish a notice of rotation through an
+out-of-band channel to allow affected consumers to refresh cached
+references before the alias period elapses.
+
+### Resolution and non-correlation {#pairwise-resolution-non-correlation}
+
+The state authority is the only party that can resolve a
+`mission.ref` to the canonical `mission.id`. Other parties MUST
 NOT be able to derive the canonical ID from a pairwise reference.
 
-## `mission.origin` metadata document
+A correctly-implemented `mission.ref` value provides no
+externally-observable correlation across sectors: two consumers in
+distinct sectors, presented with `mission.ref` values for the same
+Mission, MUST NOT be able to detect that the references identify
+the same Mission without state-authority cooperation.
 
-The metadata document at `{mission.origin}/.well-known/mission-authority`
-is a JSON object with fields:
+### When to use canonical vs pairwise {#when-to-use-canonical-vs-pairwise}
 
-- `issuer` (URL, required): MUST match `mission.origin`.
-- `jwks_uri` (URL, required): state authority's public keys for
-  response signing.
-- `mission_status_endpoint` (URL, required): by-mission-reference
-  Mission Status operation.
-- `mission_lifecycle_endpoint` (URL, required): revoke, suspend,
-  resume, complete operations.
-- `mission_intent_schema_uri` (URL, required): JSON Schema for
-  Mission Intent.
+The Mission identifier mode advertised by an audience determines
+which reference form the audience consumes:
+
+- An audience that consumes canonical identifiers (e.g., the state
+  authority itself, an audit consumer, an administrator dashboard)
+  receives `mission.id`.
+- An audience that consumes pairwise identifiers (e.g., a Resource
+  Server, a downstream Resource AS, a tenant-scoped service)
+  receives `mission.ref`.
+
+The mission-bound credential's substrate-specific carrier (e.g.,
+the `mission` JWT claim) carries exactly one of the two forms; the
+audience's advertised mode determines which.
+
+## State authority metadata document {#state-authority-metadata-document}
+
+The metadata document at
+`{mission.origin}/.well-known/mission-authority` is a JSON object
+({{RFC8259}}) with the following members. The document MUST be
+served over TLS, MUST be cacheable per HTTP conventions, and MUST
+declare `Content-Type: application/json`.
+
+- `issuer` (string, required): URL. MUST match `mission.origin`.
+- `jwks_uri` (string, required): URL of the state authority's
+  public-key document {{RFC7517}}, used for signature verification
+  of state-authority-signed responses.
+- `mission_status_endpoint` (string, required): URL of the
+  by-mission-reference Mission Status operation (see
+  {{mission-status-interface}}).
+- `mission_lifecycle_endpoint` (string, required): URL of the
+  by-mission-reference lifecycle operation (see
+  {{lifecycle-endpoint}}).
+- `mission_intent_schema_uri` (string, required): URL of the
+  Mission Intent JSON Schema in force at this state authority. By
+  default this URL serves the schema defined in
+  {{mission-intent-schema}}; deployments using a stricter schema
+  MUST publish the stricter schema at this URL.
 - `authority_set_types_supported` (array of strings, required): the
-  Authority Set entry types this state authority issues.
+  Authority Set entry types this state authority issues. Each
+  entry MUST be a registered type in the Mission Authority Set
+  Type registry.
 - `mission_pairwise_supported` (boolean, required): whether the
   state authority emits pairwise references.
-- `mission_pairwise_sector` (string, conditional): the sector type,
-  required if `mission_pairwise_supported` is `true`.
-- `mission_framework_versions_supported` (array, required): spec
-  revisions of this Framework that the state authority supports.
+- `mission_pairwise_sector` (string, conditional): the sector
+  type, required if `mission_pairwise_supported` is `true`. Value
+  is one of the registered sector types
+  ({{pairwise-sectors}}).
+- `mission_purposes_supported` (array of strings, optional): the
+  set of `purpose` URIs the state authority accepts in Mission
+  Intents under its purpose vocabulary. Absent if the state
+  authority uses client-registered purposes only.
+- `mission_framework_versions_supported` (array of strings,
+  required): spec revisions of this Framework that the state
+  authority supports.
+- `mission_normalization_profiles_supported` (array of strings,
+  required): registered Normalization Profile identifiers
+  ({{normalization-profile-registry}}) the state authority
+  understands.
+- `mission_capability_advertisement` (object, optional): the
+  capability-advertisement object defined in
+  {{capability-advertisement-metadata}}.
 
-Profile specifications MAY extend this metadata document.
+### Worked example metadata document
+
+~~~ json
+{
+  "issuer": "https://as.example.com",
+  "jwks_uri": "https://as.example.com/.well-known/jwks.json",
+  "mission_status_endpoint":
+    "https://as.example.com/mission/status",
+  "mission_lifecycle_endpoint":
+    "https://as.example.com/mission/lifecycle",
+  "mission_intent_schema_uri":
+    "https://as.example.com/.well-known/mission-intent-schema.json",
+  "authority_set_types_supported": [
+    "mission_resource_access"
+  ],
+  "mission_pairwise_supported": true,
+  "mission_pairwise_sector": "resource_server",
+  "mission_purposes_supported": [
+    "urn:erp.example.com:purposes:quarterly-reconcile",
+    "urn:erp.example.com:purposes:bulk-export"
+  ],
+  "mission_framework_versions_supported": [
+    "draft-mcguinness-mission-framework-00"
+  ],
+  "mission_normalization_profiles_supported": [
+    "urn:mbo:norm:mission-intent:1",
+    "urn:mbo:norm:mission-authority-set:1",
+    "urn:mbo:norm:mission-consent-disclosure:1"
+  ],
+  "mission_capability_advertisement": {
+    "mission_authorization_domain_tiers_supported": ["AD-2"],
+    "mission_ladder_levels_supported": [1, 2, 3],
+    "mission_profiles_supported": [
+      "oauth", "runtime_enforcement"
+    ],
+    "mission_optional_modules_supported": []
+  }
+}
+~~~
+
+Profile specifications MAY extend this metadata document with
+additional members. Member names MUST follow `mission_*` prefix
+convention to avoid collision with discovery metadata defined by
+adjacent specifications.
+
+## Lifecycle endpoint {#lifecycle-endpoint}
+
+The Mission Lifecycle endpoint is the by-mission-reference operation
+through which authorized callers transition a Mission between
+lifecycle states (suspend, resume, revoke, complete). It is
+**distinct from token revocation** ({{RFC7009}} or substrate
+equivalents): token revocation operates on a token; the lifecycle
+endpoint operates on a Mission.
+
+### Abstract operation
+
+The Mission Lifecycle operation takes:
+
+- A Mission reference (canonical `mission.id` or pairwise
+  `mission.ref`).
+- The requesting consumer's authentication.
+- A requested transition: one of `suspend`, `resume`, `revoke`,
+  `complete`.
+- An optional `reason` (string).
+- A nonce.
+
+It returns either the updated Mission state or an error per
+{{error-model}}.
+
+The wire format is profile-specific; profile specifications bind
+this abstract operation to concrete HTTP request/response forms,
+including the authentication mechanism (e.g., OAuth bearer token,
+mTLS, or substrate-native).
+
+### Authorization
+
+The state authority MUST authenticate the caller and authorize the
+caller for the requested transition. A request from an
+unauthorized caller MUST return the not-found response of
+{{error-model}} so as not to act as a Mission enumeration oracle.
+
+The Framework does not standardize the authorization policy for
+lifecycle transitions; deployment policy specifies which principal
+roles (subject, approving principal, administrator, automation
+client) may invoke which transitions.
+
+### Idempotency
+
+Lifecycle operations MUST be idempotent on the pair
+(`mission` reference, requested transition). A repeated request
+that does not change state returns success without side effect.
+
+### Required properties
+
+A Mission Lifecycle response MUST satisfy the same authentication,
+freshness, audience, and integrity properties as a Mission Status
+response ({{mission-status-required-properties}}).
+
+## Principal model placement {#principal-model}
+
+The principal model (defined in {{principal-model-section}}) is
+the root of identity bindings on a Mission record. Its placement
+in the Mission Record schema is shown in
+{{mission-record-schema}}.
 
 # Principal Model
 
