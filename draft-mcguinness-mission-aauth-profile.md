@@ -1,0 +1,1191 @@
+---
+title: "Mission-Bound AAuth Composition Profile"
+abbrev: "Mission AAuth Profile"
+category: std
+
+docname: draft-mcguinness-mission-aauth-profile-latest
+submissiontype: independent
+number:
+date:
+consensus: true
+v: 3
+keyword:
+ - aauth
+ - mission
+ - authorization
+ - governance
+ - agent
+ - delegation
+venue:
+  group: "Independent Submission"
+  type: "Independent"
+  github: "mcguinness/mission-bound-authorization"
+  latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth-profile.html"
+
+author:
+ -
+    fullname: Karl McGuinness
+    organization: Independent
+    email: public@karlmcguinness.com
+
+normative:
+  RFC2119:
+  RFC8174:
+  RFC6234:
+  RFC8785:
+  RFC9421:
+  I-D.draft-hardt-oauth-aauth-protocol:
+    target: https://datatracker.ietf.org/doc/draft-hardt-oauth-aauth-protocol/01/
+    title: "AAuth: An Authorization Protocol for AI Agents"
+    author:
+      -
+        ins: D. Hardt
+        name: Dick Hardt
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-hardt-oauth-aauth-protocol-01
+  I-D.draft-mcguinness-mission-framework:
+  I-D.draft-mcguinness-mission-expansion:
+
+informative:
+  RFC7515:
+  RFC7517:
+  RFC7519:
+  RFC8414:
+  I-D.draft-mcguinness-mission-oauth-profile:
+
+--- abstract
+
+This profile composes the Mission Framework with AAuth. AAuth
+already defines a native Mission: an agent submits a proposal to the
+Person Server (PS) mission endpoint, the PS returns an approved
+immutable mission blob, and the PS returns an AAuth-Mission header
+carrying an approver identifier and the SHA-256 hash of the approved
+mission body. This profile does not introduce a parallel Mission. It
+defines wire-preserving local mappings between AAuth's native Mission
+and the Framework's governance object so that AAuth deployments can
+participate in cross-substrate governance without changing their wire
+shape, and it defines a small set of explicitly optional AAuth wire
+extensions that require coordination with the AAuth working group
+before they can be claimed as interoperable.
+
+--- middle
+
+# Introduction
+
+AAuth {{I-D.draft-hardt-oauth-aauth-protocol}} defines an agent-native
+authorization protocol with signed requests, agent identity at the
+protocol edge, conversational deferred approval, and a Person Server
+(PS) that mediates between agents, users, and resources. AAuth `-01`
+introduced a native Mission model: a structured proposal submitted to
+the PS mission endpoint, an approved immutable mission blob, an
+AAuth-Mission header carrying an approver identifier and a SHA-256
+digest of the exact approved body, mission-aware resource and auth
+token choreography, a two-state lifecycle (`active`, `terminated`),
+and PS-side governance endpoints for permissions, interaction, and
+audit.
+
+The Mission Framework {{I-D.draft-mcguinness-mission-framework}}
+defines a substrate-neutral governance object: a durable,
+integrity-anchored Mission record with a Proposal/Mission split,
+typed Authority Set, integrity anchors over a structured Mission
+Intent, an authority set, a consent disclosure object, a richer
+lifecycle, a principal model, a Mission Status interface, and a
+pairwise identifier framework.
+
+AAuth has already reached the conclusion that an approved task is a
+first-class governance object. This profile does not deposition that
+conclusion. AAuth's native Mission is treated as the Mission for
+AAuth-substrate deployments. This profile defines the composition
+contract that lets AAuth's native Mission also carry Framework
+governance semantics, and it draws a sharp line between two kinds of
+work that must not be conflated:
+
+- **Wire-preserving local mappings.** Mappings that a composing PS
+  applies locally without changing any AAuth-defined parameter,
+  header, error code, or endpoint. AAuth implementations not aware
+  of the Framework MUST be able to interoperate with a
+  composition-aware PS on the AAuth wire. These mappings are the
+  primary subject of this profile and the recommended baseline.
+- **Optional AAuth wire extensions.** Each extension changes the
+  interoperable AAuth wire by introducing a new field, header
+  member, error code, or endpoint. Every extension is explicitly
+  marked, versioned, advertised in AAuth metadata, and requires
+  coordination with the AAuth working group before a deployment may
+  claim interoperability for it. A composing PS MUST NOT advertise
+  or rely on any of these extensions absent that coordination.
+
+The architectural intent of the profile is to maximize the surface
+area an AAuth-aware client can interoperate with at the wire-
+preserving baseline, and to minimize and explicitly mark the surface
+area that requires AAuth-side change. AAuth's native Mission is the
+substrate; the Framework's governance object is composed on top of
+it.
+
+## Relationship to the Framework
+
+The Framework {{I-D.draft-mcguinness-mission-framework}} defines:
+
+- The Mission Proposal and Mission data model and lifecycles.
+- The Mission Intent JSON schema.
+- The typed Authority Set entry shape.
+- The Principal Model.
+- The Mission Status interface (abstract).
+- Integrity anchors over domain-separated, authorization-domain-bound
+  envelopes.
+- The pairwise reference framework (substrate-optional per Resolved
+  Decision 17).
+
+The Framework's pairwise reference framework is OPTIONAL with
+substrate-declared support. AAuth ships canonical-only initially per
+{{pairwise}}.
+
+The Framework's Mission Status interface is abstract; profiles bind
+the wire format and protection mechanism. This profile binds Mission
+Status protection to AAuth-native HTTP Message Signatures {{RFC9421}}
+and proof-of-possession rather than introducing a new JWS media type.
+See {{mission-status}}.
+
+## Relationship to AAuth's native Mission
+
+AAuth's native Mission is the substrate. This profile MUST NOT be
+read as proposing a replacement Mission, a parallel Mission, or a
+shadow Mission. A composing PS:
+
+- Continues to use AAuth's mission endpoint, mission blob,
+  AAuth-Mission header, mission-aware resource and auth tokens, and
+  AAuth-native two-state lifecycle.
+- Maintains an internal mapping from AAuth's native Mission
+  reference to the Framework's governance object.
+- Computes the Framework's structured integrity hashes
+  (`proposal_hash`, `authority_hash`, `consent_disclosure_hash`)
+  in addition to AAuth's native `s256` hash. The hash domains are
+  disjoint; see {{hash-domain-separation}}.
+- Projects the Framework's richer lifecycle into AAuth's native two
+  states per Resolved Decision 18. See {{lifecycle-projection}}.
+
+## Relationship to the OAuth Profile
+
+The OAuth Profile {{I-D.draft-mcguinness-mission-oauth-profile}} binds
+the Framework to OAuth 2.0 and defines OAuth-side wire shapes
+(`mission_intent` through PAR, `mission_resource_access` RAR type,
+`mission` JWT claim, dedicated Mission Status response media type,
+lifecycle endpoint). This profile does not depend on the OAuth
+Profile. Where this profile and the OAuth Profile describe the same
+Framework element, the wire bindings are independent: AAuth keeps its
+native shapes; OAuth keeps its OAuth-defined shapes. Cross-substrate
+composition of one canonical Mission across OAuth and AAuth is the
+subject of a separate specification on the Mission Authority Server
+and is OUT OF SCOPE here.
+
+# Conventions and Definitions
+
+{::boilerplate bcp14-tagged}
+
+Terms defined in the Framework
+{{I-D.draft-mcguinness-mission-framework}} are inherited here. Terms
+defined in AAuth {{I-D.draft-hardt-oauth-aauth-protocol}} are
+inherited here. This document additionally uses:
+
+**Person Server (PS)**:
+: The AAuth Person Server, acting as the state authority for Missions
+per the Framework's terminology in AAuth-substrate deployments.
+
+**Native Mission reference**:
+: The AAuth `(approver, s256)` tuple that identifies the approved
+mission blob.
+
+**Native mission blob**:
+: The exact response-body bytes of the PS mission-endpoint response
+on approval. AAuth's `s256` digest is computed over those bytes.
+
+**Governance Mission reference**:
+: The Framework's `(id, origin)` or pairwise `(ref, origin)` Mission
+reference.
+
+**Wire-preserving local mapping**:
+: A composition mapping a PS applies locally without changing any
+AAuth-defined parameter, header, error code, or endpoint.
+
+**Wire extension**:
+: A composition feature that changes the AAuth wire by introducing a
+new field, header member, error code, or endpoint. Wire extensions
+are OPTIONAL and require AAuth WG coordination before a deployment
+may claim interoperability.
+
+# Profile at a Glance
+
+A Mission-Bound AAuth composition has two layers.
+
+The wire-preserving baseline:
+
+1. The PS uses AAuth's native mission endpoint, mission blob, and
+   AAuth-Mission header without modification.
+2. The PS maintains a local mapping between AAuth's native Mission
+   reference and the Framework's governance Mission reference, and
+   computes the Framework's structured integrity hashes in addition
+   to AAuth's `s256`.
+3. The PS projects the Framework's richer lifecycle into AAuth's
+   native two states per {{lifecycle-projection}}.
+4. The PS projects Authority Set entries into the AAuth surfaces
+   where derived authority is already represented (resource tokens
+   and auth tokens) without changing required base fields. See
+   {{authority-projection}}.
+5. The PS exposes a Mission Status interface authenticated and
+   signed using AAuth's native HTTP Message Signatures and
+   proof-of-possession. See {{mission-status}}.
+
+The optional wire-extension layer (each item is OPTIONAL, advertised
+in AAuth metadata, and requires AAuth WG coordination):
+
+1. Mission Expansion eligibility signaling on the AAuth wire. See
+   {{wire-extension-expansion}}.
+2. Mission Status as a registered AAuth header field member or as a
+   PS-exposed endpoint integrated into AAuth metadata. See
+   {{wire-extension-status}}.
+
+The Resumable Suspension composition extension is presented in
+{{resumable-suspension}} as an additional optional composition
+extension that may be promoted to its own specification if its scope
+broadens beyond AAuth.
+
+# Wire-Preserving Local Mappings {#wire-preserving}
+
+The mappings in this section are local to a composing PS. A PS that
+implements all of {{identifier-mapping}}, {{hash-domain-separation}},
+{{governance-record-linkage}}, {{lifecycle-projection}}, and
+{{authority-projection}} interoperates on the AAuth wire with AAuth
+implementations that are unaware of the Framework.
+
+## Identifier Mapping {#identifier-mapping}
+
+AAuth's native Mission reference is the tuple `(approver, s256)`
+carried in the AAuth-Mission header. The Framework's governance
+Mission reference is `(id, origin)` in canonical mode or `(ref,
+origin)` in pairwise mode.
+
+A composing PS MUST NOT treat the AAuth `(approver, s256)` tuple
+and the Framework `(id, origin)` tuple as interchangeable strings.
+The PS MUST maintain an authoritative internal mapping:
+
+~~~ json
+{
+  "mission": {
+    "id": "msn_01J9Z2P8BQ4Y3F0V0K9D6Z7M1",
+    "origin": "https://ps.example.com"
+  },
+  "aauth_mission": {
+    "approver": "https://ps.example.com",
+    "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+  }
+}
+~~~
+
+Rules:
+
+- `mission.id` is the canonical Mission identifier minted at the
+  approval event per the Framework.
+- `mission.origin` is the PS issuer URL and resolves via
+  `{origin}/.well-known/mission-authority` per the Framework.
+- `approver` and `s256` are AAuth-native values per
+  {{I-D.draft-hardt-oauth-aauth-protocol}}.
+- The mapping is one-to-one: exactly one governance Mission
+  corresponds to each native Mission reference and conversely.
+- The PS MUST be the only party that can derive one identifier from
+  the other. A client, agent, resource, or auth-token-issuing
+  Access Server MUST NOT attempt to derive the governance reference
+  from the native reference or conversely; it queries the PS via
+  Mission Status.
+- The Framework MUST NOT require a wire change to AAuth's
+  AAuth-Mission header to carry the governance reference. Where a
+  consumer requires the governance reference, it obtains it through
+  Mission Status. See {{wire-extension-status}} for an OPTIONAL wire
+  extension that may carry the governance reference directly.
+
+## Hash Domain Separation {#hash-domain-separation}
+
+AAuth and the Framework commit different objects with hashes:
+
+- AAuth's `s256` is the SHA-256 digest of the exact approved mission
+  response-body bytes per
+  {{I-D.draft-hardt-oauth-aauth-protocol}}.
+- The Framework's `proposal_hash` is the SHA-256 digest of the
+  semantically normalized, JCS-canonical Validated Mission Intent
+  wrapped in a domain-separated, authorization-domain-bound
+  envelope per {{I-D.draft-mcguinness-mission-framework}}.
+- The Framework's `authority_hash` is the SHA-256 digest of the
+  semantically normalized, JCS-canonical Authority Set wrapped in a
+  domain-separated, authorization-domain-bound envelope.
+- The Framework's `consent_disclosure_hash` is the SHA-256 digest of
+  the semantically normalized, JCS-canonical consent disclosure
+  object wrapped in a domain-separated, authorization-domain-bound
+  envelope.
+
+A composing PS MUST compute and record all four hashes. The hashes
+commit different objects and MUST NOT be conflated.
+
+A PS MUST NOT equate `s256` with `proposal_hash` even if the
+deployment carries the JCS-canonical Validated Mission Intent inside
+the AAuth mission blob. The two hashes commit different objects:
+`s256` commits the entire mission response-body bytes (including
+AAuth-native fields like `approver`, `agent`, `approved_at`,
+`description`, and any optional AAuth fields). `proposal_hash`
+commits only the Validated Mission Intent wrapped in the Framework's
+authorization-domain-bound envelope.
+
+A PS MUST NOT recompute `s256` over a Framework-canonical object,
+and MUST NOT recompute `proposal_hash`, `authority_hash`, or
+`consent_disclosure_hash` over AAuth response-body bytes. Each hash
+is computed over its own committed object as defined by its owning
+specification.
+
+The reason for strict domain separation is that AAuth's exact-body
+hash anchors the AAuth-native client-side check (an agent computes
+`s256` over the bytes it received and compares against the value
+returned in AAuth-Mission). Cross-tenant or cross-authority
+transplantation of any of these hashes MUST be refused because the
+Framework's hashes are bound to the authorization domain and state
+authority in their envelopes per
+{{I-D.draft-mcguinness-mission-framework}}.
+
+## Governance-Record Linkage {#governance-record-linkage}
+
+A composing PS holds two linked records for each approved Mission:
+
+- The AAuth-native record: the approved mission blob, the
+  `(approver, s256)` tuple, AAuth-native state, audit log, and
+  permission records.
+- The Framework governance record: the Mission record per
+  {{I-D.draft-mcguinness-mission-framework}}, including
+  `mission.id`, `mission.origin`, the Validated Mission Intent, the
+  Authority Set, the three integrity anchors, the Principal Model
+  fields, binding evidence, lifecycle state, and the source
+  `proposal_id`.
+
+The records are linked through the identifier mapping in
+{{identifier-mapping}}. Both records refer to the same approved
+task. The AAuth-native record is what AAuth consumers see; the
+governance record is what Framework consumers see.
+
+The PS MUST treat the governance record as authoritative for
+governance state (the Framework lifecycle, the Authority Set, the
+integrity anchors). The PS MUST treat the AAuth-native record as
+authoritative for AAuth-native protocol behavior (the mission blob,
+the AAuth-Mission header value, the AAuth lifecycle state visible to
+AAuth clients).
+
+A PS MUST atomically link the two records at the approval event: an
+approved AAuth Mission MUST be created with a Framework governance
+record, and conversely. A failure to commit either record MUST roll
+back the other. Partial creation is forbidden, parallel to the
+approval atomicity contract in
+{{I-D.draft-mcguinness-mission-framework}}.
+
+## Local Lifecycle Projection {#lifecycle-projection}
+
+Per Resolved Decision 18, AAuth wire behavior preserves AAuth's
+native two states (`active`, `terminated`). The Framework's richer
+lifecycle is governance state visible to Framework consumers (via
+Mission Status). The AAuth wire sees only the projected two-state
+view.
+
+The mapping is:
+
+| Framework state | AAuth-native state |
+|---|---|
+| `active` | `active` |
+| `revoked` | `terminated` |
+| `completed` | `terminated` |
+| `expired` | `terminated` |
+| `suspended` | `terminated` for the suspension duration (see below) |
+
+AAuth-native `terminated` covers each Framework terminal state
+(`revoked`, `completed`, `expired`) because AAuth defines no
+distinction between these terminal causes on the wire. The
+governance record retains the specific Framework terminal state and
+the cause; Mission Status returns the precise state. AAuth-wire
+consumers that do not query Mission Status see only `terminated`.
+
+The Framework states that have no AAuth wire representation
+(`pending_approval`, `rejected`, `withdrawn`, `expired_as_pending`)
+exist only at the Mission Proposal layer and never produce a native
+AAuth Mission. A Proposal in any of these states has no
+corresponding AAuth mission blob, no `s256`, and no AAuth-Mission
+header value.
+
+Suspension MUST project to AAuth `terminated` for the suspension
+duration in the wire-preserving baseline. Resumption from
+`suspended` requires a new Mission Proposal flow at the AAuth
+substrate: a new agent proposal, a new PS approval, a new mission
+blob, and a new `(approver, s256)` tuple. The successor governance
+Mission is linked to the predecessor through Mission Expansion
+{{wire-extension-expansion}} or through Framework Mission lineage
+fields.
+
+The rationale for this projection is the AAuth design constraint
+that there is no push channel from the PS to the agent: AAuth agents
+poll. A long-lived suspended state with no defined resumption signal
+is operationally equivalent to termination from the agent's
+perspective. The wire-preserving baseline reflects that constraint
+honestly.
+
+Deployments that need a Hold pattern (the AAuth Mission remains
+`active` on the wire while the PS refuses governed requests with a
+distinct temporary-denial signal) MAY use the Resumable Suspension
+composition extension in {{resumable-suspension}}. That extension is
+explicitly marked OPTIONAL and requires AAuth WG coordination.
+
+## Authority Set Projection into Native Tokens {#authority-projection}
+
+The Framework's Authority Set is a substrate-neutral typed container
+of approved authority. AAuth represents derived authority on its own
+wire through:
+
+- resource tokens (issued by Resources to agents, used by the agent
+  to request an auth token from the PS);
+- auth tokens (issued by the PS or by a Resource's Access Server,
+  presented by the agent to the Resource for authorized access);
+- AAuth-native permission representations on resource and auth
+  tokens.
+
+A composing PS projects applicable Authority Set entries into AAuth
+resource-token and auth-token requests, and into AAuth-native
+permission representations, using existing AAuth extension points
+without changing required base fields. The projection rules are:
+
+- The PS selects the entries of the Authority Set relevant to the
+  audience of the credential being issued (the Resource, or the
+  Resource's Access Server in federated mode).
+- AAuth-native authority surfaces (the requested scope, the
+  permission descriptors carried on resource and auth tokens) are
+  populated from the relevant entries.
+- An AAuth client unaware of the Framework MUST be able to use the
+  resulting tokens through native AAuth processing. The projection
+  MUST NOT require Framework awareness on the client side at the
+  baseline.
+- A PS MUST NOT translate Authority Set entries into OAuth
+  `authorization_details` on the AAuth wire. OAuth-side
+  serialization is a different profile.
+- Each typed Authority Set entry preserves its `type`,
+  `specification_uri`, `schema_digest`, `schema_version`,
+  `authority`, and `narrowing_profile` per the Framework when the
+  entry is exposed through Mission Status or governance audit.
+- AAuth-native projection of an entry MUST NOT exceed the entry's
+  approved authority (subset semantics per the entry's registered
+  type and `narrowing_profile`).
+
+When the AAuth Mission record itself carries authority hints (for
+example `approved_tools` or `capabilities` in the AAuth mission
+blob), those hints remain authoritative on the AAuth wire as
+specified by AAuth. The composing PS MUST ensure that AAuth-side
+authority hints are consistent with the Framework Authority Set the
+PS has approved; inconsistency is a deployment error and the PS MUST
+refuse to issue.
+
+# Native-Token Projection Rules {#native-token-projection}
+
+This section makes the Authority Set projection rules in
+{{authority-projection}} explicit for AAuth's two native credential
+classes.
+
+## Resource Tokens
+
+A resource token is issued by an AAuth Resource to the agent so the
+agent can request an auth token from the PS or a Resource's Access
+Server.
+
+When the PS is in the issuance path for a resource token (in
+modes where the PS mediates), the PS MAY include the AAuth-native
+Mission reference (the `(approver, s256)` tuple) in the resource
+token per AAuth-native semantics. No Framework wire addition is
+required at the baseline.
+
+Authority hints embedded in the resource token (for example a
+requested scope or capability list) MUST be derived from and bounded
+by the relevant Authority Set entries. The PS MUST NOT inflate
+resource-token authority hints beyond what the Authority Set
+approves.
+
+## Auth Tokens
+
+An auth token is what the agent presents to a Resource for authorized
+access. In three-party mode the PS issues it directly; in
+four-party (federated) mode the Resource's Access Server issues it
+and the PS delivers it to the agent.
+
+A composing PS or composing Access Server preserves AAuth-native
+auth-token structure and:
+
+- Includes the AAuth-native Mission reference in the token per AAuth.
+- Projects only Authority Set entries the audience (the target
+  Resource) is entitled to.
+- MAY publish, in the auth token, AAuth-native scope, permission, or
+  capability fields populated from the projected entries.
+- MUST sender-constrain the auth token through AAuth's native
+  proof-of-possession binding. The Framework's sender-constraint
+  obligation is satisfied by AAuth's native mechanism on AAuth
+  credentials; this profile MUST NOT require DPoP or mTLS on AAuth
+  credentials.
+
+A composing implementation MUST NOT insert an unregistered nested
+shape into AAuth's native `mission` claim on auth tokens. The
+governance reference rides through Mission Status (see
+{{mission-status}}) or through the OPTIONAL wire extension in
+{{wire-extension-status}}, not through an ad-hoc claim addition.
+
+## Federated Access Server Considerations
+
+In federated access, the Resource's Access Server issues the auth
+token. A composing Access Server cooperates with the PS via the PS's
+Mission Status interface to obtain the governance Mission state and
+the audience-filtered Authority Set projection. The Access Server
+treats the PS as the state authority for Mission state. The Access
+Server applies its own Resource policy in addition.
+
+The PS-Access Server relationship is established through native
+AAuth federation. This profile does not add a new trust mechanism.
+
+# Optional AAuth Wire Extensions {#wire-extensions}
+
+This section defines wire extensions that change AAuth's wire by
+introducing a new field, header member, error code, or endpoint
+member. Each extension is:
+
+- explicitly marked OPTIONAL;
+- versioned through a profile version identifier;
+- advertised in AAuth metadata when supported by a deployment;
+- subject to coordination with the AAuth working group before a
+  deployment may claim interoperability.
+
+A composing PS MUST NOT advertise or rely on any of these extensions
+unless the relevant coordination with the AAuth WG has occurred. A
+PS that does not advertise an extension MUST NOT receive requests
+exercising it. The wire-preserving baseline of {{wire-preserving}}
+remains the default.
+
+## Metadata Advertisement
+
+A composing PS that supports any of the wire extensions in this
+section advertises them through additions to AAuth's metadata
+document (the AAuth-side analog of {{RFC8414}} OAuth Authorization
+Server Metadata). Pending AAuth-side metadata-shape coordination,
+the proposed members are:
+
+- `mission_framework_versions_supported` (array of strings): spec
+  revisions of the Framework this PS composes with.
+- `mission_wire_extensions_supported` (array of strings): identifiers
+  of the wire extensions in this section the PS supports. Defined
+  values are listed below as each extension is introduced.
+- `mission_status_endpoint` (URL): Mission Status endpoint URL. See
+  {{mission-status}}.
+
+These metadata members are themselves part of the wire-extension
+surface and are subject to AAuth WG coordination.
+
+## Mission Expansion Signaling {#wire-extension-expansion}
+
+The Mission Expansion specification
+{{I-D.draft-mcguinness-mission-expansion}} defines replacement and
+branch expansion semantics substrate-neutrally. When an action falls
+outside the Authority Set of an active Mission but is eligible for
+governed expansion, a substrate denial MUST surface the
+eligibility-signaling fields the Mission Expansion specification
+defines (`eligible`, `access_request_uri`, `ticket`,
+`requested_authority`).
+
+This extension defines how a composing PS surfaces those fields on
+the AAuth wire. The extension identifier is
+`mission-expansion-signaling-v1`.
+
+When the PS denies an AAuth request because the requested authority
+exceeds the Mission's Authority Set but the deployment supports
+governed expansion, the PS MAY include a Mission Expansion
+eligibility object in the error response in addition to AAuth's
+native denial:
+
+~~~ json
+{
+  "error": "permission_denied",
+  "mission_expansion": {
+    "eligible": true,
+    "access_request_uri": "https://ps.example.com/expand",
+    "ticket": "opq_eligibilityTicket_128bits...",
+    "requested_authority": {
+      "type": "aauth_scope",
+      "authority": {
+        "resource": "https://docs.example.com",
+        "scope": ["documents.delete"]
+      }
+    }
+  }
+}
+~~~
+
+Rules:
+
+- The `mission_expansion` object is OPTIONAL on every denial. The
+  PS MUST NOT include it when expansion is not eligible.
+- The `ticket` is single-use and time-limited per
+  {{I-D.draft-mcguinness-mission-expansion}}.
+- An AAuth client unaware of this extension MUST safely ignore the
+  `mission_expansion` field and treat the response as a native
+  permission denial.
+- The PS MUST advertise `mission-expansion-signaling-v1` in
+  `mission_wire_extensions_supported` when this extension is
+  enabled.
+
+Mission Expansion request submission (the workflow the agent uses
+once it holds an eligibility ticket) defers to
+{{I-D.draft-mcguinness-mission-expansion}}. This profile defines
+only the denial-side eligibility signaling on the AAuth wire.
+
+## Mission Status Fields or Endpoint {#wire-extension-status}
+
+The wire-preserving baseline in {{mission-status}} exposes Mission
+Status using a PS endpoint authenticated and signed via AAuth-native
+HTTP Message Signatures. That baseline does not require AAuth-side
+wire change because consumers can reach the endpoint directly from
+the PS metadata document.
+
+Two OPTIONAL wire extensions go further:
+
+The first OPTIONAL extension is integrating the Mission Status
+endpoint into AAuth's metadata document via the
+`mission_status_endpoint` member. Pending AAuth WG coordination,
+this extension is identified as `mission-status-endpoint-v1`.
+
+The second OPTIONAL extension is registering Mission-Bound governance
+projection fields directly on AAuth-defined surfaces (for example,
+adding `mission.id` and `mission.origin` to AAuth's native `mission`
+claim on auth tokens, or adding governance-reference parameters to
+AAuth-Mission). Pending AAuth WG coordination, this extension is
+identified as `mission-governance-projection-v1`. A composing
+implementation MUST NOT add unregistered nested shapes to AAuth's
+native `mission` claim absent that coordination.
+
+Both extensions are advertised in
+`mission_wire_extensions_supported` when supported. Both are
+strictly OPTIONAL: the wire-preserving baseline remains the default
+and does not require either.
+
+# Mission Status {#mission-status}
+
+The Framework defines Mission Status as a by-mission-reference
+operation distinct from token introspection. The Framework's abstract
+contract requires authentication, freshness, audience, integrity,
+anti-oracle, request-binding, and caching properties.
+
+A composing PS exposes Mission Status. The wire-preserving baseline
+binds Mission Status protection to AAuth-native mechanisms: requests
+are AAuth-signed using HTTP Message Signatures {{RFC9421}};
+responses are AAuth-signed using the PS's published signing key.
+
+This profile does NOT introduce a new JWS-signed media type for
+Mission Status responses (the OAuth Profile introduces
+`application/mission-status-response+jwt` because OAuth's
+substrate is OAuth-native and JWS-aligned; AAuth's substrate is HTTP
+Message Signatures, and Mission Status uses that mechanism for
+consistency).
+
+## Request
+
+The Mission Status request is an HTTPS POST to the PS's Mission
+Status endpoint. The PS advertises this endpoint either through its
+metadata document (when the OPTIONAL `mission-status-endpoint-v1`
+extension in {{wire-extension-status}} is enabled) or out-of-band
+to authorized consumers.
+
+The request body is `application/json` and carries:
+
+- `mission` (object, required): the Mission reference. In canonical
+  mode the value is `{ "id": "...", "origin": "..." }`. AAuth
+  consumers MAY alternatively present the native AAuth reference as
+  `{ "approver": "...", "s256": "..." }`. The PS resolves either
+  form to the same governance record via its mapping
+  ({{identifier-mapping}}).
+- `audience` (string, required): the audience identifier of the
+  requesting consumer.
+- `nonce` (string, required): a client-generated nonce for
+  request-binding.
+
+The request MUST be authenticated. The PS MUST accept AAuth-native
+HTTP Message Signatures {{RFC9421}} for request authentication and
+SHOULD treat the requesting party's AAuth-native key as the
+authenticated identity for authorization purposes.
+
+## Response
+
+On success the PS returns an AAuth-signed response. The signature
+covers the response payload and binds the requesting consumer
+identity, the requested Mission reference, the audience, and the
+nonce. The signature mechanism is HTTP Message Signatures {{RFC9421}}
+applied to the response, with the PS's published signing key.
+
+The response payload includes:
+
+~~~ json
+{
+  "iss": "https://ps.example.com",
+  "aud": "https://workflow.example.com",
+  "sub": "access_server_or_consumer_identifier",
+  "nonce": "client-provided-nonce",
+  "iat": 1718380800,
+  "exp": 1718380860,
+  "mission_status": {
+    "state": "active",
+    "mission_id_or_ref": { "id": "msn_01J9Z2..." },
+    "aauth_mission": {
+      "approver": "https://ps.example.com",
+      "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+    },
+    "origin": "https://ps.example.com",
+    "proposal_hash": "sha-256:...",
+    "authority_hash": "sha-256:...",
+    "consent_disclosure_hash": "sha-256:...",
+    "policy_version": "ps.example.com:standard@2026-06-01",
+    "authority_set_projection": [
+      { "type": "aauth_scope", "authority": "..." }
+    ],
+    "issued_at": "2026-06-09T15:00:00Z",
+    "expires_at": "2026-06-09T15:01:00Z",
+    "version": 1
+  }
+}
+~~~
+
+The `aauth_mission` member is included so AAuth consumers can
+correlate the response with the native Mission reference they hold.
+The `state` value is the Framework governance state (`active`,
+`suspended`, `revoked`, `completed`, `expired`), not AAuth's wire
+projection. AAuth consumers that need only the AAuth-wire view MAY
+ignore Framework-specific states they do not recognize and treat
+all non-`active` states as denials of further derivation.
+
+## Anti-Oracle Property
+
+The PS MUST authenticate the requester and authorize the requester
+for the requested Mission reference and audience. A Mission reference
+(native or governance) is never a bearer capability.
+
+Unknown Mission references and known-but-unauthorized references
+MUST produce indistinguishable responses, parallel to the Framework's
+abstract anti-oracle requirement.
+
+## Errors
+
+Mission Status responses use the Framework error symbol set,
+transported over HTTP status codes:
+
+| Symbol | HTTP | Description |
+|---|---|---|
+| `ok` | 200 | Mission found and visible. |
+| `unauthorized` | 401 | Request not authenticated. |
+| `not_found` | 404 | Mission reference does not exist OR is not visible to this consumer. |
+| `terminated` | 410 | Mission is in a Framework terminal state. |
+| `suspended` | 423 | Mission is suspended. |
+| `rate_limited` | 429 | Consumer is rate-limited. |
+| `unavailable` | 503 | PS temporarily can't serve status. |
+
+## Relationship to Native AAuth Permissions
+
+AAuth defines a native permissions endpoint at the PS. The Mission
+Status endpoint is distinct: Mission Status reports governance
+Mission state and the audience-filtered Authority Set projection;
+the AAuth permissions endpoint reports per-permission decisions on
+specific operations. Both may be queried in the same deployment;
+they answer different questions.
+
+A composing PS MAY internally use the Authority Set projection from
+Mission Status when computing AAuth permission decisions. Consumers
+that do not need Authority Set projection or governance lifecycle
+state MAY continue to use AAuth's native permission endpoint
+without invoking Mission Status.
+
+# Pairwise Identifier Mode {#pairwise}
+
+Per Resolved Decision 17, the Framework's pairwise reference
+framework is OPTIONAL with substrate-declared support. This profile
+declares that AAuth ships canonical-only initially. A composing PS
+emits `mission.id` (canonical) and MUST NOT emit `mission.ref`
+(pairwise) on AAuth-substrate Missions in a baseline deployment.
+
+## Rationale for Canonical-Only
+
+AAuth's native Mission reference is itself canonical in form: the
+`(approver, s256)` tuple uniquely identifies the approved mission
+blob and is the same across every AAuth consumer that sees the same
+Mission. Introducing a pairwise governance reference on the
+Framework side while leaving the AAuth-native reference canonical
+would not improve correlation resistance against the AAuth-side
+identifier (consumers can correlate via `(approver, s256)`
+regardless of governance-side identifier choice).
+
+A pairwise governance reference is therefore only useful if the
+AAuth-native reference is also pairwise, which requires changes to
+AAuth's own AAuth-Mission header semantics. Those changes are out
+of scope for this profile and would require AAuth WG coordination.
+
+## Privacy Trade-Off
+
+The privacy trade-off of canonical-only on AAuth is:
+
+- Multiple Resources, Access Servers, and other AAuth consumers
+  that observe the same Mission can correlate activity through the
+  AAuth-native `(approver, s256)` tuple. The native reference is
+  the same value across all consumers.
+- An honest-but-curious consumer can therefore link a user's
+  activity across resources within the lifetime of a single
+  approved Mission.
+- The AAuth-native reference is stable for the Mission lifetime;
+  rotation is not defined by AAuth `-01`.
+
+Deployments that need stronger cross-consumer unlinkability for
+AAuth-substrate Missions must adopt different mitigations than the
+Framework's pairwise reference framework: shorter Mission lifetimes,
+narrower Authority Sets that limit any single Mission's
+cross-resource visibility, or per-resource separate Missions where
+the user's consent supports that pattern. These are deployment-level
+mitigations; they are not new wire mechanisms in this profile.
+
+## Future Pairwise Composition
+
+A future AAuth specification revision MAY define an AAuth-native
+pairwise reference (a per-sector, per-consumer rotation of the
+AAuth-Mission tuple). If such a revision is adopted, a future
+revision of this profile MAY compose the Framework's pairwise
+reference framework with that AAuth-native pairwise reference and
+align the two. Until that AAuth-side work exists, this profile
+declares canonical-only.
+
+# Resumable Suspension Composition Extension {#resumable-suspension}
+
+This section sketches an OPTIONAL composition extension that may be
+promoted to its own specification (`draft-mcguinness-mission-
+resumable-suspension`) if its scope broadens beyond AAuth. The
+extension identifier is `mission-resumable-suspension-v1`.
+
+The baseline lifecycle projection in {{lifecycle-projection}}
+projects `suspended` to AAuth `terminated` for the suspension
+duration, with resumption requiring a new Mission Proposal flow per
+Resolved Decision 18. That baseline preserves AAuth wire behavior
+but does not satisfy enterprise deployments that need administrative
+hold workflows (compliance review, scheduled maintenance, risk-team
+pause) where the AAuth Mission reference SHOULD remain valid across
+the hold.
+
+The Resumable Suspension extension defines a wire surface for that
+pattern. It is OPTIONAL, advertised in
+`mission_wire_extensions_supported`, and requires AAuth WG
+coordination on the new error code and the resume-probe object.
+
+## Hold Pattern
+
+While the governance Mission is `suspended` and the PS supports this
+extension, the PS keeps the AAuth-native Mission state as `active`
+on the wire but refuses governed requests with a distinct
+temporary-denial signal:
+
+~~~ json
+{
+  "error": "mission_suspended",
+  "mission_status": "suspended",
+  "resume_probe": {
+    "method": "status_poll",
+    "endpoint": "https://ps.example.com/mission-status",
+    "earliest_resume": "2026-10-15T18:00:00Z",
+    "max_wait": "PT4H"
+  }
+}
+~~~
+
+Rules:
+
+- The `mission_suspended` error symbol is distinct from AAuth's
+  native `mission_terminated`.
+- A client unaware of this extension MUST treat `mission_suspended`
+  as a temporary failure and back off.
+- A client aware of this extension uses the `resume_probe` field to
+  detect resumption.
+- The native AAuth `(approver, s256)` tuple remains valid through
+  the hold. Resumption restores governed-request servicing under
+  the same tuple.
+- A PS that supports this extension MUST advertise
+  `mission-resumable-suspension-v1` in
+  `mission_wire_extensions_supported`.
+
+## Resumption Discovery
+
+Two patterns are defined:
+
+- **Status polling.** The agent re-queries Mission Status at
+  `mission.origin` at the cadence indicated by `earliest_resume`
+  and `max_wait`. When the response indicates `state: "active"`,
+  the agent resumes governed requests.
+- **Event-driven.** The agent subscribes to a Shared Signals
+  Framework or CAEP-style event channel; the PS publishes a
+  `mission.resumed` event when the Mission transitions back to
+  `active`. This pattern is OPTIONAL and depends on the deployment
+  having event infrastructure; it is not required by the
+  extension.
+
+A composing PS MAY support either or both.
+
+## Bounded Resume Window
+
+A suspended Mission with no resumption signal after a
+deployment-configured ceiling SHOULD transition to a Framework
+terminal state (`revoked` or `expired` depending on cause). The
+extension does not erase AAuth's original architectural concern
+that indefinite suspension is operationally equivalent to
+termination; it gives short-bounded suspensions a clean wire shape.
+
+## Promotion to a Separate Specification
+
+If implementation interest demonstrates that the Resumable
+Suspension pattern generalizes beyond AAuth (for example, that it
+applies equally to the OAuth Profile or to the MAS topology), this
+section will be removed from this profile and promoted to a separate
+specification. Until that demonstration, the extension lives here as
+a sketch.
+
+# Cross-Substrate Composition
+
+A deployment that needs one canonical governance object shared
+between OAuth and AAuth uses the Mission Authority Server (MAS)
+topology defined in a separate specification. This profile does not
+define the MAS protocol.
+
+Under a MAS topology:
+
+- The PS remains the AAuth protocol endpoint and the AAuth-native
+  `approver` value.
+- The MAS is the state authority for the canonical Mission record,
+  Authority Set, lifecycle, and Principal Model.
+- The PS registers as an authorized Mission consumer and
+  projection issuer at the MAS.
+- The PS retains a local AAuth-native record (the mission blob,
+  AAuth-Mission tuple, audit log) linked to the MAS canonical
+  governance record.
+- AAuth credentials are issued by the PS (or by a Resource's Access
+  Server in federated mode); the MAS does not issue AAuth
+  credentials.
+- Mission Status and Mission lifecycle queries can be served by
+  either the PS or the MAS; the MAS's view is authoritative for
+  governance state.
+
+Cross-substrate consumption is OUT OF SCOPE for this profile. The
+MAS profile owns the cross-substrate trust mechanism, the MAS
+metadata document, and cross-substrate revocation propagation.
+
+# What This Profile Does NOT Define
+
+To bound scope:
+
+- OAuth-side wire bindings: defined in
+  {{I-D.draft-mcguinness-mission-oauth-profile}}.
+- Runtime per-action enforcement on AAuth requests: defined in the
+  Mission-Bound Runtime Enforcement Profile (a separate
+  specification).
+- Cross-substrate Mission Authority Server topology: defined in the
+  Mission Authority Server specification.
+- Mission Expansion semantics: defined in
+  {{I-D.draft-mcguinness-mission-expansion}}. This profile defines
+  only the AAuth-side eligibility-signaling wire extension.
+- The pairwise framework for AAuth: see {{pairwise}} for why this
+  profile ships canonical-only.
+- Unannounced changes to AAuth-defined parameters, headers, error
+  codes, or endpoints. This profile MUST NOT be read as authorizing
+  silent AAuth-wire change.
+
+# Security Considerations
+
+## Hash Domain Confusion
+
+The four hashes computed in a composing PS (AAuth `s256`,
+`proposal_hash`, `authority_hash`, `consent_disclosure_hash`) commit
+different objects. An implementation that conflates them produces
+incorrect integrity claims. In particular:
+
+- Equating `s256` with `proposal_hash` allows attackers to substitute
+  Mission Intent content while preserving the AAuth-native body
+  hash (or vice versa).
+- Recomputing `proposal_hash` over AAuth response-body bytes
+  produces a value that does not commit the Validated Mission
+  Intent in the Framework's envelope, breaking cross-substrate
+  governance audit.
+- Cross-tenant or cross-authority transplantation of any Framework
+  hash MUST be refused: the Framework's hashes are bound to the
+  authorization domain and state authority in their envelopes.
+
+Implementations MUST treat each hash as committed to a specific
+object and a specific envelope. The reference test vectors published
+with the Framework specification validate hash computation; this
+profile defers vector publication to the Framework.
+
+## Reference Substitution
+
+An attacker that combines a valid AAuth-Mission tuple with a
+different governance Mission reference can mislead a Framework
+consumer about which governance object the AAuth Mission corresponds
+to. The PS MUST be the only party that maintains and asserts the
+mapping. Consumers MUST resolve the mapping via authenticated
+Mission Status, not by accepting client-asserted pairings.
+
+## Projection Issuer Authorization
+
+A PS or Access Server projecting authority for a Mission MUST be
+authorized for the relevant tenant, substrate, and audience. Mission
+Status responses bind the projection issuer's identity, the
+requested Mission, the audience, and the nonce; a consumer that
+receives a Mission Status response signed by a party not authorized
+to project for the requested audience MUST refuse the response.
+
+## Lifecycle Ambiguity
+
+The wire-preserving lifecycle projection in
+{{lifecycle-projection}} maps several distinct Framework terminal
+states to AAuth `terminated`. AAuth-wire consumers that need to
+distinguish causes (audit, compliance reporting) MUST query Mission
+Status to obtain the Framework state. A consumer that infers
+specific terminal causes from `terminated` alone is operating on
+incomplete information.
+
+The Resumable Suspension extension reduces the ambiguity for
+suspended Missions at the cost of requiring extension-aware clients
+and AAuth WG coordination.
+
+## PS-Asserted Trust Confusion
+
+In AAuth's PS-asserted access mode, a Resource accepts identity
+claims and consent context from the PS but applies its own Resource
+policy. A composing PS MUST NOT represent that the Resource is
+required to authorize a specific request because the PS approved
+the Mission. Mission approval is a governance decision at the PS;
+Resource authorization remains the Resource's responsibility.
+
+## Mission Status Enumeration
+
+Per the anti-oracle property, the PS MUST NOT distinguish unknown
+Mission references from known-but-unauthorized references at the
+Mission Status endpoint. Implementations that leak this distinction
+expose the Mission space to enumeration.
+
+## Sender Constraint and Proof of Possession
+
+AAuth credentials are sender-constrained via AAuth-native HTTP
+Message Signatures and proof-of-possession binding. This profile
+MUST NOT require DPoP or mTLS on AAuth credentials and MUST NOT
+weaken AAuth's proof-of-possession requirements. Mission-Bound
+governance does not introduce a parallel sender-constraint
+mechanism on AAuth.
+
+## Pairwise-Mode Privacy
+
+This profile declares canonical-only ({{pairwise}}). The privacy
+trade-off (correlation of a user's activity across AAuth consumers
+through the native `(approver, s256)` tuple within the lifetime of
+a single Mission) is documented in {{pairwise}}. Deployments that
+cannot accept that trade-off MUST select substrate-level
+mitigations (shorter Mission lifetimes, narrower Authority Sets,
+per-resource separate Missions) rather than inventing a
+non-coordinated pairwise scheme.
+
+## Wire-Extension Risk
+
+Each wire extension in {{wire-extensions}} changes the AAuth wire.
+A deployment that advertises support for an extension that has not
+been coordinated with the AAuth WG risks interoperability problems:
+other AAuth implementations may reject, misinterpret, or future-
+conflict with the extension fields. The metadata
+`mission_wire_extensions_supported` is the deployment's honest
+declaration of which extensions it implements; consumers MUST
+consult that declaration before issuing extension-bearing requests.
+
+## Resumable Suspension Hold Risk
+
+The Resumable Suspension extension keeps the AAuth-native Mission
+reference valid across a hold. A poorly bounded hold (no
+`max_wait`, no `earliest_resume`) can leave an agent indefinitely
+waiting and producing repeated polled requests. Deployments
+implementing the extension MUST configure conservative ceilings and
+MUST transition long-suspended Missions to a Framework terminal
+state per the bounded-resume-window rule.
+
+## Integrity Anchor Non-Guarantees
+
+The Framework's Security Considerations enumerate non-guarantees of
+integrity anchors (faithful rendering, principal authenticity, real-
+time honesty). Those non-guarantees apply unchanged on AAuth: a
+correctly computed `consent_disclosure_hash` commits the disclosure
+object that was provided at consent rendering, but does not by
+itself prove the user comprehended that object or that the agent
+that asked for the Mission was operating in good faith. This
+profile inherits the Framework's enumeration without restating it.
+
+# IANA Considerations {#iana}
+
+This profile's IANA actions are subject to AAuth-side registry
+coordination. AAuth `-01` is an individual Internet-Draft and does
+not yet define a comprehensive IANA registry surface. Until AAuth-
+side registries are established, the actions in this section are
+proposed but not actionable.
+
+## Mission Authority Set Type Registry
+
+This document does NOT register a new Authority Set entry type. The
+specific AAuth-side Authority Set entry type (an `aauth_scope`-style
+type or equivalent) MAY be registered in the Mission Authority Set
+Type Registry created by the Framework, in coordination with the
+AAuth working group when that registry surface stabilizes.
+
+## AAuth-side Governance-Mapping Fields
+
+Pending AAuth WG coordination, the following fields are proposed for
+registration in AAuth's eventual extension registry:
+
+- `mission_status_endpoint` (PS metadata): URL of the PS's Mission
+  Status endpoint per {{mission-status}}.
+- `mission_framework_versions_supported` (PS metadata): array of
+  Framework spec revisions supported.
+- `mission_wire_extensions_supported` (PS metadata): array of
+  wire-extension identifiers (e.g.
+  `mission-expansion-signaling-v1`,
+  `mission-status-endpoint-v1`,
+  `mission-governance-projection-v1`,
+  `mission-resumable-suspension-v1`).
+- `mission_expansion` (object): denial-response member carrying the
+  eligibility-signaling fields defined in
+  {{wire-extension-expansion}}.
+- `mission_suspended` (error code): temporary-denial error code
+  defined in {{resumable-suspension}}.
+- `resume_probe` (object): error-response member defined in
+  {{resumable-suspension}}.
+
+A composing PS MUST NOT publish any of these fields on the AAuth
+wire until the relevant AAuth registry action has occurred.
+
+## No JWT or OAuth Registry Actions
+
+This profile does NOT register OAuth parameters, OAuth error codes,
+JWT claims, or OAuth metadata members. Those registrations belong
+in the OAuth Profile {{I-D.draft-mcguinness-mission-oauth-profile}}.
+Where this profile and the OAuth Profile describe parallel
+behaviors, the two are independent.
+
+## No New Media Types
+
+This profile does NOT register a new media type for Mission Status
+responses. The OAuth Profile registers
+`application/mission-status-response+jwt` because OAuth's substrate
+is OAuth-native and JWS-aligned. AAuth's substrate is HTTP Message
+Signatures, and Mission Status responses are signed per {{RFC9421}}
+without a new media type.
+
+# Acknowledgments
+{:numbered="false"}
+
+The author thanks Dick Hardt for the AAuth protocol and the
+mission-aware additions in `-01` that made this composition profile
+possible. The author thanks the implementers and reviewers of the
+Mission-Bound Authorization architecture for feedback that shaped
+this specification.
