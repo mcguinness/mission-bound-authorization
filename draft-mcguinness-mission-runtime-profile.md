@@ -316,6 +316,11 @@ When the PDP returns a denial, the denial is one of:
   Mission's `acr` constraint (either `acr_values` mismatch or
   `max_age` exceeded). MAY be satisfied by RFC 9470 step-up
   authentication without expansion.
+- **`amr_insufficient`**: the actor's `amr` does not intersect the
+  Mission's `amr` constraint `amr_values` set, or the authentication
+  event's `auth_time` exceeds the constraint's `max_age`. MAY be
+  satisfied by step-up authentication using one of the required
+  methods without expansion.
 - **`stale_state`**: the PEP-supplied freshness is stale or
   inconsistent with the materialized policy view.
 - **`mission_inactive`**: the Mission state is not `active`.

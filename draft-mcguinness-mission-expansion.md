@@ -87,11 +87,11 @@ defined by Delegated Authority Validation
 
 Expansion is a governance operation. It is distinct from
 authentication step-up {{RFC9470}}. A request denied because an
-`acr` constraint requires fresh authentication is satisfied by
-step-up, not by expansion: the Authority Set does not change. A
-request denied because the requested authority is not in the
-Authority Set requires expansion: the Authority Set must be
-enlarged through a new approval event.
+`acr` or `amr` constraint requires fresh authentication is
+satisfied by step-up, not by expansion: the Authority Set does
+not change. A request denied because the requested authority is
+not in the Authority Set requires expansion: the Authority Set
+must be enlarged through a new approval event.
 
 ## Relationship to the Framework
 
@@ -673,14 +673,15 @@ Mitigations:
 ## Expansion vs step-up
 
 Expansion is not authentication step-up. A request denied for
-insufficient `acr` is satisfied by fresh authentication
+insufficient `acr` or `amr` is satisfied by fresh authentication
 {{RFC9470}}, not by expansion. Conflating the two would route
 authentication problems through an approval event the approving
 principal did not need to perform, surfacing irrelevant consent and
 risking principal fatigue.
 
 Mitigation: substrate profiles MUST classify denials such that
-`acr`-related denials route to step-up and authority-shortfall
+authentication-related denials (`acr`, `amr`) route to step-up
+and authority-shortfall
 denials route to expansion. The `eligible` field signals expansion
 eligibility specifically; it is not a generic "additional input
 required" marker.

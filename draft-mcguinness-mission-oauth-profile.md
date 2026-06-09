@@ -430,8 +430,8 @@ The AS executes the following algorithm at the approval event:
    - Derive `authority.constraints` by translating Validated
      Mission Intent `constraints` and `context` members to
      resource-applicable Common Constraints (the Mission-level
-     `acr` and `max_derivations` are recorded at the Mission
-     level, not duplicated per entry).
+     `acr`, `amr`, and `max_derivations` are recorded at the
+     Mission level, not duplicated per entry).
 2. For each `objects` entry identifying a non-RS resource (e.g.,
    a registered tool URI, a data domain identifier), the AS MAY
    produce additional Authority Set entries of types other than

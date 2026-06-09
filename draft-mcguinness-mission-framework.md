@@ -37,6 +37,7 @@ normative:
   RFC6838:
   RFC7009:
   RFC8126:
+  RFC8176:
   RFC8259:
   RFC8615:
   RFC8785:
@@ -64,6 +65,12 @@ informative:
     date: 2017
     seriesinfo:
       "NIST": "Special Publication 800-63-3"
+  OIDC-EAP-ACR:
+    title: "OpenID Connect Extended Authentication Profile (EAP) ACR Values 1.0"
+    author:
+      org: "OpenID Foundation"
+    date: 2018
+    target: "https://openid.net/specs/openid-connect-eap-acr-values-1_0.html"
   W3C-UNICODE-NORM:
     title: "Unicode Normalization Forms"
     author:
@@ -178,8 +185,8 @@ interface, its required properties, request and response shape, and
 error model.
 
 {{common-constraints-framework}} defines the Common Constraints
-registry framework and two initial entries (`max_derivations` and
-`acr`).
+registry framework and two initial entries (`max_derivations`,
+`acr`, and `amr`).
 
 {{reference-test-vectors}} declares the required test vector classes.
 
@@ -204,7 +211,7 @@ This document defines:
   (authentication, freshness, audience binding, integrity,
   anti-oracle, request-binding, caching).
 - The Common Constraints framework and initial entries
-  (`max_derivations`, `acr`).
+  (`max_derivations`, `acr`, `amr`).
 - Domain-separated, authorization-domain-bound hash envelopes for
   integrity anchors.
 
@@ -377,9 +384,18 @@ semantics. The Framework's `acr` Common Constraint (see
 {{RFC9470}} and OIDC `acr_values` / `max_age` request parameters.
 This document does not register `acr` identifiers; deployments
 compose with existing identifier spaces ({{NIST-SP-800-63}} AAL
-identifiers, FIDO authenticator levels, OpenID PHR healthcare
-assurance values, OIDC MODRNA values, or deployment-defined
-URIs).
+identifiers, FIDO authenticator levels, OpenID Connect EAP `acr`
+values {{OIDC-EAP-ACR}} (`phr`, `phrh`), OIDC MODRNA values, or
+deployment-defined URIs).
+
+**Authentication Methods References (`amr`)**:
+: An array of identifiers naming the discrete authentication
+methods used at the authentication event, per OIDC Core `amr`
+semantics and the IANA "Authentication Method Reference Values"
+registry {{RFC8176}}. The Framework's `amr` Common Constraint
+(see {{common-constraints-framework}}) carries a list of
+acceptable `amr` values that the authentication event MUST
+intersect.
 
 **Audience**:
 : A consumer of a Mission-bound credential or of Mission Status
@@ -542,7 +558,8 @@ A Mission record carries the following members:
   the approval event: `signer_kid` (state-authority key
   identifier), `approval_event_id`, `approval_event_at` (RFC 3339),
   `policy_version`, `intent_schema_version`,
-  `consent_template_version`, `acr_at_approval`.
+  `consent_template_version`, `acr_at_approval`,
+  `amr_at_approval`, `auth_time_at_approval` (RFC 3339).
 - `proposal_id` (string, required, immutable): the originating
   Proposal identifier.
 - `created_at` (string, required): RFC 3339 timestamp of the
@@ -626,7 +643,8 @@ The canonical JSON Schema for a Mission record is:
       "required": [
         "signer_kid", "approval_event_id", "approval_event_at",
         "policy_version", "intent_schema_version",
-        "consent_template_version", "acr_at_approval"
+        "consent_template_version", "acr_at_approval",
+        "amr_at_approval", "auth_time_at_approval"
       ],
       "additionalProperties": false,
       "properties": {
@@ -638,7 +656,14 @@ The canonical JSON Schema for a Mission record is:
         "policy_version": { "type": "string" },
         "intent_schema_version": { "type": "string" },
         "consent_template_version": { "type": "string" },
-        "acr_at_approval": { "type": "string" }
+        "acr_at_approval": { "type": "string" },
+        "amr_at_approval": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "auth_time_at_approval": {
+          "type": "string", "format": "date-time"
+        }
       }
     },
     "proposal_id": { "type": "string" },
@@ -740,7 +765,9 @@ Continuing the example from {{mission-intent}}:
     "policy_version": "deploy-policy:v17",
     "intent_schema_version": "urn:mbo:schema:mission-intent:1",
     "consent_template_version": "consent-tpl:reconcile:v3",
-    "acr_at_approval": "http://idmanagement.gov/ns/assurance/aal/2"
+    "acr_at_approval": "http://idmanagement.gov/ns/assurance/aal/2",
+    "amr_at_approval": ["mfa", "pwd", "otp"],
+    "auth_time_at_approval": "2026-10-15T14:30:48Z"
   },
   "proposal_id": "prop_4kQ9pX2vN7sR1tY8mZ3",
   "created_at": "2026-10-15T14:32:11Z",
@@ -2546,6 +2573,8 @@ space that matches their threat model. Common choices include:
   `http://idmanagement.gov/ns/assurance/aal/2` for AAL2).
 - FIDO authenticator-level identifiers.
 - OpenID PHR (Personal Healthcare Records) assurance values.
+- {{OIDC-EAP-ACR}} `phr` (phishing-resistant) and `phrh`
+  (phishing-resistant, hardware-protected).
 - OIDC MODRNA `acr` values.
 - Deployment-defined URIs.
 
@@ -2568,6 +2597,74 @@ fresher authentication); it MUST NOT add identifiers not present
 in the Mission's `acr_values` set or extend `max_age` beyond the
 Mission's value. Ordering of identifiers within `acr_values` is
 deployment-defined and out of scope for this document.
+
+### `amr`
+
+The required Authentication Methods References for the approving
+principal's authentication at the approval event, and for any
+subsequent step-up authentication required to derive credentials
+under this Mission.
+
+The `amr` constraint mirrors the OIDC Core `amr` claim and the
+IANA "Authentication Method Reference Values" registry
+{{RFC8176}}. `acr` and `amr` are independent dimensions: `acr`
+names the overall authentication context class (a policy
+identifier); `amr` enumerates the discrete methods used. A
+Mission MAY carry both; consumers evaluating credential
+derivation AND across all present authentication constraints.
+
+**Value type**: JSON object with the following members:
+
+- `amr_values` (array of strings, required, minItems 1): the set
+  of acceptable `amr` identifiers. The authentication event's
+  `amr` claim MUST intersect this set (the authentication's `amr`
+  array contains at least one of the listed identifiers). Each
+  identifier is interpreted per the IANA AMR registry
+  {{RFC8176}} or deployment extension.
+- `max_age` (integer, optional): the maximum age in seconds of
+  the authentication event that satisfies the constraint.
+  Mirrors the OIDC `max_age` request parameter. When absent,
+  the `max_age` from a co-present `acr` constraint applies; if
+  no constraint declares `max_age`, the credential issuer's
+  default freshness applies. Range: 1 to 86400 (24 hours).
+
+**Example `context` member**:
+
+~~~ json
+{
+  "amr": {
+    "amr_values": ["mfa", "hwk"],
+    "max_age": 1800
+  }
+}
+~~~
+
+This requires that the approving principal's authentication event
+used at least one of `mfa` or `hwk` and occurred within 1800
+seconds.
+
+**Identifier-space composition**: the IANA "Authentication Method
+Reference Values" registry {{RFC8176}} is the canonical registry.
+Common values include `pwd`, `otp`, `mfa`, `hwk` (hardware key),
+`fpt` (fingerprint), `face`, `pop` (proof of possession). This
+document does not register new AMR values; deployments compose
+with {{RFC8176}} entries and register extensions there.
+
+**Composes with**: {{RFC9470}} step-up. RFC 9470 step-up is
+primarily `acr`-based; deployments that need to require specific
+methods MAY express the requirement through both an `acr`
+constraint (mapping to a deployment-registered `acr` identifier
+that implies the methods) and an `amr` constraint (binding the
+methods explicitly for audit). Implementations MAY translate an
+`amr`-only constraint into an `acr`-based step-up challenge when
+the deployment registers an `acr` identifier covering the
+required `amr` set.
+
+**Narrowing**: a derived constraint at credential derivation time
+MAY narrow `amr_values` to a subset (stricter set of acceptable
+methods) and MAY reduce `max_age`; it MUST NOT add identifiers
+not present in the Mission's `amr_values` set or extend `max_age`
+beyond the Mission's value.
 
 ## Future-work entries
 
@@ -2722,14 +2819,18 @@ state authority.
 ## Approving principal `acr`
 
 This specification requires the approving principal's `acr` (the
-authentication context class reference at approval time) to be
-recorded in binding evidence as `acr_at_approval`. It does not
-mandate an `acr` floor for approval; deployment policy declares
-the minimum `acr` per Mission class. Deployments SHOULD set
-appropriate `acr` floors and document them. The `acr` identifier
-space is not registered by this document; deployments compose
-with their chosen assurance framework (NIST SP 800-63, FIDO,
-OpenID PHR, MODRNA, or deployment-defined URIs) per
+authentication context class reference) and `amr` (the
+authentication methods used) at approval time to be recorded in
+binding evidence as `acr_at_approval` and `amr_at_approval`,
+respectively. The `auth_time_at_approval` timestamp records when
+the authentication event occurred. The Framework does not
+mandate floors for either; deployment policy declares the
+minimum per Mission class through the `acr` and `amr` Common
+Constraints. Deployments SHOULD set appropriate floors and
+document them. Identifier spaces are not registered by this
+document; deployments compose with their chosen frameworks
+(NIST SP 800-63, FIDO, OIDC EAP {{OIDC-EAP-ACR}}, MODRNA, IANA
+AMR registry {{RFC8176}}, or deployment-defined URIs) per
 {{common-constraints-framework}}.
 
 ## Transport security (TLS)
@@ -3150,8 +3251,13 @@ NOT register media types; profiles do.
   closed sets, as noted above.
 - `acr` identifiers: this document does not register `acr`
   identifiers. Deployments compose with existing identifier
-  spaces (NIST SP 800-63, FIDO, OpenID PHR, MODRNA, or
-  deployment-defined URIs); see {{common-constraints-framework}}.
+  spaces (NIST SP 800-63, FIDO, OpenID Connect EAP
+  {{OIDC-EAP-ACR}}, OIDC MODRNA, or deployment-defined URIs);
+  see {{common-constraints-framework}}.
+- `amr` identifiers: this document does not register `amr`
+  identifiers. Deployments compose with the IANA
+  "Authentication Method Reference Values" registry
+  {{RFC8176}}; see {{common-constraints-framework}}.
 
 # Acknowledgments
 {:numbered="false"}
