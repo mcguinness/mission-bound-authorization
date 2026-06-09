@@ -4,7 +4,7 @@ abbrev: "Mission Runtime"
 category: std
 
 docname: draft-mcguinness-mission-runtime-profile-latest
-submissiontype: independent
+submissiontype: IETF
 number:
 date:
 consensus: true
@@ -16,8 +16,6 @@ keyword:
  - pdp
  - enforcement
 venue:
-  group: "Independent Submission"
-  type: "Independent"
   github: "mcguinness/mission-bound-authorization"
   latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-profile.html"
 

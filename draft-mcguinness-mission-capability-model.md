@@ -4,7 +4,7 @@ abbrev: "Mission Capability Model"
 category: info
 
 docname: draft-mcguinness-mission-capability-model-latest
-submissiontype: independent
+submissiontype: IETF
 number:
 date:
 consensus: true
@@ -18,8 +18,6 @@ keyword:
  - aauth
  - governance
 venue:
-  group: "Independent Submission"
-  type: "Independent"
   github: "mcguinness/mission-bound-authorization"
   latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-model.html"
 
@@ -924,7 +922,7 @@ references the closed enumerations defined later in this section.
   a registered identifier from
   {{authorization-domain-tier-identifiers}}.
 - **Defining specification**: this document, {{capability-advertisement}}.
-- **Change controller**: IETF (Independent Submission).
+- **Change controller**: IETF.
 
 ### Entry: mission_ladder_levels_supported
 
@@ -933,7 +931,7 @@ references the closed enumerations defined later in this section.
   value MUST be a registered identifier from
   {{capability-ladder-level-identifiers}}.
 - **Defining specification**: this document, {{capability-advertisement}}.
-- **Change controller**: IETF (Independent Submission).
+- **Change controller**: IETF.
 
 ### Entry: mission_profiles_supported
 
@@ -945,7 +943,7 @@ references the closed enumerations defined later in this section.
   Capability-Advertisement Metadata Registry under the policy in
   {{I-D.draft-mcguinness-mission-framework}}.
 - **Defining specification**: this document, {{capability-advertisement}}.
-- **Change controller**: IETF (Independent Submission).
+- **Change controller**: IETF.
 
 ### Entry: mission_optional_modules_supported
 
@@ -957,7 +955,7 @@ references the closed enumerations defined later in this section.
   {{I-D.draft-mcguinness-mission-runtime-profile}} and its
   follow-on module specifications.
 - **Defining specification**: this document, {{capability-advertisement}}.
-- **Change controller**: IETF (Independent Submission).
+- **Change controller**: IETF.
 
 ## Capability Ladder Level Identifiers  {#capability-ladder-level-identifiers}
 

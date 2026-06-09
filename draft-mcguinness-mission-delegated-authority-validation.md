@@ -4,7 +4,7 @@ abbrev: "Delegated Authority Validation"
 category: std
 
 docname: draft-mcguinness-mission-delegated-authority-validation-latest
-submissiontype: independent
+submissiontype: IETF
 number:
 date:
 consensus: true
@@ -17,8 +17,6 @@ keyword:
  - delegation
  - ontology
 venue:
-  group: "Independent Submission"
-  type: "Independent"
   github: "mcguinness/mission-bound-authorization"
   latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-delegated-authority-validation.html"
 

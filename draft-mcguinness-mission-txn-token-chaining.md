@@ -4,7 +4,7 @@ abbrev: "Mission Txn Token Chaining"
 category: std
 
 docname: draft-mcguinness-mission-txn-token-chaining-latest
-submissiontype: independent
+submissiontype: IETF
 number:
 date:
 consensus: true
@@ -17,8 +17,6 @@ keyword:
  - rar
  - cross-domain
 venue:
-  group: "Independent Submission"
-  type: "Independent"
   github: "mcguinness/mission-bound-authorization"
   latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-txn-token-chaining.html"
 
@@ -226,7 +224,7 @@ AS-A at the moment of transcription. It is not a claim AS-B can
 forge a Mission state from. AS-B MUST validate Mission state by
 reach-back (see {{validation}}).
 
-## Audience-Filtered Authority Set
+## Audience-Filtered Authority Set {#audience-filtered-authority-set}
 
 `txn_claims.mission_resource_access` MUST carry a JSON array of
 Authority Set entries of type `mission_resource_access` as defined
@@ -573,8 +571,8 @@ Initial entry:
 - Identifier: `urn:mbo:txn-chain:transcription:default-v1`.
 - Specification reference: this document.
 - Permitted Authority Set entry types: `mission_resource_access`.
-- Audience-filtering rule reference: {{Section 4.2}} of this
-  document.
+- Audience-filtering rule reference: {{audience-filtered-authority-set}}
+  of this document.
 - Narrowing profiles permitted: those advertised under the
   applicable CDTA; `urn:mbo:narrowing:default-v1` permitted by
   default.

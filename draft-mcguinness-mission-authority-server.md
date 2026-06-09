@@ -4,7 +4,7 @@ abbrev: "Mission Authority Server"
 category: std
 
 docname: draft-mcguinness-mission-authority-server-latest
-submissiontype: independent
+submissiontype: IETF
 number:
 date:
 consensus: true
@@ -19,8 +19,6 @@ keyword:
  - cross-substrate
 
 venue:
-  group: "Independent Submission"
-  type: "Independent"
   github: "mcguinness/mission-bound-authorization"
   latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html"
 
