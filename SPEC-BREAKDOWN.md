@@ -119,7 +119,7 @@ The Mission-Bound work composes with the following published RFCs, adopted IETF/
 | --- | --- | --- |
 | RFC 6749 | OAuth 2.0 Authorization Framework | Drafts 2, 3 |
 | RFC 6750 | OAuth 2.0 Bearer Token Usage | Draft 2 (baseline) |
-| RFC 7009 | OAuth 2.0 Token Revocation | Draft 2 (Mission revocation), Draft 7 (MAS) |
+| RFC 7009 | OAuth 2.0 Token Revocation | Draft 2 (cascaded token revocation when a Mission is revoked); Mission revocation itself is a separate operation defined by Draft 2's Mission lifecycle endpoint, not by RFC 7009. |
 | RFC 7519 | JSON Web Token (JWT) | Drafts 1, 2 (Mission claim format) |
 | RFC 7591 | OAuth 2.0 Dynamic Client Registration | Draft 2 (client declaring Mission Intent capabilities) |
 | RFC 7592 | OAuth 2.0 Dynamic Client Registration Management | Draft 2 (informative) |
@@ -147,7 +147,7 @@ The Mission-Bound work composes with the following published RFCs, adopted IETF/
 | RFC | Title | Used by |
 | --- | --- | --- |
 | RFC 6234 | US Secure Hash Algorithms (SHA-256) | Draft 1 (integrity anchor algorithm) |
-| RFC 7515 | JSON Web Signature (JWS) | Drafts 1, 2 (signed Mission Status, signed evidence) |
+| RFC 7515 | JSON Web Signature (JWS) | Drafts 2, 7 (profile-level signed responses; OAuth Profile uses RFC 9701; MAS uses JWS-signed Mission Status). Framework defines abstract signing requirements only. |
 | RFC 7517 | JSON Web Key (JWK) | Drafts 1, 2, 7 (key publication for state authorities and MAS) |
 | RFC 8174 | Ambiguity of Uppercase vs Lowercase in BCP 14 | All Standards Track drafts |
 | RFC 8785 | JSON Canonicalization Scheme (JCS) | Draft 1 (canonicalization for integrity anchors) |
@@ -238,7 +238,7 @@ These are adjacent or speculative; not in scope for the initial set:
 
 ### Abstract
 
-This document defines the Mission as a durable, integrity-anchored, lifecycle-governed governance object for an approved task. It defines the abstract types, interfaces, and behaviors that profile specifications map onto specific substrates: the Mission Intent JSON schema, Authority Set, lifecycle state machine, integrity anchors, mission identifier model, common constraints vocabulary, Mission Status interface, pairwise identifier framework, evidence binding, and capability-advertisement metadata. The framework is substrate-neutral. Profile specifications for OAuth, AAuth, and the Mission Authority Server compose this framework with their respective wire substrates.
+This document defines the Mission as a durable, integrity-anchored, lifecycle-governed governance object for an approved task. It defines the abstract types, interfaces, and behaviors that profile specifications map onto specific substrates: Mission Proposal and Mission lifecycles, the Mission Intent JSON schema, typed Authority Set, integrity anchors (with domain-separated hash inputs), canonical and pairwise identifier model, common constraints framework, Mission Status interface, principal model, evidence binding, and capability-advertisement metadata. The framework is substrate-neutral on semantics; profile specifications for OAuth, AAuth, and the Mission Authority Server compose this framework with their respective wire substrates and pick the concrete protection mechanism.
 
 ### What this spec defines
 
@@ -318,6 +318,139 @@ This document defines the Mission as a durable, integrity-anchored, lifecycle-go
 - **Reference test vectors** as a first-class spec deliverable. For each canonicalization and hash output: input JSON → expected JCS canonical bytes (hex) → expected hash (base64url). Plus state-transition vectors and narrowing-rule vectors. An implementation that does not reproduce the test vectors is non-conformant.
 
 - **Normative vocabulary**: Mission Proposal, Mission, Mission Intent, Authority Set, Projection, Runtime Decision, Evidence.
+
+### Concrete shapes (sketches for the spec)
+
+These shapes are the proposed initial values that the Framework will normatively define. They are pinned here so implementer ambiguity is resolved.
+
+**Pairwise Mission Reference format**: opaque URL-safe string of at least 128 bits of entropy, namespaced as `pwm:{audience_label}:{opaque_id}` where:
+- `pwm` is the literal scheme prefix
+- `audience_label` is a short label identifying the audience (e.g., the Resource AS short name); allows consumers to recognize "this reference is for me"
+- `opaque_id` is the audience-specific identifier minted by the state authority
+
+Resolution: a consumer presents a pairwise reference to `mission.origin` over an authenticated channel; the state authority returns Mission Status if the consumer is authorized for that audience.
+
+**`narrowing_profile`**: a URI value referencing a named narrowing profile. Default value `urn:mbo:narrowing:default-v1` which mandates set-inclusion subset for arrays, key-set inclusion for objects, and refusal on unknown machine-enforceable constraints. Alternative profiles register their narrowing rules in the Authority Set Type registry.
+
+**Approval event semantics**: an "approval event" is a state-authority-initiated atomic transition from Proposal to Mission upon receiving a binding consent signal. The consent signal is substrate-specific:
+- OAuth: user approval at the authorization endpoint or admin approval through an out-of-band approval workflow.
+- AAuth: native PS approval.
+- MAS: MAS-mediated consent rendering.
+
+At the approval event the state authority records the principal-model evidence (approving principal identity, AAL, timestamp, consent disclosure object) atomically with Mission record creation. If the state authority cannot complete the atomic commit, the Proposal MUST remain in `pending_approval`; no partial Mission record exists.
+
+**`policy_version`**: a string in the Mission record indicating the version of the state authority's derivation policy that was applied at approval. Format: `{policy_namespace}:{policy_id}@{version}` (e.g., `as.example.com:standard@2026-06-01`). Distinct from Resource policy version (which lives at the Resource AS) and PDP policy materialization version (which lives at the PDP). The Mission record's `policy_version` is the derivation policy that produced the Authority Set.
+
+**`mission.origin` resolution**: an HTTPS URL identifying the state authority's issuer. Resolution: the state authority publishes a metadata document at `{mission.origin}/.well-known/mission-authority` (per RFC 8615 well-known URI conventions). The metadata document follows an RFC 8414-shaped structure and includes:
+- `issuer` (matches `mission.origin`)
+- `jwks_uri` (state authority's public keys for response signing)
+- `mission_status_endpoint`
+- `mission_lifecycle_endpoint`
+- `mission_intent_schema_uri`
+- `authority_set_types_supported`
+- `mission_pairwise_supported` (boolean)
+- substrate-specific extensions
+
+**Mission Expansion ticket**: an opaque, single-use, time-limited bearer token. Default eligibility window: 300 seconds. Holder presents the ticket at the expansion request endpoint (per Mission Expansion, Draft 3). Tickets MUST be cryptographically unpredictable, MUST NOT be reused, and MUST be invalidated on first use or expiry.
+
+**Consent disclosure object schema**:
+```json
+{
+  "mission_intent_canonical_hash": "<base64url SHA-256 of JCS-canonical Mission Intent>",
+  "authority_set_canonical_hash": "<base64url SHA-256 of JCS-canonical derived Authority Set>",
+  "locale": "en-US",
+  "template_id": "urn:example:consent-template:standard",
+  "template_version": "2026-06-01",
+  "material_notices": [
+    { "notice_id": "data-classification", "text": "This task accesses confidential records." }
+  ],
+  "presented_at": "2026-06-08T17:30:00Z",
+  "principal_assurance": {
+    "aal": "AAL2",
+    "amr": ["pwd", "otp"],
+    "auth_time": "2026-06-08T17:25:00Z"
+  }
+}
+```
+
+`consent_disclosure_hash` is computed over `SHA-256(JCS({type: "mission-consent-disclosure", schema_version: 1, value: <this object>}))`.
+
+**`mission` JWT claim shape**:
+```json
+{
+  "mission": {
+    "id": "msn_01J9Z2P8BQ4Y3F0V0K9D6Z7M1",
+    "origin": "https://as.example.com",
+    "pwm": "pwm:docs-example:opq_AbC123..."
+  }
+}
+```
+- `id`: canonical Mission ID. URL-safe ASCII, max 256 bytes. Required.
+- `origin`: state authority issuer URL. Required.
+- `pwm`: audience-pairwise Mission Reference. Optional; present only when pairwise mode is in use for this audience.
+
+When pairwise mode is in use, the canonical `id` MAY be omitted from the token claim emitted to that audience; the consumer uses `pwm` to query Mission Status.
+
+**`mission_resource_access` payload shape** (one instance of a typed Authority Set entry):
+```json
+{
+  "type": "mission_resource_access",
+  "schema_uri": "https://mcguinness.github.io/mission-bound-authorization/schemas/mission_resource_access-v1.json",
+  "schema_version": "1",
+  "authority": {
+    "resource": "https://docs.example.com",
+    "actions": ["documents.read", "documents.write"],
+    "constraints": {
+      "folder": "board-materials",
+      "data_classification": "confidential"
+    }
+  },
+  "narrowing_profile": "urn:mbo:narrowing:default-v1"
+}
+```
+
+Narrowing rules for `mission_resource_access` under the default profile:
+- `resource`: exact-match equality (string).
+- `actions`: subset = set-inclusion (every derived action is in the approved set).
+- `constraints`: every key in the derived `constraints` MUST be present in the approved `constraints`; values narrow per constraint-key rules from the Common Constraints registry; unknown keys at derivation time are refused unless a registered constraint type defines pass-through semantics.
+
+**Mission Status request authentication** (substrate-neutral floor; profiles bind):
+- Request MUST be authenticated. The Framework does not pick the mechanism.
+- OAuth Profile MUST permit at minimum: (a) `client_credentials`-authenticated request with the state authority, OR (b) mTLS-authenticated request with the state authority, OR (c) DPoP-bound bearer token issued by the state authority for status queries.
+- AAuth Profile: AAuth-native signed-request authentication.
+- MAS Profile: explicit RP-style authentication using the MAS metadata document's registered client credentials.
+
+**Mission Status error model** (substrate-neutral, profiles map to substrate-appropriate transport):
+
+| Code | Symbol | Meaning |
+|---|---|---|
+| 200 | `ok` | Mission found and visible. Response carries state. |
+| 401 | `unauthorized` | Request not authenticated. |
+| 403 | `forbidden` | Authenticated but not authorized for this Mission/audience. |
+| 404 | `not_found` | Mission reference does not exist or is invisible to this consumer. |
+| 410 | `terminated` | Mission is in a terminal state. Response includes state. |
+| 423 | `suspended` | Mission is suspended. Response includes state. |
+| 429 | `rate_limited` | Consumer is rate-limited. |
+| 503 | `unavailable` | State authority temporarily can't serve status. |
+
+Consumers MUST distinguish authorization failures (401/403) from Mission-state-based responses (410/423). A Mission in `terminated` state is "found" with a state, not "not found."
+
+**Reference test vectors enumeration**: the Framework spec MUST publish, alongside the spec text:
+
+1. **JCS canonicalization vectors**: ≥20 input JSON objects → expected canonical bytes (hex-encoded). Covers number formatting edge cases, key ordering, escape rules, Unicode handling, nested objects, arrays, nulls.
+2. **Domain-separated hash vectors**: input value → wrapped canonical input → expected SHA-256 hash (base64url). One per object type (Mission Intent, Authority Set, Consent Disclosure).
+3. **State-transition vectors**: full state-machine traversals for Mission Proposal and Mission lifecycles, including invalid transitions that MUST be refused.
+4. **Authority Set narrowing vectors** per registered type. For `mission_resource_access`: approved entry + derived entry → expected accept/refuse classification.
+5. **Mission Status response vectors**: request payloads → expected response shape and field values for each error class.
+6. **`mission` claim vectors**: Mission record → expected claim shape including canonical and pairwise variants.
+
+Vectors are JSON files in a `vectors/` directory in the repo, named `{spec_short_name}-{class}-{n}.json`. Each vector includes `description`, `input`, `expected_output`, and `notes` fields. License: CC0 (public domain) so vectors can be embedded in any implementation.
+
+**Spec versioning and compatibility advertisement**:
+- Each spec ships with a `spec_version` identifier (e.g., `draft-mcguinness-mission-framework-00`).
+- Implementations advertise supported spec versions in the state authority's metadata document via `mission_framework_versions_supported`.
+- Minor version bumps (-00 → -01) are backward compatible by default; the spec declares any incompatibilities explicitly.
+- Major version changes are advertised under a different namespace and require explicit consumer opt-in.
 
 ### Key normative requirements (abstract)
 
@@ -555,7 +688,7 @@ This profile defines how a deployment composes AAuth `-01` with the Mission Fram
 - Identifier mapping between AAuth's `(approver, s256)` native Mission reference and the Framework's `(mission.id, mission.origin)` governance reference.
 - Hash domain separation between AAuth's exact-body Mission hash and the Framework's structured governance hashes.
 - Authority Set projection rules into AAuth resource tokens and auth tokens.
-- Lifecycle composition: how the Framework's seven states map onto AAuth's native two-state `(active, terminated)` lifecycle.
+- Lifecycle composition: how the Framework's two lifecycle state machines (Mission Proposal with `pending_approval / rejected / withdrawn / expired_as_pending`; Mission with `active / suspended / revoked / completed / expired`) map onto AAuth's native two-state `(active, terminated)` lifecycle. See **Open Architectural Decisions** for the resolution approach.
 - **Mission Expansion eligibility signaling on the AAuth wire**: the AAuth-native binding for the contract defined in Draft 3.
 - **Mission Status AAuth binding**: the AAuth PS endpoint for Mission Status.
 
@@ -646,7 +779,7 @@ This profile defines how a deployment composes the AuthZEN Authorization API wit
 
 - Runtime Evidence Object media type and registry.
 - Runtime decision evidence claim names.
-- AuthZEN extension parameters for Mission inputs (in coordination with AUTHZEN WG).
+- AuthZEN extension parameters for Mission inputs (in coordination with the OpenID AuthZEN working group; AuthZEN is an OpenID Foundation effort, not an IETF WG).
 
 ---
 
@@ -778,7 +911,7 @@ The blog posts retain their arguments, diagrams, worked examples, TL;DR and spin
         │                 │                                                       │
         │   Composed by both OAuth and AAuth Profiles:                            │
         │     Draft 3: Mission Expansion (substrate-neutral semantics)            │
-        │     Draft 4: Delegated Authority Validation                             │
+        │     Draft 4: Delegated Authority Validation (depends on Draft 3)        │
         │     Draft 5: Mission-Bound Txn Token Chaining                           │
         │                                                                          │
         │   Also referenced from Draft 2:                                          │
@@ -814,7 +947,7 @@ The order leads with what builders need first to ship a Mission-Bound deployment
 **Phase 1: the implementable pair.** What an OAuth AS implementer needs to ship Mission-Bound issuance.
 
 1. **Draft 1: Mission Framework.** Concrete data model, JSON schemas, hash algorithms, lifecycle state machine, Mission Status interface, integrity-anchor algorithm. Includes reference test vectors so implementers can validate their canonicalization and hash output. Foundational.
-2. **Draft 2: Mission-Bound OAuth Profile.** Concrete OAuth wire bindings: `mission_intent` PAR parameter, `mission_resource_access` RAR type, `mission` claim, Mission Status introspection extension. Composes Framework + RFCs 6749, 9126, 9396, 9068, 9449, 7662, 8693. Implementable by an OAuth AS builder.
+2. **Draft 2: Mission-Bound OAuth Profile.** Concrete OAuth wire bindings: `mission_intent` PAR parameter, `mission_resource_access` RAR type, `mission` claim, dedicated by-mission-reference Mission Status operation, optional Mission-snapshot introspection projection (RFC 7662 extension using RFC 9701 signed responses), Mission lifecycle endpoint (distinct from RFC 7009 token revocation). Composes Framework + RFCs 6749, 9126, 9396, 9068, 9449, 7662, 8693, 9701. Implementable by an OAuth AS builder.
 
 A reference implementation of the Framework + OAuth Profile pair lives alongside, validating that the specs are concrete enough to build from.
 
@@ -843,7 +976,7 @@ A reference implementation of the Framework + OAuth Profile pair lives alongside
 
 ## Resolved Decisions
 
-1. ✅ **Common Constraints Catalog**: lives in Framework (Draft 1) as the abstract vocabulary; substrate profiles define wire serialization. May split into its own draft later if the catalog grows beyond what fits in the Framework.
+1. ✅ **Common Constraints**: a **constraint extension framework** lives in Framework (Draft 1), with initial fully-specified entries `max_calls` and `aal`. Other constraint names sketched in the blog (`max_value`, `max_duration`, `geo`, `data_classification`) are future-work entries with unresolved semantics explicitly listed. Substrate profiles define wire serialization. Catalog can split into its own draft if it grows.
 2. ✅ **OAuth Extensions catchall**: gone. Each former extension is its own feature spec (Drafts 3, 4, 5).
 3. ✅ **Mission Expansion**: substrate-neutral semantics in Draft 3 + per-profile wire bindings in the substrate profiles (Drafts 2 and 6).
 4. ✅ **Mission Status**: abstract interface in Framework (Draft 1); each substrate profile and MAS spec defines its transport binding. Not its own draft.
@@ -859,6 +992,13 @@ A reference implementation of the Framework + OAuth Profile pair lives alongside
 14. ✅ **Shaper Profile category**: Informational. Client-side processing spec with loose conformance; Standards Track would overclaim. The trace artifact and refusal protocol are guidance, not enforceable wire contracts.
 15. ✅ **Worked examples**: each draft carries a minimal illustrative example (~5-10 lines). The full worked board-packet example stays in the blog and is referenced by each draft.
 16. ✅ **Resumable Suspension placement**: currently sketched inside the AAuth Profile (Draft 6). If it generalizes beyond AAuth during drafting, promote to its own feature spec; otherwise keep as an AAuth-specific section.
+17. ✅ **AAuth pairwise identifier conflict**: the Framework's pairwise identifier framework is **OPTIONAL with substrate-declared support**. Substrates advertise which identifier modes they support; AAuth ships canonical-only initially and the AAuth Profile documents the privacy trade-off. OAuth supports both canonical and pairwise.
+18. ✅ **AAuth lifecycle mapping with Proposal/Mission split**: AAuth wire preserves its native two states (`active`, `terminated`). The substrate-neutral Mission Status carries the fine-grained Framework state for governance consumers. AAuth `terminated` covers `revoked / completed / expired`. Suspension projects to AAuth `terminated` for the suspension duration; resumption requires a new Mission Proposal flow at the AAuth substrate.
+19. ✅ **Approving principal AAL**: Framework requires the AAL to be **recorded** in binding evidence; the Framework does NOT mandate an AAL floor. Deployment policy declares the minimum AAL per Mission class. Runtime Enforcement composes with RFC 9470 step-up when an `aal` constraint requires higher AAL than the approving principal's session carries.
+20. ✅ **Mission record retention**: Mission records MUST be retained at least until (a) all derived credentials have expired, AND (b) the deployment's audit retention period for that Mission class has elapsed. After retention the state authority MAY garbage-collect; the canonical `mission.id` MUST NOT be reused. Cross-substrate Mission records under MAS follow the MAS's retention policy advertised in MAS metadata.
+21. ✅ **Mission Intent schema evolution**: extension fields with `x_*` prefix are permitted; non-prefixed unknown properties are reserved for future Framework revisions. Extension fields MUST be included in JCS canonicalization (and therefore in `proposal_hash`) but MAY be ignored semantically by implementations that don't recognize them. Deployments requiring stricter schemas MAY publish a deployment-specific schema via `mission_intent_schema_uri`.
+22. ✅ **Approval atomicity contract**: the approval event MUST be atomic with Mission record creation. Either the Mission record exists with all integrity hashes, principal-model fields, and binding evidence, or the Proposal remains in `pending_approval`. Approval submission MUST be idempotent on retry; the state authority MUST detect duplicate approvals and return the same Mission record. If Mission record creation fails after approval, the Proposal transitions to `expired_as_pending` after a deployment-defined timeout.
+23. ✅ **MAS scope**: a committed MAS implementer is assumed. MAS spec (Draft 7) proceeds at Phase 3 as planned. Cross-MAS federation is OUT of scope for v1. MAS-to-MAS Mission migration is OUT of scope. MAS-supporting both pairwise and canonical identifier modes simultaneously per consumer IS in scope. MAS retention policy is advertised in MAS metadata.
 
 ## Tradeoff: Runtime Optional Modules Deferred
 
@@ -926,3 +1066,165 @@ Draft 2 (OAuth Profile) ships when an implementer can read it and build a Missio
 Reference implementation alongside: a thin OAuth AS + Framework library that passes the test vectors and demonstrates the wire shapes. The implementation is the test that the specs are concrete enough to build from. Specs without an implementation that exercises them are not yet baked.
 
 I will start with Draft 1. First version produces a complete `-00` for review; subsequent versions iterate based on what implementation exposes.
+
+## Glossary
+
+These definitions are the canonical terminology for the specs. They build on the blog's [Terminology key](https://notes.karlmcguinness.com/notes/the-mission-is-the-missing-abstraction/#terminology-key) (Part 1) and [Normative vocabulary](https://notes.karlmcguinness.com/notes/the-mission-model/#normative-vocabulary) (Part 2), with the following improvements:
+
+- Distinguish **Submitted** from **Validated** Mission Intent (the blog's "Mission Intent" was dual-referent).
+- Introduce **Mission Proposal** as a first-class term (the blog had no name for the pre-approval record; using "Mission" both pre- and post-approval was contradictory).
+- Drop **Approved Mission** as redundant: after the Proposal/Mission split, a Mission only exists post-approval, so "Mission" alone is unambiguous.
+- Rename **`consent_rendering_hash` → `consent_disclosure_hash`** (the hash covers the disclosure object, not rendered output).
+- Add terms the blog lacked: **Pairwise Mission Reference**, **Resource AS**, **Tenant / Authorization domain**, principal-model roles.
+
+Blog updates required to align with these terms are listed in the Operational Plan's Blog synchronization section.
+
+**Intent step:**
+
+- **Mission Shaper.** Client-side component that turns a prompt or trigger into Submitted Mission Intent. Does not issue authority and never crosses the trust boundary on its own. ([Part 1](https://notes.karlmcguinness.com/notes/the-mission-is-the-missing-abstraction/#terminology-key))
+- **Submitted Mission Intent.** The structured proposal the Shaper produces and the client submits. **Untrusted** until the state authority validates it. Carries `goal`, `objects`, `constraints`, `success_criteria`, `mission_expiry`, optional `purpose`, optional `context`.
+- **Validated Mission Intent.** The post-validation, post-narrowing form recorded on the Mission Proposal. The state authority's authoritative version. `proposal_hash` is computed over this form. When unqualified, "Mission Intent" in spec text means the **validated** form.
+
+**Mission step:**
+
+- **Mission Proposal.** Pre-approval record carrying Validated Mission Intent. Has its own lifecycle: `pending_approval`, `rejected`, `withdrawn`, `expired_as_pending`. Created at submission; either promoted to Mission at the approval event, or terminated. Carries a `proposal_id` distinct from `mission.id`.
+- **Mission.** The durable, integrity-anchored, lifecycle-governed governance object that records an approved task. Created at the approval event from a Mission Proposal. Lifecycle: `active`, `suspended`, `revoked`, `completed`, `expired`. Carries Validated Mission Intent, Authority Set, integrity anchors, principal-model fields, lifecycle state, consent disclosure reference, and a stable identifier. ([Part 2](https://notes.karlmcguinness.com/notes/the-mission-model/#normative-vocabulary))
+- **Approval event.** The atomic state-authority transition from Mission Proposal to Mission upon a binding consent signal. Records principal-model evidence (approving principal identity, AAL, timestamp, consent disclosure object) atomically with Mission record creation. Idempotent on retry.
+- **Mission record.** The server-side record holding a Mission. Lives at the OAuth AS, AAuth PS, or MAS depending on topology. ([Part 1](https://notes.karlmcguinness.com/notes/the-mission-is-the-missing-abstraction/#terminology-key))
+- **State authority.** The server that holds the Mission record: AS, PS, or MAS. Authoritative for Mission state and the only party that can resolve Pairwise Mission References to the canonical `mission.id`. ([Part 1](https://notes.karlmcguinness.com/notes/the-mission-is-the-missing-abstraction/#terminology-key))
+- **`mission` claim.** Object claim carried on credentials. Fields: `id` (canonical Mission ID, required), `origin` (state-authority issuer URL, required), `pwm` (pairwise reference, optional and present only when pairwise mode is in use for this audience). ([Part 1](https://notes.karlmcguinness.com/notes/the-mission-is-the-missing-abstraction/#terminology-key); breakdown adds `pwm`.)
+- **`mission.id`.** Canonical Mission identifier held by the state authority. Stable for the Mission's lifetime; MUST NOT be reused after Mission record garbage collection.
+- **`mission.origin`.** State authority issuer URL. Resolves via `/.well-known/mission-authority` metadata document.
+- **Pairwise Mission Reference (`pwm`).** Audience-specific opaque identifier for a Mission, resolvable to canonical `mission.id` only at the state authority. Format `pwm:{audience_label}:{opaque_id}`. Privacy plumbing; not a blog term.
+- **Integrity anchors.** Collective term for `proposal_hash`, `authority_hash`, `consent_disclosure_hash`. Each is `SHA-256(JCS({type, schema_version, value}))` — domain-separated input, JCS-canonicalized, SHA-256, base64url-encoded. ([Part 1](https://notes.karlmcguinness.com/notes/the-mission-is-the-missing-abstraction/#terminology-key) for collective term; breakdown adds domain separation and renames `consent_rendering_hash`.)
+- **`proposal_hash`.** Integrity anchor over Validated Mission Intent.
+- **`authority_hash`.** Integrity anchor over the Authority Set.
+- **`consent_disclosure_hash`** (renamed from `consent_rendering_hash`). Integrity anchor over the structured consent disclosure object presented to the approving principal. Renamed because the hash covers the disclosure object, not rendered output.
+
+**Authority step:**
+
+- **Authority Set.** Substrate-neutral canonical container for the maximum authority the state authority approved. Composed of **typed entries**; each entry declares its type, schema, schema version, and narrowing rules. On OAuth substrates serializes as `authorization_details` with `mission_resource_access` entries (or ecosystem-specific RAR types). ([Part 1](https://notes.karlmcguinness.com/notes/the-mission-is-the-missing-abstraction/#terminology-key); [Part 2](https://notes.karlmcguinness.com/notes/the-mission-model/#normative-vocabulary); breakdown adds typed-entry structure.)
+- **Authority Set entry.** A typed payload in the Authority Set: `{type, schema_uri, schema_version, authority, narrowing_profile}`. The Framework maintains a type registry; each type provides deterministic equality, subset, intersection, and unknown-field rules.
+- **`mission_resource_access`.** One Authority Set entry type. Payload (`authority` field) carries `resource`, `actions`, `constraints` per the blog's original shape. The OAuth Profile defines this type's schema and narrowing rules.
+- **`authorization_details`.** OAuth wire shape for derived authority (RFC 9396). The OAuth Profile uses `mission_resource_access` as one entry in this array. ([Part 1](https://notes.karlmcguinness.com/notes/the-mission-is-the-missing-abstraction/#terminology-key))
+- **`narrowing_profile`.** URI identifying the narrowing rules applied to an Authority Set entry. Default `urn:mbo:narrowing:default-v1`.
+- **Projection.** Substrate-specific, audience-bounded credential or assertion derived from the Mission's Authority Set: OAuth access token, ID-JAG, AAuth resource token, AAuth auth token, downstream JWT Authorization Grant. Each carries the Mission reference and is bounded by the Authority Set. ([Part 2](https://notes.karlmcguinness.com/notes/the-mission-model/#normative-vocabulary))
+- **Mission Expansion.** Governance mechanism that produces a successor Mission with broader authority. The prior Mission completes when the successor activates; `mission.supersedes` preserves lineage. ([Part 1](https://notes.karlmcguinness.com/notes/the-mission-is-the-missing-abstraction/#terminology-key))
+
+**Enforcement step:**
+
+- **PDP (Policy Decision Point).** Component that evaluates per-action requests against the Mission's versioned policy view, the audience-relevant Authority Set projection, authenticated actor context, and current Resource policy. ([Part 1](https://notes.karlmcguinness.com/notes/the-mission-is-the-missing-abstraction/#terminology-key))
+- **PEP (Policy Enforcement Point).** The in-line component that calls the PDP before allowing a consequential action and enforces the decision.
+- **Mission Status.** Authenticated state-authority view returning Mission state, integrity anchors, audience-filtered Authority Set projection, `policy_version`, freshness indicator. By-mission-reference operation, **distinct from token introspection**. The blog conflated these; the breakdown separates them.
+- **Runtime Decision.** Per-action evaluation result from a PDP. Produces a Runtime Evidence record. ([Part 2](https://notes.karlmcguinness.com/notes/the-mission-model/#normative-vocabulary))
+- **Evidence.** Durable record of a state-authority decision (admission, consent, lifecycle transition) or a runtime decision (allow, deny, expand). Keyed on `mission.id` and `mission.origin`; carries integrity anchors plus binding evidence (signer, timestamp, policy version, schema version, disclosure template version, approving principal). ([Part 2](https://notes.karlmcguinness.com/notes/the-mission-model/#normative-vocabulary))
+
+**Principal model:**
+
+- **Subject** (also **Beneficiary**). The principal on whose behalf the task is approved. The user the Mission serves.
+- **Approving principal.** The principal who actually approved the Mission. Usually the Subject; may differ for delegated approval (e.g., admin approval, headless approval anchors).
+- **Requesting client.** The OAuth client or AAuth agent that submitted the Mission Proposal.
+- **Actor chain.** The current delegation chain on derived artifacts. Composes with [`draft-mcguinness-oauth-actor-profile`](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-actor-profile/). The chain may grow as a Mission is delegated; each hop is recorded.
+- **Tenant / Authorization domain.** Logical partitioning at the state authority. Missions in one tenant are not visible to consumers of another tenant unless explicit cross-tenant policy declares it.
+
+**Deployment roles (cross-cutting):**
+
+- **AS (Authorization Server).** OAuth server. ([Part 1](https://notes.karlmcguinness.com/notes/the-mission-is-the-missing-abstraction/#terminology-key))
+- **PS (Person Server).** AAuth server. Defines a native Mission ([AAuth `-01`](https://datatracker.ietf.org/doc/draft-hardt-oauth-aauth-protocol/01/)). ([Part 1](https://notes.karlmcguinness.com/notes/the-mission-is-the-missing-abstraction/#terminology-key))
+- **MAS (Mission Authority Server).** Dedicated governance server holding the Mission record when OAuth and AAuth share one governance object, or when governance lives outside any one credential issuer. ([Part 1](https://notes.karlmcguinness.com/notes/the-mission-is-the-missing-abstraction/#terminology-key))
+- **Resource Server.** The server hosting a protected resource and accepting Mission-bound credentials. Per RFC 6749 and RFC 9728. Resource Server tiers (RS-A through RS-D) describe what the RS does with the credential.
+- **Resource AS.** Authorization Server adjacent to a Resource Server in cross-AS topology (RFC 8693). Validates audience-bound credentials, may host a PDP or projection issuer.
+
+**Trust boundaries.** See [Part 2 Trust boundaries and roles](https://notes.karlmcguinness.com/notes/the-mission-model/#trust-boundaries-and-roles) for the canonical role map (who is trusted for what).
+
+## Conformance
+
+Each Standards Track spec in this set includes a conformance section that enumerates the MUST/SHOULD/MAY surface for that spec. A claim of conformance MUST identify:
+
+- The spec's short name and version (e.g., `draft-mcguinness-mission-framework-00`).
+- The role(s) the implementation plays (state authority, credential issuer, Resource AS, PDP, etc.).
+- Which optional features the implementation supports (e.g., pairwise identifiers, specific Authority Set types, specific constraint types).
+- Which test vector classes the implementation has been validated against.
+
+Test vector reproduction is the conformance floor for the Framework: an implementation that does not reproduce the published test vectors byte-for-byte is not conformant to that vector class.
+
+## License
+
+- **Spec text** (kramdown-rfc sources, rendered HTML/text drafts): IETF Trust License Provisions, per standard Internet-Draft submission norms.
+- **Test vectors**: CC0 (public domain). Vectors are intended to be embedded in any implementation regardless of license.
+- **Reference implementation**: Apache License 2.0.
+- **Schemas** (JSON Schema files for Mission Intent, Authority Set, Mission Status response, etc.): CC0.
+
+A `LICENSE` file at the repo root carries the IETF Trust License Provisions for spec text. Other licenses are declared in their respective files or subdirectory READMEs.
+
+## Reference Implementation
+
+A reference implementation lives alongside the drafts and is part of the deliverable. Without it, "implementer-ready" is aspirational.
+
+- **Language**: TypeScript. Broad JOSE library ecosystem, broad OAuth stack ecosystem, accessible to web-platform implementers, runs in Node and Deno.
+- **Repository**: `mcguinness/mission-bound-authorization-reference` (sibling to the spec repo). Created when Draft 1 reaches `-00`.
+- **Scope at Phase 1**:
+  - Framework: Mission Intent JSON validator, Authority Set type registry, integrity-anchor computation (JCS + domain-separation + SHA-256), Mission Proposal and Mission state machines, pairwise identifier framework.
+  - OAuth Profile: `mission_intent` parsing, `mission_resource_access` RAR derivation, `mission` claim emission, Mission Status endpoint, Mission lifecycle endpoint, RFC 9701-signed introspection projection.
+- **Validation**: the reference implementation MUST reproduce every published test vector. CI runs the vector suite on every commit.
+- **Out of scope**: production-grade hardening, persistence at scale, production key management. The reference implementation is a conformance reference and interop partner, not a production deployment.
+
+## Cross-spec versioning
+
+When the Framework spec advances (e.g., `-00` → `-01`) with changes that affect dependent profiles, the dependent profiles MUST track. Rules:
+
+- Each profile declares the Framework version range it supports in its frontmatter.
+- Backward-incompatible Framework changes require dependent profiles to revise; the changelog records the cascade.
+- Implementations advertise their supported version sets in state-authority metadata; consumers select compatible versions during composition.
+- During the implementation-readiness phase (before IETF submission), backward incompatibility is acceptable; once submitted, backward compatibility within a major version is required.
+
+## Operational Plan
+
+### Maturity stages
+
+Each draft progresses through three stages before being submitted to IETF:
+
+1. **Sketch (this breakdown).** Scope, structure, and key normative items documented. No spec text yet.
+2. **Implementable `-00`.** Full spec text published in the repo. Test vectors included. Reference implementation validates the vectors. Implementer review is open.
+3. **Baked (`-01` and beyond).** Implementation feedback incorporated. At least one external implementation exists. Submission to IETF (or the relevant venue) is then considered.
+
+Phase 1 (Framework + OAuth Profile) target: `-00` publication when both specs are implementable and reference implementation passes test vectors. Quality over speed.
+
+### Contributor pathway
+
+- **Spec text**: PRs to the repo on individual draft files. Editorial PRs accepted with minimal review; substantive PRs require an issue first.
+- **Test vectors**: PRs to `vectors/` directory. Each vector PR includes the input, expected output, and a `notes` field explaining what it tests.
+- **Reference implementation**: PRs to the sibling repo. Required: vector suite passes.
+- **Co-authorship**: implementers who contribute substantive design or text may be added as co-authors on the relevant spec.
+
+### Feedback channel
+
+- **GitHub Issues** on the spec repo: structural feedback, draft text issues, breakdown revisions.
+- **Discussion thread on the blog**: conceptual feedback, architecture-level questions.
+- **Direct email** to the author: confidential review, embargoed implementer-interest signals.
+
+### Blog synchronization
+
+The blog series carries the conceptual argument and the canonical terminology; the breakdown and drafts carry the wire and normative requirements. As decisions change in the breakdown, blog posts SHOULD be updated within the same week as the breakdown commit.
+
+Current breakdown/blog deltas requiring blog updates:
+
+- Blog refers to "seven-state lifecycle"; breakdown splits into Mission Proposal (4 states) and Mission (5 states). **Blog needs Mission Proposal vs Mission distinction.**
+- Blog uses `consent_rendering_hash`; breakdown uses `consent_disclosure_hash`. **Blog rename pending.**
+- Blog uses "Approved Mission"; breakdown drops this term as redundant (Mission only exists post-approval). **Blog should align.**
+- Blog defines Mission Intent without distinguishing submitted vs validated forms; breakdown distinguishes them. **Blog should adopt distinction.**
+- Blog `mission` claim shape has `{id, origin}`; breakdown adds `pwm` for pairwise mode. **Blog should add pairwise note.**
+- Blog uses `additionalProperties: true` for Mission Intent; breakdown specifies `x_*` prefix extension policy. **Blog needs extension policy update.**
+- Blog references `draft-mcguinness-oauth-identity-assertion-trust-framework`; correct draft name is `draft-mcguinness-oauth-identity-assertion-trust-policy`. **Blog link fix needed.**
+
+## Changelog
+
+| Date | Change |
+|---|---|
+| 2026-06-08 | Stress-test resolution: stale references fixed; concrete shapes pinned for pairwise reference, `narrowing_profile`, approval event, `policy_version`, `mission.origin` resolution, Mission Expansion ticket, consent disclosure schema, `mission` claim, `mission_resource_access` payload, Mission Status request auth + error model, spec versioning, test vector enumeration. Decisions 17-23 closed (AAuth pairwise, AAuth lifecycle, approving AAL, retention, schema evolution, atomicity, MAS scope). Added Glossary (with improved terms over blog), Conformance, License, Reference Implementation, Cross-spec versioning, Operational Plan, Changelog sections. |
+| 2026-06-08 | Reviewer's 14-item stress test addressed (Proposal/Mission split, JWS pulled to profile level, Mission Status distinct from introspection, ID-JAG roles corrected, principal model added, canonical+pairwise identifier scheme, typed Authority Set, constraint extension framework + 2 worked entries, domain-separated hashes, IANA audit, RFC 7009/9470 claims tightened, profile principle rewritten, Draft 4 narrowed, AuthZEN OpenID attribution). |
+| 2026-06-08 | Reframed for implementation-readiness, not IETF submission. Added vertical-slice first-deliverable approach. |
+| 2026-06-08 | Composition Surface section added with full audit of RFCs, drafts, and Karl's individual drafts. |
+| 2026-06-08 | OAuth Extensions catchall split into Mission Expansion, Delegated Authority Validation, Same-IdP Chain Continuation (referenced from existing `draft-mcguinness-oauth-id-continuation-assertion`), Mission-Bound Txn Token Chaining. |
+| 2026-06-08 | Layered structure introduced: Framework / Server-Topology / Profiles / Features / Informational. Mission Framework added as Draft 1. |
+| 2026-06-08 | Initial spec breakdown published. |
