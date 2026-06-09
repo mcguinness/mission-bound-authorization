@@ -1439,9 +1439,8 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 are inherited here without restatement. In particular, this document
 uses Framework terms Mission, Mission Proposal, Mission Intent
 (Submitted and Validated forms), Authority Set, Authority Set entry,
-approval event, integrity anchor, state authority, canonical Mission
-ID (<code>mission.id</code>), Pairwise Mission Reference (<code>mission.ref</code>), and
-<code>mission.origin</code> as defined there.<a href="#section-2-2" class="pilcrow">¶</a></p>
+approval event, integrity anchor, state authority, canonical
+<code>mission.id</code>, and <code>mission.origin</code> as defined there.<a href="#section-2-2" class="pilcrow">¶</a></p>
 <p id="section-2-3">The following additional terms apply.<a href="#section-2-3" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-2-4">
         <dt id="section-2-4.1">
@@ -1743,10 +1742,9 @@ predecessor untouched and return the appropriate denial outcome.<a href="#sectio
 <strong>Synchronous approved</strong>:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.2">
             <p id="section-3.3-2.2.1">The approval event completes within the response window of the
-expansion request. The state authority returns the resulting Mission
-reference (canonical or pairwise per the substrate's pairwise
-support), the <code>expansion_mode</code>, and, in replacement mode, the
-predecessor's transition to <code>completed</code>. The orchestrator <span class="bcp14">MAY</span>
+expansion request. The state authority returns the resulting
+canonical <code>mission.id</code>, the <code>expansion_mode</code>, and, in
+replacement mode, the predecessor's transition to <code>completed</code>. The orchestrator <span class="bcp14">MAY</span>
 re-derive credentials from the resulting Mission.<a href="#section-3.3-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
@@ -2278,9 +2276,7 @@ surfaced (e.g., JWT claim names, AAuth fields).<a href="#section-6-1" class="pil
           <li class="normal" id="section-6.1-1.2">
             <p id="section-6.1-1.2.1"><strong>Type</strong>: string. URL-safe ASCII matching the Framework's
 <code>mission.id</code> format. The predecessor is identified by canonical
-<code>mission.id</code> only; pairwise references <span class="bcp14">MUST NOT</span> be used in this
-attribute, because the predecessor reference is recorded at the
-state authority that holds both records.<a href="#section-6.1-1.2.1" class="pilcrow">¶</a></p>
+<code>mission.id</code>.<a href="#section-6.1-1.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.1-1.3">
             <p id="section-6.1-1.3.1"><strong>Defining specification</strong>: This document.<a href="#section-6.1-1.3.1" class="pilcrow">¶</a></p>

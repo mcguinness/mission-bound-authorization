@@ -1415,8 +1415,8 @@ described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</s
 appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
 <p id="section-2-2">Terms from <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> (Mission,
 Mission Proposal, Authority Set, <code>mission</code> claim, Mission Status,
-state authority, integrity anchor, canonical and pairwise Mission
-reference) and from
+state authority, integrity anchor, canonical <code>mission.id</code>) and
+from
 <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span> (<code>mission_intent</code>,
 <code>mission_resource_access</code>, <code>mission_inactive</code>, enforcement
 classes <code>issuance</code>, <code>introspection</code>, <code>event_driven</code>,
@@ -2070,12 +2070,8 @@ composition substrate.<a href="#section-9.2-3" class="pilcrow">¶</a></p>
         </h3>
 <p id="section-9.3-1">Each AS that participates in cross-AS continuity recognizes the
 <code>mission</code> claim on incoming subject tokens at the Token Exchange
-endpoint and preserves it on the exchanged token; resolves the
-incoming Mission reference (canonical or pairwise) to the
-appropriate sector reference for the target audience per the
-Framework, minting the reference for the target audience rather
-than copying an upstream pairwise reference into a different
-sector; consults Mission Status at the state authority
+endpoint and preserves the canonical <code>mission.id</code> on the
+exchanged token; consults Mission Status at the state authority
 identified by <code>mission.origin</code> before issuing a derived
 credential, per the <code>issuance</code> class; and cascades Mission
 revocation to all derived credentials it has issued.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
@@ -2111,12 +2107,10 @@ guide walks through.<a href="#section-9.4-1" class="pilcrow">¶</a></p>
 <a href="#section-9.5" class="section-number selfRef">9.5. </a><a href="#name-exit-criteria-4" class="section-name selfRef">Exit criteria</a>
         </h3>
 <p id="section-9.5-1">A deployment exits Stage 5 when Token Exchange and (where
-deployed) ID-JAG issuance preserve the Mission reference across
-AS hops; Mission revocation at the originating state authority
-blocks derivation at downstream ASes within the deployment's
-stated <code>mission_max_stale_seconds</code> interval; and pairwise
-Mission references are minted per target audience rather than
-propagated across audiences.<a href="#section-9.5-1" class="pilcrow">¶</a></p>
+deployed) ID-JAG issuance preserve the canonical <code>mission.id</code>
+across AS hops, and Mission revocation at the originating state
+authority blocks derivation at downstream ASes within the
+deployment's stated <code>mission_max_stale_seconds</code> interval.<a href="#section-9.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2298,11 +2292,6 @@ plus <code>event_driven</code>, or plus <code>per_request</code>) <span class="b
 RS's claimed class is honored. Misadvertisement leads consumers
 to assume revocation propagation guarantees that do not hold for
 their audience.<a href="#section-11-5" class="pilcrow">¶</a></p>
-<p id="section-11-6">Operators introducing pairwise Mission references in Stage 3 or
-later <span class="bcp14">SHOULD</span> audit log pipelines for canonical-identifier
-leakage. The pairwise model assumes audience-specific visibility;
-canonical identifiers leaked through logs, support tools, or
-unencrypted backups defeat the model.<a href="#section-11-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana-considerations">

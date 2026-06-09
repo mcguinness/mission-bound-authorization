@@ -14,9 +14,8 @@ governance state from one shared governance object. This document
 defines the MAS role and topology, the MAS metadata document, the
 Mission submission and lifecycle endpoints, the MAS-side Mission
 Status binding for the abstract interface defined in the Mission
-Framework, a substrate-neutral Authority Set serialization, an
-audience-pairwise Mission identifier protocol that supports both
-pairwise and canonical identifier modes per consumer, and the
+Framework, a substrate-neutral Authority Set serialization, the
+use of the canonical  mission.id  across all consumers, and the
 cross-substrate revocation propagation contract using OpenID Shared
 Signals events with a polling fallback. Cross-MAS federation and
 MAS-to-MAS Mission migration are out of scope for this revision. 
@@ -1103,9 +1102,8 @@ governance state from one shared governance object. This document
 defines the MAS role and topology, the MAS metadata document, the
 Mission submission and lifecycle endpoints, the MAS-side Mission
 Status binding for the abstract interface defined in the Mission
-Framework, a substrate-neutral Authority Set serialization, an
-audience-pairwise Mission identifier protocol that supports both
-pairwise and canonical identifier modes per consumer, and the
+Framework, a substrate-neutral Authority Set serialization, the
+use of the canonical <code>mission.id</code> across all consumers, and the
 cross-substrate revocation propagation contract using OpenID Shared
 Signals events with a polling fallback. Cross-MAS federation and
 MAS-to-MAS Mission migration are out of scope for this revision.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
@@ -1320,30 +1318,7 @@ MAS-to-MAS Mission migration are out of scope for this revision.<a href="#sectio
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
-            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-audience-pairwise-mission-i" class="internal xref">Audience-Pairwise Mission Identifier Protocol</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
-                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-per-consumer-mode-declarati" class="internal xref">Per-consumer mode declaration</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
-                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-pairwise-sector" class="internal xref">Pairwise sector</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
-                <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-pairwise-reference-generati" class="internal xref">Pairwise reference generation</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.4">
-                <p id="section-toc.1-1.9.2.4.1"><a href="#section-9.4" class="auto internal xref">9.4</a>.  <a href="#name-resolution" class="internal xref">Resolution</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.5">
-                <p id="section-toc.1-1.9.2.5.1"><a href="#section-9.5" class="auto internal xref">9.5</a>.  <a href="#name-cross-consumer-non-correlat" class="internal xref">Cross-consumer non-correlation</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.6">
-                <p id="section-toc.1-1.9.2.6.1"><a href="#section-9.6" class="auto internal xref">9.6</a>.  <a href="#name-rotation" class="internal xref">Rotation</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.7">
-                <p id="section-toc.1-1.9.2.7.1"><a href="#section-9.7" class="auto internal xref">9.7</a>.  <a href="#name-identifier-mode-changes" class="internal xref">Identifier mode changes</a></p>
-</li>
-            </ul>
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-mission-identifier" class="internal xref">Mission Identifier</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
             <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-cross-substrate-revocation-" class="internal xref">Cross-Substrate Revocation Propagation</a></p>
@@ -1356,9 +1331,6 @@ MAS-to-MAS Mission migration are out of scope for this revision.<a href="#sectio
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2.2.1">
                     <p id="section-toc.1-1.10.2.2.2.1.1"><a href="#section-10.2.1" class="auto internal xref">10.2.1</a>.  <a href="#name-missionlifecycle-change-eve" class="internal xref"><code>mission.lifecycle-change</code> event</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2.2.2">
-                    <p id="section-toc.1-1.10.2.2.2.2.1"><a href="#section-10.2.2" class="auto internal xref">10.2.2</a>.  <a href="#name-missionreference-rotated-ev" class="internal xref"><code>mission.reference-rotated</code> event</a></p>
 </li>
                 </ul>
 </li>
@@ -1435,7 +1407,7 @@ MAS-to-MAS Mission migration are out of scope for this revision.<a href="#sectio
                 <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-trust-establishment-between" class="internal xref">Trust establishment between MAS and consumers</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.3">
-                <p id="section-toc.1-1.14.2.3.1"><a href="#section-14.3" class="auto internal xref">14.3</a>.  <a href="#name-pairwise-identifier-exposur" class="internal xref">Pairwise identifier exposure across consumers</a></p>
+                <p id="section-toc.1-1.14.2.3.1"><a href="#section-14.3" class="auto internal xref">14.3</a>.  <a href="#name-mission-identifier-exposure" class="internal xref">Mission identifier exposure across consumers</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.4">
                 <p id="section-toc.1-1.14.2.4.1"><a href="#section-14.4" class="auto internal xref">14.4</a>.  <a href="#name-cross-substrate-token-leak-" class="internal xref">Cross-substrate token-leak surface</a></p>
@@ -1473,10 +1445,7 @@ MAS-to-MAS Mission migration are out of scope for this revision.<a href="#sectio
                 <p id="section-toc.1-1.15.2.3.1"><a href="#section-15.3" class="auto internal xref">15.3</a>.  <a href="#name-cross-substrate-authority-s" class="internal xref">Cross-Substrate Authority Set Serialization Media Type</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.4">
-                <p id="section-toc.1-1.15.2.4.1"><a href="#section-15.4" class="auto internal xref">15.4</a>.  <a href="#name-mission-pairwise-identifier" class="internal xref">Mission Pairwise Identifier Protocols Registry</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.5">
-                <p id="section-toc.1-1.15.2.5.1"><a href="#section-15.5" class="auto internal xref">15.5</a>.  <a href="#name-mas-lifecycle-event-shapes-" class="internal xref">MAS Lifecycle Event Shapes for SSF/CAEP Propagation</a></p>
+                <p id="section-toc.1-1.15.2.4.1"><a href="#section-15.4" class="auto internal xref">15.4</a>.  <a href="#name-mas-lifecycle-event-shapes-" class="internal xref">MAS Lifecycle Event Shapes for SSF/CAEP Propagation</a></p>
 </li>
             </ul>
 </li>
@@ -1546,19 +1515,14 @@ interface, using JWS-signed responses.<a href="#section-1-4.5.1" class="pilcrow"
 projection at consumer time.<a href="#section-1-4.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-4.7">
-          <p id="section-1-4.7.1">An audience-pairwise Mission identifier protocol. A MAS <span class="bcp14">MUST</span> be
-able to support pairwise and canonical identifier modes
-simultaneously, declared per consumer.<a href="#section-1-4.7.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-1-4.8">
-          <p id="section-1-4.8.1">Cross-substrate revocation propagation through OpenID Shared
+          <p id="section-1-4.7.1">Cross-substrate revocation propagation through OpenID Shared
 Signals Framework (SSF) and Continuous Access Evaluation Profile
 (CAEP) events, with a polling fallback for consumers that do not
-receive event streams.<a href="#section-1-4.8.1" class="pilcrow">¶</a></p>
+receive event streams.<a href="#section-1-4.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-1-4.9">
-          <p id="section-1-4.9.1">Consumer-binding sections specifying how an OAuth AS and an AAuth
-Person Server consume MAS state.<a href="#section-1-4.9.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-1-4.8">
+          <p id="section-1-4.8.1">Consumer-binding sections specifying how an OAuth AS and an AAuth
+Person Server consume MAS state.<a href="#section-1-4.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-1-5">This document does NOT redefine the abstract Mission Status interface
@@ -1592,10 +1556,10 @@ state authority is fixed at the approval event.<a href="#section-1.1-2.2.1" clas
 <p id="section-1.1-3">The following IS in scope:<a href="#section-1.1-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-1.1-4.1">
-            <p id="section-1.1-4.1.1">A MAS supporting both pairwise and canonical Mission identifier
-modes simultaneously, declared per consumer in MAS-side consumer
-registration. Two consumers of the same MAS <span class="bcp14">MAY</span> operate in
-different modes against the same Mission.<a href="#section-1.1-4.1.1" class="pilcrow">¶</a></p>
+            <p id="section-1.1-4.1.1">A MAS using the canonical <code>mission.id</code> in all responses to all
+registered consumers. Mission-identity isolation across consumers
+is out of scope for this revision and is addressed (if needed)
+by a profile extension to the Framework.<a href="#section-1.1-4.1.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -1649,37 +1613,26 @@ Mission reference appropriate to AAuth.<a href="#section-2-3.6.1" class="pilcrow
 <strong>Consumer registration</strong>:</dt>
         <dd style="margin-left: 1.5em" id="section-2-3.8">
           <p id="section-2-3.8.1">A MAS-side record binding a registered consumer identity to its
-authentication keys, audience identifier, declared identifier mode
-(pairwise or canonical), and authorized operations. The MAS uses the
-consumer registration to authenticate consumer requests and to
-project Mission state appropriately.<a href="#section-2-3.8.1" class="pilcrow">¶</a></p>
+authentication keys, audience identifier, and authorized
+operations. The MAS uses the consumer registration to authenticate
+consumer requests and to project Mission state appropriately.<a href="#section-2-3.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-2-3.9">
-<strong>Pairwise sector (MAS)</strong>:</dt>
+<strong>Consumer-mediated submission (Flow A)</strong>:</dt>
         <dd style="margin-left: 1.5em" id="section-2-3.10">
-          <p id="section-2-3.10.1">As defined by the Framework, a pairwise sector is the audience
-boundary across which Pairwise Mission References are stable. In a
-MAS deployment the sector is typically "consumer", that is, each
-registered consumer is its own sector. A MAS <span class="bcp14">MAY</span> advertise an
-alternative sector grouping consistent with the Framework.<a href="#section-2-3.10.1" class="pilcrow">¶</a></p>
+          <p id="section-2-3.10.1">The default Mission submission flow. The client interacts with a
+consumer (typically an OAuth AS) using that consumer's substrate-
+native submission interface; the consumer forwards the Mission Intent
+to the MAS for atomic approval.<a href="#section-2-3.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-2-3.11">
-<strong>Consumer-mediated submission (Flow A)</strong>:</dt>
-        <dd style="margin-left: 1.5em" id="section-2-3.12">
-          <p id="section-2-3.12.1">The default Mission submission flow. The client interacts with a
-consumer (typically an OAuth AS) using that consumer's substrate-
-native submission interface; the consumer forwards the Mission Intent
-to the MAS for atomic approval.<a href="#section-2-3.12.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-2-3.13">
 <strong>Direct-to-MAS submission (Flow B)</strong>:</dt>
-        <dd style="margin-left: 1.5em" id="section-2-3.14">
-          <p id="section-2-3.14.1">An optional submission flow in which a registered client interacts
+        <dd style="margin-left: 1.5em" id="section-2-3.12">
+          <p id="section-2-3.12.1">An optional submission flow in which a registered client interacts
 directly with the MAS Mission submission endpoint, bypassing any
-substrate-local consumer at submission time.<a href="#section-2-3.14.1" class="pilcrow">¶</a></p>
+substrate-local consumer at submission time.<a href="#section-2-3.12.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1708,8 +1661,7 @@ anchors, and principal-model evidence.<a href="#section-3.1-2.1.1" class="pilcro
 Proposal to a Mission.<a href="#section-3.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.1-2.3">
-            <p id="section-3.1-2.3.1">Owns the canonical <code>mission.id</code> and the canonical-to-pairwise
-resolution map for any consumer operating in pairwise mode.<a href="#section-3.1-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-3.1-2.3.1">Owns the canonical <code>mission.id</code>.<a href="#section-3.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.1-2.4">
             <p id="section-3.1-2.4.1">Publishes integrity-protected Mission Status responses.<a href="#section-3.1-2.4.1" class="pilcrow">¶</a></p>
@@ -1773,16 +1725,12 @@ referencing a MAS for which they have no current registration.<a href="#section-
 <code>aud</code> claim on signed responses to that consumer).<a href="#section-3.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.3-2.4">
-            <p id="section-3.3-2.4.1">The consumer's declared identifier mode (<code>pairwise</code> or <code>canonical</code>)
-for Mission references emitted to that consumer.<a href="#section-3.3-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-3.3-2.4.1">The consumer's authorized operations (submission, status,
+lifecycle, event subscription).<a href="#section-3.3-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.3-2.5">
-            <p id="section-3.3-2.5.1">The consumer's authorized operations (submission, status,
-lifecycle, event subscription).<a href="#section-3.3-2.5.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-3.3-2.6">
-            <p id="section-3.3-2.6.1">The consumer's substrate identifier (<code>oauth_as</code>, <code>aauth_ps</code>, or
-another registered substrate name).<a href="#section-3.3-2.6.1" class="pilcrow">¶</a></p>
+            <p id="section-3.3-2.5.1">The consumer's substrate identifier (<code>oauth_as</code>, <code>aauth_ps</code>, or
+another registered substrate name).<a href="#section-3.3-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-3.3-3">Consumer registration is a deployment operation, not a wire protocol
@@ -1889,16 +1837,7 @@ operations.<a href="#section-4.2-2.4.1" class="pilcrow">¶</a></p>
 types this MAS issues.<a href="#section-4.2-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.2-2.7">
-            <p id="section-4.2-2.7.1"><code>mission_pairwise_supported</code> (boolean): <span class="bcp14">MUST</span> be <code>true</code> for a MAS
-that supports any pairwise consumer; otherwise <code>false</code>.<a href="#section-4.2-2.7.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-4.2-2.8">
-            <p id="section-4.2-2.8.1"><code>mission_pairwise_sector</code> (string, conditional): typically
-<code>"consumer"</code>, indicating each registered consumer is its own
-sector. Other registered sector values are permitted.<a href="#section-4.2-2.8.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-4.2-2.9">
-            <p id="section-4.2-2.9.1"><code>mission_framework_versions_supported</code> (array).<a href="#section-4.2-2.9.1" class="pilcrow">¶</a></p>
+            <p id="section-4.2-2.7.1"><code>mission_framework_versions_supported</code> (array).<a href="#section-4.2-2.7.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -1920,46 +1859,40 @@ required): registered substrate consumer names the MAS supports,
 for example <code>["oauth_as", "aauth_ps"]</code>.<a href="#section-4.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.3-2.3">
-            <p id="section-4.3-2.3.1"><code>mission_identifier_modes_supported</code> (array of strings, required):
-the identifier modes the MAS can serve. A MAS implementing this
-specification <span class="bcp14">MUST</span> advertise <code>["canonical", "pairwise"]</code>, in
-conformance with Section 8.<a href="#section-4.3-2.3.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-4.3-2.4">
-            <p id="section-4.3-2.4.1"><code>mission_event_delivery_modes_supported</code> (array of strings,
+            <p id="section-4.3-2.3.1"><code>mission_event_delivery_modes_supported</code> (array of strings,
 required): subset of <code>["ssf_push", "ssf_poll", "status_poll"]</code>
 identifying the cross-substrate event delivery modes the MAS
-supports per Section 9.<a href="#section-4.3-2.4.1" class="pilcrow">¶</a></p>
+supports per Section 9.<a href="#section-4.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.3-2.4">
+            <p id="section-4.3-2.4.1"><code>mission_event_stream_endpoint</code> (URL, conditional): the MAS event
+stream endpoint, required if any SSF mode is advertised.<a href="#section-4.3-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.3-2.5">
-            <p id="section-4.3-2.5.1"><code>mission_event_stream_endpoint</code> (URL, conditional): the MAS event
-stream endpoint, required if any SSF mode is advertised.<a href="#section-4.3-2.5.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-4.3-2.6">
-            <p id="section-4.3-2.6.1"><code>mission_status_polling_max_interval_seconds</code> (integer, required
+            <p id="section-4.3-2.5.1"><code>mission_status_polling_max_interval_seconds</code> (integer, required
 when <code>status_poll</code> is advertised): the maximum interval in seconds
 the MAS recommends consumers poll Mission Status to detect state
-changes when no event stream is used.<a href="#section-4.3-2.6.1" class="pilcrow">¶</a></p>
+changes when no event stream is used.<a href="#section-4.3-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.3-2.6">
+            <p id="section-4.3-2.6.1"><code>mission_submission_flow_b_supported</code> (boolean, required): whether
+the MAS accepts direct-to-MAS submission (Flow B). Default
+deployments <span class="bcp14">MAY</span> publish <code>false</code>.<a href="#section-4.3-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.3-2.7">
-            <p id="section-4.3-2.7.1"><code>mission_submission_flow_b_supported</code> (boolean, required): whether
-the MAS accepts direct-to-MAS submission (Flow B). Default
-deployments <span class="bcp14">MAY</span> publish <code>false</code>.<a href="#section-4.3-2.7.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-4.3-2.8">
-            <p id="section-4.3-2.8.1"><code>mission_retention_policy_uri</code> (URL, required): a URL identifying
+            <p id="section-4.3-2.7.1"><code>mission_retention_policy_uri</code> (URL, required): a URL identifying
 the MAS's retention policy applied to Mission records and
 Proposal records, per Framework Section 5.3 and Resolved Decision
-20.<a href="#section-4.3-2.8.1" class="pilcrow">¶</a></p>
+20.<a href="#section-4.3-2.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.3-2.8">
+            <p id="section-4.3-2.8.1"><code>mission_consumer_registration_endpoint</code> (URL, optional): a URL
+the MAS publishes if it offers dynamic consumer registration.<a href="#section-4.3-2.8.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.3-2.9">
-            <p id="section-4.3-2.9.1"><code>mission_consumer_registration_endpoint</code> (URL, optional): a URL
-the MAS publishes if it offers dynamic consumer registration.<a href="#section-4.3-2.9.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-4.3-2.10">
-            <p id="section-4.3-2.10.1"><code>mission_response_media_type</code> (string, required): the MAS-side
+            <p id="section-4.3-2.9.1"><code>mission_response_media_type</code> (string, required): the MAS-side
 signed Mission Status response media type registered by this
-document, namely <code>application/mas-mission-status-response+jwt</code>.<a href="#section-4.3-2.10.1" class="pilcrow">¶</a></p>
+document, namely <code>application/mas-mission-status-response+jwt</code>.<a href="#section-4.3-2.9.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -2144,9 +2077,8 @@ approval the Mission is governed exclusively through the lifecycle
 endpoint (Section 7).<a href="#section-5.1.4-1" class="pilcrow">¶</a></p>
 <p id="section-5.1.4-2">The MAS performs the atomic approval event per Framework
 <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> Section 5.2 and creates
-the Mission record. The MAS returns the Mission record reference to
-the consumer in the identifier mode declared in that consumer's
-registration (canonical <code>mission.id</code> or pairwise <code>mission.ref</code>).<a href="#section-5.1.4-2" class="pilcrow">¶</a></p>
+the Mission record. The MAS returns the canonical <code>mission.id</code> to
+the consumer.<a href="#section-5.1.4-2" class="pilcrow">¶</a></p>
 <p id="section-5.1.4-3">If the MAS refuses the Proposal at any step, declines the approval,
 or fails the atomic commit, the MAS returns a structured error
 (Section 6.3). The consumer <span class="bcp14">MUST NOT</span> issue any credential
@@ -2357,9 +2289,7 @@ complete.<a href="#section-6-1" class="pilcrow">¶</a></p>
 <code>resume</code>, <code>complete</code>.<a href="#section-6.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.1-2.2">
-            <p id="section-6.1-2.2.1"><code>mission</code> (string, required): the Mission reference. The form
-(canonical or pairwise) follows the caller's registered mode at
-the MAS.<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-6.1-2.2.1"><code>mission</code> (string, required): the canonical <code>mission.id</code>.<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.1-2.3">
             <p id="section-6.1-2.3.1"><code>reason</code> (string, optional): a human-readable reason recorded in
@@ -2556,7 +2486,7 @@ Status body, defined below.<a href="#section-7.3-2.7.1" class="pilcrow">¶</a></
 <pre>
 {
   "state": "active",
-  "mission_id_or_ref": { "ref": "opq_mW8Jx_pairwise_value" },
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "origin": "https://mas.example.com",
   "tenant": "tenant_01J9...",
   "proposal_hash":           "sha-256:...",
@@ -2578,10 +2508,8 @@ Status body, defined below.<a href="#section-7.3-2.7.1" class="pilcrow">¶</a></
 }
 </pre><a href="#section-7.3-4" class="pilcrow">¶</a>
 </div>
-<p id="section-7.3-5">The <code>mission_id_or_ref</code> carries <code>id</code> when the caller is registered
-in canonical mode and <code>ref</code> when the caller is registered in
-pairwise mode. The MAS <span class="bcp14">MUST NOT</span> emit both <code>id</code> and <code>ref</code> in the same
-response.<a href="#section-7.3-5" class="pilcrow">¶</a></p>
+<p id="section-7.3-5">The <code>mission_id</code> member carries the canonical <code>mission.id</code> as
+defined by the Framework.<a href="#section-7.3-5" class="pilcrow">¶</a></p>
 <p id="section-7.3-6">The <code>authority_set_projection.neutral</code> array contains the
 substrate-neutral Authority Set serialization defined in Section 8.
 The <code>authority_set_projection.substrate_view</code> object <span class="bcp14">MAY</span> be present
@@ -2802,157 +2730,26 @@ the consumer cannot project faithfully.<a href="#section-8.4-1" class="pilcrow">
 </div>
 </section>
 </div>
-<div id="audience-pairwise-mission-identifier-protocol">
+<div id="mission-identifier">
 <section id="section-9">
-      <h2 id="name-audience-pairwise-mission-i">
-<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-audience-pairwise-mission-i" class="section-name selfRef">Audience-Pairwise Mission Identifier Protocol</a>
+      <h2 id="name-mission-identifier">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-mission-identifier" class="section-name selfRef">Mission Identifier</a>
       </h2>
-<p id="section-9-1">The Framework
-<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> defines a canonical
-Mission identifier (<code>mission.id</code>) and an audience-pairwise Mission
-reference (<code>mission.ref</code>). A MAS conforming to this document <span class="bcp14">MUST</span>
-support both modes simultaneously, declared per consumer.<a href="#section-9-1" class="pilcrow">¶</a></p>
-<div id="per-consumer-mode-declaration">
-<section id="section-9.1">
-        <h3 id="name-per-consumer-mode-declarati">
-<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-per-consumer-mode-declarati" class="section-name selfRef">Per-consumer mode declaration</a>
-        </h3>
-<p id="section-9.1-1">Each consumer registration at the MAS declares one of:<a href="#section-9.1-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-9.1-2.1">
-            <p id="section-9.1-2.1.1"><code>canonical</code>: the MAS emits canonical <code>mission.id</code> in all
-responses to this consumer (signed Mission Status responses,
-lifecycle responses, and event payloads). The consumer carries
-the canonical ID on its substrate-local credentials.<a href="#section-9.1-2.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-9.1-2.2">
-            <p id="section-9.1-2.2.1"><code>pairwise</code>: the MAS emits Pairwise Mission References
-(<code>mission.ref</code>) in all responses to this consumer. The consumer
-carries the pairwise reference on its substrate-local
-credentials.<a href="#section-9.1-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-<p id="section-9.1-3">The MAS <span class="bcp14">MUST</span> refuse to emit canonical identifiers to a consumer
-registered as <code>pairwise</code>, and vice versa.<a href="#section-9.1-3" class="pilcrow">¶</a></p>
-<p id="section-9.1-4">Two consumers operating under the same MAS for the same Mission
-<span class="bcp14">MAY</span> have different modes. A canonical-mode OAuth AS and a pairwise-
-mode AAuth PS, both registered at the same MAS for the same Mission,
-each receive Mission references in their declared mode.<a href="#section-9.1-4" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="pairwise-sector">
-<section id="section-9.2">
-        <h3 id="name-pairwise-sector">
-<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-pairwise-sector" class="section-name selfRef">Pairwise sector</a>
-        </h3>
-<p id="section-9.2-1">The MAS pairwise sector is typically <code>"consumer"</code>: each registered
-consumer is its own sector, so a pairwise reference is stable for
-that consumer alone and is not correlatable with the same Mission
-as projected to another consumer. The MAS advertises its sector
-choice in <code>mission_pairwise_sector</code>.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
-<p id="section-9.2-2">A MAS <span class="bcp14">MAY</span> advertise an alternative sector (for example, <code>"tenant"</code>
-to make pairwise references stable across all consumers within a
-tenant). Implementations <span class="bcp14">SHOULD</span> prefer the <code>"consumer"</code> sector
-unless deployment policy requires a coarser sector.<a href="#section-9.2-2" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="pairwise-reference-generation">
-<section id="section-9.3">
-        <h3 id="name-pairwise-reference-generati">
-<a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-pairwise-reference-generati" class="section-name selfRef">Pairwise reference generation</a>
-        </h3>
-<p id="section-9.3-1">A MAS <span class="bcp14">MUST</span> generate Pairwise Mission References meeting the
-Framework's properties:<a href="#section-9.3-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-9.3-2.1">
-            <p id="section-9.3-2.1.1">At least 128 bits of entropy.<a href="#section-9.3-2.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-9.3-2.2">
-            <p id="section-9.3-2.2.1">URL-safe.<a href="#section-9.3-2.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-9.3-2.3">
-            <p id="section-9.3-2.3.1">Containing no audience label, tenant name, canonical-ID
-derivative, or other correlatable input.<a href="#section-9.3-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-<p id="section-9.3-3">The MAS holds the canonical-to-pairwise map. No other party can
-derive a canonical ID from a pairwise reference or correlate
-pairwise references across sectors.<a href="#section-9.3-3" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="resolution">
-<section id="section-9.4">
-        <h3 id="name-resolution">
-<a href="#section-9.4" class="section-number selfRef">9.4. </a><a href="#name-resolution" class="section-name selfRef">Resolution</a>
-        </h3>
-<p id="section-9.4-1">A pairwise reference is resolved only at the MAS, and only for the
-consumer for whose sector it was minted. A MAS <span class="bcp14">MUST</span> refuse a
-Mission Status request that carries a pairwise reference under a
-caller registration whose sector does not own that reference. The
-refusal <span class="bcp14">MUST</span> be <code>not_found</code> to preserve the anti-oracle property
-(an attacker presenting a pairwise reference belonging to another
-sector <span class="bcp14">MUST NOT</span> learn that the reference is valid in any sector).<a href="#section-9.4-1" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="cross-consumer-non-correlation">
-<section id="section-9.5">
-        <h3 id="name-cross-consumer-non-correlat">
-<a href="#section-9.5" class="section-number selfRef">9.5. </a><a href="#name-cross-consumer-non-correlat" class="section-name selfRef">Cross-consumer non-correlation</a>
-        </h3>
-<p id="section-9.5-1">Two pairwise references emitted to two different consumers for the
-same Mission <span class="bcp14">MUST NOT</span> be linkable by either consumer or by an
-intermediary network observer. Two consumers comparing pairwise
-references see no equality; only the MAS can join them.<a href="#section-9.5-1" class="pilcrow">¶</a></p>
-<p id="section-9.5-2">A consumer <span class="bcp14">MUST NOT</span> emit a pairwise reference outside its own
-substrate-local boundary in a form that could leak to another
-consumer (for example, in HTTP-visible URL paths shared by both
-consumers' Resource Servers). Sender constraint at the substrate
-profile mitigates exfiltration risk.<a href="#section-9.5-2" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="rotation">
-<section id="section-9.6">
-        <h3 id="name-rotation">
-<a href="#section-9.6" class="section-number selfRef">9.6. </a><a href="#name-rotation" class="section-name selfRef">Rotation</a>
-        </h3>
-<p id="section-9.6-1">A MAS <span class="bcp14">MAY</span> rotate a pairwise reference for operational reasons
-(suspected exposure, key migration). On rotation:<a href="#section-9.6-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-9.6-2.1">
-            <p id="section-9.6-2.1.1">The new pairwise reference is minted for the same Mission and the
-same sector.<a href="#section-9.6-2.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-9.6-2.2">
-            <p id="section-9.6-2.2.1">The MAS <span class="bcp14">MUST</span> advertise an alias period sufficient for outstanding
-credentials to drain, during which both the old and new
-references resolve.<a href="#section-9.6-2.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-9.6-2.3">
-            <p id="section-9.6-2.3.1">After the alias period the old reference <span class="bcp14">MUST</span> cease to resolve.<a href="#section-9.6-2.3.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-9.6-2.4">
-            <p id="section-9.6-2.4.1">Retired references <span class="bcp14">MUST NOT</span> be reassigned.<a href="#section-9.6-2.4.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-9.6-2.5">
-            <p id="section-9.6-2.5.1">The MAS <span class="bcp14">MUST</span> emit a <code>mission.reference-rotated</code> SSF event
-(Section 9) to the affected consumer.<a href="#section-9.6-2.5.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-</section>
-</div>
-<div id="identifier-mode-changes">
-<section id="section-9.7">
-        <h3 id="name-identifier-mode-changes">
-<a href="#section-9.7" class="section-number selfRef">9.7. </a><a href="#name-identifier-mode-changes" class="section-name selfRef">Identifier mode changes</a>
-        </h3>
-<p id="section-9.7-1">A consumer's mode (<code>pairwise</code> or <code>canonical</code>) is part of consumer
-registration. Changing a consumer's mode mid-relationship is a
-re-registration operation. The new mode applies only to Missions
-created after the registration change. The MAS <span class="bcp14">MUST NOT</span>
-retroactively change the identifier mode for credentials already
-issued by the consumer.<a href="#section-9.7-1" class="pilcrow">¶</a></p>
-</section>
-</div>
+<p id="section-9-1">The MAS uses the canonical <code>mission.id</code> defined by the Framework
+(<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>) in all responses to
+all consumers: signed Mission Status responses, lifecycle
+responses, and event payloads. Consumers carry the canonical
+<code>mission.id</code> on their substrate-local credentials.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">This document does not define an audience-pairwise Mission
+identifier protocol; consumers operating under the same MAS for
+the same Mission see the same <code>mission.id</code>. Cross-consumer user
+correlation is addressed by OIDC pairwise <code>sub</code> (or the AAuth
+equivalent) at the substrate profile level, not by Mission
+identity. Deployments with stronger Mission-identity isolation
+requirements (e.g., a MAS serving competing tenants whose
+Mission identifiers must not link across consumers) define a
+pairwise Mission identifier through a profile extension to the
+Framework; such extensions are out of scope for this document.<a href="#section-9-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="cross-substrate-revocation-propagation">
@@ -3002,13 +2799,10 @@ fall back to a less-timely mode.<a href="#section-10.1-4" class="pilcrow">¶</a>
 <a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-lifecycle-events" class="section-name selfRef">Lifecycle events</a>
         </h3>
 <p id="section-10.2-1">The MAS emits the following CAEP-aligned event types within SSF SETs.
-Event type URIs registered by this document:<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+Event type URI registered by this document:<a href="#section-10.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-10.2-2.1">
             <p id="section-10.2-2.1.1"><code>https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change</code><a href="#section-10.2-2.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-10.2-2.2">
-            <p id="section-10.2-2.2.1"><code>https://schemas.karlmcguinness.com/secevent/mission/reference-rotated</code><a href="#section-10.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <div id="missionlifecycle-change-event">
@@ -3020,8 +2814,7 @@ Event type URIs registered by this document:<a href="#section-10.2-1" class="pil
 the approval event. Required event claims:<a href="#section-10.2.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-10.2.1-2.1">
-              <p id="section-10.2.1-2.1.1"><code>mission</code>: the Mission reference, in the recipient consumer's
-declared identifier mode.<a href="#section-10.2.1-2.1.1" class="pilcrow">¶</a></p>
+              <p id="section-10.2.1-2.1.1"><code>mission</code>: the canonical <code>mission.id</code>.<a href="#section-10.2.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-10.2.1-2.2">
               <p id="section-10.2.1-2.2.1"><code>mission_origin</code>: the MAS issuer URL.<a href="#section-10.2.1-2.2.1" class="pilcrow">¶</a></p>
@@ -3047,35 +2840,6 @@ absent on the approval-event emission.<a href="#section-10.2.1-2.4.1" class="pil
               <p id="section-10.2.1-2.8.1"><code>reason</code>: optional human-readable reason.<a href="#section-10.2.1-2.8.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
-</section>
-</div>
-<div id="missionreference-rotated-event">
-<section id="section-10.2.2">
-          <h4 id="name-missionreference-rotated-ev">
-<a href="#section-10.2.2" class="section-number selfRef">10.2.2. </a><a href="#name-missionreference-rotated-ev" class="section-name selfRef"><code>mission.reference-rotated</code> event</a>
-          </h4>
-<p id="section-10.2.2-1">Emitted when the MAS rotates a Pairwise Mission Reference for a
-consumer (Section 8.6). Required event claims:<a href="#section-10.2.2-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-10.2.2-2.1">
-              <p id="section-10.2.2-2.1.1"><code>mission_old_ref</code>: the prior pairwise reference.<a href="#section-10.2.2-2.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-10.2.2-2.2">
-              <p id="section-10.2.2-2.2.1"><code>mission_new_ref</code>: the new pairwise reference.<a href="#section-10.2.2-2.2.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-10.2.2-2.3">
-              <p id="section-10.2.2-2.3.1"><code>mission_origin</code>: the MAS issuer URL.<a href="#section-10.2.2-2.3.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-10.2.2-2.4">
-              <p id="section-10.2.2-2.4.1"><code>tenant</code>.<a href="#section-10.2.2-2.4.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-10.2.2-2.5">
-              <p id="section-10.2.2-2.5.1"><code>rotation_alias_expires_at</code>: RFC 3339 timestamp at which the old
-reference ceases to resolve.<a href="#section-10.2.2-2.5.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-<p id="section-10.2.2-3">This event is emitted only to consumers operating in <code>pairwise</code>
-mode.<a href="#section-10.2.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3156,8 +2920,8 @@ this section.<a href="#section-11-1" class="pilcrow">¶</a></p>
 <p id="section-11.1-1">The OAuth AS is registered at the MAS as a consumer with
 <code>substrate=oauth_as</code>. The registration declares the AS's audience
 identifier, the AS's JWKS URL (for AS-to-MAS request authentication
-and SET verification keys), the tenant or tenants the AS may
-operate on, and the identifier mode (<code>canonical</code> or <code>pairwise</code>).<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+and SET verification keys), and the tenant or tenants the AS may
+operate on.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="as-metadata-extensions">
@@ -3175,10 +2939,6 @@ additional members in its AS metadata document <span>[<a href="#RFC8414" class="
             <p id="section-11.2-2.2.1"><code>mission_state_authority_mode</code> (string): <code>mas_consumer</code>,
 identifying that the AS holds Mission state through a MAS rather
 than locally.<a href="#section-11.2-2.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-11.2-2.3">
-            <p id="section-11.2-2.3.1"><code>mission_state_authority_identifier_mode</code> (string): <code>canonical</code>
-or <code>pairwise</code>, matching the AS's registration at the MAS.<a href="#section-11.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-11.2-3">An OAuth AS <span class="bcp14">MUST NOT</span> carry both
@@ -3219,13 +2979,12 @@ normal.<a href="#section-11.3-2.5.1" class="pilcrow">¶</a></p>
 creates the Mission Proposal's promotion as recorded by the MAS.<a href="#section-11.3-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-11.3-2.7">
-            <p id="section-11.3-2.7.1">Receives the MAS-minted Mission reference (canonical or pairwise
-per AS registration) and uses that reference on subsequent
-credential issuance.<a href="#section-11.3-2.7.1" class="pilcrow">¶</a></p>
+            <p id="section-11.3-2.7.1">Receives the MAS-minted canonical <code>mission.id</code> and uses it on
+subsequent credential issuance.<a href="#section-11.3-2.7.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
 <p id="section-11.3-3">The AS <span class="bcp14">MUST NOT</span> mint a Mission identifier locally. The AS uses the
-MAS-minted identifier on the <code>mission.id</code> or <code>mission.ref</code> of the
+MAS-minted canonical <code>mission.id</code> on the <code>mission.id</code> of the
 <code>mission</code> claim per
 <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span> Section 9, with
 <code>mission.origin</code> set to the MAS issuer URL.<a href="#section-11.3-3" class="pilcrow">¶</a></p>
@@ -3325,16 +3084,7 @@ behavior in this section.<a href="#section-12-1" class="pilcrow">¶</a></p>
 <p id="section-12.1-1">The AAuth PS is registered at the MAS as a consumer with
 <code>substrate=aauth_ps</code>. The registration declares the PS's audience
 identifier, the PS's authentication keys, the tenant or tenants
-the PS may operate on, and the identifier mode.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
-<p id="section-12.1-2">A MAS deployment serving AAuth consumers <span class="bcp14">MAY</span> observe that the AAuth
-substrate profile, per Resolved Decision 17 of the spec breakdown,
-ships canonical-only identifiers initially. AAuth consumers
-operating in pairwise mode are nevertheless valid at the MAS
-boundary; the consumer's substrate profile is responsible for
-preserving the pairwise property end to end. A MAS deployment <span class="bcp14">SHOULD</span>
-default AAuth consumers to <code>canonical</code> unless the AAuth Profile
-revision the consumer implements supports pairwise references
-end-to-end.<a href="#section-12.1-2" class="pilcrow">¶</a></p>
+the PS may operate on.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="ps-metadata-extensions">
@@ -3350,9 +3100,6 @@ identifiers in its AAuth metadata:<a href="#section-12.2-1" class="pilcrow">¶</
 </li>
           <li class="normal" id="section-12.2-2.2">
             <p id="section-12.2-2.2.1"><code>mission_state_authority_mode</code> (string): <code>mas_consumer</code>.<a href="#section-12.2-2.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-12.2-2.3">
-            <p id="section-12.2-2.3.1"><code>mission_state_authority_identifier_mode</code> (string).<a href="#section-12.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -3485,10 +3232,6 @@ simultaneously, multiplying the substrate-local credential damage.<a href="#sect
 consumers to refuse legitimate credential derivations
 (denial of service) or to omit revocations.<a href="#section-14.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.1-2.4">
-            <p id="section-14.1-2.4.1">Reveal pairwise-to-canonical mappings to colluding consumers,
-collapsing the privacy property.<a href="#section-14.1-2.4.1" class="pilcrow">¶</a></p>
-</li>
         </ul>
 <p id="section-14.1-3">Because a MAS aggregates governance across substrates, the blast
 radius of a MAS compromise is larger than that of a substrate-local
@@ -3545,35 +3288,25 @@ invalidate compromised keys immediately.<a href="#section-14.2-3.3.1" class="pil
 gated by deployment policy.<a href="#section-14.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="pairwise-identifier-exposure-across-consumers">
+<div id="mission-identifier-exposure-across-consumers">
 <section id="section-14.3">
-        <h3 id="name-pairwise-identifier-exposur">
-<a href="#section-14.3" class="section-number selfRef">14.3. </a><a href="#name-pairwise-identifier-exposur" class="section-name selfRef">Pairwise identifier exposure across consumers</a>
+        <h3 id="name-mission-identifier-exposure">
+<a href="#section-14.3" class="section-number selfRef">14.3. </a><a href="#name-mission-identifier-exposure" class="section-name selfRef">Mission identifier exposure across consumers</a>
         </h3>
-<p id="section-14.3-1">The pairwise identifier property is defeated if the MAS or any
-consumer leaks the canonical-to-pairwise map. Specifically:<a href="#section-14.3-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-14.3-2.1">
-            <p id="section-14.3-2.1.1">The MAS <span class="bcp14">MUST NOT</span> emit canonical Mission identifiers to a
-pairwise-mode consumer.<a href="#section-14.3-2.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-14.3-2.2">
-            <p id="section-14.3-2.2.1">A consumer in pairwise mode <span class="bcp14">MUST NOT</span> expose pairwise references
-in URL paths, logs, or analytics shared with other consumers.<a href="#section-14.3-2.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-14.3-2.3">
-            <p id="section-14.3-2.3.1">A consumer's Resource Servers <span class="bcp14">MUST</span> treat pairwise references as
-confidential to the consumer's substrate-local boundary.<a href="#section-14.3-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-<p id="section-14.3-3">A subtler attack: an attacker who controls two consumers operating
-on the same MAS-held Mission may compare the pairwise references
-the MAS emits to each. Under the recommended <code>"consumer"</code> pairwise
-sector, the two references differ and are not correlatable. Under a
-coarser sector (for example, <code>"tenant"</code>), references emitted to
-different consumers within the same tenant ARE correlatable; this
-is the deliberate trade-off of the coarser sector. Deployments
-selecting a coarser sector <span class="bcp14">MUST</span> document the correlation surface.<a href="#section-14.3-3" class="pilcrow">¶</a></p>
+<p id="section-14.3-1">The canonical <code>mission.id</code> is emitted to every registered
+consumer that holds a credential or queries Mission Status. Two
+consumers participating in the same Mission can observe that they
+share a Mission. This is inherent to the Mission's role as a
+governance handle across substrates and is consented to at
+approval time. Deployments that require Mission-identity
+isolation across consumers (an unusual case typically arising
+when a MAS serves competing tenants whose Mission identifiers
+must not link) compose with a profile extension to the Framework;
+such extensions are out of scope.<a href="#section-14.3-1" class="pilcrow">¶</a></p>
+<p id="section-14.3-2">User-level cross-consumer correlation (a Resource Server linking
+user activity across Missions) is addressed by pairwise <code>sub</code> (or
+the AAuth equivalent) at the substrate level, not by Mission
+identity.<a href="#section-14.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="cross-substrate-token-leak-surface">
@@ -3847,85 +3580,31 @@ Set.<a href="#section-15.3-2.8.1" class="pilcrow">¶</a></p>
         </ul>
 </section>
 </div>
-<div id="mission-pairwise-identifier-protocols-registry">
+<div id="mas-lifecycle-event-shapes-for-ssfcaep-propagation">
 <section id="section-15.4">
-        <h3 id="name-mission-pairwise-identifier">
-<a href="#section-15.4" class="section-number selfRef">15.4. </a><a href="#name-mission-pairwise-identifier" class="section-name selfRef">Mission Pairwise Identifier Protocols Registry</a>
+        <h3 id="name-mas-lifecycle-event-shapes-">
+<a href="#section-15.4" class="section-number selfRef">15.4. </a><a href="#name-mas-lifecycle-event-shapes-" class="section-name selfRef">MAS Lifecycle Event Shapes for SSF/CAEP Propagation</a>
         </h3>
-<p id="section-15.4-1">This document creates a new IANA registry, <strong>Mission Pairwise
-Identifier Protocols</strong>, that names concrete protocols realizing the
-Framework's abstract pairwise reference framework
-(<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> Section 7.2). The
-Framework defines the abstract properties; this registry names the
-concrete protocols that implement them.<a href="#section-15.4-1" class="pilcrow">¶</a></p>
+<p id="section-15.4-1">This document registers the following Security Event Token (SET)
+event type URI:<a href="#section-15.4-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-15.4-2.1">
-            <p id="section-15.4-2.1.1"><strong>Registration Policy</strong>: Specification Required.<a href="#section-15.4-2.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-15.4-2.2">
-            <p id="section-15.4-2.2.1"><strong>Required fields per entry</strong>: protocol name, specification
-reference, sector vocabulary (the sector type values the protocol
-supports), reference entropy floor (in bits), reference rotation
-semantics, resolution authority statement, change controller.<a href="#section-15.4-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-<p id="section-15.4-3">Initial entry registered by this document:<a href="#section-15.4-3" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-15.4-4.1">
-            <p id="section-15.4-4.1.1">Protocol name: <code>mas_audience_pairwise_v1</code>.<a href="#section-15.4-4.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-15.4-4.2">
-            <p id="section-15.4-4.2.1">Specification reference: this document, Section 8.<a href="#section-15.4-4.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-15.4-4.3">
-            <p id="section-15.4-4.3.1">Sector vocabulary: <code>consumer</code> (recommended default), <code>tenant</code>.<a href="#section-15.4-4.3.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-15.4-4.4">
-            <p id="section-15.4-4.4.1">Reference entropy floor: 128 bits.<a href="#section-15.4-4.4.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-15.4-4.5">
-            <p id="section-15.4-4.5.1">Reference rotation: as defined in Section 8.6 of this document.<a href="#section-15.4-4.5.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-15.4-4.6">
-            <p id="section-15.4-4.6.1">Resolution authority: the MAS, exclusively.<a href="#section-15.4-4.6.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-15.4-4.7">
-            <p id="section-15.4-4.7.1">Change controller: IETF.<a href="#section-15.4-4.7.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-</section>
-</div>
-<div id="mas-lifecycle-event-shapes-for-ssfcaep-propagation">
-<section id="section-15.5">
-        <h3 id="name-mas-lifecycle-event-shapes-">
-<a href="#section-15.5" class="section-number selfRef">15.5. </a><a href="#name-mas-lifecycle-event-shapes-" class="section-name selfRef">MAS Lifecycle Event Shapes for SSF/CAEP Propagation</a>
-        </h3>
-<p id="section-15.5-1">This document registers the following Security Event Token (SET)
-event type URIs:<a href="#section-15.5-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-15.5-2.1">
-            <p id="section-15.5-2.1.1"><code>https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change</code>:
+            <p id="section-15.4-2.1.1"><code>https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change</code>:
 event type for any Mission lifecycle transition or approval-event
 emission from a MAS. Required claims: <code>mission</code>, <code>mission_origin</code>,
 <code>tenant</code>, <code>prior_state</code>, <code>state</code>, <code>version</code>, <code>committed_at</code>.
-Optional claim: <code>reason</code>.<a href="#section-15.5-2.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-15.5-2.2">
-            <p id="section-15.5-2.2.1"><code>https://schemas.karlmcguinness.com/secevent/mission/reference-rotated</code>:
-event type for Pairwise Mission Reference rotation. Required
-claims: <code>mission_old_ref</code>, <code>mission_new_ref</code>, <code>mission_origin</code>,
-<code>tenant</code>, <code>rotation_alias_expires_at</code>.<a href="#section-15.5-2.2.1" class="pilcrow">¶</a></p>
+Optional claim: <code>reason</code>.<a href="#section-15.4-2.1.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-15.5-3">Both event types follow the OpenID Shared Signals Framework SET
+<p id="section-15.4-3">This event type follows the OpenID Shared Signals Framework SET
 shape and the Continuous Access Evaluation Profile subject and
-event conventions. The event-type URIs are stable identifiers
+event conventions. The event-type URI is a stable identifier
 under the <code>schemas.karlmcguinness.com/secevent</code> namespace.
 Coordination with the OpenID Foundation Shared Signals and CAEP
-working groups is anticipated for these event-type registrations
-when this document is submitted; until then, the URIs are owned
-by the author and may be aliased to OpenID-registered URIs by a
-subsequent revision of this document.<a href="#section-15.5-3" class="pilcrow">¶</a></p>
+working groups is anticipated for this event-type registration
+when this document is submitted; until then, the URI is owned
+by the author and may be aliased to an OpenID-registered URI by a
+subsequent revision of this document.<a href="#section-15.4-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

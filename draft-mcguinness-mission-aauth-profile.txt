@@ -98,10 +98,7 @@ Table of Contents
      7.3.  Anti-Oracle Property
      7.4.  Errors
      7.5.  Relationship to Native AAuth Permissions
-   8.  Pairwise Identifier Mode
-     8.1.  Rationale for Canonical-Only
-     8.2.  Privacy Trade-Off
-     8.3.  Future Pairwise Composition
+   8.  Mission Identifier
    9.  Resumable Suspension Composition Extension
      9.1.  Hold Pattern
      9.2.  Resumption Discovery
@@ -117,7 +114,7 @@ Table of Contents
      12.5.  PS-Asserted Trust Confusion
      12.6.  Mission Status Enumeration
      12.7.  Sender Constraint and Proof of Possession
-     12.8.  Pairwise-Mode Privacy
+     12.8.  Cross-consumer correlation
      12.9.  Wire-Extension Risk
      12.10. Resumable Suspension Hold Risk
      12.11. Integrity Anchor Non-Guarantees
@@ -150,8 +147,7 @@ Table of Contents
    anchored Mission record with a Proposal/Mission split, typed
    Authority Set, integrity anchors over a structured Mission Intent, an
    authority set, a consent disclosure object, a richer lifecycle, a
-   principal model, a Mission Status interface, and a pairwise
-   identifier framework.
+   principal model, and a Mission Status interface.
 
    AAuth has already reached the conclusion that an approved task is a
    first-class governance object.  This profile does not deposition that
@@ -199,13 +195,6 @@ Table of Contents
 
    *  Integrity anchors over domain-separated, authorization-domain-
       bound envelopes.
-
-   *  The pairwise reference framework (substrate-optional per Resolved
-      Decision 17).
-
-   The Framework's pairwise reference framework is OPTIONAL with
-   substrate-declared support.  AAuth ships canonical-only initially per
-   Section 8.
 
    The Framework's Mission Status interface is abstract; profiles bind
    the wire format and protection mechanism.  This profile binds Mission
@@ -272,8 +261,8 @@ Table of Contents
       mission-endpoint response on approval.  AAuth's s256 digest is
       computed over those bytes.
 
-   *Governance Mission reference*:  The Framework's (id, origin) or
-      pairwise (ref, origin) Mission reference.
+   *Governance Mission reference*:  The Framework's (id, origin) Mission
+      reference.
 
    *Wire-preserving local mapping*:  A composition mapping a PS applies
       locally without changing any AAuth-defined parameter, header,
@@ -335,8 +324,7 @@ Table of Contents
 
    AAuth's native Mission reference is the tuple (approver, s256)
    carried in the AAuth-Mission header.  The Framework's governance
-   Mission reference is (id, origin) in canonical mode or (ref, origin)
-   in pairwise mode.
+   Mission reference is (id, origin).
 
    A composing PS MUST NOT treat the AAuth (approver, s256) tuple and
    the Framework (id, origin) tuple as interchangeable strings.  The PS
@@ -829,7 +817,7 @@ Table of Contents
      "exp": 1718380860,
      "mission_status": {
        "state": "active",
-       "mission_id_or_ref": { "id": "msn_01J9Z2..." },
+       "mission_id": "msn_01J9Z2...",
        "aauth_mission": {
          "approver": "https://ps.example.com",
          "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
@@ -908,62 +896,27 @@ Table of Contents
    state MAY continue to use AAuth's native permission endpoint without
    invoking Mission Status.
 
-8.  Pairwise Identifier Mode
+8.  Mission Identifier
 
-   Per Resolved Decision 17, the Framework's pairwise reference
-   framework is OPTIONAL with substrate-declared support.  This profile
-   declares that AAuth ships canonical-only initially.  A composing PS
-   emits mission.id (canonical) and MUST NOT emit mission.ref (pairwise)
-   on AAuth-substrate Missions in a baseline deployment.
+   Consistent with the Framework's canonical-only Mission identifier
+   model, this profile emits mission.id (canonical) on AAuth-substrate
+   Missions.  The AAuth-native Mission reference (the (approver, s256)
+   tuple) is itself canonical: it is the same value across every AAuth
+   consumer that sees the same Mission.
 
-8.1.  Rationale for Canonical-Only
+   Multiple Resources, Access Servers, and other AAuth consumers that
+   observe the same Mission can correlate activity through the AAuth-
+   native (approver, s256) tuple regardless of any governance-side
+   identifier choice; the canonical mission.id adds no correlation
+   surface beyond what the AAuth substrate already exposes.  Cross-
+   consumer user correlation (linking a user's activity across
+   resources) is addressed by the AAuth substrate's existing approver
+   privacy mechanisms, not by a governance-layer pairwise identifier.
 
-   AAuth's native Mission reference is itself canonical in form: the
-   (approver, s256) tuple uniquely identifies the approved mission blob
-   and is the same across every AAuth consumer that sees the same
-   Mission.  Introducing a pairwise governance reference on the
-   Framework side while leaving the AAuth-native reference canonical
-   would not improve correlation resistance against the AAuth-side
-   identifier (consumers can correlate via (approver, s256) regardless
-   of governance-side identifier choice).
-
-   A pairwise governance reference is therefore only useful if the
-   AAuth-native reference is also pairwise, which requires changes to
-   AAuth's own AAuth-Mission header semantics.  Those changes are out of
-   scope for this profile and would require AAuth WG coordination.
-
-8.2.  Privacy Trade-Off
-
-   The privacy trade-off of canonical-only on AAuth is:
-
-   *  Multiple Resources, Access Servers, and other AAuth consumers that
-      observe the same Mission can correlate activity through the AAuth-
-      native (approver, s256) tuple.  The native reference is the same
-      value across all consumers.
-
-   *  An honest-but-curious consumer can therefore link a user's
-      activity across resources within the lifetime of a single approved
-      Mission.
-
-   *  The AAuth-native reference is stable for the Mission lifetime;
-      rotation is not defined by AAuth -01.
-
-   Deployments that need stronger cross-consumer unlinkability for
-   AAuth-substrate Missions must adopt different mitigations than the
-   Framework's pairwise reference framework: shorter Mission lifetimes,
-   narrower Authority Sets that limit any single Mission's cross-
-   resource visibility, or per-resource separate Missions where the
-   user's consent supports that pattern.  These are deployment-level
-   mitigations; they are not new wire mechanisms in this profile.
-
-8.3.  Future Pairwise Composition
-
-   A future AAuth specification revision MAY define an AAuth-native
-   pairwise reference (a per-sector, per-consumer rotation of the AAuth-
-   Mission tuple).  If such a revision is adopted, a future revision of
-   this profile MAY compose the Framework's pairwise reference framework
-   with that AAuth-native pairwise reference and align the two.  Until
-   that AAuth-side work exists, this profile declares canonical-only.
+   Deployments that need stronger cross-consumer Mission-identity
+   isolation define a pairwise Mission identifier through a profile
+   extension to the Framework; such extensions are out of scope for this
+   profile.
 
 9.  Resumable Suspension Composition Extension
 
@@ -1108,9 +1061,6 @@ Table of Contents
       [I-D.draft-mcguinness-mission-expansion].  This profile defines
       only the AAuth-side eligibility-signaling wire extension.
 
-   *  The pairwise framework for AAuth: see Section 8 for why this
-      profile ships canonical-only.
-
    *  Unannounced changes to AAuth-defined parameters, headers, error
       codes, or endpoints.  This profile MUST NOT be read as authorizing
       silent AAuth-wire change.
@@ -1197,15 +1147,16 @@ Table of Contents
    governance does not introduce a parallel sender-constraint mechanism
    on AAuth.
 
-12.8.  Pairwise-Mode Privacy
+12.8.  Cross-consumer correlation
 
-   This profile declares canonical-only (Section 8).  The privacy trade-
-   off (correlation of a user's activity across AAuth consumers through
-   the native (approver, s256) tuple within the lifetime of a single
-   Mission) is documented in Section 8.  Deployments that cannot accept
-   that trade-off MUST select substrate-level mitigations (shorter
-   Mission lifetimes, narrower Authority Sets, per-resource separate
-   Missions) rather than inventing a non-coordinated pairwise scheme.
+   Multiple AAuth consumers observing the same Mission can correlate the
+   user's activity through the AAuth-native (approver, s256) tuple.
+   This is inherent to AAuth's native Mission reference and exists
+   independently of the Framework's mission.id.  Deployments that need
+   stronger cross-consumer unlinkability MUST select substrate-level
+   mitigations (shorter Mission lifetimes, narrower Authority Sets, per-
+   resource separate Missions) rather than expecting a governance-layer
+   identifier to provide isolation absent from the substrate.
 
 12.9.  Wire-Extension Risk
 

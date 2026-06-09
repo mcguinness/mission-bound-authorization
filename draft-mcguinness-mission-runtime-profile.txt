@@ -331,7 +331,7 @@ Table of Contents
 
    *  decision_id (string, required): unique decision identifier.
 
-   *  mission_id_or_ref, origin, authority_hash, policy_view_id: Mission
+   *  mission_id, origin, authority_hash, policy_view_id: Mission
       projection at decision time.
 
    *  actor, subject, resource, action, parameter_digest, audience: PDP

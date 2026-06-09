@@ -1225,16 +1225,13 @@ Cross-Domain Trust Agreement.<a href="#section-abstract-1" class="pilcrow">¶</a
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
                 <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-origin-resolution-trust" class="internal xref">Origin Resolution Trust</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
-                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-pairwise-sector-hygiene" class="internal xref">Pairwise Sector Hygiene</a></p>
-</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
             <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
-                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-cross-domain-mission-leak" class="internal xref">Cross-Domain Mission Leak</a></p>
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-cross-domain-mission-identi" class="internal xref">Cross-Domain Mission Identifier</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
                 <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-audience-confusion" class="internal xref">Audience Confusion</a></p>
@@ -1334,7 +1331,7 @@ Profile. It composes them.<a href="#section-1-4" class="pilcrow">¶</a></p>
 <li class="normal" id="section-1.1-1.1">
             <p id="section-1.1-1.1.1"><span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> (Framework) owns the
 Mission record, the Mission Status interface, the typed Authority
-Set, the canonical and pairwise identifier model, and the
+Set, the canonical <code>mission.id</code> identifier model, and the
 integrity anchors. This document references these without
 redefining them.<a href="#section-1.1-1.1.1" class="pilcrow">¶</a></p>
 </li>
@@ -1377,9 +1374,8 @@ appear in all capitals, as shown here.<a href="#section-1.2-1" class="pilcrow">�
 <ul class="normal">
 <li class="normal" id="section-1.2-3.1">
             <p id="section-1.2-3.1.1"><strong>Mission</strong>, <strong>Mission record</strong>, <strong>Mission Intent</strong>, <strong>Authority
-Set</strong>, <strong>Mission Status</strong>, <strong><code>mission.id</code></strong>, <strong><code>mission.ref</code></strong>,
-<strong><code>mission.origin</code></strong>, <strong><code>authority_hash</code></strong>, <strong>canonical mode</strong>,
-<strong>pairwise mode</strong>, <strong>pairwise sector</strong>: per
+Set</strong>, <strong>Mission Status</strong>, <strong><code>mission.id</code></strong>,
+<strong><code>mission.origin</code></strong>, <strong><code>authority_hash</code></strong>: per
 <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>.<a href="#section-1.2-3.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.2-3.2">
@@ -1407,7 +1403,7 @@ AS-B.<a href="#section-1.2-5.2.1" class="pilcrow">¶</a></p>
           <li class="normal" id="section-1.2-5.3">
             <p id="section-1.2-5.3.1"><strong>Cross-Domain Mission Status Consumer</strong>: a Receiving AS that has
 been pre-registered at the Transcribing AS's Mission Status
-endpoint with a bound pairwise sector, per the CDTA.<a href="#section-1.2-5.3.1" class="pilcrow">¶</a></p>
+endpoint per the CDTA.<a href="#section-1.2-5.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.2-5.4">
             <p id="section-1.2-5.4.1"><strong>Transcription Profile</strong>: a named, registered rule set governing
@@ -1465,47 +1461,28 @@ when producing a JWT Authorization Grant for AS-B.<a href="#section-3-1" class="
 }
 </pre><a href="#section-3.1-3" class="pilcrow">¶</a>
 </div>
-<p id="section-3.1-4">In pairwise mode:<a href="#section-3.1-4" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-3.1-5">
-<pre>
-{
-  "mission": {
-    "ref": "opq_partnerB_mW8Jx0qN9PfBdC4LqRy2Xg",
-    "origin": "https://as-a.example.com",
-    "authority_hash": "sha-256:fS8h4w7Z3Lq...",
-    "version": 1
-  }
-}
-</pre><a href="#section-3.1-5" class="pilcrow">¶</a>
-</div>
-<p id="section-3.1-6">The members carry the following meaning at the trust boundary:<a href="#section-3.1-6" class="pilcrow">¶</a></p>
+<p id="section-3.1-4">The members carry the following meaning at the trust boundary:<a href="#section-3.1-4" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-3.1-7.1">
-            <p id="section-3.1-7.1.1"><code>id</code> or <code>ref</code>: the Mission handle. The Transcribing AS <span class="bcp14">MUST</span> emit
-<code>ref</code> when its advertised pairwise sector applies to the AS-B
-audience. The Transcribing AS <span class="bcp14">MUST NOT</span> copy a pairwise reference
-minted for any other sector into <code>txn_claims.mission.ref</code>; it
-<span class="bcp14">MUST</span> mint a fresh reference for the AS-B sector per
-<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>. The Transcribing AS
-<span class="bcp14">MUST NOT</span> emit both <code>id</code> and <code>ref</code>.<a href="#section-3.1-7.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-3.1-5.1">
+            <p id="section-3.1-5.1.1"><code>id</code>: the canonical <code>mission.id</code> identifying the Mission handle.<a href="#section-3.1-5.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.1-7.2">
-            <p id="section-3.1-7.2.1"><code>origin</code>: the Transcribing AS's issuer URL. This is the resolution
+          <li class="normal" id="section-3.1-5.2">
+            <p id="section-3.1-5.2.1"><code>origin</code>: the Transcribing AS's issuer URL. This is the resolution
 anchor that AS-B uses to discover the Mission Status endpoint per
-<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>.<a href="#section-3.1-7.2.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>.<a href="#section-3.1-5.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.1-7.3">
-            <p id="section-3.1-7.3.1"><code>authority_hash</code>: the integrity anchor for the Authority Set the
-Mission record holds at the time of transcription.<a href="#section-3.1-7.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-3.1-5.3">
+            <p id="section-3.1-5.3.1"><code>authority_hash</code>: the integrity anchor for the Authority Set the
+Mission record holds at the time of transcription.<a href="#section-3.1-5.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.1-7.4">
-            <p id="section-3.1-7.4.1"><code>version</code>: the Mission record version used to produce this grant.<a href="#section-3.1-7.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-3.1-5.4">
+            <p id="section-3.1-5.4.1"><code>version</code>: the Mission record version used to produce this grant.<a href="#section-3.1-5.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-3.1-8"><code>txn_claims.mission</code> is a copy of the Mission reference captured by
+<p id="section-3.1-6"><code>txn_claims.mission</code> is a copy of the Mission reference captured by
 AS-A at the moment of transcription. It is not a claim AS-B can
 forge a Mission state from. AS-B <span class="bcp14">MUST</span> validate Mission state by
-reach-back (see <a href="#validation" class="auto internal xref">Section 5</a>).<a href="#section-3.1-8" class="pilcrow">¶</a></p>
+reach-back (see <a href="#validation" class="auto internal xref">Section 5</a>).<a href="#section-3.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="audience-filtered-authority-set">
@@ -1600,7 +1577,7 @@ optional claims omitted):<a href="#section-4-1" class="pilcrow">¶</a></p>
     "transcription_profile":
       "urn:mbo:txn-chain:transcription:default-v1",
     "mission": {
-      "ref": "opq_partnerB_mW8Jx0qN9PfBdC4LqRy2Xg",
+      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "origin": "https://as-a.example.com",
       "authority_hash": "sha-256:fS8h4w7Z3Lq...",
       "version": 1
@@ -1674,10 +1651,9 @@ consumed within the configured replay window.<a href="#section-5.2-1" class="pil
 through <code>txn_claims.mission.origin</code> per
 <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> and
 <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>. The query <span class="bcp14">MUST</span> use
-the Mission reference carried in <code>txn_claims.mission</code> (either <code>id</code>
-in canonical mode or <code>ref</code> in pairwise mode) and <span class="bcp14">MUST</span> be
-authenticated as the Cross-Domain Mission Status Consumer
-pre-registered for the Receiving AS's audience-sector.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+the canonical <code>mission.id</code> carried in <code>txn_claims.mission.id</code> and
+<span class="bcp14">MUST</span> be authenticated as the Cross-Domain Mission Status Consumer
+pre-registered at the Transcribing AS.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
 <p id="section-5.3-2">The Receiving AS <span class="bcp14">MUST</span> require all of the following from the Mission
 Status response to issue a partner-domain access token:<a href="#section-5.3-2" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-5.3-3">
@@ -1774,8 +1750,8 @@ CDTA with three additional concerns.<a href="#section-6-1" class="pilcrow">¶</a
 <a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-mission-status-consumer-pre" class="section-name selfRef">Mission Status Consumer Pre-Registration</a>
         </h3>
 <p id="section-6.1-1">The CDTA <span class="bcp14">MUST</span> establish AS-B as a Cross-Domain Mission Status
-Consumer at AS-A's Mission Status endpoint with a bound pairwise
-sector. Pre-registration covers:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+Consumer at AS-A's Mission Status endpoint. Pre-registration
+covers:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-6.1-2.1">
             <p id="section-6.1-2.1.1">AS-B's client credentials at AS-A's Mission Status endpoint
@@ -1783,18 +1759,13 @@ sector. Pre-registration covers:<a href="#section-6.1-1" class="pilcrow">¶</a><
 applicable OAuth Profile authentication options).<a href="#section-6.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.1-2.2">
-            <p id="section-6.1-2.2.1">The pairwise sector AS-A applies when minting
-<code>txn_claims.mission.ref</code> for AS-B and the sector AS-A serves on
-Mission Status responses to AS-B.<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-6.1-2.3">
-            <p id="section-6.1-2.3.1">The maximum tolerated staleness AS-B will accept on responses
-from AS-A.<a href="#section-6.1-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-6.1-2.2.1">The maximum tolerated staleness AS-B will accept on responses
+from AS-A.<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-6.1-3">Without pre-registration, AS-A's Mission Status endpoint <span class="bcp14">MUST</span>
-refuse the reach-back as an unauthorized reference, indistinguishable
-from an unknown reference per
+refuse the reach-back as an unauthorized reference,
+indistinguishable from an unknown reference per
 <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1812,17 +1783,6 @@ grant's <code>iss</code> is a CDTA partner. This prevents a compromised or
 misconfigured AS-A from redirecting Mission Status to an attacker.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="pairwise-sector-hygiene">
-<section id="section-6.3">
-        <h3 id="name-pairwise-sector-hygiene">
-<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-pairwise-sector-hygiene" class="section-name selfRef">Pairwise Sector Hygiene</a>
-        </h3>
-<p id="section-6.3-1">The pairwise sector AS-A applies to AS-B <span class="bcp14">MUST</span> be distinct from
-sectors AS-A applies to any other partner AS, Resource Server, or
-audience. Cross-sector reuse defeats the unlinkability the Mission
-Framework's pairwise identifier model provides.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
-</section>
-</div>
 </section>
 </div>
 <div id="security-considerations">
@@ -1830,23 +1790,22 @@ Framework's pairwise identifier model provides.<a href="#section-6.3-1" class="p
       <h2 id="name-security-considerations">
 <a href="#section-7" class="section-number selfRef">7. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
       </h2>
-<div id="cross-domain-mission-leak">
+<div id="cross-domain-mission-identifier">
 <section id="section-7.1">
-        <h3 id="name-cross-domain-mission-leak">
-<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-cross-domain-mission-leak" class="section-name selfRef">Cross-Domain Mission Leak</a>
+        <h3 id="name-cross-domain-mission-identi">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-cross-domain-mission-identi" class="section-name selfRef">Cross-Domain Mission Identifier</a>
         </h3>
-<p id="section-7.1-1">Mission references are correlatable identifiers across artifacts
-derived from the same Mission record. A canonical <code>mission.id</code>
-emitted into <code>txn_claims.mission</code> reaches AS-B in plaintext within
-the signed grant. Deployments <span class="bcp14">SHOULD</span> prefer pairwise mode for
-cross-domain transcription, scoped to the Receiving AS's sector,
-so that AS-B holds a partner-specific reference that does not
-correlate with references the same Mission emits to other partners
-or to Resource Servers.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
-<p id="section-7.1-2">A Transcribing AS that emits canonical <code>mission.id</code> into
-<code>txn_claims.mission</code> <span class="bcp14">MUST</span> treat the grant payload as carrying
-correlation-class data and <span class="bcp14">SHOULD</span> restrict it through CDTA terms
-rather than through wire confidentiality alone.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
+<p id="section-7.1-1">The canonical <code>mission.id</code> emitted into <code>txn_claims.mission</code>
+reaches AS-B in plaintext within the signed grant. AS-B observes
+the same <code>mission.id</code> that AS-A's other partners observe; cross-
+partner correlation via Mission identifier is possible by design,
+consistent with the Framework's canonical-only identifier model.
+Deployments where cross-partner correlation matters compose with
+a profile extension to the Framework defining a pairwise Mission
+identifier; such extensions are out of scope.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.1-2">A Transcribing AS <span class="bcp14">MUST</span> treat the grant payload as carrying
+correlation-class data and <span class="bcp14">SHOULD</span> restrict its distribution
+through CDTA terms rather than through wire confidentiality alone.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="audience-confusion">
@@ -1854,14 +1813,9 @@ rather than through wire confidentiality alone.<a href="#section-7.1-2" class="p
         <h3 id="name-audience-confusion">
 <a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-audience-confusion" class="section-name selfRef">Audience Confusion</a>
         </h3>
-<p id="section-7.2-1">The composition relies on three audience signals that <span class="bcp14">MUST</span> agree:
-top-level <code>aud</code>, the Receiving AS's audience-sector at the
-Transcribing AS, and the partner identity in the CDTA. A
-mismatch among these signals <span class="bcp14">MUST</span> cause the grant to be refused.
-Specifically, a grant whose <code>aud</code> names AS-B but whose
-<code>txn_claims.mission.ref</code> was minted for a different sector
-indicates either a malicious replay or a Transcribing AS
-implementation defect; either way, the Receiving AS <span class="bcp14">MUST</span> refuse.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.2-1">The composition relies on two audience signals that <span class="bcp14">MUST</span> agree:
+top-level <code>aud</code> and the partner identity in the CDTA. A mismatch
+between these signals <span class="bcp14">MUST</span> cause the grant to be refused.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="replay">
@@ -1940,9 +1894,8 @@ are documented descriptively in this document.<a href="#section-8.1-1" class="pi
 <li class="normal" id="section-8.1-2.1">
             <p id="section-8.1-2.1.1"><code>mission</code>: object carrying the Mission reference per
 <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>. Members: <code>id</code>
-(string, canonical mode), <code>ref</code> (string, pairwise mode), <code>origin</code>
-(URL), <code>authority_hash</code> (string), <code>version</code> (integer). <code>id</code> and
-<code>ref</code> are mutually exclusive.<a href="#section-8.1-2.1.1" class="pilcrow">¶</a></p>
+(string, canonical <code>mission.id</code>), <code>origin</code> (URL),
+<code>authority_hash</code> (string), <code>version</code> (integer).<a href="#section-8.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-8.1-2.2">
             <p id="section-8.1-2.2.1"><code>mission_resource_access</code>: array of audience-filtered Authority

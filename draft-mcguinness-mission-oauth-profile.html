@@ -1261,19 +1261,13 @@ PAR, RFC 8693 Token Exchange, RFC 9449 DPoP, RFC 8705 mTLS, and RFC
                 <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-mission-claim-schema" class="internal xref"><code>mission</code> claim schema</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
-                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-canonical-mode" class="internal xref">Canonical mode</a></p>
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-example-claim" class="internal xref">Example claim</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
-                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-pairwise-mode" class="internal xref">Pairwise mode</a></p>
+                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-refresh-and-exchange-contin" class="internal xref">Refresh and exchange continuity</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.4">
-                <p id="section-toc.1-1.7.2.4.1"><a href="#section-7.4" class="auto internal xref">7.4</a>.  <a href="#name-mode-selection" class="internal xref">Mode selection</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.5">
-                <p id="section-toc.1-1.7.2.5.1"><a href="#section-7.5" class="auto internal xref">7.5</a>.  <a href="#name-refresh-and-exchange-contin" class="internal xref">Refresh and exchange continuity</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.6">
-                <p id="section-toc.1-1.7.2.6.1"><a href="#section-7.6" class="auto internal xref">7.6</a>.  <a href="#name-opaque-access-tokens" class="internal xref">Opaque access tokens</a></p>
+                <p id="section-toc.1-1.7.2.4.1"><a href="#section-7.4" class="auto internal xref">7.4</a>.  <a href="#name-opaque-access-tokens" class="internal xref">Opaque access tokens</a></p>
 </li>
             </ul>
 </li>
@@ -1566,8 +1560,7 @@ and its PAR-only submission rule.<a href="#section-1.2-4" class="pilcrow">¶</a>
 <p id="section-1.2-6"><a href="#authority-set-entry-type-mission-resource-access" class="auto internal xref">Section 6</a> defines the
 <code>mission_resource_access</code> Authority Set entry type with its JSON
 Schema and default narrowing rules.<a href="#section-1.2-6" class="pilcrow">¶</a></p>
-<p id="section-1.2-7"><a href="#the-mission-claim" class="auto internal xref">Section 7</a> defines the <code>mission</code> JWT claim, including
-canonical and pairwise modes.<a href="#section-1.2-7" class="pilcrow">¶</a></p>
+<p id="section-1.2-7"><a href="#the-mission-claim" class="auto internal xref">Section 7</a> defines the <code>mission</code> JWT claim.<a href="#section-1.2-7" class="pilcrow">¶</a></p>
 <p id="section-1.2-8"><a href="#mission-record-at-the-as" class="auto internal xref">Section 10</a> describes the AS's role as state
 authority and its Mission record.<a href="#section-1.2-8" class="pilcrow">¶</a></p>
 <p id="section-1.2-9"><a href="#lifecycle-gating" class="auto internal xref">Section 11</a> defines which credential-derivation operations
@@ -1689,7 +1682,7 @@ cross-AS topology (<span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</spa
 <strong>Mission-bound refresh token</strong>:</dt>
           <dd style="margin-left: 1.5em" id="section-2.2-2.10">
             <p id="section-2.2-2.10.1">A refresh token issued by the AS under this profile, bound to a
-specific Mission (see <a href="#refresh-token-binding" class="auto internal xref">Section 7.5</a>).<a href="#section-2.2-2.10.1" class="pilcrow">¶</a></p>
+specific Mission (see <a href="#refresh-token-binding" class="auto internal xref">Section 7.3</a>).<a href="#section-2.2-2.10.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-2.2-2.11">
@@ -2256,15 +2249,10 @@ credential was derived under.<a href="#section-7-1" class="pilcrow">¶</a></p>
   "$id": "urn:mbo:schema:oauth-mission-claim:1",
   "title": "OAuth mission claim",
   "type": "object",
-  "required": ["origin", "authority_hash", "version"],
-  "oneOf": [
-    { "required": ["id"] },
-    { "required": ["ref"] }
-  ],
+  "required": ["id", "origin", "authority_hash", "version"],
   "additionalProperties": false,
   "properties": {
     "id":     { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,256}$" },
-    "ref":    { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,256}$" },
     "origin": { "type": "string", "format": "uri" },
     "authority_hash": {
       "type": "string",
@@ -2278,42 +2266,33 @@ credential was derived under.<a href="#section-7-1" class="pilcrow">¶</a></p>
 <p id="section-7.1-3">Members:<a href="#section-7.1-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7.1-4.1">
-            <p id="section-7.1-4.1.1"><code>id</code> (string, required in canonical mode, mutually exclusive
-with <code>ref</code>): canonical <code>mission.id</code> per the Framework.<a href="#section-7.1-4.1.1" class="pilcrow">¶</a></p>
+            <p id="section-7.1-4.1.1"><code>id</code> (string, required): canonical <code>mission.id</code> per the Framework.<a href="#section-7.1-4.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.1-4.2">
-            <p id="section-7.1-4.2.1"><code>ref</code> (string, required in pairwise mode, mutually exclusive
-with <code>id</code>): the audience-sector pairwise Mission Reference per
-the Framework.<a href="#section-7.1-4.2.1" class="pilcrow">¶</a></p>
+            <p id="section-7.1-4.2.1"><code>origin</code> (string, required, URI format): the AS issuer URL.
+Equal to <code>mission.origin</code>. Consumers resolve via
+<code>{origin}/.well-known/mission-authority</code> per <span>[<a href="#RFC8615" class="cite xref">RFC8615</a>]</span>.<a href="#section-7.1-4.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.1-4.3">
-            <p id="section-7.1-4.3.1"><code>origin</code> (string, required, URI format): the AS issuer URL.
-Equal to <code>mission.origin</code>. Consumers resolve via
-<code>{origin}/.well-known/mission-authority</code> per <span>[<a href="#RFC8615" class="cite xref">RFC8615</a>]</span>.<a href="#section-7.1-4.3.1" class="pilcrow">¶</a></p>
+            <p id="section-7.1-4.3.1"><code>authority_hash</code> (string, required): the integrity anchor for
+the Authority Set from which this credential was derived. Format
+per the Framework's integrity-anchor encoded form.<a href="#section-7.1-4.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.1-4.4">
-            <p id="section-7.1-4.4.1"><code>authority_hash</code> (string, required): the integrity anchor for
-the Authority Set from which this credential was derived. Format
-per the Framework's integrity-anchor encoded form.<a href="#section-7.1-4.4.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-7.1-4.5">
-            <p id="section-7.1-4.5.1"><code>version</code> (integer, required, minimum 1): Mission record version
+            <p id="section-7.1-4.4.1"><code>version</code> (integer, required, minimum 1): Mission record version
 at issuance. Increments on each AS-recorded state change to the
 Mission record's content; used by consumers to detect stale
-evidence.<a href="#section-7.1-4.5.1" class="pilcrow">¶</a></p>
+evidence.<a href="#section-7.1-4.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-7.1-5">The AS <span class="bcp14">MUST</span> emit exactly one of <code>id</code> or <code>ref</code>; both <span class="bcp14">MUST NOT</span>
-appear in the same claim.<a href="#section-7.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="mission-claim-canonical-mode">
+<div id="mission-claim-example">
 <section id="section-7.2">
-        <h3 id="name-canonical-mode">
-<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-canonical-mode" class="section-name selfRef">Canonical mode</a>
+        <h3 id="name-example-claim">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-example-claim" class="section-name selfRef">Example claim</a>
         </h3>
-<p id="section-7.2-1">When the audience consumes canonical identifiers, the claim is:<a href="#section-7.2-1" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-7.2-2">
+<div class="lang-json sourcecode" id="section-7.2-1">
 <pre>
 {
   "mission": {
@@ -2324,72 +2303,36 @@ appear in the same claim.<a href="#section-7.1-5" class="pilcrow">¶</a></p>
     "version": 1
   }
 }
-</pre><a href="#section-7.2-2" class="pilcrow">¶</a>
+</pre><a href="#section-7.2-1" class="pilcrow">¶</a>
 </div>
-</section>
-</div>
-<div id="mission-claim-pairwise-mode">
-<section id="section-7.3">
-        <h3 id="name-pairwise-mode">
-<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-pairwise-mode" class="section-name selfRef">Pairwise mode</a>
-        </h3>
-<p id="section-7.3-1">When the AS emits pairwise references for this audience-sector, the
-claim is:<a href="#section-7.3-1" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-7.3-2">
-<pre>
-{
-  "mission": {
-    "ref": "mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
-    "origin": "https://as.example.com",
-    "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-    "version": 1
-  }
-}
-</pre><a href="#section-7.3-2" class="pilcrow">¶</a>
-</div>
-</section>
-</div>
-<div id="mode-selection">
-<section id="section-7.4">
-        <h3 id="name-mode-selection">
-<a href="#section-7.4" class="section-number selfRef">7.4. </a><a href="#name-mode-selection" class="section-name selfRef">Mode selection</a>
-        </h3>
-<p id="section-7.4-1">The AS selects mode per audience-sector advertised in its metadata
-document. The token audience determines which sector applies and
-therefore which mode. The AS <span class="bcp14">MUST NOT</span> vary mode for the same
-(Mission, audience) pair within a sector for the Mission's
-lifetime, except via pairwise reference rotation per the Framework.<a href="#section-7.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="refresh-token-binding">
-<section id="section-7.5">
+<section id="section-7.3">
         <h3 id="name-refresh-and-exchange-contin">
-<a href="#section-7.5" class="section-number selfRef">7.5. </a><a href="#name-refresh-and-exchange-contin" class="section-name selfRef">Refresh and exchange continuity</a>
+<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-refresh-and-exchange-contin" class="section-name selfRef">Refresh and exchange continuity</a>
         </h3>
-<p id="section-7.5-1">A Mission-bound refresh token is bound to the Mission whose <code>id</code> or
-<code>ref</code> appears in the refresh token's <code>mission</code> claim (when the
-refresh token is a JWT) or in the AS's per-token state (when the
-refresh token is opaque). The AS <span class="bcp14">MUST</span> refuse a refresh-token
-rotation when the bound Mission's state is not <code>active</code>.<a href="#section-7.5-1" class="pilcrow">¶</a></p>
-<p id="section-7.5-2">When refresh produces a new credential for the same audience and
-sector, the AS <span class="bcp14">MUST</span> preserve the chosen mode and the chosen
-reference (pairwise references are stable within sector). When
-Token Exchange <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> produces a credential for a different
-audience, the AS mints the reference appropriate to the target
-audience's sector. The AS <span class="bcp14">MUST NOT</span> copy an upstream pairwise
-reference into a different sector.<a href="#section-7.5-2" class="pilcrow">¶</a></p>
+<p id="section-7.3-1">A Mission-bound refresh token is bound to the Mission whose <code>id</code>
+appears in the refresh token's <code>mission</code> claim (when the refresh
+token is a JWT) or in the AS's per-token state (when the refresh
+token is opaque). The AS <span class="bcp14">MUST</span> refuse a refresh-token rotation when
+the bound Mission's state is not <code>active</code>.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+<p id="section-7.3-2">When refresh produces a new credential the AS preserves the
+Mission identity in the new credential's <code>mission</code> claim. Token
+Exchange <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> producing a credential for a different
+audience preserves the same <code>mission.id</code> in the new credential's
+claim; the Mission is the same, only the audience differs.<a href="#section-7.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="opaque-access-tokens">
-<section id="section-7.6">
+<section id="section-7.4">
         <h3 id="name-opaque-access-tokens">
-<a href="#section-7.6" class="section-number selfRef">7.6. </a><a href="#name-opaque-access-tokens" class="section-name selfRef">Opaque access tokens</a>
+<a href="#section-7.4" class="section-number selfRef">7.4. </a><a href="#name-opaque-access-tokens" class="section-name selfRef">Opaque access tokens</a>
         </h3>
-<p id="section-7.6-1">Opaque access tokens carry the <code>mission</code> claim only through the
+<p id="section-7.4-1">Opaque access tokens carry the <code>mission</code> claim only through the
 token introspection extension (<a href="#token-introspection-mission-projection" class="auto internal xref">Section 12.2</a>).
 The opaque token itself is not parseable by Resource Servers; RSes
-that need <code>mission</code> <span class="bcp14">MUST</span> introspect.<a href="#section-7.6-1" class="pilcrow">¶</a></p>
+that need <code>mission</code> <span class="bcp14">MUST</span> introspect.<a href="#section-7.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2529,11 +2472,10 @@ Cache-Control: no-store
 </pre><a href="#section-9-5" class="pilcrow">¶</a>
 </div>
 <p id="section-9-6">The new access token carries the <code>mission</code> claim referencing the
-same Mission as the <code>subject_token</code>. If the new audience is in a
-different pairwise sector, the AS uses that sector's <code>mission.ref</code>;
-if the new audience is in the same sector or consumes canonical
-identifiers, the AS preserves the upstream form per
-<a href="#refresh-token-binding" class="auto internal xref">Section 7.5</a>.<a href="#section-9-6" class="pilcrow">¶</a></p>
+same Mission as the <code>subject_token</code>, with the same <code>mission.id</code>.
+Only the OAuth audience (<code>aud</code> claim) and the substrate-level
+authority projection differ; the Mission identity is preserved
+across the exchange.<a href="#section-9-6" class="pilcrow">¶</a></p>
 <p id="section-9-7">If the Mission's state at exchange time is not <code>active</code>, the AS
 <span class="bcp14">MUST</span> refuse the exchange with the <code>mission_inactive</code> error response
 defined in <a href="#lifecycle-gating" class="auto internal xref">Section 11</a>.<a href="#section-9-7" class="pilcrow">¶</a></p>
@@ -2672,8 +2614,7 @@ document. The endpoint <span class="bcp14">MUST</span> be served over TLS 1.2 or
 <code>application/x-www-form-urlencoded</code> body containing:<a href="#section-12.1.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-12.1.1-2.1">
-              <p id="section-12.1.1-2.1.1"><code>mission</code> (string, required): the Mission reference. Either a
-canonical <code>mission.id</code> or a pairwise <code>mission.ref</code>.<a href="#section-12.1.1-2.1.1" class="pilcrow">¶</a></p>
+              <p id="section-12.1.1-2.1.1"><code>mission</code> (string, required): the canonical <code>mission.id</code>.<a href="#section-12.1.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-12.1.1-2.2">
               <p id="section-12.1.1-2.2.1"><code>audience</code> (string, required): the audience identifier of the
@@ -2736,7 +2677,7 @@ Content-Type: application/x-www-form-urlencoded
 Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2IiwiandrIjp7...
 
-mission=mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w
+mission=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 &amp;audience=https%3A%2F%2Ferp.example.com
 &amp;nonce=nonce_K9pV4nT2sR7mB1xQ
 </pre><a href="#section-12.1.3-1" class="pilcrow">¶</a>
@@ -2787,7 +2728,7 @@ Mission Status Response object):<a href="#section-12.1.4-6" class="pilcrow">¶</
   "iat": 1797840000,
   "exp": 1797840060,
   "mission": {
-    "ref": "mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com"
   },
   "state": "active",
@@ -3017,7 +2958,7 @@ token=eyJhbGciOiJFUzI1NiIsImtpZCI6...
   "sub":     "user_3p2q8mN1a0kV7tR",
   "scope":   "openid",
   "mission": {
-    "ref": "mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
@@ -3037,10 +2978,9 @@ use them up to <code>expires_at</code> per the caching rule of
 <a href="#mission-status-caching" class="auto internal xref">Section 12.1.5</a>.<a href="#section-12.2-7" class="pilcrow">¶</a></p>
 <p id="section-12.2-8">The introspection projection is an OPTIMIZATION for consumers
 that already query by token. It does NOT replace the dedicated
-Mission Status operation. Consumers needing by-mission-reference
-lookups, audience-pairwise resolution, or signed evidence
-independent of a specific token <span class="bcp14">MUST</span> use the dedicated
-operation.<a href="#section-12.2-8" class="pilcrow">¶</a></p>
+Mission Status operation. Consumers needing by-mission-id lookups
+or signed evidence independent of a specific token <span class="bcp14">MUST</span> use the
+dedicated operation.<a href="#section-12.2-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3062,8 +3002,7 @@ operation.<a href="#section-12.2-8" class="pilcrow">¶</a></p>
 body:<a href="#section-13.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-13.1-2.1">
-            <p id="section-13.1-2.1.1"><code>mission</code> (string, required): the Mission reference (canonical
-<code>mission.id</code> or pairwise <code>mission.ref</code>).<a href="#section-13.1-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-13.1-2.1.1"><code>mission</code> (string, required): the canonical <code>mission.id</code>.<a href="#section-13.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.1-2.2">
             <p id="section-13.1-2.2.1"><code>operation</code> (string, required): one of <code>revoke</code>, <code>suspend</code>,
@@ -3147,7 +3086,7 @@ Content-Type: application/x-www-form-urlencoded
 Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2IiwiandrIjp7...
 
-mission=mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w
+mission=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 &amp;operation=revoke
 &amp;reason=Quarterly+reconcile+completed+early
 &amp;nonce=nonce_8Y3vN0sM6tP1xR9bQ5
@@ -3176,7 +3115,7 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIiwidHlwIjoi...
   "iat": 1797843200,
   "exp": 1797843260,
   "mission": {
-    "ref": "mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com"
   },
   "state": "revoked",
@@ -3359,35 +3298,26 @@ required): same value space as
 Authority Set entry types this AS issues.<a href="#section-16.1-1.7.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-16.1-1.8">
-            <p id="section-16.1-1.8.1"><code>mission_pairwise_supported</code> (boolean, required): whether the AS
-emits pairwise references.<a href="#section-16.1-1.8.1" class="pilcrow">¶</a></p>
+            <p id="section-16.1-1.8.1"><code>mission_enforcement_classes_supported</code> (array of strings,
+required): one or more of <code>issuance</code>, <code>introspection</code>,
+<code>event_driven</code>, <code>per_request</code>.<a href="#section-16.1-1.8.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-16.1-1.9">
-            <p id="section-16.1-1.9.1"><code>mission_pairwise_sector</code> (string, conditional, required if
-<code>mission_pairwise_supported</code> is <code>true</code>): sector type, one of
-<code>resource_server</code>, <code>resource_as</code>, <code>tenant</code>, <code>trust_domain</code>.<a href="#section-16.1-1.9.1" class="pilcrow">¶</a></p>
+            <p id="section-16.1-1.9.1"><code>mission_max_stale_seconds</code> (integer, required): maximum
+tolerated stale interval for revocation propagation.<a href="#section-16.1-1.9.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-16.1-1.10">
-            <p id="section-16.1-1.10.1"><code>mission_enforcement_classes_supported</code> (array of strings,
-required): one or more of <code>issuance</code>, <code>introspection</code>,
-<code>event_driven</code>, <code>per_request</code>.<a href="#section-16.1-1.10.1" class="pilcrow">¶</a></p>
+            <p id="section-16.1-1.10.1"><code>mission_sender_constraints_supported</code> (array of strings,
+required): one or both of <code>dpop</code>, <code>mtls</code>.<a href="#section-16.1-1.10.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-16.1-1.11">
-            <p id="section-16.1-1.11.1"><code>mission_max_stale_seconds</code> (integer, required): maximum
-tolerated stale interval for revocation propagation.<a href="#section-16.1-1.11.1" class="pilcrow">¶</a></p>
+            <p id="section-16.1-1.11.1"><code>mission_framework_versions_supported</code> (array of strings,
+required): spec revisions of the Framework this AS supports.<a href="#section-16.1-1.11.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-16.1-1.12">
-            <p id="section-16.1-1.12.1"><code>mission_sender_constraints_supported</code> (array of strings,
-required): one or both of <code>dpop</code>, <code>mtls</code>.<a href="#section-16.1-1.12.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-16.1-1.13">
-            <p id="section-16.1-1.13.1"><code>mission_framework_versions_supported</code> (array of strings,
-required): spec revisions of the Framework this AS supports.<a href="#section-16.1-1.13.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-16.1-1.14">
-            <p id="section-16.1-1.14.1"><code>mission_purposes_supported</code> (array of strings, optional):
+            <p id="section-16.1-1.12.1"><code>mission_purposes_supported</code> (array of strings, optional):
 deployment-registered <code>purpose</code> URIs the AS accepts in Mission
-Intents.<a href="#section-16.1-1.14.1" class="pilcrow">¶</a></p>
+Intents.<a href="#section-16.1-1.12.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -3444,8 +3374,6 @@ Cache-Control: max-age=3600
     "mtls", "private_key_jwt"
   ],
   "authority_set_types_supported": ["mission_resource_access"],
-  "mission_pairwise_supported": true,
-  "mission_pairwise_sector": "resource_server",
   "mission_enforcement_classes_supported": [
     "issuance", "introspection"
   ],
@@ -3766,21 +3694,25 @@ binding. Privacy considerations for the Mission Framework
         <h3 id="name-mission-identifier-exposure">
 <a href="#section-19.1" class="section-number selfRef">19.1. </a><a href="#name-mission-identifier-exposure" class="section-name selfRef">Mission identifier exposure in tokens</a>
         </h3>
-<p id="section-19.1-1">Access tokens issued under this profile carry the <code>mission</code> claim,
-which contains either canonical <code>mission.id</code> or pairwise
-<code>mission.ref</code>. Resource Servers and other audiences that observe
-the access token observe the Mission reference.<a href="#section-19.1-1" class="pilcrow">¶</a></p>
-<p id="section-19.1-2">Deployments using canonical <code>mission.id</code> accept that any audience
-seeing two access tokens with the same <code>mission.id</code> can correlate
-them as referring to the same Mission. This is appropriate when
-the audience is intended to consume canonical identifiers
-(audit consumers, administrator dashboards) and inappropriate
-when the audience is a Resource Server that should not correlate
-across Missions of the same user.<a href="#section-19.1-2" class="pilcrow">¶</a></p>
-<p id="section-19.1-3">Deployments where audience-side correlation matters <span class="bcp14">MUST</span> use
-pairwise mode and select an appropriate sector
-(see the Pairwise Mission Reference section of
-<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>).<a href="#section-19.1-3" class="pilcrow">¶</a></p>
+<p id="section-19.1-1">Access tokens issued under this profile carry the <code>mission</code> claim
+containing the canonical <code>mission.id</code>. Resource Servers and other
+audiences that observe the access token observe the same
+<code>mission.id</code>. Audiences participating in the same Mission can
+observe that they share a Mission; this is inherent to the
+Mission's role as a governance handle and is consented to at
+approval time.<a href="#section-19.1-1" class="pilcrow">¶</a></p>
+<p id="section-19.1-2">User-level correlation across audiences (a Resource Server
+linking activity across Missions of the same user) is independent
+of the Mission identifier and addressed by OIDC pairwise <code>sub</code>.
+Deployments where user-level cross-audience correlation matters
+<span class="bcp14">MUST</span> configure pairwise <code>sub</code> claims at the AS. The <code>mission.id</code>
+does not encode subject identity and does not undo <code>sub</code>-level
+pairwise isolation.<a href="#section-19.1-2" class="pilcrow">¶</a></p>
+<p id="section-19.1-3">Deployments with stronger Mission-identity isolation requirements
+(an unusual case typically arising in multi-tenant SaaS state
+authorities serving competing tenants) define a pairwise Mission
+identifier through a profile extension to the Mission Framework;
+such extensions are out of scope for this profile.<a href="#section-19.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="refresh-token-contents">
@@ -4013,25 +3945,19 @@ Authorization Server Metadata registry. For each registration:<a href="#section-
             <p id="section-20.5-4.7.1"><code>authority_set_types_supported</code><a href="#section-20.5-4.7.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-20.5-4.8">
-            <p id="section-20.5-4.8.1"><code>mission_pairwise_supported</code><a href="#section-20.5-4.8.1" class="pilcrow">¶</a></p>
+            <p id="section-20.5-4.8.1"><code>mission_enforcement_classes_supported</code><a href="#section-20.5-4.8.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-20.5-4.9">
-            <p id="section-20.5-4.9.1"><code>mission_pairwise_sector</code><a href="#section-20.5-4.9.1" class="pilcrow">¶</a></p>
+            <p id="section-20.5-4.9.1"><code>mission_max_stale_seconds</code><a href="#section-20.5-4.9.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-20.5-4.10">
-            <p id="section-20.5-4.10.1"><code>mission_enforcement_classes_supported</code><a href="#section-20.5-4.10.1" class="pilcrow">¶</a></p>
+            <p id="section-20.5-4.10.1"><code>mission_sender_constraints_supported</code><a href="#section-20.5-4.10.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-20.5-4.11">
-            <p id="section-20.5-4.11.1"><code>mission_max_stale_seconds</code><a href="#section-20.5-4.11.1" class="pilcrow">¶</a></p>
+            <p id="section-20.5-4.11.1"><code>mission_framework_versions_supported</code><a href="#section-20.5-4.11.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-20.5-4.12">
-            <p id="section-20.5-4.12.1"><code>mission_sender_constraints_supported</code><a href="#section-20.5-4.12.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-20.5-4.13">
-            <p id="section-20.5-4.13.1"><code>mission_framework_versions_supported</code><a href="#section-20.5-4.13.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-20.5-4.14">
-            <p id="section-20.5-4.14.1"><code>mission_purposes_supported</code><a href="#section-20.5-4.14.1" class="pilcrow">¶</a></p>
+            <p id="section-20.5-4.12.1"><code>mission_purposes_supported</code><a href="#section-20.5-4.12.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>

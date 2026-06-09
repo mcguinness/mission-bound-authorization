@@ -13,7 +13,7 @@ the abstract types, interfaces, and behaviors that profile
 specifications map onto specific substrates: Mission Proposal and
 Mission lifecycles, the Mission Intent JSON schema, typed Authority
 Set, integrity anchors with domain-separated hash inputs, a canonical
-and pairwise identifier model, common constraints framework, Mission
+Mission identifier model, common constraints framework, Mission
 Status interface, principal model, and evidence binding. The
 framework is substrate-neutral
 on semantics; profile specifications for OAuth, AAuth, and the Mission
@@ -1101,7 +1101,7 @@ the abstract types, interfaces, and behaviors that profile
 specifications map onto specific substrates: Mission Proposal and
 Mission lifecycles, the Mission Intent JSON schema, typed Authority
 Set, integrity anchors with domain-separated hash inputs, a canonical
-and pairwise identifier model, common constraints framework, Mission
+Mission identifier model, common constraints framework, Mission
 Status interface, principal model, and evidence binding. The
 framework is substrate-neutral
 on semantics; profile specifications for OAuth, AAuth, and the Mission
@@ -1395,31 +1395,9 @@ substrates and pick the concrete protection mechanism.<a href="#section-abstract
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
                 <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-canonical-mission-id" class="internal xref">Canonical Mission ID</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1.2.1">
-                    <p id="section-toc.1-1.7.2.1.2.1.1"><a href="#section-7.1.1" class="auto internal xref">7.1.1</a>.  <a href="#name-missionorigin" class="internal xref"><code>mission.origin</code></a></p>
-</li>
-                </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
-                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-pairwise-mission-reference" class="internal xref">Pairwise Mission Reference</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2.2.1">
-                    <p id="section-toc.1-1.7.2.2.2.1.1"><a href="#section-7.2.1" class="auto internal xref">7.2.1</a>.  <a href="#name-pairwise-sectors" class="internal xref">Pairwise sectors</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2.2.2">
-                    <p id="section-toc.1-1.7.2.2.2.2.1"><a href="#section-7.2.2" class="auto internal xref">7.2.2</a>.  <a href="#name-assignment" class="internal xref">Assignment</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2.2.3">
-                    <p id="section-toc.1-1.7.2.2.2.3.1"><a href="#section-7.2.3" class="auto internal xref">7.2.3</a>.  <a href="#name-rotation-and-alias-period" class="internal xref">Rotation and alias period</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2.2.4">
-                    <p id="section-toc.1-1.7.2.2.2.4.1"><a href="#section-7.2.4" class="auto internal xref">7.2.4</a>.  <a href="#name-resolution-and-non-correlat" class="internal xref">Resolution and non-correlation</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2.2.5">
-                    <p id="section-toc.1-1.7.2.2.2.5.1"><a href="#section-7.2.5" class="auto internal xref">7.2.5</a>.  <a href="#name-when-to-use-canonical-vs-pa" class="internal xref">When to use canonical vs pairwise</a></p>
-</li>
-                </ul>
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-missionorigin" class="internal xref"><code>mission.origin</code></a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
                 <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-state-authority-metadata-do" class="internal xref">State authority metadata document</a></p>
@@ -1477,7 +1455,7 @@ substrates and pick the concrete protection mechanism.<a href="#section-abstract
                     <p id="section-toc.1-1.9.2.2.2.1.1"><a href="#section-9.2.1" class="auto internal xref">9.2.1</a>.  <a href="#name-mission-status-response-jso" class="internal xref">Mission Status Response JSON Schema</a></p>
 </li>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2.2.2">
-                    <p id="section-toc.1-1.9.2.2.2.2.1"><a href="#section-9.2.2" class="auto internal xref">9.2.2</a>.  <a href="#name-worked-example-response-pai" class="internal xref">Worked example response (pairwise)</a></p>
+                    <p id="section-toc.1-1.9.2.2.2.2.1"><a href="#section-9.2.2" class="auto internal xref">9.2.2</a>.  <a href="#name-worked-example-response" class="internal xref">Worked example response</a></p>
 </li>
                 </ul>
 </li>
@@ -1544,7 +1522,7 @@ substrates and pick the concrete protection mechanism.<a href="#section-abstract
                 <p id="section-toc.1-1.12.2.4.1"><a href="#section-12.4" class="auto internal xref">12.4</a>.  <a href="#name-number-precision-under-jcs" class="internal xref">Number precision under JCS</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.5">
-                <p id="section-toc.1-1.12.2.5.1"><a href="#section-12.5" class="auto internal xref">12.5</a>.  <a href="#name-pairwise-identifier-privacy" class="internal xref">Pairwise identifier privacy and correlation</a></p>
+                <p id="section-toc.1-1.12.2.5.1"><a href="#section-12.5" class="auto internal xref">12.5</a>.  <a href="#name-mission-identifier-correlat" class="internal xref">Mission identifier correlation</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.6">
                 <p id="section-toc.1-1.12.2.6.1"><a href="#section-12.6" class="auto internal xref">12.6</a>.  <a href="#name-hash-equality-leakage-and-c" class="internal xref">Hash equality leakage and cross-tenant transplantation</a></p>
@@ -1574,13 +1552,10 @@ substrates and pick the concrete protection mechanism.<a href="#section-abstract
                 <p id="section-toc.1-1.12.2.14.1"><a href="#section-12.14" class="auto internal xref">12.14</a>. <a href="#name-replay-of-mission-status-re" class="internal xref">Replay of Mission Status responses</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.15">
-                <p id="section-toc.1-1.12.2.15.1"><a href="#section-12.15" class="auto internal xref">12.15</a>. <a href="#name-side-channels-via-pairwise-" class="internal xref">Side channels via pairwise references</a></p>
+                <p id="section-toc.1-1.12.2.15.1"><a href="#section-12.15" class="auto internal xref">12.15</a>. <a href="#name-log-injection-via-consent-d" class="internal xref">Log injection via consent disclosure content</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.16">
-                <p id="section-toc.1-1.12.2.16.1"><a href="#section-12.16" class="auto internal xref">12.16</a>. <a href="#name-log-injection-via-consent-d" class="internal xref">Log injection via consent disclosure content</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.17">
-                <p id="section-toc.1-1.12.2.17.1"><a href="#section-12.17" class="auto internal xref">12.17</a>. <a href="#name-mission-record-garbage-coll" class="internal xref">Mission record garbage collection and audit chains</a></p>
+                <p id="section-toc.1-1.12.2.16.1"><a href="#section-12.16" class="auto internal xref">12.16</a>. <a href="#name-mission-record-garbage-coll" class="internal xref">Mission record garbage collection and audit chains</a></p>
 </li>
             </ul>
 </li>
@@ -1588,7 +1563,7 @@ substrates and pick the concrete protection mechanism.<a href="#section-abstract
             <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
-                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-pairwise-references-and-cor" class="internal xref">Pairwise references and correlation</a></p>
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-cross-audience-correlation" class="internal xref">Cross-audience correlation</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
                 <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-consent-disclosure-content-" class="internal xref">Consent disclosure content and PII</a></p>
@@ -1650,13 +1625,10 @@ substrates and pick the concrete protection mechanism.<a href="#section-abstract
                 <p id="section-toc.1-1.14.2.5.1"><a href="#section-14.5" class="auto internal xref">14.5</a>.  <a href="#name-mission-lifecycle-state-enu" class="internal xref">Mission Lifecycle State Enumerations</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.6">
-                <p id="section-toc.1-1.14.2.6.1"><a href="#section-14.6" class="auto internal xref">14.6</a>.  <a href="#name-mission-pairwise-sector-typ" class="internal xref">Mission Pairwise Sector Type Enumeration</a></p>
+                <p id="section-toc.1-1.14.2.6.1"><a href="#section-14.6" class="auto internal xref">14.6</a>.  <a href="#name-mission-status-response-med" class="internal xref">Mission Status Response Media Types</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.7">
-                <p id="section-toc.1-1.14.2.7.1"><a href="#section-14.7" class="auto internal xref">14.7</a>.  <a href="#name-mission-status-response-med" class="internal xref">Mission Status Response Media Types</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.8">
-                <p id="section-toc.1-1.14.2.8.1"><a href="#section-14.8" class="auto internal xref">14.8</a>.  <a href="#name-what-this-document-does-not" class="internal xref">What this document does NOT register</a></p>
+                <p id="section-toc.1-1.14.2.7.1"><a href="#section-14.7" class="auto internal xref">14.7</a>.  <a href="#name-what-this-document-does-not" class="internal xref">What this document does NOT register</a></p>
 </li>
             </ul>
 </li>
@@ -1760,9 +1732,8 @@ Authority Set Type registry framework, and the default narrowing
 profile.<a href="#section-1.2-5" class="pilcrow">¶</a></p>
 <p id="section-1.2-6"><a href="#integrity-anchors" class="auto internal xref">Section 6</a> defines semantic normalization, the
 authorization-domain-bound envelope, and the three integrity anchors.<a href="#section-1.2-6" class="pilcrow">¶</a></p>
-<p id="section-1.2-7"><a href="#identifier-model" class="auto internal xref">Section 7</a> defines the canonical Mission ID, the pairwise
-Mission reference framework, and the state-authority discovery
-metadata document.<a href="#section-1.2-7" class="pilcrow">¶</a></p>
+<p id="section-1.2-7"><a href="#identifier-model" class="auto internal xref">Section 7</a> defines the canonical Mission ID and the
+state-authority discovery metadata document.<a href="#section-1.2-7" class="pilcrow">¶</a></p>
 <p id="section-1.2-8"><a href="#mission-status-interface" class="auto internal xref">Section 9</a> defines the abstract Mission Status
 interface, its required properties, request and response shape, and
 error model.<a href="#section-1.2-8" class="pilcrow">¶</a></p>
@@ -1797,8 +1768,7 @@ fields, lifecycle state machines, and integrity anchors.<a href="#section-1.3-2.
             <p id="section-1.3-2.4.1">The principal model.<a href="#section-1.3-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.3-2.5">
-            <p id="section-1.3-2.5.1">The canonical Mission identifier and the pairwise reference
-framework.<a href="#section-1.3-2.5.1" class="pilcrow">¶</a></p>
+            <p id="section-1.3-2.5.1">The canonical Mission identifier.<a href="#section-1.3-2.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.3-2.6">
             <p id="section-1.3-2.6.1">The abstract Mission Status interface and its required properties
@@ -1973,82 +1943,66 @@ domain-separated envelope, using SHA-256, base64url-encoded.<a href="#section-2.
           <dd style="margin-left: 1.5em" id="section-2.2-2.20">
             <p id="section-2.2-2.20.1">The authenticated state-authority view returning Mission state,
 integrity anchors, audience-filtered Authority Set projection, and
-freshness indicator. By-mission-reference operation, distinct from
-token introspection.<a href="#section-2.2-2.20.1" class="pilcrow">¶</a></p>
+freshness indicator. By-mission-id operation, distinct from token
+introspection.<a href="#section-2.2-2.20.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-2.2-2.21">
-<strong>Pairwise Mission Reference</strong>:</dt>
+<strong>Approving principal</strong>:</dt>
           <dd style="margin-left: 1.5em" id="section-2.2-2.22">
-            <p id="section-2.2-2.22.1">An audience-sector-specific opaque identifier for a Mission,
-resolvable to the canonical <code>mission.id</code> only at the state authority.<a href="#section-2.2-2.22.1" class="pilcrow">¶</a></p>
+            <p id="section-2.2-2.22.1">The principal who approved the Mission (may differ from the
+subject for delegated approval).<a href="#section-2.2-2.22.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-2.2-2.23">
-<strong>Pairwise sector</strong>:</dt>
+<strong>Subject</strong>:</dt>
           <dd style="margin-left: 1.5em" id="section-2.2-2.24">
-            <p id="section-2.2-2.24.1">The boundary across which a single Pairwise Mission Reference is
-constant. Within a sector, the same Mission resolves to the same
-reference for every consumer. Across sectors, the same Mission
-resolves to distinct references.<a href="#section-2.2-2.24.1" class="pilcrow">¶</a></p>
+            <p id="section-2.2-2.24.1">The principal on whose behalf the task is approved.<a href="#section-2.2-2.24.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-2.2-2.25">
-<strong>Approving principal</strong>:</dt>
+<strong>Requesting client</strong>:</dt>
           <dd style="margin-left: 1.5em" id="section-2.2-2.26">
-            <p id="section-2.2-2.26.1">The principal who approved the Mission (may differ from the
-subject for delegated approval).<a href="#section-2.2-2.26.1" class="pilcrow">¶</a></p>
+            <p id="section-2.2-2.26.1">The OAuth client or AAuth agent that submitted the Mission
+Proposal.<a href="#section-2.2-2.26.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-2.2-2.27">
-<strong>Subject</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-2.2-2.28">
-            <p id="section-2.2-2.28.1">The principal on whose behalf the task is approved.<a href="#section-2.2-2.28.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-2.2-2.29">
-<strong>Requesting client</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-2.2-2.30">
-            <p id="section-2.2-2.30.1">The OAuth client or AAuth agent that submitted the Mission
-Proposal.<a href="#section-2.2-2.30.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-2.2-2.31">
 <strong>Tenant</strong> / <strong>Authorization domain</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-2.2-2.32">
-            <p id="section-2.2-2.32.1">A logical partitioning at the state authority. Missions in one
+          <dd style="margin-left: 1.5em" id="section-2.2-2.28">
+            <p id="section-2.2-2.28.1">A logical partitioning at the state authority. Missions in one
 tenant are not visible to consumers of another tenant unless
 explicit cross-tenant policy declares it. This document treats
 "tenant" and "authorization domain" as interchangeable identifiers
-for that partition.<a href="#section-2.2-2.32.1" class="pilcrow">¶</a></p>
+for that partition.<a href="#section-2.2-2.28.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-2.2-2.33">
+<dt id="section-2.2-2.29">
 <strong>Credential derivation event</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-2.2-2.34">
-            <p id="section-2.2-2.34.1">Any state-authority-initiated emission of a substrate credential
+          <dd style="margin-left: 1.5em" id="section-2.2-2.30">
+            <p id="section-2.2-2.30.1">Any state-authority-initiated emission of a substrate credential
 that references a Mission. Examples include initial access-token
 issuance, refresh-token rotation, Token Exchange grants, ID-JAG
 emissions, AAuth resource-token emissions, and AAuth auth-token
 emissions. Each derivation event is counted against
-<code>max_derivations</code> (see <a href="#common-constraints-framework" class="auto internal xref">Section 10</a>).<a href="#section-2.2-2.34.1" class="pilcrow">¶</a></p>
+<code>max_derivations</code> (see <a href="#common-constraints-framework" class="auto internal xref">Section 10</a>).<a href="#section-2.2-2.30.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-2.2-2.35">
+<dt id="section-2.2-2.31">
 <strong>Policy version</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-2.2-2.36">
-            <p id="section-2.2-2.36.1">An immutable identifier (typically a content-addressable string)
+          <dd style="margin-left: 1.5em" id="section-2.2-2.32">
+            <p id="section-2.2-2.32.1">An immutable identifier (typically a content-addressable string)
 naming the derivation policy in force at the approval event. The
 state authority <span class="bcp14">MUST</span> record the <code>policy_version</code> on the Mission
 record at the approval event. Policy versions are state-authority-
 local; profile specifications <span class="bcp14">MAY</span> register a syntax for portable
-policy-version references.<a href="#section-2.2-2.36.1" class="pilcrow">¶</a></p>
+policy-version references.<a href="#section-2.2-2.32.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-2.2-2.37">
+<dt id="section-2.2-2.33">
 <strong>Authentication Context Class Reference (<code>acr</code>)</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-2.2-2.38">
-            <p id="section-2.2-2.38.1">A string identifier describing the authentication context under
+          <dd style="margin-left: 1.5em" id="section-2.2-2.34">
+            <p id="section-2.2-2.34.1">A string identifier describing the authentication context under
 which the approving principal authenticated, per OIDC Core <code>acr</code>
 semantics. The Framework's <code>acr</code> Common Constraint (see
 <a href="#common-constraints-framework" class="auto internal xref">Section 10</a>) carries a list of acceptable
@@ -2058,36 +2012,36 @@ This document does not register <code>acr</code> identifiers; deployments
 compose with existing identifier spaces (<span>[<a href="#NIST-SP-800-63" class="cite xref">NIST-SP-800-63</a>]</span> AAL
 identifiers, FIDO authenticator levels, OpenID Connect EAP <code>acr</code>
 values <span>[<a href="#OIDC-EAP-ACR" class="cite xref">OIDC-EAP-ACR</a>]</span> (<code>phr</code>, <code>phrh</code>), OIDC MODRNA values, or
-deployment-defined URIs).<a href="#section-2.2-2.38.1" class="pilcrow">¶</a></p>
+deployment-defined URIs).<a href="#section-2.2-2.34.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-2.2-2.39">
+<dt id="section-2.2-2.35">
 <strong>Authentication Methods References (<code>amr</code>)</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-2.2-2.40">
-            <p id="section-2.2-2.40.1">An array of identifiers naming the discrete authentication
+          <dd style="margin-left: 1.5em" id="section-2.2-2.36">
+            <p id="section-2.2-2.36.1">An array of identifiers naming the discrete authentication
 methods used at the authentication event, per OIDC Core <code>amr</code>
 semantics and the IANA "Authentication Method Reference Values"
 registry <span>[<a href="#RFC8176" class="cite xref">RFC8176</a>]</span>. The Framework's <code>amr</code> Common Constraint
 (see <a href="#common-constraints-framework" class="auto internal xref">Section 10</a>) carries a list of
 acceptable <code>amr</code> values that the authentication event <span class="bcp14">MUST</span>
-intersect.<a href="#section-2.2-2.40.1" class="pilcrow">¶</a></p>
+intersect.<a href="#section-2.2-2.36.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-2.2-2.41">
+<dt id="section-2.2-2.37">
 <strong>Audience</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-2.2-2.42">
-            <p id="section-2.2-2.42.1">A consumer of a Mission-bound credential or of Mission Status
+          <dd style="margin-left: 1.5em" id="section-2.2-2.38">
+            <p id="section-2.2-2.38.1">A consumer of a Mission-bound credential or of Mission Status
 responses. Audiences are named at issuance time and verified at
-consumption time.<a href="#section-2.2-2.42.1" class="pilcrow">¶</a></p>
+consumption time.<a href="#section-2.2-2.38.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-2.2-2.43">
+<dt id="section-2.2-2.39">
 <strong>Mission-bound credential</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-2.2-2.44">
-            <p id="section-2.2-2.44.1">Any substrate credential (OAuth access token, OAuth refresh
+          <dd style="margin-left: 1.5em" id="section-2.2-2.40">
+            <p id="section-2.2-2.40.1">Any substrate credential (OAuth access token, OAuth refresh
 token, AAuth resource token, AAuth auth token, transaction token,
 or similar) whose Mission claim or substrate-native binding
-references a specific Mission.<a href="#section-2.2-2.44.1" class="pilcrow">¶</a></p>
+references a specific Mission.<a href="#section-2.2-2.40.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -4061,10 +4015,16 @@ above the protocol layer (see <a href="#integrity-anchor-non-guarantees" class="
       <h2 id="name-identifier-model">
 <a href="#section-7" class="section-number selfRef">7. </a><a href="#name-identifier-model" class="section-name selfRef">Identifier Model</a>
       </h2>
-<p id="section-7-1">A Mission has a <strong>canonical Mission ID</strong> (<code>mission.id</code>) held by the
-state authority. Consumers <span class="bcp14">MAY</span> interact with a Mission through the
-canonical ID or through an audience-sector-specific
-<strong>Pairwise Mission Reference</strong> (<code>mission.ref</code>).<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-1">A Mission is identified by a stable canonical <code>mission.id</code> minted
+by the state authority. The same <code>mission.id</code> is observable by
+every consumer that receives a credential derived from the
+Mission or queries Mission Status. This document does not define
+a pairwise or audience-scoped Mission identifier; deployments
+that need audience-level correlation resistance compose with OIDC
+pairwise <code>sub</code> claims (which already prevent cross-audience user
+correlation) and, if a Mission-level pairwise identifier is
+genuinely required, layer a profile extension on top of this
+baseline.<a href="#section-7-1" class="pilcrow">¶</a></p>
 <div id="canonical-mission-id">
 <section id="section-7.1">
         <h3 id="name-canonical-mission-id">
@@ -4098,205 +4058,19 @@ prefix; if a deployment-side stable prefix is used (e.g.,
             <p id="section-7.1-4.4.1">NOT be reused after Mission record garbage collection.<a href="#section-7.1-4.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-7.1-5">The canonical <code>mission.id</code> <span class="bcp14">MUST NOT</span> be disclosed to a consumer
-unless that consumer's audience explicitly consumes canonical
-identifiers (see <a href="#when-to-use-canonical-vs-pairwise" class="auto internal xref">Section 7.2.5</a>).<a href="#section-7.1-5" class="pilcrow">¶</a></p>
+</section>
+</div>
 <div id="missionorigin">
-<section id="section-7.1.1">
-          <h4 id="name-missionorigin">
-<a href="#section-7.1.1" class="section-number selfRef">7.1.1. </a><a href="#name-missionorigin" class="section-name selfRef"><code>mission.origin</code></a>
-          </h4>
-<p id="section-7.1.1-1">The <code>mission.origin</code> value is the state authority's issuer URL. It
+<section id="section-7.2">
+        <h3 id="name-missionorigin">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-missionorigin" class="section-name selfRef"><code>mission.origin</code></a>
+        </h3>
+<p id="section-7.2-1">The <code>mission.origin</code> value is the state authority's issuer URL. It
 is the value a consumer uses to locate the state authority's
 metadata document via the well-known URI
 <code>/.well-known/mission-authority</code> per <span>[<a href="#RFC8615" class="cite xref">RFC8615</a>]</span>. The
 <code>mission.origin</code> value is the absolute URL of the state authority's
-issuer, with no query or fragment.<a href="#section-7.1.1-1" class="pilcrow">¶</a></p>
-</section>
-</div>
-</section>
-</div>
-<div id="pairwise-mission-reference">
-<section id="section-7.2">
-        <h3 id="name-pairwise-mission-reference">
-<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-pairwise-mission-reference" class="section-name selfRef">Pairwise Mission Reference</a>
-        </h3>
-<p id="section-7.2-1">A Pairwise Mission Reference (<code>mission.ref</code>) is an opaque URL-safe
-string. ABNF:<a href="#section-7.2-1" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-7.2-2">
-<pre>
-mission-ref     = 1*256( unreserved-char )
-unreserved-char = ALPHA / DIGIT / "-" / "_"
-</pre><a href="#section-7.2-2" class="pilcrow">¶</a>
-</div>
-<p id="section-7.2-3">The <code>mission.ref</code> <span class="bcp14">MUST</span>:<a href="#section-7.2-3" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-7.2-4.1">
-            <p id="section-7.2-4.1.1">Contain at least 128 bits of entropy.<a href="#section-7.2-4.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-7.2-4.2">
-            <p id="section-7.2-4.2.1">Be deterministically derivable, at the state authority, from
-the pair (canonical <code>mission.id</code>, sector identifier) using a
-state-authority-internal mechanism. State authorities <span class="bcp14">MAY</span>
-implement this as keyed lookup, keyed hash, or pre-generated
-table; the choice is not externally observable.<a href="#section-7.2-4.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-7.2-4.3">
-            <p id="section-7.2-4.3.1">NOT contain audience label, tenant name, canonical-<code>mission.id</code>
-derivative, or any other deployment-side correlatable input
-visible to external parties.<a href="#section-7.2-4.3.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-7.2-4.4">
-            <p id="section-7.2-4.4.1">Be stable for the Mission's lifetime within its sector, except
-during rotation (see <a href="#pairwise-reference-rotation" class="auto internal xref">Section 7.2.3</a>).<a href="#section-7.2-4.4.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-<div id="pairwise-sectors">
-<section id="section-7.2.1">
-          <h4 id="name-pairwise-sectors">
-<a href="#section-7.2.1" class="section-number selfRef">7.2.1. </a><a href="#name-pairwise-sectors" class="section-name selfRef">Pairwise sectors</a>
-          </h4>
-<p id="section-7.2.1-1">A <strong>pairwise sector</strong> is the boundary across which a single
-<code>mission.ref</code> is constant. Within a sector, the same Mission
-resolves to the same <code>mission.ref</code> for every consumer in that
-sector. Across sectors, the same Mission resolves to distinct
-<code>mission.ref</code> values.<a href="#section-7.2.1-1" class="pilcrow">¶</a></p>
-<p id="section-7.2.1-2">The Framework registers the following sector types:<a href="#section-7.2.1-2" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-7.2.1-3.1">
-              <p id="section-7.2.1-3.1.1"><code>resource_server</code>: the sector boundary is the Resource Server
-identifier (as defined by Protected Resource Metadata
-<span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> or the deployment's RS identifier scheme). Each
-Resource Server sees a distinct <code>mission.ref</code>.<a href="#section-7.2.1-3.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-7.2.1-3.2">
-              <p id="section-7.2.1-3.2.1"><code>resource_as</code>: the sector boundary is the Resource Authorization
-Server (a Resource AS in OAuth 2.1 multi-AS deployments). Each
-Resource AS sees a distinct <code>mission.ref</code>.<a href="#section-7.2.1-3.2.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-7.2.1-3.3">
-              <p id="section-7.2.1-3.3.1"><code>tenant</code>: the sector boundary is the consuming tenant. All
-audiences belonging to the same consuming tenant share a single
-<code>mission.ref</code>; audiences in different tenants see distinct
-references.<a href="#section-7.2.1-3.3.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-7.2.1-3.4">
-              <p id="section-7.2.1-3.4.1"><code>trust_domain</code>: the sector boundary is a SPIFFE-style or
-deployment-declared trust-domain identifier.<a href="#section-7.2.1-3.4.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-<p id="section-7.2.1-4">Deployments select the sector type that matches their threat model:
-narrower sectors (e.g., <code>resource_server</code>) provide stronger
-correlation resistance at the cost of state-authority bookkeeping
-overhead; wider sectors (e.g., <code>tenant</code>) ease bookkeeping at the
-cost of larger correlation surfaces.<a href="#section-7.2.1-4" class="pilcrow">¶</a></p>
-<p id="section-7.2.1-5">The state authority advertises its sector type in
-<code>mission_pairwise_sector</code> in its metadata document
-(<a href="#state-authority-metadata-document" class="auto internal xref">Section 7.3</a>).<a href="#section-7.2.1-5" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="pairwise-reference-assignment">
-<section id="section-7.2.2">
-          <h4 id="name-assignment">
-<a href="#section-7.2.2" class="section-number selfRef">7.2.2. </a><a href="#name-assignment" class="section-name selfRef">Assignment</a>
-          </h4>
-<p id="section-7.2.2-1">The state authority assigns a <code>mission.ref</code> for a (Mission, sector
-member) pair at the latest of:<a href="#section-7.2.2-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-7.2.2-2.1">
-              <p id="section-7.2.2-2.1.1">Mission creation (eager assignment), or<a href="#section-7.2.2-2.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-7.2.2-2.2">
-              <p id="section-7.2.2-2.2.1">First request by that sector member that references the Mission
-(lazy assignment).<a href="#section-7.2.2-2.2.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-<p id="section-7.2.2-3">Lazy assignment is <span class="bcp14">RECOMMENDED</span> for state-authority deployments
-where the number of potential sector members is large; eager
-assignment is <span class="bcp14">RECOMMENDED</span> for deployments where sector members are
-fixed at Mission creation.<a href="#section-7.2.2-3" class="pilcrow">¶</a></p>
-<p id="section-7.2.2-4">Once assigned, a <code>mission.ref</code> <span class="bcp14">MUST NOT</span> change for the sector
-member except via rotation
-(<a href="#pairwise-reference-rotation" class="auto internal xref">Section 7.2.3</a>). Assignment <span class="bcp14">MUST</span> be idempotent:
-two queries from the same sector member for the same Mission <span class="bcp14">MUST</span>
-return the same <code>mission.ref</code>.<a href="#section-7.2.2-4" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="pairwise-reference-rotation">
-<section id="section-7.2.3">
-          <h4 id="name-rotation-and-alias-period">
-<a href="#section-7.2.3" class="section-number selfRef">7.2.3. </a><a href="#name-rotation-and-alias-period" class="section-name selfRef">Rotation and alias period</a>
-          </h4>
-<p id="section-7.2.3-1">A state authority <span class="bcp14">MAY</span> rotate <code>mission.ref</code> values for a sector for
-operational reasons (e.g., compromise of the reference-generation
-seed). Rotation <span class="bcp14">MUST</span> proceed as follows:<a href="#section-7.2.3-1" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-7.2.3-2">
-<li id="section-7.2.3-2.1">
-              <p id="section-7.2.3-2.1.1">The state authority begins emitting the new <code>mission.ref</code> for
-all new credential derivation events and Mission Status
-responses for the affected sector.<a href="#section-7.2.3-2.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li id="section-7.2.3-2.2">
-              <p id="section-7.2.3-2.2.1">The state authority continues to accept the old <code>mission.ref</code>
-as an alias for the same Mission for a deployment-declared
-<strong>alias period</strong>. The alias period <span class="bcp14">MUST</span> be no shorter than the
-maximum credential lifetime in the affected sector, and <span class="bcp14">SHOULD</span>
-be at least 24 hours.<a href="#section-7.2.3-2.2.1" class="pilcrow">¶</a></p>
-</li>
-            <li id="section-7.2.3-2.3">
-              <p id="section-7.2.3-2.3.1">After the alias period elapses, the state authority <span class="bcp14">MUST</span>
-refuse the old <code>mission.ref</code> (responses <span class="bcp14">MUST</span> be
-indistinguishable from the not-found response of
-<a href="#error-model" class="auto internal xref">Section 9.5</a>).<a href="#section-7.2.3-2.3.1" class="pilcrow">¶</a></p>
-</li>
-            <li id="section-7.2.3-2.4">
-              <p id="section-7.2.3-2.4.1">Retired <code>mission.ref</code> values <span class="bcp14">MUST NOT</span> be reassigned to any
-Mission.<a href="#section-7.2.3-2.4.1" class="pilcrow">¶</a></p>
-</li>
-          </ol>
-<p id="section-7.2.3-3">State authorities <span class="bcp14">SHOULD</span> publish a notice of rotation through an
-out-of-band channel to allow affected consumers to refresh cached
-references before the alias period elapses.<a href="#section-7.2.3-3" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="pairwise-resolution-non-correlation">
-<section id="section-7.2.4">
-          <h4 id="name-resolution-and-non-correlat">
-<a href="#section-7.2.4" class="section-number selfRef">7.2.4. </a><a href="#name-resolution-and-non-correlat" class="section-name selfRef">Resolution and non-correlation</a>
-          </h4>
-<p id="section-7.2.4-1">The state authority is the only party that can resolve a
-<code>mission.ref</code> to the canonical <code>mission.id</code>. Other parties <span class="bcp14">MUST NOT</span> be able to derive the canonical ID from a pairwise reference.<a href="#section-7.2.4-1" class="pilcrow">¶</a></p>
-<p id="section-7.2.4-2">A correctly-implemented <code>mission.ref</code> value provides no
-externally-observable correlation across sectors: two consumers in
-distinct sectors, presented with <code>mission.ref</code> values for the same
-Mission, <span class="bcp14">MUST NOT</span> be able to detect that the references identify
-the same Mission without state-authority cooperation.<a href="#section-7.2.4-2" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="when-to-use-canonical-vs-pairwise">
-<section id="section-7.2.5">
-          <h4 id="name-when-to-use-canonical-vs-pa">
-<a href="#section-7.2.5" class="section-number selfRef">7.2.5. </a><a href="#name-when-to-use-canonical-vs-pa" class="section-name selfRef">When to use canonical vs pairwise</a>
-          </h4>
-<p id="section-7.2.5-1">The Mission identifier mode advertised by an audience determines
-which reference form the audience consumes:<a href="#section-7.2.5-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-7.2.5-2.1">
-              <p id="section-7.2.5-2.1.1">An audience that consumes canonical identifiers (e.g., the state
-authority itself, an audit consumer, an administrator dashboard)
-receives <code>mission.id</code>.<a href="#section-7.2.5-2.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-7.2.5-2.2">
-              <p id="section-7.2.5-2.2.1">An audience that consumes pairwise identifiers (e.g., a Resource
-Server, a downstream Resource AS, a tenant-scoped service)
-receives <code>mission.ref</code>.<a href="#section-7.2.5-2.2.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-<p id="section-7.2.5-3">The mission-bound credential's substrate-specific carrier (e.g.,
-the <code>mission</code> JWT claim) carries exactly one of the two forms; the
-audience's advertised mode determines which.<a href="#section-7.2.5-3" class="pilcrow">¶</a></p>
-</section>
-</div>
+issuer, with no query or fragment.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="state-authority-metadata-document">
@@ -4320,12 +4094,12 @@ of state-authority-signed responses.<a href="#section-7.3-2.2.1" class="pilcrow"
 </li>
           <li class="normal" id="section-7.3-2.3">
             <p id="section-7.3-2.3.1"><code>mission_status_endpoint</code> (string, required): URL of the
-by-mission-reference Mission Status operation (see
+by-mission-id Mission Status operation (see
 <a href="#mission-status-interface" class="auto internal xref">Section 9</a>).<a href="#section-7.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.3-2.4">
             <p id="section-7.3-2.4.1"><code>mission_lifecycle_endpoint</code> (string, required): URL of the
-by-mission-reference lifecycle operation (see
+by-mission-id lifecycle operation (see
 <a href="#lifecycle-endpoint" class="auto internal xref">Section 7.4</a>).<a href="#section-7.3-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.3-2.5">
@@ -4342,31 +4116,21 @@ entry <span class="bcp14">MUST</span> be a registered type in the Mission Author
 Type registry.<a href="#section-7.3-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.3-2.7">
-            <p id="section-7.3-2.7.1"><code>mission_pairwise_supported</code> (boolean, required): whether the
-state authority emits pairwise references.<a href="#section-7.3-2.7.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-7.3-2.8">
-            <p id="section-7.3-2.8.1"><code>mission_pairwise_sector</code> (string, conditional): the sector
-type, required if <code>mission_pairwise_supported</code> is <code>true</code>. Value
-is one of the registered sector types
-(<a href="#pairwise-sectors" class="auto internal xref">Section 7.2.1</a>).<a href="#section-7.3-2.8.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-7.3-2.9">
-            <p id="section-7.3-2.9.1"><code>mission_purposes_supported</code> (array of strings, optional): the
+            <p id="section-7.3-2.7.1"><code>mission_purposes_supported</code> (array of strings, optional): the
 set of <code>purpose</code> URIs the state authority accepts in Mission
 Intents under its purpose vocabulary. Absent if the state
-authority uses client-registered purposes only.<a href="#section-7.3-2.9.1" class="pilcrow">¶</a></p>
+authority uses client-registered purposes only.<a href="#section-7.3-2.7.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.3-2.10">
-            <p id="section-7.3-2.10.1"><code>mission_framework_versions_supported</code> (array of strings,
+          <li class="normal" id="section-7.3-2.8">
+            <p id="section-7.3-2.8.1"><code>mission_framework_versions_supported</code> (array of strings,
 required): spec revisions of this Framework that the state
-authority supports.<a href="#section-7.3-2.10.1" class="pilcrow">¶</a></p>
+authority supports.<a href="#section-7.3-2.8.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.3-2.11">
-            <p id="section-7.3-2.11.1"><code>mission_normalization_profiles_supported</code> (array of strings,
+          <li class="normal" id="section-7.3-2.9">
+            <p id="section-7.3-2.9.1"><code>mission_normalization_profiles_supported</code> (array of strings,
 required): registered Normalization Profile identifiers
 (<a href="#normalization-profile-registry" class="auto internal xref">Section 14.4</a>) the state authority
-understands.<a href="#section-7.3-2.11.1" class="pilcrow">¶</a></p>
+understands.<a href="#section-7.3-2.9.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <div id="worked-example-metadata-document">
@@ -4388,8 +4152,6 @@ understands.<a href="#section-7.3-2.11.1" class="pilcrow">¶</a></p>
   "authority_set_types_supported": [
     "mission_resource_access"
   ],
-  "mission_pairwise_supported": true,
-  "mission_pairwise_sector": "resource_server",
   "mission_purposes_supported": [
     "urn:erp.example.com:purposes:quarterly-reconcile",
     "urn:erp.example.com:purposes:bulk-export"
@@ -4418,7 +4180,7 @@ adjacent specifications.<a href="#section-7.3.1-2" class="pilcrow">¶</a></p>
         <h3 id="name-lifecycle-endpoint">
 <a href="#section-7.4" class="section-number selfRef">7.4. </a><a href="#name-lifecycle-endpoint" class="section-name selfRef">Lifecycle endpoint</a>
         </h3>
-<p id="section-7.4-1">The Mission Lifecycle endpoint is the by-mission-reference operation
+<p id="section-7.4-1">The Mission Lifecycle endpoint is the by-mission-id operation
 through which authorized callers transition a Mission between
 lifecycle states (suspend, resume, revoke, complete). It is
 <strong>distinct from token revocation</strong> (<span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> or substrate
@@ -4432,8 +4194,7 @@ endpoint operates on a Mission.<a href="#section-7.4-1" class="pilcrow">¶</a></
 <p id="section-7.4.1-1">The Mission Lifecycle operation takes:<a href="#section-7.4.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7.4.1-2.1">
-              <p id="section-7.4.1-2.1.1">A Mission reference (canonical <code>mission.id</code> or pairwise
-<code>mission.ref</code>).<a href="#section-7.4.1-2.1.1" class="pilcrow">¶</a></p>
+              <p id="section-7.4.1-2.1.1">A canonical <code>mission.id</code>.<a href="#section-7.4.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-7.4.1-2.2">
               <p id="section-7.4.1-2.2.1">The requesting consumer's authentication.<a href="#section-7.4.1-2.2.1" class="pilcrow">¶</a></p>
@@ -4599,7 +4360,7 @@ credentials via the actor profile (e.g.,
 <p id="section-9-1">The Mission Status interface is the authenticated state-authority view
 returning Mission state and integrity-anchored evidence. It is
 <strong>distinct from token introspection</strong> (which is by-token); Mission
-Status is by-mission-reference.<a href="#section-9-1" class="pilcrow">¶</a></p>
+Status is by-mission-id.<a href="#section-9-1" class="pilcrow">¶</a></p>
 <div id="abstract-operation-1">
 <section id="section-9.1">
         <h3 id="name-abstract-operation-2">
@@ -4608,9 +4369,7 @@ Status is by-mission-reference.<a href="#section-9-1" class="pilcrow">¶</a></p>
 <p id="section-9.1-1">The Mission Status operation takes:<a href="#section-9.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9.1-2.1">
-            <p id="section-9.1-2.1.1">A <strong>Mission reference</strong>: either a canonical <code>mission.id</code> (for
-audiences that consume canonical identifiers) or a pairwise
-<code>mission.ref</code> (for audiences that consume pairwise references).<a href="#section-9.1-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-9.1-2.1.1">A canonical <strong><code>mission.id</code></strong> identifying the Mission to query.<a href="#section-9.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-9.1-2.2">
             <p id="section-9.1-2.2.1">The requesting consumer's <strong>authentication</strong>: substrate-specific
@@ -4669,9 +4428,7 @@ members:<a href="#section-9.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9.2-2.1">
             <p id="section-9.2-2.1.1"><code>mission</code> (object, required): the Mission identity envelope.
-Carries either <code>{ "id": "...", "origin": "..." }</code> for canonical
-responses or <code>{ "ref": "...", "origin": "..." }</code> for pairwise
-responses, never both.<a href="#section-9.2-2.1.1" class="pilcrow">¶</a></p>
+Carries <code>{ "id": "...", "origin": "..." }</code>.<a href="#section-9.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-9.2-2.2">
             <p id="section-9.2-2.2.1"><code>state</code> (string, required): one of <code>active</code>, <code>suspended</code>,
@@ -4741,15 +4498,10 @@ Response object is the protocol-level data the wire form carries.<a href="#secti
   "properties": {
     "mission": {
       "type": "object",
-      "required": ["origin"],
-      "oneOf": [
-        { "required": ["id"] },
-        { "required": ["ref"] }
-      ],
+      "required": ["id", "origin"],
       "additionalProperties": false,
       "properties": {
         "id":     { "type": "string" },
-        "ref":    { "type": "string" },
         "origin": { "type": "string", "format": "uri" }
       }
     },
@@ -4788,10 +4540,10 @@ Response object is the protocol-level data the wire form carries.<a href="#secti
 </div>
 </section>
 </div>
-<div id="worked-example-response-pairwise">
+<div id="worked-example-response">
 <section id="section-9.2.2">
-          <h4 id="name-worked-example-response-pai">
-<a href="#section-9.2.2" class="section-number selfRef">9.2.2. </a><a href="#name-worked-example-response-pai" class="section-name selfRef">Worked example response (pairwise)</a>
+          <h4 id="name-worked-example-response">
+<a href="#section-9.2.2" class="section-number selfRef">9.2.2. </a><a href="#name-worked-example-response" class="section-name selfRef">Worked example response</a>
           </h4>
 <p id="section-9.2.2-1">A Resource Server <code>https://erp.example.com</code> queries Mission Status
 for the example Mission from <a href="#mission-record" class="auto internal xref">Section 3.2</a>:<a href="#section-9.2.2-1" class="pilcrow">¶</a></p>
@@ -4799,7 +4551,7 @@ for the example Mission from <a href="#mission-record" class="auto internal xref
 <pre>
 {
   "mission": {
-    "ref": "mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com"
   },
   "state": "active",
@@ -4837,8 +4589,6 @@ for the example Mission from <a href="#mission-record" class="auto internal xref
 }
 </pre><a href="#section-9.2.2-2" class="pilcrow">¶</a>
 </div>
-<p id="section-9.2.2-3">For a canonical-identifier consumer, <code>mission.id</code> replaces
-<code>mission.ref</code>. The remainder is identical in shape.<a href="#section-9.2.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -5408,8 +5158,8 @@ equivalent.<a href="#section-11-4.5.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-11-4.6">
           <p id="section-11-4.6.1"><strong><code>mission</code> claim vectors</strong>: Mission record → expected claim
-shape including canonical and pairwise variants. (Defined in
-the OAuth Profile; vector class declared here.)<a href="#section-11-4.6.1" class="pilcrow">¶</a></p>
+shape. (Defined in the OAuth Profile; vector class declared
+here.)<a href="#section-11-4.6.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
 </section>
@@ -5496,16 +5246,25 @@ representation (e.g., <code>"max_derivations": "100"</code>), not number
 representation.<a href="#section-12.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="pairwise-identifier-privacy-and-correlation">
+<div id="mission-identifier-correlation">
 <section id="section-12.5">
-        <h3 id="name-pairwise-identifier-privacy">
-<a href="#section-12.5" class="section-number selfRef">12.5. </a><a href="#name-pairwise-identifier-privacy" class="section-name selfRef">Pairwise identifier privacy and correlation</a>
+        <h3 id="name-mission-identifier-correlat">
+<a href="#section-12.5" class="section-number selfRef">12.5. </a><a href="#name-mission-identifier-correlat" class="section-name selfRef">Mission identifier correlation</a>
         </h3>
-<p id="section-12.5-1">The pairwise reference framework prevents direct correlation of
-Mission identifiers across audiences in the same sector. It does
-not prevent indirect correlation through audience-side state
-(e.g., user identifiers, timing, request patterns). Deployments
-<span class="bcp14">SHOULD</span> assess the correlation surface of their chosen sector.<a href="#section-12.5-1" class="pilcrow">¶</a></p>
+<p id="section-12.5-1">This document does not define a pairwise Mission identifier. The
+canonical <code>mission.id</code> is observable by every audience that
+receives a credential derived from the Mission. Two audiences
+that share a Mission necessarily share the identifier; this is
+inherent to the Mission's role as a governance handle binding
+related authority.<a href="#section-12.5-1" class="pilcrow">¶</a></p>
+<p id="section-12.5-2">Cross-audience user correlation (the OAuth/OIDC threat that
+pairwise identifiers traditionally address) is independent and
+addressed by OIDC pairwise <code>sub</code> claims. Deployments where
+cross-audience user correlation matters <span class="bcp14">MUST</span> use pairwise <code>sub</code>.
+Deployments that additionally need to hide Mission identity
+across audiences within a single user's task (an unusual
+requirement) define a pairwise Mission identifier through a
+profile extension to this Framework.<a href="#section-12.5-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="hash-equality-leakage-and-cross-tenant-transplantation">
@@ -5670,67 +5429,38 @@ binding, not authentication tokens; consumers <span class="bcp14">MUST NOT</span
 nonce secrecy.<a href="#section-12.14-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="side-channels-via-pairwise-references">
-<section id="section-12.15">
-        <h3 id="name-side-channels-via-pairwise-">
-<a href="#section-12.15" class="section-number selfRef">12.15. </a><a href="#name-side-channels-via-pairwise-" class="section-name selfRef">Side channels via pairwise references</a>
-        </h3>
-<p id="section-12.15-1">Even with the non-correlation property of
-<a href="#pairwise-resolution-non-correlation" class="auto internal xref">Section 7.2.4</a>, side channels can leak
-that two <code>mission.ref</code> values identify the same Mission. Examples
-include:<a href="#section-12.15-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-12.15-2.1">
-            <p id="section-12.15-2.1.1">Timing correlation when the state authority's Mission Status
-endpoint serves two queries from collaborating audiences for
-the same Mission.<a href="#section-12.15-2.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-12.15-2.2">
-            <p id="section-12.15-2.2.1">Mission Status response staleness alignment in
-eventually-consistent state authorities.<a href="#section-12.15-2.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-12.15-2.3">
-            <p id="section-12.15-2.3.1">Pairwise sector boundaries crossed during rotation
-(<a href="#pairwise-reference-rotation" class="auto internal xref">Section 7.2.3</a>) before all sector members
-have refreshed their cached references.<a href="#section-12.15-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-<p id="section-12.15-3">Deployments <span class="bcp14">SHOULD</span> assess the side-channel surface specific to
-their sector type and threat model.<a href="#section-12.15-3" class="pilcrow">¶</a></p>
-</section>
-</div>
 <div id="log-injection-via-consent-disclosure-content">
-<section id="section-12.16">
+<section id="section-12.15">
         <h3 id="name-log-injection-via-consent-d">
-<a href="#section-12.16" class="section-number selfRef">12.16. </a><a href="#name-log-injection-via-consent-d" class="section-name selfRef">Log injection via consent disclosure content</a>
+<a href="#section-12.15" class="section-number selfRef">12.15. </a><a href="#name-log-injection-via-consent-d" class="section-name selfRef">Log injection via consent disclosure content</a>
         </h3>
-<p id="section-12.16-1">The consent disclosure object contains user-facing strings
+<p id="section-12.15-1">The consent disclosure object contains user-facing strings
 (typically derived from the Mission Intent's <code>goal</code>,
 <code>constraints</code>, and <code>success_criteria</code>). These strings reach
-audit logs, dashboards, and possibly downstream notifications.<a href="#section-12.16-1" class="pilcrow">¶</a></p>
-<p id="section-12.16-2">Implementations <span class="bcp14">MUST</span> treat consent-disclosure content as
+audit logs, dashboards, and possibly downstream notifications.<a href="#section-12.15-1" class="pilcrow">¶</a></p>
+<p id="section-12.15-2">Implementations <span class="bcp14">MUST</span> treat consent-disclosure content as
 untrusted when emitting it to log sinks: HTML/template escape on
 HTML sinks, JSON-escape on JSON sinks, and so on. The state
 authority's recording of the consent disclosure object is a
 verbatim JSON serialization for integrity-anchor purposes; it is
-not safe to inject into other contexts unescaped.<a href="#section-12.16-2" class="pilcrow">¶</a></p>
+not safe to inject into other contexts unescaped.<a href="#section-12.15-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-record-garbage-collection-and-audit-chains">
-<section id="section-12.17">
+<section id="section-12.16">
         <h3 id="name-mission-record-garbage-coll">
-<a href="#section-12.17" class="section-number selfRef">12.17. </a><a href="#name-mission-record-garbage-coll" class="section-name selfRef">Mission record garbage collection and audit chains</a>
+<a href="#section-12.16" class="section-number selfRef">12.16. </a><a href="#name-mission-record-garbage-coll" class="section-name selfRef">Mission record garbage collection and audit chains</a>
         </h3>
-<p id="section-12.17-1">After Mission record garbage collection (<a href="#retention" class="auto internal xref">Section 3.6</a>), the
+<p id="section-12.16-1">After Mission record garbage collection (<a href="#retention" class="auto internal xref">Section 3.6</a>), the
 state authority <span class="bcp14">MUST</span> retain a stub indicating that the
 <code>mission.id</code> and <code>proposal_id</code> are retired. Audit logs
 referencing a garbage-collected Mission's identifier <span class="bcp14">MUST</span> resolve
 to the stub rather than to "not found", which would be
-indistinguishable from never having existed.<a href="#section-12.17-1" class="pilcrow">¶</a></p>
-<p id="section-12.17-2">The stub <span class="bcp14">MUST</span> contain at minimum: <code>mission.id</code>, <code>proposal_id</code>,
+indistinguishable from never having existed.<a href="#section-12.16-1" class="pilcrow">¶</a></p>
+<p id="section-12.16-2">The stub <span class="bcp14">MUST</span> contain at minimum: <code>mission.id</code>, <code>proposal_id</code>,
 <code>created_at</code>, <code>retired_at</code>, and the terminal state at retirement.
 The stub <span class="bcp14">MUST NOT</span> contain the Mission Intent, Authority Set, or
-consent disclosure object.<a href="#section-12.17-2" class="pilcrow">¶</a></p>
+consent disclosure object.<a href="#section-12.16-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -5744,44 +5474,29 @@ consent disclosure object.<a href="#section-12.17-2" class="pilcrow">¶</a></p>
 to the Mission Framework. <a href="#security-considerations" class="auto internal xref">Section 12</a> addresses
 security threats; this section addresses privacy threats that
 are not subsumed by security.<a href="#section-13-1" class="pilcrow">¶</a></p>
-<div id="pairwise-references-and-correlation">
+<div id="cross-audience-correlation">
 <section id="section-13.1">
-        <h3 id="name-pairwise-references-and-cor">
-<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-pairwise-references-and-cor" class="section-name selfRef">Pairwise references and correlation</a>
+        <h3 id="name-cross-audience-correlation">
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-cross-audience-correlation" class="section-name selfRef">Cross-audience correlation</a>
         </h3>
-<p id="section-13.1-1">The pairwise reference framework (<a href="#pairwise-mission-reference" class="auto internal xref">Section 7.2</a>)
-is designed to prevent direct cross-sector correlation of
-Mission identifiers. It is not a complete defense against
-correlation; in particular, audiences may correlate Missions
-indirectly through:<a href="#section-13.1-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-13.1-2.1">
-            <p id="section-13.1-2.1.1"><strong>Shared subject identifiers</strong>: when audiences in distinct
-sectors observe credentials for the same subject (<code>sub</code> claim
-in OAuth, <code>subject</code> in AAuth), they can correlate Mission
-references through the subject.<a href="#section-13.1-2.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-13.1-2.2">
-            <p id="section-13.1-2.2.1"><strong>Shared client identifiers</strong>: when audiences observe
-credentials with the same <code>requesting_client</code>, they can
-correlate.<a href="#section-13.1-2.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-13.1-2.3">
-            <p id="section-13.1-2.3.1"><strong>Timing and request-pattern fingerprinting</strong>: when audiences
-observe correlated request patterns, they can probabilistically
-associate Mission references.<a href="#section-13.1-2.3.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-13.1-2.4">
-            <p id="section-13.1-2.4.1"><strong>Side channels through the state authority</strong>: as described in
-<a href="#side-channels-via-pairwise-references" class="auto internal xref">Section 12.15</a>.<a href="#section-13.1-2.4.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-<p id="section-13.1-3">Deployments <span class="bcp14">SHOULD</span> assess which correlation channels are relevant
-to their threat model and select pairwise sector type
-(<a href="#pairwise-sectors" class="auto internal xref">Section 7.2.1</a>) accordingly. The narrowest sector type
-(<code>resource_server</code>) provides the strongest pairwise unlinkability
-within the framework; wider sectors are correlation-permissive by
-design.<a href="#section-13.1-3" class="pilcrow">¶</a></p>
+<p id="section-13.1-1">This Framework relies on OIDC pairwise <code>sub</code> (or the substrate
+equivalent in AAuth) to prevent cross-audience user correlation.
+The canonical <code>mission.id</code> is shared across every audience the
+Mission touches, so audiences that participate in the same
+Mission can observe that they share a Mission. This is inherent
+to the Mission's role as a governance handle and is consented to
+at approval time when the user approves a Mission spanning those
+audiences.<a href="#section-13.1-1" class="pilcrow">¶</a></p>
+<p id="section-13.1-2">Audiences that should not be able to correlate user activity at
+all (across distinct Missions) <span class="bcp14">MUST</span> be served pairwise <code>sub</code>
+values; this is the canonical OIDC mechanism and is independent
+of Mission identity.<a href="#section-13.1-2" class="pilcrow">¶</a></p>
+<p id="section-13.1-3">Deployments with stronger Mission-identity-isolation requirements
+(e.g., a multi-tenant SaaS state authority where two competing
+tenants' Missions must not share identifier structure even when
+the same user has Missions in both) define a pairwise Mission
+identifier through a profile extension to this Framework. Such
+extensions are out of scope for this document.<a href="#section-13.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="consent-disclosure-content-and-pii">
@@ -5874,7 +5589,7 @@ disclose Mission records for a given subject identifier on
 authorized request; the subject identifier is the join key.<a href="#section-13.6-1" class="pilcrow">¶</a></p>
 <p id="section-13.6-2">Deployments <span class="bcp14">MUST</span> be able to delete or anonymize Mission records
 on lawful erasure request, subject to overriding retention
-obligations. The garbage-collection stub of <a href="#mission-record-garbage-collection-and-audit-chains" class="auto internal xref">Section 12.17</a>
+obligations. The garbage-collection stub of <a href="#mission-record-garbage-collection-and-audit-chains" class="auto internal xref">Section 12.16</a>
 provides the retention-side residual; deployments needing full
 erasure rather than retirement <span class="bcp14">MUST</span> extend the garbage-collection
 flow to remove the stub when lawfully required.<a href="#section-13.6-2" class="pilcrow">¶</a></p>
@@ -6136,66 +5851,54 @@ later required, dedicated IANA registries <span class="bcp14">SHOULD</span> be c
 a subsequent revision of this Framework.<a href="#section-14.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="mission-pairwise-sector-type-enumeration">
-<section id="section-14.6">
-        <h3 id="name-mission-pairwise-sector-typ">
-<a href="#section-14.6" class="section-number selfRef">14.6. </a><a href="#name-mission-pairwise-sector-typ" class="section-name selfRef">Mission Pairwise Sector Type Enumeration</a>
-        </h3>
-<p id="section-14.6-1">This document defines a closed enumeration for the
-<code>mission_pairwise_sector</code> metadata value:
-<code>resource_server</code>, <code>resource_as</code>, <code>tenant</code>, <code>trust_domain</code>. If
-extensibility is later required, a dedicated IANA registry
-<span class="bcp14">SHOULD</span> be created via a subsequent revision.<a href="#section-14.6-1" class="pilcrow">¶</a></p>
-</section>
-</div>
 <div id="mission-status-response-media-types">
-<section id="section-14.7">
+<section id="section-14.6">
         <h3 id="name-mission-status-response-med">
-<a href="#section-14.7" class="section-number selfRef">14.7. </a><a href="#name-mission-status-response-med" class="section-name selfRef">Mission Status Response Media Types</a>
+<a href="#section-14.6" class="section-number selfRef">14.6. </a><a href="#name-mission-status-response-med" class="section-name selfRef">Mission Status Response Media Types</a>
         </h3>
-<p id="section-14.7-1">Where a profile specification needs a new media type for Mission
+<p id="section-14.6-1">Where a profile specification needs a new media type for Mission
 Status responses (e.g.,
 <code>application/mission-status-response+json</code> or
 <code>application/mission-status-response+jwt</code>), the profile
 registers the media type per <span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>. This document does
-NOT register media types; profiles do.<a href="#section-14.7-1" class="pilcrow">¶</a></p>
+NOT register media types; profiles do.<a href="#section-14.6-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="what-this-document-does-not-register">
-<section id="section-14.8">
+<section id="section-14.7">
         <h3 id="name-what-this-document-does-not">
-<a href="#section-14.8" class="section-number selfRef">14.8. </a><a href="#name-what-this-document-does-not" class="section-name selfRef">What this document does NOT register</a>
+<a href="#section-14.7" class="section-number selfRef">14.7. </a><a href="#name-what-this-document-does-not" class="section-name selfRef">What this document does NOT register</a>
         </h3>
 <ul class="normal">
-<li class="normal" id="section-14.8-1.1">
-            <p id="section-14.8-1.1.1">RAR <code>type</code> values: <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> does not establish an IANA
+<li class="normal" id="section-14.7-1.1">
+            <p id="section-14.7-1.1.1">RAR <code>type</code> values: <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> does not establish an IANA
 registry for every RAR <code>type</code>. The <code>mission_resource_access</code>
 RAR type is registered by the OAuth Profile in the Mission
 Authority Set Type Registry created by this document, not in
-a (nonexistent) RFC 9396 type registry.<a href="#section-14.8-1.1.1" class="pilcrow">¶</a></p>
+a (nonexistent) RFC 9396 type registry.<a href="#section-14.7-1.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.8-1.2">
-            <p id="section-14.8-1.2.1">Generic JWT <code>typ</code> values: there is no IANA "JWT Media Type
+          <li class="normal" id="section-14.7-1.2">
+            <p id="section-14.7-1.2.1">Generic JWT <code>typ</code> values: there is no IANA "JWT Media Type
 Registry" for arbitrary <code>typ</code> values. Where a profile needs a
 specific JWT <code>typ</code>, it registers a media type per
-<span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>.<a href="#section-14.8-1.2.1" class="pilcrow">¶</a></p>
+<span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>.<a href="#section-14.7-1.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.8-1.3">
-            <p id="section-14.8-1.3.1">Mission Lifecycle and Mission Proposal state enumerations:
-closed sets, as noted above.<a href="#section-14.8-1.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-14.7-1.3">
+            <p id="section-14.7-1.3.1">Mission Lifecycle and Mission Proposal state enumerations:
+closed sets, as noted above.<a href="#section-14.7-1.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.8-1.4">
-            <p id="section-14.8-1.4.1"><code>acr</code> identifiers: this document does not register <code>acr</code>
+          <li class="normal" id="section-14.7-1.4">
+            <p id="section-14.7-1.4.1"><code>acr</code> identifiers: this document does not register <code>acr</code>
 identifiers. Deployments compose with existing identifier
 spaces (NIST SP 800-63, FIDO, OpenID Connect EAP
 <span>[<a href="#OIDC-EAP-ACR" class="cite xref">OIDC-EAP-ACR</a>]</span>, OIDC MODRNA, or deployment-defined URIs);
-see <a href="#common-constraints-framework" class="auto internal xref">Section 10</a>.<a href="#section-14.8-1.4.1" class="pilcrow">¶</a></p>
+see <a href="#common-constraints-framework" class="auto internal xref">Section 10</a>.<a href="#section-14.7-1.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.8-1.5">
-            <p id="section-14.8-1.5.1"><code>amr</code> identifiers: this document does not register <code>amr</code>
+          <li class="normal" id="section-14.7-1.5">
+            <p id="section-14.7-1.5.1"><code>amr</code> identifiers: this document does not register <code>amr</code>
 identifiers. Deployments compose with the IANA
 "Authentication Method Reference Values" registry
-<span>[<a href="#RFC8176" class="cite xref">RFC8176</a>]</span>; see <a href="#common-constraints-framework" class="auto internal xref">Section 10</a>.<a href="#section-14.8-1.5.1" class="pilcrow">¶</a></p>
+<span>[<a href="#RFC8176" class="cite xref">RFC8176</a>]</span>; see <a href="#common-constraints-framework" class="auto internal xref">Section 10</a>.<a href="#section-14.7-1.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -6363,10 +6066,6 @@ this specification.<a href="#section-15-1" class="pilcrow">¶</a></p>
 <dt id="RFC9701">[RFC9701]</dt>
         <dd>
 <span class="refAuthor">Lodderstedt, T., Ed.</span> and <span class="refAuthor">V. Dzhuvinov</span>, <span class="refTitle">"JSON Web Token (JWT) Response for OAuth Token Introspection"</span>, <span class="seriesInfo">RFC 9701</span>, <span class="seriesInfo">DOI 10.17487/RFC9701</span>, <time datetime="2025-01" class="refDate">January 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9701">https://www.rfc-editor.org/rfc/rfc9701</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC9728">[RFC9728]</dt>
-        <dd>
-<span class="refAuthor">Jones, M.B.</span>, <span class="refAuthor">Hunt, P.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth 2.0 Protected Resource Metadata"</span>, <span class="seriesInfo">RFC 9728</span>, <span class="seriesInfo">DOI 10.17487/RFC9728</span>, <time datetime="2025-04" class="refDate">April 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9728">https://www.rfc-editor.org/rfc/rfc9728</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="W3C-UNICODE-NORM">[W3C-UNICODE-NORM]</dt>
       <dd>
