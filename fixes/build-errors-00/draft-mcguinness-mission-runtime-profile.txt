@@ -1,0 +1,717 @@
+
+
+
+
+Network Working Group                                      K. McGuinness
+Internet-Draft                                               Independent
+Intended status: Standards Track                             9 June 2026
+Expires: 11 December 2026
+
+
+               Mission-Bound Runtime Enforcement Profile
+            draft-mcguinness-mission-runtime-profile-latest
+
+Abstract
+
+   This document profiles the OpenID AuthZEN Authorization API to
+   enforce Mission-bound authority at runtime.  The composition defines
+   Mission-to-policy materialization, the Resource-Side Enforcement
+   Contract, PEP placement rules, parameter binding, denial
+   classification with governed expansion eligibility, the Decision
+   Evidence Object emitted by the PDP, the Execution Evidence Object
+   emitted by the PEP or executor, and the runtime max_invocations
+   constraint.  Each Mission-bound enforcement claim names a deployment-
+   published enforcement-scope manifest identifying covered action
+   classes and execution boundaries.
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://mcguinness.github.io/mission-bound-authorization/draft-
+   mcguinness-mission-runtime-profile.html.  Status information for this
+   document may be found at https://datatracker.ietf.org/doc/draft-
+   mcguinness-mission-runtime-profile/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/mcguinness/mission-bound-authorization.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 11 December 2026.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+     1.1.  Submission venue
+   2.  Conventions and Definitions
+   3.  Profile Structure
+   4.  Mission-to-Policy Materialization
+     4.1.  Inputs
+     4.2.  Properties
+     4.3.  Wire form
+   5.  Resource-Side Enforcement Contract (RS-D)
+   6.  PEP Placement Rules
+   7.  PDP Request
+   8.  Decision Evidence Object
+   9.  Execution Evidence Object
+     9.1.  TOCTOU and parameter binding
+   10. Runtime Denial Classification
+     10.1.  Expansion eligibility
+     10.2.  Insufficient Claims composition
+   11. max_invocations Constraint
+     11.1.  Semantics
+     11.2.  Authoritative counter
+     11.3.  Multi-PEP coordination
+   12. Enforcement-Scope Manifest
+   13. Mission Status Composition
+   14. Local-Action Boundary
+   15. Security Considerations
+     15.1.  Decision Evidence vs Execution Evidence
+     15.2.  Stale state and TOCTOU
+     15.3.  PDP compromise
+     15.4.  Authority enlargement at runtime
+     15.5.  max_invocations counter correctness
+     15.6.  Bypass surfaces
+   16. IANA Considerations
+     16.1.  Decision Evidence Object Media Type
+     16.2.  Execution Evidence Object Media Type
+     16.3.  Mission Common Constraints Registry
+     16.4.  Mission Capability-Advertisement Metadata
+   Acknowledgments
+   References
+     Normative References
+     Informative References
+   Author's Address
+
+1.  Introduction
+
+   The Mission Framework [I-D.draft-mcguinness-mission-framework]
+   governs credential issuance and derivation.  This profile carries
+   those bounds to the execution boundary.  Every consequential action
+   in a deployment's enforcement-scope manifest is evaluated by a Policy
+   Decision Point (PDP) against:
+
+   *  Current Mission state (per Mission Status, from
+      [I-D.draft-mcguinness-mission-framework]).
+
+   *  The audience-relevant Authority Set projection.
+
+   *  Authenticated actor context.
+
+   *  Resource policy.
+
+   The PDP returns a permit, deny, or expandable-denial decision.  The
+   PEP enforces the decision and emits Execution Evidence.
+
+   This profile is substrate-independent.  OAuth Profile
+   [I-D.draft-mcguinness-mission-oauth-profile] and AAuth Profile
+   [I-D.draft-mcguinness-mission-aauth-profile] adapters supply
+   substrate-native credential and actor context.  The PDP interface is
+   the OpenID AuthZEN Authorization API 1.0 (a final OpenID Foundation
+   specification).
+
+1.1.  Submission venue
+
+   This document is an independent IETF Internet-Draft composing with
+   the OpenID AuthZEN Authorization API 1.0 specification.  AuthZEN is
+   an OpenID Foundation effort, not an IETF Working Group.
+
+2.  Conventions and Definitions
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   Terms from [I-D.draft-mcguinness-mission-framework] are inherited.
+   Additional definitions:
+
+   *PDP (Policy Decision Point)*:  Component that evaluates per-action
+      requests and produces a permit, deny, or expandable-denial
+      decision.  Conforms to the OpenID AuthZEN Authorization API.
+
+   *PEP (Policy Enforcement Point)*:  The in-line component that calls
+      the PDP before allowing a consequential action and enforces the
+      decision.
+
+   *Materialized Policy View*:  The reproducible evaluable form of the
+      Mission's approved tuple (Validated Mission Intent, Authority Set,
+      policy_version) produced by the state authority or a trusted
+      compiler.
+
+   *Decision Evidence*:  A durable record emitted by the PDP capturing
+      the inputs and result of one runtime decision.
+
+   *Execution Evidence*:  A durable record emitted by the PEP or
+      executor capturing whether the authorized action was attempted,
+      completed, failed, or suppressed.
+
+   *Enforcement-scope manifest*:  A deployment-published document
+      identifying the action classes, PEP locations, and execution
+      boundaries covered by a Mission-Bound Runtime Enforcement
+      conformance claim.
+
+3.  Profile Structure
+
+   This profile is modular:
+
+   *  *Core*: defines the required PDP contract, PEP placement, Decision
+      Evidence, Execution Evidence, parameter binding, and denial
+      classification.
+
+   *  *Optional Modules*: separate per-module specifications adding Tool
+      Binding, Decision Receipt, Purpose Registry, Attestation, Policy
+      Projection.
+
+   Conformance claims name which modules the implementation supports.
+   The Core profile is the minimum for any Mission-Bound Runtime
+   Enforcement claim.
+
+4.  Mission-to-Policy Materialization
+
+   The state authority (or a trusted compiler) reproducibly materializes
+   the approved Mission tuple as an evaluable policy view consumable by
+   the PDP.
+
+4.1.  Inputs
+
+   *  Validated Mission Intent.
+
+   *  Authority Set (typed entries).
+
+   *  policy_version.
+
+   *  Schema versions for each Authority Set entry type.
+
+4.2.  Properties
+
+   The materialized policy view MUST satisfy:
+
+   *  *Reproducibility*: same inputs produce byte-identical materialized
+      output.
+
+   *  *Identifiable*: the materialized view carries policy_view_id and
+      policy_view_version so PDP cache entries are addressable.
+
+   *  *Bounded*: the materialized view does not enlarge the Authority
+      Set's semantic bounds.  Materialization is faithful.
+
+4.3.  Wire form
+
+   This profile does not pick a concrete policy-language wire form for
+   the materialized view.  Implementations MAY use:
+
+   *  Cedar policies (draft-cecchetti-oauth-rar-cedar).
+
+   *  OpenFGA tuples.
+
+   *  Canonical input bundles consumed by the AuthZEN PDP directly.
+
+   *  Engine-native artifacts.
+
+   The Policy Projection Optional Module (future spec) standardizes a
+   specific wire form when implementer demand justifies.
+
+5.  Resource-Side Enforcement Contract (RS-D)
+
+   A Resource Server claiming RS-D MUST:
+
+   1.  Identify every consequential action in its enforcement scope.
+
+   2.  For each such action, call the PDP before allowing the action.
+
+   3.  Pass to the PDP the inputs defined in Section 7.
+
+   4.  Enforce the PDP decision.
+
+   5.  Emit Execution Evidence after the action's outcome is determined.
+
+   A Resource Server claiming RS-D for a named scope but allowing
+   consequential actions outside that scope to bypass the PDP MUST NOT
+   claim RS-D for those actions.  The enforcement-scope manifest names
+   covered action classes; uncovered actions are explicitly outside the
+   claim.
+
+6.  PEP Placement Rules
+
+   The PEP MUST be placed such that:
+
+   *  Every action in the enforcement scope passes through the PEP.
+
+   *  The PEP can prevent the action from being executed (not merely log
+      it).
+
+   *  The PEP has access to the authenticated subject, actor context,
+      Mission reference, parameters, and Resource policy at decision
+      time.
+
+   Acceptable placements include:
+
+   *  In-process middleware in the Resource Server.
+
+   *  A reverse-proxy interceptor.
+
+   *  A sidecar enforcement gateway.
+
+   *  The agent orchestrator's tool-call boundary (for local actions not
+      exposed as resources).
+
+   PEP placements MUST be documented in the enforcement-scope manifest.
+
+7.  PDP Request
+
+   The PDP request follows the OpenID AuthZEN Authorization API.  This
+   profile adds the following Mission-specific inputs:
+
+   *  mission (object, required): Mission reference and projection.
+      Carries id or ref, origin, authority_hash, policy_version,
+      policy_view_id.
+
+   *  actor (object, required): authenticated actor context per
+      [I-D.draft-mcguinness-oauth-actor-profile].
+
+   *  subject (object, required): authenticated subject identifier.
+
+   *  resource (object, required): the target resource.
+
+   *  action (string, required): the requested action identifier.
+
+   *  parameters (object, conditional): action parameters when parameter
+      binding is required.
+
+   *  parameter_digest (string, required when parameters is present): a
+      digest committing to the parameters at request time.
+
+   *  audience (string, required): the PEP's audience identifier.
+
+   *  freshness (object, required): the Mission Status freshness the PEP
+      relies on.  Includes mission_status_issued_at,
+      mission_status_expires_at, and the freshness mode (fresh, cached,
+      or event_driven).
+
+   The PDP MUST verify that the Mission state, authority_hash, and
+   policy_version carried by the PEP are consistent with the
+   materialized policy view.  Stale or inconsistent inputs MUST be
+   treated as denial classification stale_state.
+
+8.  Decision Evidence Object
+
+   The PDP emits a Decision Evidence Object for every runtime decision.
+   The object is a JSON document with:
+
+   *  decision_id (string, required): unique decision identifier.
+
+   *  mission_id_or_ref, origin, authority_hash, policy_view_id: Mission
+      projection at decision time.
+
+   *  actor, subject, resource, action, parameter_digest, audience: PDP
+      inputs.
+
+   *  decision (string, required): one of permit, deny, expandable_deny.
+
+   *  denial_reason (string, conditional): when decision is deny or
+      expandable_deny.  Values include out_of_authority,
+      aal_insufficient, stale_state, mission_inactive,
+      parameter_violation, resource_policy, quota_exceeded, registered
+      values from the Common Constraints registry.
+
+   *  expansion (object, conditional): when decision is expandable_deny,
+      the eligibility-signaling fields per
+      [I-D.draft-mcguinness-mission-expansion]: eligible: true,
+      access_request_uri, ticket, requested_authority.
+
+   *  evaluated_at (RFC 3339 timestamp, required).
+
+   *  policy_view_id, policy_view_version.
+
+   *  evidence_envelope (signature or integrity reference): how the
+      Decision Evidence is integrity-protected.  Profiles bind.
+
+   Decision Evidence is durable and integrity-protected.  It is the
+   authoritative record of what the PDP evaluated, NOT proof that the
+   action occurred.
+
+9.  Execution Evidence Object
+
+   The PEP or executor emits an Execution Evidence Object after the
+   authorized action's outcome is determined.  The object is a JSON
+   document with:
+
+   *  execution_id (string, required): unique execution identifier.
+
+   *  decision_id (string, required): the Decision Evidence this
+      execution is linked to.
+
+   *  parameter_digest (string, required): MUST match the
+      parameter_digest in the linked Decision Evidence.
+
+   *  outcome (string, required): one of attempted, completed, failed,
+      suppressed. suppressed indicates the action was permitted by the
+      PDP but the executor chose not to attempt it (e.g., kill-switch,
+      secondary deny).
+
+   *  outcome_at (RFC 3339 timestamp, required).
+
+   *  error (string, conditional): error identifier when outcome is
+      failed.
+
+   *  attempted_at, completed_at: timing context.
+
+   *  result_summary (object, optional): minimal action result metadata
+      (e.g., affected resource counts).
+
+   *  evidence_envelope: integrity protection.
+
+   Decision Evidence and Execution Evidence are *linked but distinct*.
+   Authorization is not proof that an action occurred; the existence of
+   a Decision Evidence record without a corresponding Execution Evidence
+   record indicates the action was not attempted, or that the executor
+   failed to emit evidence.
+
+9.1.  TOCTOU and parameter binding
+
+   The parameter_digest chain (PEP request → Decision Evidence →
+   Execution Evidence) closes the time-of-check-to-time-of-use gap.  If
+   the executed action's effective parameters differ from those the PDP
+   evaluated, the digest mismatch is detectable in audit.
+
+   PEP MUST compute parameter_digest over the canonical parameter object
+   using the integrity-anchor hash format from
+   [I-D.draft-mcguinness-mission-framework].
+
+10.  Runtime Denial Classification
+
+   When the PDP returns a denial, the denial is one of:
+
+   *  *out_of_authority*: the requested action is not within the
+      Authority Set. MAY be expandable_deny if eligible.
+
+   *  *aal_insufficient*: the actor's AAL does not satisfy an aal
+      constraint.  MAY be satisfied by RFC 9470 step-up authentication
+      without expansion.
+
+   *  *stale_state*: the PEP-supplied freshness is stale or inconsistent
+      with the materialized policy view.
+
+   *  *mission_inactive*: the Mission state is not active.
+
+   *  *parameter_violation*: parameters violate a registered constraint.
+
+   *  *resource_policy*: Resource policy refuses the action
+      independently of Mission authority.
+
+   *  *quota_exceeded*: a runtime budget (e.g., max_invocations) has
+      been exhausted.
+
+10.1.  Expansion eligibility
+
+   The PDP returns expandable_deny when:
+
+   *  The denial is out_of_authority, AND
+
+   *  The Mission Expansion specification's eligibility predicate
+      permits expansion for the requested authority delta.
+
+   The PEP MUST surface the expansion eligibility to the caller per
+   [I-D.draft-mcguinness-mission-expansion]'s wire binding for the
+   substrate.
+
+10.2.  Insufficient Claims composition
+
+   The PDP MAY compose with
+   [I-D.draft-mcguinness-oauth-insufficient-claims] to signal which
+   authenticated claims would lift an aal_insufficient denial.
+
+11.  max_invocations Constraint
+
+   This profile defines max_invocations as a runtime constraint distinct
+   from the Framework's max_derivations (which is an issuance
+   constraint).
+
+11.1.  Semantics
+
+   max_invocations is the maximum number of authorized action
+   invocations permitted under the Mission, evaluated at the enforcement
+   boundary.
+
+11.2.  Authoritative counter
+
+   The PEP maintains an authoritative atomic counter per Mission.  The
+   counter is incremented through a reserve-on-permit, finalize-on-
+   outcome protocol:
+
+   1.  On PDP permit, the PEP reserves one count slot.
+
+   2.  On Execution Evidence completed, the slot is finalized as
+       consumed.
+
+   3.  On Execution Evidence failed or suppressed, the slot is released
+       per the registered constraint semantics (default: failed =
+       consumed, suppressed = released).
+
+   4.  On Execution Evidence missing (timeout), the slot is finalized
+       per the registered timeout semantics (default: consumed).
+
+   The counter MUST NOT exceed the value declared in the Mission's
+   max_invocations constraint.
+
+11.3.  Multi-PEP coordination
+
+   When more than one PEP enforces a Mission's max_invocations (e.g.,
+   multiple Resource Servers under one deployment), the deployment
+   publishes a coordination policy in the enforcement-scope manifest.
+   Implementations:
+
+   *  MAY use a centralized counter service.
+
+   *  MAY use eventually-consistent counters with a per-PEP allocation
+      budget.
+
+   *  MUST NOT allow uncoordinated counters that would together exceed
+      the declared maximum.
+
+12.  Enforcement-Scope Manifest
+
+   A deployment publishing a Mission-Bound Runtime Enforcement claim
+   MUST publish an enforcement-scope manifest identifying:
+
+   *  *Action classes covered*: the set of action identifiers the PEP
+      intercepts.
+
+   *  *PEP locations*: the components hosting the PEP for each action
+      class.
+
+   *  *Excluded execution boundaries*: action paths or execution
+      contexts the deployment cannot intercept (e.g., debug shells,
+      unsanctioned egress routes, agent-side tool invocations outside
+      the orchestrator).
+
+   *  *Mission state freshness mode*: fresh, cached, or event_driven.
+
+   *  *Maximum tolerated stale interval*: in seconds.
+
+   The manifest is a JSON document published at a well-known URL or
+   linked from AS metadata.
+
+13.  Mission Status Composition
+
+   The PDP relies on Mission Status to determine current Mission state.
+   The PEP MUST pass to the PDP the freshness of the Mission Status it
+   last consulted.  The PDP applies the deployment's freshness mode:
+
+   *  fresh: PEP MUST consult Mission Status synchronously before every
+      consequential action.
+
+   *  cached: PEP MAY use cached Mission Status within
+      mission_max_stale_seconds.
+
+   *  event_driven: PEP relies on event-channel invalidation; cached
+      state is valid until an event invalidates it.
+
+   When freshness fails (cache miss, event-channel lag), the PEP MUST
+   classify the request as stale_state denial unless the deployment
+   explicitly defines a bounded degraded mode.
+
+14.  Local-Action Boundary
+
+   For consequential actions that are NOT OAuth Resource Server calls or
+   AAuth resource-token calls (e.g., agent-orchestrator local tool
+   invocations, file-system writes, process launches), the orchestrator
+   MUST act as the PEP at the action boundary.
+
+   The orchestrator-PEP MUST:
+
+   *  Identify the local action in its enforcement-scope manifest.
+
+   *  Call the PDP before the action.
+
+   *  Emit Decision Evidence and Execution Evidence per Sections 8 and
+      9.
+
+   The enforcement-scope manifest MUST explicitly list local-action PEP
+   placements and any local actions excluded from enforcement.
+
+15.  Security Considerations
+
+15.1.  Decision Evidence vs Execution Evidence
+
+   Decision Evidence is NOT proof an action occurred.  Implementations
+   MUST emit Execution Evidence to record outcomes.  Auditors MUST NOT
+   treat Decision Evidence alone as evidence of action.
+
+15.2.  Stale state and TOCTOU
+
+   A PDP decision is valid only for the freshness window the PEP
+   supplied.  The PEP MUST NOT execute an authorized action after the
+   freshness window has elapsed without re-consulting Mission Status.
+
+   The parameter_digest chain closes the parameter TOCTOU gap.
+   Implementations MUST verify the digest at execution time.
+
+15.3.  PDP compromise
+
+   A compromised PDP can return arbitrary decisions.  Mission-Bound
+   Runtime Enforcement assumes a trusted PDP.  Deployments mitigate PDP
+   compromise through key hardware modules for PDP signing keys, PDP
+   redundancy with majority quorum, and audit-side cross-checks against
+   Mission Status.
+
+15.4.  Authority enlargement at runtime
+
+   A PEP that interprets permit as authorization beyond the Authority
+   Set's bounds violates this profile.  The Mission's authority_hash is
+   the upper bound; runtime evaluation NEVER enlarges authority.
+
+15.5.  max_invocations counter correctness
+
+   The reserve-on-permit, finalize-on-outcome protocol depends on the
+   PEP correctly emitting Execution Evidence.  A PEP that fails to emit
+   Execution Evidence leaks reserved slots over time, eventually denying
+   legitimate requests.
+
+   Implementations MUST timeout reserved slots and finalize them per the
+   registered constraint semantics (default: consumed).
+
+15.6.  Bypass surfaces
+
+   Action paths outside the enforcement-scope manifest are NOT covered
+   by the conformance claim.  Deployments MUST honestly document bypass
+   surfaces.  A "complete" enforcement claim covering a narrow manifest
+   is more honest than a broad manifest with unenumerated bypass
+   surfaces.
+
+16.  IANA Considerations
+
+16.1.  Decision Evidence Object Media Type
+
+   This document registers application/mission-decision-evidence+json
+   per RFC 6838.
+
+16.2.  Execution Evidence Object Media Type
+
+   This document registers application/mission-execution-evidence+json
+   per RFC 6838.
+
+16.3.  Mission Common Constraints Registry
+
+   This document registers max_invocations in the Mission Common
+   Constraints registry created by
+   [I-D.draft-mcguinness-mission-framework].
+
+   *  Name: max_invocations
+
+   *  Type: string (decimal-string integer).
+
+   *  Specification: this document.
+
+   *  Authoritative counter: PEP per Section 11.
+
+   *  Narrowing: derived constraints MAY specify smaller values.
+
+16.4.  Mission Capability-Advertisement Metadata
+
+   This document registers the following metadata values in the Mission
+   Capability-Advertisement Metadata registry:
+
+   *  mission_optional_modules_supported values: tool_binding,
+      decision_receipt, purpose_registry, attestation,
+      policy_projection.  (The modules themselves are separate
+      specifications.)
+
+   *  mission_freshness_mode_supported: array of fresh, cached,
+      event_driven.
+
+   *  mission_enforcement_scope_manifest_uri: URL of the deployment's
+      enforcement-scope manifest.
+
+Acknowledgments
+
+   The author thanks the OpenID AuthZEN working group and the Mission-
+   Bound Authorization implementer community for feedback.
+
+References
+
+Normative References
+
+   [I-D.draft-mcguinness-mission-expansion]
+              "*** BROKEN REFERENCE ***".
+
+   [I-D.draft-mcguinness-mission-framework]
+              "*** BROKEN REFERENCE ***".
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+Informative References
+
+   [I-D.draft-mcguinness-mission-aauth-profile]
+              "*** BROKEN REFERENCE ***".
+
+   [I-D.draft-mcguinness-mission-oauth-profile]
+              "*** BROKEN REFERENCE ***".
+
+   [I-D.draft-mcguinness-oauth-actor-profile]
+              McGuinness, K., "OAuth Actor Profile for Delegation", Work
+              in Progress, Internet-Draft, draft-mcguinness-oauth-actor-
+              profile-00, 30 April 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-actor-profile-00>.
+
+   [I-D.draft-mcguinness-oauth-insufficient-claims]
+              McGuinness, K., "OAuth 2.0 Insufficient Claims Challenge",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              insufficient-claims-00, 27 May 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-insufficient-claims-00>.
+
+   [RFC9396]  Lodderstedt, T., Richer, J., and B. Campbell, "OAuth 2.0
+              Rich Authorization Requests", RFC 9396,
+              DOI 10.17487/RFC9396, May 2023,
+              <https://www.rfc-editor.org/rfc/rfc9396>.
+
+   [RFC9701]  Lodderstedt, T., Ed. and V. Dzhuvinov, "JSON Web Token
+              (JWT) Response for OAuth Token Introspection", RFC 9701,
+              DOI 10.17487/RFC9701, January 2025,
+              <https://www.rfc-editor.org/rfc/rfc9701>.
+
+Author's Address
+
+   Karl McGuinness
+   Independent
+   Email: public@karlmcguinness.com
