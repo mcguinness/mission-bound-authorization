@@ -215,11 +215,14 @@ This document defines the Mission as a durable, integrity-anchored, lifecycle-go
 - **Mission Intent JSON schema**: structured task proposal admitted by the state authority. Fields: `goal`, `objects`, `constraints`, `success_criteria`, `mission_expiry`, optional `purpose`, optional `context`. Profiles define transport; the schema is owned here.
 - **Authority Set**: substrate-neutral container for approved authority bounded by Mission Intent. Carries per-resource entries with `resource`, `actions`, and `constraints`.
 - **Lifecycle state machine**: seven states (`pending_approval`, `active`, `suspended`, `revoked`, `completed`, `expired`, `rejected`) and the permitted transitions.
-- **Integrity anchors**: `proposal_hash`, `authority_hash`, `consent_rendering_hash`. Canonical form (JCS, RFC 8785), digest algorithm (SHA-256), and what each commits.
+- **Two-layer integrity model**:
+  - **Content-addressable identifiers** (`proposal_hash`, `authority_hash`, `consent_rendering_hash`). JCS-canonicalized (RFC 8785) JSON, SHA-256 digest, base64url-encoded. Stable across signers; used as join keys on tokens, audit records, and Mission Status responses. JCS is the canonicalization because JSON's data model sidesteps XML C14N's worst pitfalls (no namespaces, no comments, no mixed content, no DTD, no wrapping-attack surface).
+  - **Signed audit evidence** (JWS, RFC 7515). The state authority emits signed Mission Status responses and signed canonical Mission record content (Mission Intent, Authority Set, Consent Disclosure). The JWS payload is the JCS-canonical form of the content; the signature anchors authenticity and signer identity. The hashes anchor content addressability; the JWS anchors authenticity. The two are complementary, not redundant.
 - **Mission identifier model**: `mission.id` (stable opaque), `mission.origin` (state-authority issuer URI), audience-pairwise identifier framework.
-- **Common Constraints vocabulary**: standardized constraint key names with stable semantics (`max_calls`, `max_value`, `max_duration`, `aal`, `geo`, `data_classification`). Each defines what it constrains; substrate profiles define wire serialization. (Initial catalog stays in this draft; can split into its own spec later if the catalog grows.)
-- **Mission Status interface**: abstract request/response shape for authenticated Mission Status reads (state, integrity hashes, audience-filtered Authority Set projection, `policy_version`). Profiles define transport bindings (OAuth introspection extension, AAuth PS endpoint, MAS endpoint).
-- **Evidence binding**: signer, timestamp, policy version, schema version, rendering template version, approving principal. The minimum metadata each integrity anchor MUST be paired with for audit.
+- **Common Constraints vocabulary**: standardized constraint key names with stable semantics (`max_calls`, `max_value`, `max_duration`, `aal`, `geo`, `data_classification`). Each defines what it constrains; substrate profiles define wire serialization. (Initial catalog stays in this draft; can split into its own spec later if the catalog grows.) Where a constraint value precision matters (e.g., `max_value`), the canonical representation is a JSON string, not a JSON number, to avoid IEEE 754 precision edge cases under JCS.
+- **Mission Status interface**: request/response contract for authenticated Mission Status reads (state, integrity hashes, audience-filtered Authority Set projection, `policy_version`). Responses MUST be returned as a JWS-signed envelope using the `mission-status+jwt` `typ` value defined in this spec. Profiles define transport bindings (OAuth introspection extension, AAuth PS endpoint, MAS endpoint); the JWS payload schema is owned here.
+- **Signed Mission evidence types**: JWS profile for Mission Status responses and for state authority audit emissions. Required header fields (`alg`, `kid`, `typ`). Required claims (`mission.id`, `mission.origin`, `iat`, `exp`, canonical Mission state object). Key publication and rotation rules.
+- **Reference test vectors**: Mission Intent input → expected JCS canonical bytes (hex-encoded) → expected `proposal_hash` (base64url-encoded SHA-256). Mission Status payload input → expected JWS encoding. Without these, "JCS-canonical" and "JWS-signed" are aspirational. The reference vectors are part of the spec, not an appendix added later.
 - **Trust boundaries**: who is trusted for what (Shaper, state authority, credential issuer, PDP, evidence emitter). Profiles populate these roles for their substrate.
 - **Capability-advertisement metadata**: `mission_authorization_domain_tiers_supported`, `mission_ladder_levels_supported`, `mission_profiles_supported`, `mission_optional_modules_supported`. (Registry creation lives here; the Capability Model spec, Draft 11, adds entries.)
 - **Normative vocabulary**: Mission Intent, Mission, Authority Set, Projection, Runtime Decision, Evidence.
@@ -227,10 +230,12 @@ This document defines the Mission as a durable, integrity-anchored, lifecycle-go
 ### Key normative requirements (abstract)
 
 - A Mission MUST satisfy the litmus test (durable, integrity-anchored, lifecycle-governed, identifier-stable, reference-bearing, derived-authority).
-- A state authority MUST compute `proposal_hash`, `authority_hash`, and `consent_rendering_hash` over JCS-canonicalized objects and SHA-256.
-- A Mission record MUST carry binding evidence (signer, timestamp, policy version, schema version, rendering template version, approver) alongside the integrity anchors.
+- A state authority MUST compute `proposal_hash`, `authority_hash`, and `consent_rendering_hash` over JCS-canonicalized (RFC 8785) objects, SHA-256, base64url-encoded.
+- A state authority MUST produce byte-identical JCS output to the reference test vectors published with this spec. Implementations that diverge from the test vectors are non-conformant.
+- A Mission record MUST carry binding evidence (signer identity, timestamp, policy version, schema version, rendering template version, approving principal) alongside the integrity anchors.
 - A Mission MUST be in `active` state to permit new derivation; every non-active state refuses.
-- A state authority MUST implement the Mission Status interface defined here. Profiles MUST specify the transport binding.
+- A state authority MUST implement the Mission Status interface defined here. Mission Status responses MUST be returned as JWS (RFC 7515) using the `mission-status+jwt` `typ` value, with `kid` referencing a key published in the state authority's JWKS. Profiles specify the transport binding for the JWS.
+- A state authority MAY emit signed canonical Mission record content (Mission Intent, Authority Set, Consent Disclosure) as separate JWS objects for audit export; when emitted, the JWS payload MUST be the JCS-canonical bytes of the content.
 - A profile MUST specify how each Mission Model element manifests on its substrate.
 - A profile MUST NOT enlarge the Mission Model semantics; profile mappings are subset-faithful representations.
 
@@ -239,6 +244,8 @@ This document defines the Mission as a durable, integrity-anchored, lifecycle-go
 - Mission Common Constraints registry (new): key, semantics, commitment shape, narrowing rules.
 - Mission lifecycle state enumeration (or registry).
 - Mission Status request/response media types.
+- `mission-status+jwt` `typ` value (registered in the JWT Media Type Registry).
+- Signed Mission evidence `typ` values: `mission-intent+jwt`, `mission-authority-set+jwt`, `mission-consent-disclosure+jwt`.
 - Capability-advertisement metadata registry (new).
 - Mission Model identifier vocabulary (`mission.id`, `mission.origin`).
 
@@ -249,10 +256,13 @@ This document defines the Mission as a durable, integrity-anchored, lifecycle-go
 - Trust-boundary violations (Shaper acting as authorization component).
 - Pairwise identifier privacy and correlation risk.
 - Mission Status interface privacy and freshness.
+- **JCS implementation correctness as a deployment risk.** Implementations that produce byte-divergent canonical output produce divergent hashes and break the content-addressability that the rest of the architecture depends on. Mitigation: the spec's reference test vectors. An implementation that does not reproduce the test vectors byte-for-byte is non-conformant. Where possible, deployments SHOULD use known-good JCS libraries rather than rolling their own.
+- **JWS key management for signed Mission evidence.** The state authority's JWKS publication, key rotation, and `kid` discipline are load-bearing for Mission Status authenticity. Key compromise produces forgeable Mission Status responses. Standard JWS key-management guidance applies; the spec adds Mission-specific considerations for key continuity across Mission lifetimes that may outlast individual key rotations.
+- **Number precision under JCS.** IEEE 754 double precision applies to JSON numbers under JCS. Constraint values where precision matters MUST use string representation (e.g., `"max_value": "100.00"`), not number representation.
 
 ### Normative references
 
-RFC 8785 (JCS), RFC 8174 (BCP 14 update), RFC 6234 (SHA-256), RFC 7519 (JWT, where Mission claims appear).
+RFC 8785 (JCS), RFC 7515 (JWS), RFC 7517 (JWK), RFC 7518 (JWA), RFC 8174 (BCP 14 update), RFC 6234 (SHA-256), RFC 7519 (JWT, where Mission claims appear).
 
 ### Informative references
 
