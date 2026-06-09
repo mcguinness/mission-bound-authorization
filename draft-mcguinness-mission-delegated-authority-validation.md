@@ -725,15 +725,17 @@ returned in a validation response's `classifications` array.
   - `unknown_action`: this document. The Resource AS does not
     recognize the requested action. The originating AS MUST refuse.
 
-## Mission Capability-Advertisement Metadata
+## AS metadata member
 
-This document registers the following entry in the Mission
-Capability-Advertisement Metadata registry created by
-{{I-D.draft-mcguinness-mission-framework}}:
+This document registers the following member in the OAuth
+Authorization Server Metadata registry ({{!RFC8414}}):
 
 - `mission_authority_validation_endpoint`: URL at which a Resource
   AS accepts delegated authority validation requests per this
-  document. Advertised in Authorization Server metadata.
+  document.
+
+- **Change controller**: IETF
+- **Reference**: this document
 
 # Acknowledgments
 {:numbered="false"}

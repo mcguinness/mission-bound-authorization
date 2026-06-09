@@ -54,13 +54,12 @@ Tiers (AD-1 through AD-3). The document names three adoption claims
 (Mission-Bound Issuance, Mission-Bound Runtime Enforcement, and
 Mission-Bound Cross-Domain Projection) that map onto the coordinate,
 and describes how OAuth-only, AAuth-only, and cross-substrate
-deployments report against the coordinate. The capability-advertisement
-metadata registry is created by the Mission Framework; this document
-provides the formal registry entries for the four metadata fields and
-the closed enumerations for the three axes. This document is
-Informational: conformance is claimed against substrate or runtime
-profile specifications, and the coordinate here is a reporting
-vocabulary.
+deployments report against the coordinate. This document is
+Informational: it defines a descriptive vocabulary for
+deployment maturity, not a protocol-actionable advertisement.
+Conformance is claimed against substrate or runtime profile
+specifications; the coordinate here is a reporting vocabulary
+used in documentation, migration roadmaps, and positioning.
 
 --- middle
 
@@ -113,10 +112,8 @@ Enforcement Profile. The Capability Ladder, the Resource Server
 Tiers, and the Authorization Domain Tiers are reporting tools. An
 implementation describes its position on the coordinate; it does not
 "conform" to a level or tier as if these were independent wire
-contracts. IANA actions in this document are limited to formal entry
-definitions in the Mission Capability-Advertisement Metadata
-Registry created by the Mission Framework and to the closed
-enumerations for the three axes.
+contracts. This document has no IANA actions; the tiers and levels
+are vocabulary, not protocol identifiers.
 
 # Conventions and Definitions
 
@@ -738,96 +735,35 @@ In a cross-substrate report, a single deployment-wide Level label
 is insufficient. The report SHOULD include the MAS tier, each
 consuming domain's tier, and the per-substrate scope statement.
 
-# Capability Advertisement
+# Using the Vocabulary {#using-the-vocabulary}
 
-A state authority MAY advertise its capabilities through metadata.
-The Mission Framework {{I-D.draft-mcguinness-mission-framework}}
-creates the **Mission Capability-Advertisement Metadata Registry**
-and names four metadata fields for that registry. This document
-provides the formal registry entries for those fields and the
-closed enumerations the field values reference. The IANA actions
-appear in {{iana-considerations}}.
+The Capability Ladder, Resource Server Tiers, and Authorization
+Domain Tiers defined in this document are a **reporting
+vocabulary**, not a wire contract. Deployments use these labels in:
 
-The four metadata fields are:
+- Release notes, case studies, and documentation describing what
+  the deployment delivers.
+- Migration roadmaps mapping current state to a target coordinate.
+- Audit narratives describing where governance evidence is and
+  is not enforced.
+- Vendor positioning describing comparative capability.
 
-## mission_authorization_domain_tiers_supported
+Protocol-level capability negotiation between consumers and state
+authorities is performed through the substrate-specific
+`*_supported` metadata members defined by each profile (e.g.,
+`mission_status_endpoint`, `mission_enforcement_classes_supported`,
+`mission_sender_constraints_supported`,
+`authority_set_types_supported`). Consumers MUST make protocol
+decisions from those concrete feature advertisements, not from
+the labels defined here.
 
-Array of Authorization Domain Tier identifiers (a subset of the
-closed enumeration in {{authorization-domain-tier-identifiers}})
-that the advertising authorization domain implements.
-
-Example value: `["AD-1", "AD-2", "AD-3"]`.
-
-The advertised tiers represent claimed capability at the
-authorization domain. A consumer SHOULD treat the highest tier in
-the array as the upper bound of the domain's claim and SHOULD NOT
-assume capabilities beyond the listed tiers.
-
-## mission_ladder_levels_supported
-
-Array of integer Capability Ladder level identifiers (a subset of
-the closed enumeration in
-{{capability-ladder-level-identifiers}}) that the advertising
-deployment supports.
-
-Example value: `[1, 2, 3]`.
-
-A deployment SHOULD advertise the highest level it can support
-end-to-end within a defined scope, together with each lower level
-it remains compatible with. A `mission_ladder_levels_supported`
-value is a deployment-level claim, not a per-Resource-Server
-claim; per-Resource-Server tier reporting belongs at the Resource
-Server's own metadata surface.
-
-## mission_profiles_supported
-
-Array of substrate or runtime profile identifiers the advertising
-authorization domain implements. The initial registered string
-values are:
-
-- `"oauth"`: the OAuth Profile
-  {{I-D.draft-mcguinness-mission-oauth-profile}}.
-- `"aauth"`: the AAuth Composition Profile
-  {{I-D.draft-mcguinness-mission-aauth-profile}}.
-- `"mas"`: the Mission Authority Server Profile
-  {{I-D.draft-mcguinness-mission-mas}}.
-- `"runtime_enforcement"`: the Runtime Enforcement Profile
-  {{I-D.draft-mcguinness-mission-runtime-profile}}.
-
-Additional profile identifiers MAY be added to the
-Capability-Advertisement Metadata Registry per the policy in
-{{I-D.draft-mcguinness-mission-framework}}.
-
-## mission_optional_modules_supported
-
-Array of registered Mission Runtime Enforcement Profile optional
-module identifiers the advertising authorization domain or runtime
-implements. The set of registered optional modules is defined by
-{{I-D.draft-mcguinness-mission-runtime-profile}} and its
-follow-on module specifications. Example values include
-`"tool_binding"`, `"decision_receipt"`, `"purpose_registry"`,
-`"actor_provenance"`, `"attestation"`, and `"policy_projection"`.
-
-Each value MUST correspond to a registered optional module with a
-defining specification. Unregistered tokens are not
-interoperable and SHOULD NOT be advertised.
-
-## Metadata location
-
-The metadata location is substrate-specific:
-
-- OAuth uses the AS metadata document.
-- AAuth uses the PS metadata document.
-- MAS uses its own metadata document defined in
-  {{I-D.draft-mcguinness-mission-mas}}.
-
-Resource Server tier and PDP capability are advertised at the
-Resource Server through PRM {{RFC9728}} (or
-{{I-D.draft-mcguinness-oauth-rfc9728bis}} when available) for
-OAuth-substrate Resource Servers, and through the AAuth Resource
-metadata for AAuth Resource Servers. The exact field names for
-per-Resource-Server tier advertisement are defined by the relevant
-substrate profile and are out of scope for this document.
+This separation is deliberate. Tiers and Levels invite scoring
+and gaming when used as protocol signals; they are stable and
+useful when used as descriptive vocabulary. The substrate
+profiles capture every protocol-actionable capability through
+concrete flags. This document captures the human-facing
+positioning vocabulary that organizes those flags into
+recognizable maturity points.
 
 # Reading Paths by Capability Goal
 
@@ -888,80 +824,27 @@ A capability coordinate is not itself a conformance claim. An
 implementation MUST NOT claim "conformance to" this document; an
 implementation describes its position on the coordinate.
 
-IANA actions in this document are confined to formal entries in
-the Capability-Advertisement Metadata Registry created by the
-Mission Framework and to closed enumerations for the three axes.
-This document defines no new wire surface. For these reasons, the
-Informational category is the appropriate publication track.
+This document has no IANA actions and defines no new wire surface.
+The tiers and levels are vocabulary; protocol-level capability
+advertisement is performed through the substrate-specific
+`*_supported` metadata members each profile already defines.
+For these reasons, the Informational category is the appropriate
+publication track.
 
 # IANA Considerations  {#iana-considerations}
 
-This document requests IANA registrations in registries created
-by {{I-D.draft-mcguinness-mission-framework}} and establishes
-three closed enumerations.
+This document has no IANA actions. The Capability Ladder Levels,
+Resource Server Tiers, and Authorization Domain Tiers defined
+here are a vocabulary for documentation and positioning, not a
+protocol-actionable advertisement. They are listed below for
+reference; consumers MUST NOT make protocol decisions from the
+labels.
 
-## Mission Capability-Advertisement Metadata Registry entries
+Protocol-level capability advertisement is performed through the
+substrate-specific `*_supported` metadata members defined by
+each profile (see {{using-the-vocabulary}}).
 
-{{I-D.draft-mcguinness-mission-framework}} creates the
-**Mission Capability-Advertisement Metadata Registry** with
-Specification Required registration policy. Each entry MUST
-include:
-
-- `name`
-- value semantics
-- defining specification
-- change controller
-
-This document registers four entries in that registry. Each entry
-references the closed enumerations defined later in this section.
-
-### Entry: mission_authorization_domain_tiers_supported
-
-- **Name**: `mission_authorization_domain_tiers_supported`
-- **Value semantics**: JSON array of strings. Each value MUST be
-  a registered identifier from
-  {{authorization-domain-tier-identifiers}}.
-- **Defining specification**: this document, {{capability-advertisement}}.
-- **Change controller**: IETF.
-
-### Entry: mission_ladder_levels_supported
-
-- **Name**: `mission_ladder_levels_supported`
-- **Value semantics**: JSON array of non-negative integers. Each
-  value MUST be a registered identifier from
-  {{capability-ladder-level-identifiers}}.
-- **Defining specification**: this document, {{capability-advertisement}}.
-- **Change controller**: IETF.
-
-### Entry: mission_profiles_supported
-
-- **Name**: `mission_profiles_supported`
-- **Value semantics**: JSON array of strings. Each value MUST be
-  a registered profile identifier. Initial registered values are
-  `"oauth"`, `"aauth"`, `"mas"`, `"runtime_enforcement"`.
-  Additional values MAY be registered in the
-  Capability-Advertisement Metadata Registry under the policy in
-  {{I-D.draft-mcguinness-mission-framework}}.
-- **Defining specification**: this document, {{capability-advertisement}}.
-- **Change controller**: IETF.
-
-### Entry: mission_optional_modules_supported
-
-- **Name**: `mission_optional_modules_supported`
-- **Value semantics**: JSON array of strings. Each value MUST
-  correspond to a registered Mission Runtime Enforcement Profile
-  optional module with a defining specification. The registry of
-  optional module identifiers is maintained by
-  {{I-D.draft-mcguinness-mission-runtime-profile}} and its
-  follow-on module specifications.
-- **Defining specification**: this document, {{capability-advertisement}}.
-- **Change controller**: IETF.
-
-## Capability Ladder Level Identifiers  {#capability-ladder-level-identifiers}
-
-This document defines a closed enumeration of Capability Ladder
-level identifiers. Conformant deployments reporting a coordinate
-under this document MUST use these identifiers.
+## Capability Ladder Levels (vocabulary)  {#capability-ladder-level-identifiers}
 
 | Identifier | Short name | Section |
 | --- | --- | --- |
@@ -972,15 +855,7 @@ under this document MUST use these identifiers.
 | `4` | Full Runtime Enforcement | {{level-4-full-runtime-enforcement}} |
 | `5` | Verifiable governance | {{level-5-verifiable-governance}} |
 
-The enumeration is closed. Extensions or new levels require a
-revision of this document or a successor specification. IANA is
-not asked to maintain a separate registry for these identifiers.
-
-## Resource Server Tier Identifiers  {#resource-server-tier-identifiers}
-
-This document defines a closed enumeration of Resource Server Tier
-identifiers. Conformant deployments reporting a coordinate under
-this document MUST use these identifiers.
+## Resource Server Tiers (vocabulary)  {#resource-server-tier-identifiers}
 
 | Identifier | Short name | Section |
 | --- | --- | --- |
@@ -989,23 +864,13 @@ this document MUST use these identifiers.
 | `RS-C` | Authority-aware | {{rs-c-authority-aware}} |
 | `RS-D` | PDP-evaluated | {{rs-d-pdp-evaluated}} |
 
-The enumeration is closed. Extensions or new tiers require a
-revision of this document or a successor specification.
-
-## Authorization Domain Tier Identifiers  {#authorization-domain-tier-identifiers}
-
-This document defines a closed enumeration of Authorization Domain
-Tier identifiers. Conformant deployments reporting a coordinate
-under this document MUST use these identifiers.
+## Authorization Domain Tiers (vocabulary)  {#authorization-domain-tier-identifiers}
 
 | Identifier | Short name | Section |
 | --- | --- | --- |
 | `AD-1` | Mission-bound issuance | {{ad-1-mission-bound-issuance}} |
 | `AD-2` | Mission-aware projection | {{ad-2-mission-aware-projection}} |
 | `AD-3` | Authority-aware projection plus authenticated Mission Status | {{ad-3-authority-aware-projection-plus-authenticated-mission-status}} |
-
-The enumeration is closed. Extensions or new tiers require a
-revision of this document or a successor specification.
 
 # Security Considerations
 
@@ -1031,14 +896,14 @@ connectors outside the named scope, agent-side invocations not
 gated by an orchestrator PEP) fall outside the claim and may
 invalidate its operational value.
 
-**Self-reported capability.** Capability advertisement through
-state-authority metadata is self-reported. A relying party
-receiving a `mission_ladder_levels_supported` value of `[1, 2, 3,
-4]` learns what the issuer claims to support; it does not learn
-that any particular request or Mission was handled at that level.
-The Mission Framework's integrity-anchor and Mission Status
-contracts provide the per-Mission and per-decision evidence
-mechanisms; the capability advertisement is orthogonal.
+**Self-reported capability.** A deployment claim of "Capability
+Ladder Level 4" in documentation or marketing is self-reported.
+Readers learn what the deployment claims to support; they do not
+learn that any particular request or Mission was handled at that
+level. The Mission Framework's integrity-anchor and Mission
+Status contracts provide the per-Mission and per-decision
+evidence mechanisms; the vocabulary defined here is descriptive
+and orthogonal.
 
 **Misaligned tiers can mislead.** A deployment reporting
 `L4 / RS-A / AD-1` is internally inconsistent. Relying parties

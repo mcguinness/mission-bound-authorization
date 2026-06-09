@@ -81,8 +81,8 @@ specifications map onto specific substrates: Mission Proposal and
 Mission lifecycles, the Mission Intent JSON schema, typed Authority
 Set, integrity anchors with domain-separated hash inputs, a canonical
 and pairwise identifier model, common constraints framework, Mission
-Status interface, principal model, evidence binding, and
-capability-advertisement metadata. The framework is substrate-neutral
+Status interface, principal model, and evidence binding. The
+framework is substrate-neutral
 on semantics; profile specifications for OAuth, AAuth, and the Mission
 Authority Server compose this framework with their respective wire
 substrates and pick the concrete protection mechanism.
@@ -181,9 +181,6 @@ error model.
 registry framework and two initial entries (`max_derivations` and
 `aal`).
 
-{{capability-advertisement-metadata}} defines the state-authority
-capability-advertisement metadata document and its registry.
-
 {{reference-test-vectors}} declares the required test vector classes.
 
 {{security-considerations}} and {{privacy-considerations}} address
@@ -208,7 +205,6 @@ This document defines:
   anti-oracle, request-binding, caching).
 - The Common Constraints framework and initial entries
   (`max_derivations`, `aal`).
-- Capability-advertisement metadata.
 - Domain-separated, authorization-domain-bound hash envelopes for
   integrity anchors.
 
@@ -1919,9 +1915,6 @@ declare `Content-Type: application/json`.
   required): registered Normalization Profile identifiers
   ({{normalization-profile-registry}}) the state authority
   understands.
-- `mission_capability_advertisement` (object, optional): the
-  capability-advertisement object defined in
-  {{capability-advertisement-metadata}}.
 
 ### Worked example metadata document
 
@@ -1951,15 +1944,7 @@ declare `Content-Type: application/json`.
     "urn:mbo:norm:mission-intent:1",
     "urn:mbo:norm:mission-authority-set:1",
     "urn:mbo:norm:mission-consent-disclosure:1"
-  ],
-  "mission_capability_advertisement": {
-    "mission_authorization_domain_tiers_supported": ["AD-2"],
-    "mission_ladder_levels_supported": [1, 2, 3],
-    "mission_profiles_supported": [
-      "oauth", "runtime_enforcement"
-    ],
-    "mission_optional_modules_supported": []
-  }
+  ]
 }
 ~~~
 
@@ -2579,83 +2564,6 @@ registry:
 These will register as the design stabilizes and implementer
 interest emerges.
 
-# Capability-Advertisement Metadata {#capability-advertisement-metadata}
-
-The Framework creates a **Mission Capability-Advertisement Metadata**
-registry. State authorities advertise their capabilities through the
-following metadata fields. These fields appear under the
-`mission_capability_advertisement` member of the state-authority
-metadata document ({{state-authority-metadata-document}}).
-
-## Initial members
-
-- `mission_authorization_domain_tiers_supported` (array of strings,
-  required): subset of registered Authorization Domain Tier
-  identifiers. Identifiers are defined in
-  {{?I-D.draft-mcguinness-mission-capability-model}}.
-- `mission_ladder_levels_supported` (array of integers, required):
-  subset of Capability Ladder levels (0 through 5) supported.
-  Levels are defined in
-  {{?I-D.draft-mcguinness-mission-capability-model}}.
-- `mission_profiles_supported` (array of strings, required):
-  substrate profiles supported. Initial values are `"oauth"`,
-  `"aauth"`, `"mas"`, `"runtime_enforcement"`.
-- `mission_optional_modules_supported` (array of strings,
-  required): registered optional modules supported. May be empty.
-- `mission_framework_versions_supported` (array of strings,
-  required): spec revisions of this Framework that the state
-  authority supports.
-
-## Worked example
-
-A state authority that implements the OAuth Profile and the
-Runtime Enforcement Profile, at Authorization Domain Tier AD-2,
-Capability Ladder Levels 1 through 3, with no optional modules,
-advertises:
-
-~~~ json
-{
-  "mission_capability_advertisement": {
-    "mission_authorization_domain_tiers_supported": ["AD-2"],
-    "mission_ladder_levels_supported": [1, 2, 3],
-    "mission_profiles_supported": [
-      "oauth", "runtime_enforcement"
-    ],
-    "mission_optional_modules_supported": [],
-    "mission_framework_versions_supported": [
-      "draft-mcguinness-mission-framework-00"
-    ]
-  }
-}
-~~~
-
-## Registration template {#capability-metadata-registration-template}
-
-The **Mission Capability-Advertisement Metadata** IANA registry
-holds the member names that may appear under
-`mission_capability_advertisement`. Each registration MUST include:
-
-- **Member name** (string).
-- **Value type and structure** (JSON type and shape).
-- **Defining specification** (RFC, Internet-Draft, or stable URL).
-- **Closed-set status**: whether the value space is a closed
-  enumeration registered in another IANA registry, or open.
-- **Change controller**.
-- **Reference**.
-
-Profile and feature specifications MAY add registry entries
-following this template.
-
-## Cross-reference to Capability Model
-
-The Mission-Bound Authorization Capability Model
-({{?I-D.draft-mcguinness-mission-capability-model}}) defines the
-Capability Ladder levels, Resource Server Tiers, and Authorization
-Domain Tiers. This document creates the metadata registry that
-names them and the initial members above; the Capability Model
-specification registers concrete tier and level identifiers in
-their own registries.
-
 # Reference Test Vectors
 
 This specification includes reference test vectors as a first-class
@@ -3140,33 +3048,6 @@ The Framework reserves `mission_resource_access` for
 registration by the OAuth Profile
 ({{?I-D.draft-mcguinness-mission-oauth-profile}}). No type is
 registered by this document.
-
-## Mission Capability-Advertisement Metadata Registry {#iana-capability-metadata-registry}
-
-IANA is requested to create the **Mission Capability-Advertisement
-Metadata** registry. See
-{{capability-advertisement-metadata}} for the specification
-text.
-
-- **Registration Policy**: Specification Required ({{!RFC8126}}).
-- **Designated Expert review criteria**: experts evaluate
-  whether (a) the metadata member's value type and structure are
-  unambiguous, (b) the closed-set status is well-defined, and
-  (c) the member name does not collide.
-
-### Registration template
-
-See {{capability-metadata-registration-template}}.
-
-### Initial entries
-
-This document registers the five initial members defined in
-{{capability-advertisement-metadata}}:
-`mission_authorization_domain_tiers_supported`,
-`mission_ladder_levels_supported`,
-`mission_profiles_supported`,
-`mission_optional_modules_supported`,
-`mission_framework_versions_supported`.
 
 ## Mission Normalization Profile Registry {#normalization-profile-registry}
 
