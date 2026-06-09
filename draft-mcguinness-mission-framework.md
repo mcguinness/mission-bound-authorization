@@ -2453,39 +2453,111 @@ This document defines two initial entries:
 
 ### `max_derivations`
 
-The maximum number of credential derivation events permitted under
-this Mission across its lifetime. Counts new access tokens, refresh
-token rotations, Token Exchange grants, ID-JAGs, AAuth resource
-tokens, and AAuth auth tokens.
+The maximum number of credential derivation events
+({{terminology}}) permitted under this Mission across its lifetime.
 
-- Value type: decimal string (e.g., `"100"`). String form chosen
-  for IEEE 754 precision safety under JCS.
-- Authoritative counter: the state authority. Each derivation event
-  increments the counter atomically. Counter MUST NOT exceed the
-  declared value.
-- Narrowing: derived constraints MAY specify smaller values.
-- Reset: the counter resets only when Mission Expansion creates a
-  successor Mission; the predecessor's counter is final.
-- Runtime relationship: this constraint governs issuance, not
-  per-action invocation. Per-action runtime budgets are
-  `max_invocations`, defined in the Mission-Bound Runtime
-  Enforcement Profile.
+**Value type**: JSON string representing a non-negative decimal
+integer. Maximum value `"18446744073709551615"` (2^64 − 1). String
+form is chosen for IEEE 754 precision safety under JCS (see
+{{number-precision-under-jcs}}).
+
+**Authoritative counter**: the state authority. Each credential
+derivation event MUST increment the counter atomically as part
+of the credential-issuance commit. The counter MUST NOT exceed
+the declared `max_derivations` value; an issuance request that
+would exceed it MUST be refused with a substrate-appropriate
+error (the OAuth Profile binds this to the `mission_inactive`
+error class).
+
+**Counter exposure**: the state authority MUST expose the
+current counter value through Mission Status under a member
+`derivations_remaining` when `max_derivations` is declared and
+when policy permits the requesting audience to observe budget
+state. When `derivations_remaining` is exposed it carries the
+decimal-string remainder (`max_derivations` minus the
+authoritative counter).
+
+**Narrowing**: a derived constraint at credential derivation time
+MAY specify a smaller value; it MUST NOT exceed the Mission's
+declared `max_derivations`.
+
+**Reset**: the counter resets only when Mission Expansion creates
+a successor Mission. The predecessor's counter is final.
+Implementation guidance for the successor's initial counter is
+defined in {{?I-D.draft-mcguinness-mission-expansion}}.
+
+**Runtime relationship**: this constraint governs **issuance**, not
+per-action invocation. Per-action runtime budgets are
+`max_invocations`, defined in
+{{?I-D.draft-mcguinness-mission-runtime-profile}}.
+
+**Example `context` member**:
+
+~~~ json
+{ "max_derivations": "200" }
+~~~
 
 ### `aal`
 
-The required Authentication Assurance Level for the approving
-principal's authentication at the approval event, and for any
-subsequent step-up authentication.
+The required Authentication Assurance Level (AAL) for the
+approving principal's authentication at the approval event, and
+for any subsequent step-up authentication required to derive
+credentials under this Mission.
 
-- Value type: string. Values follow {{RFC9470}}'s `acr` semantics or
-  deployment-registered AAL identifiers.
-- Freshness window (required): an integer number of seconds
-  declaring the maximum age of an authentication event that
-  satisfies the constraint.
-- Composes with: {{RFC9470}} step-up authentication challenges. A
-  denied request that would be permitted by satisfying the `aal`
-  constraint via fresh authentication MAY be returned as a step-up
-  challenge by the credential issuer.
+**Value type**: JSON object with the following members:
+
+- `value` (string, required): an AAL identifier (URI or short
+  string). See {{aal-identifier-registry}} for the registered
+  identifier space.
+- `freshness_seconds` (integer, required): the maximum age, in
+  seconds, of an authentication event that satisfies the
+  constraint. Range: 1 to 86400.
+
+**Example `context` member**:
+
+~~~ json
+{
+  "aal": {
+    "value": "urn:mbo:aal:2",
+    "freshness_seconds": 1800
+  }
+}
+~~~
+
+**AAL identifier registry** {#aal-identifier-registry}:
+
+The Framework creates the **Mission AAL Identifier** IANA registry
+to coordinate AAL values across deployments.
+
+Registration policy: Specification Required.
+
+Initial entries (each maps to a stable identifier and a defining
+specification):
+
+| Identifier | Description | Reference |
+|---|---|---|
+| `urn:mbo:aal:1` | Single-factor; minimal binding to a non-shared device. | {{NIST-SP-800-63}} AAL1 |
+| `urn:mbo:aal:2` | Two-factor; cryptographic possession proof. | {{NIST-SP-800-63}} AAL2 |
+| `urn:mbo:aal:3` | Hardware-bound multi-factor; verifier impersonation resistance. | {{NIST-SP-800-63}} AAL3 |
+
+Deployments using {{RFC9470}} `acr` semantics for AAL signaling
+MAY register their `acr` values in this registry; profiles MAY
+also accept registered `acr` values directly as `aal.value`.
+Implementations MUST refuse `aal.value` strings that match neither
+a registered Mission AAL identifier nor a registered `acr` value
+for the deployment.
+
+**Composes with**: {{RFC9470}} step-up authentication challenges.
+A denied credential derivation request that would be permitted by
+satisfying the `aal` constraint via fresh authentication MAY be
+returned as a step-up challenge by the credential issuer.
+
+**Narrowing**: a derived constraint at credential derivation time
+MAY require an AAL value that is **stricter** than the Mission's
+declared `aal.value` (per the AAL ordering of the relevant
+identifier registry); it MUST NOT relax the Mission's value.
+The Framework recommends the ordering `aal:1 < aal:2 < aal:3` for
+the `urn:mbo:aal:*` registered identifiers.
 
 ## Future-work entries
 
@@ -2504,28 +2576,82 @@ registry:
 These will register as the design stabilizes and implementer
 interest emerges.
 
-# Capability-Advertisement Metadata
+# Capability-Advertisement Metadata {#capability-advertisement-metadata}
 
 The Framework creates a **Mission Capability-Advertisement Metadata**
 registry. State authorities advertise their capabilities through the
-following metadata fields:
+following metadata fields. These fields appear under the
+`mission_capability_advertisement` member of the state-authority
+metadata document ({{state-authority-metadata-document}}).
 
-- `mission_authorization_domain_tiers_supported` (array): subset of
-  registered Authorization Domain Tier identifiers.
-- `mission_ladder_levels_supported` (array of integers): subset of
-  Capability Ladder levels supported.
-- `mission_profiles_supported` (array of strings): substrate
-  profiles supported (e.g., `"oauth"`, `"aauth"`, `"mas"`,
-  `"runtime_enforcement"`).
-- `mission_optional_modules_supported` (array): registered optional
-  modules supported.
-- `mission_framework_versions_supported` (array): spec revisions of
-  this Framework that the state authority supports.
+## Initial members
 
-The Capability Model specification (Mission-Bound Authorization
-Capability Model) defines the Capability Ladder levels, Resource
-Server Tiers, and Authorization Domain Tiers; this document creates
-the metadata registry that names them.
+- `mission_authorization_domain_tiers_supported` (array of strings,
+  required): subset of registered Authorization Domain Tier
+  identifiers. Identifiers are defined in
+  {{?I-D.draft-mcguinness-mission-capability-model}}.
+- `mission_ladder_levels_supported` (array of integers, required):
+  subset of Capability Ladder levels (0 through 5) supported.
+  Levels are defined in
+  {{?I-D.draft-mcguinness-mission-capability-model}}.
+- `mission_profiles_supported` (array of strings, required):
+  substrate profiles supported. Initial values are `"oauth"`,
+  `"aauth"`, `"mas"`, `"runtime_enforcement"`.
+- `mission_optional_modules_supported` (array of strings,
+  required): registered optional modules supported. May be empty.
+- `mission_framework_versions_supported` (array of strings,
+  required): spec revisions of this Framework that the state
+  authority supports.
+
+## Worked example
+
+A state authority that implements the OAuth Profile and the
+Runtime Enforcement Profile, at Authorization Domain Tier AD-2,
+Capability Ladder Levels 1 through 3, with no optional modules,
+advertises:
+
+~~~ json
+{
+  "mission_capability_advertisement": {
+    "mission_authorization_domain_tiers_supported": ["AD-2"],
+    "mission_ladder_levels_supported": [1, 2, 3],
+    "mission_profiles_supported": [
+      "oauth", "runtime_enforcement"
+    ],
+    "mission_optional_modules_supported": [],
+    "mission_framework_versions_supported": [
+      "draft-mcguinness-mission-framework-00"
+    ]
+  }
+}
+~~~
+
+## Registration template {#capability-metadata-registration-template}
+
+The **Mission Capability-Advertisement Metadata** IANA registry
+holds the member names that may appear under
+`mission_capability_advertisement`. Each registration MUST include:
+
+- **Member name** (string).
+- **Value type and structure** (JSON type and shape).
+- **Defining specification** (RFC, Internet-Draft, or stable URL).
+- **Closed-set status**: whether the value space is a closed
+  enumeration registered in another IANA registry, or open.
+- **Change controller**.
+- **Reference**.
+
+Profile and feature specifications MAY add registry entries
+following this template.
+
+## Cross-reference to Capability Model
+
+The Mission-Bound Authorization Capability Model
+({{?I-D.draft-mcguinness-mission-capability-model}}) defines the
+Capability Ladder levels, Resource Server Tiers, and Authorization
+Domain Tiers. This document creates the metadata registry that
+names them and the initial members above; the Capability Model
+specification registers concrete tier and level identifiers in
+their own registries.
 
 # Reference Test Vectors
 
