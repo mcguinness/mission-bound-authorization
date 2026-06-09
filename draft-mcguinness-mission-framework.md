@@ -2025,9 +2025,11 @@ the root of identity bindings on a Mission record. Its placement
 in the Mission Record schema is shown in
 {{mission-record-schema}}.
 
-# Principal Model
+# Principal Model {#principal-model-section}
 
-A Mission record carries the following principal fields:
+A Mission record carries the following principal fields, grouped
+under the `principals` member of the Mission Record schema (see
+{{mission-record-schema}}):
 
 - `subject` (string, required): the principal on whose behalf the
   task is approved. Format is substrate-specific (e.g., subject
@@ -2059,82 +2061,371 @@ Profile and AAuth Profile bind dynamic actor context to derived
 credentials via the actor profile (e.g.,
 `draft-mcguinness-oauth-actor-profile`).
 
-# Mission Status Interface
+## Principal Model JSON Schema
+
+The canonical JSON Schema for the principal-model object is:
+
+~~~ json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mbo:schema:principal-model:1",
+  "title": "Mission Principal Model",
+  "type": "object",
+  "required": [
+    "subject", "approving_principal", "requesting_client",
+    "tenant", "state_authority", "delegation_policy"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "subject": { "type": "string", "minLength": 1 },
+    "approving_principal": { "type": "string", "minLength": 1 },
+    "requesting_client": { "type": "string", "minLength": 1 },
+    "tenant": { "type": "string", "minLength": 1 },
+    "state_authority": { "type": "string", "format": "uri" },
+    "delegation_policy": { "type": "string", "format": "uri" }
+  }
+}
+~~~
+
+The `state_authority` value MUST equal the Mission's
+`mission.origin`.
+
+# Mission Status Interface {#mission-status-interface}
 
 The Mission Status interface is the authenticated state-authority view
 returning Mission state and integrity-anchored evidence. It is
 **distinct from token introspection** (which is by-token); Mission
 Status is by-mission-reference.
 
-## Operation
+## Abstract operation
 
-The Mission Status operation takes a Mission reference (canonical
-`mission.id` or pairwise `mission.ref`), the requesting consumer's
-authentication, the consumer's audience identifier, and a nonce. It
-returns:
+The Mission Status operation takes:
 
-- `state` (one of `active`, `suspended`, `revoked`, `completed`,
-  `expired`).
-- The three integrity anchors.
-- Audience-filtered Authority Set projection (the entries relevant
-  to the requesting audience).
-- `policy_version` of the derivation policy applied at approval.
-- `issued_at` (RFC 3339 timestamp).
-- `expires_at` (RFC 3339 timestamp).
-- Freshness indicator (when the state was current).
-- The nonce echoed from the request.
+- A **Mission reference**: either a canonical `mission.id` (for
+  audiences that consume canonical identifiers) or a pairwise
+  `mission.ref` (for audiences that consume pairwise references).
+- The requesting consumer's **authentication**: substrate-specific
+  (OAuth bearer token, mTLS client certificate, AAuth resource
+  token, etc.).
+- The consumer's **audience identifier**: the value the consumer
+  uses to identify itself as a Mission Status consumer at this
+  state authority. This binds the response to the consumer for
+  audience-property purposes.
+- A caller-supplied **nonce**: a URL-safe ASCII string with at
+  least 96 bits of entropy. The state authority echoes the nonce
+  in the response.
+
+It returns either a Mission Status Response object (defined below)
+or an error per {{error-model}}.
 
 The wire format is profile-specific. Profile specifications bind
 this abstract operation to a concrete request and response
-representation, including the protection mechanism (e.g., RFC 9701
-signed responses for OAuth introspection, JWS for the dedicated
-operation).
+representation, including the protection mechanism (e.g.,
+{{RFC9701}} signed responses for OAuth introspection projection;
+JWS {{RFC7515}} for the dedicated operation; substrate-native
+signing in AAuth).
 
-## Required properties
+### Nonce format
+
+ABNF:
+
+~~~
+mission-status-nonce = 16*128( unreserved-char )
+unreserved-char      = ALPHA / DIGIT / "-" / "_"
+~~~
+
+The caller MUST generate a fresh nonce per request. The state
+authority MUST NOT cache a response keyed by nonce; the nonce is
+a per-request anti-replay binding. The state authority MUST echo
+the nonce in the response verbatim under the response's
+`nonce` member; it MUST refuse a request whose nonce does not
+match the ABNF.
+
+## Mission Status Response object {#mission-status-response-object}
+
+A Mission Status Response is a JSON object with the following
+members:
+
+- `mission` (object, required): the Mission identity envelope.
+  Carries either `{ "id": "...", "origin": "..." }` for canonical
+  responses or `{ "ref": "...", "origin": "..." }` for pairwise
+  responses, never both.
+- `state` (string, required): one of `active`, `suspended`,
+  `revoked`, `completed`, `expired`.
+- `integrity_anchors` (object, required): the three integrity
+  anchors of {{integrity-anchors}}.
+- `authority_projection` (array, required): the audience-filtered
+  Authority Set projection (see {{authority-projection}}).
+- `policy_version` (string, required): the `policy_version`
+  recorded at the approval event.
+- `issued_at` (string, required): RFC 3339 timestamp at which the
+  response was generated.
+- `expires_at` (string, required): RFC 3339 timestamp after which
+  the response MUST NOT be relied upon.
+- `freshness_at` (string, required): RFC 3339 timestamp at which
+  the state authority's view of the Mission was current. In
+  consistent-store deployments, this equals `issued_at`. In
+  eventually-consistent deployments, `freshness_at` MAY be
+  earlier than `issued_at` by a deployment-declared bound.
+- `mission_expiry` (string, required): mirrors the Mission's
+  `mission_expiry`.
+- `audience` (string, required): echoes the requesting consumer's
+  audience identifier.
+- `nonce` (string, required): echoes the caller-supplied nonce.
+
+The wire form (e.g., a JWS-signed payload, an RFC 9701 token
+introspection response) is profile-specific. The Mission Status
+Response object is the protocol-level data the wire form carries.
+
+### Mission Status Response JSON Schema {#mission-status-response-schema}
+
+~~~ json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mbo:schema:mission-status-response:1",
+  "title": "Mission Status Response",
+  "type": "object",
+  "required": [
+    "mission", "state", "integrity_anchors",
+    "authority_projection", "policy_version",
+    "issued_at", "expires_at", "freshness_at",
+    "mission_expiry", "audience", "nonce"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "mission": {
+      "type": "object",
+      "required": ["origin"],
+      "oneOf": [
+        { "required": ["id"] },
+        { "required": ["ref"] }
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id":     { "type": "string" },
+        "ref":    { "type": "string" },
+        "origin": { "type": "string", "format": "uri" }
+      }
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "active", "suspended", "revoked", "completed", "expired"
+      ]
+    },
+    "integrity_anchors": {
+      "type": "object",
+      "required": [
+        "proposal_hash", "authority_hash",
+        "consent_disclosure_hash"
+      ],
+      "properties": {
+        "proposal_hash":           { "type": "string" },
+        "authority_hash":          { "type": "string" },
+        "consent_disclosure_hash": { "type": "string" }
+      }
+    },
+    "authority_projection": {
+      "type": "array",
+      "items": { "$ref": "urn:mbo:schema:authority-set-entry:1" }
+    },
+    "policy_version":  { "type": "string" },
+    "issued_at":       { "type": "string", "format": "date-time" },
+    "expires_at":      { "type": "string", "format": "date-time" },
+    "freshness_at":    { "type": "string", "format": "date-time" },
+    "mission_expiry":  { "type": "string", "format": "date-time" },
+    "audience":        { "type": "string" },
+    "nonce":           { "type": "string" }
+  }
+}
+~~~
+
+### Worked example response (pairwise)
+
+A Resource Server `https://erp.example.com` queries Mission Status
+for the example Mission from {{mission-record}}:
+
+~~~ json
+{
+  "mission": {
+    "ref": "mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
+    "origin": "https://as.example.com"
+  },
+  "state": "active",
+  "integrity_anchors": {
+    "proposal_hash":
+      "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "consent_disclosure_hash":
+      "sha-256:nB2xK5qY7vM3rL9pT4cE6sZ8wQ1bN0fH5jX9kV2sRdM"
+  },
+  "authority_projection": [
+    {
+      "type": "mission_resource_access",
+      "specification_uri":
+        "https://datatracker.ietf.org/doc/draft-mcguinness-mission-oauth-profile",
+      "schema_version": "1",
+      "authority": {
+        "resource": "https://erp.example.com",
+        "actions": ["invoices.read", "journal-entries.write"],
+        "constraints": {
+          "max_amount_usd": 500
+        }
+      },
+      "narrowing_profile": "urn:mbo:narrowing:default-v1"
+    }
+  ],
+  "policy_version": "deploy-policy:v17",
+  "issued_at":     "2026-11-02T08:14:00Z",
+  "expires_at":    "2026-11-02T08:15:00Z",
+  "freshness_at":  "2026-11-02T08:14:00Z",
+  "mission_expiry":"2026-12-31T23:59:59Z",
+  "audience":      "https://erp.example.com",
+  "nonce":         "nonce_K9pV4nT2sR7mB1xQ"
+}
+~~~
+
+For a canonical-identifier consumer, `mission.id` replaces
+`mission.ref`. The remainder is identical in shape.
+
+## Audience-filtered Authority Set projection {#authority-projection}
+
+The `authority_projection` member carries the subset of the
+Mission's Authority Set relevant to the requesting audience.
+
+The default projection rule, applied unless an Authority Set Type
+registers a stricter projection rule, is:
+
+1. For each entry in the Mission's Authority Set, the entry is
+   **in-projection** for an audience A if A's audience identifier
+   matches the audience identifier carried in the entry's
+   `authority` payload under the type's
+   audience-identification rule. The default identification rule
+   inspects the `authority.resource` member if present and treats
+   it as the entry's audience-identifying URI; types MAY register
+   alternate identification rules.
+2. The state authority projects the in-projection entries
+   verbatim.
+3. Entries not in projection MUST NOT appear in
+   `authority_projection`. Their presence in the Mission record
+   is not externally observable through this projection.
+
+The default projection rule applies syntactic equality between
+the audience identifier and the entry's `authority.resource`
+value, after applying the URI normalization rule declared by the
+relevant Authority Set Type's Normalization Profile.
+
+Audiences that are tenants or trust domains rather than single
+resource URIs are matched by the registered audience-identification
+rule of the relevant Authority Set Type; the Framework default rule
+is single-URI.
+
+## Required properties {#mission-status-required-properties}
 
 A Mission Status response MUST satisfy:
 
 - **Authentication property**: the response carries an integrity
   signal whose source is the state authority. Consumers verify the
-  signal against the state authority's published keys.
+  signal against the state authority's published keys
+  (`jwks_uri` in the metadata document).
 - **Freshness property**: the response indicates when the state was
-  current via `issued_at` and `expires_at`.
+  current via `issued_at`, `freshness_at`, and `expires_at`.
 - **Audience property**: the response binds the requesting consumer's
   audience identifier. Replay against a different audience MUST be
-  detectable.
+  detectable: the `audience` member binds the response to a single
+  consumer, and signed wire forms (RFC 9701, JWS) carry the
+  audience binding in the signed payload.
 - **Integrity property**: the response payload and its integrity
   anchors chain back to the canonical Mission record verifiably.
+  A correct consumer that obtains the Mission's Validated Intent
+  and Authority Set through any path MUST be able to recompute
+  `proposal_hash` and `authority_hash` and observe equality with
+  the response values.
 - **Anti-oracle property**: possession of a Mission reference is not
   authorization. The state authority MUST authenticate the caller and
   authorize the caller for the requested reference and audience.
   Unknown and unauthorized references MUST produce indistinguishable
-  responses.
-- **Request-binding property**: signed responses MUST bind the caller
-  identity, the requested Mission reference, the audience, and the
-  caller-provided nonce.
-- **Caching property**: every response declares `issued_at` and
-  `expires_at`. Consumers MUST fail closed after `expires_at` unless a
-  profile explicitly defines a bounded degraded mode.
+  responses (the not-found shape of {{error-model}}).
+- **Request-binding property**: signed responses MUST bind the
+  caller identity, the requested Mission reference, the
+  audience, and the caller-provided nonce within the signed
+  payload. Verification of the signature without these bindings
+  MUST be insufficient to accept the response.
+- **Caching property**: every response declares `issued_at`,
+  `freshness_at`, and `expires_at`. Consumers MUST fail closed
+  after `expires_at` unless a profile explicitly defines a
+  bounded degraded mode. The Framework RECOMMENDS `expires_at -
+  issued_at` of 60 seconds for `active` state and 300 seconds for
+  terminal states; profiles MAY tune within deployment policy.
 
-## Error model
+## Error model {#error-model}
 
 A Mission Status response operates over the following error model.
 Profile specifications map these to substrate-appropriate transport
 codes.
 
-| Symbol | Meaning |
-|---|---|
-| `ok` | Mission found and visible. Response carries state. |
-| `unauthorized` | Request not authenticated. |
-| `not_found` | Mission reference does not exist OR is not visible to this consumer. These cases are intentionally indistinguishable. |
-| `terminated` | Mission is in a terminal state. Response includes state. |
-| `suspended` | Mission is suspended. Response includes state. |
-| `rate_limited` | Consumer is rate-limited. |
-| `unavailable` | State authority temporarily can't serve status. |
+| Symbol | Meaning | RECOMMENDED HTTP status |
+|---|---|---|
+| `ok` | Mission found and visible. Response carries state. | 200 |
+| `unauthorized` | Request not authenticated. | 401 |
+| `not_found` | Mission reference does not exist OR is not visible to this consumer. These cases are intentionally indistinguishable. | 404 |
+| `terminated` | Mission is in a terminal state. Response includes state. | 200 (with `state` ∈ terminal set) |
+| `suspended` | Mission is suspended. Response includes state. | 200 (with `state` = `suspended`) |
+| `rate_limited` | Consumer is rate-limited. | 429 |
+| `unavailable` | State authority temporarily can't serve status. | 503 |
 
 Consumers MUST NOT distinguish an unknown Mission from a known but
 unauthorized Mission. A terminal Mission is "found" only for an
-authorized caller.
+authorized caller. State authorities returning `not_found` MUST
+NOT vary response timing, payload size, or response headers in a
+way that distinguishes the two cases.
+
+### Error response shape
+
+When a Mission Status operation returns an error, the response
+body is a JSON object:
+
+~~~ json
+{
+  "error": "not_found",
+  "error_description":
+    "Mission reference is not found or not visible.",
+  "nonce": "nonce_K9pV4nT2sR7mB1xQ"
+}
+~~~
+
+Members:
+
+- `error` (string, required): one of the symbols in the table
+  above (excluding `ok`).
+- `error_description` (string, recommended): human-readable summary.
+- `nonce` (string, required): echoes the caller-supplied nonce so
+  the caller can correlate response with request.
+
+Profiles MAY add substrate-specific error members (e.g.,
+`error_uri`); the three above MUST be present.
+
+### Rate-limited response
+
+When responding `rate_limited`, the state authority SHOULD include
+a `retry_after` member (seconds, integer) suggesting when the
+consumer may retry. Profiles binding to HTTP SHOULD additionally
+emit a `Retry-After` response header.
+
+## Caller authentication
+
+The Framework requires that the state authority authenticate the
+caller of every Mission Status operation. The Framework does not
+standardize the authentication mechanism; profile specifications
+bind to OAuth bearer tokens, mTLS client certificates, AAuth
+resource tokens, or similar substrate-native mechanisms.
+
+Caller authentication MUST be cryptographic and replay-resistant
+within the response's freshness window. Bearer-token-only
+authentication is permitted only when the bearer token itself
+is short-lived or sender-constrained (e.g., DPoP {{RFC9449}}
+or mTLS-bound {{RFC8705}}).
 
 # Common Constraints Framework
 
