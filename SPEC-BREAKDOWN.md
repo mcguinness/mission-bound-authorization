@@ -2,6 +2,37 @@
 
 This document defines what becomes a standards-track Internet-Draft, what stays in the [blog series](https://notes.karlmcguinness.com/series/mission-bound-authorization/), and the dependency order for drafting.
 
+## First Deliverable: Vertical Slice
+
+Rather than writing the full 35-45 page Framework first, the first deliverable is a **vertical implementation slice** co-developed with a reference implementation:
+
+1. **Core Model** (subset of Framework):
+   - Mission **Proposal** (pre-approval) vs Mission (approved) lifecycle.
+   - Principal model (subject, approving principal, requesting client, actor chain, tenant, state authority).
+   - Typed Authority Set entries with explicit equality/subset/intersection rules.
+   - Canonical internal Mission ID + audience-pairwise external reference.
+   - Domain-separated integrity hashes (`{type, schema_version, value}` inputs).
+   - Abstract Mission Status semantics (authentication/integrity/freshness/audience properties, not a specific signing format).
+
+2. **OAuth Binding** (subset of OAuth Profile):
+   - `mission_intent` PAR parameter encoding.
+   - `mission_resource_access` RAR representation.
+   - `mission` token claim.
+   - Sender constraint.
+   - Refresh and exchange gating.
+   - Dedicated Mission Status operation + optional introspection projection.
+   - AS metadata and error codes.
+
+3. **Conformance package**:
+   - JSON Schemas (Mission Intent, Authority Set, Mission Status response).
+   - Positive and negative validation vectors.
+   - State-transition tests (Proposal → Mission → lifecycle).
+   - Authority-Set narrowing tests.
+   - JCS canonicalization and hash vectors.
+   - Two-AS same-IdP worked example end-to-end.
+
+The eleven-spec map below is the **destination**, not a settled drafting backlog. The vertical slice produces the first publishable artifact and validates the architecture before expanding scope.
+
 ## Drafting Goal
 
 **These specs exist to enable implementation. They are not being submitted to IETF in their current form. Submission is deferred until they have baked through implementation.**
@@ -23,9 +54,9 @@ The bar at each version:
 
 The split obeys three principles:
 
-1. **Profiles compose existing standards.** A profile spec defines how existing standards (RFC 6749, RFC 9396, RFC 9126, AAuth, AuthZEN, etc.) plus the Mission Model framework are deployed together. Profiles do not invent new features or wire formats; they specify deployment requirements over what already exists.
-2. **Features are separate composable specs.** Anything not already in an existing standard (Mission Model, Mission Expansion, Delegated Authority Validation, etc.) gets its own spec. Profiles reference these features and require them to compose with the substrate.
-3. **The framework is substrate-neutral.** The Mission Framework defines abstract concepts (Mission, Authority Set, lifecycle, integrity anchors, constraints vocabulary, Mission Status interface, pairwise identifiers, capability-advertisement metadata). Profile specs map those abstract concepts onto specific wire substrates (OAuth, AAuth) and topologies (MAS).
+1. **Profiles bind Framework semantics to an existing substrate** and MAY define the minimum extension points required for that binding (new parameters, claims, error codes, response members). Profiles do not invent new architectural features; they realize Framework concepts on a specific wire.
+2. **Features are separate composable specs.** Anything that adds capability beyond the Framework's baseline (Mission Expansion, Delegated Authority Validation, etc.) is its own spec that profiles can compose with.
+3. **The Framework is substrate-neutral on semantics, not on protection mechanism.** The Framework defines abstract data models, integrity/authentication/freshness/audience requirements, and registry vocabularies. Profile specs pick the concrete protection mechanism (e.g., OAuth uses RFC 9701 signed introspection responses; AAuth uses its native signing; MAS picks its own). Substrate neutrality means the Framework doesn't pick a wire format, not that it has no requirements.
 
 ## Author and Organization
 
@@ -211,43 +242,114 @@ This document defines the Mission as a durable, integrity-anchored, lifecycle-go
 
 ### What this spec defines
 
-- **Mission object structure**: Intent, Authority Set, integrity anchors, lifecycle state, consent reference, identifier, delegation context.
-- **Mission Intent JSON schema**: structured task proposal admitted by the state authority. Fields: `goal`, `objects`, `constraints`, `success_criteria`, `mission_expiry`, optional `purpose`, optional `context`. Profiles define transport; the schema is owned here.
-- **Authority Set**: substrate-neutral container for approved authority bounded by Mission Intent. Carries per-resource entries with `resource`, `actions`, and `constraints`.
-- **Lifecycle state machine**: seven states (`pending_approval`, `active`, `suspended`, `revoked`, `completed`, `expired`, `rejected`) and the permitted transitions.
-- **Two-layer integrity model**:
-  - **Content-addressable identifiers** (`proposal_hash`, `authority_hash`, `consent_rendering_hash`). JCS-canonicalized (RFC 8785) JSON, SHA-256 digest, base64url-encoded. Stable across signers; used as join keys on tokens, audit records, and Mission Status responses. JCS is the canonicalization because JSON's data model sidesteps XML C14N's worst pitfalls (no namespaces, no comments, no mixed content, no DTD, no wrapping-attack surface).
-  - **Signed audit evidence** (JWS, RFC 7515). The state authority emits signed Mission Status responses and signed canonical Mission record content (Mission Intent, Authority Set, Consent Disclosure). The JWS payload is the JCS-canonical form of the content; the signature anchors authenticity and signer identity. The hashes anchor content addressability; the JWS anchors authenticity. The two are complementary, not redundant.
-- **Mission identifier model**: `mission.id` (stable opaque), `mission.origin` (state-authority issuer URI), audience-pairwise identifier framework.
-- **Common Constraints vocabulary**: standardized constraint key names with stable semantics (`max_calls`, `max_value`, `max_duration`, `aal`, `geo`, `data_classification`). Each defines what it constrains; substrate profiles define wire serialization. (Initial catalog stays in this draft; can split into its own spec later if the catalog grows.) Where a constraint value precision matters (e.g., `max_value`), the canonical representation is a JSON string, not a JSON number, to avoid IEEE 754 precision edge cases under JCS.
-- **Mission Status interface**: request/response contract for authenticated Mission Status reads (state, integrity hashes, audience-filtered Authority Set projection, `policy_version`). Responses MUST be returned as a JWS-signed envelope using the `mission-status+jwt` `typ` value defined in this spec. Profiles define transport bindings (OAuth introspection extension, AAuth PS endpoint, MAS endpoint); the JWS payload schema is owned here.
-- **Signed Mission evidence types**: JWS profile for Mission Status responses and for state authority audit emissions. Required header fields (`alg`, `kid`, `typ`). Required claims (`mission.id`, `mission.origin`, `iat`, `exp`, canonical Mission state object). Key publication and rotation rules.
-- **Reference test vectors**: Mission Intent input → expected JCS canonical bytes (hex-encoded) → expected `proposal_hash` (base64url-encoded SHA-256). Mission Status payload input → expected JWS encoding. Without these, "JCS-canonical" and "JWS-signed" are aspirational. The reference vectors are part of the spec, not an appendix added later.
+- **Mission Proposal vs Mission distinction.** A **Mission Proposal** is the pre-approval object created when a client submits Mission Intent. It has its own lifecycle: `pending_approval`, `rejected`, `withdrawn`, `expired_as_pending`. A **Mission** is created at the moment of approval and has its own lifecycle: `active`, `suspended`, `revoked`, `completed`, `expired`. The two are distinct records with distinct identifiers (a `proposal_id` and, only on activation, a `mission.id`). This resolves the prior contradiction where a "Mission" was claimed to exist before approval despite the litmus test requiring approval.
+- **Mission Intent JSON schema**: structured task proposal carried by Mission Proposal. Fields: `goal`, `objects`, `constraints`, `success_criteria`, `mission_expiry`, optional `purpose`, optional `context`. Profiles define transport; the schema is owned here.
+- **Principal model.** Mission and Mission Proposal records explicitly carry:
+  - `subject` / `beneficiary`: the principal on whose behalf the task is approved.
+  - `approving_principal`: the principal who approved the Mission (may differ from subject for delegated approval; covers headless approval anchors too).
+  - `requesting_client`: the OAuth client or AAuth agent that submitted the Proposal.
+  - `actor_chain`: the current delegation chain at any derived artifact (composes with `draft-mcguinness-oauth-actor-profile`).
+  - `tenant` / `authorization_domain`: the tenant identifier the Mission lives in.
+  - `state_authority`: the AS, PS, or MAS that owns the Mission record.
+
+  Subject identifiers can differ at each hop; the state authority is the only party that can authoritatively map them. Pairwise resolution rules are defined below.
+
+- **Typed Authority Set entries.** Each entry has explicit type metadata:
+  ```json
+  {
+    "type": "mission_resource_access",
+    "schema_uri": "https://example.com/schemas/mission_resource_access/v1",
+    "schema_version": "1",
+    "authority": { ... type-specific payload ... },
+    "narrowing_profile": "default"
+  }
+  ```
+  The Framework defines a type registry. Each registered type provides deterministic equality, subset, intersection, and unknown-field rules. Loose `resource/actions/constraints` is the payload shape of one type (`mission_resource_access`), not the universal shape.
+
+- **Lifecycle state machines** (two, not one):
+  - **Mission Proposal lifecycle**: `pending_approval` → (`approved` → transitions to Mission) | `rejected` | `withdrawn` | `expired_as_pending`.
+  - **Mission lifecycle**: `active` → (`suspended` ⇄ `active`) | `revoked` | `completed` | `expired`. Mission begins at `active` on activation; there is no Mission record in any earlier state.
+
+- **Integrity hashes with domain separation.** Hash inputs are wrapped to prevent collision across object types:
+  ```
+  SHA-256(JCS({
+    "type": "mission-intent",
+    "schema_version": 1,
+    "value": <canonical content>
+  }))
+  ```
+  - `proposal_hash`: over the approved Mission Intent (wrapped with `type=mission-intent`).
+  - `authority_hash`: over the approved Authority Set (wrapped with `type=mission-authority-set`).
+  - `consent_disclosure_hash`: over the structured consent disclosure object (wrapped with `type=mission-consent-disclosure`). **Renamed from `consent_rendering_hash`** because the hash covers the disclosure object, not rendered output.
+
+  JCS (RFC 8785) is the canonicalization; SHA-256 is the digest; base64url is the encoding. JCS avoids XML C14N's wrapping, namespace, comment, and DTD pitfalls because JSON's data model is structurally simpler.
+
+- **Identifier model: canonical + pairwise.**
+  - **Canonical Mission ID** (`mission.id`): stable opaque identifier held by the state authority. Used internally and by authorized auditors.
+  - **Pairwise Mission Reference**: audience-specific identifier surfaced to consumers (Resource ASes, Resource Servers, downstream domains). Each pairwise reference resolves to the canonical ID only at the state authority.
+  - **Mapping authority**: the state authority owns the canonical → pairwise map. No other party can independently derive one from the other.
+  - **Correlation authorization**: defines which parties are entitled to resolve pairwise references (typically: authorized auditors, the state authority itself, regulators in defined jurisdictions). Default-deny for everyone else.
+  - **Audit export behavior**: when audit records are exported across organizational boundaries, the export controller selects either canonical or pairwise references per recipient policy.
+
+  `mission.origin` identifies the state authority (and resolves to its metadata document). It is not a separate audience-pairwise quantity; it is the discovery anchor for resolving references.
+
+- **Abstract Mission Status semantics** (not a specific signing format). The Framework defines:
+  - **Operation**: by-mission-reference query (input: canonical or pairwise mission reference; output: state, integrity hashes, audience-filtered Authority Set projection, `policy_version`, `iat`, freshness indicator). Distinct from token introspection.
+  - **Authentication property**: responses MUST carry an integrity signal whose source is the state authority. The Framework does not pick the wire format. Profiles bind to substrate-appropriate mechanisms.
+  - **Freshness property**: responses MUST indicate when the state was current. Profiles bind to substrate-appropriate freshness semantics.
+  - **Audience property**: responses MUST be addressable to the requesting consumer (so the response can't be replayed against a different audience).
+  - **Integrity property**: the response payload and its hash chain back to the canonical Mission record MUST be verifiable.
+
+  Profile bindings:
+  - OAuth Profile composes with **RFC 9701 (signed introspection responses)** plus a dedicated by-mission-reference status operation. RFC 9701 already defines signed responses; no new signing envelope is invented.
+  - AAuth Profile composes with AAuth's native signing.
+  - MAS Profile defines its own signed Mission Status binding.
+
+- **Common Constraints framework + initial entries.** The Framework defines a **constraint extension framework**: registry with `name`, `type`, `schema_uri`, `schema_version`, semantics document URI, equality/subset/intersection rules, narrowing rules, runtime enforcement contract. Initial fully specified entries:
+  - **`max_calls`**: integer count of invocation events. Authoritative counter at the state authority. Increments on derivation; resets only on Mission Expansion to a successor Mission.
+  - **`aal`**: required authentication assurance level (composes with RFC 9470's AAL signaling). Freshness window is required.
+
+  Other constraint names sketched in the blog (`max_value`, `max_duration`, `geo`, `data_classification`) become **future-work entries** with explicit unresolved semantics noted (currency / aggregation period / authoritative counter for `max_value`; units and start event for `max_duration`; subject vs actor vs resource vs execution location for `geo`; auth context and freshness for `aal`-related). The Framework ships the extension mechanism, not six underspecified names.
+
+- **Capability-advertisement metadata**: `mission_authorization_domain_tiers_supported`, `mission_ladder_levels_supported`, `mission_profiles_supported`, `mission_optional_modules_supported`. Registry creation lives here; Capability Model (Draft 11) adds entries.
+
 - **Trust boundaries**: who is trusted for what (Shaper, state authority, credential issuer, PDP, evidence emitter). Profiles populate these roles for their substrate.
-- **Capability-advertisement metadata**: `mission_authorization_domain_tiers_supported`, `mission_ladder_levels_supported`, `mission_profiles_supported`, `mission_optional_modules_supported`. (Registry creation lives here; the Capability Model spec, Draft 11, adds entries.)
-- **Normative vocabulary**: Mission Intent, Mission, Authority Set, Projection, Runtime Decision, Evidence.
+
+- **Reference test vectors** as a first-class spec deliverable. For each canonicalization and hash output: input JSON → expected JCS canonical bytes (hex) → expected hash (base64url). Plus state-transition vectors and narrowing-rule vectors. An implementation that does not reproduce the test vectors is non-conformant.
+
+- **Normative vocabulary**: Mission Proposal, Mission, Mission Intent, Authority Set, Projection, Runtime Decision, Evidence.
 
 ### Key normative requirements (abstract)
 
-- A Mission MUST satisfy the litmus test (durable, integrity-anchored, lifecycle-governed, identifier-stable, reference-bearing, derived-authority).
-- A state authority MUST compute `proposal_hash`, `authority_hash`, and `consent_rendering_hash` over JCS-canonicalized (RFC 8785) objects, SHA-256, base64url-encoded.
-- A state authority MUST produce byte-identical JCS output to the reference test vectors published with this spec. Implementations that diverge from the test vectors are non-conformant.
-- A Mission record MUST carry binding evidence (signer identity, timestamp, policy version, schema version, rendering template version, approving principal) alongside the integrity anchors.
+- A Mission MUST satisfy the litmus test (durable, integrity-anchored, lifecycle-governed, identifier-stable, reference-bearing, derived-authority). A Mission record exists only after activation; pre-approval state is held in a Mission Proposal record.
+- A Mission Proposal MUST be promoted to a Mission by an explicit state-authority approval event; rejected/withdrawn/expired Proposals MUST NOT become Missions.
+- A state authority MUST compute `proposal_hash`, `authority_hash`, and `consent_disclosure_hash` over domain-separated JCS-canonicalized (RFC 8785) inputs (`{type, schema_version, value}`), SHA-256, base64url-encoded.
+- A state authority MUST produce byte-identical JCS output to the reference test vectors published with this spec.
+- A Mission record MUST carry binding evidence (signer identity, timestamp, policy version, schema version, disclosure template version, approving principal) alongside the integrity hashes.
+- A Mission record MUST carry the principal-model fields (`subject`, `approving_principal`, `requesting_client`, `actor_chain`, `tenant`, `state_authority`).
 - A Mission MUST be in `active` state to permit new derivation; every non-active state refuses.
-- A state authority MUST implement the Mission Status interface defined here. Mission Status responses MUST be returned as JWS (RFC 7515) using the `mission-status+jwt` `typ` value, with `kid` referencing a key published in the state authority's JWKS. Profiles specify the transport binding for the JWS.
-- A state authority MAY emit signed canonical Mission record content (Mission Intent, Authority Set, Consent Disclosure) as separate JWS objects for audit export; when emitted, the JWS payload MUST be the JCS-canonical bytes of the content.
-- A profile MUST specify how each Mission Model element manifests on its substrate.
-- A profile MUST NOT enlarge the Mission Model semantics; profile mappings are subset-faithful representations.
+- A state authority MUST expose a by-mission-reference Mission Status operation distinct from token introspection. Responses MUST satisfy the authentication, freshness, audience, and integrity properties defined in this spec. Profiles specify the wire format and protection mechanism.
+- Authority Set entries MUST carry explicit `type`, `schema_uri`, `schema_version`, and `authority` fields. Equality, subset, intersection, and unknown-field rules MUST be those registered for the type.
+- Constraint values that require precision MUST use string representation in JCS-canonical form (e.g., `"max_calls": "100"`), not JSON number representation.
+- Pairwise Mission references MUST be resolvable to the canonical Mission ID only at the state authority. Other parties MUST NOT be able to derive the canonical ID from a pairwise reference.
+- A profile MUST specify how each Framework element manifests on its substrate, including the chosen wire format for Mission Status protection.
+- A profile MAY define minimum extension points required for that binding (new parameters, claims, error codes); a profile MUST NOT enlarge the Framework semantics.
 
 ### IANA Considerations
 
-- Mission Common Constraints registry (new): key, semantics, commitment shape, narrowing rules.
-- Mission lifecycle state enumeration (or registry).
-- Mission Status request/response media types.
-- `mission-status+jwt` `typ` value (registered in the JWT Media Type Registry).
-- Signed Mission evidence `typ` values: `mission-intent+jwt`, `mission-authority-set+jwt`, `mission-consent-disclosure+jwt`.
-- Capability-advertisement metadata registry (new).
-- Mission Model identifier vocabulary (`mission.id`, `mission.origin`).
+Registry-by-registry audit required. The previous draft of this section claimed registrations that don't track real registries; corrected here:
+
+- **Mission Common Constraints registry**: new IANA registry to be created. Defines registry policy (Specification Required or similar), entry schema (`name`, `type`, `schema_uri`, `schema_version`, semantics document, narrowing rules, runtime contract), and initial entries (`max_calls`, `aal`).
+- **Mission Authority Set Type registry**: new IANA registry. Defines registry policy, entry schema (`type`, `schema_uri`, `schema_version`, equality/subset/intersection/unknown-field rules), and initial entry (`mission_resource_access`).
+- **Mission lifecycle state enumeration**: defined inline in this spec (closed set); reservation in a new "Mission Lifecycle States" registry if extensibility is needed.
+- **Mission Proposal lifecycle state enumeration**: same pattern.
+- **Mission Status response media types**: where new media types are needed (e.g., `application/mission-status-response+json`), registered via the IANA Media Types Registry per RFC 6838. The Framework does NOT register `typ` values for JWT; that is profile-level (e.g., OAuth Profile registers any new media types it needs for RFC 9701-signed responses, per IANA Media Types Registry).
+- **Capability-advertisement metadata registry**: new IANA registry. Capability Model (Draft 11) adds entries.
+- **Mission Model identifier vocabulary** (`mission.id`, `mission.origin`): if these become JWT claims (in profiles, not in Framework), profiles register them in the JWT Claims Registry per RFC 7519.
+
+What this spec does NOT register here:
+- RAR `type` values: RFC 9396 does not establish an IANA registry for every RAR `type`. The `mission_resource_access` RAR type is documented descriptively here; OAuth Profile may propose a RAR-type registry creation if that work emerges separately, or rely on convention until one exists.
+- Generic JWT `typ` values: there is no IANA "JWT Media Type Registry" for arbitrary `typ` values. Where a profile needs a specific JWT `typ`, it registers a media type via IANA Media Types Registry per RFC 6838.
 
 ### Security Considerations themes
 
@@ -262,7 +364,7 @@ This document defines the Mission as a durable, integrity-anchored, lifecycle-go
 
 ### Normative references
 
-RFC 8785 (JCS), RFC 7515 (JWS), RFC 7517 (JWK), RFC 7518 (JWA), RFC 8174 (BCP 14 update), RFC 6234 (SHA-256), RFC 7519 (JWT, where Mission claims appear).
+RFC 8785 (JCS), RFC 8174 (BCP 14 update), RFC 6234 (SHA-256). JWS, JWK, JWA, JWT are referenced informatively from the Framework; profiles make them normative where they're used for protection.
 
 ### Informative references
 
@@ -289,19 +391,33 @@ This profile defines how a deployment composes OAuth 2.0 (RFC 6749), Rich Author
 - **DPoP (RFC 9449)** or **mTLS (RFC 8705)** as the sender-constraint mechanism.
 - **The Mission Framework (Draft 1)** for Mission record semantics, integrity anchors, lifecycle, constraints vocabulary, and Mission Status interface.
 
-### What this profile defines on the OAuth wire (registered with IANA)
+### What this profile defines on the OAuth wire
 
 - **`mission_intent`** parameter at PAR (transport for the Framework's Mission Intent JSON schema).
-- **`mission_resource_access`** RAR type (OAuth representation of an Authority Set entry).
-- **`mission`** claim on JWT access tokens.
+- **`mission_resource_access`** RAR type as one Framework Authority Set type (with declared `schema_uri`, `schema_version`, and narrowing rules). RFC 9396 does not provide an IANA registry of RAR types; the profile documents this descriptively.
+- **`mission`** claim on JWT access tokens (registered in the IANA JWT Claims Registry).
 - **`mission_inactive`** error code for refresh/exchange denial.
-- **Mission Expansion eligibility signaling on the OAuth wire**: the `expansion` block in OAuth error responses, carrying `eligible`, `access_request_uri`, `ticket`, and `requested_authority`. (Substrate-neutral semantics live in Draft 3; this profile defines the OAuth binding.)
-- **Mission Status OAuth binding**: introspection extension that surfaces Mission state, integrity hashes, audience-filtered Authority Set, and `policy_version`. (Abstract interface lives in Draft 1; this profile defines the OAuth transport.)
+- **Mission Expansion eligibility signaling on the OAuth wire**: the `expansion` block in OAuth error responses, carrying `eligible`, `access_request_uri`, `ticket`, and `requested_authority`. Substrate-neutral semantics live in Draft 3; this profile binds them on the OAuth wire.
+- **Dedicated Mission Status operation** (by mission reference) plus an **optional introspection projection** (RFC 7662 extended to return a Mission snapshot for the queried token). These are different operations:
+  - The dedicated operation takes a Mission reference (canonical or pairwise) and returns Mission state.
+  - The introspection extension takes a token and returns its claims, including a Mission snapshot if the token references a Mission.
+  - Mission Status responses use **RFC 9701 signed introspection responses** as the protection mechanism for the introspection projection, and a parallel signed-JSON encoding for the dedicated operation. No new signing envelope is invented here.
+- **Mission lifecycle operations on OAuth endpoints**: revoke, suspend, resume, complete by mission reference. **Distinct from RFC 7009 token revocation.** RFC 7009 revokes a specific token; Mission revocation terminates the Mission and cascades to all derived credentials. The profile defines a dedicated Mission lifecycle endpoint.
 
 ### What this profile composes with (existing or separate drafts)
 
-- [`draft-mcguinness-oauth-id-continuation-assertion`](https://mcguinness.github.io/draft-mcguinness-oauth-id-continuation-assertion/draft-mcguinness-oauth-id-continuation-assertion.html) for same-IdP SaaS-to-SaaS chains. This profile specifies how Mission claims thread through Identity Continuation Assertions; no new continuation assertion is defined here.
-- `draft-ietf-oauth-identity-assertion-authz-grant` (ID-JAG) for cross-IdP identity chaining.
+Identity-chaining decomposition (corrected):
+
+- **`draft-ietf-oauth-identity-assertion-authz-grant` (ID-JAG)**: common-IdP case. The user is resolved by a single IdP; Resource ASes consume the ID-JAG. This profile defines how Mission claims thread through ID-JAGs in the common-IdP scenario.
+- **[`draft-mcguinness-oauth-id-continuation-assertion`](https://mcguinness.github.io/draft-mcguinness-oauth-id-continuation-assertion/draft-mcguinness-oauth-id-continuation-assertion.html) (Identity Continuation Assertion)**: onward issuance in a common-IdP chain when SaaS1 calls SaaS2 calls SaaS3. Composes with ID-JAG.
+- **`draft-ietf-oauth-identity-chaining` (OAuth Identity and Authorization Chaining Across Domains)**: cross-domain mapping where issuer and subject identifiers differ across trust domains. This is the cross-IdP case; the previous breakdown conflated it with ID-JAG.
+
+This profile composes with all three, with explicit role assignment per scenario.
+
+### RFC compositions clarified
+
+- **RFC 7009** revokes OAuth tokens. **Mission revocation is a separate operation** defined by this profile's Mission lifecycle endpoint.
+- **RFC 9470** performs authentication step-up. It may satisfy an `aal` constraint, but it does NOT perform Mission Expansion. Expansion is a governance operation requiring approval; step-up is an authentication operation. The profile may compose with RFC 9470 for the case where a denied request would be permitted by satisfying an `aal` constraint via fresh authentication.
 
 ### What this profile does NOT define
 
@@ -358,30 +474,40 @@ This document defines the governance expansion mechanism for Mission-Bound Autho
 
 ## Draft 4: `draft-mcguinness-mission-delegated-authority-validation`
 
-**Delegated Authority Validation**
+**Delegated Authority Validation (AS-to-Resource-AS handoff)**
 
-**Layer:** Feature. **Category:** Standards Track. **Target WG:** OAUTH or independent. **Status:** New. **Depends on:** Drafts 1 and 3 (Mission Expansion for the eligibility-signaling contract).
+**Layer:** Feature. **Category:** Standards Track. **Status:** New. **Depends on:** Drafts 1 and 3.
 
 ### Abstract
 
-This document defines the authority validation pattern for open-world tool semantics. When an agent attempts an action at a Resource AS whose ontology the originating AS does not know, the Resource AS validates the request against the Mission's Authority Set and returns either a permit, a hard denial, or an expansion-eligible denial. This spec defines the protocol between the Resource AS and the originating state authority, the eligibility-discovery rules, and how the validation result composes with Mission Expansion.
+This document defines a narrow AS-to-Resource-AS protocol for delegating authority validation when the originating Authorization Server lacks the Resource AS's action ontology. The Resource AS validates the request against the Mission's Authority Set using its local ontology, and signals back to the originating AS whether expansion is eligible. **Scope is intentionally narrow**: this spec defines the wire protocol between two specific server roles for this specific handoff. General per-action authority validation (request classification, PDP evaluation) belongs in the Runtime Enforcement Profile (Draft 8).
 
-### What this spec defines
+### What this spec defines (narrowly)
 
-- The Resource-AS-as-validator pattern.
-- Resource AS responsibilities: examine the Mission Intent's `objects` field, determine action eligibility against local ontology, distinguish in-bounds / out-of-bounds / out-of-bounds-but-eligible.
-- The expansion-eligibility signaling protocol in coordination with Mission Expansion (Draft 3).
-- Trust boundaries between Resource AS and originating AS.
+- The AS-to-Resource-AS validation request and response.
+- Resource AS responsibilities in the handoff: examine the Mission Intent against local ontology, determine eligibility classification, signal expansion eligibility per Mission Expansion contract (Draft 3).
+- Trust establishment between Resource AS and originating AS (the originating AS trusts the Resource AS's classification because the Resource AS owns the ontology; the Resource AS trusts the originating AS's Mission record because the originating AS is the state authority).
+- Failure modes: Resource AS unreachable, classification timeout, mismatched ontology versions.
 
 ### What this spec does NOT define
 
+- General per-request authority validation at runtime → Runtime Enforcement Profile (Draft 8). Draft 4 is specifically about the AS-to-Resource-AS handoff at issuance or expansion time, not about every consequential action.
 - The expansion workflow itself → Mission Expansion (Draft 3).
 - Mission Intent shape → Mission Framework (Draft 1).
 
+### Overlap with Runtime Enforcement
+
+Draft 4 and Draft 8 both classify requests against Mission authority. The boundary:
+
+- **Draft 4** is server-to-server, at issuance or expansion time, between the originating AS and a Resource AS that owns ontology the originating AS does not have. The output is a classification for the expansion eligibility decision.
+- **Draft 8** is runtime, per consequential action, between a PEP and a PDP. The output is a permit/deny/expand decision for a specific request.
+
+If implementer experience shows the boundary is unstable, this draft folds into Draft 8.
+
 ### IANA Considerations
 
-- Delegated Authority Validation request and response shapes.
-- Eligibility-discovery error codes.
+- AS-to-Resource-AS validation request/response shapes (media types via IANA Media Types Registry).
+- Classification result codes.
 
 ---
 
@@ -487,7 +613,7 @@ A Mission Authority Server (MAS) holds the canonical Mission record so multiple 
 
 **Mission-Bound Runtime Enforcement Profile**
 
-**Layer:** Profile. **Category:** Standards Track. **Target WG:** AUTHZEN. **Depends on:** Drafts 1, 2 and/or 6, AuthZEN Authorization API.
+**Layer:** Profile. **Category:** Standards Track. **Submission venue:** Independent IETF I-D composing with the [OpenID AuthZEN Authorization API 1.0](https://openid.net/specs/authorization-api-1_0.html) (a final OpenID specification, not an IETF artifact). **Depends on:** Drafts 1, 2 and/or 6, OpenID AuthZEN Authorization API 1.0, OpenID AuthZEN Access Request.
 
 ### Abstract
 
@@ -495,9 +621,9 @@ This profile defines how a deployment composes the AuthZEN Authorization API wit
 
 ### What this profile composes
 
-- **AuthZEN Authorization API** as the PDP interface.
-- **AuthZEN Access Request** for governed expansion of denied authority (per Mission Expansion, Draft 3).
-- **The Mission Framework (Draft 1)** for Mission state, Authority Set, integrity anchors, and Mission Status interface.
+- **OpenID AuthZEN Authorization API 1.0** as the PDP interface (final OpenID spec, not IETF).
+- **OpenID AuthZEN Access Request** for governed expansion of denied authority (per Mission Expansion, Draft 3).
+- **The Mission Framework (Draft 1)** for Mission state, Authority Set, integrity hashes, and Mission Status interface.
 - Either the OAuth Profile (Draft 2) or the AAuth Profile (Draft 6) as the credential substrate adapter (at least one substrate profile is required).
 
 ### What this profile defines
