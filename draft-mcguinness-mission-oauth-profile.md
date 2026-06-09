@@ -352,7 +352,7 @@ PAR transport. The default value is 16384 octets. Submissions
 exceeding the advertised size MUST be refused with
 `invalid_request`.
 
-## Interaction with `scope` and `authorization_details`
+## Interaction with `scope` and `authorization_details` {#interaction-with-scope-and-authorization-details}
 
 When `mission_intent` is submitted, the client MAY additionally
 submit:
@@ -853,7 +853,7 @@ If the Mission's state at exchange time is not `active`, the AS
 MUST refuse the exchange with the `mission_inactive` error response
 defined in {{lifecycle-gating}}.
 
-# Mission Record at the AS
+# Mission Record at the AS {#mission-record-at-the-as}
 
 Per {{I-D.draft-mcguinness-mission-framework}}, the AS creates a
 Mission Proposal on `mission_intent` submission and creates a
@@ -1206,42 +1206,148 @@ lookups, audience-pairwise resolution, or signed evidence
 independent of a specific token MUST use the dedicated
 operation.
 
-# Mission Lifecycle Endpoint
+# Mission Lifecycle Endpoint {#mission-lifecycle-endpoint}
 
 The AS publishes a `mission_lifecycle_endpoint` URL distinct from
-RFC 7009 {{RFC7009}} token revocation.
+{{RFC7009}} token revocation. The endpoint MUST be served over TLS
+1.2 or later (TLS 1.3 RECOMMENDED).
 
 ## Operations
 
-The endpoint accepts authenticated POST requests:
+The endpoint accepts authenticated POST requests with form-urlencoded
+body:
+
+- `mission` (string, required): the Mission reference (canonical
+  `mission.id` or pairwise `mission.ref`).
+- `operation` (string, required): one of `revoke`, `suspend`,
+  `resume`, `complete`.
+- `reason` (string, optional): a human-readable reason recorded in
+  audit. Maximum length 1024 characters.
+- `nonce` (string, required): a client-generated nonce.
+
+The four operations are:
 
 - `revoke`: terminate the Mission. Mission transitions to `revoked`.
 - `suspend`: pause the Mission. Mission transitions to `suspended`.
 - `resume`: return a suspended Mission to `active`.
-- `complete`: mark the Mission as completed. Mission transitions to
-  `completed`.
+- `complete`: mark the Mission as completed. Mission transitions
+  to `completed`.
 
-Each operation takes:
+## Authentication
 
-- `mission` (string, required): the Mission reference.
-- `reason` (string, optional): a human-readable reason recorded in
-  audit.
+Authentication for the lifecycle endpoint uses the same mechanisms
+as the Mission Status endpoint ({{mission-status-authentication}}):
+mTLS, DPoP-bound bearer, or private_key_jwt. The AS advertises
+supported mechanisms under
+`mission_lifecycle_auth_methods_supported`.
 
-The AS MUST authenticate and authorize the requester for the
-operation on the requested Mission.
+## Authorization
 
-## RFC 7009 cascade
+The AS authorizes lifecycle operations against deployment policy.
+The Framework does not standardize the authorization policy;
+typical deployments authorize:
+
+- `revoke`: the Mission's `subject` or `approving_principal`; any
+  administrator role.
+- `suspend` / `resume`: administrator roles only.
+- `complete`: the Mission's `requesting_client` or an
+  administrator role.
+
+The AS MUST refuse unauthorized lifecycle requests with the
+not-found response shape of {{mission-status-error-responses}} so
+the endpoint does not act as a Mission enumeration oracle.
+
+## Worked example
+
+**Revoke request**:
+
+~~~ http-message
+POST /as/mission/lifecycle HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2IiwiandrIjp7...
+
+mission=mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w
+&operation=revoke
+&reason=Quarterly+reconcile+completed+early
+&nonce=nonce_8Y3vN0sM6tP1xR9bQ5
+~~~
+
+**Revoke success response** (JWS-signed Mission Status Response
+shape; the AS returns the updated status as evidence of the
+transition):
+
+~~~ http-message
+HTTP/1.1 200 OK
+Content-Type: application/mission-status-response+jwt
+Cache-Control: no-store
+
+eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIiwidHlwIjoi...
+~~~
+
+**Decoded JWS payload**:
+
+~~~ json
+{
+  "iss": "https://as.example.com",
+  "aud": "https://erp.example.com",
+  "sub": "user_3p2q8mN1a0kV7tR",
+  "nonce": "nonce_8Y3vN0sM6tP1xR9bQ5",
+  "iat": 1797843200,
+  "exp": 1797843260,
+  "mission": {
+    "ref": "mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
+    "origin": "https://as.example.com"
+  },
+  "state": "revoked",
+  "lifecycle_event": {
+    "operation": "revoke",
+    "at":        "2026-11-02T09:06:40Z",
+    "actor":     "user_3p2q8mN1a0kV7tR",
+    "reason":    "Quarterly reconcile completed early"
+  },
+  "integrity_anchors": {
+    "proposal_hash":
+      "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "consent_disclosure_hash":
+      "sha-256:nB2xK5qY7vM3rL9pT4cE6sZ8wQ1bN0fH5jX9kV2sRdM"
+  },
+  "policy_version": "deploy-policy:v17",
+  "issued_at":     "2026-11-02T09:06:40Z",
+  "expires_at":    "2026-11-02T09:11:40Z",
+  "freshness_at":  "2026-11-02T09:06:40Z",
+  "mission_expiry":"2026-12-31T23:59:59Z",
+  "audience":      "https://erp.example.com",
+  "version":       2
+}
+~~~
+
+The `lifecycle_event` member is added to the standard Mission
+Status Response shape and records the transition. The
+`version` increments from 1 (at approval) to 2.
+
+## Idempotency
+
+Lifecycle operations MUST be idempotent on the pair
+(`mission`, `operation`). A repeated request that does not change
+state returns success without side effect, returning the current
+Mission Status Response.
+
+## {{RFC7009}} cascade
 
 Mission revocation cascades to all access tokens, refresh tokens,
 and ID-JAGs derived from the Mission, per the AS's advertised
-enforcement classes (Section 11).
+enforcement classes ({{revocation-enforcement-classes}}).
 
-The AS MAY additionally invoke RFC 7009 {{RFC7009}} token revocation
-for specific outstanding tokens when the AS knows their `jti`. RFC
-7009 alone does NOT revoke a Mission; the lifecycle endpoint is the
+The AS MAY additionally invoke {{RFC7009}} token revocation for
+specific outstanding tokens when the AS knows their `jti`. {{RFC7009}}
+alone does NOT revoke a Mission; the lifecycle endpoint is the
 authoritative Mission state change.
 
-# Revocation Enforcement Classes
+# Revocation Enforcement Classes {#revocation-enforcement-classes}
 
 A Mission-Bound OAuth deployment advertises its enforcement classes
 in AS metadata under `mission_enforcement_classes_supported`. The
@@ -1275,40 +1381,142 @@ for `issuance`-only deployments where revocation matters.
 Deployments with `event_driven` or `per_request` enforcement may
 use longer TTLs because revocation propagates out-of-band.
 
-# Sender Constraint
+# Sender Constraint {#sender-constraint}
 
 Access tokens issued under this profile MUST be sender-constrained
 using one of:
 
-- DPoP {{RFC9449}}.
-- mTLS {{RFC8705}}.
+- DPoP {{RFC9449}}: the access token's `cnf.jkt` member binds the
+  token to a client-controlled DPoP key. Each request to the
+  Resource Server carries a `DPoP` proof header.
+- mTLS {{RFC8705}}: the access token's `cnf.x5t#S256` member binds
+  the token to the client's X.509 certificate. Each request to the
+  Resource Server uses the matching client certificate at the TLS
+  layer.
 
-The AS advertises supported sender-constraint mechanisms in AS
-metadata. Bearer-only tokens are NOT permitted under this profile.
+The AS MUST advertise supported sender-constraint mechanisms under
+`mission_sender_constraints_supported` (an array with one or both
+of `dpop`, `mtls`). Bearer-only (unconstrained) tokens are NOT
+permitted under this profile.
 
-# AS Metadata
+Refresh tokens MUST also be sender-constrained. The AS rotates
+refresh tokens on use (per OAuth 2.1 RECOMMENDATION) and preserves
+the sender-constraint binding across rotation.
+
+# AS Metadata {#as-metadata}
 
 The AS metadata document {{RFC8414}} carries the following
-Mission-Bound members in addition to standard OAuth metadata:
+Mission-Bound members in addition to standard OAuth metadata.
 
-- `mission_intent_schema_uri` (URL): JSON Schema for `mission_intent`.
-- `mission_intent_max_size` (integer): octet limit on `mission_intent`.
-- `mission_status_endpoint` (URL): dedicated Mission Status operation.
-- `mission_lifecycle_endpoint` (URL): Mission lifecycle operations.
-- `authority_set_types_supported` (array): Authority Set entry types
-  this AS issues.
-- `mission_pairwise_supported` (boolean): whether the AS emits
-  pairwise references.
-- `mission_pairwise_sector` (string, conditional): sector type if
-  `mission_pairwise_supported` is `true`.
-- `mission_enforcement_classes_supported` (array): one or more of
-  `issuance`, `introspection`, `event_driven`, `per_request`.
-- `mission_max_stale_seconds` (integer): maximum tolerated stale
-  interval for revocation propagation.
-- `mission_framework_versions_supported` (array): spec revisions of
-  the Framework this AS supports.
+## Mission-Bound metadata members
 
-# Composition with Other Specifications
+- `mission_intent_schema_uri` (string, required, URL): JSON Schema
+  for `mission_intent`. Resolves to either the Framework's default
+  Mission Intent schema or a deployment-specific stricter schema.
+- `mission_intent_max_size` (integer, required): octet limit on
+  `mission_intent`. Default 16384.
+- `mission_status_endpoint` (string, required, URL): dedicated
+  Mission Status operation.
+- `mission_status_auth_methods_supported` (array of strings,
+  required): one or more of `mtls`, `dpop_bearer`,
+  `private_key_jwt`.
+- `mission_lifecycle_endpoint` (string, required, URL): Mission
+  lifecycle operations.
+- `mission_lifecycle_auth_methods_supported` (array of strings,
+  required): same value space as
+  `mission_status_auth_methods_supported`.
+- `authority_set_types_supported` (array of strings, required):
+  Authority Set entry types this AS issues.
+- `mission_pairwise_supported` (boolean, required): whether the AS
+  emits pairwise references.
+- `mission_pairwise_sector` (string, conditional, required if
+  `mission_pairwise_supported` is `true`): sector type, one of
+  `resource_server`, `resource_as`, `tenant`, `trust_domain`.
+- `mission_enforcement_classes_supported` (array of strings,
+  required): one or more of `issuance`, `introspection`,
+  `event_driven`, `per_request`.
+- `mission_max_stale_seconds` (integer, required): maximum
+  tolerated stale interval for revocation propagation.
+- `mission_sender_constraints_supported` (array of strings,
+  required): one or both of `dpop`, `mtls`.
+- `mission_framework_versions_supported` (array of strings,
+  required): spec revisions of the Framework this AS supports.
+- `mission_purposes_supported` (array of strings, optional):
+  deployment-registered `purpose` URIs the AS accepts in Mission
+  Intents.
+
+## Worked metadata example
+
+A discovery response from `https://as.example.com/.well-known/oauth-authorization-server`:
+
+~~~ http-message
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: max-age=3600
+
+{
+  "issuer": "https://as.example.com",
+  "authorization_endpoint":
+    "https://as.example.com/as/authorize",
+  "token_endpoint": "https://as.example.com/as/token",
+  "pushed_authorization_request_endpoint":
+    "https://as.example.com/as/par",
+  "require_pushed_authorization_requests": true,
+  "introspection_endpoint":
+    "https://as.example.com/as/introspect",
+  "revocation_endpoint":
+    "https://as.example.com/as/revoke",
+  "jwks_uri":
+    "https://as.example.com/.well-known/jwks.json",
+  "response_types_supported": ["code"],
+  "grant_types_supported": [
+    "authorization_code",
+    "refresh_token",
+    "urn:ietf:params:oauth:grant-type:token-exchange"
+  ],
+  "code_challenge_methods_supported": ["S256"],
+  "dpop_signing_alg_values_supported": ["ES256", "EdDSA"],
+  "tls_client_certificate_bound_access_tokens": true,
+  "introspection_signing_alg_values_supported": ["ES256"],
+  "authorization_response_iss_parameter_supported": true,
+
+  "mission_intent_schema_uri":
+    "https://as.example.com/.well-known/mission-intent-schema.json",
+  "mission_intent_max_size": 16384,
+  "mission_status_endpoint":
+    "https://as.example.com/as/mission/status",
+  "mission_status_auth_methods_supported": [
+    "mtls", "dpop_bearer", "private_key_jwt"
+  ],
+  "mission_lifecycle_endpoint":
+    "https://as.example.com/as/mission/lifecycle",
+  "mission_lifecycle_auth_methods_supported": [
+    "mtls", "private_key_jwt"
+  ],
+  "authority_set_types_supported": ["mission_resource_access"],
+  "mission_pairwise_supported": true,
+  "mission_pairwise_sector": "resource_server",
+  "mission_enforcement_classes_supported": [
+    "issuance", "introspection"
+  ],
+  "mission_max_stale_seconds": 60,
+  "mission_sender_constraints_supported": ["dpop", "mtls"],
+  "mission_framework_versions_supported": [
+    "draft-mcguinness-mission-framework-00"
+  ],
+  "mission_purposes_supported": [
+    "urn:erp.example.com:purposes:quarterly-reconcile",
+    "urn:erp.example.com:purposes:bulk-export"
+  ]
+}
+~~~
+
+The metadata document at
+`{mission.origin}/.well-known/mission-authority` defined in the
+Framework is ALSO published; this profile's AS metadata members
+above are an OAuth-substrate complement, not a replacement.
+
+# Composition with Other Specifications {#composition-with-other-specifications}
 
 ## Identity-chaining decomposition
 
@@ -1365,16 +1573,23 @@ fresh authentication.
 - Cross-substrate (MAS) topology: Mission Authority Server
   specification.
 
-# Security Considerations
+# Security Considerations {#security-considerations}
+
+This section discusses security considerations specific to this
+profile. Security considerations for the Mission Framework
+({{I-D.draft-mcguinness-mission-framework}}) apply in full to
+deployments using this profile.
 
 ## Mission revocation and offline tokens
 
 Mission revocation does not claim to invalidate offline
 self-contained tokens immediately unless `event_driven` or
-`per_request` enforcement is deployed. Deployments where revocation
-propagation matters MUST advertise their enforcement classes
-honestly (Section 11). Implementers SHOULD NOT assume revocation is
-instantaneous.
+`per_request` enforcement is deployed. Deployments where
+revocation propagation matters MUST advertise their enforcement
+classes honestly ({{revocation-enforcement-classes}}).
+Implementers SHOULD NOT assume revocation is instantaneous and
+SHOULD adjust access-token TTL to align with their declared
+`mission_max_stale_seconds`.
 
 ## Token-scope vs Mission-scope
 
@@ -1383,23 +1598,37 @@ the Authority Set committed by `authority_hash` is the upper bound.
 However, a leaked refresh token can produce new credentials
 indefinitely until the Mission is revoked or the refresh token is
 explicitly revoked. Refresh tokens MUST be sender-constrained per
-Section 12.
+{{sender-constraint}}.
+
+## Refresh-token rotation and Mission binding
+
+The AS rotates refresh tokens on use. Each rotation MUST preserve
+the Mission binding: the rotated token carries the same Mission
+reference and sender-constraint binding as its predecessor. Two
+refresh tokens for the same client and Mission SHOULD NOT be
+valid simultaneously; the AS revokes the predecessor on
+successful rotation. Detection of two-active-refresh-tokens
+SHOULD be treated as a token-theft signal and trigger a Mission
+revocation event per the AS's deployment policy.
 
 ## Mission Status enumeration
 
 Per the anti-oracle property, the AS MUST NOT distinguish unknown
 Mission references from known-but-unauthorized references at the
-Mission Status endpoint. Implementations that leak this distinction
-expose the Mission space to enumeration.
+Mission Status endpoint. Implementations that leak this
+distinction expose the Mission space to enumeration. The error
+response shape of {{mission-status-error-responses}} mitigates
+this by requiring identical body content, identical HTTP status,
+and timing/size invariance between the two cases.
 
 ## RFC 9701 vs new media type
 
-The introspection projection uses RFC 9701 {{RFC9701}}, an existing
+The introspection projection uses {{RFC9701}}, an existing
 specification scoped to token introspection. The dedicated Mission
 Status operation uses a new media type
 (`application/mission-status-response+jwt`) registered in
-{{iana}} because RFC 9701 does not apply to by-reference status
-lookups. Implementations MUST NOT use RFC 9701 for the dedicated
+{{iana}} because {{RFC9701}} does not apply to by-reference status
+lookups. Implementations MUST NOT use {{RFC9701}} for the dedicated
 operation.
 
 ## Cross-substrate token-leak surface
@@ -1411,70 +1640,337 @@ issues its own credentials sender-constrained to its substrate.
 However, lifecycle state propagation across substrates depends on
 the MAS topology being correctly configured.
 
+## DPoP and mTLS deployment
+
+DPoP {{RFC9449}} and mTLS {{RFC8705}} have different deployment
+characteristics. DPoP is straightforward to deploy in
+browser-hosted SPAs and mobile apps but requires the client to
+hold a private key. mTLS provides stronger binding at the TLS
+layer but requires per-client X.509 issuance.
+
+This profile permits either; deployments SHOULD select based on
+the threat model: stronger binding (mTLS) for high-value
+deployments and confidential clients; DPoP for public clients
+and where mTLS deployment overhead is impractical.
+
+When DPoP is used, the AS MUST validate the DPoP proof per
+{{RFC9449}} and reject reuse of `jti` within the proof's window.
+When mTLS is used, the AS MUST validate the certificate against
+its trust anchors and against the client's registered
+`tls_client_auth_*` metadata members.
+
+## Mission Status response replay
+
+A Mission Status response is bound to (caller, audience, nonce,
+issuance time). Replay against a different caller, audience, or
+beyond `expires_at` is detectable by signature verification and
+binding-claim verification. Consumers MUST verify all six bindings
+listed in {{mission-status-response-wire-form}} before honoring a
+response.
+
+A Mission Status response cached and replayed by the same caller
+within `expires_at` is correctly equivalent to a fresh response
+(caching is permitted up to `expires_at`). Consumers MUST NOT use
+a cached response after `expires_at` (plus permissible skew per
+{{mission-status-caching}}).
+
+## Mission Status DoS
+
+The Mission Status endpoint is on the consumption path of every
+Mission-bound credential validation in deployments that consult
+it synchronously. The AS MUST implement per-consumer rate
+limiting per the Framework's DoS mitigation. Deployments SHOULD
+encourage consumer-side caching to reduce traffic.
+
+## Authorization code injection and PKCE
+
+This profile inherits the OAuth 2.0 Best Current Practice
+{{RFC9700}} and {{?I-D.draft-ietf-oauth-v2-1}}. PKCE MUST be used
+for public clients; PKCE SHOULD be used for confidential clients
+as defense in depth. The PKCE `code_challenge_method` MUST be
+`S256`.
+
+## Resource Indicator binding
+
+When the client submits {{RFC8707}} `resource` parameters at
+authorization or token-exchange time, the AS MUST narrow issued
+authority to the intersection of (Validated Mission Intent
+authority, requested resources). The AS MUST refuse a request
+whose `resource` set has no intersection with any
+`mission_resource_access` entry derived from the Validated
+Mission Intent.
+
 ## General OAuth security
 
 This profile inherits the OAuth 2.0 Best Current Practice
 {{RFC9700}}. Implementers MUST follow current OAuth security
 guidance for the OAuth surfaces this profile composes with.
 
+# Privacy Considerations {#privacy-considerations}
+
+This section addresses privacy threats specific to the OAuth
+binding. Privacy considerations for the Mission Framework
+({{I-D.draft-mcguinness-mission-framework}}) apply in full.
+
+## Mission identifier exposure in tokens
+
+Access tokens issued under this profile carry the `mission` claim,
+which contains either canonical `mission.id` or pairwise
+`mission.ref`. Resource Servers and other audiences that observe
+the access token observe the Mission reference.
+
+Deployments using canonical `mission.id` accept that any audience
+seeing two access tokens with the same `mission.id` can correlate
+them as referring to the same Mission. This is appropriate when
+the audience is intended to consume canonical identifiers
+(audit consumers, administrator dashboards) and inappropriate
+when the audience is a Resource Server that should not correlate
+across Missions of the same user.
+
+Deployments where audience-side correlation matters MUST use
+pairwise mode and select an appropriate sector
+(see the Pairwise Mission Reference section of
+{{I-D.draft-mcguinness-mission-framework}}).
+
+## Refresh token contents
+
+A Mission-bound refresh token, when implemented as a JWT, MAY
+expose the Mission reference and `authority_hash` to anyone who
+obtains the refresh token. Deployments treating the refresh
+token as bearer data (e.g., logging the token in plain text)
+expose this information. The AS SHOULD prefer opaque refresh
+tokens or encrypt JWT refresh tokens at rest.
+
+## Introspection responses
+
+Introspection responses include the Mission projection when the
+AS chooses to emit it. The introspection response is delivered
+to a Resource Server (or other token consumer) authenticated to
+the introspection endpoint. The Mission projection therefore
+exposes Mission state and `authority_hash` to that consumer.
+
+Deployments MUST treat the introspection endpoint as a Mission
+information disclosure surface with the same privacy posture as
+the dedicated Mission Status endpoint.
+
+## Audit and logging
+
+The AS records Mission Proposal submission, approval events,
+credential derivation, and lifecycle transitions in audit logs.
+These logs contain Mission identifiers, audience identifiers,
+principal identifiers, and timing information. Deployments MUST
+treat AS audit logs as PII sinks per the Framework's privacy
+considerations.
+
+## Client-registration metadata
+
+Client registration metadata under
+{{client-registration-extensions}} (`mission_purposes_registered`,
+`mission_intent_schema_uri_supported`,
+`mission_max_derivations_max`) describes client capabilities. This
+metadata is typically not user-PII but MAY reveal organizational
+relationships and approved task classes. Deployments SHOULD
+treat client registration data with the same care as other
+client metadata.
+
+## Resource indicator inference
+
+When clients submit {{RFC8707}} `resource` parameters at
+authorization or token-exchange time, the AS observes the
+target audience and can correlate Missions by target. The AS
+SHOULD limit retention of resource-parameter values beyond the
+audit window or generalize them to deployment-internal audience
+identifiers in logs.
+
 # IANA Considerations {#iana}
 
-## OAuth Parameters Registry
+This document requests IANA actions to register OAuth parameters,
+claims, error codes, metadata members, media types, and one
+Mission Authority Set Type Registry entry.
 
-This document registers `mission_intent` as an OAuth parameter
-applicable to the authorization request, per the registration
-policy of the OAuth Parameters Registry.
+## OAuth Authorization Request Parameters
 
-## JWT Claims Registry
+This document registers `mission_intent` in the OAuth Parameters
+Registry under the "OAuth Authorization Request" parameter usage
+location.
 
-This document registers `mission` as a JWT claim per {{RFC7519}}.
-
-- Claim Name: `mission`
-- Claim Description: Reference to the governing Mission record.
+- Parameter Name: `mission_intent`
+- Parameter Usage Location: Authorization Request (REQUIRED via PAR
+  only; see {{mission-intent-parameter}})
 - Change Controller: IETF
-- Reference: this document
-- Value type: JSON object with `id` or `ref`, `origin`,
-  `authority_hash`, and `version` members.
+- Specification Document(s): this document
+
+## OAuth Token Endpoint Authentication Methods
+
+This document does not register new token-endpoint authentication
+methods. The Mission Status and Mission Lifecycle endpoints reuse
+existing methods (`tls_client_auth`,
+`self_signed_tls_client_auth`, `private_key_jwt`,
+`dpop_bound_access_token`).
 
 ## OAuth Error Codes Registry
 
-This document registers `mission_inactive` as an OAuth error code
-(profile-specific extension).
+This document registers the following error codes in the OAuth
+Extensions Error Registry.
 
-## Mission Authority Set Type Registry
+| Name | Usage Location | Reference |
+|---|---|---|
+| `mission_inactive` | Token Error Response | this document |
+| `mission_concurrent_modification` | Token Error Response | this document |
 
-This document registers `mission_resource_access` in the Mission
-Authority Set Type Registry created by the Mission Framework.
+For each:
 
-- Type: `mission_resource_access`
-- Specification URI: this document
-- Schema version: `1`
-- Normalization, equality, subset, intersection, and unknown-field
-  rules: per Sections 5 and 6.
+- Change Controller: IETF
+- Reference: this document
 
-## Media Type Registry
+## JWT Claims Registry
 
-This document registers the following media types per RFC 6838:
+This document registers `mission` in the JSON Web Token Claims
+registry per {{RFC7519}}.
 
-- `application/mission-status-response+jwt`: signed Mission Status
-  response payload format. Format: JWS Compact Serialization with the
-  payload structure defined in Section 9.1.
+- Claim Name: `mission`
+- Claim Description: Reference to the governing Mission record and
+  related integrity-anchored evidence.
+- Change Controller: IETF
+- Reference: this document
+- Value type: JSON object conforming to
+  `urn:mbo:schema:oauth-mission-claim:1` ({{mission-claim-schema}}).
 
 ## OAuth Authorization Server Metadata
 
 This document registers the following members in the OAuth
-Authorization Server Metadata registry:
+Authorization Server Metadata registry. For each registration:
+
+- Change Controller: IETF
+- Reference: this document
+- Value type and definition: see {{as-metadata}}.
+
+Registered members:
 
 - `mission_intent_schema_uri`
 - `mission_intent_max_size`
 - `mission_status_endpoint`
+- `mission_status_auth_methods_supported`
 - `mission_lifecycle_endpoint`
+- `mission_lifecycle_auth_methods_supported`
 - `authority_set_types_supported`
 - `mission_pairwise_supported`
 - `mission_pairwise_sector`
 - `mission_enforcement_classes_supported`
 - `mission_max_stale_seconds`
+- `mission_sender_constraints_supported`
 - `mission_framework_versions_supported`
+- `mission_purposes_supported`
+
+## OAuth Dynamic Client Registration Metadata
+
+This document registers the following members in the OAuth Dynamic
+Client Registration Metadata registry per {{RFC7591}}. For each:
+
+- Change Controller: IETF
+- Reference: this document
+
+Registered members:
+
+- `mission_purposes_registered`
+- `mission_intent_schema_uri_supported`
+- `mission_max_derivations_max`
+
+See {{client-registration-extensions}} for definitions.
+
+## Mission Authority Set Type Registry
+
+This document registers `mission_resource_access` in the Mission
+Authority Set Type Registry created by the Mission Framework
+({{I-D.draft-mcguinness-mission-framework}}).
+
+- **Type**: `mission_resource_access`
+- **Defining specification**: this document
+- **`schema_digest`**: computed over the schema document at
+  `https://datatracker.ietf.org/doc/draft-mcguinness-mission-oauth-profile/`
+- **Schema document URL**: see definition in
+  {{authority-set-entry-type-mission-resource-access}}
+- **`schema_version` semantics**: integer-valued strings. Successor
+  versions are backward-compatible when they add optional members
+  and break-compatible when they add required members or change
+  member semantics.
+- **Normalization rule**: `urn:mbo:norm:mission-resource-access:1`
+  (also registered by this document, see
+  {{normalization-profile-registration}}).
+- **Equality rule**: per
+  {{authority-set-entry-type-mission-resource-access}}.
+- **Subset rule**: per
+  {{authority-set-entry-type-mission-resource-access}}.
+- **Intersection rule**: per
+  {{authority-set-entry-type-mission-resource-access}}.
+- **Unknown-field handling**: refuse (default); per-entry
+  `narrowing_profile` MAY declare pass-through.
+- **Change controller**: IETF
+- **Reference**: this document
+
+## Mission Normalization Profile Registry {#normalization-profile-registration}
+
+This document registers
+`urn:mbo:norm:mission-resource-access:1` in the Mission
+Normalization Profile registry created by the Framework.
+
+- **Profile identifier**:
+  `urn:mbo:norm:mission-resource-access:1`
+- **Defining specification**: this document
+- **Per-field rules**: see
+  {{authority-set-entry-type-mission-resource-access}}.
+- **Change controller**: IETF
+- **Reference**: this document
+
+## Media Type Registry
+
+This document registers two media types per {{RFC6838}}.
+
+### `application/mission-status-response+jwt`
+
+- **Type name**: application
+- **Subtype name**: mission-status-response+jwt
+- **Required parameters**: none
+- **Optional parameters**: none
+- **Encoding considerations**: binary; JWS Compact Serialization
+- **Security considerations**: see {{security-considerations}}
+- **Interoperability considerations**: see this document
+- **Published specification**: this document
+- **Applications that use this media type**: OAuth Mission-Bound
+  consumers
+- **Fragment identifier considerations**: not applicable
+- **Restrictions on usage**: none
+- **Provisional registration**: no
+- **Magic number(s)**: none
+- **File extension(s)**: none
+- **Macintosh file type code(s)**: none
+- **Person & email address to contact for further information**:
+  Karl McGuinness <public@karlmcguinness.com>
+- **Intended usage**: COMMON
+- **Author/Change controller**: IETF
+
+### `application/mission-lifecycle-response+jwt`
+
+This document registers a second media type for Mission Lifecycle
+endpoint responses. The on-the-wire form is identical to
+Mission Status (the AS returns the updated Mission Status
+Response as evidence of the transition); the distinct media type
+allows recipients to dispatch on response provenance.
+
+Registration fields are identical to the above except:
+
+- **Subtype name**: mission-lifecycle-response+jwt
+- **Applications**: OAuth Mission-Bound consumers performing
+  lifecycle operations.
+
+## Well-Known URI
+
+This document does NOT register a new Well-Known URI. The state
+authority metadata document at
+`/.well-known/mission-authority` is registered by the Framework.
+The AS metadata document at
+`/.well-known/oauth-authorization-server` is the OAuth Server
+Metadata registration of {{RFC8414}}.
 
 # Acknowledgments
 {:numbered="false"}
