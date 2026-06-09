@@ -31,22 +31,30 @@ normative:
   RFC8174:
   RFC6749:
   RFC6750:
+  RFC6838:
   RFC7009:
+  RFC7515:
+  RFC7517:
   RFC7519:
+  RFC7591:
   RFC7662:
+  RFC8126:
+  RFC8259:
   RFC8414:
+  RFC8615:
   RFC8693:
   RFC8705:
+  RFC8707:
   RFC9068:
   RFC9126:
   RFC9396:
   RFC9449:
   RFC9701:
-  RFC8615:
   I-D.draft-mcguinness-mission-framework:
 
 informative:
-  RFC7591:
+  RFC3339:
+  RFC9110:
   RFC9470:
   RFC9700:
   RFC9728:
@@ -55,6 +63,7 @@ informative:
   I-D.draft-mcguinness-oauth-actor-profile:
   I-D.draft-mcguinness-oauth-client-instance-assertion:
   I-D.draft-mcguinness-oauth-id-continuation-assertion:
+  I-D.draft-ietf-oauth-v2-1:
 
 --- abstract
 
@@ -91,6 +100,61 @@ The baseline `-00` of this profile does NOT define Mission Expansion
 bindings. After Mission Expansion (separate specification)
 stabilizes, this profile is revised to add the OAuth wire binding.
 
+## OAuth versions
+
+This profile composes with OAuth 2.0 {{RFC6749}} and is compatible
+with OAuth 2.1 {{?I-D.draft-ietf-oauth-v2-1}}. Implementations
+SHOULD adopt OAuth 2.1 baseline requirements (PKCE for public
+clients, redirect-URI exact matching, no implicit grant) in
+addition to the constraints this profile imposes.
+
+## Document Organization {#document-organization}
+
+This document is organized as follows.
+
+{{conventions-and-definitions}} introduces terminology and notation.
+
+{{profile-at-a-glance}} enumerates the wire surfaces a Mission-Bound
+OAuth Authorization Server implements.
+
+{{mission-intent-submission}} defines the `mission_intent` parameter
+and its PAR-only submission rule.
+
+{{authority-derivation}} defines AS-side derivation of
+`authorization_details` from a Validated Mission Intent.
+
+{{authority-set-entry-type-mission-resource-access}} defines the
+`mission_resource_access` Authority Set entry type with its JSON
+Schema and default narrowing rules.
+
+{{the-mission-claim}} defines the `mission` JWT claim, including
+canonical and pairwise modes.
+
+{{mission-record-at-the-as}} describes the AS's role as state
+authority and its Mission record.
+
+{{lifecycle-gating}} defines which credential-derivation operations
+gate on Mission state and the `mission_inactive` error.
+
+{{mission-status}} defines the dedicated Mission Status operation
+and the optional introspection projection.
+
+{{mission-lifecycle-endpoint}} defines the Mission Lifecycle endpoint.
+
+{{revocation-enforcement-classes}} defines the four enforcement
+classes and their advertisement.
+
+{{sender-constraint}} requires sender-constrained credentials.
+
+{{as-metadata}} enumerates the discovery extensions.
+
+{{composition-with-other-specifications}} addresses adjacent specs.
+
+{{security-considerations}} and {{privacy-considerations}} address
+security and privacy threats.
+
+{{iana}} requests IANA actions.
+
 ## Relationship to the Framework
 
 The Framework {{I-D.draft-mcguinness-mission-framework}} defines:
@@ -106,12 +170,26 @@ The Framework {{I-D.draft-mcguinness-mission-framework}} defines:
 This profile binds those abstract elements onto OAuth-specific wire
 shapes. It does not redefine Framework semantics.
 
-# Conventions and Definitions
+# Conventions and Definitions {#conventions-and-definitions}
 
 {::boilerplate bcp14-tagged}
 
-Terms defined in the Framework {{I-D.draft-mcguinness-mission-framework}}
-are inherited here. This document additionally uses:
+## Notation
+
+This document uses the notation defined in
+{{I-D.draft-mcguinness-mission-framework}}. In addition:
+
+- HTTP message examples follow the conventions of {{RFC9110}};
+  long URLs and form parameters are wrapped for display.
+- JWT examples are shown as decoded JSON payloads with separate
+  header objects; on the wire the JWS Compact Serialization
+  {{RFC7515}} applies.
+
+## Terminology
+
+Terms defined in the Framework
+{{I-D.draft-mcguinness-mission-framework}} are inherited here.
+This document additionally uses:
 
 **Authorization Server (AS)**:
 : The OAuth Authorization Server, acting as the state authority for
@@ -121,10 +199,24 @@ Missions per the Framework's terminology.
 : An OAuth Resource Server consuming Mission-bound access tokens.
 
 **Resource AS**:
-: An Authorization Server adjacent to a Resource Server in cross-AS
-topology (RFC 8693 audience).
+: An Authorization Server adjacent to a Resource Server in
+cross-AS topology ({{RFC8693}} audience).
 
-# Profile at a Glance
+**Mission-bound access token**:
+: An access token issued by the AS under this profile, carrying a
+`mission` claim.
+
+**Mission-bound refresh token**:
+: A refresh token issued by the AS under this profile, bound to a
+specific Mission (see {{refresh-token-binding}}).
+
+**Mission Status Response (OAuth wire form)**:
+: A JWS-signed payload returned by the AS's
+`mission_status_endpoint`, matching the Framework's abstract
+Mission Status Response object with OAuth-specific wire-form
+members. See {{mission-status-response-wire-form}}.
+
+# Profile at a Glance {#profile-at-a-glance}
 
 A Mission-Bound OAuth AS implements these surfaces:
 
@@ -150,24 +242,27 @@ A Mission-Bound OAuth AS implements these surfaces:
 9. Advertises supported Mission capabilities in AS metadata
    {{RFC8414}}.
 
-# Mission Intent Submission
+# Mission Intent Submission {#mission-intent-submission}
 
-## `mission_intent` parameter
+## `mission_intent` parameter {#mission-intent-parameter}
 
 The `mission_intent` parameter is a top-level OAuth authorization
-request parameter. Its value is a JSON object conforming to the
-Mission Intent schema defined in
+request parameter. Its value is a JSON object {{RFC8259}}
+conforming to the Mission Intent schema defined in
 {{I-D.draft-mcguinness-mission-framework}}.
 
 This profile REQUIRES that `mission_intent` be submitted through PAR
 {{RFC9126}}. A direct authorization-endpoint submission carrying
-`mission_intent` MUST be refused with `invalid_request`.
+`mission_intent` MUST be refused with `invalid_request` and an
+error description identifying the violation.
 
 Encoding: the JSON object is serialized as UTF-8 and form-urlencoded
 as the `mission_intent` parameter value within the PAR request body
 (`application/x-www-form-urlencoded`).
 
-A PAR request carrying `mission_intent`:
+### Worked PAR exchange {#par-exchange}
+
+**PAR request** from the client to the AS's PAR endpoint:
 
 ~~~ http-message
 POST /as/par HTTP/1.1
@@ -179,105 +274,178 @@ response_type=code
 &client_id=s6BhdRkqt3
 &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb
 &scope=openid
-&mission_intent=%7B%22goal%22%3A%22Prepare%20Q2%20board%20packet%22%2C
-%20%22objects%22%3A%5B%22board%20materials%22%2C%22calendar%22%5D%2C%20
-%22constraints%22%3A%5B%22confidential%20only%22%5D%2C%20
-%22success_criteria%22%3A%5B%22packet%20drafted%22%5D%2C%20
-%22mission_expiry%22%3A%222026-09-05T12%3A00%3A00Z%22%7D
+&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
+&code_challenge_method=S256
+&mission_intent=%7B%22goal%22%3A%22Reconcile%20Q3%20invoices...
+%22%2C%22objects%22%3A%5B%22https%3A%2F%2Ferp.example.com%2Fapi%2Finvoices%22
+%5D%2C%22constraints%22%3A%5B%5D%2C%22success_criteria%22%3A%5B%5D%2C
+%22mission_expiry%22%3A%222026-12-31T23%3A59%3A59Z%22%7D
 ~~~
+
+The form-urlencoded `mission_intent` value, when decoded, is a JSON
+object matching the Framework's Mission Intent schema. The example
+above abbreviates the JSON for display.
+
+**PAR success response** from the AS:
+
+~~~ http-message
+HTTP/1.1 201 Created
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "request_uri":
+    "urn:ietf:params:oauth:request_uri:nq4SY-7uxIWnZqJqQABg",
+  "expires_in": 60
+}
+~~~
+
+The `request_uri` is then used by the client at the authorization
+endpoint:
+
+~~~ http-message
+GET /as/authorize?client_id=s6BhdRkqt3&request_uri=urn%3Aietf%3Aparams
+%3Aoauth%3Arequest_uri%3Anq4SY-7uxIWnZqJqQABg HTTP/1.1
+Host: as.example.com
+~~~
+
+After the approving principal authenticates and approves, the AS
+creates the Mission record per {{mission-record-at-the-as}} and
+issues an authorization code:
+
+~~~ http-message
+HTTP/1.1 302 Found
+Location: https://client.example.org/cb?code=SplxlOBeZQQYbYS6
+WxSbIA&state=xyz&iss=https%3A%2F%2Fas.example.com
+~~~
+
+The client then redeems the code at the token endpoint
+({{authorization-code-redemption}}).
 
 ### Validation rules
 
 The AS MUST:
 
-- Parse the `mission_intent` value as JSON, rejecting parse failures
-  with `invalid_request` and an error description identifying the
-  parse error.
+- Parse the `mission_intent` value as JSON {{RFC8259}}, rejecting
+  parse failures with `invalid_request` and an error description
+  identifying the parse error.
 - Reject duplicate JSON object member names with `invalid_request`.
 - Validate the Mission Intent against the published
   `mission_intent_schema_uri` and against deployment policy
   constraints.
-- Reject Mission Intents whose validated form would exceed requester
-  bounds (registered client maximums, deployment policy ceilings).
-- Narrow values where deployment policy requires (e.g., shorten
-  `mission_expiry` to a policy maximum). The Validated Mission
-  Intent is what is recorded on the Mission Proposal and what
-  `proposal_hash` covers.
+- Reject Mission Intents whose validated form would exceed
+  requester bounds (registered client maximums, deployment policy
+  ceilings).
+- Narrow values where deployment policy permits, per the narrowing
+  rules of {{I-D.draft-mcguinness-mission-framework}}. The
+  Validated Mission Intent is what is recorded on the Mission
+  Proposal and what `proposal_hash` covers.
 
 ### Maximum size
 
 The AS advertises `mission_intent_max_size` in its AS metadata
-document as a positive integer number of octets. Submissions
-exceeding this size MUST be refused with `invalid_request`.
+document as a positive integer number of octets, measured as the
+length of the UTF-8 form-urlencoded `mission_intent` value before
+PAR transport. The default value is 16384 octets. Submissions
+exceeding the advertised size MUST be refused with
+`invalid_request`.
 
-# Authority Derivation
+## Interaction with `scope` and `authorization_details`
+
+When `mission_intent` is submitted, the client MAY additionally
+submit:
+
+- `scope`: a space-separated list of OAuth scopes. The AS MUST
+  treat client-submitted `scope` as a requested subset of the
+  Authority Set derived from the Validated Mission Intent. The
+  AS MUST narrow or refuse scopes not derivable from the
+  Validated Mission Intent's `authorization_details` per
+  {{authority-derivation}}.
+- `resource` (Resource Indicators {{RFC8707}}): one or more URIs
+  identifying intended Resource Servers. The AS MUST refuse
+  resources not authorized under any
+  `mission_resource_access` entry derived from the Validated
+  Mission Intent.
+
+Clients MUST NOT submit `authorization_details` directly when
+submitting `mission_intent`; the AS derives `authorization_details`
+from the Validated Mission Intent. A request carrying both
+MUST be refused with `invalid_request`.
+
+## Client registration extensions {#client-registration-extensions}
+
+A client that submits Mission Intents declares its capabilities
+through the following client-registration metadata members
+({{RFC7591}}):
+
+- `mission_purposes_registered` (array of strings, optional): the
+  set of `purpose` URIs this client may submit in Mission Intents.
+  The AS MUST refuse a `mission_intent` whose `purpose` is not in
+  this set, when the AS uses client-registered purposes.
+- `mission_intent_schema_uri_supported` (array of strings,
+  optional): the deployment-specific Mission Intent schema
+  identifiers this client supports.
+- `mission_max_derivations_max` (string, optional): the maximum
+  `max_derivations` value this client may request. The AS MUST
+  refuse Mission Intents requesting values above this ceiling, or
+  narrow.
+
+The AS MAY refuse client registration that does not declare these
+capabilities when the deployment's policy requires explicit client
+declaration. Implementations using OAuth Dynamic Client Registration
+{{RFC7591}} bind these as Client Metadata members.
+
+# Authority Derivation {#authority-derivation}
 
 The AS derives `authorization_details` from the Validated Mission
 Intent on the Mission Proposal. The derivation MUST:
 
 - Produce one or more Authority Set entries (typed per
   {{I-D.draft-mcguinness-mission-framework}}).
-- Bound every entry's authority by the Validated Mission Intent.
+- Bound every entry's authority by the Validated Mission Intent's
+  `objects`, `constraints`, and `context` fields.
 - Compute `authority_hash` over the derived Authority Set per the
   Framework's domain-separated, authorization-domain-bound envelope.
 
 This profile registers `mission_resource_access` as one Authority
-Set entry type (Section 6).
+Set entry type ({{authority-set-entry-type-mission-resource-access}}).
 
-# Authority Set Entry Type: `mission_resource_access`
+## Derivation algorithm
 
-The `mission_resource_access` type is registered in the Mission
-Authority Set Type Registry created by the Framework
-{{I-D.draft-mcguinness-mission-framework}}. Each entry takes the
-form:
+The AS executes the following algorithm at the approval event:
 
-~~~ json
-{
-  "type": "mission_resource_access",
-  "specification_uri":
-    "https://mcguinness.github.io/mission-bound-authorization/specs/mission_resource_access-v1",
-  "schema_digest": "sha-256:rcDp...QlQQ",
-  "schema_version": "1",
-  "authority": {
-    "resource": "https://docs.example.com",
-    "actions": ["documents.read", "documents.write"],
-    "constraints": {
-      "folder": "board-materials",
-      "data_classification": "confidential"
-    }
-  },
-  "narrowing_profile": "urn:mbo:narrowing:default-v1"
-}
-~~~
+1. For each `objects` entry in the Validated Mission Intent that
+   identifies a Resource Server URI:
+   - Construct a `mission_resource_access` entry whose
+     `authority.resource` matches the entry.
+   - Derive `authority.actions` from the Validated Mission Intent's
+     `constraints`, `success_criteria`, and deployment policy
+     mapping rules. The AS MAY use either an explicit deployment-
+     defined Intent-to-action mapping registry or a deployment-
+     specific NLP-assisted derivation; in either case the AS MUST
+     record the derivation policy version (`policy_version`) on
+     the Mission's `binding_evidence`.
+   - Derive `authority.constraints` by translating Validated
+     Mission Intent `constraints` and `context` members to
+     resource-applicable Common Constraints (the Mission-level
+     `aal` and `max_derivations` are recorded at the Mission
+     level, not duplicated per entry).
+2. For each `objects` entry identifying a non-RS resource (e.g.,
+   a registered tool URI, a data domain identifier), the AS MAY
+   produce additional Authority Set entries of types other than
+   `mission_resource_access` (deployment- or ecosystem-specific
+   types) provided each entry is registered in the Mission
+   Authority Set Type registry and is bounded by the Validated
+   Mission Intent.
+3. Compute `authority_hash` over the constructed Authority Set.
 
-## Authority payload
+Implementations that produce non-deterministic Authority Sets
+(e.g., NLP-assisted derivation that varies between runs over the
+same input) MUST capture the resulting Authority Set on the Mission
+record verbatim; the integrity anchor binds the recorded result,
+not the derivation process.
 
-The `authority` object carries:
-
-- `resource` (URI, required): the protected resource the authority
-  applies to. Exact-match equality.
-- `actions` (array of strings, required): the permitted action
-  identifiers. Set semantics.
-- `constraints` (object, required): registered Common Constraints
-  applying to actions on this resource.
-
-## Default narrowing rules
-
-Under `urn:mbo:narrowing:default-v1`, derived `mission_resource_access`
-entries are accepted only when:
-
-- `resource` matches exactly the approved resource (string
-  equality).
-- `actions` is a subset (set inclusion) of the approved `actions`
-  array.
-- Every key present in derived `constraints` is also present in
-  approved `constraints`. Derived values narrow per the constraint's
-  registered semantics.
-- Derived entries MUST NOT introduce keys not present in approved
-  `constraints`, unless a registered constraint type defines
-  pass-through semantics.
-
-## Authorization Server-side derivation
+## Client-submitted `authorization_details` interaction
 
 This profile inverts the plain RAR client-submits-authority pattern:
 the client submits Mission Intent (a task description), and the AS
@@ -285,11 +453,143 @@ derives `authorization_details` (the OAuth authority). The user
 approves the rendered Validated Mission Intent plus the derived
 Authority Set.
 
-The AS-derived `authorization_details` array MAY contain entries of
-types other than `mission_resource_access` (deployment- or
-ecosystem-specific RAR types) provided each entry conforms to the
-Framework's typed-entry shape and is bounded by the Validated
-Mission Intent.
+When the client submits `mission_intent`, the client MUST NOT
+submit `authorization_details` in the same request; the AS rejects
+such requests with `invalid_request` per
+{{interaction-with-scope-and-authorization-details}}.
+
+# Authority Set Entry Type: `mission_resource_access` {#authority-set-entry-type-mission-resource-access}
+
+The `mission_resource_access` type is registered in the Mission
+Authority Set Type Registry created by the Framework
+{{I-D.draft-mcguinness-mission-framework}}.
+
+## Schema
+
+The canonical JSON Schema for a `mission_resource_access` entry's
+`authority` payload is:
+
+~~~ json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mbo:schema:mission-resource-access:1",
+  "title": "mission_resource_access authority payload",
+  "type": "object",
+  "required": ["resource", "actions"],
+  "additionalProperties": false,
+  "properties": {
+    "resource": {
+      "type": "string",
+      "format": "uri",
+      "minLength": 1
+    },
+    "actions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_.:-]+$"
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}
+~~~
+
+### Action identifier ABNF
+
+Action identifiers in `actions[*]` follow the ABNF:
+
+~~~
+action-id   = 1*64( ALPHA / DIGIT / "_" / "." / ":" / "-" )
+~~~
+
+Action identifiers SHOULD use the dotted-namespace form
+(`<noun>.<verb>`, e.g., `invoices.read`, `journal-entries.write`).
+Identifiers are case-sensitive.
+
+## Example entry
+
+~~~ json
+{
+  "type": "mission_resource_access",
+  "specification_uri":
+    "https://mcguinness.github.io/mission-bound-authorization/specs/mission_resource_access-v1",
+  "schema_digest":
+    "sha-256:rcDpZQ4eFm0bKLqJv7M2sNHbR8tY9pXkE3sVrLqJpQQ",
+  "schema_version": "1",
+  "authority": {
+    "resource": "https://erp.example.com",
+    "actions": ["invoices.read", "journal-entries.write"],
+    "constraints": {
+      "issued_after": "2026-07-01T00:00:00Z",
+      "issued_before": "2026-10-01T00:00:00Z",
+      "max_amount_usd": 500
+    }
+  },
+  "narrowing_profile": "urn:mbo:narrowing:default-v1"
+}
+~~~
+
+## Authority payload semantics
+
+The `authority` object carries:
+
+- `resource` (string, required, URI format): the protected resource
+  the authority applies to.
+- `actions` (array of strings, required, minItems 1): permitted
+  action identifiers per the ABNF above.
+- `constraints` (object, optional): per-entry registered constraints
+  applying to actions on this resource.
+
+## Normalization Profile
+
+The `mission_resource_access` type uses
+`urn:mbo:norm:mission-resource-access:1`:
+
+- `resource`: RFC 3986 syntax-based normalization {{RFC9728}}.
+- `actions`: order-insensitive; sorted ascending by code-point
+  order; duplicates removed.
+- `constraints`: member rules per the registered Common Constraint
+  for each member name. Unknown members refused at validation.
+
+## Equality, subset, and intersection rules
+
+**Equality**: two entries are equal when their normalized
+`resource`, `actions` (as ordered set), and `constraints` are
+identical.
+
+**Subset**: entry A is a subset of entry B when:
+
+- A.`resource` equals B.`resource` (after URI normalization).
+- A.`actions` is a subset of B.`actions`.
+- For every member key K in A.`constraints`, K is present in
+  B.`constraints` and A.`constraints[K]` is a subset of
+  B.`constraints[K]` per the registered Common Constraint's
+  subset rule.
+
+**Intersection**: when both entries reference the same `resource`,
+the intersection's `actions` is the set-intersection of the two
+entries' `actions`, and the intersection's `constraints[K]` is the
+constraint-specific intersection of corresponding values for each
+shared key. If the resources differ, the intersection is empty.
+
+**Unknown-field handling**: members of `authority` not listed in
+the schema MUST be refused. Members of `constraints` whose names
+are not registered Common Constraints MUST be refused, unless the
+entry's `narrowing_profile` registers explicit pass-through for
+specific extension keys.
+
+## Default narrowing rules
+
+Under `urn:mbo:narrowing:default-v1` (the Framework's default
+narrowing profile), derived `mission_resource_access` entries are
+accepted at credential derivation only when they are subsets of
+some Mission Authority Set entry per the subset rule above.
 
 # The `mission` Claim
 
