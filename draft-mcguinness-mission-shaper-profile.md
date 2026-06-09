@@ -230,7 +230,7 @@ The Framework defines a discovery metadata document at
 `{mission.origin}/.well-known/mission-authority`
 {{I-D.draft-mcguinness-mission-framework}} containing fields
 including `mission_intent_schema_uri`,
-`authority_set_types_supported`, `mission_pairwise_supported`, and
+`authority_set_types_supported`, and
 `mission_framework_versions_supported`. The OAuth Profile,
 AAuth Profile, and MAS profile each add their substrate-specific
 fields.

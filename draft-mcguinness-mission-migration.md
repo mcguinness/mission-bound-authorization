@@ -132,8 +132,8 @@ enforcement classes.
 
 Terms from {{I-D.draft-mcguinness-mission-framework}} (Mission,
 Mission Proposal, Authority Set, `mission` claim, Mission Status,
-state authority, integrity anchor, canonical and pairwise Mission
-reference) and from
+state authority, integrity anchor, canonical `mission.id`) and
+from
 {{I-D.draft-mcguinness-mission-oauth-profile}} (`mission_intent`,
 `mission_resource_access`, `mission_inactive`, enforcement
 classes `issuance`, `introspection`, `event_driven`,
@@ -566,12 +566,8 @@ composition substrate.
 
 Each AS that participates in cross-AS continuity recognizes the
 `mission` claim on incoming subject tokens at the Token Exchange
-endpoint and preserves it on the exchanged token; resolves the
-incoming Mission reference (canonical or pairwise) to the
-appropriate sector reference for the target audience per the
-Framework, minting the reference for the target audience rather
-than copying an upstream pairwise reference into a different
-sector; consults Mission Status at the state authority
+endpoint and preserves the canonical `mission.id` on the
+exchanged token; consults Mission Status at the state authority
 identified by `mission.origin` before issuing a derived
 credential, per the `issuance` class; and cascades Mission
 revocation to all derived credentials it has issued.
@@ -600,12 +596,10 @@ guide walks through.
 ## Exit criteria
 
 A deployment exits Stage 5 when Token Exchange and (where
-deployed) ID-JAG issuance preserve the Mission reference across
-AS hops; Mission revocation at the originating state authority
-blocks derivation at downstream ASes within the deployment's
-stated `mission_max_stale_seconds` interval; and pairwise
-Mission references are minted per target audience rather than
-propagated across audiences.
+deployed) ID-JAG issuance preserve the canonical `mission.id`
+across AS hops, and Mission revocation at the originating state
+authority blocks derivation at downstream ASes within the
+deployment's stated `mission_max_stale_seconds` interval.
 
 # Compatibility Hazards
 
@@ -756,12 +750,6 @@ plus `event_driven`, or plus `per_request`) SHOULD ensure each
 RS's claimed class is honored. Misadvertisement leads consumers
 to assume revocation propagation guarantees that do not hold for
 their audience.
-
-Operators introducing pairwise Mission references in Stage 3 or
-later SHOULD audit log pipelines for canonical-identifier
-leakage. The pairwise model assumes audience-specific visibility;
-canonical identifiers leaked through logs, support tools, or
-unencrypted backups defeat the model.
 
 # IANA Considerations
 

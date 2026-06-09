@@ -101,7 +101,7 @@ Profile. It composes them.
 
 - {{I-D.draft-mcguinness-mission-framework}} (Framework) owns the
   Mission record, the Mission Status interface, the typed Authority
-  Set, the canonical and pairwise identifier model, and the
+  Set, the canonical `mission.id` identifier model, and the
   integrity anchors. This document references these without
   redefining them.
 - {{I-D.draft-mcguinness-mission-oauth-profile}} (OAuth Profile)
@@ -127,9 +127,8 @@ Profile. It composes them.
 In this document the following terms are used as defined elsewhere:
 
 - **Mission**, **Mission record**, **Mission Intent**, **Authority
-  Set**, **Mission Status**, **`mission.id`**, **`mission.ref`**,
-  **`mission.origin`**, **`authority_hash`**, **canonical mode**,
-  **pairwise mode**, **pairwise sector**: per
+  Set**, **Mission Status**, **`mission.id`**,
+  **`mission.origin`**, **`authority_hash`**: per
   {{I-D.draft-mcguinness-mission-framework}}.
 - **`mission` claim**, **`mission_resource_access`**: per
   {{I-D.draft-mcguinness-mission-oauth-profile}}.
@@ -147,7 +146,7 @@ This document additionally defines:
   AS-B.
 - **Cross-Domain Mission Status Consumer**: a Receiving AS that has
   been pre-registered at the Transcribing AS's Mission Status
-  endpoint with a bound pairwise sector, per the CDTA.
+  endpoint per the CDTA.
 - **Transcription Profile**: a named, registered rule set governing
   how Mission-bound `txn_claims` members are produced and validated.
   This document defines the initial entry
@@ -190,28 +189,9 @@ In canonical mode:
 }
 ~~~
 
-In pairwise mode:
-
-~~~ json
-{
-  "mission": {
-    "ref": "opq_partnerB_mW8Jx0qN9PfBdC4LqRy2Xg",
-    "origin": "https://as-a.example.com",
-    "authority_hash": "sha-256:fS8h4w7Z3Lq...",
-    "version": 1
-  }
-}
-~~~
-
 The members carry the following meaning at the trust boundary:
 
-- `id` or `ref`: the Mission handle. The Transcribing AS MUST emit
-  `ref` when its advertised pairwise sector applies to the AS-B
-  audience. The Transcribing AS MUST NOT copy a pairwise reference
-  minted for any other sector into `txn_claims.mission.ref`; it
-  MUST mint a fresh reference for the AS-B sector per
-  {{I-D.draft-mcguinness-mission-framework}}. The Transcribing AS
-  MUST NOT emit both `id` and `ref`.
+- `id`: the canonical `mission.id` identifying the Mission handle.
 - `origin`: the Transcribing AS's issuer URL. This is the resolution
   anchor that AS-B uses to discover the Mission Status endpoint per
   {{I-D.draft-mcguinness-mission-framework}}.
@@ -297,7 +277,7 @@ optional claims omitted):
     "transcription_profile":
       "urn:mbo:txn-chain:transcription:default-v1",
     "mission": {
-      "ref": "opq_partnerB_mW8Jx0qN9PfBdC4LqRy2Xg",
+      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "origin": "https://as-a.example.com",
       "authority_hash": "sha-256:fS8h4w7Z3Lq...",
       "version": 1
@@ -358,10 +338,9 @@ The Receiving AS MUST query the Mission Status endpoint discovered
 through `txn_claims.mission.origin` per
 {{I-D.draft-mcguinness-mission-framework}} and
 {{I-D.draft-mcguinness-mission-oauth-profile}}. The query MUST use
-the Mission reference carried in `txn_claims.mission` (either `id`
-in canonical mode or `ref` in pairwise mode) and MUST be
-authenticated as the Cross-Domain Mission Status Consumer
-pre-registered for the Receiving AS's audience-sector.
+the canonical `mission.id` carried in `txn_claims.mission.id` and
+MUST be authenticated as the Cross-Domain Mission Status Consumer
+pre-registered at the Transcribing AS.
 
 The Receiving AS MUST require all of the following from the Mission
 Status response to issue a partner-domain access token:
@@ -427,21 +406,18 @@ CDTA with three additional concerns.
 ## Mission Status Consumer Pre-Registration
 
 The CDTA MUST establish AS-B as a Cross-Domain Mission Status
-Consumer at AS-A's Mission Status endpoint with a bound pairwise
-sector. Pre-registration covers:
+Consumer at AS-A's Mission Status endpoint. Pre-registration
+covers:
 
 - AS-B's client credentials at AS-A's Mission Status endpoint
   (`client_credentials`, mTLS, or DPoP-bound bearer per the
   applicable OAuth Profile authentication options).
-- The pairwise sector AS-A applies when minting
-  `txn_claims.mission.ref` for AS-B and the sector AS-A serves on
-  Mission Status responses to AS-B.
 - The maximum tolerated staleness AS-B will accept on responses
   from AS-A.
 
 Without pre-registration, AS-A's Mission Status endpoint MUST
-refuse the reach-back as an unauthorized reference, indistinguishable
-from an unknown reference per
+refuse the reach-back as an unauthorized reference,
+indistinguishable from an unknown reference per
 {{I-D.draft-mcguinness-mission-framework}}.
 
 ## Origin Resolution Trust
@@ -454,41 +430,28 @@ resolves outside that enumeration MUST be refused, even when the
 grant's `iss` is a CDTA partner. This prevents a compromised or
 misconfigured AS-A from redirecting Mission Status to an attacker.
 
-## Pairwise Sector Hygiene
-
-The pairwise sector AS-A applies to AS-B MUST be distinct from
-sectors AS-A applies to any other partner AS, Resource Server, or
-audience. Cross-sector reuse defeats the unlinkability the Mission
-Framework's pairwise identifier model provides.
-
 # Security Considerations
 
-## Cross-Domain Mission Leak
+## Cross-Domain Mission Identifier
 
-Mission references are correlatable identifiers across artifacts
-derived from the same Mission record. A canonical `mission.id`
-emitted into `txn_claims.mission` reaches AS-B in plaintext within
-the signed grant. Deployments SHOULD prefer pairwise mode for
-cross-domain transcription, scoped to the Receiving AS's sector,
-so that AS-B holds a partner-specific reference that does not
-correlate with references the same Mission emits to other partners
-or to Resource Servers.
+The canonical `mission.id` emitted into `txn_claims.mission`
+reaches AS-B in plaintext within the signed grant. AS-B observes
+the same `mission.id` that AS-A's other partners observe; cross-
+partner correlation via Mission identifier is possible by design,
+consistent with the Framework's canonical-only identifier model.
+Deployments where cross-partner correlation matters compose with
+a profile extension to the Framework defining a pairwise Mission
+identifier; such extensions are out of scope.
 
-A Transcribing AS that emits canonical `mission.id` into
-`txn_claims.mission` MUST treat the grant payload as carrying
-correlation-class data and SHOULD restrict it through CDTA terms
-rather than through wire confidentiality alone.
+A Transcribing AS MUST treat the grant payload as carrying
+correlation-class data and SHOULD restrict its distribution
+through CDTA terms rather than through wire confidentiality alone.
 
 ## Audience Confusion
 
-The composition relies on three audience signals that MUST agree:
-top-level `aud`, the Receiving AS's audience-sector at the
-Transcribing AS, and the partner identity in the CDTA. A
-mismatch among these signals MUST cause the grant to be refused.
-Specifically, a grant whose `aud` names AS-B but whose
-`txn_claims.mission.ref` was minted for a different sector
-indicates either a malicious replay or a Transcribing AS
-implementation defect; either way, the Receiving AS MUST refuse.
+The composition relies on two audience signals that MUST agree:
+top-level `aud` and the partner identity in the CDTA. A mismatch
+between these signals MUST cause the grant to be refused.
 
 ## Replay
 
@@ -541,9 +504,8 @@ are documented descriptively in this document.
 
 - `mission`: object carrying the Mission reference per
   {{I-D.draft-mcguinness-mission-oauth-profile}}. Members: `id`
-  (string, canonical mode), `ref` (string, pairwise mode), `origin`
-  (URL), `authority_hash` (string), `version` (integer). `id` and
-  `ref` are mutually exclusive.
+  (string, canonical `mission.id`), `origin` (URL),
+  `authority_hash` (string), `version` (integer).
 - `mission_resource_access`: array of audience-filtered Authority
   Set entries of type `mission_resource_access` per
   {{I-D.draft-mcguinness-mission-oauth-profile}}.

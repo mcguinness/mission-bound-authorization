@@ -129,8 +129,7 @@ and its PAR-only submission rule.
 `mission_resource_access` Authority Set entry type with its JSON
 Schema and default narrowing rules.
 
-{{the-mission-claim}} defines the `mission` JWT claim, including
-canonical and pairwise modes.
+{{the-mission-claim}} defines the `mission` JWT claim.
 
 {{mission-record-at-the-as}} describes the AS's role as state
 authority and its Mission record.
@@ -609,15 +608,10 @@ The canonical JSON Schema for the `mission` claim value is:
   "$id": "urn:mbo:schema:oauth-mission-claim:1",
   "title": "OAuth mission claim",
   "type": "object",
-  "required": ["origin", "authority_hash", "version"],
-  "oneOf": [
-    { "required": ["id"] },
-    { "required": ["ref"] }
-  ],
+  "required": ["id", "origin", "authority_hash", "version"],
   "additionalProperties": false,
   "properties": {
     "id":     { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,256}$" },
-    "ref":    { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,256}$" },
     "origin": { "type": "string", "format": "uri" },
     "authority_hash": {
       "type": "string",
@@ -630,11 +624,7 @@ The canonical JSON Schema for the `mission` claim value is:
 
 Members:
 
-- `id` (string, required in canonical mode, mutually exclusive
-  with `ref`): canonical `mission.id` per the Framework.
-- `ref` (string, required in pairwise mode, mutually exclusive
-  with `id`): the audience-sector pairwise Mission Reference per
-  the Framework.
+- `id` (string, required): canonical `mission.id` per the Framework.
 - `origin` (string, required, URI format): the AS issuer URL.
   Equal to `mission.origin`. Consumers resolve via
   `{origin}/.well-known/mission-authority` per {{RFC8615}}.
@@ -646,12 +636,7 @@ Members:
   Mission record's content; used by consumers to detect stale
   evidence.
 
-The AS MUST emit exactly one of `id` or `ref`; both MUST NOT
-appear in the same claim.
-
-## Canonical mode {#mission-claim-canonical-mode}
-
-When the audience consumes canonical identifiers, the claim is:
+## Example claim {#mission-claim-example}
 
 ~~~ json
 {
@@ -665,46 +650,19 @@ When the audience consumes canonical identifiers, the claim is:
 }
 ~~~
 
-## Pairwise mode {#mission-claim-pairwise-mode}
-
-When the AS emits pairwise references for this audience-sector, the
-claim is:
-
-~~~ json
-{
-  "mission": {
-    "ref": "mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
-    "origin": "https://as.example.com",
-    "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-    "version": 1
-  }
-}
-~~~
-
-## Mode selection
-
-The AS selects mode per audience-sector advertised in its metadata
-document. The token audience determines which sector applies and
-therefore which mode. The AS MUST NOT vary mode for the same
-(Mission, audience) pair within a sector for the Mission's
-lifetime, except via pairwise reference rotation per the Framework.
-
 ## Refresh and exchange continuity {#refresh-token-binding}
 
-A Mission-bound refresh token is bound to the Mission whose `id` or
-`ref` appears in the refresh token's `mission` claim (when the
-refresh token is a JWT) or in the AS's per-token state (when the
-refresh token is opaque). The AS MUST refuse a refresh-token
-rotation when the bound Mission's state is not `active`.
+A Mission-bound refresh token is bound to the Mission whose `id`
+appears in the refresh token's `mission` claim (when the refresh
+token is a JWT) or in the AS's per-token state (when the refresh
+token is opaque). The AS MUST refuse a refresh-token rotation when
+the bound Mission's state is not `active`.
 
-When refresh produces a new credential for the same audience and
-sector, the AS MUST preserve the chosen mode and the chosen
-reference (pairwise references are stable within sector). When
-Token Exchange {{RFC8693}} produces a credential for a different
-audience, the AS mints the reference appropriate to the target
-audience's sector. The AS MUST NOT copy an upstream pairwise
-reference into a different sector.
+When refresh produces a new credential the AS preserves the
+Mission identity in the new credential's `mission` claim. Token
+Exchange {{RFC8693}} producing a credential for a different
+audience preserves the same `mission.id` in the new credential's
+claim; the Mission is the same, only the audience differs.
 
 ## Opaque access tokens
 
@@ -843,11 +801,10 @@ Cache-Control: no-store
 ~~~
 
 The new access token carries the `mission` claim referencing the
-same Mission as the `subject_token`. If the new audience is in a
-different pairwise sector, the AS uses that sector's `mission.ref`;
-if the new audience is in the same sector or consumes canonical
-identifiers, the AS preserves the upstream form per
-{{refresh-token-binding}}.
+same Mission as the `subject_token`, with the same `mission.id`.
+Only the OAuth audience (`aud` claim) and the substrate-level
+authority projection differ; the Mission identity is preserved
+across the exchange.
 
 If the Mission's state at exchange time is not `active`, the AS
 MUST refuse the exchange with the `mission_inactive` error response
@@ -933,8 +890,7 @@ document. The endpoint MUST be served over TLS 1.2 or later (TLS
 The request is an HTTPS POST with
 `application/x-www-form-urlencoded` body containing:
 
-- `mission` (string, required): the Mission reference. Either a
-  canonical `mission.id` or a pairwise `mission.ref`.
+- `mission` (string, required): the canonical `mission.id`.
 - `audience` (string, required): the audience identifier of the
   requesting consumer.
 - `nonce` (string, required): a client-generated nonce for
@@ -977,7 +933,7 @@ Content-Type: application/x-www-form-urlencoded
 Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2IiwiandrIjp7...
 
-mission=mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w
+mission=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 &audience=https%3A%2F%2Ferp.example.com
 &nonce=nonce_K9pV4nT2sR7mB1xQ
 ~~~
@@ -1024,7 +980,7 @@ Mission Status Response object):
   "iat": 1797840000,
   "exp": 1797840060,
   "mission": {
-    "ref": "mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com"
   },
   "state": "active",
@@ -1180,7 +1136,7 @@ token=eyJhbGciOiJFUzI1NiIsImtpZCI6...
   "sub":     "user_3p2q8mN1a0kV7tR",
   "scope":   "openid",
   "mission": {
-    "ref": "mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
@@ -1201,10 +1157,9 @@ use them up to `expires_at` per the caching rule of
 
 The introspection projection is an OPTIMIZATION for consumers
 that already query by token. It does NOT replace the dedicated
-Mission Status operation. Consumers needing by-mission-reference
-lookups, audience-pairwise resolution, or signed evidence
-independent of a specific token MUST use the dedicated
-operation.
+Mission Status operation. Consumers needing by-mission-id lookups
+or signed evidence independent of a specific token MUST use the
+dedicated operation.
 
 # Mission Lifecycle Endpoint {#mission-lifecycle-endpoint}
 
@@ -1217,8 +1172,7 @@ The AS publishes a `mission_lifecycle_endpoint` URL distinct from
 The endpoint accepts authenticated POST requests with form-urlencoded
 body:
 
-- `mission` (string, required): the Mission reference (canonical
-  `mission.id` or pairwise `mission.ref`).
+- `mission` (string, required): the canonical `mission.id`.
 - `operation` (string, required): one of `revoke`, `suspend`,
   `resume`, `complete`.
 - `reason` (string, optional): a human-readable reason recorded in
@@ -1268,7 +1222,7 @@ Content-Type: application/x-www-form-urlencoded
 Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2IiwiandrIjp7...
 
-mission=mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w
+mission=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 &operation=revoke
 &reason=Quarterly+reconcile+completed+early
 &nonce=nonce_8Y3vN0sM6tP1xR9bQ5
@@ -1297,7 +1251,7 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIiwidHlwIjoi...
   "iat": 1797843200,
   "exp": 1797843260,
   "mission": {
-    "ref": "mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com"
   },
   "state": "revoked",
@@ -1427,11 +1381,6 @@ Mission-Bound members in addition to standard OAuth metadata.
   `mission_status_auth_methods_supported`.
 - `authority_set_types_supported` (array of strings, required):
   Authority Set entry types this AS issues.
-- `mission_pairwise_supported` (boolean, required): whether the AS
-  emits pairwise references.
-- `mission_pairwise_sector` (string, conditional, required if
-  `mission_pairwise_supported` is `true`): sector type, one of
-  `resource_server`, `resource_as`, `tenant`, `trust_domain`.
 - `mission_enforcement_classes_supported` (array of strings,
   required): one or more of `issuance`, `introspection`,
   `event_driven`, `per_request`.
@@ -1494,8 +1443,6 @@ Cache-Control: max-age=3600
     "mtls", "private_key_jwt"
   ],
   "authority_set_types_supported": ["mission_resource_access"],
-  "mission_pairwise_supported": true,
-  "mission_pairwise_sector": "resource_server",
   "mission_enforcement_classes_supported": [
     "issuance", "introspection"
   ],
@@ -1716,23 +1663,27 @@ binding. Privacy considerations for the Mission Framework
 
 ## Mission identifier exposure in tokens
 
-Access tokens issued under this profile carry the `mission` claim,
-which contains either canonical `mission.id` or pairwise
-`mission.ref`. Resource Servers and other audiences that observe
-the access token observe the Mission reference.
+Access tokens issued under this profile carry the `mission` claim
+containing the canonical `mission.id`. Resource Servers and other
+audiences that observe the access token observe the same
+`mission.id`. Audiences participating in the same Mission can
+observe that they share a Mission; this is inherent to the
+Mission's role as a governance handle and is consented to at
+approval time.
 
-Deployments using canonical `mission.id` accept that any audience
-seeing two access tokens with the same `mission.id` can correlate
-them as referring to the same Mission. This is appropriate when
-the audience is intended to consume canonical identifiers
-(audit consumers, administrator dashboards) and inappropriate
-when the audience is a Resource Server that should not correlate
-across Missions of the same user.
+User-level correlation across audiences (a Resource Server
+linking activity across Missions of the same user) is independent
+of the Mission identifier and addressed by OIDC pairwise `sub`.
+Deployments where user-level cross-audience correlation matters
+MUST configure pairwise `sub` claims at the AS. The `mission.id`
+does not encode subject identity and does not undo `sub`-level
+pairwise isolation.
 
-Deployments where audience-side correlation matters MUST use
-pairwise mode and select an appropriate sector
-(see the Pairwise Mission Reference section of
-{{I-D.draft-mcguinness-mission-framework}}).
+Deployments with stronger Mission-identity isolation requirements
+(an unusual case typically arising in multi-tenant SaaS state
+authorities serving competing tenants) define a pairwise Mission
+identifier through a profile extension to the Mission Framework;
+such extensions are out of scope for this profile.
 
 ## Refresh token contents
 
@@ -1856,8 +1807,6 @@ Registered members:
 - `mission_lifecycle_endpoint`
 - `mission_lifecycle_auth_methods_supported`
 - `authority_set_types_supported`
-- `mission_pairwise_supported`
-- `mission_pairwise_sector`
 - `mission_enforcement_classes_supported`
 - `mission_max_stale_seconds`
 - `mission_sender_constraints_supported`

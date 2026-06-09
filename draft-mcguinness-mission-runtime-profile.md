@@ -242,7 +242,7 @@ The PDP emits a Decision Evidence Object for every runtime decision.
 The object is a JSON document with:
 
 - `decision_id` (string, required): unique decision identifier.
-- `mission_id_or_ref`, `origin`, `authority_hash`, `policy_view_id`:
+- `mission_id`, `origin`, `authority_hash`, `policy_view_id`:
   Mission projection at decision time.
 - `actor`, `subject`, `resource`, `action`, `parameter_digest`,
   `audience`: PDP inputs.
