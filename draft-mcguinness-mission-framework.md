@@ -37,6 +37,7 @@ normative:
   RFC6838:
   RFC7009:
   RFC8126:
+  RFC8176:
   RFC8259:
   RFC8615:
   RFC8785:
@@ -64,6 +65,12 @@ informative:
     date: 2017
     seriesinfo:
       "NIST": "Special Publication 800-63-3"
+  OIDC-EAP-ACR:
+    title: "OpenID Connect Extended Authentication Profile (EAP) ACR Values 1.0"
+    author:
+      org: "OpenID Foundation"
+    date: 2018
+    target: "https://openid.net/specs/openid-connect-eap-acr-values-1_0.html"
   W3C-UNICODE-NORM:
     title: "Unicode Normalization Forms"
     author:
@@ -138,7 +145,7 @@ scope remains.
 A Mission is the persistent record that carries that task identity.
 The state authority records the goal, the constrained authority
 ("post adjustments < $500"), the integrity-anchored proposal, the
-approving principal and the AAL of their approval, and a stable
+approving principal and the `acr` recorded at approval, and a stable
 identifier that every derived credential references. When the user
 later revokes the Mission, every derived credential becomes
 unusable. When an auditor asks why a particular adjustment was
@@ -178,8 +185,8 @@ interface, its required properties, request and response shape, and
 error model.
 
 {{common-constraints-framework}} defines the Common Constraints
-registry framework and two initial entries (`max_derivations` and
-`aal`).
+registry framework and two initial entries (`max_derivations`,
+`acr`, and `amr`).
 
 {{reference-test-vectors}} declares the required test vector classes.
 
@@ -204,7 +211,7 @@ This document defines:
   (authentication, freshness, audience binding, integrity,
   anti-oracle, request-binding, caching).
 - The Common Constraints framework and initial entries
-  (`max_derivations`, `aal`).
+  (`max_derivations`, `acr`, `amr`).
 - Domain-separated, authorization-domain-bound hash envelopes for
   integrity anchors.
 
@@ -368,12 +375,27 @@ record at the approval event. Policy versions are state-authority-
 local; profile specifications MAY register a syntax for portable
 policy-version references.
 
-**Authentication Assurance Level (AAL)**:
-: A measure of confidence in the approving principal's authentication
-at the approval event. AAL identifiers are deployment-defined; this
-document recommends compositions with {{NIST-SP-800-63}} levels
-(`aal1`, `aal2`, `aal3`) or {{RFC9470}}-style `acr` values, and
-provides the `aal` Common Constraint to bind required values.
+**Authentication Context Class Reference (`acr`)**:
+: A string identifier describing the authentication context under
+which the approving principal authenticated, per OIDC Core `acr`
+semantics. The Framework's `acr` Common Constraint (see
+{{common-constraints-framework}}) carries a list of acceptable
+`acr` values and a `max_age` freshness window, mirroring
+{{RFC9470}} and OIDC `acr_values` / `max_age` request parameters.
+This document does not register `acr` identifiers; deployments
+compose with existing identifier spaces ({{NIST-SP-800-63}} AAL
+identifiers, FIDO authenticator levels, OpenID Connect EAP `acr`
+values {{OIDC-EAP-ACR}} (`phr`, `phrh`), OIDC MODRNA values, or
+deployment-defined URIs).
+
+**Authentication Methods References (`amr`)**:
+: An array of identifiers naming the discrete authentication
+methods used at the authentication event, per OIDC Core `amr`
+semantics and the IANA "Authentication Method Reference Values"
+registry {{RFC8176}}. The Framework's `amr` Common Constraint
+(see {{common-constraints-framework}}) carries a list of
+acceptable `amr` values that the authentication event MUST
+intersect.
 
 **Audience**:
 : A consumer of a Mission-bound credential or of Mission Status
@@ -536,7 +558,8 @@ A Mission record carries the following members:
   the approval event: `signer_kid` (state-authority key
   identifier), `approval_event_id`, `approval_event_at` (RFC 3339),
   `policy_version`, `intent_schema_version`,
-  `consent_template_version`, `aal_at_approval`.
+  `consent_template_version`, `acr_at_approval`,
+  `amr_at_approval`, `auth_time_at_approval` (RFC 3339).
 - `proposal_id` (string, required, immutable): the originating
   Proposal identifier.
 - `created_at` (string, required): RFC 3339 timestamp of the
@@ -620,7 +643,8 @@ The canonical JSON Schema for a Mission record is:
       "required": [
         "signer_kid", "approval_event_id", "approval_event_at",
         "policy_version", "intent_schema_version",
-        "consent_template_version", "aal_at_approval"
+        "consent_template_version", "acr_at_approval",
+        "amr_at_approval", "auth_time_at_approval"
       ],
       "additionalProperties": false,
       "properties": {
@@ -632,7 +656,14 @@ The canonical JSON Schema for a Mission record is:
         "policy_version": { "type": "string" },
         "intent_schema_version": { "type": "string" },
         "consent_template_version": { "type": "string" },
-        "aal_at_approval": { "type": "string" }
+        "acr_at_approval": { "type": "string" },
+        "amr_at_approval": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "auth_time_at_approval": {
+          "type": "string", "format": "date-time"
+        }
       }
     },
     "proposal_id": { "type": "string" },
@@ -685,9 +716,11 @@ Continuing the example from {{mission-intent}}:
     "language": "en",
     "context": {
       "max_derivations": "200",
-      "aal": {
-        "value": "urn:mbo:aal:2",
-        "freshness_seconds": 1800
+      "acr": {
+        "acr_values": [
+          "http://idmanagement.gov/ns/assurance/aal/2"
+        ],
+        "max_age": 1800
       }
     }
   },
@@ -732,7 +765,9 @@ Continuing the example from {{mission-intent}}:
     "policy_version": "deploy-policy:v17",
     "intent_schema_version": "urn:mbo:schema:mission-intent:1",
     "consent_template_version": "consent-tpl:reconcile:v3",
-    "aal_at_approval": "urn:mbo:aal:2"
+    "acr_at_approval": "http://idmanagement.gov/ns/assurance/aal/2",
+    "amr_at_approval": ["mfa", "pwd", "otp"],
+    "auth_time_at_approval": "2026-10-15T14:30:48Z"
   },
   "proposal_id": "prop_4kQ9pX2vN7sR1tY8mZ3",
   "created_at": "2026-10-15T14:32:11Z",
@@ -1045,9 +1080,11 @@ example of {{a-motivating-example}}:
   "language": "en",
   "context": {
     "max_derivations": "500",
-    "aal": {
-      "value": "urn:mbo:aal:2",
-      "freshness_seconds": 1800
+    "acr": {
+      "acr_values": [
+        "http://idmanagement.gov/ns/assurance/aal/2"
+      ],
+      "max_age": 1800
     }
   }
 }
@@ -1082,9 +1119,11 @@ references) is:
   "language": "en",
   "context": {
     "max_derivations": "200",
-    "aal": {
-      "value": "urn:mbo:aal:2",
-      "freshness_seconds": 1800
+    "acr": {
+      "acr_values": [
+        "http://idmanagement.gov/ns/assurance/aal/2"
+      ],
+      "max_age": 1800
     }
   }
 }
@@ -1637,9 +1676,11 @@ has the same byte content as the Validated example in
     "language": "en",
     "context": {
       "max_derivations": "200",
-      "aal": {
-        "value": "urn:mbo:aal:2",
-        "freshness_seconds": 1800
+      "acr": {
+        "acr_values": [
+          "http://idmanagement.gov/ns/assurance/aal/2"
+        ],
+        "max_age": 1800
       }
     }
   }
@@ -2485,67 +2526,145 @@ per-action invocation. Per-action runtime budgets are
 { "max_derivations": "200" }
 ~~~
 
-### `aal`
+### `acr`
 
-The required Authentication Assurance Level (AAL) for the
-approving principal's authentication at the approval event, and
-for any subsequent step-up authentication required to derive
+The required Authentication Context Class Reference values for
+the approving principal's authentication at the approval event,
+and for any subsequent step-up authentication required to derive
 credentials under this Mission.
+
+The `acr` constraint mirrors the OIDC Core `acr` claim and the
+{{RFC9470}} `acr_values` and `max_age` request parameters. The
+identifier space for `acr` values is intentionally not registered
+by this document; deployments compose with whichever assurance
+framework they already use.
 
 **Value type**: JSON object with the following members:
 
-- `value` (string, required): an AAL identifier (URI or short
-  string). See {{aal-identifier-registry}} for the registered
-  identifier space.
-- `freshness_seconds` (integer, required): the maximum age, in
-  seconds, of an authentication event that satisfies the
-  constraint. Range: 1 to 86400.
+- `acr_values` (array of strings, required, minItems 1): the set
+  of acceptable `acr` identifiers. Any single identifier in the
+  list satisfies the constraint (any-of semantics, matching OIDC
+  `acr_values`). Each identifier is an opaque string interpreted
+  by the credential issuer and consumers per deployment policy.
+- `max_age` (integer, required): the maximum age in seconds of
+  the authentication event that satisfies the constraint.
+  Mirrors the OIDC `max_age` request parameter.
+  Range: 1 to 86400 (24 hours).
 
 **Example `context` member**:
 
 ~~~ json
 {
-  "aal": {
-    "value": "urn:mbo:aal:2",
-    "freshness_seconds": 1800
+  "acr": {
+    "acr_values": [
+      "http://idmanagement.gov/ns/assurance/aal/2",
+      "phr_high"
+    ],
+    "max_age": 1800
   }
 }
 ~~~
 
-#### AAL identifier registry {#aal-identifier-registry}
+**Identifier-space composition**: this document does not
+register `acr` identifiers. Deployments select an identifier
+space that matches their threat model. Common choices include:
 
-The Framework creates the **Mission AAL Identifier** IANA registry
-to coordinate AAL values across deployments.
+- {{NIST-SP-800-63}} AAL identifiers (e.g.,
+  `http://idmanagement.gov/ns/assurance/aal/2` for AAL2).
+- FIDO authenticator-level identifiers.
+- OpenID PHR (Personal Healthcare Records) assurance values.
+- {{OIDC-EAP-ACR}} `phr` (phishing-resistant) and `phrh`
+  (phishing-resistant, hardware-protected).
+- OIDC MODRNA `acr` values.
+- Deployment-defined URIs.
 
-Registration policy: Specification Required.
-
-Initial entries (each maps to a stable identifier and a defining
-specification):
-
-| Identifier | Description | Reference |
-|---|---|---|
-| `urn:mbo:aal:1` | Single-factor; minimal binding to a non-shared device. | {{NIST-SP-800-63}} AAL1 |
-| `urn:mbo:aal:2` | Two-factor; cryptographic possession proof. | {{NIST-SP-800-63}} AAL2 |
-| `urn:mbo:aal:3` | Hardware-bound multi-factor; verifier impersonation resistance. | {{NIST-SP-800-63}} AAL3 |
-
-Deployments using {{RFC9470}} `acr` semantics for AAL signaling
-MAY register their `acr` values in this registry; profiles MAY
-also accept registered `acr` values directly as `aal.value`.
-Implementations MUST refuse `aal.value` strings that match neither
-a registered Mission AAL identifier nor a registered `acr` value
-for the deployment.
+Profile specifications composing this Framework with their wire
+substrate inherit the deployment's `acr` identifier space; the
+AS or PS advertises its supported `acr` values in its discovery
+metadata under `acr_values_supported`.
 
 **Composes with**: {{RFC9470}} step-up authentication challenges.
 A denied credential derivation request that would be permitted by
-satisfying the `aal` constraint via fresh authentication MAY be
-returned as a step-up challenge by the credential issuer.
+satisfying the `acr` constraint via fresh authentication MAY be
+returned as a step-up challenge by the credential issuer. The
+challenge carries the Mission's `acr_values` and `max_age`
+verbatim as the step-up request parameters.
 
 **Narrowing**: a derived constraint at credential derivation time
-MAY require an AAL value that is **stricter** than the Mission's
-declared `aal.value` (per the AAL ordering of the relevant
-identifier registry); it MUST NOT relax the Mission's value.
-The Framework recommends the ordering `aal:1 < aal:2 < aal:3` for
-the `urn:mbo:aal:*` registered identifiers.
+MAY narrow the Mission's `acr_values` to a subset (stricter set
+of acceptable identifiers) and MAY reduce `max_age` (require
+fresher authentication); it MUST NOT add identifiers not present
+in the Mission's `acr_values` set or extend `max_age` beyond the
+Mission's value. Ordering of identifiers within `acr_values` is
+deployment-defined and out of scope for this document.
+
+### `amr`
+
+The required Authentication Methods References for the approving
+principal's authentication at the approval event, and for any
+subsequent step-up authentication required to derive credentials
+under this Mission.
+
+The `amr` constraint mirrors the OIDC Core `amr` claim and the
+IANA "Authentication Method Reference Values" registry
+{{RFC8176}}. `acr` and `amr` are independent dimensions: `acr`
+names the overall authentication context class (a policy
+identifier); `amr` enumerates the discrete methods used. A
+Mission MAY carry both; consumers evaluating credential
+derivation AND across all present authentication constraints.
+
+**Value type**: JSON object with the following members:
+
+- `amr_values` (array of strings, required, minItems 1): the set
+  of acceptable `amr` identifiers. The authentication event's
+  `amr` claim MUST intersect this set (the authentication's `amr`
+  array contains at least one of the listed identifiers). Each
+  identifier is interpreted per the IANA AMR registry
+  {{RFC8176}} or deployment extension.
+- `max_age` (integer, optional): the maximum age in seconds of
+  the authentication event that satisfies the constraint.
+  Mirrors the OIDC `max_age` request parameter. When absent,
+  the `max_age` from a co-present `acr` constraint applies; if
+  no constraint declares `max_age`, the credential issuer's
+  default freshness applies. Range: 1 to 86400 (24 hours).
+
+**Example `context` member**:
+
+~~~ json
+{
+  "amr": {
+    "amr_values": ["mfa", "hwk"],
+    "max_age": 1800
+  }
+}
+~~~
+
+This requires that the approving principal's authentication event
+used at least one of `mfa` or `hwk` and occurred within 1800
+seconds.
+
+**Identifier-space composition**: the IANA "Authentication Method
+Reference Values" registry {{RFC8176}} is the canonical registry.
+Common values include `pwd`, `otp`, `mfa`, `hwk` (hardware key),
+`fpt` (fingerprint), `face`, `pop` (proof of possession). This
+document does not register new AMR values; deployments compose
+with {{RFC8176}} entries and register extensions there.
+
+**Composes with**: {{RFC9470}} step-up. RFC 9470 step-up is
+primarily `acr`-based; deployments that need to require specific
+methods MAY express the requirement through both an `acr`
+constraint (mapping to a deployment-registered `acr` identifier
+that implies the methods) and an `amr` constraint (binding the
+methods explicitly for audit). Implementations MAY translate an
+`amr`-only constraint into an `acr`-based step-up challenge when
+the deployment registers an `acr` identifier covering the
+required `amr` set.
+
+**Narrowing**: a derived constraint at credential derivation time
+MAY narrow `amr_values` to a subset (stricter set of acceptable
+methods) and MAY reduce `max_age`; it MUST NOT add identifiers
+not present in the Mission's `amr_values` set or extend `max_age`
+beyond the Mission's value.
 
 ## Future-work entries
 
@@ -2632,7 +2751,7 @@ prove:
   state-authority operation from in-the-moment fabrication that
   records itself consistently.
 - **Approving-principal authenticity**: the approving principal
-  was authentically the named person, beyond the AAL evidence
+  was authentically the named person, beyond the `acr` evidence
   recorded.
 
 Deployments needing stronger guarantees compose with trustworthy
@@ -2697,14 +2816,22 @@ Implementations MUST NOT permit a Shaper to act as an authorization
 component. Output of the Shaper MUST be treated as untrusted by the
 state authority.
 
-## Approving principal AAL
+## Approving principal `acr`
 
-This specification requires the AAL to be recorded in binding
-evidence. It does not mandate an AAL floor for approval; deployment
-policy declares the minimum AAL per Mission class. Deployments
-SHOULD set appropriate AAL floors and document them. The Mission
-AAL Identifier registry ({{aal-identifier-registry}}) provides a
-coordinated identifier space.
+This specification requires the approving principal's `acr` (the
+authentication context class reference) and `amr` (the
+authentication methods used) at approval time to be recorded in
+binding evidence as `acr_at_approval` and `amr_at_approval`,
+respectively. The `auth_time_at_approval` timestamp records when
+the authentication event occurred. The Framework does not
+mandate floors for either; deployment policy declares the
+minimum per Mission class through the `acr` and `amr` Common
+Constraints. Deployments SHOULD set appropriate floors and
+document them. Identifier spaces are not registered by this
+document; deployments compose with their chosen frameworks
+(NIST SP 800-63, FIDO, OIDC EAP {{OIDC-EAP-ACR}}, MODRNA, IANA
+AMR registry {{RFC8176}}, or deployment-defined URIs) per
+{{common-constraints-framework}}.
 
 ## Transport security (TLS)
 
@@ -3020,7 +3147,7 @@ The Framework registers the two constraints defined in
 {{common-constraints-framework}}:
 
 - `max_derivations` — this document.
-- `aal` — this document.
+- `acr` — this document.
 
 ## Mission Authority Set Type Registry {#iana-authority-set-type-registry}
 
@@ -3082,39 +3209,6 @@ in {{semantic-normalization}}:
 - `urn:mbo:norm:mission-authority-set:1` — this document.
 - `urn:mbo:norm:mission-consent-disclosure:1` — this document.
 
-## Mission AAL Identifier Registry {#iana-aal-identifier-registry}
-
-IANA is requested to create the **Mission AAL Identifier**
-registry. See {{aal-identifier-registry}} for the
-specification text.
-
-- **Registration Policy**: Specification Required ({{!RFC8126}}).
-- **Designated Expert review criteria**: experts evaluate
-  whether (a) the identifier maps cleanly to a recognized
-  authentication-assurance framework, (b) the ordering relative
-  to existing entries is well-defined, and (c) the identifier
-  does not collide.
-
-### Registration template
-
-- **Identifier** (URI or short string).
-- **Description**.
-- **Reference** to the defining authentication-assurance
-  specification (NIST SP 800-63, ISO/IEC 29115, RFC 9470 `acr`,
-  or similar).
-- **Ordering**: position relative to existing registered
-  identifiers, when an ordering is meaningful.
-- **Change controller**.
-
-### Initial entries
-
-This document registers the three identifiers of
-{{aal-identifier-registry}}:
-
-- `urn:mbo:aal:1` — this document.
-- `urn:mbo:aal:2` — this document.
-- `urn:mbo:aal:3` — this document.
-
 ## Mission Lifecycle State Enumerations
 
 This document defines closed enumerations for Mission Proposal
@@ -3155,10 +3249,15 @@ NOT register media types; profiles do.
   {{!RFC6838}}.
 - Mission Lifecycle and Mission Proposal state enumerations:
   closed sets, as noted above.
-- Specific deployment-side AAL identifiers (e.g., `acr` values
-  used by individual identity providers): out of scope for this
-  document's IANA actions; deployments compose with their own
-  identifier spaces.
+- `acr` identifiers: this document does not register `acr`
+  identifiers. Deployments compose with existing identifier
+  spaces (NIST SP 800-63, FIDO, OpenID Connect EAP
+  {{OIDC-EAP-ACR}}, OIDC MODRNA, or deployment-defined URIs);
+  see {{common-constraints-framework}}.
+- `amr` identifiers: this document does not register `amr`
+  identifiers. Deployments compose with the IANA
+  "Authentication Method Reference Values" registry
+  {{RFC8176}}; see {{common-constraints-framework}}.
 
 # Acknowledgments
 {:numbered="false"}

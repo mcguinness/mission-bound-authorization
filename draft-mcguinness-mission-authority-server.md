@@ -557,13 +557,14 @@ consent channel differ.
 
 Under `approval_channel: "mas_native"` the MAS renders the consent
 disclosure object to the approving principal directly. The MAS owns
-the consent UX and the AAL recording.
+the consent UX and the `acr_at_approval` recording.
 
 Under `approval_channel: "out_of_band"` the deployment is
 responsible for ensuring the consent signal is bound to the
-Proposal and carries the AAL evidence required by deployment policy.
-A MAS MUST refuse out-of-band signals that do not carry recorded
-AAL evidence sufficient for the Mission class.
+Proposal and carries the `acr_at_approval` evidence required by
+deployment policy. A MAS MUST refuse out-of-band signals that do
+not carry recorded `acr_at_approval` evidence sufficient for the
+Mission class.
 
 ### Direct projection issuance
 

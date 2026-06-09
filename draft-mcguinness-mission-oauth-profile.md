@@ -430,8 +430,8 @@ The AS executes the following algorithm at the approval event:
    - Derive `authority.constraints` by translating Validated
      Mission Intent `constraints` and `context` members to
      resource-applicable Common Constraints (the Mission-level
-     `aal` and `max_derivations` are recorded at the Mission
-     level, not duplicated per entry).
+     `acr`, `amr`, and `max_derivations` are recorded at the
+     Mission level, not duplicated per entry).
 2. For each `objects` entry identifying a non-RS resource (e.g.,
    a registered tool URI, a data domain identifier), the AS MAY
    produce additional Authority Set entries of types other than
@@ -1549,14 +1549,16 @@ This profile composes with:
 ## RFC 9470 step-up
 
 RFC 9470 {{RFC9470}} performs authentication step-up. It MAY satisfy
-an `aal` constraint (per the Mission Framework's Common Constraints
-registry) but it does NOT perform Mission Expansion. Expansion is a
-governance operation requiring approval; step-up is an authentication
-operation.
+the Mission's `acr` constraint (per the Mission Framework's Common
+Constraints registry) but it does NOT perform Mission Expansion.
+Expansion is a governance operation requiring approval; step-up is
+an authentication operation.
 
 This profile MAY compose with RFC 9470 step-up when a denied
-request would be permitted by satisfying an `aal` constraint via
-fresh authentication.
+request would be permitted by satisfying the Mission's `acr`
+constraint via fresh authentication. The step-up challenge carries
+the Mission's `acr_values` and `max_age` verbatim as the RFC 9470
+request parameters.
 
 ## What this profile does NOT cover
 
