@@ -32,6 +32,7 @@ normative:
   RFC2119:
   RFC8174:
   RFC6234:
+  RFC6570:
   RFC8615:
   RFC8785:
   RFC7515:
@@ -43,6 +44,7 @@ normative:
   I-D.draft-mcguinness-mission-oauth-profile:
 
 informative:
+  I-D.ietf-httpapi-idempotency-key:
   RFC6749:
   RFC8414:
   RFC9396:
@@ -227,7 +229,7 @@ OAuth AS; the PS metadata for an AAuth PS) by carrying the MAS
 issuer URL it is bound to. Consumers MUST NOT issue credentials
 referencing a MAS for which they have no current registration.
 
-## Trust establishment
+## Trust establishment {#trust-establishment}
 
 Trust between a MAS and a consumer is established out of band through
 **consumer registration** at the MAS. Consumer registration binds:
@@ -291,17 +293,52 @@ publishes its metadata document at
 The MAS metadata document is the Framework metadata document with
 MAS-specific extensions; it does not replace the Framework fields.
 
+## REST resource model {#rest-resource-model}
+
+A MAS is a RESTful HTTP API. Mission Proposals and Missions are
+resources; state transitions are HTTP requests on those resources
+or on action subresources of them. All resources are served over
+TLS 1.2 or later (TLS 1.3 RECOMMENDED).
+
+The MAS exposes the following resources, identified by URI
+templates {{RFC6570}} published in the MAS metadata document:
+
+| Resource | Method | Description |
+|---|---|---|
+| `proposals_collection` | `POST` | Submit a Mission Proposal. Returns the created Proposal. |
+| `proposal` | `GET` | Read a Proposal's current state. |
+| `proposal_approve` | `POST` | Consumer asserts approval received; creates the Mission. |
+| `proposal_reject` | `POST` | Consumer or administrator rejects. Terminal. |
+| `proposal_withdraw` | `POST` | Client or administrator withdraws a `pending_approval` Proposal. |
+| `mission` | `GET` | Read a Mission's record (audience-scoped projection). |
+| `mission_status` | `GET` | Retrieve a signed Mission Status Response. |
+| `mission_revoke` | `POST` | Revoke an `active` or `suspended` Mission. |
+| `mission_suspend` | `POST` | Suspend an `active` Mission. |
+| `mission_resume` | `POST` | Resume a `suspended` Mission. |
+| `mission_complete` | `POST` | Mark an `active` Mission as completed. |
+
+All action endpoints (POSTs on the three Proposal lifecycle
+action subresources and the four Mission lifecycle action
+subresources) support the `Idempotency-Key` request header per
+{{?I-D.ietf-httpapi-idempotency-key}}. A repeated request with
+the same `Idempotency-Key` for the same authenticated consumer
+returns the prior outcome rather than re-applying the operation.
+
+Authentication for every endpoint is per consumer registration
+({{trust-establishment}}); the authenticated consumer's identity
+binds requests and responses (no separate `audience` parameter
+is needed in the wire form).
+
 ## Required Framework metadata fields
 
-The MAS metadata document MUST carry all fields required by the
+The MAS metadata document MUST carry the fields required by the
 Framework metadata document
-({{I-D.draft-mcguinness-mission-framework}} Section 7.3):
+({{I-D.draft-mcguinness-mission-framework}} Section 7.3). The MAS
+substitutes URI-template members for the Framework's single-URL
+status and lifecycle endpoint members:
 
 - `issuer` (URL): the MAS issuer URL.
 - `jwks_uri` (URL): the MAS's public keys for response signing.
-- `mission_status_endpoint` (URL): MAS-side Mission Status operation.
-- `mission_lifecycle_endpoint` (URL): MAS Mission lifecycle
-  operations.
 - `mission_intent_schema_uri` (URL): JSON Schema for Mission Intent.
 - `authority_set_types_supported` (array): the Authority Set entry
   types this MAS issues.
@@ -309,10 +346,34 @@ Framework metadata document
 
 ## MAS-specific metadata fields
 
-A MAS metadata document MUST additionally carry:
+A MAS metadata document MUST additionally carry the following
+URI-template members per {{RFC6570}}:
 
-- `mission_submission_endpoint` (URL, required): the MAS endpoint
-  accepting Mission submissions in Flow A and Flow B (Section 6).
+- `proposals_collection_endpoint` (URL, required): collection URL
+  accepting Mission Proposal submission via `POST`.
+- `proposal_endpoint_template` (URI template, required): template
+  for a Proposal resource. Variable: `{proposal_id}`. Example:
+  `https://mas.example.com/proposals/{proposal_id}`.
+- `proposal_lifecycle_endpoint_template` (URI template, required):
+  template for Proposal lifecycle action subresources. Variables:
+  `{proposal_id}` and `{action}`, where `{action}` is one of
+  `approve`, `reject`, `withdraw`. Example:
+  `https://mas.example.com/proposals/{proposal_id}/{action}`.
+- `mission_endpoint_template` (URI template, required): template
+  for a Mission resource. Variable: `{mission_id}`. Example:
+  `https://mas.example.com/missions/{mission_id}`.
+- `mission_status_endpoint_template` (URI template, required):
+  template for the Mission Status subresource. Variable:
+  `{mission_id}`. Example:
+  `https://mas.example.com/missions/{mission_id}/status`.
+- `mission_lifecycle_endpoint_template` (URI template, required):
+  template for lifecycle action subresources. Variables:
+  `{mission_id}` and `{action}`, where `{action}` is one of
+  `revoke`, `suspend`, `resume`, `complete`. Example:
+  `https://mas.example.com/missions/{mission_id}/{action}`.
+
+Additional MAS-specific members:
+
 - `mission_supported_consumer_substrates` (array of strings,
   required): registered substrate consumer names the MAS supports,
   for example `["oauth_as", "aauth_ps"]`.
@@ -327,8 +388,8 @@ A MAS metadata document MUST additionally carry:
   the MAS recommends consumers poll Mission Status to detect state
   changes when no event stream is used.
 - `mission_submission_flow_b_supported` (boolean, required): whether
-  the MAS accepts direct-to-MAS submission (Flow B). Default
-  deployments MAY publish `false`.
+  the MAS accepts direct-to-MAS Proposal submission (Flow B).
+  Default deployments MAY publish `false`.
 - `mission_retention_policy_uri` (URL, required): a URL identifying
   the MAS's retention policy applied to Mission records and
   Proposal records, per Framework Section 5.3 and Resolved Decision
@@ -338,6 +399,46 @@ A MAS metadata document MUST additionally carry:
 - `mission_response_media_type` (string, required): the MAS-side
   signed Mission Status response media type registered by this
   document, namely `application/mas-mission-status-response+jwt`.
+
+### Worked metadata document
+
+~~~ json
+{
+  "issuer": "https://mas.example.com",
+  "jwks_uri": "https://mas.example.com/.well-known/jwks.json",
+  "mission_intent_schema_uri":
+    "https://mas.example.com/.well-known/mission-intent-schema.json",
+  "authority_set_types_supported": ["mission_resource_access"],
+  "mission_framework_versions_supported": [
+    "draft-mcguinness-mission-framework-00"
+  ],
+
+  "proposals_collection_endpoint":
+    "https://mas.example.com/proposals",
+  "proposal_endpoint_template":
+    "https://mas.example.com/proposals/{proposal_id}",
+  "proposal_lifecycle_endpoint_template":
+    "https://mas.example.com/proposals/{proposal_id}/{action}",
+  "mission_endpoint_template":
+    "https://mas.example.com/missions/{mission_id}",
+  "mission_status_endpoint_template":
+    "https://mas.example.com/missions/{mission_id}/status",
+  "mission_lifecycle_endpoint_template":
+    "https://mas.example.com/missions/{mission_id}/{action}",
+
+  "mission_supported_consumer_substrates":
+    ["oauth_as", "aauth_ps"],
+  "mission_event_delivery_modes_supported":
+    ["ssf_push", "status_poll"],
+  "mission_event_stream_endpoint":
+    "https://mas.example.com/events",
+  "mission_submission_flow_b_supported": false,
+  "mission_retention_policy_uri":
+    "https://mas.example.com/policies/retention",
+  "mission_response_media_type":
+    "application/mas-mission-status-response+jwt"
+}
+~~~
 
 ## JWKS publication
 
@@ -358,10 +459,10 @@ Key rotation rules:
 - Consumers MUST refresh the MAS `jwks_uri` periodically and on any
   unrecognized `kid`.
 
-# Mission Submission Endpoint
+# Proposals Collection: Mission Submission
 
-The MAS exposes a Mission submission endpoint at the URL advertised
-by `mission_submission_endpoint`. Two flows are defined: Flow A
+A Mission Proposal is created by `POST` to the
+`proposals_collection_endpoint`. Two flows are defined: Flow A
 (consumer-mediated, default) and Flow B (direct-to-MAS, optional).
 
 A MAS MUST support Flow A. A MAS MAY support Flow B. A MAS that
@@ -373,9 +474,9 @@ In Flow A the client submits Mission Intent to a consumer through
 that consumer's substrate-native interface (for example, OAuth PAR
 carrying `mission_intent`
 {{I-D.draft-mcguinness-mission-oauth-profile}}). The consumer
-forwards the submission to the MAS for the approval event. The
-consumer is the intermediary; the MAS performs the approval and
-commits the canonical record.
+forwards the submission to the MAS by `POST`ing to
+`proposals_collection_endpoint`. The consumer is the intermediary;
+the MAS performs the approval and commits the canonical record.
 
 ### Step 1: client submits to consumer
 
@@ -386,10 +487,26 @@ tenant.
 
 ### Step 2: consumer forwards to MAS
 
-The consumer authenticates to the MAS submission endpoint and
-forwards a Mission Intent forwarding request. The request is an
-HTTPS POST to `mission_submission_endpoint` with content type
-`application/json`.
+The consumer authenticates to the MAS and `POST`s to
+`proposals_collection_endpoint` with content type
+`application/json` and the `Idempotency-Key` header set to a
+stable consumer-generated key:
+
+~~~ http-message
+POST /proposals HTTP/1.1
+Host: mas.example.com
+Content-Type: application/json
+Idempotency-Key: prop-corr_4kQ9pX2vN7sR1tY8mZ3
+Authorization: ...
+
+{
+  "mission_intent": { ... },
+  "tenant": "tenant_acme",
+  "requesting_client": "client_erp-recon-agent",
+  "submitting_consumer": "as_acme_primary",
+  "subject": { "format": "iss_sub", "iss": "...", "sub": "..." }
+}
+~~~
 
 Required body fields:
 
@@ -439,15 +556,27 @@ On success the MAS creates a Mission Proposal record bound to:
 - The `tenant`, `requesting_client`, `subject`, and
   `submitting_consumer`.
 - A MAS-minted `proposal_id`.
-- The consumer's `proposal_correlation_id` (recorded for idempotency
+- The `Idempotency-Key` header value (recorded for idempotency
   and for consumer-side correlation).
 
-The MAS returns the `proposal_id` to the consumer. The Proposal is
-in state `pending_approval`.
+The MAS responds:
 
-Submission is idempotent on the pair
-`(submitting_consumer, proposal_correlation_id)`. A repeat submission
-with the same pair MUST return the original `proposal_id`.
+~~~ http-message
+HTTP/1.1 201 Created
+Location: https://mas.example.com/proposals/prop_4kQ9pX2vN7sR1tY8mZ3
+Content-Type: application/json
+Idempotency-Key: prop-corr_4kQ9pX2vN7sR1tY8mZ3
+
+{
+  "proposal_id": "prop_4kQ9pX2vN7sR1tY8mZ3",
+  "state": "pending_approval",
+  "tenant": "tenant_acme"
+}
+~~~
+
+The Proposal is in state `pending_approval`. A repeat `POST` with
+the same `Idempotency-Key` for the same authenticated consumer
+returns the original Proposal verbatim with the same status code.
 
 ### Step 4: approval event
 
@@ -455,12 +584,12 @@ The consumer drives the consent rendering and approval interaction
 appropriate to its substrate (the OAuth AS uses its authorization
 endpoint and consent UX; the AAuth PS uses its native approval
 interface). On receiving a binding consent signal the consumer
-POSTs an approval request to `mission_submission_endpoint` carrying
-`action=approve`, the `proposal_id`, and the consent disclosure
-object recorded at the consumer. The submission endpoint thus
-accepts two `action` values: `submit` (Step 2) and `approve`
-(Step 4). Withdrawals and rejections at the Proposal stage use
-`action=withdraw` or `action=reject` at the same endpoint. After
+`POST`s to the `proposal_lifecycle_endpoint_template` expanded
+with `{action}=approve` and the target `{proposal_id}`. The
+request body carries the consent disclosure object recorded at
+the consumer. Withdrawals and rejections at the Proposal stage
+use the same template expanded with `{action}=withdraw` or
+`{action}=reject`. After
 approval the Mission is governed exclusively through the lifecycle
 endpoint (Section 7).
 
@@ -493,7 +622,7 @@ governing MAS.
 
 A MAS that supports Flow B advertises
 `mission_submission_flow_b_supported: true` and accepts authenticated
-client requests at `mission_submission_endpoint`.
+client requests at `proposals_collection_endpoint`.
 
 ### Client authentication for Flow B
 
@@ -510,15 +639,15 @@ submissions.
 
 ### Direct submission request
 
-The request is an HTTPS POST to `mission_submission_endpoint` with
-content type `application/json`. Required fields:
+The request is an HTTPS `POST` to `proposals_collection_endpoint`
+with content type `application/json` and an `Idempotency-Key`
+header. Required body fields:
 
 - `mission_intent` (object, required).
 - `tenant` (string, required).
 - `requesting_client` (string, required): the registered client
   identifier at the MAS; MUST match the authenticated client.
-- `subject` (string, required).
-- `proposal_correlation_id` (string, required).
+- `subject` (Mission Principal, required).
 - `approval_channel` (string, required): identifies how the consent
   signal will be supplied. Defined values are `"mas_native"`
   (the MAS renders consent itself, for example to a registered
@@ -586,52 +715,62 @@ Defined error symbols:
   conflicting payload.
 - `unavailable`: the MAS temporarily cannot accept submissions.
 
-# Mission Lifecycle Endpoint
+# Mission Lifecycle: Action Subresources
 
-The MAS publishes a Mission lifecycle endpoint at the URL advertised
-by `mission_lifecycle_endpoint`. The endpoint accepts authenticated
-POST requests for the four operations: revoke, suspend, resume, and
-complete.
-
-## Operations
-
-Each lifecycle request is an HTTPS POST with content type
-`application/json` carrying:
-
-- `action` (string, required): one of `revoke`, `suspend`,
-  `resume`, `complete`.
-- `mission` (string, required): the canonical `mission.id`.
-- `reason` (string, optional): a human-readable reason recorded in
-  audit.
-- `request_id` (string, required): a caller-generated unique
-  identifier used for idempotency.
-
-The MAS MUST authenticate the requester. Permitted authentication
-mechanisms are identical to those for Flow A consumer authentication
-(mTLS or signed JWT bearer assertion) or, for an end-user-driven
-revocation, an authenticated MAS administrative interface that maps
-to the same lifecycle operations internally.
-
-## State transitions
-
-The MAS performs the requested transition per the Framework
-Mission lifecycle ({{I-D.draft-mcguinness-mission-framework}}
-Section 5.1):
+The MAS exposes four lifecycle action subresources under each
+Mission resource, expanded from
+`mission_lifecycle_endpoint_template` with `{mission_id}` set to
+the target Mission and `{action}` set to one of:
 
 - `revoke`: `active`, `suspended` -> `revoked`. Terminal.
 - `suspend`: `active` -> `suspended`. Reversible by `resume`.
 - `resume`: `suspended` -> `active`.
 - `complete`: `active`, `suspended` -> `completed`. Terminal.
 
-Transitions that are not permitted by the Mission's current state
-MUST be refused with `invalid_state`.
+Transitions not permitted by the Mission's current state MUST be
+refused with HTTP 409 `Conflict` and an `invalid_state` error body.
 
-## Lifecycle response
+## Request
 
-On success the MAS returns a JWS-signed Mission Status response per
-Section 7 reflecting the new state. The signed response binds the
-caller, the requested Mission reference, and the requester-supplied
-`request_id`.
+Each lifecycle request is an HTTPS `POST` to the expanded action
+subresource. Content type is `application/json`. The body MAY
+carry an optional `reason` string (maximum 1024 characters); the
+body MAY be empty.
+
+The `Idempotency-Key` request header
+({{?I-D.ietf-httpapi-idempotency-key}}) MUST be supplied and
+serves as the operation's idempotency key. The MAS MUST treat
+repeated requests with the same `Idempotency-Key` from the same
+authenticated consumer as idempotent: the prior response is
+returned without re-applying the operation.
+
+~~~ http-message
+POST /missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-/revoke HTTP/1.1
+Host: mas.example.com
+Content-Type: application/json
+Idempotency-Key: rev-req_8Y3vN0sM6tP1xR9bQ5
+Authorization: ...
+
+{
+  "reason": "Quarterly reconcile completed early"
+}
+~~~
+
+## Authentication
+
+The MAS MUST authenticate the requester per consumer
+registration. Permitted authentication mechanisms are identical
+to those for Flow A consumer authentication (mTLS or signed JWT
+bearer assertion) or, for an end-user-driven revocation, an
+authenticated MAS administrative interface that maps to the same
+action subresources internally.
+
+## Response
+
+On success the MAS returns HTTP 200 with a JWS-signed Mission
+Status Response (Section 7) reflecting the new state. The signed
+response binds the caller identity, the Mission, and the
+`Idempotency-Key`.
 
 ## Audit recording
 
@@ -641,11 +780,10 @@ The MAS MUST atomically record:
 - The caller identity (authenticated consumer or administrator).
 - The wall-clock timestamp.
 - The reason (if provided).
-- The `request_id` (for idempotency).
+- The `Idempotency-Key` value.
 
-Concurrent lifecycle operations are serialized at the MAS with
-compare-and-set semantics. Repeat operations with the same
-`request_id` are idempotent and MUST return the original response.
+Concurrent lifecycle operations on the same Mission are
+serialized at the MAS with compare-and-set semantics.
 
 ## Propagation obligation
 
@@ -659,7 +797,7 @@ state; consumers may revoke their own substrate-local projections
 in response to MAS state changes, but the MAS owns the Mission
 state machine.
 
-# MAS-Side Mission Status Binding
+# Mission Status: GET on Resource
 
 This section defines the MAS-side transport binding for the abstract
 Mission Status interface defined by the Framework
@@ -676,18 +814,26 @@ here is its cross-substrate counterpart at the MAS.
 
 ## Request
 
-The request is an HTTPS POST to `mission_status_endpoint` with body
-content type `application/x-www-form-urlencoded`. Required parameters:
+The request is an HTTPS `GET` to the `mission_status_endpoint_template`
+expanded with the target `{mission_id}`. The caller supplies the
+binding nonce as a query parameter (`nonce`); the response is bound
+to the authenticated caller's identity (no separate `audience` body
+parameter is needed).
 
-- `mission` (string, required): the Mission reference, in the
-  identifier mode declared for the caller's consumer registration.
-- `audience` (string, required): the consumer's registered audience
-  identifier. MUST match the caller's registration.
-- `nonce` (string, required): a caller-generated unique nonce for
-  request-binding.
+~~~ http-message
+GET /missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-/status?nonce=nonce_K9pV4nT2sR7mB1xQ HTTP/1.1
+Host: mas.example.com
+Accept: application/mas-mission-status-response+jwt
+Authorization: ...
+~~~
 
 The request MUST be authenticated using the consumer's registered
 authentication mechanism (mTLS or signed JWT bearer assertion).
+
+Consumers MAY include `If-None-Match` with a previously observed
+`ETag`; the MAS MAY respond `304 Not Modified` if the response would
+be byte-identical to the one identified by the supplied `ETag`.
+Otherwise the MAS returns `200 OK` with a fresh signed response.
 
 ## Response media type
 
@@ -1011,9 +1157,10 @@ additional members in its AS metadata document {{RFC8414}}:
   than locally.
 
 An OAuth AS MUST NOT carry both
-`mission_state_authority_mode: mas_consumer` and a self-hosted
-`mission_lifecycle_endpoint` for the same Mission class; lifecycle
-operations on MAS-held Missions MUST be routed through the MAS.
+`mission_state_authority_mode: mas_consumer` and self-hosted
+Mission lifecycle endpoints for the same Mission class;
+lifecycle operations on MAS-held Missions MUST be routed through
+the MAS via the MAS's action subresources.
 
 ## Mission Intent forwarding (Flow A)
 
@@ -1344,12 +1491,19 @@ the Framework metadata document at the well-known URI
 document does not register a new well-known URI; it adds members to
 the metadata document.
 
-The following member names are added to the Mission Capability-
-Advertisement Metadata registry created by the Framework:
+This document defines the following member names for the MAS
+metadata document. Each member is documented in this specification;
+no central registry is created. Profile and consumer
+specifications referencing these members SHOULD cite this
+document.
 
-- `mission_submission_endpoint`
+- `proposals_collection_endpoint`
+- `proposal_endpoint_template`
+- `proposal_lifecycle_endpoint_template`
+- `mission_endpoint_template`
+- `mission_status_endpoint_template`
+- `mission_lifecycle_endpoint_template`
 - `mission_supported_consumer_substrates`
-- `mission_identifier_modes_supported`
 - `mission_event_delivery_modes_supported`
 - `mission_event_stream_endpoint`
 - `mission_status_polling_max_interval_seconds`
@@ -1359,7 +1513,6 @@ Advertisement Metadata registry created by the Framework:
 - `mission_response_media_type`
 - `mission_state_authority`
 - `mission_state_authority_mode`
-- `mission_state_authority_identifier_mode`
 
 Each entry's change controller is IETF; the reference is this
 document; value semantics are as defined in Sections 5 and 11.
