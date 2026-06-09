@@ -4,7 +4,7 @@ abbrev: "Mission Framework"
 category: std
 
 docname: draft-mcguinness-mission-framework-latest
-submissiontype: independent
+submissiontype: IETF
 number:
 date:
 consensus: true
@@ -18,8 +18,6 @@ keyword:
  - agent
  - delegation
 venue:
-  group: "Independent Submission"
-  type: "Independent"
   github: "mcguinness/mission-bound-authorization"
   latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-framework.html"
 

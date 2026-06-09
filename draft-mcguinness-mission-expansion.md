@@ -4,7 +4,7 @@ abbrev: "Mission Expansion"
 category: std
 
 docname: draft-mcguinness-mission-expansion-latest
-submissiontype: independent
+submissiontype: IETF
 number:
 date:
 consensus: true
@@ -17,8 +17,6 @@ keyword:
  - governance
  - delegation
 venue:
-  group: "Independent Submission"
-  type: "Independent"
   github: "mcguinness/mission-bound-authorization"
   latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-expansion.html"
 
@@ -753,7 +751,7 @@ surfaced (e.g., JWT claim names, AAuth fields).
 - **Substrate registration**: As for `mission.predecessor`,
   substrate profiles register the on-the-wire surfacing.
 
-## Concurrent Expansion Reconciliation Status Codes
+## Concurrent Expansion Reconciliation Status Codes {#reconciliation-status-codes}
 
 This document registers a new "Mission Expansion Reconciliation
 Status" registry.

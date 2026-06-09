@@ -4,7 +4,7 @@ abbrev: "Mission Migration"
 category: info
 
 docname: draft-mcguinness-mission-migration-latest
-submissiontype: independent
+submissiontype: IETF
 number:
 date:
 consensus: true
@@ -17,8 +17,6 @@ keyword:
  - adoption
  - governance
 venue:
-  group: "Independent Submission"
-  type: "Independent"
   github: "mcguinness/mission-bound-authorization"
   latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-migration.html"
 

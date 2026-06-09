@@ -4,7 +4,7 @@ abbrev: "Mission OAuth Profile"
 category: std
 
 docname: draft-mcguinness-mission-oauth-profile-latest
-submissiontype: independent
+submissiontype: IETF
 number:
 date:
 consensus: true
@@ -17,8 +17,6 @@ keyword:
  - par
  - token-exchange
 venue:
-  group: "Independent Submission"
-  type: "Independent"
   github: "mcguinness/mission-bound-authorization"
   latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-oauth-profile.html"
 
