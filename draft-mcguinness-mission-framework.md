@@ -34,6 +34,9 @@ normative:
   RFC4648:
   RFC5234:
   RFC6234:
+  RFC6838:
+  RFC7009:
+  RFC8126:
   RFC8259:
   RFC8615:
   RFC8785:
@@ -2703,7 +2706,7 @@ compromise through key hardware modules, audit logging,
 independent attestation of state-authority operations, and
 cross-organization audit anchoring.
 
-## Integrity anchor non-guarantees
+## Integrity anchor non-guarantees {#integrity-anchor-non-guarantees}
 
 The integrity anchors prove the state authority committed to
 specific canonical objects at the approval event. They do not
@@ -2739,7 +2742,7 @@ that does not reproduce the test vectors byte-for-byte is
 non-conformant. Where possible, deployments SHOULD use known-good
 JCS libraries rather than rolling their own.
 
-## Number precision under JCS
+## Number precision under JCS {#number-precision-under-jcs}
 
 IEEE 754 double precision applies to JSON numbers under JCS.
 Constraint values where precision matters MUST use string
@@ -2762,9 +2765,9 @@ produce identical `proposal_hash` values, leaking equality across
 tenants and creating a transplantation surface.
 
 This specification mitigates by binding `authorization_domain` and
-`state_authority` into the hash envelope. Implementations MUST
-include these fields per Section 6.2; omitting them produces
-non-conformant hashes.
+`state_authority` into the hash envelope (see
+{{integrity-envelope}}). Implementations MUST include these fields;
+omitting them produces non-conformant hashes.
 
 ## Mission Status enumeration and authorization-oracle resistance
 
@@ -2773,9 +2776,10 @@ unauthorized references as observationally equivalent. An
 attacker that can distinguish "unknown" from "unauthorized" can
 enumerate the state authority's Mission space.
 
-This specification mitigates via the anti-oracle property
-(Section 8.2). Profile specifications MUST preserve this property
-in transport.
+This specification mitigates via the anti-oracle property of
+{{mission-status-required-properties}} and the not-found error
+shape of {{error-model}}. Profile specifications MUST preserve
+both in transport, including timing and payload-size invariance.
 
 ## Trust-boundary violations
 
@@ -2790,71 +2794,490 @@ state authority.
 This specification requires the AAL to be recorded in binding
 evidence. It does not mandate an AAL floor for approval; deployment
 policy declares the minimum AAL per Mission class. Deployments
-SHOULD set appropriate AAL floors and document them.
+SHOULD set appropriate AAL floors and document them. The Mission
+AAL Identifier registry ({{aal-identifier-registry}}) provides a
+coordinated identifier space.
 
-# IANA Considerations
+## Transport security (TLS)
 
-This document creates the following IANA registries:
+All state-authority interfaces specified by this document
+(`/.well-known/mission-authority`, `mission_status_endpoint`,
+`mission_lifecycle_endpoint`, `jwks_uri`,
+`mission_intent_schema_uri`) MUST be served over TLS 1.2 or
+later, with TLS 1.3 RECOMMENDED. State authorities MUST refuse
+plaintext requests on these endpoints.
 
-## Mission Common Constraints Registry
+Consumers fetching state-authority metadata or making Mission
+Status / Mission Lifecycle requests MUST validate the TLS server
+certificate against the trust anchors established by the
+deployment's PKI. Consumers MUST NOT pin to the state
+authority's signing keys (`jwks_uri` keys) for TLS purposes; the
+two key roles are separate.
 
-A new registry tracking constraint key names and their semantics.
+## State-authority signing-key rotation
 
-- **Registration Policy**: Specification Required.
-- **Required fields per entry**: `name`, `type`, `specification_uri`,
-  optional `schema_digest`, `schema_version`, normalization rules,
-  equality and subset rules, narrowing rules, runtime enforcement
-  contract, change controller.
-- **Initial entries**:
-  - `max_derivations` (this document).
-  - `aal` (this document).
+State authorities MUST rotate the signing keys used for Mission
+Status and Mission Lifecycle response signatures on a
+deployment-policy schedule. Consumers MUST refresh their cached
+JWKS view at least every 24 hours and on signature-verification
+failure.
 
-## Mission Authority Set Type Registry
+Compromised signing keys MUST be revoked by removing them from
+`jwks_uri` and by recording the revocation event in the state
+authority's audit trail. Mission Status responses signed by a
+revoked key are not valid even when they appear well-formed; the
+state authority's JWKS document is authoritative.
 
-A new registry tracking Authority Set entry types.
+Mission Status responses MUST carry the `kid` of the signing key
+in the wire form so consumers can match the signature to the
+current JWKS entry. The Framework does not standardize the wire
+form; profile specifications bind the `kid` carriage.
 
-- **Registration Policy**: Specification Required.
-- **Required fields per entry**: `type`, `specification_uri` or
-  `schema_digest`, normalization rules, equality, subset,
-  intersection, unknown-field handling, change controller.
-- **Initial entries**: `mission_resource_access` (registered by the
-  OAuth Profile, not by this document; reserved here).
+## Denial of service against the state authority
 
-## Mission Capability-Advertisement Metadata Registry
+Mission Status is on the consumption path of every Mission-bound
+credential validation in deployments that consult it
+synchronously. A flood of Mission Status requests, or a
+flood of Mission Proposal submissions, can degrade or disable
+the state authority and thereby every consumer of its Missions.
 
-A new registry tracking capability-advertisement metadata names.
+State authorities MUST implement per-consumer rate limits on
+both Mission Status (`rate_limited` error per
+{{error-model}}) and Mission Proposal submission. Rate limits
+MUST account for the consumer identity (authenticated client)
+rather than IP address alone, since legitimate consumers may
+share network infrastructure.
 
-- **Registration Policy**: Specification Required.
-- **Required fields per entry**: `name`, value semantics,
-  defining specification, change controller.
-- **Initial entries**: as listed in Section 11.
+State authorities SHOULD implement the `Retry-After` header
+on rate-limited responses to allow well-behaved consumers to
+back off.
+
+Consumers SHOULD cache Mission Status responses up to the
+response's `expires_at` rather than re-querying for every
+credential validation; profiles bind this caching behavior.
+
+## Clock skew
+
+Mission Status responses carry RFC 3339 timestamps in
+`issued_at`, `expires_at`, `freshness_at`, and `mission_expiry`.
+Clock skew between the state authority and consumer can cause
+either premature acceptance (consumer believes a response is
+still fresh when it is not) or premature rejection.
+
+Implementations MUST use NTP or an equivalent time-synchronization
+mechanism. Consumers SHOULD accept responses whose `expires_at`
+has elapsed by up to 30 seconds of skew tolerance for `active`
+state responses; this is a defense against clock drift, not a
+security relaxation. Consumers MUST NOT extend skew tolerance
+for terminal-state responses (`revoked`, `expired`, `completed`).
+
+## Replay of Mission Status responses
+
+A Mission Status response signed and bound to a caller, audience,
+and nonce is reusable only within its `expires_at` window and
+only by the same caller in the same audience. The bindings of
+{{mission-status-required-properties}} prevent cross-caller,
+cross-audience, and stale replay.
+
+State authorities MUST treat nonce reuse from the same caller as
+a per-caller anti-abuse signal; profiles MAY refuse repeated use
+of the same nonce within a short window. Nonces are anti-replay
+binding, not authentication tokens; consumers MUST NOT rely on
+nonce secrecy.
+
+## Side channels via pairwise references
+
+Even with the non-correlation property of
+{{pairwise-resolution-non-correlation}}, side channels can leak
+that two `mission.ref` values identify the same Mission. Examples
+include:
+
+- Timing correlation when the state authority's Mission Status
+  endpoint serves two queries from collaborating audiences for
+  the same Mission.
+- Mission Status response staleness alignment in
+  eventually-consistent state authorities.
+- Pairwise sector boundaries crossed during rotation
+  ({{pairwise-reference-rotation}}) before all sector members
+  have refreshed their cached references.
+
+Deployments SHOULD assess the side-channel surface specific to
+their sector type and threat model.
+
+## Log injection via consent disclosure content
+
+The consent disclosure object contains user-facing strings
+(typically derived from the Mission Intent's `goal`,
+`constraints`, and `success_criteria`). These strings reach
+audit logs, dashboards, and possibly downstream notifications.
+
+Implementations MUST treat consent-disclosure content as
+untrusted when emitting it to log sinks: HTML/template escape on
+HTML sinks, JSON-escape on JSON sinks, and so on. The state
+authority's recording of the consent disclosure object is a
+verbatim JSON serialization for integrity-anchor purposes; it is
+not safe to inject into other contexts unescaped.
+
+## Mission record garbage collection and audit chains
+
+After Mission record garbage collection ({{retention}}), the
+state authority MUST retain a stub indicating that the
+`mission.id` and `proposal_id` are retired. Audit logs
+referencing a garbage-collected Mission's identifier MUST resolve
+to the stub rather than to "not found", which would be
+indistinguishable from never having existed.
+
+The stub MUST contain at minimum: `mission.id`, `proposal_id`,
+`created_at`, `retired_at`, and the terminal state at retirement.
+The stub MUST NOT contain the Mission Intent, Authority Set, or
+consent disclosure object.
+
+# Privacy Considerations {#privacy-considerations}
+
+This section discusses privacy threats and mitigations specific
+to the Mission Framework. {{security-considerations}} addresses
+security threats; this section addresses privacy threats that
+are not subsumed by security.
+
+## Pairwise references and correlation
+
+The pairwise reference framework ({{pairwise-mission-reference}})
+is designed to prevent direct cross-sector correlation of
+Mission identifiers. It is not a complete defense against
+correlation; in particular, audiences may correlate Missions
+indirectly through:
+
+- **Shared subject identifiers**: when audiences in distinct
+  sectors observe credentials for the same subject (`sub` claim
+  in OAuth, `subject` in AAuth), they can correlate Mission
+  references through the subject.
+- **Shared client identifiers**: when audiences observe
+  credentials with the same `requesting_client`, they can
+  correlate.
+- **Timing and request-pattern fingerprinting**: when audiences
+  observe correlated request patterns, they can probabilistically
+  associate Mission references.
+- **Side channels through the state authority**: as described in
+  {{side-channels-via-pairwise-references}}.
+
+Deployments SHOULD assess which correlation channels are relevant
+to their threat model and select pairwise sector type
+({{pairwise-sectors}}) accordingly. The narrowest sector type
+(`resource_server`) provides the strongest pairwise unlinkability
+within the framework; wider sectors are correlation-permissive by
+design.
+
+## Consent disclosure content and PII
+
+The consent disclosure object can contain personally identifiable
+information (PII) drawn from the Mission Intent's user-facing
+strings (`goal`, `constraints`, `success_criteria`) and from
+deployment-supplied template text. The state authority records
+this object verbatim for integrity-anchor purposes.
+
+Implementations MUST treat the consent disclosure object as a PII
+sink and apply data-protection controls (access control, audit,
+encryption at rest, and retention discipline per
+{{retention}}) consistent with the deployment's regulatory
+environment (e.g., GDPR, HIPAA, CCPA).
+
+The Framework does not specify minimization of consent
+disclosure content; deployments SHOULD review the content their
+state authority records to ensure that integrity-anchor
+guarantees do not require recording disproportionately sensitive
+content. The narrowing decisions of {{narrowing-rules}} provide a
+hook to record bounded, machine-readable evidence of policy
+decisions without embedding additional PII.
+
+## Subject and approving-principal identifiers
+
+The Mission record's `principals.subject` and
+`principals.approving_principal` are stable identifiers within
+the state authority's namespace. They appear in Mission Status
+responses to authorized callers and in derived credentials.
+
+Subject and approving-principal identifiers SHOULD NOT be email
+addresses or other widely-correlatable identifiers unless the
+deployment's privacy posture explicitly accommodates such
+identifiers. Deployments SHOULD prefer opaque or pseudonymous
+identifiers and SHOULD map them to PII through a separate,
+access-controlled directory service rather than embedding PII
+in the Mission record.
+
+## Tenant correlation
+
+The `principals.tenant` value identifies the authorization domain
+the Mission lives in. Tenant identifiers SHOULD be opaque and
+SHOULD NOT carry the consuming organization's name, regulatory
+classification, or other deployment-side correlatable attributes
+when those attributes leak through the value to audiences other
+than the tenant itself.
+
+State authorities serving multi-tenant deployments MUST not allow
+a Mission Status query in tenant A to return information about
+tenants other than A; the tenant-isolation property is a
+fundamental privacy boundary.
+
+## Audit logging and retention
+
+State-authority audit logs SHOULD record per-Mission events
+(approval, suspension, revocation, expiry) for the audit
+retention window of {{retention}}. Audit logs are themselves a
+PII sink and SHOULD be access-controlled, encrypted at rest, and
+retained no longer than the deployment's policy or regulatory
+floor requires, whichever is shorter.
+
+When the deployment's policy or regulatory floor prescribes
+retention longer than the audit window the state authority can
+sustain, the deployment SHOULD export audit anchors (the
+integrity-anchor values and approval-event metadata) to a
+separate audit anchor store while permitting the Mission record
+itself to be garbage-collected.
+
+## Mission record content and data subject access
+
+In regulatory regimes where data subjects have access rights to
+records concerning them (e.g., GDPR Article 15), the Mission
+record is in scope. Deployments MUST be able to enumerate and
+disclose Mission records for a given subject identifier on
+authorized request; the subject identifier is the join key.
+
+Deployments MUST be able to delete or anonymize Mission records
+on lawful erasure request, subject to overriding retention
+obligations. The garbage-collection stub of {{mission-record-garbage-collection-and-audit-chains}}
+provides the retention-side residual; deployments needing full
+erasure rather than retirement MUST extend the garbage-collection
+flow to remove the stub when lawfully required.
+
+# IANA Considerations {#iana-considerations}
+
+This document requests IANA to create five new registries and
+to add the Well-Known URI registration for
+`mission-authority`.
+
+## Well-Known URI: `mission-authority`
+
+IANA is requested to register the following Well-Known URI per
+{{RFC8615}}:
+
+- **URI suffix**: `mission-authority`
+- **Change controller**: IETF
+- **Specification document(s)**: this document
+- **Related information**: identifies the Mission state-authority
+  metadata document at `{mission.origin}/.well-known/mission-authority`
+  (see {{state-authority-metadata-document}}).
+
+## Mission Common Constraints Registry {#iana-common-constraints-registry}
+
+IANA is requested to create the **Mission Common Constraints**
+registry.
+
+- **Registration Policy**: Specification Required ({{!RFC8126}}).
+- **Designated Expert review criteria**: experts evaluate (a)
+  whether the constraint semantics are well-defined and
+  testable, (b) whether the normalization and narrowing rules
+  are deterministic, (c) whether the runtime enforcement
+  contract is consistent with the Mission lifecycle model, and
+  (d) whether the constraint name does not collide with
+  existing registered names.
+
+### Registration template
+
+Each registration MUST include:
+
+- **Name** (string): the key in `mission_intent.context`.
+- **JSON type and structure**: scalar, object, or array; if
+  structured, the member shape.
+- **Defining specification**: stable reference (RFC, Internet-
+  Draft, or stable URL).
+- **`schema_version`** if applicable.
+- **`schema_digest`** if applicable.
+- **Normalization rule**: the Normalization Profile that applies
+  to this constraint's value.
+- **Equality rule**.
+- **Subset rule**: when one constraint value is a strict
+  narrowing of another.
+- **Narrowing rule** at credential derivation.
+- **Runtime enforcement contract**: where in the runtime the
+  constraint is enforced (issuance, introspection, per-action,
+  event-driven; see
+  {{?I-D.draft-mcguinness-mission-oauth-profile}} and
+  {{?I-D.draft-mcguinness-mission-runtime-profile}}).
+- **Change controller**.
+- **Reference**.
+
+### Initial entries
+
+The Framework registers the two constraints defined in
+{{common-constraints-framework}}:
+
+- `max_derivations` — this document.
+- `aal` — this document.
+
+## Mission Authority Set Type Registry {#iana-authority-set-type-registry}
+
+IANA is requested to create the **Mission Authority Set Type**
+registry. See {{authority-set-type-registry}} for the
+specification text.
+
+- **Registration Policy**: Specification Required ({{!RFC8126}}).
+- **Designated Expert review criteria**: experts evaluate
+  whether (a) the type's `authority` payload shape is
+  unambiguous, (b) equality, subset, and intersection rules are
+  total and deterministic, (c) unknown-field handling does not
+  default to silent acceptance, (d) the Normalization Profile is
+  registered or co-registered, and (e) the type name does not
+  collide.
+
+### Registration template
+
+See {{authority-set-type-registry}} for the registration
+template.
+
+### Initial entries
+
+The Framework reserves `mission_resource_access` for
+registration by the OAuth Profile
+({{?I-D.draft-mcguinness-mission-oauth-profile}}). No type is
+registered by this document.
+
+## Mission Capability-Advertisement Metadata Registry {#iana-capability-metadata-registry}
+
+IANA is requested to create the **Mission Capability-Advertisement
+Metadata** registry. See
+{{capability-advertisement-metadata}} for the specification
+text.
+
+- **Registration Policy**: Specification Required ({{!RFC8126}}).
+- **Designated Expert review criteria**: experts evaluate
+  whether (a) the metadata member's value type and structure are
+  unambiguous, (b) the closed-set status is well-defined, and
+  (c) the member name does not collide.
+
+### Registration template
+
+See {{capability-metadata-registration-template}}.
+
+### Initial entries
+
+This document registers the five initial members defined in
+{{capability-advertisement-metadata}}:
+`mission_authorization_domain_tiers_supported`,
+`mission_ladder_levels_supported`,
+`mission_profiles_supported`,
+`mission_optional_modules_supported`,
+`mission_framework_versions_supported`.
+
+## Mission Normalization Profile Registry {#normalization-profile-registry}
+
+IANA is requested to create the **Mission Normalization Profile**
+registry.
+
+- **Registration Policy**: Specification Required ({{!RFC8126}}).
+- **Designated Expert review criteria**: experts evaluate
+  whether (a) the profile's rules are deterministic and total,
+  (b) the rule set covers JSON parsing, array semantics, set
+  semantics, Unicode normalization, URI normalization, number
+  representation, absent vs empty members, and field-name
+  canonical form (per {{semantic-normalization}}), and (c) the
+  profile identifier does not collide.
+
+### Registration template
+
+- **Profile identifier** (URI): the registered identifier (e.g.,
+  `urn:mbo:norm:mission-intent:1`).
+- **Defining specification**: stable reference.
+- **Per-field rules**: full enumeration of the fields the profile
+  governs and the rule applied to each.
+- **Change controller**.
+- **Reference**.
+
+### Initial entries
+
+This document registers the three Normalization Profiles defined
+in {{semantic-normalization}}:
+
+- `urn:mbo:norm:mission-intent:1` — this document.
+- `urn:mbo:norm:mission-authority-set:1` — this document.
+- `urn:mbo:norm:mission-consent-disclosure:1` — this document.
+
+## Mission AAL Identifier Registry {#iana-aal-identifier-registry}
+
+IANA is requested to create the **Mission AAL Identifier**
+registry. See {{aal-identifier-registry}} for the
+specification text.
+
+- **Registration Policy**: Specification Required ({{!RFC8126}}).
+- **Designated Expert review criteria**: experts evaluate
+  whether (a) the identifier maps cleanly to a recognized
+  authentication-assurance framework, (b) the ordering relative
+  to existing entries is well-defined, and (c) the identifier
+  does not collide.
+
+### Registration template
+
+- **Identifier** (URI or short string).
+- **Description**.
+- **Reference** to the defining authentication-assurance
+  specification (NIST SP 800-63, ISO/IEC 29115, RFC 9470 `acr`,
+  or similar).
+- **Ordering**: position relative to existing registered
+  identifiers, when an ordering is meaningful.
+- **Change controller**.
+
+### Initial entries
+
+This document registers the three identifiers of
+{{aal-identifier-registry}}:
+
+- `urn:mbo:aal:1` — this document.
+- `urn:mbo:aal:2` — this document.
+- `urn:mbo:aal:3` — this document.
 
 ## Mission Lifecycle State Enumerations
 
 This document defines closed enumerations for Mission Proposal
 states (`pending_approval`, `rejected`, `withdrawn`,
 `expired_as_pending`) and Mission states (`active`, `suspended`,
-`revoked`, `completed`, `expired`). If extensibility is later
-required, IANA registries can be created via subsequent revisions.
+`revoked`, `completed`, `expired`). These enumerations are not
+externally extensible by this revision; if extensibility is
+later required, dedicated IANA registries SHOULD be created via
+a subsequent revision of this Framework.
+
+## Mission Pairwise Sector Type Enumeration
+
+This document defines a closed enumeration for the
+`mission_pairwise_sector` metadata value:
+`resource_server`, `resource_as`, `tenant`, `trust_domain`. If
+extensibility is later required, a dedicated IANA registry
+SHOULD be created via a subsequent revision.
 
 ## Mission Status Response Media Types
 
 Where a profile specification needs a new media type for Mission
-Status responses (e.g., `application/mission-status-response+json`
-or `application/mission-status-response+jwt`), the profile registers
-the media type per RFC 6838. This document does NOT register media
-types; profiles do.
+Status responses (e.g.,
+`application/mission-status-response+json` or
+`application/mission-status-response+jwt`), the profile
+registers the media type per {{!RFC6838}}. This document does
+NOT register media types; profiles do.
 
 ## What this document does NOT register
 
-- RAR `type` values: RFC 9396 {{RFC9396}} does not establish an IANA
-  registry for every RAR `type`. The `mission_resource_access` RAR
-  type is registered by the OAuth Profile in the Mission Authority
-  Set Type Registry created by this document, not in a (nonexistent)
-  RFC 9396 type registry.
+- RAR `type` values: {{RFC9396}} does not establish an IANA
+  registry for every RAR `type`. The `mission_resource_access`
+  RAR type is registered by the OAuth Profile in the Mission
+  Authority Set Type Registry created by this document, not in
+  a (nonexistent) RFC 9396 type registry.
 - Generic JWT `typ` values: there is no IANA "JWT Media Type
   Registry" for arbitrary `typ` values. Where a profile needs a
-  specific JWT `typ`, it registers a media type per RFC 6838.
+  specific JWT `typ`, it registers a media type per
+  {{!RFC6838}}.
+- Mission Lifecycle and Mission Proposal state enumerations:
+  closed sets, as noted above.
+- Specific deployment-side AAL identifiers (e.g., `acr` values
+  used by individual identity providers): out of scope for this
+  document's IANA actions; deployments compose with their own
+  identifier spaces.
 
 # Acknowledgments
 {:numbered="false"}
