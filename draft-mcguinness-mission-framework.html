@@ -1,0 +1,2987 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission Framework</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       This document defines the Mission as a durable, integrity-anchored,
+lifecycle-governed governance object for an approved task. It defines
+the abstract types, interfaces, and behaviors that profile
+specifications map onto specific substrates: Mission Proposal and
+Mission lifecycles, the Mission Intent JSON schema, typed Authority
+Set, integrity anchors with domain-separated hash inputs, a canonical
+and pairwise identifier model, common constraints framework, Mission
+Status interface, principal model, evidence binding, and
+capability-advertisement metadata. The framework is substrate-neutral
+on semantics; profile specifications for OAuth, AAuth, and the Mission
+Authority Server compose this framework with their respective wire
+substrates and pick the concrete protection mechanism. 
+    " name="description">
+<meta content="xml2rfc 3.33.0" name="generator">
+<meta content="mission" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="oauth" name="keyword">
+<meta content="aauth" name="keyword">
+<meta content="governance" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="delegation" name="keyword">
+<meta content="draft-mcguinness-mission-framework-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.33.0
+    Python 3.12.13
+    ConfigArgParse 1.7
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.0.2
+    platformdirs 4.9.6
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.7.0
+-->
+<link href="draft-mcguinness-mission-framework.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Mission Framework</td>
+<td class="right">June 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 11 December 2026</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-mission-framework-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-06-09" class="published">9 June 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2026-12-11">11 December 2026</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission Framework</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">This document defines the Mission as a durable, integrity-anchored,
+lifecycle-governed governance object for an approved task. It defines
+the abstract types, interfaces, and behaviors that profile
+specifications map onto specific substrates: Mission Proposal and
+Mission lifecycles, the Mission Intent JSON schema, typed Authority
+Set, integrity anchors with domain-separated hash inputs, a canonical
+and pairwise identifier model, common constraints framework, Mission
+Status interface, principal model, evidence binding, and
+capability-advertisement metadata. The framework is substrate-neutral
+on semantics; profile specifications for OAuth, AAuth, and the Mission
+Authority Server compose this framework with their respective wire
+substrates and pick the concrete protection mechanism.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-framework.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-framework.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-mission-framework/">https://datatracker.ietf.org/doc/draft-mcguinness-mission-framework/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 11 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
+                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-scope-and-non-scope" class="internal xref">Scope and non-scope</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-definitions" class="internal xref">Conventions and Definitions</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-mission-proposal-and-missio" class="internal xref">Mission Proposal and Mission</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
+                <p id="section-toc.1-1.3.2.1.1"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-lifecycle-state-machines" class="internal xref">Lifecycle state machines</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2">
+                <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-approval-event" class="internal xref">Approval event</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-retention" class="internal xref">Retention</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-mission-intent" class="internal xref">Mission Intent</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-submitted-vs-validated-form" class="internal xref">Submitted vs Validated forms</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-schema-evolution" class="internal xref">Schema evolution</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-authority-set" class="internal xref">Authority Set</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-schema-digest-format" class="internal xref">Schema digest format</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-integrity-anchors" class="internal xref">Integrity Anchors</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-semantic-normalization" class="internal xref">Semantic normalization</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-domain-separated-authorizat" class="internal xref">Domain-separated, authorization-domain-bound envelope</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
+                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-three-integrity-anchors" class="internal xref">Three integrity anchors</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-identifier-model" class="internal xref">Identifier Model</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-canonical-mission-id" class="internal xref">Canonical Mission ID</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-pairwise-mission-reference" class="internal xref">Pairwise Mission Reference</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
+                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-missionorigin-metadata-docu" class="internal xref"><code>mission.origin</code> metadata document</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-principal-model" class="internal xref">Principal Model</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-mission-status-interface" class="internal xref">Mission Status Interface</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-operation" class="internal xref">Operation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-required-properties" class="internal xref">Required properties</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
+                <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-error-model" class="internal xref">Error model</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-common-constraints-framewor" class="internal xref">Common Constraints Framework</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-initial-entries" class="internal xref">Initial entries</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1.2.1">
+                    <p id="section-toc.1-1.10.2.1.2.1.1"><a href="#section-10.1.1" class="auto internal xref">10.1.1</a>.  <a href="#name-max_derivations" class="internal xref"><code>max_derivations</code></a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1.2.2">
+                    <p id="section-toc.1-1.10.2.1.2.2.1"><a href="#section-10.1.2" class="auto internal xref">10.1.2</a>.  <a href="#name-aal" class="internal xref"><code>aal</code></a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-future-work-entries" class="internal xref">Future-work entries</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-capability-advertisement-me" class="internal xref">Capability-Advertisement Metadata</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-reference-test-vectors" class="internal xref">Reference Test Vectors</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-state-authority-compromise" class="internal xref">State authority compromise</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
+                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-integrity-anchor-non-guaran" class="internal xref">Integrity anchor non-guarantees</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.3">
+                <p id="section-toc.1-1.13.2.3.1"><a href="#section-13.3" class="auto internal xref">13.3</a>.  <a href="#name-jcs-implementation-correctn" class="internal xref">JCS implementation correctness</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.4">
+                <p id="section-toc.1-1.13.2.4.1"><a href="#section-13.4" class="auto internal xref">13.4</a>.  <a href="#name-number-precision-under-jcs" class="internal xref">Number precision under JCS</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.5">
+                <p id="section-toc.1-1.13.2.5.1"><a href="#section-13.5" class="auto internal xref">13.5</a>.  <a href="#name-pairwise-identifier-privacy" class="internal xref">Pairwise identifier privacy and correlation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.6">
+                <p id="section-toc.1-1.13.2.6.1"><a href="#section-13.6" class="auto internal xref">13.6</a>.  <a href="#name-hash-equality-leakage-and-c" class="internal xref">Hash equality leakage and cross-tenant transplantation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.7">
+                <p id="section-toc.1-1.13.2.7.1"><a href="#section-13.7" class="auto internal xref">13.7</a>.  <a href="#name-mission-status-enumeration-" class="internal xref">Mission Status enumeration and authorization-oracle resistance</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.8">
+                <p id="section-toc.1-1.13.2.8.1"><a href="#section-13.8" class="auto internal xref">13.8</a>.  <a href="#name-trust-boundary-violations" class="internal xref">Trust-boundary violations</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.9">
+                <p id="section-toc.1-1.13.2.9.1"><a href="#section-13.9" class="auto internal xref">13.9</a>.  <a href="#name-approving-principal-aal" class="internal xref">Approving principal AAL</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
+                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-mission-common-constraints-" class="internal xref">Mission Common Constraints Registry</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2">
+                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-mission-authority-set-type-" class="internal xref">Mission Authority Set Type Registry</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.3">
+                <p id="section-toc.1-1.14.2.3.1"><a href="#section-14.3" class="auto internal xref">14.3</a>.  <a href="#name-mission-capability-advertis" class="internal xref">Mission Capability-Advertisement Metadata Registry</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.4">
+                <p id="section-toc.1-1.14.2.4.1"><a href="#section-14.4" class="auto internal xref">14.4</a>.  <a href="#name-mission-lifecycle-state-enu" class="internal xref">Mission Lifecycle State Enumerations</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.5">
+                <p id="section-toc.1-1.14.2.5.1"><a href="#section-14.5" class="auto internal xref">14.5</a>.  <a href="#name-mission-status-response-med" class="internal xref">Mission Status Response Media Types</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.6">
+                <p id="section-toc.1-1.14.2.6.1"><a href="#section-14.6" class="auto internal xref">14.6</a>.  <a href="#name-what-this-document-does-not" class="internal xref">What this document does NOT register</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref"></a><a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.1">
+                <p id="section-toc.1-1.16.2.1.1"><a href="#section-16.1" class="auto internal xref"></a><a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.2">
+                <p id="section-toc.1-1.16.2.2.1"><a href="#section-16.2" class="auto internal xref"></a><a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> and adjacent specifications standardized
+credential issuance, delegation, and token exchange. They do not
+standardize an explicit, durable governance object for the
+user-approved task that credentials are issued to serve. As long-lived
+agentic workloads derive credentials across audiences and over time,
+the absence of such an object forces deployments to reconstruct task
+governance from disconnected per-credential records, with no shared
+identifier, integrity commitment, or lifecycle ownership across hops.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">This document defines the <strong>Mission</strong> as that object. A Mission is
+created by an authoritative state authority at the moment of approval
+from a structured Mission Intent submitted by a client. The Mission
+record carries the approved Intent, a typed Authority Set bounded by
+the Intent, integrity anchors that commit the approved record, a
+lifecycle state machine the state authority owns, a stable identifier
+that every derived artifact references, and principal-model bindings
+identifying who approved the task and on whose behalf. Profile
+specifications map these abstract elements onto OAuth, AAuth, and
+cross-substrate (Mission Authority Server) wires.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">This document is the foundational spec of the Mission-Bound
+Authorization architecture. The OAuth Profile, AAuth Composition
+Profile, Mission Authority Server profile, Mission-Bound Runtime
+Enforcement Profile, Mission Shaper Profile, and feature specs
+(Mission Expansion, Delegated Authority Validation, Mission-Bound
+Transaction Token Chaining) compose this framework with their
+respective substrates. This document does not select a wire format,
+signing mechanism, or transport. It defines what profiles must
+preserve.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<div id="scope-and-non-scope">
+<section id="section-1.1">
+        <h3 id="name-scope-and-non-scope">
+<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-scope-and-non-scope" class="section-name selfRef">Scope and non-scope</a>
+        </h3>
+<p id="section-1.1-1">This document defines:<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1.1-2.1">
+            <p id="section-1.1-2.1.1">The Mission Proposal and Mission data model, including required
+fields, lifecycle state machines, and integrity anchors.<a href="#section-1.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-2.2">
+            <p id="section-1.1-2.2.1">The Mission Intent JSON schema.<a href="#section-1.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-2.3">
+            <p id="section-1.1-2.3.1">The typed Authority Set entry shape and type registry framework.<a href="#section-1.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-2.4">
+            <p id="section-1.1-2.4.1">The principal model.<a href="#section-1.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-2.5">
+            <p id="section-1.1-2.5.1">The canonical Mission identifier and the pairwise reference
+framework.<a href="#section-1.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-2.6">
+            <p id="section-1.1-2.6.1">The abstract Mission Status interface and its required properties
+(authentication, freshness, audience binding, integrity,
+anti-oracle, request-binding, caching).<a href="#section-1.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-2.7">
+            <p id="section-1.1-2.7.1">The Common Constraints framework and initial entries
+(<code>max_derivations</code>, <code>aal</code>).<a href="#section-1.1-2.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-2.8">
+            <p id="section-1.1-2.8.1">Capability-advertisement metadata.<a href="#section-1.1-2.8.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-2.9">
+            <p id="section-1.1-2.9.1">Domain-separated, authorization-domain-bound hash envelopes for
+integrity anchors.<a href="#section-1.1-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-1.1-3">This document does NOT define:<a href="#section-1.1-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1.1-4.1">
+            <p id="section-1.1-4.1.1">A wire format for any specific substrate. Profile specifications do
+that.<a href="#section-1.1-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-4.2">
+            <p id="section-1.1-4.2.1">A signing format for Mission Status responses. Profiles compose with
+RFC 9701 <span>[<a href="#RFC9701" class="cite xref">RFC9701</a>]</span>, JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>, or substrate-native signing as
+appropriate.<a href="#section-1.1-4.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-4.3">
+            <p id="section-1.1-4.3.1">Runtime per-action enforcement. The Mission-Bound Runtime Enforcement
+Profile defines that.<a href="#section-1.1-4.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-4.4">
+            <p id="section-1.1-4.4.1">Mission Expansion semantics. The Mission Expansion specification
+defines that.<a href="#section-1.1-4.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+</section>
+</div>
+<div id="conventions-and-definitions">
+<section id="section-2">
+      <h2 id="name-conventions-and-definitions">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-definitions" class="section-name selfRef">Conventions and Definitions</a>
+      </h2>
+<p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">This document uses the following terms with the meanings defined
+here. Profile specifications inherit these meanings; substrate-specific
+terms (e.g., "Authorization Server", "Person Server") are defined in
+the relevant profile.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-3">
+        <dt id="section-2-3.1">
+<strong>Mission Proposal</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.2">
+          <p id="section-2-3.2.1">A pre-approval record carrying a Validated Mission Intent. Has its
+own lifecycle (<code>pending_approval</code>, <code>rejected</code>, <code>withdrawn</code>,
+<code>expired_as_pending</code>). Identified by a <code>proposal_id</code>.<a href="#section-2-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.3">
+<strong>Mission</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.4">
+          <p id="section-2-3.4.1">The durable, integrity-anchored, lifecycle-governed governance
+object that records an approved task. Created from a Mission Proposal
+at the approval event. Has its own lifecycle (<code>active</code>, <code>suspended</code>,
+<code>revoked</code>, <code>completed</code>, <code>expired</code>). Identified by a canonical
+<code>mission.id</code>.<a href="#section-2-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.5">
+<strong>Mission Intent</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.6">
+          <p id="section-2-3.6.1">The structured task proposal. Two forms are distinguished:
+<strong>Submitted Mission Intent</strong> (untrusted, as the client provided it)
+and <strong>Validated Mission Intent</strong> (the state authority's authoritative,
+post-validation, post-narrowing form, recorded on the Mission
+Proposal). When unqualified, "Mission Intent" refers to the Validated
+form.<a href="#section-2-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.7">
+<strong>Authority Set</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.8">
+          <p id="section-2-3.8.1">The substrate-neutral container of approved authority entries, each
+typed. Bounded by the Validated Mission Intent.<a href="#section-2-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.9">
+<strong>Authority Set entry</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.10">
+          <p id="section-2-3.10.1">A typed payload in the Authority Set, carrying <code>type</code>,
+<code>specification_uri</code>, <code>schema_digest</code>, <code>schema_version</code>, <code>authority</code>,
+and <code>narrowing_profile</code> fields.<a href="#section-2-3.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.11">
+<strong>State authority</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.12">
+          <p id="section-2-3.12.1">The server that owns a Mission record. Realized as an OAuth
+Authorization Server, an AAuth Person Server, or a Mission Authority
+Server depending on topology. The state authority is authoritative
+for Mission state and is the only party that can resolve Pairwise
+Mission References to the canonical <code>mission.id</code>.<a href="#section-2-3.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.13">
+<strong>Approval event</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.14">
+          <p id="section-2-3.14.1">The atomic state-authority transition from Mission Proposal to
+Mission upon receiving a binding consent signal.<a href="#section-2-3.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.15">
+<strong>Integrity anchor</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.16">
+          <p id="section-2-3.16.1">One of <code>proposal_hash</code>, <code>authority_hash</code>, <code>consent_disclosure_hash</code>.
+Each is computed after registered semantic normalization, over a
+domain-separated envelope, using SHA-256, base64url-encoded.<a href="#section-2-3.16.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.17">
+<strong>Mission Status</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.18">
+          <p id="section-2-3.18.1">The authenticated state-authority view returning Mission state,
+integrity anchors, audience-filtered Authority Set projection, and
+freshness indicator. By-mission-reference operation, distinct from
+token introspection.<a href="#section-2-3.18.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.19">
+<strong>Pairwise Mission Reference</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.20">
+          <p id="section-2-3.20.1">An audience-sector-specific opaque identifier for a Mission,
+resolvable to the canonical <code>mission.id</code> only at the state authority.<a href="#section-2-3.20.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.21">
+<strong>Approving principal</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.22">
+          <p id="section-2-3.22.1">The principal who approved the Mission (may differ from the
+subject for delegated approval).<a href="#section-2-3.22.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.23">
+<strong>Subject</strong> (also <strong>Beneficiary</strong>):</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.24">
+          <p id="section-2-3.24.1">The principal on whose behalf the task is approved.<a href="#section-2-3.24.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.25">
+<strong>Requesting client</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.26">
+          <p id="section-2-3.26.1">The OAuth client or AAuth agent that submitted the Mission
+Proposal.<a href="#section-2-3.26.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.27">
+<strong>Tenant</strong> / <strong>Authorization domain</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.28">
+          <p id="section-2-3.28.1">A logical partitioning at the state authority. Missions in one
+tenant are not visible to consumers of another tenant unless
+explicit cross-tenant policy declares it.<a href="#section-2-3.28.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="mission-proposal-and-mission">
+<section id="section-3">
+      <h2 id="name-mission-proposal-and-missio">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-mission-proposal-and-missio" class="section-name selfRef">Mission Proposal and Mission</a>
+      </h2>
+<p id="section-3-1">A <strong>Mission Proposal</strong> is created when a client submits a Mission
+Intent to a state authority. A Mission Proposal carries the Validated
+Mission Intent (after the state authority validates and narrows the
+Submitted Mission Intent) and is identified by a stable
+<code>proposal_id</code>. A Mission Proposal is in one of four states:<a href="#section-3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-2.1">
+          <p id="section-3-2.1.1"><code>pending_approval</code>: awaiting consent.<a href="#section-3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-2.2">
+          <p id="section-3-2.2.1"><code>rejected</code>: consent denied; terminal.<a href="#section-3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-2.3">
+          <p id="section-3-2.3.1"><code>withdrawn</code>: client or admin withdrew the Proposal; terminal.<a href="#section-3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-2.4">
+          <p id="section-3-2.4.1"><code>expired_as_pending</code>: consent window elapsed; terminal.<a href="#section-3-2.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-3-3">A <strong>Mission</strong> is created by the state authority at the <strong>approval
+event</strong> atomic transition. A Mission exists only post-approval. A
+Mission is in one of five states:<a href="#section-3-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-4.1">
+          <p id="section-3-4.1.1"><code>active</code>: the only state in which credential derivation <span class="bcp14">MAY</span> proceed.<a href="#section-3-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-4.2">
+          <p id="section-3-4.2.1"><code>suspended</code>: temporarily blocked; the Mission <span class="bcp14">MAY</span> return to <code>active</code>
+by state-authority action.<a href="#section-3-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-4.3">
+          <p id="section-3-4.3.1"><code>revoked</code>: terminated by user, administrator, or policy; terminal.<a href="#section-3-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-4.4">
+          <p id="section-3-4.4.1"><code>completed</code>: the task finished or the Mission was superseded;
+terminal.<a href="#section-3-4.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-4.5">
+          <p id="section-3-4.5.1"><code>expired</code>: <code>mission_expiry</code> reached; terminal.<a href="#section-3-4.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-3-5">A Mission record carries:<a href="#section-3-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-6.1">
+          <p id="section-3-6.1.1"><code>mission.id</code>: stable canonical identifier.<a href="#section-3-6.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-6.2">
+          <p id="section-3-6.2.1"><code>mission.origin</code>: state authority issuer URL.<a href="#section-3-6.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-6.3">
+          <p id="section-3-6.3.1">The Validated Mission Intent.<a href="#section-3-6.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-6.4">
+          <p id="section-3-6.4.1">The Authority Set.<a href="#section-3-6.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-6.5">
+          <p id="section-3-6.5.1">Integrity anchors: <code>proposal_hash</code>, <code>authority_hash</code>,
+<code>consent_disclosure_hash</code>.<a href="#section-3-6.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-6.6">
+          <p id="section-3-6.6.1">Principal model: <code>subject</code>, <code>approving_principal</code>,
+<code>requesting_client</code>, <code>tenant</code>, <code>state_authority</code>,
+<code>delegation_policy</code>.<a href="#section-3-6.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-6.7">
+          <p id="section-3-6.7.1">Binding evidence: signer identity, timestamp, <code>policy_version</code>,
+schema versions, disclosure template version, approving principal.<a href="#section-3-6.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-6.8">
+          <p id="section-3-6.8.1">Lifecycle state.<a href="#section-3-6.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-6.9">
+          <p id="section-3-6.9.1">Source <code>proposal_id</code> (immutable, permanently recording the
+originating Proposal).<a href="#section-3-6.9.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-3-7">A Mission record <span class="bcp14">MUST NOT</span> carry mutable runtime context. Actor chains
+and per-request actor identifiers are carried by projections (derived
+credentials) and runtime requests, not by the Mission record.<a href="#section-3-7" class="pilcrow">¶</a></p>
+<div id="lifecycle-state-machines">
+<section id="section-3.1">
+        <h3 id="name-lifecycle-state-machines">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-lifecycle-state-machines" class="section-name selfRef">Lifecycle state machines</a>
+        </h3>
+<p id="section-3.1-1">The Mission Proposal lifecycle is:<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-3.1-2">
+<pre>
+            +------------------+
+            | pending_approval |
+            +--------+---------+
+                     |
+       +-------------+------------+--------------+
+       |             |            |              |
+       v             v            v              v
+   approved      rejected     withdrawn   expired_as_pending
+   (atomic
+    transition
+    to Mission)
+</pre><a href="#section-3.1-2" class="pilcrow">¶</a>
+</div>
+<p id="section-3.1-3">The Mission lifecycle is:<a href="#section-3.1-3" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-3.1-4">
+<pre>
+                  +----------+
+                  |  active  | &lt;----+
+                  +-----+----+      |
+                        |           | resume
+                        |    +------+------+
+                        +---&gt;|  suspended  |
+                        |    +-------------+
+                        |
+       +----------------+--------+-------------+
+       |                |        |             |
+       v                v        v             v
+   revoked          completed  expired   (other terminal)
+</pre><a href="#section-3.1-4" class="pilcrow">¶</a>
+</div>
+<p id="section-3.1-5">Transitions are normatively defined by the state authority. Profile
+specifications <span class="bcp14">MAY</span> add substrate-specific transitions consistent with
+this state machine.<a href="#section-3.1-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="approval-event">
+<section id="section-3.2">
+        <h3 id="name-approval-event">
+<a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-approval-event" class="section-name selfRef">Approval event</a>
+        </h3>
+<p id="section-3.2-1">The approval event is the atomic state-authority transition from
+Mission Proposal to Mission upon receiving a binding consent signal.
+At the approval event the state authority <span class="bcp14">MUST</span>:<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-3.2-2">
+<li id="section-3.2-2.1">
+            <p id="section-3.2-2.1.1">Validate the Submitted Mission Intent and produce the Validated
+Mission Intent on the Proposal.<a href="#section-3.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-3.2-2.2">
+            <p id="section-3.2-2.2.1">Derive the Authority Set from the Validated Mission Intent.<a href="#section-3.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-3.2-2.3">
+            <p id="section-3.2-2.3.1">Render the consent disclosure object presented to the approving
+principal.<a href="#section-3.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-3.2-2.4">
+            <p id="section-3.2-2.4.1">Compute <code>proposal_hash</code>, <code>authority_hash</code>, and
+<code>consent_disclosure_hash</code>.<a href="#section-3.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-3.2-2.5">
+            <p id="section-3.2-2.5.1">Record principal-model evidence (approving principal identity,
+Authentication Assurance Level, timestamp, consent disclosure
+object, <code>policy_version</code>).<a href="#section-3.2-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-3.2-2.6">
+            <p id="section-3.2-2.6.1">Create the Mission record atomically with the above evidence.<a href="#section-3.2-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-3.2-3">The approval event <span class="bcp14">MUST</span> be atomic with Mission record creation. If
+the state authority cannot complete the atomic commit, the Proposal
+remains <code>pending_approval</code>; no partial Mission record exists.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
+<p id="section-3.2-4">Approval submission <span class="bcp14">MUST</span> be idempotent on <code>proposal_id</code> and
+approval-event identifier. Concurrent approve, reject, withdraw, and
+expiry operations <span class="bcp14">MUST</span> be serialized with compare-and-set semantics.
+Exactly one Mission may be created from a Proposal. The resulting
+Mission permanently records its source <code>proposal_id</code>.<a href="#section-3.2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="retention">
+<section id="section-3.3">
+        <h3 id="name-retention">
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-retention" class="section-name selfRef">Retention</a>
+        </h3>
+<p id="section-3.3-1">A Mission record <span class="bcp14">MUST</span> be retained at least until: (a) all derived
+credentials have expired, AND (b) the deployment's audit retention
+period for the relevant Mission class has elapsed. After retention,
+the state authority <span class="bcp14">MAY</span> garbage-collect the Mission record. The
+canonical <code>mission.id</code> <span class="bcp14">MUST NOT</span> be reused after garbage collection.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+<p id="section-3.3-2">The Proposal record is retained alongside its resulting Mission for
+the same audit retention window. After retention, the Proposal record
+<span class="bcp14">MAY</span> be garbage-collected with the Mission record. <code>proposal_id</code> <span class="bcp14">MUST NOT</span> be reused. Terminal-state Proposals (rejected, withdrawn,
+expired_as_pending) follow a deployment-defined Proposal-only
+retention policy independent of Mission retention.<a href="#section-3.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="mission-intent">
+<section id="section-4">
+      <h2 id="name-mission-intent">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-mission-intent" class="section-name selfRef">Mission Intent</a>
+      </h2>
+<p id="section-4-1">The Mission Intent is the structured task proposal. The Mission Intent
+JSON schema defines the following fields:<a href="#section-4-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4-2.1">
+          <p id="section-4-2.1.1"><code>goal</code> (string, required): user-readable description of the task.<a href="#section-4-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.2">
+          <p id="section-4-2.2.1"><code>objects</code> (array of string, required): the resources, datasets,
+tools, or domains the task touches.<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.3">
+          <p id="section-4-2.3.1"><code>constraints</code> (array of string, required): user-readable bounds
+on the task.<a href="#section-4-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.4">
+          <p id="section-4-2.4.1"><code>success_criteria</code> (array of string, required): conditions for
+the task being complete.<a href="#section-4-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.5">
+          <p id="section-4-2.5.1"><code>mission_expiry</code> (RFC 3339 timestamp, required): hard ceiling on
+the Mission's validity. Derived authority <span class="bcp14">MUST NOT</span> outlast it.<a href="#section-4-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.6">
+          <p id="section-4-2.6.1"><code>purpose</code> (URI, optional): a stable URI registered with the
+requesting client that identifies the task class.<a href="#section-4-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.7">
+          <p id="section-4-2.7.1"><code>context</code> (object, optional): machine-actionable bounds. Keys
+understood by the state authority are enforced; unknown keys are
+refused unless a registered constraint type permits pass-through.<a href="#section-4-2.7.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<div id="submitted-vs-validated-forms">
+<section id="section-4.1">
+        <h3 id="name-submitted-vs-validated-form">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-submitted-vs-validated-form" class="section-name selfRef">Submitted vs Validated forms</a>
+        </h3>
+<p id="section-4.1-1">The <strong>Submitted Mission Intent</strong> is the JSON object the client
+provides. It is untrusted until the state authority validates it.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-2">The <strong>Validated Mission Intent</strong> is the post-validation,
+post-narrowing form the state authority records on the Mission
+Proposal. The state authority <span class="bcp14">MAY</span> narrow values (e.g., shorten
+<code>mission_expiry</code>, tighten <code>constraints</code>) to deployment policy. The
+Validated Mission Intent is the form covered by <code>proposal_hash</code>.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="schema-evolution">
+<section id="section-4.2">
+        <h3 id="name-schema-evolution">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-schema-evolution" class="section-name selfRef">Schema evolution</a>
+        </h3>
+<p id="section-4.2-1">The Mission Intent schema permits extension fields prefixed with
+<code>x_</code>. Non-prefixed unknown properties are reserved for future
+revisions of this specification and <span class="bcp14">MUST</span> be rejected at validation
+time.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.2-2">Extension fields <span class="bcp14">MUST</span> be included in semantic normalization and
+therefore in <code>proposal_hash</code>. Implementations that do not recognize
+an <code>x_*</code> extension <span class="bcp14">MUST NOT</span> grant or enlarge authority based on it.
+If an <code>x_*</code> extension claims authority-relevant semantics and is
+not registered for the deployment, the state authority <span class="bcp14">MUST</span> reject
+the Mission Intent.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+<p id="section-4.2-3">Deployments requiring stricter schemas <span class="bcp14">MAY</span> publish a
+deployment-specific stricter schema via <code>mission_intent_schema_uri</code>
+in state-authority metadata.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="authority-set">
+<section id="section-5">
+      <h2 id="name-authority-set">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-authority-set" class="section-name selfRef">Authority Set</a>
+      </h2>
+<p id="section-5-1">The Authority Set is a substrate-neutral canonical container for the
+maximum authority the state authority approved at the approval
+event. The Authority Set is composed of <strong>typed entries</strong>.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">Each Authority Set entry <span class="bcp14">MUST</span> carry the following fields:<a href="#section-5-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5-3.1">
+          <p id="section-5-3.1.1"><code>type</code> (string, required): the registered type name.<a href="#section-5-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-3.2">
+          <p id="section-5-3.2.1"><code>specification_uri</code> (URI, required) OR <code>schema_digest</code> (string,
+required): an immutable reference to the type's specification. If
+both are present, <code>schema_digest</code> is authoritative.<a href="#section-5-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-3.3">
+          <p id="section-5-3.3.1"><code>schema_version</code> (string, required): the version of the type's
+schema.<a href="#section-5-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-3.4">
+          <p id="section-5-3.4.1"><code>authority</code> (object, required): the type-specific payload.<a href="#section-5-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-3.5">
+          <p id="section-5-3.5.1"><code>narrowing_profile</code> (URI, required): the narrowing rules applied
+to this entry. Default: <code>urn:mbo:narrowing:default-v1</code>.<a href="#section-5-3.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-5-4">The Framework defines a <strong>Mission Authority Set Type</strong> registry.
+Each registered type provides:<a href="#section-5-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5-5.1">
+          <p id="section-5-5.1.1">Specification reference (immutable).<a href="#section-5-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-5.2">
+          <p id="section-5-5.2.1">Schema digest (where applicable).<a href="#section-5-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-5.3">
+          <p id="section-5-5.3.1">Semantic normalization rules.<a href="#section-5-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-5.4">
+          <p id="section-5-5.4.1">Equality rules (when are two entries semantically equal).<a href="#section-5-5.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-5.5">
+          <p id="section-5-5.5.1">Subset rules (when does one entry's authority narrow another's).<a href="#section-5-5.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-5.6">
+          <p id="section-5-5.6.1">Intersection rules (the largest authority both entries permit).<a href="#section-5-5.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-5.7">
+          <p id="section-5-5.7.1">Unknown-field handling at narrowing time.<a href="#section-5-5.7.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-5-6">Profile specifications <span class="bcp14">MAY</span> register additional Authority Set entry
+types. The OAuth Profile registers <code>mission_resource_access</code> as one
+type with <code>resource</code>, <code>actions</code>, and <code>constraints</code> fields.<a href="#section-5-6" class="pilcrow">¶</a></p>
+<div id="schema-digest-format">
+<section id="section-5.1">
+        <h3 id="name-schema-digest-format">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-schema-digest-format" class="section-name selfRef">Schema digest format</a>
+        </h3>
+<p id="section-5.1-1">The <code>schema_digest</code> value <span class="bcp14">MUST</span> be <code>"sha-256:" || base64url(SHA-256(
+JCS-canonical schema bytes))</code>. This format parallels the integrity-
+anchor hash format. Future digest algorithms register prefixes like
+<code>sha-384:</code>; consumers <span class="bcp14">MUST</span> reject digests using unregistered
+prefixes.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="integrity-anchors">
+<section id="section-6">
+      <h2 id="name-integrity-anchors">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-integrity-anchors" class="section-name selfRef">Integrity Anchors</a>
+      </h2>
+<p id="section-6-1">A Mission record carries three integrity anchors that commit the
+state authority to canonical objects: <code>proposal_hash</code>,
+<code>authority_hash</code>, <code>consent_disclosure_hash</code>.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">Integrity anchors are computed in three steps:<a href="#section-6-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6-3">
+<li id="section-6-3.1">
+          <p id="section-6-3.1.1"><strong>Semantic normalization</strong> under the registered normalization
+profile for the object's type.<a href="#section-6-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-3.2">
+          <p id="section-6-3.2.1"><strong>Domain-separated, authorization-domain-bound envelope</strong> wraps
+the normalized value.<a href="#section-6-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-3.3">
+          <p id="section-6-3.3.1"><strong>JCS canonicalization</strong> <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>, <strong>SHA-256</strong> <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span>,
+<strong>base64url encoding</strong>.<a href="#section-6-3.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<div id="semantic-normalization">
+<section id="section-6.1">
+        <h3 id="name-semantic-normalization">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-semantic-normalization" class="section-name selfRef">Semantic normalization</a>
+        </h3>
+<p id="section-6.1-1">JCS canonicalizes JSON syntax but does not make semantically
+equivalent values identical. Before JCS, each committed object <span class="bcp14">MUST</span>
+be normalized under its registered normalization profile. The
+profile defines:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.1-2.1">
+            <p id="section-6.1-2.1.1">Array ordering and duplicate handling.<a href="#section-6.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-2.2">
+            <p id="section-6.1-2.2.1">Unicode normalization policy (NFC by default).<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-2.3">
+            <p id="section-6.1-2.3.1">URI normalization or exact-comparison rules per field.<a href="#section-6.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-2.4">
+            <p id="section-6.1-2.4.1">Absent-member versus empty-member semantics.<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-2.5">
+            <p id="section-6.1-2.5.1">Rejection of duplicate JSON object member names before parsing
+into the data model.<a href="#section-6.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-6.1-3">Implementations <span class="bcp14">MUST</span> normalize before computing any integrity anchor.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="domain-separated-authorization-domain-bound-envelope">
+<section id="section-6.2">
+        <h3 id="name-domain-separated-authorizat">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-domain-separated-authorizat" class="section-name selfRef">Domain-separated, authorization-domain-bound envelope</a>
+        </h3>
+<p id="section-6.2-1">After normalization, the hash input is wrapped in an envelope:<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-6.2-2">
+<pre>
+SHA-256(JCS({
+  "type":                "mission-intent" | "mission-authority-set"
+                         | "mission-consent-disclosure",
+  "schema_version":      &lt;integer&gt;,
+  "authorization_domain": &lt;tenant or authorization-domain identifier&gt;,
+  "state_authority":     &lt;mission.origin URL&gt;,
+  "value":               &lt;normalized content&gt;
+}))
+</pre><a href="#section-6.2-2" class="pilcrow">¶</a>
+</div>
+<p id="section-6.2-3">The <code>type</code> field provides domain separation between object types.
+The <code>authorization_domain</code> and <code>state_authority</code> fields bind the
+hash to the authorization domain and to the issuing state authority,
+preventing cross-tenant or cross-authority transplantation. Two
+identical Validated Mission Intents in different tenants produce
+different <code>proposal_hash</code> values.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<p id="section-6.2-4">The resulting hash is base64url-encoded without padding.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="three-integrity-anchors">
+<section id="section-6.3">
+        <h3 id="name-three-integrity-anchors">
+<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-three-integrity-anchors" class="section-name selfRef">Three integrity anchors</a>
+        </h3>
+<ul class="normal">
+<li class="normal" id="section-6.3-1.1">
+            <p id="section-6.3-1.1.1"><code>proposal_hash</code>: over the Validated Mission Intent (envelope
+<code>type=mission-intent</code>). Committed at the approval event; stable for
+the Mission's lifetime.<a href="#section-6.3-1.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.3-1.2">
+            <p id="section-6.3-1.2.1"><code>authority_hash</code>: over the Authority Set (envelope
+<code>type=mission-authority-set</code>). Committed at the approval event.<a href="#section-6.3-1.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.3-1.3">
+            <p id="section-6.3-1.3.1"><code>consent_disclosure_hash</code>: over the consent disclosure object
+presented to the approving principal (envelope
+<code>type=mission-consent-disclosure</code>). Committed at the approval
+event.<a href="#section-6.3-1.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-6.3-2">The integrity anchors collectively commit the state authority's
+recorded approval. They do not prove faithful rendering to the
+approving principal; that property requires trustworthy consent UX
+above the protocol layer.<a href="#section-6.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="identifier-model">
+<section id="section-7">
+      <h2 id="name-identifier-model">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-identifier-model" class="section-name selfRef">Identifier Model</a>
+      </h2>
+<p id="section-7-1">A Mission has a <strong>canonical Mission ID</strong> (<code>mission.id</code>) held by the
+state authority. Consumers <span class="bcp14">MAY</span> interact with a Mission through the
+canonical ID or through an audience-sector-specific
+<strong>Pairwise Mission Reference</strong> (<code>mission.ref</code>).<a href="#section-7-1" class="pilcrow">¶</a></p>
+<div id="canonical-mission-id">
+<section id="section-7.1">
+        <h3 id="name-canonical-mission-id">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-canonical-mission-id" class="section-name selfRef">Canonical Mission ID</a>
+        </h3>
+<p id="section-7.1-1">The canonical <code>mission.id</code> is a stable opaque identifier minted by
+the state authority. It is URL-safe ASCII, maximum 256 octets. It
+<span class="bcp14">MUST</span> be unique within the state authority's namespace and <span class="bcp14">MUST NOT</span>
+be reused after Mission record garbage collection.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.1-2">The <code>mission.origin</code> value is the state authority's issuer URL. It
+resolves via the well-known URI <code>/.well-known/mission-authority</code> per
+<span>[<a href="#RFC8615" class="cite xref">RFC8615</a>]</span>.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="pairwise-mission-reference">
+<section id="section-7.2">
+        <h3 id="name-pairwise-mission-reference">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-pairwise-mission-reference" class="section-name selfRef">Pairwise Mission Reference</a>
+        </h3>
+<p id="section-7.2-1">A Pairwise Mission Reference (<code>mission.ref</code>) is an opaque URL-safe
+string containing at least 128 bits of entropy. It <span class="bcp14">MUST</span> contain no
+audience label, tenant name, canonical-ID derivative, or other
+correlatable input. The state authority binds the opaque reference
+to an advertised <strong>pairwise sector</strong> in its metadata.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.2-2">The pairwise sector type is one of:<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.2-3.1">
+            <p id="section-7.2-3.1.1">Resource Server<a href="#section-7.2-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.2-3.2">
+            <p id="section-7.2-3.2.1">Resource AS<a href="#section-7.2-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.2-3.3">
+            <p id="section-7.2-3.3.1">Tenant<a href="#section-7.2-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.2-3.4">
+            <p id="section-7.2-3.4.1">Trust domain<a href="#section-7.2-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-7.2-4">The state authority advertises its sector choice in
+<code>mission_pairwise_sector</code> in its metadata document.<a href="#section-7.2-4" class="pilcrow">¶</a></p>
+<p id="section-7.2-5">Pairwise references are stable for the Mission's lifetime within a
+sector. Reference rotation creates an alias period sufficient for
+outstanding credentials to drain, then retires the old reference.
+Retired references <span class="bcp14">MUST NOT</span> be reassigned.<a href="#section-7.2-5" class="pilcrow">¶</a></p>
+<p id="section-7.2-6">The state authority is the only party that can resolve a Pairwise
+Mission Reference to the canonical <code>mission.id</code>. Other parties <span class="bcp14">MUST NOT</span> be able to derive the canonical ID from a pairwise reference.<a href="#section-7.2-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="missionorigin-metadata-document">
+<section id="section-7.3">
+        <h3 id="name-missionorigin-metadata-docu">
+<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-missionorigin-metadata-docu" class="section-name selfRef"><code>mission.origin</code> metadata document</a>
+        </h3>
+<p id="section-7.3-1">The metadata document at <code>{mission.origin}/.well-known/mission-authority</code>
+is a JSON object with fields:<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.3-2.1">
+            <p id="section-7.3-2.1.1"><code>issuer</code> (URL, required): <span class="bcp14">MUST</span> match <code>mission.origin</code>.<a href="#section-7.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.3-2.2">
+            <p id="section-7.3-2.2.1"><code>jwks_uri</code> (URL, required): state authority's public keys for
+response signing.<a href="#section-7.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.3-2.3">
+            <p id="section-7.3-2.3.1"><code>mission_status_endpoint</code> (URL, required): by-mission-reference
+Mission Status operation.<a href="#section-7.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.3-2.4">
+            <p id="section-7.3-2.4.1"><code>mission_lifecycle_endpoint</code> (URL, required): revoke, suspend,
+resume, complete operations.<a href="#section-7.3-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.3-2.5">
+            <p id="section-7.3-2.5.1"><code>mission_intent_schema_uri</code> (URL, required): JSON Schema for
+Mission Intent.<a href="#section-7.3-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.3-2.6">
+            <p id="section-7.3-2.6.1"><code>authority_set_types_supported</code> (array of strings, required): the
+Authority Set entry types this state authority issues.<a href="#section-7.3-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.3-2.7">
+            <p id="section-7.3-2.7.1"><code>mission_pairwise_supported</code> (boolean, required): whether the
+state authority emits pairwise references.<a href="#section-7.3-2.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.3-2.8">
+            <p id="section-7.3-2.8.1"><code>mission_pairwise_sector</code> (string, conditional): the sector type,
+required if <code>mission_pairwise_supported</code> is <code>true</code>.<a href="#section-7.3-2.8.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.3-2.9">
+            <p id="section-7.3-2.9.1"><code>mission_framework_versions_supported</code> (array, required): spec
+revisions of this Framework that the state authority supports.<a href="#section-7.3-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-7.3-3">Profile specifications <span class="bcp14">MAY</span> extend this metadata document.<a href="#section-7.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="principal-model">
+<section id="section-8">
+      <h2 id="name-principal-model">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-principal-model" class="section-name selfRef">Principal Model</a>
+      </h2>
+<p id="section-8-1">A Mission record carries the following principal fields:<a href="#section-8-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8-2.1">
+          <p id="section-8-2.1.1"><code>subject</code> (string, required): the principal on whose behalf the
+task is approved. Format is substrate-specific (e.g., subject
+identifier per RFC 7519 in OAuth profiles, AAuth <code>approver</code> in
+AAuth profiles).<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.2">
+          <p id="section-8-2.2.1"><code>approving_principal</code> (string, required): the principal who
+approved the Mission. <span class="bcp14">MAY</span> equal <code>subject</code>. For delegated
+approval (administrator approval, headless approval anchors)
+<code>approving_principal</code> differs from <code>subject</code>.<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.3">
+          <p id="section-8-2.3.1"><code>requesting_client</code> (string, required): the OAuth client
+identifier or AAuth agent identifier that submitted the Mission
+Proposal.<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.4">
+          <p id="section-8-2.4.1"><code>tenant</code> (string, required): the tenant or authorization-domain
+identifier the Mission lives in.<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.5">
+          <p id="section-8-2.5.1"><code>state_authority</code> (URL, required): the issuer URL of the state
+authority. Equal to <code>mission.origin</code>.<a href="#section-8-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.6">
+          <p id="section-8-2.6.1"><code>delegation_policy</code> (string, required): a URI or named profile
+identifying the stable Mission-level bounds governing which actors
+may derive or exercise authority.<a href="#section-8-2.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-8-3">The principal model is recorded at the approval event and is
+immutable thereafter (the Mission's <code>subject</code>, <code>approving_principal</code>,
+and other principal fields <span class="bcp14">MUST NOT</span> change after activation).<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">Dynamic actor context (the current delegation chain at a derived
+artifact) is carried on projections (derived credentials) and
+runtime requests, not stored on the Mission record. The OAuth
+Profile and AAuth Profile bind dynamic actor context to derived
+credentials via the actor profile (e.g.,
+<code>draft-mcguinness-oauth-actor-profile</code>).<a href="#section-8-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-status-interface">
+<section id="section-9">
+      <h2 id="name-mission-status-interface">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-mission-status-interface" class="section-name selfRef">Mission Status Interface</a>
+      </h2>
+<p id="section-9-1">The Mission Status interface is the authenticated state-authority view
+returning Mission state and integrity-anchored evidence. It is
+<strong>distinct from token introspection</strong> (which is by-token); Mission
+Status is by-mission-reference.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<div id="operation">
+<section id="section-9.1">
+        <h3 id="name-operation">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-operation" class="section-name selfRef">Operation</a>
+        </h3>
+<p id="section-9.1-1">The Mission Status operation takes a Mission reference (canonical
+<code>mission.id</code> or pairwise <code>mission.ref</code>), the requesting consumer's
+authentication, the consumer's audience identifier, and a nonce. It
+returns:<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9.1-2.1">
+            <p id="section-9.1-2.1.1"><code>state</code> (one of <code>active</code>, <code>suspended</code>, <code>revoked</code>, <code>completed</code>,
+<code>expired</code>).<a href="#section-9.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.2">
+            <p id="section-9.1-2.2.1">The three integrity anchors.<a href="#section-9.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.3">
+            <p id="section-9.1-2.3.1">Audience-filtered Authority Set projection (the entries relevant
+to the requesting audience).<a href="#section-9.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.4">
+            <p id="section-9.1-2.4.1"><code>policy_version</code> of the derivation policy applied at approval.<a href="#section-9.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.5">
+            <p id="section-9.1-2.5.1"><code>issued_at</code> (RFC 3339 timestamp).<a href="#section-9.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.6">
+            <p id="section-9.1-2.6.1"><code>expires_at</code> (RFC 3339 timestamp).<a href="#section-9.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.7">
+            <p id="section-9.1-2.7.1">Freshness indicator (when the state was current).<a href="#section-9.1-2.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.8">
+            <p id="section-9.1-2.8.1">The nonce echoed from the request.<a href="#section-9.1-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-9.1-3">The wire format is profile-specific. Profile specifications bind
+this abstract operation to a concrete request and response
+representation, including the protection mechanism (e.g., RFC 9701
+signed responses for OAuth introspection, JWS for the dedicated
+operation).<a href="#section-9.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="required-properties">
+<section id="section-9.2">
+        <h3 id="name-required-properties">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-required-properties" class="section-name selfRef">Required properties</a>
+        </h3>
+<p id="section-9.2-1">A Mission Status response <span class="bcp14">MUST</span> satisfy:<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9.2-2.1">
+            <p id="section-9.2-2.1.1"><strong>Authentication property</strong>: the response carries an integrity
+signal whose source is the state authority. Consumers verify the
+signal against the state authority's published keys.<a href="#section-9.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.2-2.2">
+            <p id="section-9.2-2.2.1"><strong>Freshness property</strong>: the response indicates when the state was
+current via <code>issued_at</code> and <code>expires_at</code>.<a href="#section-9.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.2-2.3">
+            <p id="section-9.2-2.3.1"><strong>Audience property</strong>: the response binds the requesting consumer's
+audience identifier. Replay against a different audience <span class="bcp14">MUST</span> be
+detectable.<a href="#section-9.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.2-2.4">
+            <p id="section-9.2-2.4.1"><strong>Integrity property</strong>: the response payload and its integrity
+anchors chain back to the canonical Mission record verifiably.<a href="#section-9.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.2-2.5">
+            <p id="section-9.2-2.5.1"><strong>Anti-oracle property</strong>: possession of a Mission reference is not
+authorization. The state authority <span class="bcp14">MUST</span> authenticate the caller and
+authorize the caller for the requested reference and audience.
+Unknown and unauthorized references <span class="bcp14">MUST</span> produce indistinguishable
+responses.<a href="#section-9.2-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.2-2.6">
+            <p id="section-9.2-2.6.1"><strong>Request-binding property</strong>: signed responses <span class="bcp14">MUST</span> bind the caller
+identity, the requested Mission reference, the audience, and the
+caller-provided nonce.<a href="#section-9.2-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.2-2.7">
+            <p id="section-9.2-2.7.1"><strong>Caching property</strong>: every response declares <code>issued_at</code> and
+<code>expires_at</code>. Consumers <span class="bcp14">MUST</span> fail closed after <code>expires_at</code> unless a
+profile explicitly defines a bounded degraded mode.<a href="#section-9.2-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="error-model">
+<section id="section-9.3">
+        <h3 id="name-error-model">
+<a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-error-model" class="section-name selfRef">Error model</a>
+        </h3>
+<p id="section-9.3-1">A Mission Status response operates over the following error model.
+Profile specifications map these to substrate-appropriate transport
+codes.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-1">
+          <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Symbol</th>
+              <th class="text-left" rowspan="1" colspan="1">Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>ok</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission found and visible. Response carries state.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>unauthorized</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Request not authenticated.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>not_found</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission reference does not exist OR is not visible to this consumer. These cases are intentionally indistinguishable.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission is in a terminal state. Response includes state.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>suspended</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission is suspended. Response includes state.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>rate_limited</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Consumer is rate-limited.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>unavailable</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">State authority temporarily can't serve status.</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-9.3-3">Consumers <span class="bcp14">MUST NOT</span> distinguish an unknown Mission from a known but
+unauthorized Mission. A terminal Mission is "found" only for an
+authorized caller.<a href="#section-9.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="common-constraints-framework">
+<section id="section-10">
+      <h2 id="name-common-constraints-framewor">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-common-constraints-framewor" class="section-name selfRef">Common Constraints Framework</a>
+      </h2>
+<p id="section-10-1">The Mission Intent's <code>context</code> field carries machine-actionable
+bounds. The Framework defines a <strong>Mission Common Constraints</strong>
+registry that standardizes constraint key names and semantics so
+cross-vendor deployments express common bounds consistently.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<p id="section-10-2">Each registered constraint provides:<a href="#section-10-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10-3.1">
+          <p id="section-10-3.1.1"><code>name</code>: the key in <code>mission_intent.context</code>.<a href="#section-10-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-3.2">
+          <p id="section-10-3.2.1"><code>type</code>: the JSON type of the value (string, integer, array, etc.).<a href="#section-10-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-3.3">
+          <p id="section-10-3.3.1"><code>specification_uri</code>: immutable specification reference.<a href="#section-10-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-3.4">
+          <p id="section-10-3.4.1"><code>schema_digest</code> (optional): for richer constraint shapes.<a href="#section-10-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-3.5">
+          <p id="section-10-3.5.1"><code>schema_version</code>.<a href="#section-10-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-3.6">
+          <p id="section-10-3.6.1">Normalization rules.<a href="#section-10-3.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-3.7">
+          <p id="section-10-3.7.1">Equality and subset rules.<a href="#section-10-3.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-3.8">
+          <p id="section-10-3.8.1">Narrowing rules at derivation time.<a href="#section-10-3.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-3.9">
+          <p id="section-10-3.9.1">Runtime enforcement contract: where and how the constraint is
+enforced.<a href="#section-10-3.9.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<div id="initial-entries">
+<section id="section-10.1">
+        <h3 id="name-initial-entries">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-initial-entries" class="section-name selfRef">Initial entries</a>
+        </h3>
+<p id="section-10.1-1">This document defines two initial entries:<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<div id="maxderivations">
+<section id="section-10.1.1">
+          <h4 id="name-max_derivations">
+<a href="#section-10.1.1" class="section-number selfRef">10.1.1. </a><a href="#name-max_derivations" class="section-name selfRef"><code>max_derivations</code></a>
+          </h4>
+<p id="section-10.1.1-1">The maximum number of credential derivation events permitted under
+this Mission across its lifetime. Counts new access tokens, refresh
+token rotations, Token Exchange grants, ID-JAGs, AAuth resource
+tokens, and AAuth auth tokens.<a href="#section-10.1.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1.1-2.1">
+              <p id="section-10.1.1-2.1.1">Value type: decimal string (e.g., <code>"100"</code>). String form chosen
+for IEEE 754 precision safety under JCS.<a href="#section-10.1.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-2.2">
+              <p id="section-10.1.1-2.2.1">Authoritative counter: the state authority. Each derivation event
+increments the counter atomically. Counter <span class="bcp14">MUST NOT</span> exceed the
+declared value.<a href="#section-10.1.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-2.3">
+              <p id="section-10.1.1-2.3.1">Narrowing: derived constraints <span class="bcp14">MAY</span> specify smaller values.<a href="#section-10.1.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-2.4">
+              <p id="section-10.1.1-2.4.1">Reset: the counter resets only when Mission Expansion creates a
+successor Mission; the predecessor's counter is final.<a href="#section-10.1.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-2.5">
+              <p id="section-10.1.1-2.5.1">Runtime relationship: this constraint governs issuance, not
+per-action invocation. Per-action runtime budgets are
+<code>max_invocations</code>, defined in the Mission-Bound Runtime
+Enforcement Profile.<a href="#section-10.1.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</section>
+</div>
+<div id="aal">
+<section id="section-10.1.2">
+          <h4 id="name-aal">
+<a href="#section-10.1.2" class="section-number selfRef">10.1.2. </a><a href="#name-aal" class="section-name selfRef"><code>aal</code></a>
+          </h4>
+<p id="section-10.1.2-1">The required Authentication Assurance Level for the approving
+principal's authentication at the approval event, and for any
+subsequent step-up authentication.<a href="#section-10.1.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1.2-2.1">
+              <p id="section-10.1.2-2.1.1">Value type: string. Values follow <span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span>'s <code>acr</code> semantics or
+deployment-registered AAL identifiers.<a href="#section-10.1.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-2.2">
+              <p id="section-10.1.2-2.2.1">Freshness window (required): an integer number of seconds
+declaring the maximum age of an authentication event that
+satisfies the constraint.<a href="#section-10.1.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.2-2.3">
+              <p id="section-10.1.2-2.3.1">Composes with: <span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span> step-up authentication challenges. A
+denied request that would be permitted by satisfying the <code>aal</code>
+constraint via fresh authentication <span class="bcp14">MAY</span> be returned as a step-up
+challenge by the credential issuer.<a href="#section-10.1.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</section>
+</div>
+</section>
+</div>
+<div id="future-work-entries">
+<section id="section-10.2">
+        <h3 id="name-future-work-entries">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-future-work-entries" class="section-name selfRef">Future-work entries</a>
+        </h3>
+<p id="section-10.2-1">The following constraint names are sketched in the architecture but
+have unresolved semantics; they are NOT included in the initial
+registry:<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.2-2.1">
+            <p id="section-10.2-2.1.1"><code>max_value</code>: requires currency, aggregation period, and
+authoritative counter to be specified.<a href="#section-10.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.2-2.2">
+            <p id="section-10.2-2.2.1"><code>max_duration</code>: requires units and start event to be specified.<a href="#section-10.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.2-2.3">
+            <p id="section-10.2-2.3.1"><code>geo</code>: requires subject vs actor vs resource vs execution-location
+semantics to be picked.<a href="#section-10.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.2-2.4">
+            <p id="section-10.2-2.4.1"><code>data_classification</code>: requires a registered classification
+vocabulary.<a href="#section-10.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-10.2-3">These will register as the design stabilizes and implementer
+interest emerges.<a href="#section-10.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="capability-advertisement-metadata">
+<section id="section-11">
+      <h2 id="name-capability-advertisement-me">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-capability-advertisement-me" class="section-name selfRef">Capability-Advertisement Metadata</a>
+      </h2>
+<p id="section-11-1">The Framework creates a <strong>Mission Capability-Advertisement Metadata</strong>
+registry. State authorities advertise their capabilities through the
+following metadata fields:<a href="#section-11-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-2.1">
+          <p id="section-11-2.1.1"><code>mission_authorization_domain_tiers_supported</code> (array): subset of
+registered Authorization Domain Tier identifiers.<a href="#section-11-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.2">
+          <p id="section-11-2.2.1"><code>mission_ladder_levels_supported</code> (array of integers): subset of
+Capability Ladder levels supported.<a href="#section-11-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.3">
+          <p id="section-11-2.3.1"><code>mission_profiles_supported</code> (array of strings): substrate
+profiles supported (e.g., <code>"oauth"</code>, <code>"aauth"</code>, <code>"mas"</code>,
+<code>"runtime_enforcement"</code>).<a href="#section-11-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.4">
+          <p id="section-11-2.4.1"><code>mission_optional_modules_supported</code> (array): registered optional
+modules supported.<a href="#section-11-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.5">
+          <p id="section-11-2.5.1"><code>mission_framework_versions_supported</code> (array): spec revisions of
+this Framework that the state authority supports.<a href="#section-11-2.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-11-3">The Capability Model specification (Mission-Bound Authorization
+Capability Model) defines the Capability Ladder levels, Resource
+Server Tiers, and Authorization Domain Tiers; this document creates
+the metadata registry that names them.<a href="#section-11-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="reference-test-vectors">
+<section id="section-12">
+      <h2 id="name-reference-test-vectors">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-reference-test-vectors" class="section-name selfRef">Reference Test Vectors</a>
+      </h2>
+<p id="section-12-1">This specification includes reference test vectors as a first-class
+deliverable. Test vectors are published in the <code>vectors/</code> directory
+of the specification repository, tagged with the spec revision
+(e.g., <code>vectors/draft-mcguinness-mission-framework-00/</code>).<a href="#section-12-1" class="pilcrow">¶</a></p>
+<p id="section-12-2">An implementation that does not reproduce the published test vectors
+byte-for-byte is non-conformant to that vector class.<a href="#section-12-2" class="pilcrow">¶</a></p>
+<p id="section-12-3">The required vector classes are:<a href="#section-12-3" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-12-4">
+<li id="section-12-4.1">
+          <p id="section-12-4.1.1"><strong>Semantic-normalization and JCS vectors</strong>: 20 or more input
+JSON objects with expected normalized data model and expected
+JCS bytes. Covers array ordering, duplicate elements, duplicate
+object member rejection, absent versus empty members, URI
+comparison, number formatting, key ordering, escapes, Unicode
+policy, nested objects, arrays, and nulls.<a href="#section-12-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-12-4.2">
+          <p id="section-12-4.2.1"><strong>Domain-separated and authorization-domain-bound hash vectors</strong>:
+input value, normalized wrapped input, and expected SHA-256
+hash. Includes negative cross-tenant and cross-authority
+transplantation cases.<a href="#section-12-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-12-4.3">
+          <p id="section-12-4.3.1"><strong>State-transition vectors</strong>: full state-machine traversals for
+Mission Proposal and Mission lifecycles, including invalid
+transitions that <span class="bcp14">MUST</span> be refused.<a href="#section-12-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-12-4.4">
+          <p id="section-12-4.4.1"><strong>Authority Set narrowing vectors</strong> per registered type. For
+<code>mission_resource_access</code>: approved entry + derived entry →
+expected accept/refuse classification.<a href="#section-12-4.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-12-4.5">
+          <p id="section-12-4.5.1"><strong>Mission Status vectors</strong>: authenticated request → expected
+response shape for success, stale state, replayed nonce, wrong
+audience, unknown reference, and unauthorized reference.
+Unknown and unauthorized cases <span class="bcp14">MUST</span> be observationally
+equivalent.<a href="#section-12-4.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-12-4.6">
+          <p id="section-12-4.6.1"><strong><code>mission</code> claim vectors</strong>: Mission record → expected claim
+shape including canonical and pairwise variants. (Defined in
+the OAuth Profile; vector class declared here.)<a href="#section-12-4.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-13">
+      <h2 id="name-security-considerations">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<div id="state-authority-compromise">
+<section id="section-13.1">
+        <h3 id="name-state-authority-compromise">
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-state-authority-compromise" class="section-name selfRef">State authority compromise</a>
+        </h3>
+<p id="section-13.1-1">A compromised state authority can fabricate Mission records,
+backdate evidence, and issue Mission Status responses without
+constraint. The Framework assumes the state authority is trusted;
+compromise of the state authority is outside the protection model
+of this specification. Deployments mitigate state-authority
+compromise through key hardware modules, audit logging,
+independent attestation of state-authority operations, and
+cross-organization audit anchoring.<a href="#section-13.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="integrity-anchor-non-guarantees">
+<section id="section-13.2">
+        <h3 id="name-integrity-anchor-non-guaran">
+<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-integrity-anchor-non-guaran" class="section-name selfRef">Integrity anchor non-guarantees</a>
+        </h3>
+<p id="section-13.2-1">The integrity anchors prove the state authority committed to
+specific canonical objects at the approval event. They do not
+prove:<a href="#section-13.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13.2-2.1">
+            <p id="section-13.2-2.1.1"><strong>Faithful rendering</strong>: the approving principal saw the consent
+disclosure object as the state authority recorded it. A
+compromised renderer can present different content while the
+state authority's record remains untouched.<a href="#section-13.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.2-2.2">
+            <p id="section-13.2-2.2.1"><strong>Human comprehension</strong>: the approving principal understood the
+rendered content. Consent UX assurance lives above the protocol
+layer.<a href="#section-13.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.2-2.3">
+            <p id="section-13.2-2.3.1"><strong>State authority honesty in real time</strong>: an honest auditor
+examining records after the fact cannot distinguish honest
+state-authority operation from in-the-moment fabrication that
+records itself consistently.<a href="#section-13.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.2-2.4">
+            <p id="section-13.2-2.4.1"><strong>Approving-principal authenticity</strong>: the approving principal
+was authentically the named person, beyond the AAL evidence
+recorded.<a href="#section-13.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-13.2-3">Deployments needing stronger guarantees compose with trustworthy
+consent UX, principal authentication assurance, MAS-rendered
+consent under cross-substrate governance, and transparency-log
+anchoring of integrity hashes.<a href="#section-13.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="jcs-implementation-correctness">
+<section id="section-13.3">
+        <h3 id="name-jcs-implementation-correctn">
+<a href="#section-13.3" class="section-number selfRef">13.3. </a><a href="#name-jcs-implementation-correctn" class="section-name selfRef">JCS implementation correctness</a>
+        </h3>
+<p id="section-13.3-1">Implementations that produce byte-divergent canonical output
+produce divergent hashes and break content-addressability.<a href="#section-13.3-1" class="pilcrow">¶</a></p>
+<p id="section-13.3-2">Mitigation: the spec's reference test vectors. An implementation
+that does not reproduce the test vectors byte-for-byte is
+non-conformant. Where possible, deployments <span class="bcp14">SHOULD</span> use known-good
+JCS libraries rather than rolling their own.<a href="#section-13.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="number-precision-under-jcs">
+<section id="section-13.4">
+        <h3 id="name-number-precision-under-jcs">
+<a href="#section-13.4" class="section-number selfRef">13.4. </a><a href="#name-number-precision-under-jcs" class="section-name selfRef">Number precision under JCS</a>
+        </h3>
+<p id="section-13.4-1">IEEE 754 double precision applies to JSON numbers under JCS.
+Constraint values where precision matters <span class="bcp14">MUST</span> use string
+representation (e.g., <code>"max_derivations": "100"</code>), not number
+representation.<a href="#section-13.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="pairwise-identifier-privacy-and-correlation">
+<section id="section-13.5">
+        <h3 id="name-pairwise-identifier-privacy">
+<a href="#section-13.5" class="section-number selfRef">13.5. </a><a href="#name-pairwise-identifier-privacy" class="section-name selfRef">Pairwise identifier privacy and correlation</a>
+        </h3>
+<p id="section-13.5-1">The pairwise reference framework prevents direct correlation of
+Mission identifiers across audiences in the same sector. It does
+not prevent indirect correlation through audience-side state
+(e.g., user identifiers, timing, request patterns). Deployments
+<span class="bcp14">SHOULD</span> assess the correlation surface of their chosen sector.<a href="#section-13.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="hash-equality-leakage-and-cross-tenant-transplantation">
+<section id="section-13.6">
+        <h3 id="name-hash-equality-leakage-and-c">
+<a href="#section-13.6" class="section-number selfRef">13.6. </a><a href="#name-hash-equality-leakage-and-c" class="section-name selfRef">Hash equality leakage and cross-tenant transplantation</a>
+        </h3>
+<p id="section-13.6-1">Without authorization-domain binding in the hash envelope, two
+identical Validated Mission Intents in different tenants would
+produce identical <code>proposal_hash</code> values, leaking equality across
+tenants and creating a transplantation surface.<a href="#section-13.6-1" class="pilcrow">¶</a></p>
+<p id="section-13.6-2">This specification mitigates by binding <code>authorization_domain</code> and
+<code>state_authority</code> into the hash envelope. Implementations <span class="bcp14">MUST</span>
+include these fields per Section 6.2; omitting them produces
+non-conformant hashes.<a href="#section-13.6-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-status-enumeration-and-authorization-oracle-resistance">
+<section id="section-13.7">
+        <h3 id="name-mission-status-enumeration-">
+<a href="#section-13.7" class="section-number selfRef">13.7. </a><a href="#name-mission-status-enumeration-" class="section-name selfRef">Mission Status enumeration and authorization-oracle resistance</a>
+        </h3>
+<p id="section-13.7-1">Mission Status responses <span class="bcp14">MUST</span> treat unknown references and
+unauthorized references as observationally equivalent. An
+attacker that can distinguish "unknown" from "unauthorized" can
+enumerate the state authority's Mission space.<a href="#section-13.7-1" class="pilcrow">¶</a></p>
+<p id="section-13.7-2">This specification mitigates via the anti-oracle property
+(Section 8.2). Profile specifications <span class="bcp14">MUST</span> preserve this property
+in transport.<a href="#section-13.7-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="trust-boundary-violations">
+<section id="section-13.8">
+        <h3 id="name-trust-boundary-violations">
+<a href="#section-13.8" class="section-number selfRef">13.8. </a><a href="#name-trust-boundary-violations" class="section-name selfRef">Trust-boundary violations</a>
+        </h3>
+<p id="section-13.8-1">Profile specifications populate the trust boundary roles (Shaper,
+state authority, credential issuer, PDP, evidence emitter).
+Implementations <span class="bcp14">MUST NOT</span> permit a Shaper to act as an authorization
+component. Output of the Shaper <span class="bcp14">MUST</span> be treated as untrusted by the
+state authority.<a href="#section-13.8-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="approving-principal-aal">
+<section id="section-13.9">
+        <h3 id="name-approving-principal-aal">
+<a href="#section-13.9" class="section-number selfRef">13.9. </a><a href="#name-approving-principal-aal" class="section-name selfRef">Approving principal AAL</a>
+        </h3>
+<p id="section-13.9-1">This specification requires the AAL to be recorded in binding
+evidence. It does not mandate an AAL floor for approval; deployment
+policy declares the minimum AAL per Mission class. Deployments
+<span class="bcp14">SHOULD</span> set appropriate AAL floors and document them.<a href="#section-13.9-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-14">
+      <h2 id="name-iana-considerations">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-14-1">This document creates the following IANA registries:<a href="#section-14-1" class="pilcrow">¶</a></p>
+<div id="mission-common-constraints-registry">
+<section id="section-14.1">
+        <h3 id="name-mission-common-constraints-">
+<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-mission-common-constraints-" class="section-name selfRef">Mission Common Constraints Registry</a>
+        </h3>
+<p id="section-14.1-1">A new registry tracking constraint key names and their semantics.<a href="#section-14.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-14.1-2.1">
+            <p id="section-14.1-2.1.1"><strong>Registration Policy</strong>: Specification Required.<a href="#section-14.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.1-2.2">
+            <p id="section-14.1-2.2.1"><strong>Required fields per entry</strong>: <code>name</code>, <code>type</code>, <code>specification_uri</code>,
+optional <code>schema_digest</code>, <code>schema_version</code>, normalization rules,
+equality and subset rules, narrowing rules, runtime enforcement
+contract, change controller.<a href="#section-14.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.1-2.3">
+            <p id="section-14.1-2.3.1"><strong>Initial entries</strong>:<a href="#section-14.1-2.3.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-14.1-2.3.2.1">
+                <p id="section-14.1-2.3.2.1.1"><code>max_derivations</code> (this document).<a href="#section-14.1-2.3.2.1.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-14.1-2.3.2.2">
+                <p id="section-14.1-2.3.2.2.1"><code>aal</code> (this document).<a href="#section-14.1-2.3.2.2.1" class="pilcrow">¶</a></p>
+</li>
+            </ul>
+</li>
+        </ul>
+</section>
+</div>
+<div id="mission-authority-set-type-registry">
+<section id="section-14.2">
+        <h3 id="name-mission-authority-set-type-">
+<a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-mission-authority-set-type-" class="section-name selfRef">Mission Authority Set Type Registry</a>
+        </h3>
+<p id="section-14.2-1">A new registry tracking Authority Set entry types.<a href="#section-14.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-14.2-2.1">
+            <p id="section-14.2-2.1.1"><strong>Registration Policy</strong>: Specification Required.<a href="#section-14.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.2-2.2">
+            <p id="section-14.2-2.2.1"><strong>Required fields per entry</strong>: <code>type</code>, <code>specification_uri</code> or
+<code>schema_digest</code>, normalization rules, equality, subset,
+intersection, unknown-field handling, change controller.<a href="#section-14.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.2-2.3">
+            <p id="section-14.2-2.3.1"><strong>Initial entries</strong>: <code>mission_resource_access</code> (registered by the
+OAuth Profile, not by this document; reserved here).<a href="#section-14.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="mission-capability-advertisement-metadata-registry">
+<section id="section-14.3">
+        <h3 id="name-mission-capability-advertis">
+<a href="#section-14.3" class="section-number selfRef">14.3. </a><a href="#name-mission-capability-advertis" class="section-name selfRef">Mission Capability-Advertisement Metadata Registry</a>
+        </h3>
+<p id="section-14.3-1">A new registry tracking capability-advertisement metadata names.<a href="#section-14.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-14.3-2.1">
+            <p id="section-14.3-2.1.1"><strong>Registration Policy</strong>: Specification Required.<a href="#section-14.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.3-2.2">
+            <p id="section-14.3-2.2.1"><strong>Required fields per entry</strong>: <code>name</code>, value semantics,
+defining specification, change controller.<a href="#section-14.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.3-2.3">
+            <p id="section-14.3-2.3.1"><strong>Initial entries</strong>: as listed in Section 11.<a href="#section-14.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="mission-lifecycle-state-enumerations">
+<section id="section-14.4">
+        <h3 id="name-mission-lifecycle-state-enu">
+<a href="#section-14.4" class="section-number selfRef">14.4. </a><a href="#name-mission-lifecycle-state-enu" class="section-name selfRef">Mission Lifecycle State Enumerations</a>
+        </h3>
+<p id="section-14.4-1">This document defines closed enumerations for Mission Proposal
+states (<code>pending_approval</code>, <code>rejected</code>, <code>withdrawn</code>,
+<code>expired_as_pending</code>) and Mission states (<code>active</code>, <code>suspended</code>,
+<code>revoked</code>, <code>completed</code>, <code>expired</code>). If extensibility is later
+required, IANA registries can be created via subsequent revisions.<a href="#section-14.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-status-response-media-types">
+<section id="section-14.5">
+        <h3 id="name-mission-status-response-med">
+<a href="#section-14.5" class="section-number selfRef">14.5. </a><a href="#name-mission-status-response-med" class="section-name selfRef">Mission Status Response Media Types</a>
+        </h3>
+<p id="section-14.5-1">Where a profile specification needs a new media type for Mission
+Status responses (e.g., <code>application/mission-status-response+json</code>
+or <code>application/mission-status-response+jwt</code>), the profile registers
+the media type per RFC 6838. This document does NOT register media
+types; profiles do.<a href="#section-14.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="what-this-document-does-not-register">
+<section id="section-14.6">
+        <h3 id="name-what-this-document-does-not">
+<a href="#section-14.6" class="section-number selfRef">14.6. </a><a href="#name-what-this-document-does-not" class="section-name selfRef">What this document does NOT register</a>
+        </h3>
+<ul class="normal">
+<li class="normal" id="section-14.6-1.1">
+            <p id="section-14.6-1.1.1">RAR <code>type</code> values: RFC 9396 <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> does not establish an IANA
+registry for every RAR <code>type</code>. The <code>mission_resource_access</code> RAR
+type is registered by the OAuth Profile in the Mission Authority
+Set Type Registry created by this document, not in a (nonexistent)
+RFC 9396 type registry.<a href="#section-14.6-1.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.6-1.2">
+            <p id="section-14.6-1.2.1">Generic JWT <code>typ</code> values: there is no IANA "JWT Media Type
+Registry" for arbitrary <code>typ</code> values. Where a profile needs a
+specific JWT <code>typ</code>, it registers a media type per RFC 6838.<a href="#section-14.6-1.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="section-15">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="section-15-1">The author thanks the implementers and reviewers of the
+Mission-Bound Authorization architecture for feedback that shaped
+this specification.<a href="#section-15-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-16">
+      <h2 id="name-references">
+<a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-16.1">
+        <h3 id="name-normative-references">
+<a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6234">[RFC6234]</dt>
+        <dd>
+<span class="refAuthor">Eastlake 3rd, D.</span> and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"US Secure Hash Algorithms (SHA and SHA-based HMAC and HKDF)"</span>, <span class="seriesInfo">RFC 6234</span>, <span class="seriesInfo">DOI 10.17487/RFC6234</span>, <time datetime="2011-05" class="refDate">May 2011</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6234">https://www.rfc-editor.org/rfc/rfc6234</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8615">[RFC8615]</dt>
+        <dd>
+<span class="refAuthor">Nottingham, M.</span>, <span class="refTitle">"Well-Known Uniform Resource Identifiers (URIs)"</span>, <span class="seriesInfo">RFC 8615</span>, <span class="seriesInfo">DOI 10.17487/RFC8615</span>, <time datetime="2019-05" class="refDate">May 2019</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8615">https://www.rfc-editor.org/rfc/rfc8615</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8785">[RFC8785]</dt>
+      <dd>
+<span class="refAuthor">Rundgren, A.</span>, <span class="refAuthor">Jordan, B.</span>, and <span class="refAuthor">S. Erdtman</span>, <span class="refTitle">"JSON Canonicalization Scheme (JCS)"</span>, <span class="seriesInfo">RFC 8785</span>, <span class="seriesInfo">DOI 10.17487/RFC8785</span>, <time datetime="2020-06" class="refDate">June 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8785">https://www.rfc-editor.org/rfc/rfc8785</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-16.2">
+        <h3 id="name-informative-references">
+<a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="RFC6749">[RFC6749]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6749">https://www.rfc-editor.org/rfc/rfc6749</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7515">[RFC7515]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Signature (JWS)"</span>, <span class="seriesInfo">RFC 7515</span>, <span class="seriesInfo">DOI 10.17487/RFC7515</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7515">https://www.rfc-editor.org/rfc/rfc7515</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7517">[RFC7517]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refTitle">"JSON Web Key (JWK)"</span>, <span class="seriesInfo">RFC 7517</span>, <span class="seriesInfo">DOI 10.17487/RFC7517</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7517">https://www.rfc-editor.org/rfc/rfc7517</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7662">[RFC7662]</dt>
+        <dd>
+<span class="refAuthor">Richer, J., Ed.</span>, <span class="refTitle">"OAuth 2.0 Token Introspection"</span>, <span class="seriesInfo">RFC 7662</span>, <span class="seriesInfo">DOI 10.17487/RFC7662</span>, <time datetime="2015-10" class="refDate">October 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7662">https://www.rfc-editor.org/rfc/rfc7662</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8414">[RFC8414]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8414">https://www.rfc-editor.org/rfc/rfc8414</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8693">[RFC8693]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8693">https://www.rfc-editor.org/rfc/rfc8693</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8705">[RFC8705]</dt>
+        <dd>
+<span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">T. Lodderstedt</span>, <span class="refTitle">"OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens"</span>, <span class="seriesInfo">RFC 8705</span>, <span class="seriesInfo">DOI 10.17487/RFC8705</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8705">https://www.rfc-editor.org/rfc/rfc8705</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9068">[RFC9068]</dt>
+        <dd>
+<span class="refAuthor">Bertocci, V.</span>, <span class="refTitle">"JSON Web Token (JWT) Profile for OAuth 2.0 Access Tokens"</span>, <span class="seriesInfo">RFC 9068</span>, <span class="seriesInfo">DOI 10.17487/RFC9068</span>, <time datetime="2021-10" class="refDate">October 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9068">https://www.rfc-editor.org/rfc/rfc9068</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9126">[RFC9126]</dt>
+        <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Sakimura, N.</span>, <span class="refAuthor">Tonge, D.</span>, and <span class="refAuthor">F. Skokan</span>, <span class="refTitle">"OAuth 2.0 Pushed Authorization Requests"</span>, <span class="seriesInfo">RFC 9126</span>, <span class="seriesInfo">DOI 10.17487/RFC9126</span>, <time datetime="2021-09" class="refDate">September 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9126">https://www.rfc-editor.org/rfc/rfc9126</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9396">[RFC9396]</dt>
+        <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9449">[RFC9449]</dt>
+        <dd>
+<span class="refAuthor">Fett, D.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Jones, M.</span>, and <span class="refAuthor">D. Waite</span>, <span class="refTitle">"OAuth 2.0 Demonstrating Proof of Possession (DPoP)"</span>, <span class="seriesInfo">RFC 9449</span>, <span class="seriesInfo">DOI 10.17487/RFC9449</span>, <time datetime="2023-09" class="refDate">September 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9449">https://www.rfc-editor.org/rfc/rfc9449</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9470">[RFC9470]</dt>
+        <dd>
+<span class="refAuthor">Bertocci, V.</span> and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Step Up Authentication Challenge Protocol"</span>, <span class="seriesInfo">RFC 9470</span>, <span class="seriesInfo">DOI 10.17487/RFC9470</span>, <time datetime="2023-09" class="refDate">September 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9470">https://www.rfc-editor.org/rfc/rfc9470</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9701">[RFC9701]</dt>
+      <dd>
+<span class="refAuthor">Lodderstedt, T., Ed.</span> and <span class="refAuthor">V. Dzhuvinov</span>, <span class="refTitle">"JSON Web Token (JWT) Response for OAuth Token Introspection"</span>, <span class="seriesInfo">RFC 9701</span>, <span class="seriesInfo">DOI 10.17487/RFC9701</span>, <time datetime="2025-01" class="refDate">January 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9701">https://www.rfc-editor.org/rfc/rfc9701</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-A">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
