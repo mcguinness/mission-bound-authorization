@@ -404,13 +404,15 @@ Required body fields:
   identifier) that submitted to the consumer.
 - `submitting_consumer` (string, required): the consumer identifier
   as registered at the MAS.
-- `subject` (string, required): the principal on whose behalf the
-  task is approved, in a form the MAS can map to its tenant subject
-  namespace.
-- `approving_principal` (string, optional): if the approving
-  principal is known to the consumer at submission, the value is
-  forwarded; otherwise it is recorded by the MAS at the approval
-  event.
+- `subject` (Mission Principal, required): the principal on whose
+  behalf the task is approved, as a Mission Principal object per
+  the Framework ({{I-D.draft-mcguinness-mission-framework}}). The
+  MAS MUST be able to map the supplied principal to its tenant
+  subject namespace at validation time.
+- `approving_principal` (Mission Principal, optional): if the
+  approving principal is known to the consumer at submission, the
+  value is forwarded as a Mission Principal object; otherwise the
+  MAS records it at the approval event.
 - `proposal_correlation_id` (string, required): a consumer-generated
   opaque value used to bind the consumer's local Proposal record to
   the MAS Proposal record. Used for idempotency.

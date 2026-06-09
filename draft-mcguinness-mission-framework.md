@@ -41,6 +41,7 @@ normative:
   RFC8259:
   RFC8615:
   RFC8785:
+  RFC9493:
 
 informative:
   RFC3986:
@@ -739,9 +740,28 @@ Continuing the example from {{mission-intent}}:
       "sha-256:nB2xK5qY7vM3rL9pT4cE6sZ8wQ1bN0fH5jX9kV2sRdM"
   },
   "principals": {
-    "subject": "user_3p2q8mN1a0kV7tR",
-    "approving_principal": "user_3p2q8mN1a0kV7tR",
-    "requesting_client": "client_erp-recon-agent",
+    "subject": {
+      "format": "iss_sub",
+      "iss": "https://idp.example.com",
+      "sub": "user_3p2q8mN1a0kV7tR",
+      "sub_profile": { "type": "human" }
+    },
+    "approving_principal": {
+      "format": "iss_sub",
+      "iss": "https://idp.example.com",
+      "sub": "user_3p2q8mN1a0kV7tR",
+      "sub_profile": { "type": "human" }
+    },
+    "requesting_client": {
+      "format": "iss_sub",
+      "iss": "https://as.example.com",
+      "sub": "client_erp-recon-agent",
+      "sub_profile": { "type": "service" },
+      "instance": {
+        "iss": "https://as.example.com",
+        "instance_id": "inst_8YfX2qV9rL3"
+      }
+    },
     "tenant": "tenant_acme",
     "state_authority": "https://as.example.com",
     "delegation_policy": "urn:mbo:delegation:default-v1"
@@ -1910,24 +1930,24 @@ A Mission record carries the following principal fields, grouped
 under the `principals` member of the Mission Record schema (see
 {{mission-record-schema}}):
 
-- `subject` (string, required): the principal on whose behalf the
-  task is approved. Format is substrate-specific (e.g., subject
-  identifier per RFC 7519 in OAuth profiles, AAuth `approver` in
-  AAuth profiles).
-- `approving_principal` (string, required): the principal who
-  approved the Mission. MAY equal `subject`. For delegated
-  approval (administrator approval, headless approval anchors)
-  `approving_principal` differs from `subject`.
-- `requesting_client` (string, required): the OAuth client
-  identifier or AAuth agent identifier that submitted the Mission
-  Proposal.
+- `subject` (Mission Principal, required): the principal on whose
+  behalf the task is approved.
+- `approving_principal` (Mission Principal, required): the
+  principal who approved the Mission. MAY be equal to `subject`
+  by value. For delegated approval (administrator approval,
+  headless approval anchors) `approving_principal` differs from
+  `subject`.
+- `requesting_client` (Mission Principal, required): the OAuth
+  client, AAuth agent, or other software entity that submitted
+  the Mission Proposal.
 - `tenant` (string, required): the tenant or authorization-domain
-  identifier the Mission lives in.
-- `state_authority` (URL, required): the issuer URL of the state
-  authority. Equal to `mission.origin`.
-- `delegation_policy` (string, required): a URI or named profile
-  identifying the stable Mission-level bounds governing which actors
-  may derive or exercise authority.
+  identifier the Mission lives in. Tenant is a scope identifier,
+  not an identity.
+- `state_authority` (string, required, URI format): the issuer URL
+  of the state authority. Equal to `mission.origin`.
+- `delegation_policy` (string, required, URI format): a URI or
+  named profile identifying the stable Mission-level bounds
+  governing which actors may derive or exercise authority.
 
 The principal model is recorded at the approval event and is
 immutable thereafter (the Mission's `subject`, `approving_principal`,
@@ -1937,8 +1957,179 @@ Dynamic actor context (the current delegation chain at a derived
 artifact) is carried on projections (derived credentials) and
 runtime requests, not stored on the Mission record. The OAuth
 Profile and AAuth Profile bind dynamic actor context to derived
-credentials via the actor profile (e.g.,
-`draft-mcguinness-oauth-actor-profile`).
+credentials via the actor profile
+({{?I-D.draft-mcguinness-oauth-actor-profile}}).
+
+## Mission Principal {#mission-principal}
+
+A Mission Principal is an identity-bearing object composing
+{{RFC9493}} Subject Identifiers for Security Event Tokens (the
+identity layer) with the optional Actor Profile `sub_profile`
+member ({{?I-D.draft-mcguinness-oauth-actor-profile}}, the
+entity-type layer) and an optional client-instance member
+({{?I-D.draft-mcguinness-oauth-client-instance-assertion}}, for
+software entities with multiple instances).
+
+The Mission Principal object has the following members:
+
+- `format` (string, required): the subject identifier format
+  per {{RFC9493}}. The Framework permits the following formats:
+  `iss_sub`, `email`, `account`, `phone_number`, `opaque`,
+  `decentralized_id`, `uri`, `aliases`. Format-specific members
+  (defined by {{RFC9493}}) accompany the `format` value.
+- `sub_profile` (object, optional): entity-type classification per
+  {{?I-D.draft-mcguinness-oauth-actor-profile}}. When present,
+  carries at minimum a `type` member with one of `human`,
+  `service`, `agent` (or any extension type registered by the
+  Actor Profile).
+- `instance` (object, optional): client-instance identity per
+  {{?I-D.draft-mcguinness-oauth-client-instance-assertion}}. Used
+  only for software-entity principals (typically
+  `requesting_client`); carries the instance issuer and
+  `instance_id`.
+
+The `iss_sub` format is RECOMMENDED for principals naming a
+subject within an identity provider's namespace. Deployments
+MAY use other RFC 9493 formats when the deployment's identity
+infrastructure prefers a different representation.
+
+### Mission Principal JSON Schema {#mission-principal-schema}
+
+~~~ json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mbo:schema:mission-principal:1",
+  "title": "Mission Principal",
+  "type": "object",
+  "required": ["format"],
+  "properties": {
+    "format": {
+      "type": "string",
+      "enum": [
+        "iss_sub", "email", "account", "phone_number",
+        "opaque", "decentralized_id", "uri", "aliases"
+      ]
+    },
+    "iss": { "type": "string", "format": "uri" },
+    "sub": { "type": "string", "minLength": 1 },
+    "email": { "type": "string", "format": "email" },
+    "account": { "type": "string", "format": "uri" },
+    "phone_number": { "type": "string" },
+    "id": { "type": "string", "minLength": 1 },
+    "uri": { "type": "string", "format": "uri" },
+    "identifiers": { "type": "array" },
+    "sub_profile": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "instance": {
+      "type": "object",
+      "required": ["iss", "instance_id"],
+      "properties": {
+        "iss": { "type": "string", "format": "uri" },
+        "instance_id": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": {
+        "format": { "const": "iss_sub" }
+      }, "required": ["format"] },
+      "then": { "required": ["iss", "sub"] }
+    },
+    {
+      "if": { "properties": {
+        "format": { "const": "email" }
+      }, "required": ["format"] },
+      "then": { "required": ["email"] }
+    },
+    {
+      "if": { "properties": {
+        "format": { "const": "phone_number" }
+      }, "required": ["format"] },
+      "then": { "required": ["phone_number"] }
+    },
+    {
+      "if": { "properties": {
+        "format": { "const": "opaque" }
+      }, "required": ["format"] },
+      "then": { "required": ["id"] }
+    },
+    {
+      "if": { "properties": {
+        "format": { "const": "decentralized_id" }
+      }, "required": ["format"] },
+      "then": { "required": ["uri"] }
+    },
+    {
+      "if": { "properties": {
+        "format": { "const": "uri" }
+      }, "required": ["format"] },
+      "then": { "required": ["uri"] }
+    },
+    {
+      "if": { "properties": {
+        "format": { "const": "account" }
+      }, "required": ["format"] },
+      "then": { "required": ["uri"] }
+    },
+    {
+      "if": { "properties": {
+        "format": { "const": "aliases" }
+      }, "required": ["format"] },
+      "then": { "required": ["identifiers"] }
+    }
+  ]
+}
+~~~
+
+For the full semantics of each `format` and its associated members,
+consult {{RFC9493}}.
+
+### Examples
+
+**`iss_sub` subject with type classification**:
+
+~~~ json
+{
+  "format": "iss_sub",
+  "iss": "https://idp.example.com",
+  "sub": "user_3p2q8mN1a0kV7tR",
+  "sub_profile": { "type": "human" }
+}
+~~~
+
+**`iss_sub` service principal with client instance**:
+
+~~~ json
+{
+  "format": "iss_sub",
+  "iss": "https://as.example.com",
+  "sub": "client_erp-recon-agent",
+  "sub_profile": { "type": "service" },
+  "instance": {
+    "iss": "https://as.example.com",
+    "instance_id": "inst_8YfX2qV9rL3"
+  }
+}
+~~~
+
+**`email` principal** (e.g., for an out-of-band approving
+administrator):
+
+~~~ json
+{
+  "format": "email",
+  "email": "admin@example.com",
+  "sub_profile": { "type": "human" }
+}
+~~~
 
 ## Principal Model JSON Schema
 
@@ -1956,9 +2147,13 @@ The canonical JSON Schema for the principal-model object is:
   ],
   "additionalProperties": false,
   "properties": {
-    "subject": { "type": "string", "minLength": 1 },
-    "approving_principal": { "type": "string", "minLength": 1 },
-    "requesting_client": { "type": "string", "minLength": 1 },
+    "subject": { "$ref": "urn:mbo:schema:mission-principal:1" },
+    "approving_principal": {
+      "$ref": "urn:mbo:schema:mission-principal:1"
+    },
+    "requesting_client": {
+      "$ref": "urn:mbo:schema:mission-principal:1"
+    },
     "tenant": { "type": "string", "minLength": 1 },
     "state_authority": { "type": "string", "format": "uri" },
     "delegation_policy": { "type": "string", "format": "uri" }
@@ -1968,6 +2163,21 @@ The canonical JSON Schema for the principal-model object is:
 
 The `state_authority` value MUST equal the Mission's
 `mission.origin`.
+
+## Equality of principals
+
+Two Mission Principals are equal when their `format` values match
+and the format-specific identifier members are byte-equal under
+the registered Normalization Profile for the format. The
+`sub_profile` and `instance` members are evidence, not identity;
+they MAY differ between two otherwise-equal principals without
+affecting equality.
+
+When comparing a Mission's `subject` to an authentication event's
+subject identifier at credential derivation time, implementations
+MUST compare under the same equality rule. The Mission Principal
+referenced as `subject` is the identity bound at approval and the
+target identity for any subject-matching policy.
 
 # Mission Status Interface {#mission-status-interface}
 
@@ -2851,15 +3061,19 @@ decisions without embedding additional PII.
 ## Subject and approving-principal identifiers
 
 The Mission record's `principals.subject` and
-`principals.approving_principal` are stable identifiers within
-the state authority's namespace. They appear in Mission Status
-responses to authorized callers and in derived credentials.
+`principals.approving_principal` are Mission Principal objects
+({{mission-principal}}) carrying {{RFC9493}} Subject Identifiers.
+They appear in Mission Status responses to authorized callers
+and in derived credentials.
 
-Subject and approving-principal identifiers SHOULD NOT be email
-addresses or other widely-correlatable identifiers unless the
-deployment's privacy posture explicitly accommodates such
-identifiers. Deployments SHOULD prefer opaque or pseudonymous
-identifiers and SHOULD map them to PII through a separate,
+When the deployment's privacy posture permits opaque or
+pseudonymous identifiers, the `iss_sub` format with an opaque
+`sub` value is RECOMMENDED. The `email` and `phone_number`
+formats are widely-correlatable identifiers and SHOULD NOT be
+used for `principals.subject` or `principals.approving_principal`
+unless the deployment's privacy posture explicitly accommodates
+them. Deployments SHOULD map principal identifiers to PII
+through a separate,
 access-controlled directory service rather than embedding PII
 in the Mission record.
 
@@ -2898,8 +3112,9 @@ itself to be garbage-collected.
 In regulatory regimes where data subjects have access rights to
 records concerning them (e.g., GDPR Article 15), the Mission
 record is in scope. Deployments MUST be able to enumerate and
-disclose Mission records for a given subject identifier on
-authorized request; the subject identifier is the join key.
+disclose Mission records for a given Mission Principal on
+authorized request; the principal's identity (the
+format-specific identifier per {{RFC9493}}) is the join key.
 
 Deployments MUST be able to delete or anonymize Mission records
 on lawful erasure request, subject to overriding retention
