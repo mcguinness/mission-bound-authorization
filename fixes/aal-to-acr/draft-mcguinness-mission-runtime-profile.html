@@ -1765,23 +1765,30 @@ Mission's <code>acr</code> constraint (either <code>acr_values</code> mismatch o
 authentication without expansion.<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-2.3">
-          <p id="section-10-2.3.1"><strong><code>stale_state</code></strong>: the PEP-supplied freshness is stale or
-inconsistent with the materialized policy view.<a href="#section-10-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-10-2.3.1"><strong><code>amr_insufficient</code></strong>: the actor's <code>amr</code> does not intersect the
+Mission's <code>amr</code> constraint <code>amr_values</code> set, or the authentication
+event's <code>auth_time</code> exceeds the constraint's <code>max_age</code>. <span class="bcp14">MAY</span> be
+satisfied by step-up authentication using one of the required
+methods without expansion.<a href="#section-10-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-2.4">
-          <p id="section-10-2.4.1"><strong><code>mission_inactive</code></strong>: the Mission state is not <code>active</code>.<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-10-2.4.1"><strong><code>stale_state</code></strong>: the PEP-supplied freshness is stale or
+inconsistent with the materialized policy view.<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-2.5">
-          <p id="section-10-2.5.1"><strong><code>parameter_violation</code></strong>: parameters violate a registered
-constraint.<a href="#section-10-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-10-2.5.1"><strong><code>mission_inactive</code></strong>: the Mission state is not <code>active</code>.<a href="#section-10-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-2.6">
-          <p id="section-10-2.6.1"><strong><code>resource_policy</code></strong>: Resource policy refuses the action
-independently of Mission authority.<a href="#section-10-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-10-2.6.1"><strong><code>parameter_violation</code></strong>: parameters violate a registered
+constraint.<a href="#section-10-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-2.7">
-          <p id="section-10-2.7.1"><strong><code>quota_exceeded</code></strong>: a runtime budget (e.g., <code>max_invocations</code>)
-has been exhausted.<a href="#section-10-2.7.1" class="pilcrow">¶</a></p>
+          <p id="section-10-2.7.1"><strong><code>resource_policy</code></strong>: Resource policy refuses the action
+independently of Mission authority.<a href="#section-10-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.8">
+          <p id="section-10-2.8.1"><strong><code>quota_exceeded</code></strong>: a runtime budget (e.g., <code>max_invocations</code>)
+has been exhausted.<a href="#section-10-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <div id="expansion-eligibility">

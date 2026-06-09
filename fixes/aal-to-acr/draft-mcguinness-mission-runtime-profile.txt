@@ -421,6 +421,12 @@ Table of Contents
       MAY be satisfied by RFC 9470 step-up authentication without
       expansion.
 
+   *  *amr_insufficient*: the actor's amr does not intersect the
+      Mission's amr constraint amr_values set, or the authentication
+      event's auth_time exceeds the constraint's max_age.  MAY be
+      satisfied by step-up authentication using one of the required
+      methods without expansion.
+
    *  *stale_state*: the PEP-supplied freshness is stale or inconsistent
       with the materialized policy view.
 
