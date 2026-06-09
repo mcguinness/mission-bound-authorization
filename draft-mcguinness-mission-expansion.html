@@ -1330,11 +1330,11 @@ defined by Delegated Authority Validation
 <span>[<a href="#I-D.draft-mcguinness-mission-delegated-authority-validation" class="cite xref">I-D.draft-mcguinness-mission-delegated-authority-validation</a>]</span>.<a href="#section-1-3" class="pilcrow">¶</a></p>
 <p id="section-1-4">Expansion is a governance operation. It is distinct from
 authentication step-up <span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span>. A request denied because an
-<code>aal</code> constraint requires fresh authentication is satisfied by
-step-up, not by expansion: the Authority Set does not change. A
-request denied because the requested authority is not in the
-Authority Set requires expansion: the Authority Set must be
-enlarged through a new approval event.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<code>acr</code> or <code>amr</code> constraint requires fresh authentication is
+satisfied by step-up, not by expansion: the Authority Set does
+not change. A request denied because the requested authority is
+not in the Authority Set requires expansion: the Authority Set
+must be enlarged through a new approval event.<a href="#section-1-4" class="pilcrow">¶</a></p>
 <div id="relationship-to-the-framework">
 <section id="section-1.1">
         <h3 id="name-relationship-to-the-framewo">
@@ -2205,13 +2205,14 @@ predecessor state.<a href="#section-5.5-3.3.1" class="pilcrow">¶</a></p>
 <a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-expansion-vs-step-up" class="section-name selfRef">Expansion vs step-up</a>
         </h3>
 <p id="section-5.6-1">Expansion is not authentication step-up. A request denied for
-insufficient <code>aal</code> is satisfied by fresh authentication
+insufficient <code>acr</code> or <code>amr</code> is satisfied by fresh authentication
 <span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span>, not by expansion. Conflating the two would route
 authentication problems through an approval event the approving
 principal did not need to perform, surfacing irrelevant consent and
 risking principal fatigue.<a href="#section-5.6-1" class="pilcrow">¶</a></p>
 <p id="section-5.6-2">Mitigation: substrate profiles <span class="bcp14">MUST</span> classify denials such that
-<code>aal</code>-related denials route to step-up and authority-shortfall
+authentication-related denials (<code>acr</code>, <code>amr</code>) route to step-up
+and authority-shortfall
 denials route to expansion. The <code>eligible</code> field signals expansion
 eligibility specifically; it is not a generic "additional input
 required" marker.<a href="#section-5.6-2" class="pilcrow">¶</a></p>

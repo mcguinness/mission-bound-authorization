@@ -2249,12 +2249,13 @@ consent channel differ.<a href="#section-5.2.2-3" class="pilcrow">¶</a></p>
           </h4>
 <p id="section-5.2.3-1">Under <code>approval_channel: "mas_native"</code> the MAS renders the consent
 disclosure object to the approving principal directly. The MAS owns
-the consent UX and the AAL recording.<a href="#section-5.2.3-1" class="pilcrow">¶</a></p>
+the consent UX and the <code>acr_at_approval</code> recording.<a href="#section-5.2.3-1" class="pilcrow">¶</a></p>
 <p id="section-5.2.3-2">Under <code>approval_channel: "out_of_band"</code> the deployment is
 responsible for ensuring the consent signal is bound to the
-Proposal and carries the AAL evidence required by deployment policy.
-A MAS <span class="bcp14">MUST</span> refuse out-of-band signals that do not carry recorded
-AAL evidence sufficient for the Mission class.<a href="#section-5.2.3-2" class="pilcrow">¶</a></p>
+Proposal and carries the <code>acr_at_approval</code> evidence required by
+deployment policy. A MAS <span class="bcp14">MUST</span> refuse out-of-band signals that do
+not carry recorded <code>acr_at_approval</code> evidence sufficient for the
+Mission class.<a href="#section-5.2.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="direct-projection-issuance">

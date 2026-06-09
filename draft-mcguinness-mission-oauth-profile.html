@@ -2006,8 +2006,8 @@ the Mission's <code>binding_evidence</code>.<a href="#section-5.1-2.1.2.2.1" cla
                 <p id="section-5.1-2.1.2.3.1">Derive <code>authority.constraints</code> by translating Validated
 Mission Intent <code>constraints</code> and <code>context</code> members to
 resource-applicable Common Constraints (the Mission-level
-<code>aal</code> and <code>max_derivations</code> are recorded at the Mission
-level, not duplicated per entry).<a href="#section-5.1-2.1.2.3.1" class="pilcrow">¶</a></p>
+<code>acr</code>, <code>amr</code>, and <code>max_derivations</code> are recorded at the
+Mission level, not duplicated per entry).<a href="#section-5.1-2.1.2.3.1" class="pilcrow">¶</a></p>
 </li>
             </ul>
 </li>
@@ -3527,13 +3527,15 @@ instance identity in Token Exchange <code>actor_token</code>.<a href="#section-1
 <a href="#section-17.3" class="section-number selfRef">17.3. </a><a href="#name-rfc-9470-step-up" class="section-name selfRef">RFC 9470 step-up</a>
         </h3>
 <p id="section-17.3-1">RFC 9470 <span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span> performs authentication step-up. It <span class="bcp14">MAY</span> satisfy
-an <code>aal</code> constraint (per the Mission Framework's Common Constraints
-registry) but it does NOT perform Mission Expansion. Expansion is a
-governance operation requiring approval; step-up is an authentication
-operation.<a href="#section-17.3-1" class="pilcrow">¶</a></p>
+the Mission's <code>acr</code> constraint (per the Mission Framework's Common
+Constraints registry) but it does NOT perform Mission Expansion.
+Expansion is a governance operation requiring approval; step-up is
+an authentication operation.<a href="#section-17.3-1" class="pilcrow">¶</a></p>
 <p id="section-17.3-2">This profile <span class="bcp14">MAY</span> compose with RFC 9470 step-up when a denied
-request would be permitted by satisfying an <code>aal</code> constraint via
-fresh authentication.<a href="#section-17.3-2" class="pilcrow">¶</a></p>
+request would be permitted by satisfying the Mission's <code>acr</code>
+constraint via fresh authentication. The step-up challenge carries
+the Mission's <code>acr_values</code> and <code>max_age</code> verbatim as the RFC 9470
+request parameters.<a href="#section-17.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="what-this-profile-does-not-cover">
