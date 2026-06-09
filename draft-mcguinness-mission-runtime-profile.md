@@ -312,9 +312,10 @@ When the PDP returns a denial, the denial is one of:
 
 - **`out_of_authority`**: the requested action is not within the
   Authority Set. MAY be `expandable_deny` if eligible.
-- **`aal_insufficient`**: the actor's AAL does not satisfy an `aal`
-  constraint. MAY be satisfied by RFC 9470 step-up authentication
-  without expansion.
+- **`acr_insufficient`**: the actor's `acr` does not satisfy the
+  Mission's `acr` constraint (either `acr_values` mismatch or
+  `max_age` exceeded). MAY be satisfied by RFC 9470 step-up
+  authentication without expansion.
 - **`stale_state`**: the PEP-supplied freshness is stale or
   inconsistent with the materialized policy view.
 - **`mission_inactive`**: the Mission state is not `active`.
