@@ -333,8 +333,6 @@ This document defines the Mission as a durable, integrity-anchored, lifecycle-go
 
   Invocation budgets are runtime constraints, not issuance constraints. **`max_invocations`** is deferred to the Runtime Enforcement Profile, where an authoritative atomic counter can observe execution attempts. Other constraint names sketched in the blog (`max_value`, `max_duration`, `geo`, `data_classification`) remain future work. The Framework ships the extension mechanism, not underspecified names.
 
-- **Capability-advertisement metadata**: `mission_authorization_domain_tiers_supported`, `mission_ladder_levels_supported`, `mission_profiles_supported`, `mission_optional_modules_supported`. Registry creation lives here; Capability Model (Draft 11) adds entries.
-
 - **Trust boundaries**: who is trusted for what (Shaper, state authority, credential issuer, PDP, evidence emitter). Profiles populate these roles for their substrate.
 
 - **Reference test vectors** as a first-class spec deliverable. For each canonicalization and hash output: input JSON → expected JCS canonical bytes (hex) → expected hash (base64url). Plus state-transition vectors and narrowing-rule vectors. An implementation that does not reproduce the test vectors is non-conformant.

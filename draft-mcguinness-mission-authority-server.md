@@ -1594,14 +1594,13 @@ event type URIs:
   `tenant`, `rotation_alias_expires_at`.
 
 Both event types follow the OpenID Shared Signals Framework SET
-shape and the Continuous Access Evaluation Profile subject and event
-conventions. The event-type URIs are stable identifiers under the
-`schemas.karlmcguinness.com/secevent` namespace, recorded in the IANA Mission
-Capability-Advertisement Metadata registry as event-type members.
+shape and the Continuous Access Evaluation Profile subject and
+event conventions. The event-type URIs are stable identifiers
+under the `schemas.karlmcguinness.com/secevent` namespace.
 Coordination with the OpenID Foundation Shared Signals and CAEP
 working groups is anticipated for these event-type registrations
-when this document is submitted; until then, the URIs are owned by
-the author and may be aliased to OpenID-registered URIs by a
+when this document is submitted; until then, the URIs are owned
+by the author and may be aliased to OpenID-registered URIs by a
 subsequent revision of this document.
 
 # Acknowledgments

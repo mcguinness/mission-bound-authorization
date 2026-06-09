@@ -512,19 +512,25 @@ Constraints registry created by
 - Authoritative counter: PEP per Section 11.
 - Narrowing: derived constraints MAY specify smaller values.
 
-## Mission Capability-Advertisement Metadata
+## Runtime metadata members
 
-This document registers the following metadata values in the
-Mission Capability-Advertisement Metadata registry:
+Deployments that implement this profile advertise runtime
+capabilities through substrate-specific AS or PS metadata
+documents. This document defines the following member names; each
+substrate profile (OAuth, AAuth, MAS) registers these in its own
+substrate metadata registry as needed.
 
-- `mission_optional_modules_supported` values: `tool_binding`,
-  `decision_receipt`, `purpose_registry`, `attestation`,
-  `policy_projection`. (The modules themselves are separate
-  specifications.)
 - `mission_freshness_mode_supported`: array of `fresh`, `cached`,
   `event_driven`.
-- `mission_enforcement_scope_manifest_uri`: URL of the deployment's
-  enforcement-scope manifest.
+- `mission_enforcement_scope_manifest_uri`: URL of the
+  deployment's enforcement-scope manifest.
+
+Optional Runtime modules (`tool_binding`, `decision_receipt`,
+`purpose_registry`, `attestation`, `policy_projection`) are
+defined in separate companion specifications; each module
+specification registers its own metadata member at its
+substrate's metadata registry. The Runtime Profile does not
+maintain a central registry of optional-module identifiers.
 
 # Acknowledgments
 {:numbered="false"}
