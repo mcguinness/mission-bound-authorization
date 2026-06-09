@@ -87,7 +87,7 @@ the abstract types, interfaces, and behaviors that profile
 specifications map onto specific substrates: Mission Proposal and
 Mission lifecycles, the Mission Intent JSON schema, typed Authority
 Set, integrity anchors with domain-separated hash inputs, a canonical
-and pairwise identifier model, common constraints framework, Mission
+Mission identifier model, common constraints framework, Mission
 Status interface, principal model, and evidence binding. The
 framework is substrate-neutral
 on semantics; profile specifications for OAuth, AAuth, and the Mission
@@ -176,9 +176,8 @@ profile.
 {{integrity-anchors}} defines semantic normalization, the
 authorization-domain-bound envelope, and the three integrity anchors.
 
-{{identifier-model}} defines the canonical Mission ID, the pairwise
-Mission reference framework, and the state-authority discovery
-metadata document.
+{{identifier-model}} defines the canonical Mission ID and the
+state-authority discovery metadata document.
 
 {{mission-status-interface}} defines the abstract Mission Status
 interface, its required properties, request and response shape, and
@@ -205,8 +204,7 @@ This document defines:
 - The Mission Intent JSON schema.
 - The typed Authority Set entry shape and type registry framework.
 - The principal model.
-- The canonical Mission identifier and the pairwise reference
-  framework.
+- The canonical Mission identifier.
 - The abstract Mission Status interface and its required properties
   (authentication, freshness, audience binding, integrity,
   anti-oracle, request-binding, caching).
@@ -328,18 +326,8 @@ domain-separated envelope, using SHA-256, base64url-encoded.
 **Mission Status**:
 : The authenticated state-authority view returning Mission state,
 integrity anchors, audience-filtered Authority Set projection, and
-freshness indicator. By-mission-reference operation, distinct from
-token introspection.
-
-**Pairwise Mission Reference**:
-: An audience-sector-specific opaque identifier for a Mission,
-resolvable to the canonical `mission.id` only at the state authority.
-
-**Pairwise sector**:
-: The boundary across which a single Pairwise Mission Reference is
-constant. Within a sector, the same Mission resolves to the same
-reference for every consumer. Across sectors, the same Mission
-resolves to distinct references.
+freshness indicator. By-mission-id operation, distinct from token
+introspection.
 
 **Approving principal**:
 : The principal who approved the Mission (may differ from the
@@ -1741,10 +1729,16 @@ above the protocol layer (see {{integrity-anchor-non-guarantees}}).
 
 # Identifier Model {#identifier-model}
 
-A Mission has a **canonical Mission ID** (`mission.id`) held by the
-state authority. Consumers MAY interact with a Mission through the
-canonical ID or through an audience-sector-specific
-**Pairwise Mission Reference** (`mission.ref`).
+A Mission is identified by a stable canonical `mission.id` minted
+by the state authority. The same `mission.id` is observable by
+every consumer that receives a credential derived from the
+Mission or queries Mission Status. This document does not define
+a pairwise or audience-scoped Mission identifier; deployments
+that need audience-level correlation resistance compose with OIDC
+pairwise `sub` claims (which already prevent cross-audience user
+correlation) and, if a Mission-level pairwise identifier is
+genuinely required, layer a profile extension on top of this
+baseline.
 
 ## Canonical Mission ID {#canonical-mission-id}
 
@@ -1768,11 +1762,7 @@ The `mission.id` MUST:
   `msn_`), it MUST NOT carry semantic content.
 - NOT be reused after Mission record garbage collection.
 
-The canonical `mission.id` MUST NOT be disclosed to a consumer
-unless that consumer's audience explicitly consumes canonical
-identifiers (see {{when-to-use-canonical-vs-pairwise}}).
-
-### `mission.origin`
+## `mission.origin`
 
 The `mission.origin` value is the state authority's issuer URL. It
 is the value a consumer uses to locate the state authority's
@@ -1780,137 +1770,6 @@ metadata document via the well-known URI
 `/.well-known/mission-authority` per {{RFC8615}}. The
 `mission.origin` value is the absolute URL of the state authority's
 issuer, with no query or fragment.
-
-## Pairwise Mission Reference {#pairwise-mission-reference}
-
-A Pairwise Mission Reference (`mission.ref`) is an opaque URL-safe
-string. ABNF:
-
-~~~
-mission-ref     = 1*256( unreserved-char )
-unreserved-char = ALPHA / DIGIT / "-" / "_"
-~~~
-
-The `mission.ref` MUST:
-
-- Contain at least 128 bits of entropy.
-- Be deterministically derivable, at the state authority, from
-  the pair (canonical `mission.id`, sector identifier) using a
-  state-authority-internal mechanism. State authorities MAY
-  implement this as keyed lookup, keyed hash, or pre-generated
-  table; the choice is not externally observable.
-- NOT contain audience label, tenant name, canonical-`mission.id`
-  derivative, or any other deployment-side correlatable input
-  visible to external parties.
-- Be stable for the Mission's lifetime within its sector, except
-  during rotation (see {{pairwise-reference-rotation}}).
-
-### Pairwise sectors {#pairwise-sectors}
-
-A **pairwise sector** is the boundary across which a single
-`mission.ref` is constant. Within a sector, the same Mission
-resolves to the same `mission.ref` for every consumer in that
-sector. Across sectors, the same Mission resolves to distinct
-`mission.ref` values.
-
-The Framework registers the following sector types:
-
-- `resource_server`: the sector boundary is the Resource Server
-  identifier (as defined by Protected Resource Metadata
-  {{?RFC9728}} or the deployment's RS identifier scheme). Each
-  Resource Server sees a distinct `mission.ref`.
-- `resource_as`: the sector boundary is the Resource Authorization
-  Server (a Resource AS in OAuth 2.1 multi-AS deployments). Each
-  Resource AS sees a distinct `mission.ref`.
-- `tenant`: the sector boundary is the consuming tenant. All
-  audiences belonging to the same consuming tenant share a single
-  `mission.ref`; audiences in different tenants see distinct
-  references.
-- `trust_domain`: the sector boundary is a SPIFFE-style or
-  deployment-declared trust-domain identifier.
-
-Deployments select the sector type that matches their threat model:
-narrower sectors (e.g., `resource_server`) provide stronger
-correlation resistance at the cost of state-authority bookkeeping
-overhead; wider sectors (e.g., `tenant`) ease bookkeeping at the
-cost of larger correlation surfaces.
-
-The state authority advertises its sector type in
-`mission_pairwise_sector` in its metadata document
-({{state-authority-metadata-document}}).
-
-### Assignment {#pairwise-reference-assignment}
-
-The state authority assigns a `mission.ref` for a (Mission, sector
-member) pair at the latest of:
-
-- Mission creation (eager assignment), or
-- First request by that sector member that references the Mission
-  (lazy assignment).
-
-Lazy assignment is RECOMMENDED for state-authority deployments
-where the number of potential sector members is large; eager
-assignment is RECOMMENDED for deployments where sector members are
-fixed at Mission creation.
-
-Once assigned, a `mission.ref` MUST NOT change for the sector
-member except via rotation
-({{pairwise-reference-rotation}}). Assignment MUST be idempotent:
-two queries from the same sector member for the same Mission MUST
-return the same `mission.ref`.
-
-### Rotation and alias period {#pairwise-reference-rotation}
-
-A state authority MAY rotate `mission.ref` values for a sector for
-operational reasons (e.g., compromise of the reference-generation
-seed). Rotation MUST proceed as follows:
-
-1. The state authority begins emitting the new `mission.ref` for
-   all new credential derivation events and Mission Status
-   responses for the affected sector.
-2. The state authority continues to accept the old `mission.ref`
-   as an alias for the same Mission for a deployment-declared
-   **alias period**. The alias period MUST be no shorter than the
-   maximum credential lifetime in the affected sector, and SHOULD
-   be at least 24 hours.
-3. After the alias period elapses, the state authority MUST
-   refuse the old `mission.ref` (responses MUST be
-   indistinguishable from the not-found response of
-   {{error-model}}).
-4. Retired `mission.ref` values MUST NOT be reassigned to any
-   Mission.
-
-State authorities SHOULD publish a notice of rotation through an
-out-of-band channel to allow affected consumers to refresh cached
-references before the alias period elapses.
-
-### Resolution and non-correlation {#pairwise-resolution-non-correlation}
-
-The state authority is the only party that can resolve a
-`mission.ref` to the canonical `mission.id`. Other parties MUST
-NOT be able to derive the canonical ID from a pairwise reference.
-
-A correctly-implemented `mission.ref` value provides no
-externally-observable correlation across sectors: two consumers in
-distinct sectors, presented with `mission.ref` values for the same
-Mission, MUST NOT be able to detect that the references identify
-the same Mission without state-authority cooperation.
-
-### When to use canonical vs pairwise {#when-to-use-canonical-vs-pairwise}
-
-The Mission identifier mode advertised by an audience determines
-which reference form the audience consumes:
-
-- An audience that consumes canonical identifiers (e.g., the state
-  authority itself, an audit consumer, an administrator dashboard)
-  receives `mission.id`.
-- An audience that consumes pairwise identifiers (e.g., a Resource
-  Server, a downstream Resource AS, a tenant-scoped service)
-  receives `mission.ref`.
-
-The mission-bound credential's substrate-specific carrier (e.g.,
-the `mission` JWT claim) carries exactly one of the two forms; the
-audience's advertised mode determines which.
 
 ## State authority metadata document {#state-authority-metadata-document}
 
@@ -1925,10 +1784,10 @@ declare `Content-Type: application/json`.
   public-key document {{RFC7517}}, used for signature verification
   of state-authority-signed responses.
 - `mission_status_endpoint` (string, required): URL of the
-  by-mission-reference Mission Status operation (see
+  by-mission-id Mission Status operation (see
   {{mission-status-interface}}).
 - `mission_lifecycle_endpoint` (string, required): URL of the
-  by-mission-reference lifecycle operation (see
+  by-mission-id lifecycle operation (see
   {{lifecycle-endpoint}}).
 - `mission_intent_schema_uri` (string, required): URL of the
   Mission Intent JSON Schema in force at this state authority. By
@@ -1939,12 +1798,6 @@ declare `Content-Type: application/json`.
   Authority Set entry types this state authority issues. Each
   entry MUST be a registered type in the Mission Authority Set
   Type registry.
-- `mission_pairwise_supported` (boolean, required): whether the
-  state authority emits pairwise references.
-- `mission_pairwise_sector` (string, conditional): the sector
-  type, required if `mission_pairwise_supported` is `true`. Value
-  is one of the registered sector types
-  ({{pairwise-sectors}}).
 - `mission_purposes_supported` (array of strings, optional): the
   set of `purpose` URIs the state authority accepts in Mission
   Intents under its purpose vocabulary. Absent if the state
@@ -1972,8 +1825,6 @@ declare `Content-Type: application/json`.
   "authority_set_types_supported": [
     "mission_resource_access"
   ],
-  "mission_pairwise_supported": true,
-  "mission_pairwise_sector": "resource_server",
   "mission_purposes_supported": [
     "urn:erp.example.com:purposes:quarterly-reconcile",
     "urn:erp.example.com:purposes:bulk-export"
@@ -1996,7 +1847,7 @@ adjacent specifications.
 
 ## Lifecycle endpoint {#lifecycle-endpoint}
 
-The Mission Lifecycle endpoint is the by-mission-reference operation
+The Mission Lifecycle endpoint is the by-mission-id operation
 through which authorized callers transition a Mission between
 lifecycle states (suspend, resume, revoke, complete). It is
 **distinct from token revocation** ({{RFC7009}} or substrate
@@ -2007,8 +1858,7 @@ endpoint operates on a Mission.
 
 The Mission Lifecycle operation takes:
 
-- A Mission reference (canonical `mission.id` or pairwise
-  `mission.ref`).
+- A canonical `mission.id`.
 - The requesting consumer's authentication.
 - A requested transition: one of `suspend`, `resume`, `revoke`,
   `complete`.
@@ -2124,15 +1974,13 @@ The `state_authority` value MUST equal the Mission's
 The Mission Status interface is the authenticated state-authority view
 returning Mission state and integrity-anchored evidence. It is
 **distinct from token introspection** (which is by-token); Mission
-Status is by-mission-reference.
+Status is by-mission-id.
 
 ## Abstract operation
 
 The Mission Status operation takes:
 
-- A **Mission reference**: either a canonical `mission.id` (for
-  audiences that consume canonical identifiers) or a pairwise
-  `mission.ref` (for audiences that consume pairwise references).
+- A canonical **`mission.id`** identifying the Mission to query.
 - The requesting consumer's **authentication**: substrate-specific
   (OAuth bearer token, mTLS client certificate, AAuth resource
   token, etc.).
@@ -2176,9 +2024,7 @@ A Mission Status Response is a JSON object with the following
 members:
 
 - `mission` (object, required): the Mission identity envelope.
-  Carries either `{ "id": "...", "origin": "..." }` for canonical
-  responses or `{ "ref": "...", "origin": "..." }` for pairwise
-  responses, never both.
+  Carries `{ "id": "...", "origin": "..." }`.
 - `state` (string, required): one of `active`, `suspended`,
   `revoked`, `completed`, `expired`.
 - `integrity_anchors` (object, required): the three integrity
@@ -2224,15 +2070,10 @@ Response object is the protocol-level data the wire form carries.
   "properties": {
     "mission": {
       "type": "object",
-      "required": ["origin"],
-      "oneOf": [
-        { "required": ["id"] },
-        { "required": ["ref"] }
-      ],
+      "required": ["id", "origin"],
       "additionalProperties": false,
       "properties": {
         "id":     { "type": "string" },
-        "ref":    { "type": "string" },
         "origin": { "type": "string", "format": "uri" }
       }
     },
@@ -2269,7 +2110,7 @@ Response object is the protocol-level data the wire form carries.
 }
 ~~~
 
-### Worked example response (pairwise)
+### Worked example response
 
 A Resource Server `https://erp.example.com` queries Mission Status
 for the example Mission from {{mission-record}}:
@@ -2277,7 +2118,7 @@ for the example Mission from {{mission-record}}:
 ~~~ json
 {
   "mission": {
-    "ref": "mref_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com"
   },
   "state": "active",
@@ -2314,9 +2155,6 @@ for the example Mission from {{mission-record}}:
   "nonce":         "nonce_K9pV4nT2sR7mB1xQ"
 }
 ~~~
-
-For a canonical-identifier consumer, `mission.id` replaces
-`mission.ref`. The remainder is identical in shape.
 
 ## Audience-filtered Authority Set projection {#authority-projection}
 
@@ -2717,8 +2555,8 @@ The required vector classes are:
    Unknown and unauthorized cases MUST be observationally
    equivalent.
 6. **`mission` claim vectors**: Mission record → expected claim
-   shape including canonical and pairwise variants. (Defined in
-   the OAuth Profile; vector class declared here.)
+   shape. (Defined in the OAuth Profile; vector class declared
+   here.)
 
 # Security Considerations
 
@@ -2776,13 +2614,23 @@ Constraint values where precision matters MUST use string
 representation (e.g., `"max_derivations": "100"`), not number
 representation.
 
-## Pairwise identifier privacy and correlation
+## Mission identifier correlation
 
-The pairwise reference framework prevents direct correlation of
-Mission identifiers across audiences in the same sector. It does
-not prevent indirect correlation through audience-side state
-(e.g., user identifiers, timing, request patterns). Deployments
-SHOULD assess the correlation surface of their chosen sector.
+This document does not define a pairwise Mission identifier. The
+canonical `mission.id` is observable by every audience that
+receives a credential derived from the Mission. Two audiences
+that share a Mission necessarily share the identifier; this is
+inherent to the Mission's role as a governance handle binding
+related authority.
+
+Cross-audience user correlation (the OAuth/OIDC threat that
+pairwise identifiers traditionally address) is independent and
+addressed by OIDC pairwise `sub` claims. Deployments where
+cross-audience user correlation matters MUST use pairwise `sub`.
+Deployments that additionally need to hide Mission identity
+across audiences within a single user's task (an unusual
+requirement) define a pairwise Mission identifier through a
+profile extension to this Framework.
 
 ## Hash equality leakage and cross-tenant transplantation
 
@@ -2920,25 +2768,6 @@ of the same nonce within a short window. Nonces are anti-replay
 binding, not authentication tokens; consumers MUST NOT rely on
 nonce secrecy.
 
-## Side channels via pairwise references
-
-Even with the non-correlation property of
-{{pairwise-resolution-non-correlation}}, side channels can leak
-that two `mission.ref` values identify the same Mission. Examples
-include:
-
-- Timing correlation when the state authority's Mission Status
-  endpoint serves two queries from collaborating audiences for
-  the same Mission.
-- Mission Status response staleness alignment in
-  eventually-consistent state authorities.
-- Pairwise sector boundaries crossed during rotation
-  ({{pairwise-reference-rotation}}) before all sector members
-  have refreshed their cached references.
-
-Deployments SHOULD assess the side-channel surface specific to
-their sector type and threat model.
-
 ## Log injection via consent disclosure content
 
 The consent disclosure object contains user-facing strings
@@ -2974,33 +2803,28 @@ to the Mission Framework. {{security-considerations}} addresses
 security threats; this section addresses privacy threats that
 are not subsumed by security.
 
-## Pairwise references and correlation
+## Cross-audience correlation
 
-The pairwise reference framework ({{pairwise-mission-reference}})
-is designed to prevent direct cross-sector correlation of
-Mission identifiers. It is not a complete defense against
-correlation; in particular, audiences may correlate Missions
-indirectly through:
+This Framework relies on OIDC pairwise `sub` (or the substrate
+equivalent in AAuth) to prevent cross-audience user correlation.
+The canonical `mission.id` is shared across every audience the
+Mission touches, so audiences that participate in the same
+Mission can observe that they share a Mission. This is inherent
+to the Mission's role as a governance handle and is consented to
+at approval time when the user approves a Mission spanning those
+audiences.
 
-- **Shared subject identifiers**: when audiences in distinct
-  sectors observe credentials for the same subject (`sub` claim
-  in OAuth, `subject` in AAuth), they can correlate Mission
-  references through the subject.
-- **Shared client identifiers**: when audiences observe
-  credentials with the same `requesting_client`, they can
-  correlate.
-- **Timing and request-pattern fingerprinting**: when audiences
-  observe correlated request patterns, they can probabilistically
-  associate Mission references.
-- **Side channels through the state authority**: as described in
-  {{side-channels-via-pairwise-references}}.
+Audiences that should not be able to correlate user activity at
+all (across distinct Missions) MUST be served pairwise `sub`
+values; this is the canonical OIDC mechanism and is independent
+of Mission identity.
 
-Deployments SHOULD assess which correlation channels are relevant
-to their threat model and select pairwise sector type
-({{pairwise-sectors}}) accordingly. The narrowest sector type
-(`resource_server`) provides the strongest pairwise unlinkability
-within the framework; wider sectors are correlation-permissive by
-design.
+Deployments with stronger Mission-identity-isolation requirements
+(e.g., a multi-tenant SaaS state authority where two competing
+tenants' Missions must not share identifier structure even when
+the same user has Missions in both) define a pairwise Mission
+identifier through a profile extension to this Framework. Such
+extensions are out of scope for this document.
 
 ## Consent disclosure content and PII
 
@@ -3218,14 +3042,6 @@ states (`pending_approval`, `rejected`, `withdrawn`,
 externally extensible by this revision; if extensibility is
 later required, dedicated IANA registries SHOULD be created via
 a subsequent revision of this Framework.
-
-## Mission Pairwise Sector Type Enumeration
-
-This document defines a closed enumeration for the
-`mission_pairwise_sector` metadata value:
-`resource_server`, `resource_as`, `tenant`, `trust_domain`. If
-extensibility is later required, a dedicated IANA registry
-SHOULD be created via a subsequent revision.
 
 ## Mission Status Response Media Types
 

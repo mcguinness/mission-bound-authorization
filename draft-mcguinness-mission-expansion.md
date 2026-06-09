@@ -151,9 +151,8 @@ Terms defined in the Framework {{I-D.draft-mcguinness-mission-framework}}
 are inherited here without restatement. In particular, this document
 uses Framework terms Mission, Mission Proposal, Mission Intent
 (Submitted and Validated forms), Authority Set, Authority Set entry,
-approval event, integrity anchor, state authority, canonical Mission
-ID (`mission.id`), Pairwise Mission Reference (`mission.ref`), and
-`mission.origin` as defined there.
+approval event, integrity anchor, state authority, canonical
+`mission.id`, and `mission.origin` as defined there.
 
 The following additional terms apply.
 
@@ -358,10 +357,9 @@ The expansion workflow produces exactly one of four outcomes.
 
 **Synchronous approved**:
 : The approval event completes within the response window of the
-expansion request. The state authority returns the resulting Mission
-reference (canonical or pairwise per the substrate's pairwise
-support), the `expansion_mode`, and, in replacement mode, the
-predecessor's transition to `completed`. The orchestrator MAY
+expansion request. The state authority returns the resulting
+canonical `mission.id`, the `expansion_mode`, and, in
+replacement mode, the predecessor's transition to `completed`. The orchestrator MAY
 re-derive credentials from the resulting Mission.
 
 **Asynchronous approved**:
@@ -723,9 +721,7 @@ surfaced (e.g., JWT claim names, AAuth fields).
 - **Name**: `mission.predecessor`.
 - **Type**: string. URL-safe ASCII matching the Framework's
   `mission.id` format. The predecessor is identified by canonical
-  `mission.id` only; pairwise references MUST NOT be used in this
-  attribute, because the predecessor reference is recorded at the
-  state authority that holds both records.
+  `mission.id`.
 - **Defining specification**: This document.
 - **Cardinality**: at most one per Mission record. A Mission record
   has at most one direct predecessor; chains are expressed by

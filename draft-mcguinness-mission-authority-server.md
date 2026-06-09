@@ -62,9 +62,8 @@ governance state from one shared governance object. This document
 defines the MAS role and topology, the MAS metadata document, the
 Mission submission and lifecycle endpoints, the MAS-side Mission
 Status binding for the abstract interface defined in the Mission
-Framework, a substrate-neutral Authority Set serialization, an
-audience-pairwise Mission identifier protocol that supports both
-pairwise and canonical identifier modes per consumer, and the
+Framework, a substrate-neutral Authority Set serialization, the
+use of the canonical `mission.id` across all consumers, and the
 cross-substrate revocation propagation contract using OpenID Shared
 Signals events with a polling fallback. Cross-MAS federation and
 MAS-to-MAS Mission migration are out of scope for this revision.
@@ -102,9 +101,6 @@ This document defines:
   interface, using JWS-signed responses.
 - A substrate-neutral Authority Set serialization with per-substrate
   projection at consumer time.
-- An audience-pairwise Mission identifier protocol. A MAS MUST be
-  able to support pairwise and canonical identifier modes
-  simultaneously, declared per consumer.
 - Cross-substrate revocation propagation through OpenID Shared
   Signals Framework (SSF) and Continuous Access Evaluation Profile
   (CAEP) events, with a polling fallback for consumers that do not
@@ -136,10 +132,10 @@ revision:
 
 The following IS in scope:
 
-- A MAS supporting both pairwise and canonical Mission identifier
-  modes simultaneously, declared per consumer in MAS-side consumer
-  registration. Two consumers of the same MAS MAY operate in
-  different modes against the same Mission.
+- A MAS using the canonical `mission.id` in all responses to all
+  registered consumers. Mission-identity isolation across consumers
+  is out of scope for this revision and is addressed (if needed)
+  by a profile extension to the Framework.
 
 # Conventions and Definitions
 
@@ -172,17 +168,9 @@ Mission reference appropriate to AAuth.
 
 **Consumer registration**:
 : A MAS-side record binding a registered consumer identity to its
-authentication keys, audience identifier, declared identifier mode
-(pairwise or canonical), and authorized operations. The MAS uses the
-consumer registration to authenticate consumer requests and to
-project Mission state appropriately.
-
-**Pairwise sector (MAS)**:
-: As defined by the Framework, a pairwise sector is the audience
-boundary across which Pairwise Mission References are stable. In a
-MAS deployment the sector is typically "consumer", that is, each
-registered consumer is its own sector. A MAS MAY advertise an
-alternative sector grouping consistent with the Framework.
+authentication keys, audience identifier, and authorized
+operations. The MAS uses the consumer registration to authenticate
+consumer requests and to project Mission state appropriately.
 
 **Consumer-mediated submission (Flow A)**:
 : The default Mission submission flow. The client interacts with a
@@ -207,8 +195,7 @@ MAS:
   anchors, and principal-model evidence.
 - Performs the approval event atomically, transitioning a Mission
   Proposal to a Mission.
-- Owns the canonical `mission.id` and the canonical-to-pairwise
-  resolution map for any consumer operating in pairwise mode.
+- Owns the canonical `mission.id`.
 - Publishes integrity-protected Mission Status responses.
 - Performs the lifecycle operations (revoke, suspend, resume,
   complete) and propagates state changes to consumers.
@@ -249,8 +236,6 @@ Trust between a MAS and a consumer is established out of band through
 - The consumer's authentication keys (JWKS URL or static JWK Set).
 - The consumer's audience identifier (the value the MAS uses for the
   `aud` claim on signed responses to that consumer).
-- The consumer's declared identifier mode (`pairwise` or `canonical`)
-  for Mission references emitted to that consumer.
 - The consumer's authorized operations (submission, status,
   lifecycle, event subscription).
 - The consumer's substrate identifier (`oauth_as`, `aauth_ps`, or
@@ -320,11 +305,6 @@ Framework metadata document
 - `mission_intent_schema_uri` (URL): JSON Schema for Mission Intent.
 - `authority_set_types_supported` (array): the Authority Set entry
   types this MAS issues.
-- `mission_pairwise_supported` (boolean): MUST be `true` for a MAS
-  that supports any pairwise consumer; otherwise `false`.
-- `mission_pairwise_sector` (string, conditional): typically
-  `"consumer"`, indicating each registered consumer is its own
-  sector. Other registered sector values are permitted.
 - `mission_framework_versions_supported` (array).
 
 ## MAS-specific metadata fields
@@ -336,10 +316,6 @@ A MAS metadata document MUST additionally carry:
 - `mission_supported_consumer_substrates` (array of strings,
   required): registered substrate consumer names the MAS supports,
   for example `["oauth_as", "aauth_ps"]`.
-- `mission_identifier_modes_supported` (array of strings, required):
-  the identifier modes the MAS can serve. A MAS implementing this
-  specification MUST advertise `["canonical", "pairwise"]`, in
-  conformance with Section 8.
 - `mission_event_delivery_modes_supported` (array of strings,
   required): subset of `["ssf_push", "ssf_poll", "status_poll"]`
   identifying the cross-substrate event delivery modes the MAS
@@ -488,9 +464,8 @@ endpoint (Section 7).
 
 The MAS performs the atomic approval event per Framework
 {{I-D.draft-mcguinness-mission-framework}} Section 5.2 and creates
-the Mission record. The MAS returns the Mission record reference to
-the consumer in the identifier mode declared in that consumer's
-registration (canonical `mission.id` or pairwise `mission.ref`).
+the Mission record. The MAS returns the canonical `mission.id` to
+the consumer.
 
 If the MAS refuses the Proposal at any step, declines the approval,
 or fails the atomic commit, the MAS returns a structured error
@@ -623,9 +598,7 @@ Each lifecycle request is an HTTPS POST with content type
 
 - `action` (string, required): one of `revoke`, `suspend`,
   `resume`, `complete`.
-- `mission` (string, required): the Mission reference. The form
-  (canonical or pairwise) follows the caller's registered mode at
-  the MAS.
+- `mission` (string, required): the canonical `mission.id`.
 - `reason` (string, optional): a human-readable reason recorded in
   audit.
 - `request_id` (string, required): a caller-generated unique
@@ -750,7 +723,7 @@ The `mas_mission_status` body:
 ~~~ json
 {
   "state": "active",
-  "mission_id_or_ref": { "ref": "opq_mW8Jx_pairwise_value" },
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "origin": "https://mas.example.com",
   "tenant": "tenant_01J9...",
   "proposal_hash":           "sha-256:...",
@@ -772,10 +745,8 @@ The `mas_mission_status` body:
 }
 ~~~
 
-The `mission_id_or_ref` carries `id` when the caller is registered
-in canonical mode and `ref` when the caller is registered in
-pairwise mode. The MAS MUST NOT emit both `id` and `ref` in the same
-response.
+The `mission_id` member carries the canonical `mission.id` as
+defined by the Framework.
 
 The `authority_set_projection.neutral` array contains the
 substrate-neutral Authority Set serialization defined in Section 8.
@@ -899,108 +870,24 @@ projection AND MUST include a `dropped_types` array in the
 `dropped_types` MUST refuse to derive credentials covering authority
 the consumer cannot project faithfully.
 
-# Audience-Pairwise Mission Identifier Protocol
+# Mission Identifier
 
-The Framework
-{{I-D.draft-mcguinness-mission-framework}} defines a canonical
-Mission identifier (`mission.id`) and an audience-pairwise Mission
-reference (`mission.ref`). A MAS conforming to this document MUST
-support both modes simultaneously, declared per consumer.
+The MAS uses the canonical `mission.id` defined by the Framework
+({{I-D.draft-mcguinness-mission-framework}}) in all responses to
+all consumers: signed Mission Status responses, lifecycle
+responses, and event payloads. Consumers carry the canonical
+`mission.id` on their substrate-local credentials.
 
-## Per-consumer mode declaration
-
-Each consumer registration at the MAS declares one of:
-
-- `canonical`: the MAS emits canonical `mission.id` in all
-  responses to this consumer (signed Mission Status responses,
-  lifecycle responses, and event payloads). The consumer carries
-  the canonical ID on its substrate-local credentials.
-- `pairwise`: the MAS emits Pairwise Mission References
-  (`mission.ref`) in all responses to this consumer. The consumer
-  carries the pairwise reference on its substrate-local
-  credentials.
-
-The MAS MUST refuse to emit canonical identifiers to a consumer
-registered as `pairwise`, and vice versa.
-
-Two consumers operating under the same MAS for the same Mission
-MAY have different modes. A canonical-mode OAuth AS and a pairwise-
-mode AAuth PS, both registered at the same MAS for the same Mission,
-each receive Mission references in their declared mode.
-
-## Pairwise sector
-
-The MAS pairwise sector is typically `"consumer"`: each registered
-consumer is its own sector, so a pairwise reference is stable for
-that consumer alone and is not correlatable with the same Mission
-as projected to another consumer. The MAS advertises its sector
-choice in `mission_pairwise_sector`.
-
-A MAS MAY advertise an alternative sector (for example, `"tenant"`
-to make pairwise references stable across all consumers within a
-tenant). Implementations SHOULD prefer the `"consumer"` sector
-unless deployment policy requires a coarser sector.
-
-## Pairwise reference generation
-
-A MAS MUST generate Pairwise Mission References meeting the
-Framework's properties:
-
-- At least 128 bits of entropy.
-- URL-safe.
-- Containing no audience label, tenant name, canonical-ID
-  derivative, or other correlatable input.
-
-The MAS holds the canonical-to-pairwise map. No other party can
-derive a canonical ID from a pairwise reference or correlate
-pairwise references across sectors.
-
-## Resolution
-
-A pairwise reference is resolved only at the MAS, and only for the
-consumer for whose sector it was minted. A MAS MUST refuse a
-Mission Status request that carries a pairwise reference under a
-caller registration whose sector does not own that reference. The
-refusal MUST be `not_found` to preserve the anti-oracle property
-(an attacker presenting a pairwise reference belonging to another
-sector MUST NOT learn that the reference is valid in any sector).
-
-## Cross-consumer non-correlation
-
-Two pairwise references emitted to two different consumers for the
-same Mission MUST NOT be linkable by either consumer or by an
-intermediary network observer. Two consumers comparing pairwise
-references see no equality; only the MAS can join them.
-
-A consumer MUST NOT emit a pairwise reference outside its own
-substrate-local boundary in a form that could leak to another
-consumer (for example, in HTTP-visible URL paths shared by both
-consumers' Resource Servers). Sender constraint at the substrate
-profile mitigates exfiltration risk.
-
-## Rotation
-
-A MAS MAY rotate a pairwise reference for operational reasons
-(suspected exposure, key migration). On rotation:
-
-- The new pairwise reference is minted for the same Mission and the
-  same sector.
-- The MAS MUST advertise an alias period sufficient for outstanding
-  credentials to drain, during which both the old and new
-  references resolve.
-- After the alias period the old reference MUST cease to resolve.
-- Retired references MUST NOT be reassigned.
-- The MAS MUST emit a `mission.reference-rotated` SSF event
-  (Section 9) to the affected consumer.
-
-## Identifier mode changes
-
-A consumer's mode (`pairwise` or `canonical`) is part of consumer
-registration. Changing a consumer's mode mid-relationship is a
-re-registration operation. The new mode applies only to Missions
-created after the registration change. The MAS MUST NOT
-retroactively change the identifier mode for credentials already
-issued by the consumer.
+This document does not define an audience-pairwise Mission
+identifier protocol; consumers operating under the same MAS for
+the same Mission see the same `mission.id`. Cross-consumer user
+correlation is addressed by OIDC pairwise `sub` (or the AAuth
+equivalent) at the substrate profile level, not by Mission
+identity. Deployments with stronger Mission-identity isolation
+requirements (e.g., a MAS serving competing tenants whose
+Mission identifiers must not link across consumers) define a
+pairwise Mission identifier through a profile extension to the
+Framework; such extensions are out of scope for this document.
 
 # Cross-Substrate Revocation Propagation
 
@@ -1035,18 +922,16 @@ fall back to a less-timely mode.
 ## Lifecycle events
 
 The MAS emits the following CAEP-aligned event types within SSF SETs.
-Event type URIs registered by this document:
+Event type URI registered by this document:
 
 - `https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change`
-- `https://schemas.karlmcguinness.com/secevent/mission/reference-rotated`
 
 ### `mission.lifecycle-change` event
 
 Emitted when the MAS commits any Mission lifecycle transition or
 the approval event. Required event claims:
 
-- `mission`: the Mission reference, in the recipient consumer's
-  declared identifier mode.
+- `mission`: the canonical `mission.id`.
 - `mission_origin`: the MAS issuer URL.
 - `tenant`: the Mission's tenant.
 - `prior_state`: the state immediately before the transition;
@@ -1056,21 +941,6 @@ the approval event. Required event claims:
 - `version`: the new Mission record version.
 - `committed_at`: RFC 3339 timestamp of the commit.
 - `reason`: optional human-readable reason.
-
-### `mission.reference-rotated` event
-
-Emitted when the MAS rotates a Pairwise Mission Reference for a
-consumer (Section 8.6). Required event claims:
-
-- `mission_old_ref`: the prior pairwise reference.
-- `mission_new_ref`: the new pairwise reference.
-- `mission_origin`: the MAS issuer URL.
-- `tenant`.
-- `rotation_alias_expires_at`: RFC 3339 timestamp at which the old
-  reference ceases to resolve.
-
-This event is emitted only to consumers operating in `pairwise`
-mode.
 
 ## SET protection
 
@@ -1125,8 +995,8 @@ this section.
 The OAuth AS is registered at the MAS as a consumer with
 `substrate=oauth_as`. The registration declares the AS's audience
 identifier, the AS's JWKS URL (for AS-to-MAS request authentication
-and SET verification keys), the tenant or tenants the AS may
-operate on, and the identifier mode (`canonical` or `pairwise`).
+and SET verification keys), and the tenant or tenants the AS may
+operate on.
 
 ## AS metadata extensions
 
@@ -1137,8 +1007,6 @@ additional members in its AS metadata document {{RFC8414}}:
 - `mission_state_authority_mode` (string): `mas_consumer`,
   identifying that the AS holds Mission state through a MAS rather
   than locally.
-- `mission_state_authority_identifier_mode` (string): `canonical`
-  or `pairwise`, matching the AS's registration at the MAS.
 
 An OAuth AS MUST NOT carry both
 `mission_state_authority_mode: mas_consumer` and a self-hosted
@@ -1161,12 +1029,11 @@ When a client submits `mission_intent` to the AS through PAR
    normal.
 6. On consent signal, sends the approval request to the MAS, then
    creates the Mission Proposal's promotion as recorded by the MAS.
-7. Receives the MAS-minted Mission reference (canonical or pairwise
-   per AS registration) and uses that reference on subsequent
-   credential issuance.
+7. Receives the MAS-minted canonical `mission.id` and uses it on
+   subsequent credential issuance.
 
 The AS MUST NOT mint a Mission identifier locally. The AS uses the
-MAS-minted identifier on the `mission.id` or `mission.ref` of the
+MAS-minted canonical `mission.id` on the `mission.id` of the
 `mission` claim per
 {{I-D.draft-mcguinness-mission-oauth-profile}} Section 9, with
 `mission.origin` set to the MAS issuer URL.
@@ -1234,17 +1101,7 @@ behavior in this section.
 The AAuth PS is registered at the MAS as a consumer with
 `substrate=aauth_ps`. The registration declares the PS's audience
 identifier, the PS's authentication keys, the tenant or tenants
-the PS may operate on, and the identifier mode.
-
-A MAS deployment serving AAuth consumers MAY observe that the AAuth
-substrate profile, per Resolved Decision 17 of the spec breakdown,
-ships canonical-only identifiers initially. AAuth consumers
-operating in pairwise mode are nevertheless valid at the MAS
-boundary; the consumer's substrate profile is responsible for
-preserving the pairwise property end to end. A MAS deployment SHOULD
-default AAuth consumers to `canonical` unless the AAuth Profile
-revision the consumer implements supports pairwise references
-end-to-end.
+the PS may operate on.
 
 ## PS metadata extensions
 
@@ -1253,7 +1110,6 @@ identifiers in its AAuth metadata:
 
 - `mission_state_authority` (URL): the MAS issuer URL.
 - `mission_state_authority_mode` (string): `mas_consumer`.
-- `mission_state_authority_identifier_mode` (string).
 
 ## AAuth lifecycle mapping
 
@@ -1333,8 +1189,6 @@ The MAS is a concentrated state authority. A compromised MAS can:
 - Emit fraudulent `mission.lifecycle-change` events to cause
   consumers to refuse legitimate credential derivations
   (denial of service) or to omit revocations.
-- Reveal pairwise-to-canonical mappings to colluding consumers,
-  collapsing the privacy property.
 
 Because a MAS aggregates governance across substrates, the blast
 radius of a MAS compromise is larger than that of a substrate-local
@@ -1373,26 +1227,23 @@ Deployments MUST:
 Dynamic consumer registration {{RFC7591}}, where offered, MUST be
 gated by deployment policy.
 
-## Pairwise identifier exposure across consumers
+## Mission identifier exposure across consumers
 
-The pairwise identifier property is defeated if the MAS or any
-consumer leaks the canonical-to-pairwise map. Specifically:
+The canonical `mission.id` is emitted to every registered
+consumer that holds a credential or queries Mission Status. Two
+consumers participating in the same Mission can observe that they
+share a Mission. This is inherent to the Mission's role as a
+governance handle across substrates and is consented to at
+approval time. Deployments that require Mission-identity
+isolation across consumers (an unusual case typically arising
+when a MAS serves competing tenants whose Mission identifiers
+must not link) compose with a profile extension to the Framework;
+such extensions are out of scope.
 
-- The MAS MUST NOT emit canonical Mission identifiers to a
-  pairwise-mode consumer.
-- A consumer in pairwise mode MUST NOT expose pairwise references
-  in URL paths, logs, or analytics shared with other consumers.
-- A consumer's Resource Servers MUST treat pairwise references as
-  confidential to the consumer's substrate-local boundary.
-
-A subtler attack: an attacker who controls two consumers operating
-on the same MAS-held Mission may compare the pairwise references
-the MAS emits to each. Under the recommended `"consumer"` pairwise
-sector, the two references differ and are not correlatable. Under a
-coarser sector (for example, `"tenant"`), references emitted to
-different consumers within the same tenant ARE correlatable; this
-is the deliberate trade-off of the coarser sector. Deployments
-selecting a coarser sector MUST document the correlation surface.
+User-level cross-consumer correlation (a Resource Server linking
+user activity across Missions) is addressed by pairwise `sub` (or
+the AAuth equivalent) at the substrate level, not by Mission
+identity.
 
 ## Cross-substrate token-leak surface
 
@@ -1554,54 +1405,25 @@ substrate-neutral Authority Set serialization (Section 8.1).
   Set.
 - Change controller: IETF.
 
-## Mission Pairwise Identifier Protocols Registry
-
-This document creates a new IANA registry, **Mission Pairwise
-Identifier Protocols**, that names concrete protocols realizing the
-Framework's abstract pairwise reference framework
-({{I-D.draft-mcguinness-mission-framework}} Section 7.2). The
-Framework defines the abstract properties; this registry names the
-concrete protocols that implement them.
-
-- **Registration Policy**: Specification Required.
-- **Required fields per entry**: protocol name, specification
-  reference, sector vocabulary (the sector type values the protocol
-  supports), reference entropy floor (in bits), reference rotation
-  semantics, resolution authority statement, change controller.
-
-Initial entry registered by this document:
-
-- Protocol name: `mas_audience_pairwise_v1`.
-- Specification reference: this document, Section 8.
-- Sector vocabulary: `consumer` (recommended default), `tenant`.
-- Reference entropy floor: 128 bits.
-- Reference rotation: as defined in Section 8.6 of this document.
-- Resolution authority: the MAS, exclusively.
-- Change controller: IETF.
-
 ## MAS Lifecycle Event Shapes for SSF/CAEP Propagation
 
 This document registers the following Security Event Token (SET)
-event type URIs:
+event type URI:
 
 - `https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change`:
   event type for any Mission lifecycle transition or approval-event
   emission from a MAS. Required claims: `mission`, `mission_origin`,
   `tenant`, `prior_state`, `state`, `version`, `committed_at`.
   Optional claim: `reason`.
-- `https://schemas.karlmcguinness.com/secevent/mission/reference-rotated`:
-  event type for Pairwise Mission Reference rotation. Required
-  claims: `mission_old_ref`, `mission_new_ref`, `mission_origin`,
-  `tenant`, `rotation_alias_expires_at`.
 
-Both event types follow the OpenID Shared Signals Framework SET
+This event type follows the OpenID Shared Signals Framework SET
 shape and the Continuous Access Evaluation Profile subject and
-event conventions. The event-type URIs are stable identifiers
+event conventions. The event-type URI is a stable identifier
 under the `schemas.karlmcguinness.com/secevent` namespace.
 Coordination with the OpenID Foundation Shared Signals and CAEP
-working groups is anticipated for these event-type registrations
-when this document is submitted; until then, the URIs are owned
-by the author and may be aliased to OpenID-registered URIs by a
+working groups is anticipated for this event-type registration
+when this document is submitted; until then, the URI is owned
+by the author and may be aliased to an OpenID-registered URI by a
 subsequent revision of this document.
 
 # Acknowledgments
