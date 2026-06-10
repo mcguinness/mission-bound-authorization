@@ -33,7 +33,7 @@ normative:
   I-D.draft-mcguinness-authzen-access-request:
 
 informative:
-  RFC9396:
+  RFC4086:
   RFC9470:
   I-D.draft-mcguinness-mission-oauth-profile:
   I-D.draft-mcguinness-mission-aauth-profile:
@@ -245,10 +245,10 @@ requirements.
 when `eligible` is `true`):
 : The minimum authority the issuer determined is needed to satisfy
 the denied request. Each entry conforms to the Framework's Authority
-Set entry shape, including `type`, `specification_uri` or
-`schema_digest`, `schema_version`, `authority`, and
-`narrowing_profile`. The state authority's approval event MAY further
-narrow or refuse entries.
+Set entry shape (`urn:mbo:schema:authority-set-entry:1`), including
+`type`, `specification_uri` or `schema_digest`, `schema_version`,
+`authority`, and `narrowing_profile`. The state authority's approval
+event MAY further narrow or refuse entries.
 
 The denial response MAY include additional substrate-specific fields
 (e.g., human-readable explanation, hints about the predecessor
@@ -548,8 +548,8 @@ Ticket requirements:
   parse.
 - **Unpredictability**: A Ticket MUST be cryptographically
   unpredictable. Implementations MUST use a cryptographically
-  secure random source. A Ticket MUST carry at least 128 bits of
-  entropy.
+  secure random source meeting the requirements of {{RFC4086}}. A
+  Ticket MUST carry at least 128 bits of entropy.
 - **Single use**: A Ticket MUST NOT be reused. The state authority
   MUST invalidate the Ticket on first successful presentation,
   whether the resulting adjudication approves or denies the
@@ -706,14 +706,61 @@ trace successor and child Missions back through the chain. An
 implementation that omits these attributes breaks audit linkage and
 defeats one of the core governance properties of expansion.
 
+# Privacy Considerations {#privacy-considerations}
+
+The privacy surface introduced by expansion is concentrated in the
+lineage attributes and in the authority and consent detail disclosed
+when a Mission is expanded. The considerations below are the
+expansion-specific additions to the Framework's privacy treatment.
+
+## Predecessor-chain correlation
+
+The same `mission.predecessor` and `mission.expansion_mode`
+attributes that provide governance audit linkage ({{audit-linkage}})
+are also a correlation surface: they link a successor or child
+Mission to its predecessor across distinct approval events. A party
+authorized to read the lineage -- or to read Mission Status
+projections that expose it -- can correlate the evolving task over
+time and across the Missions in a chain, which is more than any
+single Mission discloses on its own. This linkage is intrinsic to
+the governance value of expansion and is not a defect, but
+deployments SHOULD scope read access to lineage attributes and to
+Mission Status lineage projections to the parties with a governance
+need, rather than exposing the chain to every credential audience.
+
+## Requested-authority and consent disclosure
+
+The `requested_authority` carried in an eligibility-bearing denial,
+and the consent disclosure rendered at the expansion approval event,
+reveal how the approved task is evolving. A denial that surfaces
+`requested_authority` to a party broader than the orchestrator
+discloses intent that party may not need. Substrate profiles binding
+the eligibility contract SHOULD surface `requested_authority` only to
+the orchestrator entitled to act on it, and the state authority
+SHOULD render consent disclosure only to the approving principal and
+authorized governance consumers.
+
+## Ticket non-correlation
+
+The Mission Expansion Ticket is opaque, single-use, and carries no
+parseable identity or authority ({{ticket}}); it is not a
+correlation handle. A holder cannot derive the predecessor identity,
+the subject, or the requested authority from the Ticket, and a used
+or expired Ticket links nothing. The correlation surface of
+expansion is the lineage attributes, not the Ticket.
+
 # IANA Considerations
 
-This document creates the following registrations and registry
-entries. Each entry is registered as a Mission record attribute
-conceptually owned by this specification; substrate profiles
+This document creates one new registry (the Mission Expansion
+Reconciliation Status registry, {{reconciliation-status-codes}})
+and defines two Mission record attributes. Consistent with the
+Framework, which does not IANA-register the fields of the Mission
+record, the `mission.predecessor` and `mission.expansion_mode`
+attributes are defined by this specification rather than registered
+in a dedicated IANA registry; substrate profiles
 ({{I-D.draft-mcguinness-mission-oauth-profile}},
 {{I-D.draft-mcguinness-mission-aauth-profile}}) register the
-substrate-specific names through which the conceptual attribute is
+substrate-specific wire names through which each attribute is
 surfaced (e.g., JWT claim names, AAuth fields).
 
 ## `mission.predecessor` Attribute
