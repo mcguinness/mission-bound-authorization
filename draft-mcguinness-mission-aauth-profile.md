@@ -29,7 +29,9 @@ author:
 normative:
   RFC2119:
   RFC8174:
+  RFC3339:
   RFC6234:
+  RFC8259:
   RFC8785:
   RFC9421:
   I-D.draft-hardt-oauth-aauth-protocol:
@@ -51,6 +53,18 @@ informative:
   RFC7519:
   RFC8414:
   I-D.draft-mcguinness-mission-oauth-profile:
+  OIDC-SSF:
+    title: "OpenID Shared Signals Framework Specification 1.0"
+    author:
+      org: "OpenID Foundation"
+    date: 2025
+    target: "https://openid.net/specs/openid-sharedsignals-framework-1_0.html"
+  OIDC-CAEP:
+    title: "OpenID Continuous Access Evaluation Profile 1.0"
+    author:
+      org: "OpenID Foundation"
+    date: 2025
+    target: "https://openid.net/specs/openid-caep-1_0.html"
 
 --- abstract
 
@@ -684,7 +698,7 @@ metadata document (when the OPTIONAL `mission-status-endpoint-v1`
 extension in {{wire-extension-status}} is enabled) or out-of-band
 to authorized consumers.
 
-The request body is `application/json` and carries:
+The request body is a JSON object {{RFC8259}} and carries:
 
 - `mission` (object, required): the Mission reference. In canonical
   mode the value is `{ "id": "...", "origin": "..." }`. AAuth
@@ -733,10 +747,20 @@ The response payload includes:
     "consent_disclosure_hash": "sha-256:...",
     "policy_version": "ps.example.com:standard@2026-06-01",
     "authority_set_projection": [
-      { "type": "aauth_scope", "authority": "..." }
+      {
+        "type": "aauth_scope",
+        "schema_digest": "sha-256:cZ8Hh1Qv7nR2tY4mP6sB0wQ9xK3dF5gJ8",
+        "schema_version": "1",
+        "authority": {
+          "resource": "https://docs.example.com",
+          "scope": ["documents.read"]
+        },
+        "narrowing_profile": "urn:mbo:narrowing:default-v1"
+      }
     ],
     "issued_at": "2026-06-09T15:00:00Z",
     "expires_at": "2026-06-09T15:01:00Z",
+    "mission_expiry": "2026-12-31T23:59:59Z",
     "version": 1
   }
 }
@@ -749,6 +773,78 @@ The `state` value is the Framework governance state (`active`,
 projection. AAuth consumers that need only the AAuth-wire view MAY
 ignore Framework-specific states they do not recognize and treat
 all non-`active` states as denials of further derivation.
+
+Each entry of `authority_set_projection` is a full Authority Set
+entry per {{authority-projection}} -- it validates against the
+Framework's Authority Set entry schema
+(`urn:mbo:schema:authority-set-entry:1`) -- audience-filtered to the
+requesting consumer. `issued_at`, `expires_at`, and `mission_expiry`
+are {{RFC3339}} timestamps: `issued_at`/`expires_at` bound the
+freshness of this response, while `mission_expiry` mirrors the
+Mission's own expiry per the Framework.
+
+### Response payload JSON Schema {#aauth-status-response-schema}
+
+~~~ json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mbo:schema:aauth-mission-status-response:1",
+  "title": "AAuth Mission Status Response Payload",
+  "type": "object",
+  "required": [
+    "iss", "aud", "sub", "nonce", "iat", "exp", "mission_status"
+  ],
+  "properties": {
+    "iss":   { "type": "string", "format": "uri" },
+    "aud":   { "type": "string" },
+    "sub":   { "type": "string" },
+    "nonce": { "type": "string" },
+    "iat":   { "type": "integer" },
+    "exp":   { "type": "integer" },
+    "mission_status": {
+      "type": "object",
+      "required": [
+        "state", "mission_id", "aauth_mission", "origin",
+        "proposal_hash", "authority_hash", "consent_disclosure_hash",
+        "policy_version", "authority_set_projection",
+        "issued_at", "expires_at", "mission_expiry", "version"
+      ],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "active", "suspended", "revoked", "completed", "expired"
+          ]
+        },
+        "mission_id": { "type": "string" },
+        "aauth_mission": {
+          "type": "object",
+          "required": ["approver", "s256"],
+          "properties": {
+            "approver": { "type": "string", "format": "uri" },
+            "s256":     { "type": "string" }
+          }
+        },
+        "origin": { "type": "string", "format": "uri" },
+        "proposal_hash":           { "type": "string" },
+        "authority_hash":          { "type": "string" },
+        "consent_disclosure_hash": { "type": "string" },
+        "policy_version":          { "type": "string" },
+        "authority_set_projection": {
+          "type": "array",
+          "items": { "$ref": "urn:mbo:schema:authority-set-entry:1" }
+        },
+        "issued_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "mission_expiry": {
+          "type": "string", "format": "date-time"
+        },
+        "version": { "type": "integer" }
+      }
+    }
+  }
+}
+~~~
 
 ## Anti-Oracle Property
 
@@ -878,10 +974,10 @@ Two patterns are defined:
   and `max_wait`. When the response indicates `state: "active"`,
   the agent resumes governed requests.
 - **Event-driven.** The agent subscribes to a Shared Signals
-  Framework or CAEP-style event channel; the PS publishes a
-  `mission.resumed` event when the Mission transitions back to
-  `active`. This pattern is OPTIONAL and depends on the deployment
-  having event infrastructure; it is not required by the
+  Framework {{OIDC-SSF}} or CAEP {{OIDC-CAEP}} event channel; the PS
+  publishes a `mission.resumed` event when the Mission transitions
+  back to `active`. This pattern is OPTIONAL and depends on the
+  deployment having event infrastructure; it is not required by the
   extension.
 
 A composing PS MAY support either or both.
@@ -1033,18 +1129,6 @@ weaken AAuth's proof-of-possession requirements. Mission-Bound
 governance does not introduce a parallel sender-constraint
 mechanism on AAuth.
 
-## Cross-consumer correlation
-
-Multiple AAuth consumers observing the same Mission can correlate
-the user's activity through the AAuth-native `(approver, s256)`
-tuple. This is inherent to AAuth's native Mission reference and
-exists independently of the Framework's `mission.id`. Deployments
-that need stronger cross-consumer unlinkability MUST select
-substrate-level mitigations (shorter Mission lifetimes, narrower
-Authority Sets, per-resource separate Missions) rather than
-expecting a governance-layer identifier to provide isolation
-absent from the substrate.
-
 ## Wire-Extension Risk
 
 Each wire extension in {{wire-extensions}} changes the AAuth wire.
@@ -1076,6 +1160,50 @@ object that was provided at consent rendering, but does not by
 itself prove the user comprehended that object or that the agent
 that asked for the Mission was operating in good faith. This
 profile inherits the Framework's enumeration without restating it.
+
+# Privacy Considerations {#privacy-considerations}
+
+The privacy surface of this profile is thin by design: the
+composition adds governance semantics on top of AAuth's native
+Mission without introducing a new wire identifier or a new
+correlation handle. The substantive considerations are the
+following.
+
+## Cross-consumer correlation
+
+Multiple AAuth consumers observing the same Mission can correlate
+the user's activity through the AAuth-native `(approver, s256)`
+tuple. This is inherent to AAuth's native Mission reference and
+exists independently of the Framework's `mission.id`; as noted in
+{{pairwise}}, the canonical `mission.id` adds no correlation surface
+beyond what the AAuth substrate already exposes. Deployments that
+need stronger cross-consumer unlinkability MUST select
+substrate-level mitigations (shorter Mission lifetimes, narrower
+Authority Sets, per-resource separate Missions) rather than
+expecting a governance-layer identifier to provide isolation absent
+from the substrate.
+
+## Data concentration in the governance record
+
+A composing PS holds the Framework governance record
+({{governance-record-linkage}}) alongside the AAuth-native record:
+the Validated Mission Intent, the consent disclosure object, the
+Principal Model fields, and binding evidence. This is governance
+data the AAuth-native record alone does not expose. The PS MUST
+protect the governance record commensurate with the sensitivity of
+the principal and consent data it holds, and MUST NOT expose Mission
+Intent or consent-disclosure cleartext to consumers; consumers
+receive only integrity anchors and the audience-filtered Authority
+Set projection through Mission Status ({{mission-status}}).
+
+## Authority projection minimization
+
+The Authority Set projection returned in a Mission Status response
+({{authority-projection}}) MUST be audience-filtered to the
+requesting consumer. A consumer receives only the entries relevant
+to its audience, which limits the authority detail -- and the
+inferences about the approved task -- disclosed to each consumer to
+the minimum it needs.
 
 # IANA Considerations {#iana}
 
