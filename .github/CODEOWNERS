@@ -1,0 +1,14 @@
+# Automatically generated CODEOWNERS
+# Regenerate with `make update-codeowners`
+draft-mcguinness-mission-aauth-profile.md public@karlmcguinness.com
+draft-mcguinness-mission-authority-server.md public@karlmcguinness.com
+draft-mcguinness-mission-capability-model.md public@karlmcguinness.com
+draft-mcguinness-mission-delegated-authority-validation.md public@karlmcguinness.com
+draft-mcguinness-mission-expansion.md public@karlmcguinness.com
+draft-mcguinness-mission-framework.md public@karlmcguinness.com
+draft-mcguinness-mission-migration.md public@karlmcguinness.com
+draft-mcguinness-mission-oauth-profile.md public@karlmcguinness.com
+draft-mcguinness-mission-runtime-profile.md public@karlmcguinness.com
+draft-mcguinness-mission-shaper-profile.md public@karlmcguinness.com
+draft-mcguinness-mission-txn-token-chaining.md public@karlmcguinness.com
+draft-todo-yourname-protocol.md dev@karlmcguinness.com
