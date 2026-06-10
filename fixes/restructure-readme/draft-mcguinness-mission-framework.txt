@@ -1,0 +1,3720 @@
+
+
+
+
+Network Working Group                                      K. McGuinness
+Internet-Draft                                               Independent
+Intended status: Standards Track                            10 June 2026
+Expires: 12 December 2026
+
+
+                           Mission Framework
+               draft-mcguinness-mission-framework-latest
+
+Abstract
+
+   This document defines the Mission as a durable, integrity-anchored,
+   lifecycle-governed governance object for an approved task.  It
+   defines the abstract types, interfaces, and behaviors that profile
+   specifications map onto specific substrates: Mission Proposal and
+   Mission lifecycles, the Mission Intent JSON schema, typed Authority
+   Set, integrity anchors with domain-separated hash inputs, a canonical
+   Mission identifier model, common constraints framework, Mission
+   Status interface, principal model, and evidence binding.  The
+   framework is substrate-neutral on semantics; profile specifications
+   for OAuth, AAuth, and the Mission Authority Server compose this
+   framework with their respective wire substrates and pick the concrete
+   protection mechanism.
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://mcguinness.github.io/mission-bound-authorization/draft-
+   mcguinness-mission-framework.html.  Status information for this
+   document may be found at https://datatracker.ietf.org/doc/draft-
+   mcguinness-mission-framework/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/mcguinness/mission-bound-authorization.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 12 December 2026.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+     1.1.  A Motivating Example
+     1.2.  Document Organization
+     1.3.  Scope and non-scope
+   2.  Conventions and Definitions
+     2.1.  Notation
+     2.2.  Terminology
+   3.  Mission Proposal and Mission
+     3.1.  Mission Proposal Record
+       3.1.1.  proposal_id format
+       3.1.2.  Mission Proposal JSON Schema
+     3.2.  Mission Record
+       3.2.1.  mission.id format
+       3.2.2.  Mission Record JSON Schema
+       3.2.3.  Worked Example: Mission record
+     3.3.  Lifecycle state machines
+       3.3.1.  Mission Proposal lifecycle
+       3.3.2.  Mission lifecycle
+     3.4.  Approval event
+       3.4.1.  Approval-event identifier
+       3.4.2.  Idempotency
+     3.5.  Concurrent modification
+     3.6.  Retention
+   4.  Mission Intent
+     4.1.  Field Reference
+     4.2.  JSON Schema
+     4.3.  Examples
+       4.3.1.  Submitted Mission Intent
+       4.3.2.  Validated Mission Intent
+     4.4.  Submitted vs Validated forms
+     4.5.  Narrowing rules
+     4.6.  purpose URI
+     4.7.  context and Common Constraints
+     4.8.  Schema evolution
+   5.  Authority Set
+     5.1.  Authority Set entry shape
+       5.1.1.  Authority Set entry JSON Schema
+       5.1.2.  Example Authority Set entry
+     5.2.  schema_digest format
+     5.3.  Mission Authority Set Type Registry
+       5.3.1.  Registration template
+       5.3.2.  Initial entries
+     5.4.  Default narrowing profile
+       5.4.1.  Subset rule
+       5.4.2.  Equality rule
+       5.4.3.  Intersection rule
+       5.4.4.  Unknown-field handling
+       5.4.5.  Narrowing operation
+     5.5.  Registration of alternate narrowing profiles
+   6.  Integrity Anchors
+     6.1.  Computation pipeline
+     6.2.  Semantic normalization
+       6.2.1.  Initial Normalization Profile: Mission Intent
+       6.2.2.  Initial Normalization Profile: Authority Set
+       6.2.3.  Initial Normalization Profile: consent disclosure
+     6.3.  Domain-separated, authorization-domain-bound envelope
+       6.3.1.  Registered envelope types
+     6.4.  Encoded form
+     6.5.  Worked pipeline example
+       6.5.1.  Step 1: Semantic normalization
+       6.5.2.  Step 2: Envelope construction
+       6.5.3.  Step 3: JCS canonicalization, SHA-256, base64url-no-pad
+     6.6.  Three integrity anchors
+   7.  Identifier Model
+     7.1.  Canonical Mission ID
+     7.2.  mission.origin
+     7.3.  State authority metadata document
+       7.3.1.  Worked example metadata document
+     7.4.  Lifecycle endpoint
+       7.4.1.  Abstract operation
+       7.4.2.  Authorization
+       7.4.3.  Idempotency
+       7.4.4.  Required properties
+     7.5.  Principal model placement
+   8.  Principal Model
+     8.1.  Mission Principal
+       8.1.1.  Mission Principal JSON Schema
+       8.1.2.  Examples
+     8.2.  Principal Model JSON Schema
+     8.3.  Equality of principals
+   9.  Mission Status Interface
+     9.1.  Abstract operation
+       9.1.1.  Nonce format
+     9.2.  Mission Status Response object
+       9.2.1.  Mission Status Response JSON Schema
+       9.2.2.  Worked example response
+     9.3.  Audience-filtered Authority Set projection
+     9.4.  Required properties
+     9.5.  Error model
+       9.5.1.  Error response shape
+       9.5.2.  Rate-limited response
+     9.6.  Caller authentication
+   10. Common Constraints Framework
+     10.1.  Initial entries
+       10.1.1.  max_derivations
+       10.1.2.  acr
+       10.1.3.  amr
+     10.2.  Future-work entries
+   11. Reference Test Vectors
+   12. Security Considerations
+     12.1.  State authority compromise
+     12.2.  Integrity anchor non-guarantees
+     12.3.  JCS implementation correctness
+     12.4.  Number precision under JCS
+     12.5.  Mission identifier correlation
+     12.6.  Hash equality leakage and cross-tenant transplantation
+     12.7.  Mission Status enumeration and authorization-oracle
+             resistance
+     12.8.  Trust-boundary violations
+     12.9.  Approving principal acr
+     12.10. Transport security (TLS)
+     12.11. State-authority signing-key rotation
+     12.12. Denial of service against the state authority
+     12.13. Clock skew
+     12.14. Replay of Mission Status responses
+     12.15. Log injection via consent disclosure content
+     12.16. Mission record garbage collection and audit chains
+   13. Privacy Considerations
+     13.1.  Cross-audience correlation
+     13.2.  Consent disclosure content and PII
+     13.3.  Subject and approving-principal identifiers
+     13.4.  Tenant correlation
+     13.5.  Audit logging and retention
+     13.6.  Mission record content and data subject access
+   14. IANA Considerations
+     14.1.  Well-Known URI: mission-authority
+     14.2.  Mission Common Constraints Registry
+       14.2.1.  Registration template
+       14.2.2.  Initial entries
+     14.3.  Mission Authority Set Type Registry
+       14.3.1.  Registration template
+       14.3.2.  Initial entries
+     14.4.  Mission Normalization Profile Registry
+       14.4.1.  Registration template
+       14.4.2.  Initial entries
+     14.5.  Mission Lifecycle State Enumerations
+     14.6.  Mission Status Response Media Types
+     14.7.  What this document does NOT register
+   Acknowledgments
+   References
+     Normative References
+     Informative References
+   Author's Address
+
+1.  Introduction
+
+   OAuth 2.0 [RFC6749] and adjacent specifications standardized
+   credential issuance, delegation, and token exchange.  They do not
+   standardize an explicit, durable governance object for the user-
+   approved task that credentials are issued to serve.  As long-lived
+   agentic workloads derive credentials across audiences and over time,
+   the absence of such an object forces deployments to reconstruct task
+   governance from disconnected per-credential records, with no shared
+   identifier, integrity commitment, or lifecycle ownership across hops.
+
+   This document defines the *Mission* as that object.  A Mission is
+   created by an authoritative state authority at the moment of approval
+   from a structured Mission Intent submitted by a client.  The Mission
+   record carries the approved Intent, a typed Authority Set bounded by
+   the Intent, integrity anchors that commit the approved record, a
+   lifecycle state machine the state authority owns, a stable identifier
+   that every derived artifact references, and principal-model bindings
+   identifying who approved the task and on whose behalf.  Profile
+   specifications map these abstract elements onto OAuth, AAuth, and
+   cross-substrate (Mission Authority Server) wires.
+
+   This document is the foundational spec of the Mission-Bound
+   Authorization architecture.  The OAuth Profile, AAuth Composition
+   Profile, Mission Authority Server profile, Mission-Bound Runtime
+   Enforcement Profile, Mission Shaper Profile, and feature specs
+   (Mission Expansion, Delegated Authority Validation, Mission-Bound
+   Transaction Token Chaining) compose this framework with their
+   respective substrates.  This document does not select a wire format,
+   signing mechanism, or transport.  It defines what profiles must
+   preserve.
+
+1.1.  A Motivating Example
+
+   A user asks an autonomous agent to "reconcile last quarter's invoices
+   and post adjustments under $500 to my accounting system".  Today, the
+   agent would obtain one or more OAuth access tokens scoped to the
+   accounting system.  The access tokens carry the scope, but nothing
+   carries the structured task: the $500 ceiling, the quarter-bound time
+   window, the user's identity as the approver, or the relationship
+   between the read activity (fetching invoices) and the write activity
+   (posting adjustments).  When the agent rotates its refresh token,
+   exchanges credentials with a downstream service, or hands off to
+   another worker, the task identity is lost; only the scope remains.
+
+   A Mission is the persistent record that carries that task identity.
+   The state authority records the goal, the constrained authority
+   ("post adjustments < $500"), the integrity-anchored proposal, the
+   approving principal and the acr recorded at approval, and a stable
+   identifier that every derived credential references.  When the user
+   later revokes the Mission, every derived credential becomes unusable.
+   When an auditor asks why a particular adjustment was posted, the
+   credential's mission claim resolves to the recorded approval.  When a
+   downstream service receives a derived credential, it can
+   independently verify the Mission state from the state authority.
+
+   This document defines that record and the abstract operations on it.
+
+1.2.  Document Organization
+
+   This document is organized as follows.
+
+   Section 2 introduces notation and terminology.
+
+   Section 3 defines the Mission Proposal and Mission records, their
+   lifecycle state machines, the approval event, idempotency, concurrent
+   modification, and retention.
+
+   Section 4 defines the Mission Intent JSON schema and the distinction
+   between Submitted and Validated forms.
+
+   Section 5 defines the typed Authority Set entry shape, the Authority
+   Set Type registry framework, and the default narrowing profile.
+
+   Section 6 defines semantic normalization, the authorization-domain-
+   bound envelope, and the three integrity anchors.
+
+   Section 7 defines the canonical Mission ID and the state-authority
+   discovery metadata document.
+
+   Section 9 defines the abstract Mission Status interface, its required
+   properties, request and response shape, and error model.
+
+   Section 10 defines the Common Constraints registry framework and two
+   initial entries (max_derivations, acr, and amr).
+
+   Section 11 declares the required test vector classes.
+
+   Section 12 and Section 13 address security and privacy threats and
+   mitigations.
+
+   Section 14 requests the IANA actions creating registries and initial
+   entries.
+
+1.3.  Scope and non-scope
+
+   This document defines:
+
+   *  The Mission Proposal and Mission data model, including required
+      fields, lifecycle state machines, and integrity anchors.
+
+   *  The Mission Intent JSON schema.
+
+   *  The typed Authority Set entry shape and type registry framework.
+
+   *  The principal model.
+
+   *  The canonical Mission identifier.
+
+   *  The abstract Mission Status interface and its required properties
+      (authentication, freshness, audience binding, integrity, anti-
+      oracle, request-binding, caching).
+
+   *  The Common Constraints framework and initial entries
+      (max_derivations, acr, amr).
+
+   *  Domain-separated, authorization-domain-bound hash envelopes for
+      integrity anchors.
+
+   This document does NOT define:
+
+   *  A wire format for any specific substrate.  Profile specifications
+      do that.
+
+   *  A signing format for Mission Status responses.  Profiles compose
+      with RFC 9701 [RFC9701], JWS [RFC7515], or substrate-native
+      signing as appropriate.
+
+   *  Runtime per-action enforcement.  The Mission-Bound Runtime
+      Enforcement Profile defines that.
+
+   *  Mission Expansion semantics.  The Mission Expansion specification
+      defines that.
+
+2.  Conventions and Definitions
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+2.1.  Notation
+
+   This document uses JSON [RFC8259] as the data model for all records,
+   requests, and responses defined herein.
+
+   ABNF [RFC5234] is used to define wire-format strings.
+
+   "base64url" refers to the URL-safe base64 encoding defined in
+   [RFC4648] Section 5, with all trailing padding ("=") characters
+   removed.
+
+   "SHA-256" refers to the cryptographic hash function defined in
+   [RFC6234], producing a 32-octet digest.
+
+   "JCS" refers to JSON Canonicalization Scheme [RFC8785].  Where this
+   document specifies "JCS-canonical" bytes, the input MUST be a valid
+   JSON value as defined in [RFC8259]; the output is the deterministic
+   byte sequence produced by [RFC8785].
+
+   "RFC 3339 timestamp" refers to a date-time as defined in [RFC3339],
+   normalized to UTC ("Z" zone designator), with seconds resolution.
+   Implementations MAY include fractional seconds when finer resolution
+   is required.
+
+   Hexadecimal byte sequences in examples are written with a "0x" prefix
+   or as space-separated pairs.  Base64url-encoded values appear
+   verbatim.
+
+   The notation obj.field references the value of the JSON member field
+   in the object obj at the nesting path implied by the reference.  For
+   example, mission.id is the value of the id member of a top-level
+   mission object.
+
+2.2.  Terminology
+
+   This document uses the following terms with the meanings defined
+   here.  Profile specifications inherit these meanings; substrate-
+   specific terms (e.g., "Authorization Server", "Person Server") are
+   defined in the relevant profile.
+
+   *Mission Proposal*:  A pre-approval record carrying a Validated
+      Mission Intent.  Has its own lifecycle (pending_approval,
+      rejected, withdrawn, expired_as_pending).  Identified by a
+      proposal_id.
+
+   *Mission*:  The durable, integrity-anchored, lifecycle-governed
+      governance object that records an approved task.  Created from a
+      Mission Proposal at the approval event.  Has its own lifecycle
+      (active, suspended, revoked, completed, expired).  Identified by a
+      canonical mission.id.
+
+   *Mission Intent*:  The structured task proposal.  Two forms are
+      distinguished: *Submitted Mission Intent* (untrusted, as the
+      client provided it) and *Validated Mission Intent* (the state
+      authority's authoritative, post-validation, post-narrowing form,
+      recorded on the Mission Proposal).  When unqualified, "Mission
+      Intent" refers to the Validated form.
+
+   *Authority Set*:  The substrate-neutral container of approved
+      authority entries, each typed.  Bounded by the Validated Mission
+      Intent.
+
+   *Authority Set entry*:  A typed payload in the Authority Set,
+      carrying type, specification_uri, schema_digest, schema_version,
+      authority, and narrowing_profile fields.
+
+   *State authority*:  The server that owns a Mission record.  Realized
+      as an OAuth Authorization Server, an AAuth Person Server, or a
+      Mission Authority Server depending on topology.  The state
+      authority is authoritative for Mission state and is the only party
+      that can resolve Pairwise Mission References to the canonical
+      mission.id.
+
+   *Approval event*:  The atomic state-authority transition from Mission
+      Proposal to Mission upon receiving a binding consent signal.
+
+   *Consent disclosure object*:  The structured representation of the
+      information shown to the approving principal at the approval
+      event.  The state authority records this object verbatim and
+      computes consent_disclosure_hash over its normalized canonical
+      serialization.  The consent disclosure object's schema is the
+      state authority's consent template; this document binds its
+      integrity hash but does not standardize its template.
+
+   *Integrity anchor*:  One of proposal_hash, authority_hash,
+      consent_disclosure_hash.  Each is computed after registered
+      semantic normalization, over a domain-separated envelope, using
+      SHA-256, base64url-encoded.
+
+   *Mission Status*:  The authenticated state-authority view returning
+      Mission state, integrity anchors, audience-filtered Authority Set
+      projection, and freshness indicator.  By-mission-id operation,
+      distinct from token introspection.
+
+   *Approving principal*:  The principal who approved the Mission (may
+      differ from the subject for delegated approval).
+
+   *Subject*:  The principal on whose behalf the task is approved.
+
+   *Requesting client*:  The OAuth client or AAuth agent that submitted
+      the Mission Proposal.
+
+   *Tenant* / *Authorization domain*:  A logical partitioning at the
+      state authority.  Missions in one tenant are not visible to
+      consumers of another tenant unless explicit cross-tenant policy
+      declares it.  This document treats "tenant" and "authorization
+      domain" as interchangeable identifiers for that partition.
+
+   *Credential derivation event*:  Any state-authority-initiated
+      emission of a substrate credential that references a Mission.
+      Examples include initial access-token issuance, refresh-token
+      rotation, Token Exchange grants, ID-JAG emissions, AAuth resource-
+      token emissions, and AAuth auth-token emissions.  Each derivation
+      event is counted against max_derivations (see Section 10).
+
+   *Policy version*:  An immutable identifier (typically a content-
+      addressable string) naming the derivation policy in force at the
+      approval event.  The state authority MUST record the
+      policy_version on the Mission record at the approval event.
+      Policy versions are state-authority- local; profile specifications
+      MAY register a syntax for portable policy-version references.
+
+   *Authentication Context Class Reference (acr)*:  A string identifier
+      describing the authentication context under which the approving
+      principal authenticated, per OIDC Core acr semantics.  The
+      Framework's acr Common Constraint (see Section 10) carries a list
+      of acceptable acr values and a max_age freshness window, mirroring
+      [RFC9470] and OIDC acr_values / max_age request parameters.  This
+      document does not register acr identifiers; deployments compose
+      with existing identifier spaces ([NIST-SP-800-63] AAL identifiers,
+      FIDO authenticator levels, OpenID Connect EAP acr values
+      [OIDC-EAP-ACR] (phr, phrh), OIDC MODRNA values, or deployment-
+      defined URIs).
+
+   *Authentication Methods References (amr)*:  An array of identifiers
+      naming the discrete authentication methods used at the
+      authentication event, per OIDC Core amr semantics and the IANA
+      "Authentication Method Reference Values" registry [RFC8176].  The
+      Framework's amr Common Constraint (see Section 10) carries a list
+      of acceptable amr values that the authentication event MUST
+      intersect.
+
+   *Audience*:  A consumer of a Mission-bound credential or of Mission
+      Status responses.  Audiences are named at issuance time and
+      verified at consumption time.
+
+   *Mission-bound credential*:  Any substrate credential (OAuth access
+      token, OAuth refresh token, AAuth resource token, AAuth auth
+      token, transaction token, or similar) whose Mission claim or
+      substrate-native binding references a specific Mission.
+
+3.  Mission Proposal and Mission
+
+   A *Mission Proposal* is created when a client submits a Mission
+   Intent to a state authority.  A Mission Proposal carries the
+   Validated Mission Intent (after the state authority validates and
+   narrows the Submitted Mission Intent) and is identified by a stable
+   proposal_id.  A Mission Proposal is in one of four states:
+
+   *  pending_approval: awaiting consent.
+
+   *  rejected: consent denied; terminal.
+
+   *  withdrawn: client or administrator withdrew the Proposal;
+      terminal.
+
+   *  expired_as_pending: consent window elapsed; terminal.
+
+   A *Mission* is created by the state authority at the *approval event*
+   atomic transition.  A Mission exists only post-approval.  A Mission
+   is in one of five states:
+
+   *  active: the only state in which credential derivation MAY proceed.
+
+   *  suspended: temporarily blocked; the Mission MAY return to active
+      by state-authority action.
+
+   *  revoked: terminated by user, administrator, or policy; terminal.
+
+   *  completed: the task finished or the Mission was superseded;
+      terminal.
+
+   *  expired: mission_expiry reached; terminal.
+
+3.1.  Mission Proposal Record
+
+   A Mission Proposal record carries the following members:
+
+   *  proposal_id (string, required): the stable Proposal identifier
+      (see Section 3.1.1).
+
+   *  state (string, required): one of pending_approval, rejected,
+      withdrawn, expired_as_pending.
+
+   *  state_authority (string, required): issuer URL of the state
+      authority that holds the Proposal.
+
+   *  tenant (string, required): tenant identifier under which the
+      Proposal lives.
+
+   *  requesting_client (string, required): client identifier that
+      submitted the Proposal.
+
+   *  intent_submitted (object, required): the Submitted Mission Intent
+      as the client provided it.  Preserved verbatim (after JSON
+      parsing) for audit purposes.
+
+   *  intent_validated (object, required after validation): the
+      Validated Mission Intent.  Absent before validation completes.
+
+   *  created_at (string, required): RFC 3339 timestamp of Proposal
+      creation.
+
+   *  consent_window_expires_at (string, required): RFC 3339 timestamp
+      after which the Proposal transitions to expired_as_pending if
+      still pending_approval.
+
+   *  narrowing_decisions (array, optional): structured record of
+      narrowing decisions applied during validation (see Section 4.5).
+
+   *  terminal_reason (string, optional): present in terminal states.
+      For rejected, an opaque deployment-defined reason.  For withdrawn,
+      an indication of which party withdrew.
+
+   *  successor_mission_id (string, optional): present only after the
+      approval event creates a Mission; the canonical mission.id of the
+      created Mission.
+
+3.1.1.  proposal_id format
+
+   proposal_id is an opaque URL-safe ASCII string.  ABNF:
+
+   proposal-id    = 1*64( unreserved-char )
+   unreserved-char = ALPHA / DIGIT / "-" / "_"
+
+   proposal_id MUST contain at least 80 bits of entropy and MUST be
+   unique within the state authority's namespace. proposal_id MUST NOT
+   be reused after Proposal retention elapses (see Section 3.6).
+
+3.1.2.  Mission Proposal JSON Schema
+
+   The canonical JSON Schema for a Mission Proposal record is:
+
+   {
+     "$schema": "https://json-schema.org/draft/2020-12/schema",
+     "$id": "urn:mbo:schema:mission-proposal:1",
+     "title": "Mission Proposal",
+     "type": "object",
+     "required": [
+       "proposal_id", "state", "state_authority", "tenant",
+       "requesting_client", "intent_submitted",
+       "created_at", "consent_window_expires_at"
+     ],
+     "additionalProperties": false,
+     "properties": {
+       "proposal_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
+       "state": {
+         "type": "string",
+         "enum": [
+           "pending_approval", "rejected", "withdrawn",
+           "expired_as_pending"
+         ]
+       },
+       "state_authority": { "type": "string", "format": "uri" },
+       "tenant": { "type": "string" },
+       "requesting_client": { "type": "string" },
+       "intent_submitted": { "$ref": "urn:mbo:schema:mission-intent:1" },
+       "intent_validated": { "$ref": "urn:mbo:schema:mission-intent:1" },
+       "created_at": { "type": "string", "format": "date-time" },
+       "consent_window_expires_at": {
+         "type": "string", "format": "date-time"
+       },
+       "narrowing_decisions": {
+         "type": "array",
+         "items": {
+           "type": "object",
+           "required": ["field", "submitted", "validated", "policy_ref"],
+           "properties": {
+             "field": { "type": "string" },
+             "submitted": {},
+             "validated": {},
+             "policy_ref": { "type": "string", "format": "uri" }
+           }
+         }
+       },
+       "terminal_reason": { "type": "string" },
+       "successor_mission_id": { "type": "string" }
+     }
+   }
+
+3.2.  Mission Record
+
+   A Mission record carries the following members:
+
+   *  mission (object, required): the Mission identity envelope, with
+      members id (canonical mission.id) and origin (mission.origin, the
+      state-authority issuer URL).
+
+   *  state (string, required): one of active, suspended, revoked,
+      completed, expired.
+
+   *  intent (object, required): the Validated Mission Intent (see
+      Section 4).
+
+   *  authority_set (array, required): the typed Authority Set entries
+      (see Section 5).
+
+   *  integrity_anchors (object, required): the three integrity anchors
+      (see Section 6): proposal_hash, authority_hash,
+      consent_disclosure_hash.
+
+   *  principals (object, required): the principal model (see
+      Section 7.5): subject, approving_principal, requesting_client,
+      tenant, state_authority, delegation_policy.
+
+   *  binding_evidence (object, required): the evidence recorded at the
+      approval event: signer_kid (state-authority key identifier),
+      approval_event_id, approval_event_at (RFC 3339), policy_version,
+      intent_schema_version, consent_template_version, acr_at_approval,
+      amr_at_approval, auth_time_at_approval (RFC 3339).
+
+   *  proposal_id (string, required, immutable): the originating
+      Proposal identifier.
+
+   *  created_at (string, required): RFC 3339 timestamp of the approval
+      event (Mission creation).
+
+   *  mission_expiry (string, required): RFC 3339 timestamp; mirrors
+      intent.mission_expiry.  Carried at the top level for fast
+      lifecycle checks.
+
+   *  lifecycle_history (array, optional): structured record of state
+      transitions, each carrying from_state, to_state, at, and actor
+      (the principal who caused the transition, when known).
+
+   A Mission record MUST NOT carry mutable runtime context.  Actor
+   chains and per-request actor identifiers are carried by projections
+   (derived credentials) and runtime requests, not by the Mission
+   record.
+
+3.2.1.  mission.id format
+
+   mission.id is an opaque URL-safe ASCII string.  ABNF:
+
+   mission-id      = 1*256( unreserved-char )
+   unreserved-char = ALPHA / DIGIT / "-" / "_"
+
+   mission.id MUST contain at least 128 bits of entropy.  See
+   Section 7.1 for additional requirements.
+
+3.2.2.  Mission Record JSON Schema
+
+   The canonical JSON Schema for a Mission record is:
+
+   {
+     "$schema": "https://json-schema.org/draft/2020-12/schema",
+     "$id": "urn:mbo:schema:mission:1",
+     "title": "Mission",
+     "type": "object",
+     "required": [
+       "mission", "state", "intent", "authority_set",
+       "integrity_anchors", "principals", "binding_evidence",
+       "proposal_id", "created_at", "mission_expiry"
+     ],
+     "additionalProperties": false,
+     "properties": {
+       "mission": {
+         "type": "object",
+         "required": ["id", "origin"],
+         "additionalProperties": false,
+         "properties": {
+           "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,256}$" },
+           "origin": { "type": "string", "format": "uri" }
+         }
+       },
+       "state": {
+         "type": "string",
+         "enum": [
+           "active", "suspended", "revoked", "completed", "expired"
+         ]
+       },
+       "intent": { "$ref": "urn:mbo:schema:mission-intent:1" },
+       "authority_set": {
+         "type": "array",
+         "items": { "$ref": "urn:mbo:schema:authority-set-entry:1" }
+       },
+       "integrity_anchors": {
+         "type": "object",
+         "required": [
+           "proposal_hash", "authority_hash",
+           "consent_disclosure_hash"
+         ],
+         "additionalProperties": false,
+         "properties": {
+           "proposal_hash": { "type": "string" },
+           "authority_hash": { "type": "string" },
+           "consent_disclosure_hash": { "type": "string" }
+         }
+       },
+       "principals": { "$ref": "urn:mbo:schema:principal-model:1" },
+       "binding_evidence": {
+         "type": "object",
+         "required": [
+           "signer_kid", "approval_event_id", "approval_event_at",
+           "policy_version", "intent_schema_version",
+           "consent_template_version", "acr_at_approval",
+           "amr_at_approval", "auth_time_at_approval"
+         ],
+         "additionalProperties": false,
+         "properties": {
+           "signer_kid": { "type": "string" },
+           "approval_event_id": { "type": "string" },
+           "approval_event_at": {
+             "type": "string", "format": "date-time"
+           },
+           "policy_version": { "type": "string" },
+           "intent_schema_version": { "type": "string" },
+           "consent_template_version": { "type": "string" },
+           "acr_at_approval": { "type": "string" },
+           "amr_at_approval": {
+             "type": "array",
+             "items": { "type": "string" }
+           },
+           "auth_time_at_approval": {
+             "type": "string", "format": "date-time"
+           }
+         }
+       },
+       "proposal_id": { "type": "string" },
+       "created_at": { "type": "string", "format": "date-time" },
+       "mission_expiry": { "type": "string", "format": "date-time" },
+       "lifecycle_history": {
+         "type": "array",
+         "items": {
+           "type": "object",
+           "required": ["from_state", "to_state", "at"],
+           "properties": {
+             "from_state": { "type": "string" },
+             "to_state": { "type": "string" },
+             "at": { "type": "string", "format": "date-time" },
+             "actor": { "type": "string" }
+           }
+         }
+       }
+     }
+   }
+
+3.2.3.  Worked Example: Mission record
+
+   Continuing the example from Section 4:
+
+   {
+     "mission": {
+       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+       "origin": "https://as.example.com"
+     },
+     "state": "active",
+     "intent": {
+       "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+       "objects": [
+         "https://erp.example.com/api/invoices",
+         "https://erp.example.com/api/journal-entries"
+       ],
+       "constraints": [
+         "Read only invoices issued in 2026-Q3.",
+         "Post journal entries with absolute amount < $500."
+       ],
+       "success_criteria": [
+         "All Q3 invoices processed.",
+         "Each posted entry references a source invoice."
+       ],
+       "mission_expiry": "2026-12-31T23:59:59Z",
+       "purpose": "urn:erp.example.com:purposes:quarterly-reconcile",
+       "language": "en",
+       "context": {
+         "max_derivations": "200",
+         "acr": {
+           "acr_values": [
+             "http://idmanagement.gov/ns/assurance/aal/2"
+           ],
+           "max_age": 1800
+         }
+       }
+     },
+     "authority_set": [
+       {
+         "type": "mission_resource_access",
+         "specification_uri":
+           "https://datatracker.ietf.org/doc/draft-mcguinness-mission-oauth-profile",
+         "schema_version": "1",
+         "authority": {
+           "resource": "https://erp.example.com",
+           "actions": ["invoices.read", "journal-entries.write"],
+           "constraints": {
+             "issued_after": "2026-07-01T00:00:00Z",
+             "issued_before": "2026-10-01T00:00:00Z",
+             "max_amount_usd": 500
+           }
+         },
+         "narrowing_profile": "urn:mbo:narrowing:default-v1"
+       }
+     ],
+     "integrity_anchors": {
+       "proposal_hash":
+         "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+       "authority_hash":
+         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+       "consent_disclosure_hash":
+         "sha-256:nB2xK5qY7vM3rL9pT4cE6sZ8wQ1bN0fH5jX9kV2sRdM"
+     },
+     "principals": {
+       "subject": {
+         "format": "iss_sub",
+         "iss": "https://idp.example.com",
+         "sub": "user_3p2q8mN1a0kV7tR",
+         "sub_profile": { "type": "human" }
+       },
+       "approving_principal": {
+         "format": "iss_sub",
+         "iss": "https://idp.example.com",
+         "sub": "user_3p2q8mN1a0kV7tR",
+         "sub_profile": { "type": "human" }
+       },
+       "requesting_client": {
+         "format": "iss_sub",
+         "iss": "https://as.example.com",
+         "sub": "client_erp-recon-agent",
+         "sub_profile": { "type": "service" },
+         "instance": {
+           "iss": "https://as.example.com",
+           "instance_id": "inst_8YfX2qV9rL3"
+         }
+       },
+       "tenant": "tenant_acme",
+       "state_authority": "https://as.example.com",
+       "delegation_policy": "urn:mbo:delegation:default-v1"
+     },
+     "binding_evidence": {
+       "signer_kid": "sa-key-2026-q3",
+       "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",
+       "approval_event_at": "2026-10-15T14:32:11Z",
+       "policy_version": "deploy-policy:v17",
+       "intent_schema_version": "urn:mbo:schema:mission-intent:1",
+       "consent_template_version": "consent-tpl:reconcile:v3",
+       "acr_at_approval": "http://idmanagement.gov/ns/assurance/aal/2",
+       "amr_at_approval": ["mfa", "pwd", "otp"],
+       "auth_time_at_approval": "2026-10-15T14:30:48Z"
+     },
+     "proposal_id": "prop_4kQ9pX2vN7sR1tY8mZ3",
+     "created_at": "2026-10-15T14:32:11Z",
+     "mission_expiry": "2026-12-31T23:59:59Z"
+   }
+
+3.3.  Lifecycle state machines
+
+3.3.1.  Mission Proposal lifecycle
+
+   The Mission Proposal lifecycle is:
+
+               +------------------+
+               | pending_approval |
+               +--------+---------+
+                        |
+          +-------------+------------+--------------+
+          |             |            |              |
+          v             v            v              v
+      approved      rejected     withdrawn   expired_as_pending
+      (atomic
+       transition
+       to Mission)
+
+   The normative transition table for Mission Proposals is:
+
+   +================+======================+==================+=================+
+   |From            |Event                 |To                |Required side    |
+   |                |                      |                  |effect           |
+   +================+======================+==================+=================+
+   |(none)          |submit_intent         |pending_approval  |Validate and     |
+   |                |                      |                  |narrow Mission   |
+   |                |                      |                  |Intent; record   |
+   |                |                      |                  |intent_validated;|
+   |                |                      |                  |persist Proposal |
+   +----------------+----------------------+------------------+-----------------+
+   |pending_approval|consent_approved      |(Mission created) |Approval event   |
+   |                |                      |                  |(Section 3.4);   |
+   |                |                      |                  |Proposal         |
+   |                |                      |                  |transitions out  |
+   |                |                      |                  |atomically with  |
+   |                |                      |                  |Mission creation |
+   +----------------+----------------------+------------------+-----------------+
+   |pending_approval|consent_rejected      |rejected          |Record           |
+   |                |                      |                  |terminal_reason; |
+   |                |                      |                  |emit lifecycle   |
+   |                |                      |                  |event            |
+   +----------------+----------------------+------------------+-----------------+
+   |pending_approval|withdraw              |withdrawn         |Record           |
+   |                |                      |                  |terminal_reason; |
+   |                |                      |                  |emit lifecycle   |
+   |                |                      |                  |event            |
+   +----------------+----------------------+------------------+-----------------+
+   |pending_approval|consent_window_elapsed|expired_as_pending|Emit lifecycle   |
+   |                |                      |                  |event            |
+   +----------------+----------------------+------------------+-----------------+
+   |pending_approval|submit_intent (same   |pending_approval  |Idempotent no-op |
+   |                |proposal_id)          |                  |(see Section 3.4)|
+   +----------------+----------------------+------------------+-----------------+
+   |terminal        |any event             |(refused)         |Return           |
+   |                |                      |                  |concurrent-      |
+   |                |                      |                  |modification     |
+   |                |                      |                  |error            |
+   |                |                      |                  |(Section 3.5)    |
+   +----------------+----------------------+------------------+-----------------+
+
+                                  Table 1
+
+3.3.2.  Mission lifecycle
+
+   The Mission lifecycle is:
+
+                     +----------+
+                     |  active  | <----+
+                     +-----+----+      |
+                           |           | resume
+                           |    +------+------+
+                           +--->|  suspended  |
+                           |    +-------------+
+                           |
+          +----------------+--------+-------------+
+          |                |        |             |
+          v                v        v             v
+      revoked          completed  expired   (other terminal)
+
+   The normative transition table for Missions is:
+
+   +=========+======================+=========+=======================+
+   |From     |Event                 |To       |Required side effect   |
+   +=========+======================+=========+=======================+
+   |(none)   |approval_event        |active   |Create Mission record  |
+   |         |                      |         |atomically with        |
+   |         |                      |         |Proposal transition    |
+   +---------+----------------------+---------+-----------------------+
+   |active   |suspend               |suspended|Record event in        |
+   |         |                      |         |lifecycle_history; emit|
+   |         |                      |         |lifecycle event;       |
+   |         |                      |         |existing credentials   |
+   |         |                      |         |remain valid but       |
+   |         |                      |         |derivation is blocked  |
+   +---------+----------------------+---------+-----------------------+
+   |suspended|resume                |active   |Record event; emit     |
+   |         |                      |         |lifecycle event        |
+   +---------+----------------------+---------+-----------------------+
+   |active   |revoke                |revoked  |Record event; emit     |
+   |         |                      |         |lifecycle event; in-   |
+   |         |                      |         |flight credentials     |
+   |         |                      |         |invalidated per profile|
+   +---------+----------------------+---------+-----------------------+
+   |suspended|revoke                |revoked  |Same as above          |
+   +---------+----------------------+---------+-----------------------+
+   |active   |complete              |completed|Record event; emit     |
+   |         |                      |         |lifecycle event        |
+   +---------+----------------------+---------+-----------------------+
+   |active   |mission_expiry_reached|expired  |Record event; emit     |
+   |         |                      |         |lifecycle event        |
+   +---------+----------------------+---------+-----------------------+
+   |suspended|mission_expiry_reached|expired  |Same as above          |
+   +---------+----------------------+---------+-----------------------+
+   |any      |any event             |(refused)|Return concurrent-     |
+   |terminal |                      |         |modification error     |
+   |state    |                      |         |                       |
+   +---------+----------------------+---------+-----------------------+
+
+                                 Table 2
+
+   Profile specifications MAY add substrate-specific transitions
+   consistent with this state machine.  Profile-specific transitions
+   MUST NOT bypass the terminal-state guard.
+
+3.4.  Approval event
+
+   The approval event is the atomic state-authority transition from
+   Mission Proposal to Mission upon receiving a binding consent signal.
+   At the approval event the state authority MUST:
+
+   1.  Validate the Submitted Mission Intent and produce the Validated
+       Mission Intent on the Proposal (see Section 4.5).
+
+   2.  Derive the Authority Set from the Validated Mission Intent.
+
+   3.  Render the consent disclosure object presented to the approving
+       principal.
+
+   4.  Compute proposal_hash, authority_hash, and
+       consent_disclosure_hash (see Section 6).
+
+   5.  Record binding evidence (approving principal identity,
+       Authentication Assurance Level, timestamp, consent disclosure
+       object, policy_version, schema versions, consent template
+       version, signer key identifier).
+
+   6.  Create the Mission record atomically with the above evidence.
+
+   The approval event MUST be atomic with Mission record creation.  If
+   the state authority cannot complete the atomic commit, the Proposal
+   remains pending_approval; no partial Mission record exists.
+
+3.4.1.  Approval-event identifier
+
+   Each approval event has a distinct identifier (approval_event_id).
+   ABNF:
+
+   approval-event-id = 1*64( unreserved-char )
+   unreserved-char   = ALPHA / DIGIT / "-" / "_"
+
+   approval_event_id MUST contain at least 128 bits of entropy and MUST
+   be unique within the state authority's namespace.  It is recorded on
+   the Mission's binding_evidence and is the operation key for approval
+   idempotency.
+
+3.4.2.  Idempotency
+
+   Approval submission MUST be idempotent on the pair (proposal_id,
+   approval_event_id).  The state authority MUST treat a repeated
+   submission with the same pair (and the same content for the
+   originally-bound fields) as a no-op returning the existing Mission
+   record.  The state authority MUST refuse a repeated submission with
+   the same pair but divergent content, returning a concurrent-
+   modification error.
+
+   Exactly one Mission may be created from a Proposal.  The resulting
+   Mission permanently records its source proposal_id.
+
+3.5.  Concurrent modification
+
+   Concurrent approve, reject, withdraw, and expiry operations MUST be
+   serialized with compare-and-set semantics on the Proposal's state and
+   a state-authority-local revision counter.
+
+   When a concurrent-modification conflict is detected (e.g., a withdraw
+   arrives after consent has been approved, or two approve calls race),
+   the state authority MUST refuse the losing request and return an
+   error of the form:
+
+   {
+     "error": "mission_concurrent_modification",
+     "error_description":
+       "The proposal or mission was modified by a concurrent operation.",
+     "current_state": "active",
+     "observed_state": "pending_approval"
+   }
+
+   The fields are:
+
+   *  error (string, required): mission_concurrent_modification.
+
+   *  error_description (string, recommended): human-readable summary.
+
+   *  current_state (string, required): the actual current state at
+      conflict detection time.
+
+   *  observed_state (string, required): the state the caller's request
+      assumed.
+
+   Profile specifications bind this abstract error to substrate-specific
+   transport (HTTP 409 Conflict for OAuth/HTTP transports is
+   RECOMMENDED).
+
+3.6.  Retention
+
+   A Mission record MUST be retained at least until: (a) all derived
+   credentials have expired, AND (b) the deployment's audit retention
+   period for the relevant Mission class has elapsed.
+
+   Deployments SHOULD set a minimum audit retention period of 90 days
+   beyond the Mission's mission_expiry.  Regulated deployments
+   (financial, healthcare, government) SHOULD use longer retention
+   matching the applicable regulatory regime; this document does not
+   mandate a regulatory floor.
+
+   After retention, the state authority MAY garbage-collect the Mission
+   record.  The canonical mission.id MUST NOT be reused after garbage
+   collection.
+
+   The Proposal record is retained alongside its resulting Mission for
+   the same audit retention window.  After retention, the Proposal
+   record MAY be garbage-collected with the Mission record. proposal_id
+   MUST NOT be reused.
+
+   Terminal-state Proposals (rejected, withdrawn, expired_as_pending)
+   follow a deployment-defined Proposal-only retention policy
+   independent of Mission retention.  Deployments SHOULD retain such
+   Proposals for at least 30 days to support investigation of denied or
+   abandoned approval attempts.
+
+4.  Mission Intent
+
+   The Mission Intent is the structured task proposal a client submits
+   to a state authority.  The Mission Intent is the input to the
+   approval event; the Validated form (defined below) is the recorded
+   output.
+
+4.1.  Field Reference
+
+   The Mission Intent JSON object defines the following fields:
+
+   *  goal (string, required): user-readable description of the task.
+      Length 1 to 4096 characters.  Implementations SHOULD normalize via
+      Unicode NFC before storage and integrity-anchor computation.
+
+   *  objects (array of string, required, minItems 1): the resources,
+      datasets, tools, or domains the task touches.  Each entry is a URI
+      or a state-authority-registered identifier.  Order is preserved in
+      the Validated form; equality is computed as an order-independent
+      set under semantic normalization (see Section 6).
+
+   *  constraints (array of string, required): user-readable bounds on
+      the task.  May be empty.
+
+   *  success_criteria (array of string, required): conditions for the
+      task being complete.  May be empty.
+
+   *  mission_expiry (string, required): RFC 3339 timestamp.  The hard
+      ceiling on the Mission's validity.  Derived authority MUST NOT
+      outlast it.
+
+   *  purpose (string, optional): a URI [RFC3986] naming the task class.
+      Stable per requesting client.  The state authority MAY refuse a
+      purpose URI not registered in deployment policy.
+
+   *  language (string, optional): the natural-language tag [RFC5646] of
+      the user-facing string fields (goal, constraints,
+      success_criteria).  Default "en" if absent.
+
+   *  context (object, optional): machine-actionable bounds.  Member
+      names MUST be either registered Common Constraint keys (see
+      Section 10) or extension keys prefixed with x_. Unknown non-x_
+      keys MUST be refused.
+
+   *  Extension fields (any member name prefixed with x_): MAY appear at
+      the top level.  See Section 4.8.
+
+4.2.  JSON Schema
+
+   The canonical JSON Schema for a Submitted Mission Intent (draft
+   2020-12) is:
+
+   {
+     "$schema": "https://json-schema.org/draft/2020-12/schema",
+     "$id": "urn:mbo:schema:mission-intent:1",
+     "title": "Mission Intent",
+     "type": "object",
+     "required": [
+       "goal", "objects", "constraints",
+       "success_criteria", "mission_expiry"
+     ],
+     "additionalProperties": false,
+     "patternProperties": {
+       "^x_[A-Za-z0-9_-]+$": {}
+     },
+     "properties": {
+       "goal": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 4096
+       },
+       "objects": {
+         "type": "array",
+         "minItems": 1,
+         "items": { "type": "string", "minLength": 1 }
+       },
+       "constraints": {
+         "type": "array",
+         "items": { "type": "string", "minLength": 1 }
+       },
+       "success_criteria": {
+         "type": "array",
+         "items": { "type": "string", "minLength": 1 }
+       },
+       "mission_expiry": {
+         "type": "string",
+         "format": "date-time"
+       },
+       "purpose": { "type": "string", "format": "uri" },
+       "language": { "type": "string" },
+       "context": {
+         "type": "object",
+         "additionalProperties": true
+       }
+     }
+   }
+
+   The Validated Mission Intent uses the same schema.  The state
+   authority's post-narrowing form MAY differ from the Submitted form
+   only in field values (per the narrowing rules of Section 4.5); it
+   MUST NOT add or remove fields except in the case of unknown non-x_
+   keys, which are refused at validation time and absent from the
+   Validated form by construction.
+
+4.3.  Examples
+
+4.3.1.  Submitted Mission Intent
+
+   A client submits the following Mission Intent for the invoicing
+   example of Section 1.1:
+
+   {
+     "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+     "objects": [
+       "https://erp.example.com/api/invoices",
+       "https://erp.example.com/api/journal-entries"
+     ],
+     "constraints": [
+       "Read only invoices issued in 2026-Q3.",
+       "Post journal entries with absolute amount < $500."
+     ],
+     "success_criteria": [
+       "All Q3 invoices processed.",
+       "Each posted entry references a source invoice."
+     ],
+     "mission_expiry": "2026-12-31T23:59:59Z",
+     "purpose": "urn:erp.example.com:purposes:quarterly-reconcile",
+     "language": "en",
+     "context": {
+       "max_derivations": "500",
+       "acr": {
+         "acr_values": [
+           "http://idmanagement.gov/ns/assurance/aal/2"
+         ],
+         "max_age": 1800
+       }
+     }
+   }
+
+4.3.2.  Validated Mission Intent
+
+   The state authority validates the Submitted Intent against its
+   deployment policy, observes that the deployment policy caps
+   max_derivations for quarterly-reconcile purposes at 200, and narrows
+   the value.  The resulting Validated Mission Intent (which is what
+   proposal_hash covers and what every consumer ultimately references)
+   is:
+
+   {
+     "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+     "objects": [
+       "https://erp.example.com/api/invoices",
+       "https://erp.example.com/api/journal-entries"
+     ],
+     "constraints": [
+       "Read only invoices issued in 2026-Q3.",
+       "Post journal entries with absolute amount < $500."
+     ],
+     "success_criteria": [
+       "All Q3 invoices processed.",
+       "Each posted entry references a source invoice."
+     ],
+     "mission_expiry": "2026-12-31T23:59:59Z",
+     "purpose": "urn:erp.example.com:purposes:quarterly-reconcile",
+     "language": "en",
+     "context": {
+       "max_derivations": "200",
+       "acr": {
+         "acr_values": [
+           "http://idmanagement.gov/ns/assurance/aal/2"
+         ],
+         "max_age": 1800
+       }
+     }
+   }
+
+   The state authority records the Validated form on the Mission
+   Proposal and includes the narrowing decision (which fields it
+   narrowed and why) in the consent disclosure object presented to the
+   approving principal.
+
+4.4.  Submitted vs Validated forms
+
+   The *Submitted Mission Intent* is the JSON object the client
+   provides.  It is untrusted until the state authority validates it.
+
+   The *Validated Mission Intent* is the post-validation, post-narrowing
+   form the state authority records on the Mission Proposal.  The
+   Validated Mission Intent is the form covered by proposal_hash.
+
+4.5.  Narrowing rules
+
+   When validating a Submitted Mission Intent into a Validated Mission
+   Intent, the state authority MAY narrow values according to deployment
+   policy.  Permitted narrowings are:
+
+   *  mission_expiry: MAY be shortened.  MUST NOT be extended past the
+      Submitted value or past the deployment-policy ceiling.
+
+   *  objects: MAY be reduced (entries removed); MAY have entries
+      replaced with stricter URI equivalents (e.g., adding query
+      constraints) only if the replacement is a strict subset of the
+      original by URI semantics.  MUST NOT be enlarged.
+
+   *  constraints: MAY add additional constraints; MUST NOT remove
+      client-supplied constraints unless the constraint is invalid (in
+      which case the entire Submitted Intent MUST be refused).
+
+   *  success_criteria: MUST be preserved verbatim.
+
+   *  goal: MUST be preserved verbatim.
+
+   *  purpose: MUST be preserved verbatim.
+
+   *  language: MUST be preserved verbatim.
+
+   *  context: registered Common Constraints MAY be narrowed per the
+      constraint's narrowing rule (e.g., max_derivations MAY be
+      reduced).  Unknown non-x_ keys MUST be absent; this is enforced at
+      validation, not narrowing.
+
+   The state authority MUST include in the consent disclosure object a
+   record of each narrowing decision (the field, the Submitted value,
+   the Validated value, and a deployment-policy justification
+   identifier).
+
+   If the Submitted Mission Intent cannot be narrowed to a deployment-
+   acceptable form, the state authority MUST refuse the Submitted Intent
+   rather than silently substitute.
+
+4.6.  purpose URI
+
+   The optional purpose field carries a URI naming the task class.  Two
+   registration models are permitted:
+
+   *  *Client-registered*: a URI registered with the state authority by
+      the requesting client at client registration time.  The state
+      authority MUST refuse a purpose URI not registered for the
+      presenting client.
+
+   *  *Deployment-registered*: a URI in a state-authority-published
+      purpose vocabulary (e.g., urn:mbo:purposes:* or a deployment-
+      scoped IRI).  The state authority publishes the registered
+      vocabulary in its metadata document under
+      mission_purposes_supported (see Section 7.3).
+
+   Implementations SHOULD use deployment-registered purposes for cross-
+   organization audit consistency.
+
+4.7.  context and Common Constraints
+
+   Members of context are either registered Common Constraint keys (see
+   Section 10) or extension keys prefixed x_. Registered keys have
+   semantics defined in the Mission Common Constraints registry; their
+   value structures (single value, object, array) are constraint-
+   specific and defined per registry entry.  Extension keys follow
+   Section 4.8.
+
+4.8.  Schema evolution
+
+   The Mission Intent schema permits extension fields prefixed with x_
+   at the top level and inside context.  Non-prefixed unknown properties
+   are reserved for future revisions of this specification and MUST be
+   rejected at validation time.
+
+   Extension fields MUST be included in semantic normalization and
+   therefore in proposal_hash.  Implementations that do not recognize an
+   x_* extension MUST NOT grant or enlarge authority based on it.  If an
+   x_* extension claims authority-relevant semantics and is not
+   registered for the deployment, the state authority MUST reject the
+   Mission Intent.
+
+   Deployments requiring stricter schemas MAY publish a deployment-
+   specific stricter schema via mission_intent_schema_uri in state-
+   authority metadata.
+
+5.  Authority Set
+
+   The Authority Set is a substrate-neutral canonical container for the
+   maximum authority the state authority approved at the approval event.
+   The Authority Set is composed of *typed entries*.
+
+5.1.  Authority Set entry shape
+
+   Each Authority Set entry MUST carry the following fields:
+
+   *  type (string, required): the registered type name.
+
+   *  specification_uri (string, required) OR schema_digest (string,
+      required): an immutable reference to the type's specification.  If
+      both are present, schema_digest is authoritative for byte-level
+      integrity.
+
+   *  schema_version (string, required): the version of the type's
+      schema.
+
+   *  authority (object, required): the type-specific payload.
+
+   *  narrowing_profile (string, required): a URI identifying the
+      narrowing rules applied to this entry.  Default
+      urn:mbo:narrowing:default-v1 (see Section 5.4).
+
+5.1.1.  Authority Set entry JSON Schema
+
+   The canonical JSON Schema for an Authority Set entry is:
+
+   {
+     "$schema": "https://json-schema.org/draft/2020-12/schema",
+     "$id": "urn:mbo:schema:authority-set-entry:1",
+     "title": "Authority Set Entry",
+     "type": "object",
+     "required": [
+       "type", "schema_version", "authority", "narrowing_profile"
+     ],
+     "anyOf": [
+       { "required": ["specification_uri"] },
+       { "required": ["schema_digest"] }
+     ],
+     "additionalProperties": false,
+     "patternProperties": {
+       "^x_[A-Za-z0-9_-]+$": {}
+     },
+     "properties": {
+       "type": { "type": "string", "minLength": 1 },
+       "specification_uri": { "type": "string", "format": "uri" },
+       "schema_digest": {
+         "type": "string",
+         "pattern": "^sha-(256|384|512):[A-Za-z0-9_-]+$"
+       },
+       "schema_version": { "type": "string" },
+       "authority": { "type": "object" },
+       "narrowing_profile": { "type": "string", "format": "uri" }
+     }
+   }
+
+5.1.2.  Example Authority Set entry
+
+   {
+     "type": "mission_resource_access",
+     "specification_uri":
+       "https://datatracker.ietf.org/doc/draft-mcguinness-mission-oauth-profile",
+     "schema_version": "1",
+     "authority": {
+       "resource": "https://erp.example.com",
+       "actions": ["invoices.read", "journal-entries.write"],
+       "constraints": {
+         "max_amount_usd": 500
+       }
+     },
+     "narrowing_profile": "urn:mbo:narrowing:default-v1"
+   }
+
+5.2.  schema_digest format
+
+   The schema_digest value identifies the bytes of a type's schema.
+   ABNF:
+
+   schema-digest = digest-algorithm ":" digest-value
+   digest-algorithm = "sha-256" / "sha-384" / "sha-512"
+   digest-value  = 1*( ALPHA / DIGIT / "-" / "_" )
+
+   The digest-value is the base64url-no-pad encoding (see Section 2.1)
+   of the digest output computed over the JCS-canonical bytes of the
+   type's schema document.  Consumers MUST reject digests using
+   algorithms outside the registered set.
+
+   This format parallels the integrity-anchor hash format (Section 6).
+   It enables content-addressable verification of a specific schema
+   document.
+
+5.3.  Mission Authority Set Type Registry
+
+   The Framework creates the *Mission Authority Set Type* IANA registry.
+   Each registered type provides the elements below; profile
+   specifications and feature specifications MAY register additional
+   types.
+
+   Registration policy: Specification Required (RFC 8126 Section 4.6).
+
+5.3.1.  Registration template
+
+   Registration MUST include the following elements:
+
+   *  *Type name* (type field value).
+
+   *  *Defining specification* (RFC, Internet-Draft, or stable URL).
+
+   *  *schema_digest value* (where the schema is stable bytes) and
+      *schema document URL*.
+
+   *  *schema_version semantics* (how versions are compared; what
+      constitutes a compatible vs incompatible revision).
+
+   *  *Normalization rules*: the registered Normalization Profile (see
+      Section 14.4) that applies to entries of this type prior to
+      integrity-anchor computation.
+
+   *  *Equality rule*: when two entries are semantically equal.  The
+      rule MUST be a deterministic function over normalized inputs.
+
+   *  *Subset rule*: when entry A's authority is a subset of entry B's
+      authority (used by narrowing).
+
+   *  *Intersection rule*: the largest authority permitted by both A and
+      B.  Used by narrowing to constrain a Mission's authority by the
+      intersection of policy bounds and submitted intent.
+
+   *  *Unknown-field handling*: how entries with unrecognized authority-
+      member keys are treated at narrowing time.  The default behavior
+      is "refuse"; types MAY register a different rule with
+      justification.
+
+   *  *Change controller*.
+
+   *  *Reference*: pointer to the defining specification.
+
+5.3.2.  Initial entries
+
+   The Framework reserves the following type for future registration by
+   the OAuth Profile:
+
+   *  mission_resource_access — defined by
+      [I-D.draft-mcguinness-mission-oauth-profile], with members
+      resource, actions, and constraints.  The OAuth Profile performs
+      the registration; this document does not.
+
+   The Framework establishes the registry skeleton; profile and feature
+   specifications register concrete entries.
+
+5.4.  Default narrowing profile
+
+   The default narrowing profile is identified by
+   urn:mbo:narrowing:default-v1.  It applies to any Authority Set entry
+   that does not declare a more specific narrowing_profile.  The default
+   profile imposes the following rules.
+
+5.4.1.  Subset rule
+
+   Entry A is a subset of entry B if all of the following hold:
+
+   1.  A.type equals B.type.
+
+   2.  A.schema_version equals B.schema_version (or A is a strict
+       semantic-version successor that the registered type's
+       schema_version semantics declare backward-compatible).
+
+   3.  The per-type subset rule, applied to A.authority and B.authority,
+       returns true.  The per-type rule is supplied by the Authority Set
+       Type registry entry.
+
+   The default profile delegates step 3 to the type-specific rule.
+   Types that do not supply one MUST be treated as equality-only (only
+   identical authority payloads narrow).
+
+5.4.2.  Equality rule
+
+   Two entries are equal if both are subsets of each other.
+
+5.4.3.  Intersection rule
+
+   The intersection of entries A and B is computed as:
+
+   1.  If A.type ≠ B.type or A.schema_version ≠ B.schema_version, the
+       intersection is empty (no entry produced).
+
+   2.  Otherwise, the per-type intersection rule from the registry entry
+       is applied.  If no per-type rule exists, the intersection is
+       empty unless A and B are equal (in which case A is returned).
+
+5.4.4.  Unknown-field handling
+
+   The default profile refuses entries whose authority payload contains
+   keys not declared in the registered schema for the type.  A type MAY
+   register an explicit pass-through rule for specific extension fields;
+   absent that, refusal is the default.
+
+5.4.5.  Narrowing operation
+
+   At credential derivation, the requested narrowed entry MUST be a
+   subset of an entry in the Mission's Authority Set under the
+   applicable per-entry narrowing_profile.  If no Mission entry has a
+   narrowing_profile matching the requested derivation's narrowing
+   profile, the default profile applies.
+
+   Implementations MUST refuse derivation when the requested narrowing
+   cannot be proven to be a subset under the applicable profile.
+
+5.5.  Registration of alternate narrowing profiles
+
+   The Mission Authority Set Type registry MAY accept entries whose
+   narrowing_profile is a substrate-specific or vendor-specific URI.
+   Alternate narrowing profiles MUST be registered with their own
+   subset, equality, intersection, and unknown-field rules, and MUST NOT
+   be more permissive than the default profile would be for the same
+   input.
+
+6.  Integrity Anchors
+
+   A Mission record carries three integrity anchors that commit the
+   state authority to canonical objects: proposal_hash, authority_hash,
+   consent_disclosure_hash.
+
+6.1.  Computation pipeline
+
+   Integrity anchors are computed in three steps applied in order:
+
+   1.  *Semantic normalization* of the input value under the registered
+       Normalization Profile for the input's type (see Section 6.2).
+
+   2.  *Domain-separated, authorization-domain-bound envelope* wraps the
+       normalized value (see Section 6.3).
+
+   3.  *JCS canonicalization* [RFC8785] of the envelope, *SHA-256*
+       [RFC6234] of the JCS bytes, *base64url-no-pad* encoding of the
+       digest, with the digest-algorithm prefix sha-256:.
+
+   Pseudocode:
+
+   function compute_anchor(value, type, schema_version,
+                           authorization_domain, state_authority):
+       profile = lookup_normalization_profile(type)
+       normalized = profile.normalize(value)
+       envelope = {
+           "type":                 type,
+           "schema_version":       schema_version,
+           "authorization_domain": authorization_domain,
+           "state_authority":      state_authority,
+           "value":                normalized
+       }
+       jcs_bytes = jcs_canonicalize(envelope)
+       digest    = sha256(jcs_bytes)
+       return "sha-256:" + base64url_no_pad(digest)
+
+6.2.  Semantic normalization
+
+   JCS canonicalizes JSON syntax but does not make semantically
+   equivalent values identical.  Before JCS, each committed object MUST
+   be normalized under its registered Normalization Profile.  A
+   Normalization Profile defines:
+
+   *  *JSON parsing*: how source bytes are parsed into a data model.
+      Implementations MUST reject inputs containing duplicate JSON
+      object member names at parse time, prior to applying any member-
+      level rule.
+
+   *  *Array semantics*: per-field rule.  Each array-typed field is
+      declared as either _order-sensitive_ (member order preserved
+      verbatim) or _order-insensitive_ (members sorted under a declared
+      total order before JCS).
+
+   *  *Set semantics*: for order-insensitive arrays, duplicate members
+      are removed under the declared equality rule prior to ordering.
+
+   *  *Unicode normalization*: strings are normalized to Unicode
+      Normalization Form C (NFC) per [W3C-UNICODE-NORM] unless the
+      profile declares another form for a specific field.  Combining
+      character sequences in user-facing strings (e.g., goal) are
+      rendered to a canonical NFC form before JCS.
+
+   *  *URI normalization*: each URI-valued field is declared with one of
+      three rules: _syntactic-only_ (preserve case and percent-encoding
+      as supplied), _RFC 3986 normalization_ (apply syntax-based
+      normalization per [RFC3986] Section 6.2.2), or _exact-match_ (no
+      normalization; bytes preserved verbatim, comparison is byte-
+      exact).
+
+   *  *Number representation*: numeric fields requiring precision beyond
+      IEEE 754 double precision MUST use the JSON string representation.
+      The profile declares which fields are precision-sensitive (see
+      Section 12.4).
+
+   *  *Absent versus empty members*: per-field rule.  An absent member
+      and an empty value (e.g., [] or "") are by default not equivalent;
+      the profile MAY declare otherwise per field.
+
+   *  *Field-name canonical form*: field names MUST appear in the case
+      and spelling declared by the registered schema; the profile MUST
+      NOT silently lower-case or alias field names.
+
+   The Framework creates the *Mission Normalization Profile* IANA
+   registry (see Section 14.4).  Each registered type in the Authority
+   Set Type registry MUST declare its applicable Normalization Profile.
+
+6.2.1.  Initial Normalization Profile: Mission Intent
+
+   The Mission Intent type uses the Normalization Profile identified by
+   urn:mbo:norm:mission-intent:1, with these field rules:
+
+   *  goal (string): NFC.  Whitespace preserved.
+
+   *  objects (array of string): order-insensitive.  Members sorted
+      lexicographically by NFC bytes.  Duplicates removed.
+
+   *  constraints (array of string): order-sensitive.  Members preserved
+      in submitted order.  Duplicates rejected at validation time.
+
+   *  success_criteria (array of string): order-sensitive.  Duplicates
+      rejected at validation time.
+
+   *  mission_expiry (string): RFC 3339, normalized to UTC ("Z" zone
+      designator) with seconds resolution.  Fractional seconds preserved
+      if present.
+
+   *  purpose (string): exact-match (no URI normalization).
+
+   *  language (string): exact-match.
+
+   *  context (object): each member's rule is supplied by the registered
+      Common Constraint for that member name.  Members whose names are
+      extension keys (x_*) are normalized as opaque values: their byte
+      representation under JCS applies.
+
+6.2.2.  Initial Normalization Profile: Authority Set
+
+   The Authority Set type uses urn:mbo:norm:mission-authority-set:1.
+   The Authority Set is an array of typed entries; the profile delegates
+   per-entry normalization to each entry's per-type Normalization
+   Profile (declared in the Authority Set Type registry entry).  The
+   array itself is order-sensitive in the Validated Mission Intent's
+   recorded form.
+
+6.2.3.  Initial Normalization Profile: consent disclosure
+
+   The consent disclosure object uses urn:mbo:norm:mission-consent-
+   disclosure:1.  Its schema is the state authority's consent template;
+   the profile applies a default NFC + duplicate-rejection rule to all
+   string fields and delegates URI normalization to the consent
+   template's declared rules.
+
+6.3.  Domain-separated, authorization-domain-bound envelope
+
+   After normalization, the hash input is wrapped in an envelope with
+   the following members in this order (member order in the JCS output
+   is determined by JCS's algorithm; the order here is for human
+   readability):
+
+   *  type (string, required): one of the registered envelope types (see
+      below).
+
+   *  schema_version (string, required): the version identifier of the
+      input's schema, in the schema-defined version space.
+
+   *  authorization_domain (string, required): the tenant or
+      authorization-domain identifier the Mission lives in.  Equal to
+      the Mission's principals.tenant.
+
+   *  state_authority (string, required): the state authority's issuer
+      URL.  Equal to mission.origin.
+
+   *  value (any, required): the normalized input value.
+
+   Envelope JSON shape:
+
+   {
+     "type":                 "mission-intent",
+     "schema_version":       "urn:mbo:schema:mission-intent:1",
+     "authorization_domain": "tenant_acme",
+     "state_authority":      "https://as.example.com",
+     "value":                <normalized content>
+   }
+
+   The type field provides domain separation between object types.  The
+   authorization_domain and state_authority fields bind the hash to the
+   authorization domain and to the issuing state authority, preventing
+   cross-tenant and cross-authority transplantation.  Two identical
+   Validated Mission Intents in different tenants produce different
+   proposal_hash values.
+
+6.3.1.  Registered envelope types
+
+   The Framework registers three initial envelope type values:
+
+   *  mission-intent — for proposal_hash over the Validated Mission
+      Intent.
+
+   *  mission-authority-set — for authority_hash over the Authority Set.
+
+   *  mission-consent-disclosure — for consent_disclosure_hash over the
+      consent disclosure object.
+
+   The Mission Authority Set Type registry MAY introduce additional
+   envelope types for new integrity anchors as future features require;
+   each new type follows the same envelope shape.
+
+6.4.  Encoded form
+
+   Each integrity anchor value is the digest's algorithm-prefixed
+   base64url-no-pad encoding.  ABNF:
+
+   integrity-anchor   = digest-algorithm ":" digest-value
+   digest-algorithm   = "sha-256" / "sha-384" / "sha-512"
+   digest-value       = 1*( ALPHA / DIGIT / "-" / "_" )
+
+   For SHA-256 the digest-value is exactly 43 octets (256 bits
+   base64url-no-pad encoded).  Consumers MUST reject anchors with
+   unregistered digest-algorithm values or with malformed digest-value
+   encodings.
+
+6.5.  Worked pipeline example
+
+   Given the Validated Mission Intent of Section 4 and the Mission's
+   tenant tenant_acme and state authority https://as.example.com:
+
+6.5.1.  Step 1: Semantic normalization
+
+   The Mission Intent's objects array is order-insensitive; sort by NFC
+   bytes:
+
+   [
+     "https://erp.example.com/api/invoices",
+     "https://erp.example.com/api/journal-entries"
+   ]
+
+   Already sorted; no change.  All other fields are order-sensitive or
+   scalar and remain as supplied. goal, constraints[*], and
+   success_criteria[*] are NFC-normalized (in this example they are
+   already NFC).  The Validated Mission Intent after normalization has
+   the same byte content as the Validated example in Section 4.
+
+6.5.2.  Step 2: Envelope construction
+
+   {
+     "type":                 "mission-intent",
+     "schema_version":       "urn:mbo:schema:mission-intent:1",
+     "authorization_domain": "tenant_acme",
+     "state_authority":      "https://as.example.com",
+     "value": {
+       "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+       "objects": [
+         "https://erp.example.com/api/invoices",
+         "https://erp.example.com/api/journal-entries"
+       ],
+       "constraints": [
+         "Read only invoices issued in 2026-Q3.",
+         "Post journal entries with absolute amount < $500."
+       ],
+       "success_criteria": [
+         "All Q3 invoices processed.",
+         "Each posted entry references a source invoice."
+       ],
+       "mission_expiry": "2026-12-31T23:59:59Z",
+       "purpose": "urn:erp.example.com:purposes:quarterly-reconcile",
+       "language": "en",
+       "context": {
+         "max_derivations": "200",
+         "acr": {
+           "acr_values": [
+             "http://idmanagement.gov/ns/assurance/aal/2"
+           ],
+           "max_age": 1800
+         }
+       }
+     }
+   }
+
+6.5.3.  Step 3: JCS canonicalization, SHA-256, base64url-no-pad
+
+   JCS sorts object members by Unicode code-point order at each level.
+   The resulting canonical bytes (truncated for display, with member
+   order: authorization_domain, schema_version, state_authority, type,
+   value):
+
+   {"authorization_domain":"tenant_acme","schema_version":"urn:m...
+
+   (Implementations MUST compute the full byte sequence using a
+   conformant JCS library; this document does not reproduce the full
+   canonical form in display.)
+
+   SHA-256 of the canonical bytes (illustrative):
+
+   0x c1 0e e9 e0 b1 e7 5f d6 6b 7d ... (32 octets)
+
+   base64url-no-pad encoded with the algorithm prefix yields the
+   proposal_hash value recorded on the Mission:
+
+   sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY
+
+   The values of authority_hash and consent_disclosure_hash are computed
+   in the same way over their respective envelopes.
+
+   Conformant implementations MUST reproduce the test vectors in
+   Section 11 byte-for-byte; the illustrative bytes above are not
+   authoritative.
+
+6.6.  Three integrity anchors
+
+   *  proposal_hash: over the Validated Mission Intent (envelope
+      type=mission-intent).  Committed at the approval event; stable for
+      the Mission's lifetime.
+
+   *  authority_hash: over the Authority Set (envelope type=mission-
+      authority-set).  Committed at the approval event.
+
+   *  consent_disclosure_hash: over the consent disclosure object
+      presented to the approving principal (envelope type=mission-
+      consent-disclosure).  Committed at the approval event.
+
+   The integrity anchors collectively commit the state authority's
+   recorded approval.  They do not prove faithful rendering to the
+   approving principal; that property requires trustworthy consent UX
+   above the protocol layer (see Section 12.2).
+
+7.  Identifier Model
+
+   A Mission is identified by a stable canonical mission.id minted by
+   the state authority.  The same mission.id is observable by every
+   consumer that receives a credential derived from the Mission or
+   queries Mission Status.  This document does not define a pairwise or
+   audience-scoped Mission identifier; deployments that need audience-
+   level correlation resistance compose with OIDC pairwise sub claims
+   (which already prevent cross-audience user correlation) and, if a
+   Mission-level pairwise identifier is genuinely required, layer a
+   profile extension on top of this baseline.
+
+7.1.  Canonical Mission ID
+
+   The canonical mission.id is a stable opaque identifier minted by the
+   state authority at the approval event.  ABNF (matching the field ABNF
+   in Section 3.2.1):
+
+   mission-id      = 1*256( unreserved-char )
+   unreserved-char = ALPHA / DIGIT / "-" / "_"
+
+   The mission.id MUST:
+
+   *  Contain at least 128 bits of entropy.
+
+   *  Be unique within the state authority's namespace.
+
+   *  NOT contain audience label, tenant name, principal identifier,
+      policy version, or any other deployment-side correlatable
+      attribute.  Implementations MAY use a cryptographically random
+      prefix; if a deployment-side stable prefix is used (e.g., msn_),
+      it MUST NOT carry semantic content.
+
+   *  NOT be reused after Mission record garbage collection.
+
+7.2.  mission.origin
+
+   The mission.origin value is the state authority's issuer URL.  It is
+   the value a consumer uses to locate the state authority's metadata
+   document via the well-known URI /.well-known/mission-authority per
+   [RFC8615].  The mission.origin value is the absolute URL of the state
+   authority's issuer, with no query or fragment.
+
+7.3.  State authority metadata document
+
+   The metadata document at {mission.origin}/.well-known/mission-
+   authority is a JSON object ([RFC8259]) with the following members.
+   The document MUST be served over TLS, MUST be cacheable per HTTP
+   conventions, and MUST declare Content-Type: application/json.
+
+   *  issuer (string, required): URL.  MUST match mission.origin.
+
+   *  jwks_uri (string, required): URL of the state authority's public-
+      key document [RFC7517], used for signature verification of state-
+      authority-signed responses.
+
+   *  mission_status_endpoint (string, required): URL of the by-mission-
+      id Mission Status operation (see Section 9).
+
+   *  mission_lifecycle_endpoint (string, required): URL of the by-
+      mission-id lifecycle operation (see Section 7.4).
+
+   *  mission_intent_schema_uri (string, required): URL of the Mission
+      Intent JSON Schema in force at this state authority.  By default
+      this URL serves the schema defined in Section 4.2; deployments
+      using a stricter schema MUST publish the stricter schema at this
+      URL.
+
+   *  authority_set_types_supported (array of strings, required): the
+      Authority Set entry types this state authority issues.  Each entry
+      MUST be a registered type in the Mission Authority Set Type
+      registry.
+
+   *  mission_purposes_supported (array of strings, optional): the set
+      of purpose URIs the state authority accepts in Mission Intents
+      under its purpose vocabulary.  Absent if the state authority uses
+      client-registered purposes only.
+
+   *  mission_framework_versions_supported (array of strings, required):
+      spec revisions of this Framework that the state authority
+      supports.
+
+   *  mission_normalization_profiles_supported (array of strings,
+      required): registered Normalization Profile identifiers
+      (Section 14.4) the state authority understands.
+
+7.3.1.  Worked example metadata document
+
+   {
+     "issuer": "https://as.example.com",
+     "jwks_uri": "https://as.example.com/.well-known/jwks.json",
+     "mission_status_endpoint":
+       "https://as.example.com/mission/status",
+     "mission_lifecycle_endpoint":
+       "https://as.example.com/mission/lifecycle",
+     "mission_intent_schema_uri":
+       "https://as.example.com/.well-known/mission-intent-schema.json",
+     "authority_set_types_supported": [
+       "mission_resource_access"
+     ],
+     "mission_purposes_supported": [
+       "urn:erp.example.com:purposes:quarterly-reconcile",
+       "urn:erp.example.com:purposes:bulk-export"
+     ],
+     "mission_framework_versions_supported": [
+       "draft-mcguinness-mission-framework-00"
+     ],
+     "mission_normalization_profiles_supported": [
+       "urn:mbo:norm:mission-intent:1",
+       "urn:mbo:norm:mission-authority-set:1",
+       "urn:mbo:norm:mission-consent-disclosure:1"
+     ]
+   }
+
+   Profile specifications MAY extend this metadata document with
+   additional members.  Member names MUST follow mission_* prefix
+   convention to avoid collision with discovery metadata defined by
+   adjacent specifications.
+
+7.4.  Lifecycle endpoint
+
+   The Mission Lifecycle endpoint is the by-mission-id operation through
+   which authorized callers transition a Mission between lifecycle
+   states (suspend, resume, revoke, complete).  It is *distinct from
+   token revocation* ([RFC7009] or substrate equivalents): token
+   revocation operates on a token; the lifecycle endpoint operates on a
+   Mission.
+
+7.4.1.  Abstract operation
+
+   The Mission Lifecycle operation takes:
+
+   *  A canonical mission.id.
+
+   *  The requesting consumer's authentication.
+
+   *  A requested transition: one of suspend, resume, revoke, complete.
+
+   *  An optional reason (string).
+
+   *  A nonce.
+
+   It returns either the updated Mission state or an error per
+   Section 9.5.
+
+   The wire format is profile-specific; profile specifications bind this
+   abstract operation to concrete HTTP request/response forms, including
+   the authentication mechanism (e.g., OAuth bearer token, mTLS, or
+   substrate-native).
+
+7.4.2.  Authorization
+
+   The state authority MUST authenticate the caller and authorize the
+   caller for the requested transition.  A request from an unauthorized
+   caller MUST return the not-found response of Section 9.5 so as not to
+   act as a Mission enumeration oracle.
+
+   The Framework does not standardize the authorization policy for
+   lifecycle transitions; deployment policy specifies which principal
+   roles (subject, approving principal, administrator, automation
+   client) may invoke which transitions.
+
+7.4.3.  Idempotency
+
+   Lifecycle operations MUST be idempotent on the pair (mission
+   reference, requested transition).  A repeated request that does not
+   change state returns success without side effect.
+
+7.4.4.  Required properties
+
+   A Mission Lifecycle response MUST satisfy the same authentication,
+   freshness, audience, and integrity properties as a Mission Status
+   response (Section 9.4).
+
+7.5.  Principal model placement
+
+   The principal model (defined in Section 8) is the root of identity
+   bindings on a Mission record.  Its placement in the Mission Record
+   schema is shown in Section 3.2.2.
+
+8.  Principal Model
+
+   A Mission record carries the following principal fields, grouped
+   under the principals member of the Mission Record schema (see
+   Section 3.2.2):
+
+   *  subject (Mission Principal, required): the principal on whose
+      behalf the task is approved.
+
+   *  approving_principal (Mission Principal, required): the principal
+      who approved the Mission.  MAY be equal to subject by value.  For
+      delegated approval (administrator approval, headless approval
+      anchors) approving_principal differs from subject.
+
+   *  requesting_client (Mission Principal, required): the OAuth client,
+      AAuth agent, or other software entity that submitted the Mission
+      Proposal.
+
+   *  tenant (string, required): the tenant or authorization-domain
+      identifier the Mission lives in.  Tenant is a scope identifier,
+      not an identity.
+
+   *  state_authority (string, required, URI format): the issuer URL of
+      the state authority.  Equal to mission.origin.
+
+   *  delegation_policy (string, required, URI format): a URI or named
+      profile identifying the stable Mission-level bounds governing
+      which actors may derive or exercise authority.
+
+   The principal model is recorded at the approval event and is
+   immutable thereafter (the Mission's subject, approving_principal, and
+   other principal fields MUST NOT change after activation).
+
+   Dynamic actor context (the current delegation chain at a derived
+   artifact) is carried on projections (derived credentials) and runtime
+   requests, not stored on the Mission record.  The OAuth Profile and
+   AAuth Profile bind dynamic actor context to derived credentials via
+   the actor profile ([I-D.draft-mcguinness-oauth-actor-profile]).
+
+8.1.  Mission Principal
+
+   A Mission Principal is an identity-bearing object composing [RFC9493]
+   Subject Identifiers for Security Event Tokens (the identity layer)
+   with the optional Actor Profile sub_profile member
+   ([I-D.draft-mcguinness-oauth-actor-profile], the entity-type layer)
+   and an optional client-instance member
+   ([I-D.draft-mcguinness-oauth-client-instance-assertion], for software
+   entities with multiple instances).
+
+   The Mission Principal object has the following members:
+
+   *  format (string, required): the subject identifier format per
+      [RFC9493].  The Framework permits the following formats: iss_sub,
+      email, account, phone_number, opaque, decentralized_id, uri,
+      aliases.  Format-specific members (defined by [RFC9493]) accompany
+      the format value.
+
+   *  sub_profile (object, optional): entity-type classification per
+      [I-D.draft-mcguinness-oauth-actor-profile].  When present, carries
+      at minimum a type member with one of human, service, agent (or any
+      extension type registered by the Actor Profile).
+
+   *  instance (object, optional): client-instance identity per
+      [I-D.draft-mcguinness-oauth-client-instance-assertion].  Used only
+      for software-entity principals (typically requesting_client);
+      carries the instance issuer and instance_id.
+
+   The iss_sub format is RECOMMENDED for principals naming a subject
+   within an identity provider's namespace.  Deployments MAY use other
+   RFC 9493 formats when the deployment's identity infrastructure
+   prefers a different representation.
+
+8.1.1.  Mission Principal JSON Schema
+
+   {
+     "$schema": "https://json-schema.org/draft/2020-12/schema",
+     "$id": "urn:mbo:schema:mission-principal:1",
+     "title": "Mission Principal",
+     "type": "object",
+     "required": ["format"],
+     "properties": {
+       "format": {
+         "type": "string",
+         "enum": [
+           "iss_sub", "email", "account", "phone_number",
+           "opaque", "decentralized_id", "uri", "aliases"
+         ]
+       },
+       "iss": { "type": "string", "format": "uri" },
+       "sub": { "type": "string", "minLength": 1 },
+       "email": { "type": "string", "format": "email" },
+       "account": { "type": "string", "format": "uri" },
+       "phone_number": { "type": "string" },
+       "id": { "type": "string", "minLength": 1 },
+       "uri": { "type": "string", "format": "uri" },
+       "identifiers": { "type": "array" },
+       "sub_profile": {
+         "type": "object",
+         "required": ["type"],
+         "properties": {
+           "type": { "type": "string" }
+         },
+         "additionalProperties": true
+       },
+       "instance": {
+         "type": "object",
+         "required": ["iss", "instance_id"],
+         "properties": {
+           "iss": { "type": "string", "format": "uri" },
+           "instance_id": { "type": "string", "minLength": 1 }
+         },
+         "additionalProperties": false
+       }
+     },
+     "allOf": [
+       {
+         "if": { "properties": {
+           "format": { "const": "iss_sub" }
+         }, "required": ["format"] },
+         "then": { "required": ["iss", "sub"] }
+       },
+       {
+         "if": { "properties": {
+           "format": { "const": "email" }
+         }, "required": ["format"] },
+         "then": { "required": ["email"] }
+       },
+       {
+         "if": { "properties": {
+           "format": { "const": "phone_number" }
+         }, "required": ["format"] },
+         "then": { "required": ["phone_number"] }
+       },
+       {
+         "if": { "properties": {
+           "format": { "const": "opaque" }
+         }, "required": ["format"] },
+         "then": { "required": ["id"] }
+       },
+       {
+         "if": { "properties": {
+           "format": { "const": "decentralized_id" }
+         }, "required": ["format"] },
+         "then": { "required": ["uri"] }
+       },
+       {
+         "if": { "properties": {
+           "format": { "const": "uri" }
+         }, "required": ["format"] },
+         "then": { "required": ["uri"] }
+       },
+       {
+         "if": { "properties": {
+           "format": { "const": "account" }
+         }, "required": ["format"] },
+         "then": { "required": ["uri"] }
+       },
+       {
+         "if": { "properties": {
+           "format": { "const": "aliases" }
+         }, "required": ["format"] },
+         "then": { "required": ["identifiers"] }
+       }
+     ]
+   }
+
+   For the full semantics of each format and its associated members,
+   consult [RFC9493].
+
+8.1.2.  Examples
+
+   *iss_sub subject with type classification*:
+
+   {
+     "format": "iss_sub",
+     "iss": "https://idp.example.com",
+     "sub": "user_3p2q8mN1a0kV7tR",
+     "sub_profile": { "type": "human" }
+   }
+
+   *iss_sub service principal with client instance*:
+
+   {
+     "format": "iss_sub",
+     "iss": "https://as.example.com",
+     "sub": "client_erp-recon-agent",
+     "sub_profile": { "type": "service" },
+     "instance": {
+       "iss": "https://as.example.com",
+       "instance_id": "inst_8YfX2qV9rL3"
+     }
+   }
+
+   *email principal* (e.g., for an out-of-band approving administrator):
+
+   {
+     "format": "email",
+     "email": "admin@example.com",
+     "sub_profile": { "type": "human" }
+   }
+
+8.2.  Principal Model JSON Schema
+
+   The canonical JSON Schema for the principal-model object is:
+
+   {
+     "$schema": "https://json-schema.org/draft/2020-12/schema",
+     "$id": "urn:mbo:schema:principal-model:1",
+     "title": "Mission Principal Model",
+     "type": "object",
+     "required": [
+       "subject", "approving_principal", "requesting_client",
+       "tenant", "state_authority", "delegation_policy"
+     ],
+     "additionalProperties": false,
+     "properties": {
+       "subject": { "$ref": "urn:mbo:schema:mission-principal:1" },
+       "approving_principal": {
+         "$ref": "urn:mbo:schema:mission-principal:1"
+       },
+       "requesting_client": {
+         "$ref": "urn:mbo:schema:mission-principal:1"
+       },
+       "tenant": { "type": "string", "minLength": 1 },
+       "state_authority": { "type": "string", "format": "uri" },
+       "delegation_policy": { "type": "string", "format": "uri" }
+     }
+   }
+
+   The state_authority value MUST equal the Mission's mission.origin.
+
+8.3.  Equality of principals
+
+   Two Mission Principals are equal when their format values match and
+   the format-specific identifier members are byte-equal under the
+   registered Normalization Profile for the format.  The sub_profile and
+   instance members are evidence, not identity; they MAY differ between
+   two otherwise-equal principals without affecting equality.
+
+   When comparing a Mission's subject to an authentication event's
+   subject identifier at credential derivation time, implementations
+   MUST compare under the same equality rule.  The Mission Principal
+   referenced as subject is the identity bound at approval and the
+   target identity for any subject-matching policy.
+
+9.  Mission Status Interface
+
+   The Mission Status interface is the authenticated state-authority
+   view returning Mission state and integrity-anchored evidence.  It is
+   *distinct from token introspection* (which is by-token); Mission
+   Status is by-mission-id.
+
+9.1.  Abstract operation
+
+   The Mission Status operation takes:
+
+   *  A canonical *mission.id* identifying the Mission to query.
+
+   *  The requesting consumer's *authentication*: substrate-specific
+      (OAuth bearer token, mTLS client certificate, AAuth resource
+      token, etc.).
+
+   *  The consumer's *audience identifier*: the value the consumer uses
+      to identify itself as a Mission Status consumer at this state
+      authority.  This binds the response to the consumer for audience-
+      property purposes.
+
+   *  A caller-supplied *nonce*: a URL-safe ASCII string with at least
+      96 bits of entropy.  The state authority echoes the nonce in the
+      response.
+
+   It returns either a Mission Status Response object (defined below) or
+   an error per Section 9.5.
+
+   The wire format is profile-specific.  Profile specifications bind
+   this abstract operation to a concrete request and response
+   representation, including the protection mechanism (e.g., [RFC9701]
+   signed responses for OAuth introspection projection; JWS [RFC7515]
+   for the dedicated operation; substrate-native signing in AAuth).
+
+9.1.1.  Nonce format
+
+   ABNF:
+
+   mission-status-nonce = 16*128( unreserved-char )
+   unreserved-char      = ALPHA / DIGIT / "-" / "_"
+
+   The caller MUST generate a fresh nonce per request.  The state
+   authority MUST NOT cache a response keyed by nonce; the nonce is a
+   per-request anti-replay binding.  The state authority MUST echo the
+   nonce in the response verbatim under the response's nonce member; it
+   MUST refuse a request whose nonce does not match the ABNF.
+
+9.2.  Mission Status Response object
+
+   A Mission Status Response is a JSON object with the following
+   members:
+
+   *  mission (object, required): the Mission identity envelope.
+      Carries { "id": "...", "origin": "..." }.
+
+   *  state (string, required): one of active, suspended, revoked,
+      completed, expired.
+
+   *  integrity_anchors (object, required): the three integrity anchors
+      of Section 6.
+
+   *  authority_projection (array, required): the audience-filtered
+      Authority Set projection (see Section 9.3).
+
+   *  policy_version (string, required): the policy_version recorded at
+      the approval event.
+
+   *  issued_at (string, required): RFC 3339 timestamp at which the
+      response was generated.
+
+   *  expires_at (string, required): RFC 3339 timestamp after which the
+      response MUST NOT be relied upon.
+
+   *  freshness_at (string, required): RFC 3339 timestamp at which the
+      state authority's view of the Mission was current.  In consistent-
+      store deployments, this equals issued_at.  In eventually-
+      consistent deployments, freshness_at MAY be earlier than issued_at
+      by a deployment-declared bound.
+
+   *  mission_expiry (string, required): mirrors the Mission's
+      mission_expiry.
+
+   *  audience (string, required): echoes the requesting consumer's
+      audience identifier.
+
+   *  nonce (string, required): echoes the caller-supplied nonce.
+
+   The wire form (e.g., a JWS-signed payload, an RFC 9701 token
+   introspection response) is profile-specific.  The Mission Status
+   Response object is the protocol-level data the wire form carries.
+
+9.2.1.  Mission Status Response JSON Schema
+
+   {
+     "$schema": "https://json-schema.org/draft/2020-12/schema",
+     "$id": "urn:mbo:schema:mission-status-response:1",
+     "title": "Mission Status Response",
+     "type": "object",
+     "required": [
+       "mission", "state", "integrity_anchors",
+       "authority_projection", "policy_version",
+       "issued_at", "expires_at", "freshness_at",
+       "mission_expiry", "audience", "nonce"
+     ],
+     "additionalProperties": false,
+     "properties": {
+       "mission": {
+         "type": "object",
+         "required": ["id", "origin"],
+         "additionalProperties": false,
+         "properties": {
+           "id":     { "type": "string" },
+           "origin": { "type": "string", "format": "uri" }
+         }
+       },
+       "state": {
+         "type": "string",
+         "enum": [
+           "active", "suspended", "revoked", "completed", "expired"
+         ]
+       },
+       "integrity_anchors": {
+         "type": "object",
+         "required": [
+           "proposal_hash", "authority_hash",
+           "consent_disclosure_hash"
+         ],
+         "properties": {
+           "proposal_hash":           { "type": "string" },
+           "authority_hash":          { "type": "string" },
+           "consent_disclosure_hash": { "type": "string" }
+         }
+       },
+       "authority_projection": {
+         "type": "array",
+         "items": { "$ref": "urn:mbo:schema:authority-set-entry:1" }
+       },
+       "policy_version":  { "type": "string" },
+       "issued_at":       { "type": "string", "format": "date-time" },
+       "expires_at":      { "type": "string", "format": "date-time" },
+       "freshness_at":    { "type": "string", "format": "date-time" },
+       "mission_expiry":  { "type": "string", "format": "date-time" },
+       "audience":        { "type": "string" },
+       "nonce":           { "type": "string" }
+     }
+   }
+
+9.2.2.  Worked example response
+
+   A Resource Server https://erp.example.com queries Mission Status for
+   the example Mission from Section 3.2:
+
+   {
+     "mission": {
+       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+       "origin": "https://as.example.com"
+     },
+     "state": "active",
+     "integrity_anchors": {
+       "proposal_hash":
+         "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+       "authority_hash":
+         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+       "consent_disclosure_hash":
+         "sha-256:nB2xK5qY7vM3rL9pT4cE6sZ8wQ1bN0fH5jX9kV2sRdM"
+     },
+     "authority_projection": [
+       {
+         "type": "mission_resource_access",
+         "specification_uri":
+           "https://datatracker.ietf.org/doc/draft-mcguinness-mission-oauth-profile",
+         "schema_version": "1",
+         "authority": {
+           "resource": "https://erp.example.com",
+           "actions": ["invoices.read", "journal-entries.write"],
+           "constraints": {
+             "max_amount_usd": 500
+           }
+         },
+         "narrowing_profile": "urn:mbo:narrowing:default-v1"
+       }
+     ],
+     "policy_version": "deploy-policy:v17",
+     "issued_at":     "2026-11-02T08:14:00Z",
+     "expires_at":    "2026-11-02T08:15:00Z",
+     "freshness_at":  "2026-11-02T08:14:00Z",
+     "mission_expiry":"2026-12-31T23:59:59Z",
+     "audience":      "https://erp.example.com",
+     "nonce":         "nonce_K9pV4nT2sR7mB1xQ"
+   }
+
+9.3.  Audience-filtered Authority Set projection
+
+   The authority_projection member carries the subset of the Mission's
+   Authority Set relevant to the requesting audience.
+
+   The default projection rule, applied unless an Authority Set Type
+   registers a stricter projection rule, is:
+
+   1.  For each entry in the Mission's Authority Set, the entry is *in-
+       projection* for an audience A if A's audience identifier matches
+       the audience identifier carried in the entry's authority payload
+       under the type's audience-identification rule.  The default
+       identification rule inspects the authority.resource member if
+       present and treats it as the entry's audience-identifying URI;
+       types MAY register alternate identification rules.
+
+   2.  The state authority projects the in-projection entries verbatim.
+
+   3.  Entries not in projection MUST NOT appear in
+       authority_projection.  Their presence in the Mission record is
+       not externally observable through this projection.
+
+   The default projection rule applies syntactic equality between the
+   audience identifier and the entry's authority.resource value, after
+   applying the URI normalization rule declared by the relevant
+   Authority Set Type's Normalization Profile.
+
+   Audiences that are tenants or trust domains rather than single
+   resource URIs are matched by the registered audience-identification
+   rule of the relevant Authority Set Type; the Framework default rule
+   is single-URI.
+
+9.4.  Required properties
+
+   A Mission Status response MUST satisfy:
+
+   *  *Authentication property*: the response carries an integrity
+      signal whose source is the state authority.  Consumers verify the
+      signal against the state authority's published keys (jwks_uri in
+      the metadata document).
+
+   *  *Freshness property*: the response indicates when the state was
+      current via issued_at, freshness_at, and expires_at.
+
+   *  *Audience property*: the response binds the requesting consumer's
+      audience identifier.  Replay against a different audience MUST be
+      detectable: the audience member binds the response to a single
+      consumer, and signed wire forms (RFC 9701, JWS) carry the audience
+      binding in the signed payload.
+
+   *  *Integrity property*: the response payload and its integrity
+      anchors chain back to the canonical Mission record verifiably.  A
+      correct consumer that obtains the Mission's Validated Intent and
+      Authority Set through any path MUST be able to recompute
+      proposal_hash and authority_hash and observe equality with the
+      response values.
+
+   *  *Anti-oracle property*: possession of a Mission reference is not
+      authorization.  The state authority MUST authenticate the caller
+      and authorize the caller for the requested reference and audience.
+      Unknown and unauthorized references MUST produce indistinguishable
+      responses (the not-found shape of Section 9.5).
+
+   *  *Request-binding property*: signed responses MUST bind the caller
+      identity, the requested Mission reference, the audience, and the
+      caller-provided nonce within the signed payload.  Verification of
+      the signature without these bindings MUST be insufficient to
+      accept the response.
+
+   *  *Caching property*: every response declares issued_at,
+      freshness_at, and expires_at.  Consumers MUST fail closed after
+      expires_at unless a profile explicitly defines a bounded degraded
+      mode.  The Framework RECOMMENDS expires_at - issued_at of 60
+      seconds for active state and 300 seconds for terminal states;
+      profiles MAY tune within deployment policy.
+
+9.5.  Error model
+
+   A Mission Status response operates over the following error model.
+   Profile specifications map these to substrate-appropriate transport
+   codes.
+
+     +==============+==================================+=============+
+     | Symbol       | Meaning                          | RECOMMENDED |
+     |              |                                  | HTTP status |
+     +==============+==================================+=============+
+     | ok           | Mission found and visible.       | 200         |
+     |              | Response carries state.          |             |
+     +--------------+----------------------------------+-------------+
+     | unauthorized | Request not authenticated.       | 401         |
+     +--------------+----------------------------------+-------------+
+     | not_found    | Mission reference does not exist | 404         |
+     |              | OR is not visible to this        |             |
+     |              | consumer.  These cases are       |             |
+     |              | intentionally indistinguishable. |             |
+     +--------------+----------------------------------+-------------+
+     | terminated   | Mission is in a terminal state.  | 200 (with   |
+     |              | Response includes state.         | state ∈     |
+     |              |                                  | terminal    |
+     |              |                                  | set)        |
+     +--------------+----------------------------------+-------------+
+     | suspended    | Mission is suspended.  Response  | 200 (with   |
+     |              | includes state.                  | state =     |
+     |              |                                  | suspended)  |
+     +--------------+----------------------------------+-------------+
+     | rate_limited | Consumer is rate-limited.        | 429         |
+     +--------------+----------------------------------+-------------+
+     | unavailable  | State authority temporarily      | 503         |
+     |              | can't serve status.              |             |
+     +--------------+----------------------------------+-------------+
+
+                                  Table 3
+
+   Consumers MUST NOT distinguish an unknown Mission from a known but
+   unauthorized Mission.  A terminal Mission is "found" only for an
+   authorized caller.  State authorities returning not_found MUST NOT
+   vary response timing, payload size, or response headers in a way that
+   distinguishes the two cases.
+
+9.5.1.  Error response shape
+
+   When a Mission Status operation returns an error, the response body
+   is a JSON object:
+
+   {
+     "error": "not_found",
+     "error_description":
+       "Mission reference is not found or not visible.",
+     "nonce": "nonce_K9pV4nT2sR7mB1xQ"
+   }
+
+   Members:
+
+   *  error (string, required): one of the symbols in the table above
+      (excluding ok).
+
+   *  error_description (string, recommended): human-readable summary.
+
+   *  nonce (string, required): echoes the caller-supplied nonce so the
+      caller can correlate response with request.
+
+   Profiles MAY add substrate-specific error members (e.g., error_uri);
+   the three above MUST be present.
+
+9.5.2.  Rate-limited response
+
+   When responding rate_limited, the state authority SHOULD include a
+   retry_after member (seconds, integer) suggesting when the consumer
+   may retry.  Profiles binding to HTTP SHOULD additionally emit a
+   Retry-After response header.
+
+9.6.  Caller authentication
+
+   The Framework requires that the state authority authenticate the
+   caller of every Mission Status operation.  The Framework does not
+   standardize the authentication mechanism; profile specifications bind
+   to OAuth bearer tokens, mTLS client certificates, AAuth resource
+   tokens, or similar substrate-native mechanisms.
+
+   Caller authentication MUST be cryptographic and replay-resistant
+   within the response's freshness window.  Bearer-token-only
+   authentication is permitted only when the bearer token itself is
+   short-lived or sender-constrained (e.g., DPoP [RFC9449] or mTLS-bound
+   [RFC8705]).
+
+10.  Common Constraints Framework
+
+   The Mission Intent's context field carries machine-actionable bounds.
+   The Framework defines a *Mission Common Constraints* registry that
+   standardizes constraint key names and semantics so cross-vendor
+   deployments express common bounds consistently.
+
+   Each registered constraint provides:
+
+   *  name: the key in mission_intent.context.
+
+   *  type: the JSON type of the value (string, integer, array, etc.).
+
+   *  specification_uri: immutable specification reference.
+
+   *  schema_digest (optional): for richer constraint shapes.
+
+   *  schema_version.
+
+   *  Normalization rules.
+
+   *  Equality and subset rules.
+
+   *  Narrowing rules at derivation time.
+
+   *  Runtime enforcement contract: where and how the constraint is
+      enforced.
+
+10.1.  Initial entries
+
+   This document defines two initial entries:
+
+10.1.1.  max_derivations
+
+   The maximum number of credential derivation events (Section 2.2)
+   permitted under this Mission across its lifetime.
+
+   *Value type*: JSON string representing a non-negative decimal
+   integer.  Maximum value "18446744073709551615" (2^64 − 1).  String
+   form is chosen for IEEE 754 precision safety under JCS (see
+   Section 12.4).
+
+   *Authoritative counter*: the state authority.  Each credential
+   derivation event MUST increment the counter atomically as part of the
+   credential-issuance commit.  The counter MUST NOT exceed the declared
+   max_derivations value; an issuance request that would exceed it MUST
+   be refused with a substrate-appropriate error (the OAuth Profile
+   binds this to the mission_inactive error class).
+
+   *Counter exposure*: the state authority MUST expose the current
+   counter value through Mission Status under a member
+   derivations_remaining when max_derivations is declared and when
+   policy permits the requesting audience to observe budget state.  When
+   derivations_remaining is exposed it carries the decimal-string
+   remainder (max_derivations minus the authoritative counter).
+
+   *Narrowing*: a derived constraint at credential derivation time MAY
+   specify a smaller value; it MUST NOT exceed the Mission's declared
+   max_derivations.
+
+   *Reset*: the counter resets only when Mission Expansion creates a
+   successor Mission.  The predecessor's counter is final.
+   Implementation guidance for the successor's initial counter is
+   defined in [I-D.draft-mcguinness-mission-expansion].
+
+   *Runtime relationship*: this constraint governs *issuance*, not per-
+   action invocation.  Per-action runtime budgets are max_invocations,
+   defined in [I-D.draft-mcguinness-mission-runtime-profile].
+
+   *Example context member*:
+
+   { "max_derivations": "200" }
+
+10.1.2.  acr
+
+   The required Authentication Context Class Reference values for the
+   approving principal's authentication at the approval event, and for
+   any subsequent step-up authentication required to derive credentials
+   under this Mission.
+
+   The acr constraint mirrors the OIDC Core acr claim and the [RFC9470]
+   acr_values and max_age request parameters.  The identifier space for
+   acr values is intentionally not registered by this document;
+   deployments compose with whichever assurance framework they already
+   use.
+
+   *Value type*: JSON object with the following members:
+
+   *  acr_values (array of strings, required, minItems 1): the set of
+      acceptable acr identifiers.  Any single identifier in the list
+      satisfies the constraint (any-of semantics, matching OIDC
+      acr_values).  Each identifier is an opaque string interpreted by
+      the credential issuer and consumers per deployment policy.
+
+   *  max_age (integer, required): the maximum age in seconds of the
+      authentication event that satisfies the constraint.  Mirrors the
+      OIDC max_age request parameter.  Range: 1 to 86400 (24 hours).
+
+   *Example context member*:
+
+   {
+     "acr": {
+       "acr_values": [
+         "http://idmanagement.gov/ns/assurance/aal/2",
+         "phr_high"
+       ],
+       "max_age": 1800
+     }
+   }
+
+   *Identifier-space composition*: this document does not register acr
+   identifiers.  Deployments select an identifier space that matches
+   their threat model.  Common choices include:
+
+   *  [NIST-SP-800-63] AAL identifiers (e.g.,
+      http://idmanagement.gov/ns/assurance/aal/2 for AAL2).
+
+   *  FIDO authenticator-level identifiers.
+
+   *  OpenID PHR (Personal Healthcare Records) assurance values.
+
+   *  [OIDC-EAP-ACR] phr (phishing-resistant) and phrh (phishing-
+      resistant, hardware-protected).
+
+   *  OIDC MODRNA acr values.
+
+   *  Deployment-defined URIs.
+
+   Profile specifications composing this Framework with their wire
+   substrate inherit the deployment's acr identifier space; the AS or PS
+   advertises its supported acr values in its discovery metadata under
+   acr_values_supported.
+
+   *Composes with*: [RFC9470] step-up authentication challenges.  A
+   denied credential derivation request that would be permitted by
+   satisfying the acr constraint via fresh authentication MAY be
+   returned as a step-up challenge by the credential issuer.  The
+   challenge carries the Mission's acr_values and max_age verbatim as
+   the step-up request parameters.
+
+   *Narrowing*: a derived constraint at credential derivation time MAY
+   narrow the Mission's acr_values to a subset (stricter set of
+   acceptable identifiers) and MAY reduce max_age (require fresher
+   authentication); it MUST NOT add identifiers not present in the
+   Mission's acr_values set or extend max_age beyond the Mission's
+   value.  Ordering of identifiers within acr_values is deployment-
+   defined and out of scope for this document.
+
+10.1.3.  amr
+
+   The required Authentication Methods References for the approving
+   principal's authentication at the approval event, and for any
+   subsequent step-up authentication required to derive credentials
+   under this Mission.
+
+   The amr constraint mirrors the OIDC Core amr claim and the IANA
+   "Authentication Method Reference Values" registry [RFC8176]. acr and
+   amr are independent dimensions: acr names the overall authentication
+   context class (a policy identifier); amr enumerates the discrete
+   methods used.  A Mission MAY carry both; consumers evaluating
+   credential derivation AND across all present authentication
+   constraints.
+
+   *Value type*: JSON object with the following members:
+
+   *  amr_values (array of strings, required, minItems 1): the set of
+      acceptable amr identifiers.  The authentication event's amr claim
+      MUST intersect this set (the authentication's amr array contains
+      at least one of the listed identifiers).  Each identifier is
+      interpreted per the IANA AMR registry [RFC8176] or deployment
+      extension.
+
+   *  max_age (integer, optional): the maximum age in seconds of the
+      authentication event that satisfies the constraint.  Mirrors the
+      OIDC max_age request parameter.  When absent, the max_age from a
+      co-present acr constraint applies; if no constraint declares
+      max_age, the credential issuer's default freshness applies.
+      Range: 1 to 86400 (24 hours).
+
+   *Example context member*:
+
+   {
+     "amr": {
+       "amr_values": ["mfa", "hwk"],
+       "max_age": 1800
+     }
+   }
+
+   This requires that the approving principal's authentication event
+   used at least one of mfa or hwk and occurred within 1800 seconds.
+
+   *Identifier-space composition*: the IANA "Authentication Method
+   Reference Values" registry [RFC8176] is the canonical registry.
+   Common values include pwd, otp, mfa, hwk (hardware key), fpt
+   (fingerprint), face, pop (proof of possession).  This document does
+   not register new AMR values; deployments compose with [RFC8176]
+   entries and register extensions there.
+
+   *Composes with*: [RFC9470] step-up.  RFC 9470 step-up is primarily
+   acr-based; deployments that need to require specific methods MAY
+   express the requirement through both an acr constraint (mapping to a
+   deployment-registered acr identifier that implies the methods) and an
+   amr constraint (binding the methods explicitly for audit).
+   Implementations MAY translate an amr-only constraint into an acr-
+   based step-up challenge when the deployment registers an acr
+   identifier covering the required amr set.
+
+   *Narrowing*: a derived constraint at credential derivation time MAY
+   narrow amr_values to a subset (stricter set of acceptable methods)
+   and MAY reduce max_age; it MUST NOT add identifiers not present in
+   the Mission's amr_values set or extend max_age beyond the Mission's
+   value.
+
+10.2.  Future-work entries
+
+   The following constraint names are sketched in the architecture but
+   have unresolved semantics; they are NOT included in the initial
+   registry:
+
+   *  max_value: requires currency, aggregation period, and
+      authoritative counter to be specified.
+
+   *  max_duration: requires units and start event to be specified.
+
+   *  geo: requires subject vs actor vs resource vs execution-location
+      semantics to be picked.
+
+   *  data_classification: requires a registered classification
+      vocabulary.
+
+   These will register as the design stabilizes and implementer interest
+   emerges.
+
+11.  Reference Test Vectors
+
+   This specification includes reference test vectors as a first-class
+   deliverable.  Test vectors are published in the vectors/ directory of
+   the specification repository, tagged with the spec revision (e.g.,
+   vectors/draft-mcguinness-mission-framework-00/).
+
+   An implementation that does not reproduce the published test vectors
+   byte-for-byte is non-conformant to that vector class.
+
+   The required vector classes are:
+
+   1.  *Semantic-normalization and JCS vectors*: 20 or more input JSON
+       objects with expected normalized data model and expected JCS
+       bytes.  Covers array ordering, duplicate elements, duplicate
+       object member rejection, absent versus empty members, URI
+       comparison, number formatting, key ordering, escapes, Unicode
+       policy, nested objects, arrays, and nulls.
+
+   2.  *Domain-separated and authorization-domain-bound hash vectors*:
+       input value, normalized wrapped input, and expected SHA-256 hash.
+       Includes negative cross-tenant and cross-authority
+       transplantation cases.
+
+   3.  *State-transition vectors*: full state-machine traversals for
+       Mission Proposal and Mission lifecycles, including invalid
+       transitions that MUST be refused.
+
+   4.  *Authority Set narrowing vectors* per registered type.  For
+       mission_resource_access: approved entry + derived entry →
+       expected accept/refuse classification.
+
+   5.  *Mission Status vectors*: authenticated request → expected
+       response shape for success, stale state, replayed nonce, wrong
+       audience, unknown reference, and unauthorized reference.  Unknown
+       and unauthorized cases MUST be observationally equivalent.
+
+   6.  *mission claim vectors*: Mission record → expected claim shape.
+       (Defined in the OAuth Profile; vector class declared here.)
+
+12.  Security Considerations
+
+12.1.  State authority compromise
+
+   A compromised state authority can fabricate Mission records, backdate
+   evidence, and issue Mission Status responses without constraint.  The
+   Framework assumes the state authority is trusted; compromise of the
+   state authority is outside the protection model of this
+   specification.  Deployments mitigate state-authority compromise
+   through key hardware modules, audit logging, independent attestation
+   of state-authority operations, and cross-organization audit
+   anchoring.
+
+12.2.  Integrity anchor non-guarantees
+
+   The integrity anchors prove the state authority committed to specific
+   canonical objects at the approval event.  They do not prove:
+
+   *  *Faithful rendering*: the approving principal saw the consent
+      disclosure object as the state authority recorded it.  A
+      compromised renderer can present different content while the state
+      authority's record remains untouched.
+
+   *  *Human comprehension*: the approving principal understood the
+      rendered content.  Consent UX assurance lives above the protocol
+      layer.
+
+   *  *State authority honesty in real time*: an honest auditor
+      examining records after the fact cannot distinguish honest state-
+      authority operation from in-the-moment fabrication that records
+      itself consistently.
+
+   *  *Approving-principal authenticity*: the approving principal was
+      authentically the named person, beyond the acr evidence recorded.
+
+   Deployments needing stronger guarantees compose with trustworthy
+   consent UX, principal authentication assurance, MAS-rendered consent
+   under cross-substrate governance, and transparency-log anchoring of
+   integrity hashes.
+
+12.3.  JCS implementation correctness
+
+   Implementations that produce byte-divergent canonical output produce
+   divergent hashes and break content-addressability.
+
+   Mitigation: the spec's reference test vectors.  An implementation
+   that does not reproduce the test vectors byte-for-byte is non-
+   conformant.  Where possible, deployments SHOULD use known-good JCS
+   libraries rather than rolling their own.
+
+12.4.  Number precision under JCS
+
+   IEEE 754 double precision applies to JSON numbers under JCS.
+   Constraint values where precision matters MUST use string
+   representation (e.g., "max_derivations": "100"), not number
+   representation.
+
+12.5.  Mission identifier correlation
+
+   This document does not define a pairwise Mission identifier.  The
+   canonical mission.id is observable by every audience that receives a
+   credential derived from the Mission.  Two audiences that share a
+   Mission necessarily share the identifier; this is inherent to the
+   Mission's role as a governance handle binding related authority.
+
+   Cross-audience user correlation (the OAuth/OIDC threat that pairwise
+   identifiers traditionally address) is independent and addressed by
+   OIDC pairwise sub claims.  Deployments where cross-audience user
+   correlation matters MUST use pairwise sub.  Deployments that
+   additionally need to hide Mission identity across audiences within a
+   single user's task (an unusual requirement) define a pairwise Mission
+   identifier through a profile extension to this Framework.
+
+12.6.  Hash equality leakage and cross-tenant transplantation
+
+   Without authorization-domain binding in the hash envelope, two
+   identical Validated Mission Intents in different tenants would
+   produce identical proposal_hash values, leaking equality across
+   tenants and creating a transplantation surface.
+
+   This specification mitigates by binding authorization_domain and
+   state_authority into the hash envelope (see Section 6.3).
+   Implementations MUST include these fields; omitting them produces
+   non-conformant hashes.
+
+12.7.  Mission Status enumeration and authorization-oracle resistance
+
+   Mission Status responses MUST treat unknown references and
+   unauthorized references as observationally equivalent.  An attacker
+   that can distinguish "unknown" from "unauthorized" can enumerate the
+   state authority's Mission space.
+
+   This specification mitigates via the anti-oracle property of
+   Section 9.4 and the not-found error shape of Section 9.5.  Profile
+   specifications MUST preserve both in transport, including timing and
+   payload-size invariance.
+
+12.8.  Trust-boundary violations
+
+   Profile specifications populate the trust boundary roles (Shaper,
+   state authority, credential issuer, PDP, evidence emitter).
+   Implementations MUST NOT permit a Shaper to act as an authorization
+   component.  Output of the Shaper MUST be treated as untrusted by the
+   state authority.
+
+12.9.  Approving principal acr
+
+   This specification requires the approving principal's acr (the
+   authentication context class reference) and amr (the authentication
+   methods used) at approval time to be recorded in binding evidence as
+   acr_at_approval and amr_at_approval, respectively.  The
+   auth_time_at_approval timestamp records when the authentication event
+   occurred.  The Framework does not mandate floors for either;
+   deployment policy declares the minimum per Mission class through the
+   acr and amr Common Constraints.  Deployments SHOULD set appropriate
+   floors and document them.  Identifier spaces are not registered by
+   this document; deployments compose with their chosen frameworks (NIST
+   SP 800-63, FIDO, OIDC EAP [OIDC-EAP-ACR], MODRNA, IANA AMR registry
+   [RFC8176], or deployment-defined URIs) per Section 10.
+
+12.10.  Transport security (TLS)
+
+   All state-authority interfaces specified by this document (/.well-
+   known/mission-authority, mission_status_endpoint,
+   mission_lifecycle_endpoint, jwks_uri, mission_intent_schema_uri) MUST
+   be served over TLS 1.2 or later, with TLS 1.3 RECOMMENDED.  State
+   authorities MUST refuse plaintext requests on these endpoints.
+
+   Consumers fetching state-authority metadata or making Mission Status
+   / Mission Lifecycle requests MUST validate the TLS server certificate
+   against the trust anchors established by the deployment's PKI.
+   Consumers MUST NOT pin to the state authority's signing keys
+   (jwks_uri keys) for TLS purposes; the two key roles are separate.
+
+12.11.  State-authority signing-key rotation
+
+   State authorities MUST rotate the signing keys used for Mission
+   Status and Mission Lifecycle response signatures on a deployment-
+   policy schedule.  Consumers MUST refresh their cached JWKS view at
+   least every 24 hours and on signature-verification failure.
+
+   Compromised signing keys MUST be revoked by removing them from
+   jwks_uri and by recording the revocation event in the state
+   authority's audit trail.  Mission Status responses signed by a
+   revoked key are not valid even when they appear well-formed; the
+   state authority's JWKS document is authoritative.
+
+   Mission Status responses MUST carry the kid of the signing key in the
+   wire form so consumers can match the signature to the current JWKS
+   entry.  The Framework does not standardize the wire form; profile
+   specifications bind the kid carriage.
+
+12.12.  Denial of service against the state authority
+
+   Mission Status is on the consumption path of every Mission-bound
+   credential validation in deployments that consult it synchronously.
+   A flood of Mission Status requests, or a flood of Mission Proposal
+   submissions, can degrade or disable the state authority and thereby
+   every consumer of its Missions.
+
+   State authorities MUST implement per-consumer rate limits on both
+   Mission Status (rate_limited error per Section 9.5) and Mission
+   Proposal submission.  Rate limits MUST account for the consumer
+   identity (authenticated client) rather than IP address alone, since
+   legitimate consumers may share network infrastructure.
+
+   State authorities SHOULD implement the Retry-After header on rate-
+   limited responses to allow well-behaved consumers to back off.
+
+   Consumers SHOULD cache Mission Status responses up to the response's
+   expires_at rather than re-querying for every credential validation;
+   profiles bind this caching behavior.
+
+12.13.  Clock skew
+
+   Mission Status responses carry RFC 3339 timestamps in issued_at,
+   expires_at, freshness_at, and mission_expiry.  Clock skew between the
+   state authority and consumer can cause either premature acceptance
+   (consumer believes a response is still fresh when it is not) or
+   premature rejection.
+
+   Implementations MUST use NTP or an equivalent time-synchronization
+   mechanism.  Consumers SHOULD accept responses whose expires_at has
+   elapsed by up to 30 seconds of skew tolerance for active state
+   responses; this is a defense against clock drift, not a security
+   relaxation.  Consumers MUST NOT extend skew tolerance for terminal-
+   state responses (revoked, expired, completed).
+
+12.14.  Replay of Mission Status responses
+
+   A Mission Status response signed and bound to a caller, audience, and
+   nonce is reusable only within its expires_at window and only by the
+   same caller in the same audience.  The bindings of Section 9.4
+   prevent cross-caller, cross-audience, and stale replay.
+
+   State authorities MUST treat nonce reuse from the same caller as a
+   per-caller anti-abuse signal; profiles MAY refuse repeated use of the
+   same nonce within a short window.  Nonces are anti-replay binding,
+   not authentication tokens; consumers MUST NOT rely on nonce secrecy.
+
+12.15.  Log injection via consent disclosure content
+
+   The consent disclosure object contains user-facing strings (typically
+   derived from the Mission Intent's goal, constraints, and
+   success_criteria).  These strings reach audit logs, dashboards, and
+   possibly downstream notifications.
+
+   Implementations MUST treat consent-disclosure content as untrusted
+   when emitting it to log sinks: HTML/template escape on HTML sinks,
+   JSON-escape on JSON sinks, and so on.  The state authority's
+   recording of the consent disclosure object is a verbatim JSON
+   serialization for integrity-anchor purposes; it is not safe to inject
+   into other contexts unescaped.
+
+12.16.  Mission record garbage collection and audit chains
+
+   After Mission record garbage collection (Section 3.6), the state
+   authority MUST retain a stub indicating that the mission.id and
+   proposal_id are retired.  Audit logs referencing a garbage-collected
+   Mission's identifier MUST resolve to the stub rather than to "not
+   found", which would be indistinguishable from never having existed.
+
+   The stub MUST contain at minimum: mission.id, proposal_id,
+   created_at, retired_at, and the terminal state at retirement.  The
+   stub MUST NOT contain the Mission Intent, Authority Set, or consent
+   disclosure object.
+
+13.  Privacy Considerations
+
+   This section discusses privacy threats and mitigations specific to
+   the Mission Framework.  Section 12 addresses security threats; this
+   section addresses privacy threats that are not subsumed by security.
+
+13.1.  Cross-audience correlation
+
+   This Framework relies on OIDC pairwise sub (or the substrate
+   equivalent in AAuth) to prevent cross-audience user correlation.  The
+   canonical mission.id is shared across every audience the Mission
+   touches, so audiences that participate in the same Mission can
+   observe that they share a Mission.  This is inherent to the Mission's
+   role as a governance handle and is consented to at approval time when
+   the user approves a Mission spanning those audiences.
+
+   Audiences that should not be able to correlate user activity at all
+   (across distinct Missions) MUST be served pairwise sub values; this
+   is the canonical OIDC mechanism and is independent of Mission
+   identity.
+
+   Deployments with stronger Mission-identity-isolation requirements
+   (e.g., a multi-tenant SaaS state authority where two competing
+   tenants' Missions must not share identifier structure even when the
+   same user has Missions in both) define a pairwise Mission identifier
+   through a profile extension to this Framework.  Such extensions are
+   out of scope for this document.
+
+13.2.  Consent disclosure content and PII
+
+   The consent disclosure object can contain personally identifiable
+   information (PII) drawn from the Mission Intent's user-facing strings
+   (goal, constraints, success_criteria) and from deployment-supplied
+   template text.  The state authority records this object verbatim for
+   integrity-anchor purposes.
+
+   Implementations MUST treat the consent disclosure object as a PII
+   sink and apply data-protection controls (access control, audit,
+   encryption at rest, and retention discipline per Section 3.6)
+   consistent with the deployment's regulatory environment (e.g., GDPR,
+   HIPAA, CCPA).
+
+   The Framework does not specify minimization of consent disclosure
+   content; deployments SHOULD review the content their state authority
+   records to ensure that integrity-anchor guarantees do not require
+   recording disproportionately sensitive content.  The narrowing
+   decisions of Section 4.5 provide a hook to record bounded, machine-
+   readable evidence of policy decisions without embedding additional
+   PII.
+
+13.3.  Subject and approving-principal identifiers
+
+   The Mission record's principals.subject and
+   principals.approving_principal are Mission Principal objects
+   (Section 8.1) carrying [RFC9493] Subject Identifiers.  They appear in
+   Mission Status responses to authorized callers and in derived
+   credentials.
+
+   When the deployment's privacy posture permits opaque or pseudonymous
+   identifiers, the iss_sub format with an opaque sub value is
+   RECOMMENDED.  The email and phone_number formats are widely-
+   correlatable identifiers and SHOULD NOT be used for
+   principals.subject or principals.approving_principal unless the
+   deployment's privacy posture explicitly accommodates them.
+   Deployments SHOULD map principal identifiers to PII through a
+   separate, access-controlled directory service rather than embedding
+   PII in the Mission record.
+
+13.4.  Tenant correlation
+
+   The principals.tenant value identifies the authorization domain the
+   Mission lives in.  Tenant identifiers SHOULD be opaque and SHOULD NOT
+   carry the consuming organization's name, regulatory classification,
+   or other deployment-side correlatable attributes when those
+   attributes leak through the value to audiences other than the tenant
+   itself.
+
+   State authorities serving multi-tenant deployments MUST not allow a
+   Mission Status query in tenant A to return information about tenants
+   other than A; the tenant-isolation property is a fundamental privacy
+   boundary.
+
+13.5.  Audit logging and retention
+
+   State-authority audit logs SHOULD record per-Mission events
+   (approval, suspension, revocation, expiry) for the audit retention
+   window of Section 3.6.  Audit logs are themselves a PII sink and
+   SHOULD be access-controlled, encrypted at rest, and retained no
+   longer than the deployment's policy or regulatory floor requires,
+   whichever is shorter.
+
+   When the deployment's policy or regulatory floor prescribes retention
+   longer than the audit window the state authority can sustain, the
+   deployment SHOULD export audit anchors (the integrity-anchor values
+   and approval-event metadata) to a separate audit anchor store while
+   permitting the Mission record itself to be garbage-collected.
+
+13.6.  Mission record content and data subject access
+
+   In regulatory regimes where data subjects have access rights to
+   records concerning them (e.g., GDPR Article 15), the Mission record
+   is in scope.  Deployments MUST be able to enumerate and disclose
+   Mission records for a given Mission Principal on authorized request;
+   the principal's identity (the format-specific identifier per
+   [RFC9493]) is the join key.
+
+   Deployments MUST be able to delete or anonymize Mission records on
+   lawful erasure request, subject to overriding retention obligations.
+   The garbage-collection stub of Section 12.16 provides the retention-
+   side residual; deployments needing full erasure rather than
+   retirement MUST extend the garbage-collection flow to remove the stub
+   when lawfully required.
+
+14.  IANA Considerations
+
+   This document requests IANA to create five new registries and to add
+   the Well-Known URI registration for mission-authority.
+
+14.1.  Well-Known URI: mission-authority
+
+   IANA is requested to register the following Well-Known URI per
+   [RFC8615]:
+
+   *  *URI suffix*: mission-authority
+
+   *  *Change controller*: IETF
+
+   *  *Specification document(s)*: this document
+
+   *  *Related information*: identifies the Mission state-authority
+      metadata document at {mission.origin}/.well-known/mission-
+      authority (see Section 7.3).
+
+14.2.  Mission Common Constraints Registry
+
+   IANA is requested to create the *Mission Common Constraints*
+   registry.
+
+   *  *Registration Policy*: Specification Required ([RFC8126]).
+
+   *  *Designated Expert review criteria*: experts evaluate (a) whether
+      the constraint semantics are well-defined and testable, (b)
+      whether the normalization and narrowing rules are deterministic,
+      (c) whether the runtime enforcement contract is consistent with
+      the Mission lifecycle model, and (d) whether the constraint name
+      does not collide with existing registered names.
+
+14.2.1.  Registration template
+
+   Each registration MUST include:
+
+   *  *Name* (string): the key in mission_intent.context.
+
+   *  *JSON type and structure*: scalar, object, or array; if
+      structured, the member shape.
+
+   *  *Defining specification*: stable reference (RFC, Internet- Draft,
+      or stable URL).
+
+   *  *schema_version* if applicable.
+
+   *  *schema_digest* if applicable.
+
+   *  *Normalization rule*: the Normalization Profile that applies to
+      this constraint's value.
+
+   *  *Equality rule*.
+
+   *  *Subset rule*: when one constraint value is a strict narrowing of
+      another.
+
+   *  *Narrowing rule* at credential derivation.
+
+   *  *Runtime enforcement contract*: where in the runtime the
+      constraint is enforced (issuance, introspection, per-action,
+      event-driven; see [I-D.draft-mcguinness-mission-oauth-profile] and
+      [I-D.draft-mcguinness-mission-runtime-profile]).
+
+   *  *Change controller*.
+
+   *  *Reference*.
+
+14.2.2.  Initial entries
+
+   The Framework registers the two constraints defined in Section 10:
+
+   *  max_derivations — this document.
+
+   *  acr — this document.
+
+14.3.  Mission Authority Set Type Registry
+
+   IANA is requested to create the *Mission Authority Set Type*
+   registry.  See Section 5.3 for the specification text.
+
+   *  *Registration Policy*: Specification Required ([RFC8126]).
+
+   *  *Designated Expert review criteria*: experts evaluate whether (a)
+      the type's authority payload shape is unambiguous, (b) equality,
+      subset, and intersection rules are total and deterministic, (c)
+      unknown-field handling does not default to silent acceptance, (d)
+      the Normalization Profile is registered or co-registered, and (e)
+      the type name does not collide.
+
+14.3.1.  Registration template
+
+   See Section 5.3 for the registration template.
+
+14.3.2.  Initial entries
+
+   The Framework reserves mission_resource_access for registration by
+   the OAuth Profile ([I-D.draft-mcguinness-mission-oauth-profile]).  No
+   type is registered by this document.
+
+14.4.  Mission Normalization Profile Registry
+
+   IANA is requested to create the *Mission Normalization Profile*
+   registry.
+
+   *  *Registration Policy*: Specification Required ([RFC8126]).
+
+   *  *Designated Expert review criteria*: experts evaluate whether (a)
+      the profile's rules are deterministic and total, (b) the rule set
+      covers JSON parsing, array semantics, set semantics, Unicode
+      normalization, URI normalization, number representation, absent vs
+      empty members, and field-name canonical form (per Section 6.2),
+      and (c) the profile identifier does not collide.
+
+14.4.1.  Registration template
+
+   *  *Profile identifier* (URI): the registered identifier (e.g.,
+      urn:mbo:norm:mission-intent:1).
+
+   *  *Defining specification*: stable reference.
+
+   *  *Per-field rules*: full enumeration of the fields the profile
+      governs and the rule applied to each.
+
+   *  *Change controller*.
+
+   *  *Reference*.
+
+14.4.2.  Initial entries
+
+   This document registers the three Normalization Profiles defined in
+   Section 6.2:
+
+   *  urn:mbo:norm:mission-intent:1 — this document.
+
+   *  urn:mbo:norm:mission-authority-set:1 — this document.
+
+   *  urn:mbo:norm:mission-consent-disclosure:1 — this document.
+
+14.5.  Mission Lifecycle State Enumerations
+
+   This document defines closed enumerations for Mission Proposal states
+   (pending_approval, rejected, withdrawn, expired_as_pending) and
+   Mission states (active, suspended, revoked, completed, expired).
+   These enumerations are not externally extensible by this revision; if
+   extensibility is later required, dedicated IANA registries SHOULD be
+   created via a subsequent revision of this Framework.
+
+14.6.  Mission Status Response Media Types
+
+   Where a profile specification needs a new media type for Mission
+   Status responses (e.g., application/mission-status-response+json or
+   application/mission-status-response+jwt), the profile registers the
+   media type per [RFC6838].  This document does NOT register media
+   types; profiles do.
+
+14.7.  What this document does NOT register
+
+   *  RAR type values: [RFC9396] does not establish an IANA registry for
+      every RAR type.  The mission_resource_access RAR type is
+      registered by the OAuth Profile in the Mission Authority Set Type
+      Registry created by this document, not in a (nonexistent) RFC 9396
+      type registry.
+
+   *  Generic JWT typ values: there is no IANA "JWT Media Type Registry"
+      for arbitrary typ values.  Where a profile needs a specific JWT
+      typ, it registers a media type per [RFC6838].
+
+   *  Mission Lifecycle and Mission Proposal state enumerations: closed
+      sets, as noted above.
+
+   *  acr identifiers: this document does not register acr identifiers.
+      Deployments compose with existing identifier spaces (NIST SP
+      800-63, FIDO, OpenID Connect EAP [OIDC-EAP-ACR], OIDC MODRNA, or
+      deployment-defined URIs); see Section 10.
+
+   *  amr identifiers: this document does not register amr identifiers.
+      Deployments compose with the IANA "Authentication Method Reference
+      Values" registry [RFC8176]; see Section 10.
+
+Acknowledgments
+
+   The author thanks the implementers and reviewers of the Mission-Bound
+   Authorization architecture for feedback that shaped this
+   specification.
+
+References
+
+Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC3339]  Klyne, G. and C. Newman, "Date and Time on the Internet:
+              Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
+              <https://www.rfc-editor.org/rfc/rfc3339>.
+
+   [RFC4648]  Josefsson, S., "The Base16, Base32, and Base64 Data
+              Encodings", RFC 4648, DOI 10.17487/RFC4648, October 2006,
+              <https://www.rfc-editor.org/rfc/rfc4648>.
+
+   [RFC5234]  Crocker, D., Ed. and P. Overell, "Augmented BNF for Syntax
+              Specifications: ABNF", STD 68, RFC 5234,
+              DOI 10.17487/RFC5234, January 2008,
+              <https://www.rfc-editor.org/rfc/rfc5234>.
+
+   [RFC6234]  Eastlake 3rd, D. and T. Hansen, "US Secure Hash Algorithms
+              (SHA and SHA-based HMAC and HKDF)", RFC 6234,
+              DOI 10.17487/RFC6234, May 2011,
+              <https://www.rfc-editor.org/rfc/rfc6234>.
+
+   [RFC6838]  Freed, N., Klensin, J., and T. Hansen, "Media Type
+              Specifications and Registration Procedures", BCP 13,
+              RFC 6838, DOI 10.17487/RFC6838, January 2013,
+              <https://www.rfc-editor.org/rfc/rfc6838>.
+
+   [RFC7009]  Lodderstedt, T., Ed., Dronia, S., and M. Scurtescu, "OAuth
+              2.0 Token Revocation", RFC 7009, DOI 10.17487/RFC7009,
+              August 2013, <https://www.rfc-editor.org/rfc/rfc7009>.
+
+   [RFC8126]  Cotton, M., Leiba, B., and T. Narten, "Guidelines for
+              Writing an IANA Considerations Section in RFCs", BCP 26,
+              RFC 8126, DOI 10.17487/RFC8126, June 2017,
+              <https://www.rfc-editor.org/rfc/rfc8126>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC8176]  Jones, M., Hunt, P., and A. Nadalin, "Authentication
+              Method Reference Values", RFC 8176, DOI 10.17487/RFC8176,
+              June 2017, <https://www.rfc-editor.org/rfc/rfc8176>.
+
+   [RFC8259]  Bray, T., Ed., "The JavaScript Object Notation (JSON) Data
+              Interchange Format", STD 90, RFC 8259,
+              DOI 10.17487/RFC8259, December 2017,
+              <https://www.rfc-editor.org/rfc/rfc8259>.
+
+   [RFC8615]  Nottingham, M., "Well-Known Uniform Resource Identifiers
+              (URIs)", RFC 8615, DOI 10.17487/RFC8615, May 2019,
+              <https://www.rfc-editor.org/rfc/rfc8615>.
+
+   [RFC8785]  Rundgren, A., Jordan, B., and S. Erdtman, "JSON
+              Canonicalization Scheme (JCS)", RFC 8785,
+              DOI 10.17487/RFC8785, June 2020,
+              <https://www.rfc-editor.org/rfc/rfc8785>.
+
+   [RFC9493]  Backman, A., Ed., Scurtescu, M., and P. Jain, "Subject
+              Identifiers for Security Event Tokens", RFC 9493,
+              DOI 10.17487/RFC9493, December 2023,
+              <https://www.rfc-editor.org/rfc/rfc9493>.
+
+Informative References
+
+   [I-D.draft-mcguinness-mission-expansion]
+              "*** BROKEN REFERENCE ***".
+
+   [I-D.draft-mcguinness-mission-oauth-profile]
+              "*** BROKEN REFERENCE ***".
+
+   [I-D.draft-mcguinness-mission-runtime-profile]
+              "*** BROKEN REFERENCE ***".
+
+   [I-D.draft-mcguinness-oauth-actor-profile]
+              McGuinness, K., "OAuth Actor Profile for Delegation", Work
+              in Progress, Internet-Draft, draft-mcguinness-oauth-actor-
+              profile-00, 30 April 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-actor-profile-00>.
+
+   [I-D.draft-mcguinness-oauth-client-instance-assertion]
+              McGuinness, K., "OAuth 2.0 Client Instance Assertions
+              using Actor Tokens", Work in Progress, Internet-Draft,
+              draft-mcguinness-oauth-client-instance-assertion-00, 5 May
+              2026, <https://datatracker.ietf.org/doc/html/draft-
+              mcguinness-oauth-client-instance-assertion-00>.
+
+   [NIST-SP-800-63]
+              National Institute of Standards and Technology, "Digital
+              Identity Guidelines", NIST Special Publication 800-63-3,
+              2017.
+
+   [OIDC-EAP-ACR]
+              OpenID Foundation, "OpenID Connect Extended Authentication
+              Profile (EAP) ACR Values 1.0", 2018,
+              <https://openid.net/specs/openid-connect-eap-acr-values-
+              1_0.html>.
+
+   [RFC3986]  Berners-Lee, T., Fielding, R., and L. Masinter, "Uniform
+              Resource Identifier (URI): Generic Syntax", STD 66,
+              RFC 3986, DOI 10.17487/RFC3986, January 2005,
+              <https://www.rfc-editor.org/rfc/rfc3986>.
+
+   [RFC5646]  Phillips, A., Ed. and M. Davis, Ed., "Tags for Identifying
+              Languages", BCP 47, RFC 5646, DOI 10.17487/RFC5646,
+              September 2009, <https://www.rfc-editor.org/rfc/rfc5646>.
+
+   [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
+              RFC 6749, DOI 10.17487/RFC6749, October 2012,
+              <https://www.rfc-editor.org/rfc/rfc6749>.
+
+   [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
+              Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
+              2015, <https://www.rfc-editor.org/rfc/rfc7515>.
+
+   [RFC7517]  Jones, M., "JSON Web Key (JWK)", RFC 7517,
+              DOI 10.17487/RFC7517, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7517>.
+
+   [RFC7662]  Richer, J., Ed., "OAuth 2.0 Token Introspection",
+              RFC 7662, DOI 10.17487/RFC7662, October 2015,
+              <https://www.rfc-editor.org/rfc/rfc7662>.
+
+   [RFC8414]  Jones, M., Sakimura, N., and J. Bradley, "OAuth 2.0
+              Authorization Server Metadata", RFC 8414,
+              DOI 10.17487/RFC8414, June 2018,
+              <https://www.rfc-editor.org/rfc/rfc8414>.
+
+   [RFC8693]  Jones, M., Nadalin, A., Campbell, B., Ed., Bradley, J.,
+              and C. Mortimore, "OAuth 2.0 Token Exchange", RFC 8693,
+              DOI 10.17487/RFC8693, January 2020,
+              <https://www.rfc-editor.org/rfc/rfc8693>.
+
+   [RFC8705]  Campbell, B., Bradley, J., Sakimura, N., and T.
+              Lodderstedt, "OAuth 2.0 Mutual-TLS Client Authentication
+              and Certificate-Bound Access Tokens", RFC 8705,
+              DOI 10.17487/RFC8705, February 2020,
+              <https://www.rfc-editor.org/rfc/rfc8705>.
+
+   [RFC9068]  Bertocci, V., "JSON Web Token (JWT) Profile for OAuth 2.0
+              Access Tokens", RFC 9068, DOI 10.17487/RFC9068, October
+              2021, <https://www.rfc-editor.org/rfc/rfc9068>.
+
+   [RFC9126]  Lodderstedt, T., Campbell, B., Sakimura, N., Tonge, D.,
+              and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",
+              RFC 9126, DOI 10.17487/RFC9126, September 2021,
+              <https://www.rfc-editor.org/rfc/rfc9126>.
+
+   [RFC9396]  Lodderstedt, T., Richer, J., and B. Campbell, "OAuth 2.0
+              Rich Authorization Requests", RFC 9396,
+              DOI 10.17487/RFC9396, May 2023,
+              <https://www.rfc-editor.org/rfc/rfc9396>.
+
+   [RFC9449]  Fett, D., Campbell, B., Bradley, J., Lodderstedt, T.,
+              Jones, M., and D. Waite, "OAuth 2.0 Demonstrating Proof of
+              Possession (DPoP)", RFC 9449, DOI 10.17487/RFC9449,
+              September 2023, <https://www.rfc-editor.org/rfc/rfc9449>.
+
+   [RFC9470]  Bertocci, V. and B. Campbell, "OAuth 2.0 Step Up
+              Authentication Challenge Protocol", RFC 9470,
+              DOI 10.17487/RFC9470, September 2023,
+              <https://www.rfc-editor.org/rfc/rfc9470>.
+
+   [RFC9701]  Lodderstedt, T., Ed. and V. Dzhuvinov, "JSON Web Token
+              (JWT) Response for OAuth Token Introspection", RFC 9701,
+              DOI 10.17487/RFC9701, January 2025,
+              <https://www.rfc-editor.org/rfc/rfc9701>.
+
+   [W3C-UNICODE-NORM]
+              Unicode Consortium, "Unicode Normalization Forms", Unicode
+              Standard Annex #15, 2023.
+
+Author's Address
+
+   Karl McGuinness
+   Independent
+   Email: public@karlmcguinness.com
