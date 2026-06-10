@@ -95,6 +95,7 @@ Table of Contents
    7.  Mission Status
      7.1.  Request
      7.2.  Response
+       7.2.1.  Response payload JSON Schema
      7.3.  Anti-Oracle Property
      7.4.  Errors
      7.5.  Relationship to Native AAuth Permissions
@@ -114,15 +115,18 @@ Table of Contents
      12.5.  PS-Asserted Trust Confusion
      12.6.  Mission Status Enumeration
      12.7.  Sender Constraint and Proof of Possession
-     12.8.  Cross-consumer correlation
-     12.9.  Wire-Extension Risk
-     12.10. Resumable Suspension Hold Risk
-     12.11. Integrity Anchor Non-Guarantees
-   13. IANA Considerations
-     13.1.  Mission Authority Set Type Registry
-     13.2.  AAuth-side Governance-Mapping Fields
-     13.3.  No JWT or OAuth Registry Actions
-     13.4.  No New Media Types
+     12.8.  Wire-Extension Risk
+     12.9.  Resumable Suspension Hold Risk
+     12.10. Integrity Anchor Non-Guarantees
+   13. Privacy Considerations
+     13.1.  Cross-consumer correlation
+     13.2.  Data concentration in the governance record
+     13.3.  Authority projection minimization
+   14. IANA Considerations
+     14.1.  Mission Authority Set Type Registry
+     14.2.  AAuth-side Governance-Mapping Fields
+     14.3.  No JWT or OAuth Registry Actions
+     14.4.  No New Media Types
    Acknowledgments
    References
      Normative References
@@ -779,7 +783,7 @@ Table of Contents
    extension in Section 6.3 is enabled) or out-of-band to authorized
    consumers.
 
-   The request body is application/json and carries:
+   The request body is a JSON object [RFC8259] and carries:
 
    *  mission (object, required): the Mission reference.  In canonical
       mode the value is { "id": "...", "origin": "..." }. AAuth
@@ -828,10 +832,20 @@ Table of Contents
        "consent_disclosure_hash": "sha-256:...",
        "policy_version": "ps.example.com:standard@2026-06-01",
        "authority_set_projection": [
-         { "type": "aauth_scope", "authority": "..." }
+         {
+           "type": "aauth_scope",
+           "schema_digest": "sha-256:cZ8Hh1Qv7nR2tY4mP6sB0wQ9xK3dF5gJ8",
+           "schema_version": "1",
+           "authority": {
+             "resource": "https://docs.example.com",
+             "scope": ["documents.read"]
+           },
+           "narrowing_profile": "urn:mbo:narrowing:default-v1"
+         }
        ],
        "issued_at": "2026-06-09T15:00:00Z",
        "expires_at": "2026-06-09T15:01:00Z",
+       "mission_expiry": "2026-12-31T23:59:59Z",
        "version": 1
      }
    }
@@ -843,6 +857,75 @@ Table of Contents
    that need only the AAuth-wire view MAY ignore Framework-specific
    states they do not recognize and treat all non-active states as
    denials of further derivation.
+
+   Each entry of authority_set_projection is a full Authority Set entry
+   per Section 4.5 -- it validates against the Framework's Authority Set
+   entry schema (urn:mbo:schema:authority-set-entry:1) -- audience-
+   filtered to the requesting consumer. issued_at, expires_at, and
+   mission_expiry are [RFC3339] timestamps: issued_at/expires_at bound
+   the freshness of this response, while mission_expiry mirrors the
+   Mission's own expiry per the Framework.
+
+7.2.1.  Response payload JSON Schema
+
+   {
+     "$schema": "https://json-schema.org/draft/2020-12/schema",
+     "$id": "urn:mbo:schema:aauth-mission-status-response:1",
+     "title": "AAuth Mission Status Response Payload",
+     "type": "object",
+     "required": [
+       "iss", "aud", "sub", "nonce", "iat", "exp", "mission_status"
+     ],
+     "properties": {
+       "iss":   { "type": "string", "format": "uri" },
+       "aud":   { "type": "string" },
+       "sub":   { "type": "string" },
+       "nonce": { "type": "string" },
+       "iat":   { "type": "integer" },
+       "exp":   { "type": "integer" },
+       "mission_status": {
+         "type": "object",
+         "required": [
+           "state", "mission_id", "aauth_mission", "origin",
+           "proposal_hash", "authority_hash", "consent_disclosure_hash",
+           "policy_version", "authority_set_projection",
+           "issued_at", "expires_at", "mission_expiry", "version"
+         ],
+         "properties": {
+           "state": {
+             "type": "string",
+             "enum": [
+               "active", "suspended", "revoked", "completed", "expired"
+             ]
+           },
+           "mission_id": { "type": "string" },
+           "aauth_mission": {
+             "type": "object",
+             "required": ["approver", "s256"],
+             "properties": {
+               "approver": { "type": "string", "format": "uri" },
+               "s256":     { "type": "string" }
+             }
+           },
+           "origin": { "type": "string", "format": "uri" },
+           "proposal_hash":           { "type": "string" },
+           "authority_hash":          { "type": "string" },
+           "consent_disclosure_hash": { "type": "string" },
+           "policy_version":          { "type": "string" },
+           "authority_set_projection": {
+             "type": "array",
+             "items": { "$ref": "urn:mbo:schema:authority-set-entry:1" }
+           },
+           "issued_at": { "type": "string", "format": "date-time" },
+           "expires_at": { "type": "string", "format": "date-time" },
+           "mission_expiry": {
+             "type": "string", "format": "date-time"
+           },
+           "version": { "type": "integer" }
+         }
+       }
+     }
+   }
 
 7.3.  Anti-Oracle Property
 
@@ -984,10 +1067,10 @@ Table of Contents
       resumes governed requests.
 
    *  *Event-driven.* The agent subscribes to a Shared Signals Framework
-      or CAEP-style event channel; the PS publishes a mission.resumed
-      event when the Mission transitions back to active.  This pattern
-      is OPTIONAL and depends on the deployment having event
-      infrastructure; it is not required by the extension.
+      [OIDC-SSF] or CAEP [OIDC-CAEP] event channel; the PS publishes a
+      mission.resumed event when the Mission transitions back to active.
+      This pattern is OPTIONAL and depends on the deployment having
+      event infrastructure; it is not required by the extension.
 
    A composing PS MAY support either or both.
 
@@ -1147,18 +1230,7 @@ Table of Contents
    governance does not introduce a parallel sender-constraint mechanism
    on AAuth.
 
-12.8.  Cross-consumer correlation
-
-   Multiple AAuth consumers observing the same Mission can correlate the
-   user's activity through the AAuth-native (approver, s256) tuple.
-   This is inherent to AAuth's native Mission reference and exists
-   independently of the Framework's mission.id.  Deployments that need
-   stronger cross-consumer unlinkability MUST select substrate-level
-   mitigations (shorter Mission lifetimes, narrower Authority Sets, per-
-   resource separate Missions) rather than expecting a governance-layer
-   identifier to provide isolation absent from the substrate.
-
-12.9.  Wire-Extension Risk
+12.8.  Wire-Extension Risk
 
    Each wire extension in Section 6 changes the AAuth wire.  A
    deployment that advertises support for an extension that has not been
@@ -1169,7 +1241,7 @@ Table of Contents
    declaration of which extensions it implements; consumers MUST consult
    that declaration before issuing extension-bearing requests.
 
-12.10.  Resumable Suspension Hold Risk
+12.9.  Resumable Suspension Hold Risk
 
    The Resumable Suspension extension keeps the AAuth-native Mission
    reference valid across a hold.  A poorly bounded hold (no max_wait,
@@ -1179,7 +1251,7 @@ Table of Contents
    long-suspended Missions to a Framework terminal state per the
    bounded-resume-window rule.
 
-12.11.  Integrity Anchor Non-Guarantees
+12.10.  Integrity Anchor Non-Guarantees
 
    The Framework's Security Considerations enumerate non-guarantees of
    integrity anchors (faithful rendering, principal authenticity, real-
@@ -1190,7 +1262,48 @@ Table of Contents
    for the Mission was operating in good faith.  This profile inherits
    the Framework's enumeration without restating it.
 
-13.  IANA Considerations
+13.  Privacy Considerations
+
+   The privacy surface of this profile is thin by design: the
+   composition adds governance semantics on top of AAuth's native
+   Mission without introducing a new wire identifier or a new
+   correlation handle.  The substantive considerations are the
+   following.
+
+13.1.  Cross-consumer correlation
+
+   Multiple AAuth consumers observing the same Mission can correlate the
+   user's activity through the AAuth-native (approver, s256) tuple.
+   This is inherent to AAuth's native Mission reference and exists
+   independently of the Framework's mission.id; as noted in Section 8,
+   the canonical mission.id adds no correlation surface beyond what the
+   AAuth substrate already exposes.  Deployments that need stronger
+   cross-consumer unlinkability MUST select substrate-level mitigations
+   (shorter Mission lifetimes, narrower Authority Sets, per-resource
+   separate Missions) rather than expecting a governance-layer
+   identifier to provide isolation absent from the substrate.
+
+13.2.  Data concentration in the governance record
+
+   A composing PS holds the Framework governance record (Section 4.3)
+   alongside the AAuth-native record: the Validated Mission Intent, the
+   consent disclosure object, the Principal Model fields, and binding
+   evidence.  This is governance data the AAuth-native record alone does
+   not expose.  The PS MUST protect the governance record commensurate
+   with the sensitivity of the principal and consent data it holds, and
+   MUST NOT expose Mission Intent or consent-disclosure cleartext to
+   consumers; consumers receive only integrity anchors and the audience-
+   filtered Authority Set projection through Mission Status (Section 7).
+
+13.3.  Authority projection minimization
+
+   The Authority Set projection returned in a Mission Status response
+   (Section 4.5) MUST be audience-filtered to the requesting consumer.
+   A consumer receives only the entries relevant to its audience, which
+   limits the authority detail -- and the inferences about the approved
+   task -- disclosed to each consumer to the minimum it needs.
+
+14.  IANA Considerations
 
    This profile's IANA actions are subject to AAuth-side registry
    coordination.  AAuth -01 is an individual Internet-Draft and does not
@@ -1198,7 +1311,7 @@ Table of Contents
    registries are established, the actions in this section are proposed
    but not actionable.
 
-13.1.  Mission Authority Set Type Registry
+14.1.  Mission Authority Set Type Registry
 
    This document does NOT register a new Authority Set entry type.  The
    specific AAuth-side Authority Set entry type (an aauth_scope-style
@@ -1206,7 +1319,7 @@ Table of Contents
    Type Registry created by the Framework, in coordination with the
    AAuth working group when that registry surface stabilizes.
 
-13.2.  AAuth-side Governance-Mapping Fields
+14.2.  AAuth-side Governance-Mapping Fields
 
    Pending AAuth WG coordination, the following fields are proposed for
    registration in AAuth's eventual extension registry:
@@ -1233,7 +1346,7 @@ Table of Contents
    A composing PS MUST NOT publish any of these fields on the AAuth wire
    until the relevant AAuth registry action has occurred.
 
-13.3.  No JWT or OAuth Registry Actions
+14.3.  No JWT or OAuth Registry Actions
 
    This profile does NOT register OAuth parameters, OAuth error codes,
    JWT claims, or OAuth metadata members.  Those registrations belong in
@@ -1241,7 +1354,7 @@ Table of Contents
    Where this profile and the OAuth Profile describe parallel behaviors,
    the two are independent.
 
-13.4.  No New Media Types
+14.4.  No New Media Types
 
    This profile does NOT register a new media type for Mission Status
    responses.  The OAuth Profile registers application/mission-status-
@@ -1279,6 +1392,10 @@ Normative References
               DOI 10.17487/RFC2119, March 1997,
               <https://www.rfc-editor.org/rfc/rfc2119>.
 
+   [RFC3339]  Klyne, G. and C. Newman, "Date and Time on the Internet:
+              Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
+              <https://www.rfc-editor.org/rfc/rfc3339>.
+
    [RFC6234]  Eastlake 3rd, D. and T. Hansen, "US Secure Hash Algorithms
               (SHA and SHA-based HMAC and HKDF)", RFC 6234,
               DOI 10.17487/RFC6234, May 2011,
@@ -1287,6 +1404,11 @@ Normative References
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC8259]  Bray, T., Ed., "The JavaScript Object Notation (JSON) Data
+              Interchange Format", STD 90, RFC 8259,
+              DOI 10.17487/RFC8259, December 2017,
+              <https://www.rfc-editor.org/rfc/rfc8259>.
 
    [RFC8785]  Rundgren, A., Jordan, B., and S. Erdtman, "JSON
               Canonicalization Scheme (JCS)", RFC 8785,
@@ -1301,6 +1423,15 @@ Informative References
 
    [I-D.draft-mcguinness-mission-oauth-profile]
               "*** BROKEN REFERENCE ***".
+
+   [OIDC-CAEP]
+              OpenID Foundation, "OpenID Continuous Access Evaluation
+              Profile 1.0", 2025,
+              <https://openid.net/specs/openid-caep-1_0.html>.
+
+   [OIDC-SSF] OpenID Foundation, "OpenID Shared Signals Framework
+              Specification 1.0", 2025, <https://openid.net/specs/
+              openid-sharedsignals-framework-1_0.html>.
 
    [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
               Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
