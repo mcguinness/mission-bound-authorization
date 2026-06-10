@@ -28,11 +28,26 @@ author:
 normative:
   RFC2119:
   RFC8174:
+  RFC6234:
+  RFC6838:
+  RFC7515:
+  RFC8126:
+  RFC8259:
+  RFC8785:
+  RFC9457:
   I-D.draft-mcguinness-mission-framework:
   I-D.draft-mcguinness-mission-expansion:
+  OIDC-AUTHZEN:
+    title: "OpenID AuthZEN Authorization API 1.0"
+    author:
+      org: "OpenID Foundation"
+    date: 2025
+    target: "https://openid.net/specs/authorization-api-1_0.html"
 
 informative:
+  RFC3339:
   RFC9396:
+  RFC9470:
   RFC9701:
   I-D.draft-mcguinness-mission-oauth-profile:
   I-D.draft-mcguinness-mission-aauth-profile:
@@ -75,18 +90,67 @@ This profile is substrate-independent. OAuth Profile
 {{I-D.draft-mcguinness-mission-oauth-profile}} and AAuth Profile
 {{I-D.draft-mcguinness-mission-aauth-profile}} adapters supply
 substrate-native credential and actor context. The PDP interface
-is the OpenID AuthZEN Authorization API 1.0 (a final OpenID
-Foundation specification).
+is the OpenID AuthZEN Authorization API {{OIDC-AUTHZEN}}.
 
 ## Submission venue
 
 This document is an independent IETF Internet-Draft composing with
-the OpenID AuthZEN Authorization API 1.0 specification. AuthZEN
-is an OpenID Foundation effort, not an IETF Working Group.
+the OpenID AuthZEN Authorization API {{OIDC-AUTHZEN}}. AuthZEN is
+an OpenID Foundation effort, not an IETF Working Group.
 
-# Conventions and Definitions
+## Document Organization {#document-organization}
+
+{{conventions-and-definitions}} introduces terminology and notation.
+
+{{profile-structure}} explains the Core / Optional Modules split.
+
+{{mission-to-policy-materialization}} defines how a Mission becomes
+an evaluable policy view consumable by the PDP.
+
+{{resource-side-enforcement-contract-rs-d}} and
+{{pep-placement-rules}} define what an RS-D Resource Server commits
+to and where the PEP MUST be placed.
+
+{{pdp-request}} defines the PDP request shape and its mapping onto
+AuthZEN's `subject`/`resource`/`action`/`context` envelope.
+
+{{decision-evidence-object}} and {{execution-evidence-object}}
+define the two linked evidence artifacts and their JSON Schemas.
+
+{{runtime-denial-classification}} enumerates denial categories and
+their composition with step-up and Mission Expansion.
+
+{{max-invocations-constraint}} defines the reserve-on-permit /
+finalize-on-outcome counter protocol.
+
+{{enforcement-scope-manifest}} defines the deployment-published
+manifest that scopes a conformance claim.
+
+{{security-considerations}} and {{privacy-considerations}} address
+security and privacy threats.
+
+{{iana}} requests the IANA actions.
+
+# Conventions and Definitions {#conventions-and-definitions}
 
 {::boilerplate bcp14-tagged}
+
+## Notation
+
+This document uses JSON {{RFC8259}} as the data model for all
+PDP requests, responses, and evidence objects. JCS canonicalization
+{{RFC8785}} applies wherever an integrity hash is computed.
+
+"SHA-256" refers to {{RFC6234}}. Hash output is base64url-encoded
+without padding and prefixed with `sha-256:` per the integrity-anchor
+encoded form defined in
+{{I-D.draft-mcguinness-mission-framework}}.
+
+HTTP message examples follow the conventions of {{RFC9457}} for
+problem-details responses and the AuthZEN specification
+{{OIDC-AUTHZEN}} for decision request/response.
+
+## Terminology
 
 Terms from {{I-D.draft-mcguinness-mission-framework}} are inherited.
 Additional definitions:
@@ -119,7 +183,7 @@ suppressed.
 PEP locations, and execution boundaries covered by a Mission-Bound
 Runtime Enforcement conformance claim.
 
-# Profile Structure
+# Profile Structure {#profile-structure}
 
 This profile is modular:
 
@@ -134,7 +198,7 @@ Conformance claims name which modules the implementation supports.
 The Core profile is the minimum for any Mission-Bound Runtime
 Enforcement claim.
 
-# Mission-to-Policy Materialization
+# Mission-to-Policy Materialization {#mission-to-policy-materialization}
 
 The state authority (or a trusted compiler) reproducibly materializes
 the approved Mission tuple as an evaluable policy view consumable by
@@ -158,6 +222,27 @@ The materialized policy view MUST satisfy:
 - **Bounded**: the materialized view does not enlarge the Authority
   Set's semantic bounds. Materialization is faithful.
 
+### `policy_view_id` and `policy_view_version`
+
+`policy_view_id` is computed deterministically as the integrity-anchor
+encoded form ({{I-D.draft-mcguinness-mission-framework}}) over the
+JCS-canonical bytes of the materialized view envelope:
+
+~~~
+SHA-256(JCS({
+  "type":                "mission-policy-view",
+  "schema_version":      "urn:mbo:schema:mission-policy-view:1",
+  "authorization_domain": <mission.principals.tenant>,
+  "state_authority":     <mission.origin>,
+  "value":               <materialized view payload>
+}))
+~~~
+
+`policy_view_version` is a monotonic counter (decimal-string integer)
+incremented by the state authority each time the materialized view
+changes for the same Mission. The pair (`policy_view_id`,
+`policy_view_version`) uniquely addresses the materialized form.
+
 ## Wire form
 
 This profile does not pick a concrete policy-language wire form for
@@ -171,7 +256,7 @@ the materialized view. Implementations MAY use:
 The Policy Projection Optional Module (future spec) standardizes a
 specific wire form when implementer demand justifies.
 
-# Resource-Side Enforcement Contract (RS-D)
+# Resource-Side Enforcement Contract (RS-D) {#resource-side-enforcement-contract-rs-d}
 
 A Resource Server claiming RS-D MUST:
 
@@ -187,7 +272,7 @@ claim RS-D for those actions. The enforcement-scope manifest names
 covered action classes; uncovered actions are explicitly outside
 the claim.
 
-# PEP Placement Rules
+# PEP Placement Rules {#pep-placement-rules}
 
 The PEP MUST be placed such that:
 
@@ -208,74 +293,351 @@ Acceptable placements include:
 
 PEP placements MUST be documented in the enforcement-scope manifest.
 
-# PDP Request
+# PDP Request {#pdp-request}
 
-The PDP request follows the OpenID AuthZEN Authorization API. This
-profile adds the following Mission-specific inputs:
+The PDP request follows the OpenID AuthZEN Authorization API
+{{OIDC-AUTHZEN}}. AuthZEN defines the top-level envelope with
+`subject`, `resource`, `action`, and `context` members. This
+profile binds Mission-Bound inputs into that envelope.
 
-- `mission` (object, required): Mission reference and projection.
-  Carries `id` or `ref`, `origin`, `authority_hash`,
-  `policy_version`, `policy_view_id`.
-- `actor` (object, required): authenticated actor context per
-  {{I-D.draft-mcguinness-oauth-actor-profile}}.
-- `subject` (object, required): authenticated subject identifier.
-- `resource` (object, required): the target resource.
-- `action` (string, required): the requested action identifier.
-- `parameters` (object, conditional): action parameters when
-  parameter binding is required.
+## AuthZEN envelope binding
+
+| AuthZEN member | Mission-Bound binding |
+|---|---|
+| `subject` | AuthZEN subject object whose identity is a Mission Principal ({{I-D.draft-mcguinness-mission-framework}}). |
+| `resource` | The target resource per AuthZEN. The PEP supplies the canonical resource identifier per substrate convention. |
+| `action` | The requested action identifier (e.g., `journal-entries.write`). |
+| `context` | Carries the Mission-Bound context object defined below. |
+
+## `context.mission`
+
+The Mission-Bound `context` object adds a `mission` member and
+related per-request fields. The `mission` object identifies the
+governance record and its current materialized view:
+
+- `id` (string, required): the canonical `mission.id`.
+- `origin` (string, required, URI): equal to the Mission's
+  `mission.origin`.
+- `authority_hash` (string, required): the integrity anchor for
+  the Authority Set, in the integrity-anchor encoded form per
+  {{I-D.draft-mcguinness-mission-framework}}.
+- `policy_version` (string, required): the `policy_version`
+  recorded at the approval event.
+- `policy_view_id` (string, required): the materialized view
+  identifier ({{mission-to-policy-materialization}}).
+- `policy_view_version` (string, required): the materialized view
+  monotonic counter.
+
+## `context.actor`
+
+The `actor` object carries the authenticated actor chain per
+{{I-D.draft-mcguinness-oauth-actor-profile}}. Substrate profiles
+populate this from the credential the PEP receives:
+
+- OAuth Profile: the actor chain reconstructed from the access
+  token's `act` claim and the token's authenticated client identity.
+- AAuth Profile: the actor chain reconstructed from the AAuth
+  resource-token's actor-context binding.
+
+## `context.parameters` and `context.parameter_digest`
+
+When parameter binding is required for the requested action, the
+PEP supplies:
+
+- `parameters` (object, conditional): the action's parameters as a
+  JSON object. The shape is action-specific.
 - `parameter_digest` (string, required when `parameters` is
-  present): a digest committing to the parameters at request time.
+  present): the integrity-anchor encoded form computed over the
+  JCS-canonical bytes of:
+
+~~~
+SHA-256(JCS({
+  "type":                "mission-action-parameters",
+  "schema_version":      <action-parameters-schema-version>,
+  "authorization_domain": <mission.principals.tenant>,
+  "state_authority":     <mission.origin>,
+  "value":               <parameters>
+}))
+~~~
+
+The `parameter_digest` MUST be byte-equal to the digest computed by
+the PDP over the same parameters object after normalization.
+Implementations MUST reject `parameters` that contain duplicate JSON
+object member names per the Framework's semantic normalization
+rules.
+
+## `context.audience` and `context.freshness`
+
 - `audience` (string, required): the PEP's audience identifier.
-- `freshness` (object, required): the Mission Status freshness
-  the PEP relies on. Includes `mission_status_issued_at`,
-  `mission_status_expires_at`, and the freshness mode (`fresh`,
-  `cached`, or `event_driven`).
+- `freshness` (object, required): the Mission Status freshness the
+  PEP relies on. Members:
+  - `mission_status_issued_at` (RFC 3339 timestamp)
+  - `mission_status_expires_at` (RFC 3339 timestamp)
+  - `mode` (string): one of `fresh`, `cached`, `event_driven`
+    (matches {{mission-status-composition}})
+  - `freshness_at` (RFC 3339 timestamp): when the PEP's view of
+    Mission Status was current
 
-The PDP MUST verify that the Mission state, `authority_hash`, and
-`policy_version` carried by the PEP are consistent with the
-materialized policy view. Stale or inconsistent inputs MUST be
-treated as denial classification `stale_state`.
+## Worked PDP request
 
-# Decision Evidence Object
+For the Q3 invoicing Mission example:
+
+~~~ http-message
+POST /pdp/access/v1/evaluation HTTP/1.1
+Host: pdp.example.com
+Content-Type: application/json
+Authorization: ...
+
+{
+  "subject": {
+    "type": "user",
+    "id": "user_3p2q8mN1a0kV7tR",
+    "properties": {
+      "iss": "https://idp.example.com",
+      "sub_profile": { "type": "human" }
+    }
+  },
+  "resource": {
+    "type": "journal-entry",
+    "id": "je_2026Q3_inv_8421"
+  },
+  "action": {
+    "name": "journal-entries.write"
+  },
+  "context": {
+    "mission": {
+      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+      "origin": "https://as.example.com",
+      "authority_hash":
+        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "policy_version": "deploy-policy:v17",
+      "policy_view_id":
+        "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mT5L",
+      "policy_view_version": "1"
+    },
+    "actor": {
+      "act": {
+        "iss": "https://as.example.com",
+        "sub": "client_erp-recon-agent",
+        "sub_profile": { "type": "service" }
+      }
+    },
+    "parameters": {
+      "amount_usd": 423.50,
+      "source_invoice_id": "inv_2026Q3_842"
+    },
+    "parameter_digest":
+      "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA1bRM",
+    "audience": "https://erp.example.com",
+    "freshness": {
+      "mission_status_issued_at": "2026-11-02T08:14:00Z",
+      "mission_status_expires_at": "2026-11-02T08:15:00Z",
+      "mode": "cached",
+      "freshness_at": "2026-11-02T08:14:00Z"
+    }
+  }
+}
+~~~
+
+## PDP-side consistency checks
+
+The PDP MUST verify that:
+
+1. The Mission state at decision time is `active` (from the
+   Mission Status the PEP supplied).
+2. `authority_hash`, `policy_version`, and `policy_view_id`
+   carried by the PEP are consistent with the materialized policy
+   view the PDP has loaded for this Mission.
+3. The PEP-supplied `freshness` is within the deployment's
+   declared `mission_max_stale_seconds`.
+4. The `parameter_digest` (when present) matches a fresh digest
+   computed by the PDP over the supplied `parameters`.
+
+Failure of (1) returns `mission_inactive`; failure of (2) returns
+`stale_state`; failure of (3) returns `stale_state` (with the
+specific freshness-window violation in the denial reason); failure
+of (4) returns `parameter_violation`.
+
+# Decision Evidence Object {#decision-evidence-object}
 
 The PDP emits a Decision Evidence Object for every runtime decision.
-The object is a JSON document with:
+
+## Members
 
 - `decision_id` (string, required): unique decision identifier.
-- `mission_id`, `origin`, `authority_hash`, `policy_view_id`:
-  Mission projection at decision time.
+  ABNF: `1*64( ALPHA / DIGIT / "-" / "_" )`. At least 128 bits of
+  entropy.
+- `mission` (object, required): a copy of the PDP request's
+  `context.mission` object (carrying `id`, `origin`,
+  `authority_hash`, `policy_version`, `policy_view_id`,
+  `policy_view_version`).
 - `actor`, `subject`, `resource`, `action`, `parameter_digest`,
-  `audience`: PDP inputs.
+  `audience`: PDP inputs as supplied (verbatim, after PDP-side
+  normalization).
 - `decision` (string, required): one of `permit`, `deny`,
   `expandable_deny`.
 - `denial_reason` (string, conditional): when `decision` is `deny`
-  or `expandable_deny`. Values include `out_of_authority`,
-  `aal_insufficient`, `stale_state`, `mission_inactive`,
-  `parameter_violation`, `resource_policy`, `quota_exceeded`,
-  registered values from the Common Constraints registry.
+  or `expandable_deny`. Values from
+  {{runtime-denial-classification}} or registered constraint
+  names.
 - `expansion` (object, conditional): when `decision` is
   `expandable_deny`, the eligibility-signaling fields per
   {{I-D.draft-mcguinness-mission-expansion}}: `eligible: true`,
   `access_request_uri`, `ticket`, `requested_authority`.
 - `evaluated_at` (RFC 3339 timestamp, required).
-- `policy_view_id`, `policy_view_version`.
-- `evidence_envelope` (signature or integrity reference): how the
-  Decision Evidence is integrity-protected. Profiles bind.
+- `evidence_envelope` (object, required): integrity protection
+  (see {{decision-evidence-integrity}}).
+
+## JSON Schema {#decision-evidence-schema}
+
+~~~ json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mbo:schema:mission-decision-evidence:1",
+  "title": "Mission Decision Evidence",
+  "type": "object",
+  "required": [
+    "decision_id", "mission", "subject", "resource", "action",
+    "audience", "decision", "evaluated_at", "evidence_envelope"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "decision_id": {
+      "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "mission": {
+      "type": "object",
+      "required": ["id", "origin", "authority_hash"],
+      "properties": {
+        "id":     { "type": "string" },
+        "origin": { "type": "string", "format": "uri" },
+        "authority_hash": { "type": "string" },
+        "policy_version": { "type": "string" },
+        "policy_view_id": { "type": "string" },
+        "policy_view_version": { "type": "string" }
+      }
+    },
+    "subject":   { "type": "object" },
+    "actor":     { "type": "object" },
+    "resource":  { "type": "object" },
+    "action":    { "type": "object" },
+    "parameter_digest": { "type": "string" },
+    "audience":  { "type": "string" },
+    "decision": {
+      "type": "string",
+      "enum": ["permit", "deny", "expandable_deny"]
+    },
+    "denial_reason": { "type": "string" },
+    "expansion": {
+      "type": "object",
+      "properties": {
+        "eligible":            { "type": "boolean" },
+        "access_request_uri":  { "type": "string", "format": "uri" },
+        "ticket":              { "type": "string" },
+        "requested_authority": { "type": "object" }
+      }
+    },
+    "evaluated_at": {
+      "type": "string", "format": "date-time"
+    },
+    "evidence_envelope": {
+      "type": "object",
+      "required": ["format", "value"],
+      "properties": {
+        "format": { "type": "string" },
+        "value":  { "type": "string" }
+      }
+    }
+  }
+}
+~~~
+
+## Integrity {#decision-evidence-integrity}
+
+The `evidence_envelope` carries the integrity protection over the
+Decision Evidence content. The default format is `jws-compact`,
+which carries a JWS Compact Serialization {{RFC7515}} whose payload
+is the JCS-canonical bytes of the Decision Evidence object with
+the `evidence_envelope` member removed during signing. Verification
+re-removes `evidence_envelope` and verifies the JWS against the
+PDP's published signing key.
+
+~~~ json
+{
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXkt..."
+  }
+}
+~~~
+
+Profiles MAY register additional formats (e.g., `jws-flattened`,
+`detached-receipt`). Implementations MUST reject envelopes with
+unregistered formats.
+
+## Worked example
+
+~~~ json
+{
+  "decision_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "policy_version": "deploy-policy:v17",
+    "policy_view_id":
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mT5L",
+    "policy_view_version": "1"
+  },
+  "subject": {
+    "type": "user",
+    "id": "user_3p2q8mN1a0kV7tR"
+  },
+  "actor": {
+    "act": {
+      "iss": "https://as.example.com",
+      "sub": "client_erp-recon-agent"
+    }
+  },
+  "resource": {
+    "type": "journal-entry",
+    "id": "je_2026Q3_inv_8421"
+  },
+  "action": { "name": "journal-entries.write" },
+  "parameter_digest":
+    "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA1bRM",
+  "audience": "https://erp.example.com",
+  "decision": "permit",
+  "evaluated_at": "2026-11-02T08:14:03Z",
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXkt..."
+  }
+}
+~~~
 
 Decision Evidence is durable and integrity-protected. It is the
 authoritative record of what the PDP evaluated, NOT proof that the
 action occurred.
 
-# Execution Evidence Object
+# Execution Evidence Object {#execution-evidence-object}
 
 The PEP or executor emits an Execution Evidence Object after the
-authorized action's outcome is determined. The object is a JSON
-document with:
+authorized action's outcome is determined.
+
+## Members
 
 - `execution_id` (string, required): unique execution identifier.
+  ABNF: `1*64( ALPHA / DIGIT / "-" / "_" )`. At least 128 bits of
+  entropy.
 - `decision_id` (string, required): the Decision Evidence this
   execution is linked to.
-- `parameter_digest` (string, required): MUST match the
+- `mission_id` (string, required): the canonical Mission ID
+  (mirrored from the linked Decision Evidence for join-key
+  convenience).
+- `parameter_digest` (string, conditional): MUST be present when
+  the linked Decision Evidence carries one. MUST match the
   `parameter_digest` in the linked Decision Evidence.
 - `outcome` (string, required): one of `attempted`, `completed`,
   `failed`, `suppressed`. `suppressed` indicates the action was
@@ -284,16 +646,84 @@ document with:
 - `outcome_at` (RFC 3339 timestamp, required).
 - `error` (string, conditional): error identifier when `outcome` is
   `failed`.
-- `attempted_at`, `completed_at`: timing context.
+- `attempted_at`, `completed_at` (RFC 3339 timestamps, optional):
+  timing context.
 - `result_summary` (object, optional): minimal action result
-  metadata (e.g., affected resource counts).
-- `evidence_envelope`: integrity protection.
+  metadata (e.g., affected resource counts). MUST NOT carry
+  user-content payloads.
+- `evidence_envelope` (object, required): integrity protection
+  (same format as Decision Evidence; see
+  {{decision-evidence-integrity}}).
 
-Decision Evidence and Execution Evidence are **linked but distinct**.
-Authorization is not proof that an action occurred; the existence
-of a Decision Evidence record without a corresponding Execution
-Evidence record indicates the action was not attempted, or that
-the executor failed to emit evidence.
+## JSON Schema {#execution-evidence-schema}
+
+~~~ json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mbo:schema:mission-execution-evidence:1",
+  "title": "Mission Execution Evidence",
+  "type": "object",
+  "required": [
+    "execution_id", "decision_id", "mission_id",
+    "outcome", "outcome_at", "evidence_envelope"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "execution_id": {
+      "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "decision_id": { "type": "string" },
+    "mission_id":  { "type": "string" },
+    "parameter_digest": { "type": "string" },
+    "outcome": {
+      "type": "string",
+      "enum": ["attempted", "completed", "failed", "suppressed"]
+    },
+    "outcome_at":    { "type": "string", "format": "date-time" },
+    "error":         { "type": "string" },
+    "attempted_at":  { "type": "string", "format": "date-time" },
+    "completed_at":  { "type": "string", "format": "date-time" },
+    "result_summary": { "type": "object" },
+    "evidence_envelope": {
+      "type": "object",
+      "required": ["format", "value"],
+      "properties": {
+        "format": { "type": "string" },
+        "value":  { "type": "string" }
+      }
+    }
+  }
+}
+~~~
+
+## Worked example
+
+~~~ json
+{
+  "execution_id": "exe_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
+  "decision_id":  "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
+  "mission_id":   "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "parameter_digest":
+    "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA1bRM",
+  "outcome":      "completed",
+  "attempted_at": "2026-11-02T08:14:04Z",
+  "completed_at": "2026-11-02T08:14:05Z",
+  "outcome_at":   "2026-11-02T08:14:05Z",
+  "result_summary": {
+    "rows_affected": 1
+  },
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBlcC1rZXkt..."
+  }
+}
+~~~
+
+Decision Evidence and Execution Evidence are **linked but
+distinct**. Authorization is not proof that an action occurred; the
+existence of a Decision Evidence record without a corresponding
+Execution Evidence record indicates the action was not attempted,
+or that the executor failed to emit evidence.
 
 ## TOCTOU and parameter binding
 
@@ -302,9 +732,22 @@ Execution Evidence) closes the time-of-check-to-time-of-use gap.
 If the executed action's effective parameters differ from those
 the PDP evaluated, the digest mismatch is detectable in audit.
 
-PEP MUST compute `parameter_digest` over the canonical parameter
-object using the integrity-anchor hash format from
-{{I-D.draft-mcguinness-mission-framework}}.
+When the Execution Evidence's `parameter_digest` does not match the
+linked Decision Evidence's `parameter_digest`, the audit consumer
+MUST classify the action as parameter-mismatch and treat it as
+equivalent to an unauthorized action for compliance purposes. The
+PEP itself MUST refuse to emit Execution Evidence with a mismatched
+digest; only the audit consumer detects mismatches across the chain.
+
+PEP MUST compute `parameter_digest` over the JCS-canonical bytes of
+the parameter envelope defined in {{pdp-request}}.
+
+## Retention
+
+Decision Evidence and Execution Evidence MUST be retained for at
+least the deployment's audit retention window, which SHOULD be at
+least 90 days beyond the Mission's `mission_expiry`. Regulated
+deployments MAY require longer retention per applicable regulation.
 
 # Runtime Denial Classification
 
