@@ -1,0 +1,2811 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission-Bound Authorization Capability Model</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       This document defines a substrate-neutral capability and adoption
+model for Mission-Bound Authorization. Capability is reported as a
+coordinate on three axes: the Capability Ladder (Levels 0 through 5),
+Resource Server Tiers (RS-A through RS-D), and Authorization Domain
+Tiers (AD-1 through AD-3). The document names three adoption claims
+(Mission-Bound Issuance, Mission-Bound Runtime Enforcement, and
+Mission-Bound Cross-Domain Projection) that map onto the coordinate,
+and describes how OAuth-only, AAuth-only, and cross-substrate
+deployments report against the coordinate. This document is
+Informational: it defines a descriptive vocabulary for
+deployment maturity, not a protocol-actionable advertisement.
+Conformance is claimed against substrate or runtime profile
+specifications; the coordinate here is a reporting vocabulary
+used in documentation, migration roadmaps, and positioning. 
+    " name="description">
+<meta content="xml2rfc 3.33.0" name="generator">
+<meta content="mission" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="capability" name="keyword">
+<meta content="adoption" name="keyword">
+<meta content="oauth" name="keyword">
+<meta content="aauth" name="keyword">
+<meta content="governance" name="keyword">
+<meta content="draft-mcguinness-mission-capability-model-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.33.0
+    Python 3.12.13
+    ConfigArgParse 1.7
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.0.2
+    platformdirs 4.9.6
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.7.0
+-->
+<link href="draft-mcguinness-mission-capability-model.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Mission Capability Model</td>
+<td class="right">June 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 13 December 2026</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-mission-capability-model-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-06-11" class="published">11 June 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Informational</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2026-12-13">13 December 2026</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission-Bound Authorization Capability Model</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">This document defines a substrate-neutral capability and adoption
+model for Mission-Bound Authorization. Capability is reported as a
+coordinate on three axes: the Capability Ladder (Levels 0 through 5),
+Resource Server Tiers (RS-A through RS-D), and Authorization Domain
+Tiers (AD-1 through AD-3). The document names three adoption claims
+(Mission-Bound Issuance, Mission-Bound Runtime Enforcement, and
+Mission-Bound Cross-Domain Projection) that map onto the coordinate,
+and describes how OAuth-only, AAuth-only, and cross-substrate
+deployments report against the coordinate. This document is
+Informational: it defines a descriptive vocabulary for
+deployment maturity, not a protocol-actionable advertisement.
+Conformance is claimed against substrate or runtime profile
+specifications; the coordinate here is a reporting vocabulary
+used in documentation, migration roadmaps, and positioning.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-model.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-model.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-mission-capability-model/">https://datatracker.ietf.org/doc/draft-mcguinness-mission-capability-model/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 13 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-definitions" class="internal xref">Conventions and Definitions</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-three-adoption-claims" class="internal xref">Three Adoption Claims</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
+                <p id="section-toc.1-1.3.2.1.1" class="keepWithNext"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-mission-bound-issuance" class="internal xref">Mission-Bound Issuance</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2">
+                <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-mission-bound-runtime-enfor" class="internal xref">Mission-Bound Runtime Enforcement</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-mission-bound-cross-domain-" class="internal xref">Mission-Bound Cross-Domain Projection</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-the-three-axes" class="internal xref">The Three Axes</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-capability-ladder" class="internal xref">Capability Ladder</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-resource-server-tiers" class="internal xref">Resource Server Tiers</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-authorization-domain-tiers" class="internal xref">Authorization Domain Tiers</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-capability-ladder-2" class="internal xref">Capability Ladder</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-level-0-substrate-only" class="internal xref">Level 0: Substrate-only</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-level-1-mission-bound-issua" class="internal xref">Level 1: Mission-bound issuance</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-level-2-mission-aware-proje" class="internal xref">Level 2: Mission-aware projection</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
+                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-level-3-mission-aware-resou" class="internal xref">Level 3: Mission-aware Resource Server</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5">
+                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-level-4-full-runtime-enforc" class="internal xref">Level 4: Full Runtime Enforcement</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.6">
+                <p id="section-toc.1-1.5.2.6.1"><a href="#section-5.6" class="auto internal xref">5.6</a>.  <a href="#name-level-5-verifiable-governan" class="internal xref">Level 5: Verifiable governance</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-resource-server-tiers-2" class="internal xref">Resource Server Tiers</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-rs-a-token-only" class="internal xref">RS-A: Token-only</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-rs-b-mission-bound-credenti" class="internal xref">RS-B: Mission-bound credentials</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
+                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-rs-c-authority-aware" class="internal xref">RS-C: Authority-aware</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.4">
+                <p id="section-toc.1-1.6.2.4.1"><a href="#section-6.4" class="auto internal xref">6.4</a>.  <a href="#name-rs-d-pdp-evaluated" class="internal xref">RS-D: PDP-evaluated</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.5">
+                <p id="section-toc.1-1.6.2.5.1"><a href="#section-6.5" class="auto internal xref">6.5</a>.  <a href="#name-ladder-requirements-at-each" class="internal xref">Ladder requirements at each level</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-authorization-domain-tiers-2" class="internal xref">Authorization Domain Tiers</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-ad-1-mission-bound-issuance" class="internal xref">AD-1: Mission-bound issuance</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-ad-2-mission-aware-projecti" class="internal xref">AD-2: Mission-aware projection</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
+                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-ad-3-authority-aware-projec" class="internal xref">AD-3: Authority-aware projection plus authenticated Mission Status</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-the-coordinate-not-the-scor" class="internal xref">The Coordinate, Not the Score</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-mixed-tier-handling" class="internal xref">Mixed-tier handling</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-scope-statements" class="internal xref">Scope statements</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-cross-substrate-mapping" class="internal xref">Cross-Substrate Mapping</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-oauth-only" class="internal xref">OAuth-only</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-aauth-only" class="internal xref">AAuth-only</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
+                <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-cross-substrate-under-mas" class="internal xref">Cross-substrate under MAS</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-using-the-vocabulary" class="internal xref">Using the Vocabulary</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-reading-paths-by-capability" class="internal xref">Reading Paths by Capability Goal</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-why-informational" class="internal xref">Why Informational</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-capability-ladder-levels-vo" class="internal xref">Capability Ladder Levels (vocabulary)</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
+                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-resource-server-tiers-vocab" class="internal xref">Resource Server Tiers (vocabulary)</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.3">
+                <p id="section-toc.1-1.13.2.3.1"><a href="#section-13.3" class="auto internal xref">13.3</a>.  <a href="#name-authorization-domain-tiers-" class="internal xref">Authorization Domain Tiers (vocabulary)</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref"></a><a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.1">
+                <p id="section-toc.1-1.16.2.1.1"><a href="#section-16.1" class="auto internal xref"></a><a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.2">
+                <p id="section-toc.1-1.16.2.2.1"><a href="#section-16.2" class="auto internal xref"></a><a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">The Mission-Bound Authorization architecture is composed of a
+framework specification and several profile specifications. A
+deployment that implements some subset of these profiles delivers
+some subset of the architecture's governance and enforcement
+capabilities. Different deployments will sit at different points of
+maturity, in different substrates, and with different Resource Server
+behavior, for reasons that are appropriate to their environment. A
+single conformance label cannot describe these positions without
+either flattening real differences or implying that every deployment
+should climb to the top of one ladder.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">This document defines a capability and adoption vocabulary for
+Mission-Bound Authorization. The vocabulary treats capability as a
+coordinate on three independent axes:<a href="#section-1-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1-3.1">
+          <p id="section-1-3.1.1">The <strong>Capability Ladder</strong> (Levels 0 through 5) describes end-to-end
+maturity of Mission governance and enforcement across the
+deployment.<a href="#section-1-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-3.2">
+          <p id="section-1-3.2.1"><strong>Resource Server Tiers</strong> (RS-A through RS-D) describe what an
+individual Resource Server does with a Mission-bound credential at
+request time.<a href="#section-1-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-3.3">
+          <p id="section-1-3.3.1"><strong>Authorization Domain Tiers</strong> (AD-1 through AD-3) describe what an
+authorization domain (an OAuth Authorization Server, an AAuth
+Person Server, or a Mission Authority Server) delivers to its
+clients, downstream domains, and Resource Servers.<a href="#section-1-3.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-1-4">A deployment reports a coordinate composed of one value from each
+axis, optionally per Resource Server and per authorization domain,
+together with the scope of the claim and the substrate profile
+versions it implements. The coordinate preserves detail that one
+score would hide and prevents contradictory claims such as a Level 4
+deployment whose consequential actions all pass through RS-A
+Resource Servers.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">Three named adoption claims sit above the coordinate as headline
+signals: Mission-Bound Issuance, Mission-Bound Runtime Enforcement,
+and Mission-Bound Cross-Domain Projection. Each maps to a coordinate
+range on the three axes. They are convenient labels for sentences in
+release notes and case studies; they are not independent
+interoperability or certification claims.<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-6">This document is Informational. Conformance is claimed against the
+testable wire requirements of a substrate profile or the Runtime
+Enforcement Profile. The Capability Ladder, the Resource Server
+Tiers, and the Authorization Domain Tiers are reporting tools. An
+implementation describes its position on the coordinate; it does not
+"conform" to a level or tier as if these were independent wire
+contracts. This document has no IANA actions; the tiers and levels
+are vocabulary, not protocol identifiers.<a href="#section-1-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conventions-and-definitions">
+<section id="section-2">
+      <h2 id="name-conventions-and-definitions">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-definitions" class="section-name selfRef">Conventions and Definitions</a>
+      </h2>
+<p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">The following terms are used as defined in
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>:<a href="#section-2-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-2-3.1">
+          <p id="section-2-3.1.1">Mission, Mission Proposal, Mission Intent, Authority Set,
+Mission-bound credential, state authority, integrity anchors,
+Mission Status.<a href="#section-2-3.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-2-4">The following terms are used as defined in
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span>:<a href="#section-2-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-2-5.1">
+          <p id="section-2-5.1.1">Policy Decision Point (PDP), Policy Enforcement Point (PEP),
+Decision Evidence Object, Execution Evidence Object,
+enforcement-scope manifest.<a href="#section-2-5.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-2-6">The following terms are used as defined in
+<span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> and <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>:<a href="#section-2-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-2-7.1">
+          <p id="section-2-7.1.1">Authorization Server (AS), Resource Server (RS), Protected
+Resource Metadata (PRM).<a href="#section-2-7.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-2-8">This document defines no new wire surface. It introduces named
+identifiers for capability reporting and the closed enumerations
+that hold them.<a href="#section-2-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="three-adoption-claims">
+<section id="section-3">
+      <h2 id="name-three-adoption-claims">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-three-adoption-claims" class="section-name selfRef">Three Adoption Claims</a>
+      </h2>
+<p id="section-3-1">Three named adoption claims serve as the headline signal that a
+deployment, vendor, or working group can rally around when
+describing itself in a sentence. Each claim has a clear yes-or-no
+answer at audit time and maps directly to coordinates on the three
+axes defined later.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<div id="mission-bound-issuance">
+<section id="section-3.1">
+        <h3 id="name-mission-bound-issuance">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-mission-bound-issuance" class="section-name selfRef">Mission-Bound Issuance</a>
+        </h3>
+<p id="section-3.1-1">The state authority records an Approved Mission with integrity
+anchors, issues Mission-bound credentials, and gates credential
+derivation (refresh, exchange, substrate-native re-derivation) on
+Mission state. Resource Servers <span class="bcp14">MAY</span> remain unchanged. The deployment
+gains revocation, audit binding on the Mission identifier, and a
+user-visible Mission inventory without changing Resource Server
+code.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+<p id="section-3.1-2">This claim maps to:<a href="#section-3.1-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.1-3.1">
+            <p id="section-3.1-3.1.1">Capability Ladder Level 1.<a href="#section-3.1-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-3.2">
+            <p id="section-3.1-3.2.1">Resource Server Tier A (RS-A) for in-scope Resource Servers.<a href="#section-3.1-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-3.3">
+            <p id="section-3.1-3.3.1">Authorization Domain Tier 1 (AD-1) at the state authority.<a href="#section-3.1-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.1-4">Mission-Bound Issuance is the smallest deployable Mission-Bound
+Authorization claim. It is appropriate for deployments that want the
+Mission-layer governance benefits (one user approval driving
+revocable, auditable credential derivation) without buying into
+Resource Server changes or runtime enforcement on day one.<a href="#section-3.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-bound-runtime-enforcement">
+<section id="section-3.2">
+        <h3 id="name-mission-bound-runtime-enfor">
+<a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-mission-bound-runtime-enfor" class="section-name selfRef">Mission-Bound Runtime Enforcement</a>
+        </h3>
+<p id="section-3.2-1">Within a deployment-named enforcement scope, every consequential
+action is evaluated by a Policy Decision Point against the Mission's
+versioned policy view, the audience-relevant Authority Set
+projection, authenticated actor context, and current Resource
+policy, producing a Decision Evidence Object and Execution Evidence
+Object per consequential decision.<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+<p id="section-3.2-2">This claim maps to:<a href="#section-3.2-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.2-3.1">
+            <p id="section-3.2-3.1.1">Capability Ladder Level 4.<a href="#section-3.2-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-3.2">
+            <p id="section-3.2-3.2.1">Resource Server Tier D (RS-D) for every consequential Resource
+Server and local-action enforcement point in the named
+enforcement scope.<a href="#section-3.2-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-3.3">
+            <p id="section-3.2-3.3.1">Authorization Domain Tier 3 (AD-3) at the state authority.<a href="#section-3.2-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-3.4">
+            <p id="section-3.2-3.4.1">The Runtime Enforcement Profile Core
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span>.<a href="#section-3.2-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.2-4">The scope is explicit and bounded. A Mission-Bound Runtime
+Enforcement claim is valid only for the action classes, Resource
+Servers, and execution boundaries listed in the deployment's
+enforcement-scope manifest. Action paths the deployment cannot stop
+(debug shells, unsanctioned egress routes, direct database
+connectors outside an RS-D Resource Server, agent-side tool
+invocations not gated by an orchestrator PEP) fall outside the
+claim.<a href="#section-3.2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-bound-cross-domain-projection">
+<section id="section-3.3">
+        <h3 id="name-mission-bound-cross-domain-">
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-mission-bound-cross-domain-" class="section-name selfRef">Mission-Bound Cross-Domain Projection</a>
+        </h3>
+<p id="section-3.3-1">A canonical Mission record is consumed by more than one
+authorization domain (one or more OAuth Authorization Servers, one
+or more AAuth Person Servers, or both), each consuming domain
+validates the projection before issuing local credentials, and
+revocation at the canonical record demonstrably terminates
+derivation across every consuming domain.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+<p id="section-3.3-2">This claim maps to:<a href="#section-3.3-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.3-3.1">
+            <p id="section-3.3-3.1.1">Capability Ladder Level 2 or higher.<a href="#section-3.3-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.3-3.2">
+            <p id="section-3.3-3.2.1">The Mission Authority Server (MAS) topology
+<span>[<a href="#I-D.draft-mcguinness-mission-mas" class="cite xref">I-D.draft-mcguinness-mission-mas</a>]</span> or an equivalent
+multi-domain validation rule.<a href="#section-3.3-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.3-3.3">
+            <p id="section-3.3-3.3.1">Authorization Domain Tier 2 (AD-2) at each consuming domain, plus
+the projection-validation contract from each substrate's profile.<a href="#section-3.3-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.3-4">The three claims are independent in principle. A deployment can
+ship Mission-Bound Cross-Domain Projection without Mission-Bound
+Runtime Enforcement, or Mission-Bound Runtime Enforcement without
+Mission-Bound Cross-Domain Projection. In practice they tend to
+climb together, since each new claim adds enforcement points and
+authorization domains that the Authority Set must remain coherent
+across. The detailed maturity description for any combination is
+the coordinate on the three axes.<a href="#section-3.3-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="the-three-axes">
+<section id="section-4">
+      <h2 id="name-the-three-axes">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-the-three-axes" class="section-name selfRef">The Three Axes</a>
+      </h2>
+<p id="section-4-1">Capability is not a single number. A deployment reports a
+coordinate on three related axes. Three axes are useful because
+each answers a different question:<a href="#section-4-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4-2.1">
+          <p id="section-4-2.1.1">The Capability Ladder describes <em>how much</em> of the Mission-Bound
+Authorization spine the deployment implements end to end.<a href="#section-4-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.2">
+          <p id="section-4-2.2.1">Resource Server Tiers describe <em>what each Resource Server does at
+request time</em>.<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.3">
+          <p id="section-4-2.3.1">Authorization Domain Tiers describe <em>what each authorization
+domain offers to its issuers and consumers</em>.<a href="#section-4-2.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-4-3">The coordinate preserves detail that one score would hide. It also
+prevents contradictory claims. A deployment cannot, for example,
+report Capability Ladder Level 4 if its consequential Resource
+Servers are all RS-A, because Level 4 by definition requires RS-D
+for the consequential Resource Servers in scope.<a href="#section-4-3" class="pilcrow">¶</a></p>
+<div id="capability-ladder">
+<section id="section-4.1">
+        <h3 id="name-capability-ladder">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-capability-ladder" class="section-name selfRef">Capability Ladder</a>
+        </h3>
+<p id="section-4.1-1">Mission-Bound Authorization is designed for incremental adoption. A
+deployment can sit at any level on the Capability Ladder and gain
+value; higher levels add capability without invalidating lower
+ones. The Ladder is a property of the deployment as a whole, scoped
+to the deployment-named scope of the claim.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-1">
+          <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Level</th>
+              <th class="text-left" rowspan="1" colspan="1">Short name</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">0</td>
+              <td class="text-left" rowspan="1" colspan="1">Substrate-only</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">1</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission-bound issuance</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">2</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission-aware projection</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">3</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission-aware Resource Server</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">4</td>
+              <td class="text-left" rowspan="1" colspan="1">Full Runtime Enforcement</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">5</td>
+              <td class="text-left" rowspan="1" colspan="1">Verifiable governance</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-4.1-3">The Ladder is described in detail in <a href="#capability-ladder" class="auto internal xref">Section 4.1</a>.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="resource-server-tiers">
+<section id="section-4.2">
+        <h3 id="name-resource-server-tiers">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-resource-server-tiers" class="section-name selfRef">Resource Server Tiers</a>
+        </h3>
+<p id="section-4.2-1">Resource Server Tiers describe what an individual Resource Server
+does with a Mission-bound credential at request time. They are
+reported per Resource Server. A deployment-wide Ladder claim is
+bounded by the minimum tier among consequential Resource Servers
+included in that claim.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-2">
+          <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Tier</th>
+              <th class="text-left" rowspan="1" colspan="1">Short name</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">RS-A</td>
+              <td class="text-left" rowspan="1" colspan="1">Token-only</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">RS-B</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission-bound credentials</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">RS-C</td>
+              <td class="text-left" rowspan="1" colspan="1">Authority-aware</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">RS-D</td>
+              <td class="text-left" rowspan="1" colspan="1">PDP-evaluated</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-4.2-3">The tiers are described in detail in <a href="#resource-server-tiers" class="auto internal xref">Section 4.2</a>.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authorization-domain-tiers">
+<section id="section-4.3">
+        <h3 id="name-authorization-domain-tiers">
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-authorization-domain-tiers" class="section-name selfRef">Authorization Domain Tiers</a>
+        </h3>
+<p id="section-4.3-1">Authorization Domain Tiers describe what an authorization domain
+(an OAuth Authorization Server, an AAuth Person Server, or a
+Mission Authority Server) delivers to its clients, downstream
+domains, and Resource Servers. They are reported per authorization
+domain.<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-3">
+          <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Tier</th>
+              <th class="text-left" rowspan="1" colspan="1">Short name</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">AD-1</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission-bound issuance</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">AD-2</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission-aware projection</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">AD-3</td>
+              <td class="text-left" rowspan="1" colspan="1">Authority-aware projection plus authenticated Mission Status</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-4.3-3">The tiers are described in detail in <a href="#authorization-domain-tiers" class="auto internal xref">Section 4.3</a>.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="capability-ladder-1">
+<section id="section-5">
+      <h2 id="name-capability-ladder-2">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-capability-ladder-2" class="section-name selfRef">Capability Ladder</a>
+      </h2>
+<p id="section-5-1">The Capability Ladder describes end-to-end deployment maturity. Each
+level corresponds to a coherent governance outcome.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<div id="level-0-substrate-only">
+<section id="section-5.1">
+        <h3 id="name-level-0-substrate-only">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-level-0-substrate-only" class="section-name selfRef">Level 0: Substrate-only</a>
+        </h3>
+<p id="section-5.1-1">The deployment runs baseline OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>, OpenID Connect,
+or native AAuth without making a Mission-Bound Authorization
+governance claim. Native AAuth may carry its own native Mission
+construct without making this document's Mission-Bound governance
+claim; in that case it remains Level 0 in this capability model.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.1-2">Level 0 is a correct destination for any deployment that does not
+need Mission-layer governance. Single-call user-driven web flows,
+machine-to-machine service credentials, short-lived consumer
+authorizations where the credential lifetime is the task lifetime,
+and any non-agentic deployment without a cross-hop audit
+requirement <span class="bcp14">SHOULD</span> remain at Level 0. The Ladder measures progress
+<em>for deployments that have chosen to adopt Mission-Bound
+governance</em>. It does not imply that every OAuth deployment is
+behind or that every deployment should climb.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="level-1-mission-bound-issuance">
+<section id="section-5.2">
+        <h3 id="name-level-1-mission-bound-issua">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-level-1-mission-bound-issua" class="section-name selfRef">Level 1: Mission-bound issuance</a>
+        </h3>
+<p id="section-5.2-1">The state authority stores the governance Mission, commits approved
+authority and integrity anchors, issues Mission-bound credentials,
+and gates new derivation on Mission state. Mission lifecycle
+operations (revoke, suspend, resume, complete) are exposed.
+Resource Servers <span class="bcp14">MAY</span> remain at RS-A and need no changes.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.2-2">Required surfaces:<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.2-3.1">
+            <p id="section-5.2-3.1.1">OAuth substrate: the OAuth Profile Core
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>.<a href="#section-5.2-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-3.2">
+            <p id="section-5.2-3.2.1">AAuth substrate: the AAuth Composition Profile Core
+<span>[<a href="#I-D.draft-mcguinness-mission-aauth-profile" class="cite xref">I-D.draft-mcguinness-mission-aauth-profile</a>]</span>, which includes
+the governance mapping, Authority Set commitment, hash
+separation, and lifecycle projection over the native AAuth
+Mission.<a href="#section-5.2-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.2-4">What a Level 1 deployment buys on day one:<a href="#section-5.2-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.2-5.1">
+            <p id="section-5.2-5.1.1">One user approval drives many resource-specific credentials.
+Revocation at the state authority terminates future derivation
+across every audience.<a href="#section-5.2-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-5.2">
+            <p id="section-5.2-5.2.1">Refresh and exchange become governable. A long-running agent
+cannot refresh past a Mission that the user revoked.<a href="#section-5.2-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-5.3">
+            <p id="section-5.2-5.3.1">Audit reconstruction across audiences becomes a Mission-binding
+join, not log stitching by timestamp.<a href="#section-5.2-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-5.4">
+            <p id="section-5.2-5.4.1">The user has a single place to see and stop in-flight Missions,
+independent of credential expiry.<a href="#section-5.2-5.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.2-6">What Level 1 does not require:<a href="#section-5.2-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.2-7.1">
+            <p id="section-5.2-7.1.1">Reading the <code>mission</code> claim at the Resource Server.<a href="#section-5.2-7.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-7.2">
+            <p id="section-5.2-7.2.1">Cross-AS ID-JAG, Mission Expansion wire mechanics, Delegated
+Authority Validation, Concurrent Expansion reconciliation,
+Same-IdP Chain Continuation Assertions, Transaction Token
+Chaining, Capability Source Binding, or any Runtime Enforcement
+Profile surface.<a href="#section-5.2-7.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-7.3">
+            <p id="section-5.2-7.3.1">The MAS topology, cross-substrate Authority Set serialization,
+audience-filtered authority projection (AD-3), or verifiable
+governance evidence (Level 5).<a href="#section-5.2-7.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-7.4">
+            <p id="section-5.2-7.4.1">A Mission Status endpoint, expansion handles, or access-request
+submission. Clients fail-and-restart on inactive Missions at this
+level.<a href="#section-5.2-7.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="level-2-mission-aware-projection">
+<section id="section-5.3">
+        <h3 id="name-level-2-mission-aware-proje">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-level-2-mission-aware-proje" class="section-name selfRef">Level 2: Mission-aware projection</a>
+        </h3>
+<p id="section-5.3-1">Audience-specific credentials and assertions preserve the Mission
+binding and remain bounded by the Mission's approved authority.
+When a second authorization domain is involved, that domain
+validates the projection before issuing local credentials.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<p id="section-5.3-2">Required surfaces:<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.3-3.1">
+            <p id="section-5.3-3.1.1">Same-domain audience projection is sufficient where the
+deployment has one authorization domain.<a href="#section-5.3-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.3-3.2">
+            <p id="section-5.3-3.2.1">Multi-AS OAuth additionally uses ID-JAG and the Multi-AS
+validation rules from
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>.<a href="#section-5.3-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.3-3.3">
+            <p id="section-5.3-3.3.1">AAuth preserves native and governance references through
+resource and auth-token flows per
+<span>[<a href="#I-D.draft-mcguinness-mission-aauth-profile" class="cite xref">I-D.draft-mcguinness-mission-aauth-profile</a>]</span>.<a href="#section-5.3-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.3-3.4">
+            <p id="section-5.3-3.4.1">Cross-substrate deployments add MAS
+<span>[<a href="#I-D.draft-mcguinness-mission-mas" class="cite xref">I-D.draft-mcguinness-mission-mas</a>]</span>; each substrate is an
+authorized projection issuer.<a href="#section-5.3-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.3-4">Level 2 does not require Resource Server changes by itself.
+Projection correctness is primarily an issuer and
+authorization-domain property at this level. Resource Servers
+remain at RS-A unless the deployment also claims Level 3 or
+higher.<a href="#section-5.3-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="level-3-mission-aware-resource-server">
+<section id="section-5.4">
+        <h3 id="name-level-3-mission-aware-resou">
+<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-level-3-mission-aware-resou" class="section-name selfRef">Level 3: Mission-aware Resource Server</a>
+        </h3>
+<p id="section-5.4-1">Resource Servers validate Mission state and enforce
+audience-relevant Mission authority against each request.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
+<p id="section-5.4-2">Required surfaces:<a href="#section-5.4-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.4-3.1">
+            <p id="section-5.4-3.1.1">Level 2.<a href="#section-5.4-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.4-3.2">
+            <p id="section-5.4-3.2.1">RS-C for every consequential Resource Server in scope.<a href="#section-5.4-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.4-3.3">
+            <p id="section-5.4-3.3.1">AD-3 Mission Status at the state authority, or an equivalent
+authenticated issuer-provided view of Mission state and the
+audience-relevant Authority Set projection.<a href="#section-5.4-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.4-4">Level 3 is a strong default for production deployments that have
+adopted Mission-Bound issuance and now want per-request
+enforcement against approved authority, but do not need or want
+runtime PDP evaluation.<a href="#section-5.4-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="level-4-full-runtime-enforcement">
+<section id="section-5.5">
+        <h3 id="name-level-4-full-runtime-enforc">
+<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-level-4-full-runtime-enforc" class="section-name selfRef">Level 4: Full Runtime Enforcement</a>
+        </h3>
+<p id="section-5.5-1">Every consequential action within the deployment's named
+enforcement scope is evaluated against a versioned Mission policy
+view through a PEP that can prevent the action, and produces a
+runtime evidence record per consequential decision.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+<p id="section-5.5-2">Required surfaces:<a href="#section-5.5-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.5-3.1">
+            <p id="section-5.5-3.1.1">Level 3.<a href="#section-5.5-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.5-3.2">
+            <p id="section-5.5-3.2.1">RS-D for every consequential Resource Server and local-action
+enforcement point in scope.<a href="#section-5.5-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.5-3.3">
+            <p id="section-5.5-3.3.1">The Runtime Enforcement Profile Core
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span>.<a href="#section-5.5-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.5-3.4">
+            <p id="section-5.5-3.4.1">An explicit named enforcement scope (the enforcement-scope
+manifest) listing the action classes, Resource Servers, and
+execution boundaries actually mediated by a PEP.<a href="#section-5.5-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.5-4">Core surfaces required at Level 4 include reproducible policy
+materialization, PEP placement, Capability Source Binding for
+catalog-sourced actions, parameter binding, runtime failure
+handling, AuthZEN evaluation, authority-expandable denial
+handling, the Decision Evidence Object, and the Execution Evidence
+Object.<a href="#section-5.5-4" class="pilcrow">¶</a></p>
+<p id="section-5.5-5">A Level 4 claim is valid only for the consequential action classes
+and Resource Servers whose execution paths are actually mediated
+by an RS-D or runtime-PEP enforcement boundary. The deployment's
+Level 4 claim <span class="bcp14">SHOULD</span> name those action classes and resources.
+Action paths the deployment cannot stop fall outside the claim
+regardless of how comprehensive the rest of the runtime story is.<a href="#section-5.5-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="level-5-verifiable-governance">
+<section id="section-5.6">
+        <h3 id="name-level-5-verifiable-governan">
+<a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-level-5-verifiable-governan" class="section-name selfRef">Level 5: Verifiable governance</a>
+        </h3>
+<p id="section-5.6-1">Selected governance evidence is portable and independently
+verifiable across the claim's trust boundaries.<a href="#section-5.6-1" class="pilcrow">¶</a></p>
+<p id="section-5.6-2">Required surfaces:<a href="#section-5.6-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.6-3.1">
+            <p id="section-5.6-3.1.1">Level 4.<a href="#section-5.6-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.6-3.2">
+            <p id="section-5.6-3.2.1">Interoperable specifications for each claimed optional
+capability. Examples include portable Decision Receipts, Tool
+Binding, and Attestation.<a href="#section-5.6-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.6-4">The optional module sketches in
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span> are a roadmap
+rather than sufficient by themselves for a portable Level 5
+claim. When an optional module reaches sufficient implementation
+maturity, it is expected to be specified as its own draft and to
+be available to underwrite Level 5 claims that cite it. Until
+those module specifications exist, Level 5 is best understood as
+the named capacity for cross-organizational portability rather
+than a coordinate any deployment can claim today.<a href="#section-5.6-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="resource-server-tiers-1">
+<section id="section-6">
+      <h2 id="name-resource-server-tiers-2">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-resource-server-tiers-2" class="section-name selfRef">Resource Server Tiers</a>
+      </h2>
+<p id="section-6-1">Resource Server Tiers describe what an individual Resource Server
+does with a Mission-bound credential at request time. They are
+reported per Resource Server.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<div id="rs-a-token-only">
+<section id="section-6.1">
+        <h3 id="name-rs-a-token-only">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-rs-a-token-only" class="section-name selfRef">RS-A: Token-only</a>
+        </h3>
+<p id="section-6.1-1">The Resource Server validates the credential (audience, expiry,
+scope, signature, sender constraint) and ignores Mission state and
+the <code>mission</code> claim. RS-A is compatible with the AS-narrowed
+credential bounds the issuer applies at issuance time and relies on
+the credential issuer to enforce Mission gating at derivation.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<p id="section-6.1-2">RS-A is the credential-only floor. Existing Resource Servers need
+no changes to participate in a Level 1 deployment.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="rs-b-mission-bound-credentials">
+<section id="section-6.2">
+        <h3 id="name-rs-b-mission-bound-credenti">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-rs-b-mission-bound-credenti" class="section-name selfRef">RS-B: Mission-bound credentials</a>
+        </h3>
+<p id="section-6.2-1">The Resource Server reads the <code>mission</code> claim from the credential,
+validates that the Mission is active (per local cache, recent
+event, or freshness rules), and refuses requests on inactive
+Missions. It does not evaluate per-request authority and does not
+consult a PDP.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+<p id="section-6.2-2">RS-B is appropriate for Resource Servers that want to refuse
+requests on a revoked or completed Mission without taking on the
+work of evaluating Authority Set entries.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="rs-c-authority-aware">
+<section id="section-6.3">
+        <h3 id="name-rs-c-authority-aware">
+<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-rs-c-authority-aware" class="section-name selfRef">RS-C: Authority-aware</a>
+        </h3>
+<p id="section-6.3-1">The Resource Server validates Mission state and enforces Authority
+Set entries (per-resource authority, action permits, constraints)
+for the audience-relevant projection at request time.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+<p id="section-6.3-2">RS-C is the Level 3 minimum for consequential Resource Servers. It
+delivers per-request enforcement against approved authority without
+the PDP wiring required at Level 4.<a href="#section-6.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="rs-d-pdp-evaluated">
+<section id="section-6.4">
+        <h3 id="name-rs-d-pdp-evaluated">
+<a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-rs-d-pdp-evaluated" class="section-name selfRef">RS-D: PDP-evaluated</a>
+        </h3>
+<p id="section-6.4-1">The Resource Server consults a PDP for every consequential
+request. The PDP evaluates the request against the Mission's
+versioned policy view plus current Resource policy and produces a
+Decision Evidence Object. The Resource Server (or its PEP) records
+an Execution Evidence Object per consequential action.<a href="#section-6.4-1" class="pilcrow">¶</a></p>
+<p id="section-6.4-2">RS-D is the Level 4 minimum for consequential Resource Servers and
+follows the full Runtime Enforcement contract in
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span>.<a href="#section-6.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="ladder-requirements-at-each-level">
+<section id="section-6.5">
+        <h3 id="name-ladder-requirements-at-each">
+<a href="#section-6.5" class="section-number selfRef">6.5. </a><a href="#name-ladder-requirements-at-each" class="section-name selfRef">Ladder requirements at each level</a>
+        </h3>
+<ul class="normal">
+<li class="normal" id="section-6.5-1.1">
+            <p id="section-6.5-1.1.1">Level 1: RS-A is sufficient. The Ladder's enforcement at this
+level is at the credential-issuance gate, not at the Resource
+Server.<a href="#section-6.5-1.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.5-1.2">
+            <p id="section-6.5-1.2.1">Level 2: RS-A is still permitted. Projection correctness is
+primarily an issuer and authorization-domain property.<a href="#section-6.5-1.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.5-1.3">
+            <p id="section-6.5-1.3.1">Level 3: RS-C minimum for every consequential Resource Server in
+scope.<a href="#section-6.5-1.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.5-1.4">
+            <p id="section-6.5-1.4.1">Level 4: RS-D for every consequential Resource Server and
+local-action enforcement point in scope.<a href="#section-6.5-1.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.5-1.5">
+            <p id="section-6.5-1.5.1">Level 5: RS-D plus interoperable specifications for each claimed
+verifiable-governance capability.<a href="#section-6.5-1.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-6.5-2">A deployment with mixed-tier Resource Servers (some RS-A, some
+RS-D) is normal. The reported coordinate <span class="bcp14">SHOULD</span> name its scope, as
+discussed in <a href="#mixed-tier-handling" class="auto internal xref">Section 8.1</a>.<a href="#section-6.5-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="authorization-domain-tiers-1">
+<section id="section-7">
+      <h2 id="name-authorization-domain-tiers-2">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-authorization-domain-tiers-2" class="section-name selfRef">Authorization Domain Tiers</a>
+      </h2>
+<p id="section-7-1">Authorization Domain Tiers describe what an authorization domain
+(an Authorization Server, a Person Server, or a Mission Authority
+Server) delivers to its clients, downstream domains, and Resource
+Servers. The three tiers map roughly onto the Ladder but are
+described from the issuer's perspective rather than the
+deployment's. Authorization Servers and Person Servers are
+credential issuers, not Resource Servers, so their responsibilities
+cannot be described only by an RS tier.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<div id="ad-1-mission-bound-issuance">
+<section id="section-7.1">
+        <h3 id="name-ad-1-mission-bound-issuance">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-ad-1-mission-bound-issuance" class="section-name selfRef">AD-1: Mission-bound issuance</a>
+        </h3>
+<p id="section-7.1-1">The authorization domain accepts a Mission Intent (or a
+substrate-appropriate proposal), validates and stores a Mission,
+issues Mission-bound credentials, gates derivation on Mission
+state, and exposes a Mission inventory and lifecycle operations.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.1-2">AD-1 is required for Ladder Level 1 and above.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="ad-2-mission-aware-projection">
+<section id="section-7.2">
+        <h3 id="name-ad-2-mission-aware-projecti">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-ad-2-mission-aware-projecti" class="section-name selfRef">AD-2: Mission-aware projection</a>
+        </h3>
+<p id="section-7.2-1">The authorization domain delivers AD-1 plus the ability to issue
+audience-specific Mission-bound credentials or assertions that
+preserve the Mission binding. When projection crosses an
+authorization-domain boundary, the receiving domain validates the
+binding before issuing local credentials.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.2-2">AD-2 is required for Ladder Level 2 and above.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="ad-3-authority-aware-projection-plus-authenticated-mission-status">
+<section id="section-7.3">
+        <h3 id="name-ad-3-authority-aware-projec">
+<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-ad-3-authority-aware-projec" class="section-name selfRef">AD-3: Authority-aware projection plus authenticated Mission Status</a>
+        </h3>
+<p id="section-7.3-1">The authorization domain delivers AD-2 plus an authenticated
+Mission Status interface exposing state, integrity hashes, the
+audience-filtered Authority Set projection, and <code>policy_version</code>
+(when Runtime Enforcement is enabled), for Resource Servers and
+PDPs. When the state authority also issued the credential, an
+authenticated issuer endpoint <span class="bcp14">MAY</span> combine this view with
+credential introspection; otherwise the services remain separate.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+<p id="section-7.3-2">AD-3 is required for Ladder Level 3 and above.<a href="#section-7.3-2" class="pilcrow">¶</a></p>
+<p id="section-7.3-3">A deployment reports one Authorization Domain Tier per
+authorization domain. In a MAS topology, the MAS reports its
+governance tier and each consuming AS or PS separately reports the
+projection behavior it implements. There is no separate AD-4 for
+Runtime Enforcement. The Runtime Enforcement Profile composes
+AD-3 at the state authority with RS-D at the Resource Servers.<a href="#section-7.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="the-coordinate-not-the-score">
+<section id="section-8">
+      <h2 id="name-the-coordinate-not-the-scor">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-the-coordinate-not-the-scor" class="section-name selfRef">The Coordinate, Not the Score</a>
+      </h2>
+<p id="section-8-1">A deployment's capability description is a coordinate, not a single
+number. Each component of the coordinate answers a different
+question and is independently auditable. Example coordinates:<a href="#section-8-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8-2.1">
+          <p id="section-8-2.1.1"><strong>L1 / RS-A / AD-1.</strong> The state authority issues Mission-bound
+credentials, but Resource Servers ignore the Mission. The
+deployment gets the governance layer (revocation, audit,
+inventory) without per-request enforcement.<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.2">
+          <p id="section-8-2.2.1"><strong>L3 / RS-C / AD-3.</strong> Resource Servers enforce Authority Set
+entries and Mission state. The state authority exposes
+authenticated Mission Status. No PDP. A strong default for
+production deployments without Runtime Enforcement.<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.3">
+          <p id="section-8-2.3.1"><strong>L4 / RS-D / AD-3.</strong> PDPs evaluate each consequential request.
+Decision evidence is recorded. Full Runtime Enforcement.<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.4">
+          <p id="section-8-2.4.1"><strong>L5 / RS-D / AD-3 plus interoperable optional-capability
+specifications.</strong> Portable cryptographic receipts, verifiable
+capability-source bindings, attestation, or another
+independently verifiable capability cited by name. Suitable for
+cross-organizational governance claims.<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<div id="mixed-tier-handling">
+<section id="section-8.1">
+        <h3 id="name-mixed-tier-handling">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-mixed-tier-handling" class="section-name selfRef">Mixed-tier handling</a>
+        </h3>
+<p id="section-8.1-1">A deployment with mixed-tier Resource Servers is the common case.
+An organization can report Level 4 for a bounded agent platform
+whose consequential actions all pass through RS-D, while
+separately reporting legacy RS-A resources outside that scope. It
+cannot report Level 4 for the whole deployment if consequential
+in-scope actions bypass RS-D.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-2">When a deployment reports a coordinate with mixed-tier Resource
+Servers, it <span class="bcp14">SHOULD</span>:<a href="#section-8.1-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.1-3.1">
+            <p id="section-8.1-3.1.1">Name the scope of the claim, including the action classes,
+Resource Servers, and execution boundaries covered.<a href="#section-8.1-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-3.2">
+            <p id="section-8.1-3.2.1">Identify the in-scope Resource Servers and the tier each one
+implements.<a href="#section-8.1-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-3.3">
+            <p id="section-8.1-3.3.1">Identify the out-of-scope Resource Servers reachable from the
+same issuer (if any), and state that they are not covered by
+the claim.<a href="#section-8.1-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-8.1-4">Per-Resource-Server capability advertisement at the Resource
+Server itself is out of scope for this document. The relevant
+mechanisms are PRM <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> and, when available,
+<span>[<a href="#I-D.draft-mcguinness-oauth-rfc9728bis" class="cite xref">I-D.draft-mcguinness-oauth-rfc9728bis</a>]</span> for OAuth-substrate
+Resource Servers, and the substrate-specific Resource metadata
+for AAuth Resource Servers. The exact field names belong to the
+relevant substrate profile rather than to this document.<a href="#section-8.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="scope-statements">
+<section id="section-8.2">
+        <h3 id="name-scope-statements">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-scope-statements" class="section-name selfRef">Scope statements</a>
+        </h3>
+<p id="section-8.2-1">A capability coordinate is meaningful only when accompanied by a
+scope statement. A scope statement names what the coordinate
+covers and what it does not. At minimum, a scope statement
+<span class="bcp14">SHOULD</span> identify:<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.2-2.1">
+            <p id="section-8.2-2.1.1">The substrate or substrates in scope (OAuth, AAuth, MAS).<a href="#section-8.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-2.2">
+            <p id="section-8.2-2.2.1">The Resource Servers in scope and the tier each implements.<a href="#section-8.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-2.3">
+            <p id="section-8.2-2.3.1">For a Level 4 claim, the enforcement-scope manifest published by
+the deployment per
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span>.<a href="#section-8.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-2.4">
+            <p id="section-8.2-2.4.1">The Authorization Domain Tier reported by each authorization
+domain in scope.<a href="#section-8.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-2.5">
+            <p id="section-8.2-2.5.1">The Mission Framework version and substrate profile versions the
+deployment implements.<a href="#section-8.2-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-2.6">
+            <p id="section-8.2-2.6.1">Known capabilities outside the claim, especially action paths
+the deployment cannot mediate (debug shells, unsanctioned egress
+routes, direct database connectors outside an RS-D Resource
+Server, agent-side tool invocations not gated by an orchestrator
+PEP).<a href="#section-8.2-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-8.2-3">A coordinate without a scope statement is not a complete
+capability report.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="cross-substrate-mapping">
+<section id="section-9">
+      <h2 id="name-cross-substrate-mapping">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-cross-substrate-mapping" class="section-name selfRef">Cross-Substrate Mapping</a>
+      </h2>
+<p id="section-9-1">The coordinate is substrate-neutral. The same Levels and Tiers
+describe deployments built on OAuth alone, on AAuth alone, and on
+cross-substrate compositions through a Mission Authority Server.
+The protocol obligations are not identical across substrates; each
+substrate satisfies its own profile contract. This section names
+the substrate-specific mapping for each case.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<div id="oauth-only">
+<section id="section-9.1">
+        <h3 id="name-oauth-only">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-oauth-only" class="section-name selfRef">OAuth-only</a>
+        </h3>
+<p id="section-9.1-1">OAuth-only deployments map onto the Ladder through
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>. The default
+Mission record home is the OAuth Authorization Server.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9.1-2.1">
+            <p id="section-9.1-2.1.1">Level 1 corresponds to the OAuth Profile Core.<a href="#section-9.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.2">
+            <p id="section-9.1-2.2.1">Level 2 adds same-domain audience projection or, for multi-AS
+deployments, ID-JAG and the Multi-AS validation rules.<a href="#section-9.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.3">
+            <p id="section-9.1-2.3.1">Level 3 adds RS-C at consequential Resource Servers and AD-3
+Mission Status (authenticated) at the AS, typically through the
+Mission-snapshot introspection projection.<a href="#section-9.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.4">
+            <p id="section-9.1-2.4.1">Level 4 adds Runtime Enforcement Profile Core and RS-D at the
+consequential Resource Servers.<a href="#section-9.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.5">
+            <p id="section-9.1-2.5.1">Level 5 adds interoperable optional-module specifications cited
+by name.<a href="#section-9.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="aauth-only">
+<section id="section-9.2">
+        <h3 id="name-aauth-only">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-aauth-only" class="section-name selfRef">AAuth-only</a>
+        </h3>
+<p id="section-9.2-1">AAuth-only deployments map onto the Ladder through
+<span>[<a href="#I-D.draft-mcguinness-mission-aauth-profile" class="cite xref">I-D.draft-mcguinness-mission-aauth-profile</a>]</span>. The default
+Mission record home is the AAuth Person Server.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9.2-2.1">
+            <p id="section-9.2-2.1.1">Native AAuth without the AAuth Composition Profile remains
+Level 0 in this capability model even though it carries its own
+native Mission. The Level 0 designation reflects the absence of
+the Mission-Bound governance mapping, Authority Set commitment,
+hash separation, and lifecycle projection that the composition
+profile adds.<a href="#section-9.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.2-2.2">
+            <p id="section-9.2-2.2.1">Level 1 corresponds to the AAuth Composition Profile Core, which
+adds the governance mapping over the native Mission.<a href="#section-9.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.2-2.3">
+            <p id="section-9.2-2.3.1">Level 2 preserves native and governance references through
+resource and auth-token flows.<a href="#section-9.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.2-2.4">
+            <p id="section-9.2-2.4.1">Level 3 adds RS-C behavior at AAuth Resource Servers and the
+authenticated Mission Status projection at the PS.<a href="#section-9.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.2-2.5">
+            <p id="section-9.2-2.5.1">Level 4 adds Runtime Enforcement Profile Core composed with the
+AAuth substrate.<a href="#section-9.2-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.2-2.6">
+            <p id="section-9.2-2.6.1">Level 5 adds interoperable optional-module specifications.<a href="#section-9.2-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="cross-substrate-under-mas">
+<section id="section-9.3">
+        <h3 id="name-cross-substrate-under-mas">
+<a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-cross-substrate-under-mas" class="section-name selfRef">Cross-substrate under MAS</a>
+        </h3>
+<p id="section-9.3-1">Cross-substrate deployments add the MAS topology
+<span>[<a href="#I-D.draft-mcguinness-mission-mas" class="cite xref">I-D.draft-mcguinness-mission-mas</a>]</span>. The canonical Mission
+record lives at the MAS. Each consuming substrate (one or more
+OAuth Authorization Servers, one or more AAuth Person Servers, or
+both) is an authorized projection issuer.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9.3-2.1">
+            <p id="section-9.3-2.1.1">The MAS reports its own Authorization Domain Tier (AD-1 or
+higher, depending on the projection and Mission Status surfaces
+it offers).<a href="#section-9.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.3-2.2">
+            <p id="section-9.3-2.2.1">Each consuming AS or PS separately reports the Authorization
+Domain Tier it implements for projection validation, local
+credential issuance, and (at AD-3) authenticated Mission Status
+for downstream Resource Servers.<a href="#section-9.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.3-2.3">
+            <p id="section-9.3-2.3.1">The deployment's Capability Ladder claim is bounded by the
+minimum coordinate among the consuming substrates that are in
+scope for the claim.<a href="#section-9.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.3-2.4">
+            <p id="section-9.3-2.4.1">The Mission-Bound Cross-Domain Projection adoption claim is met
+when the MAS canonical record is consumed by more than one
+consuming domain and revocation at the canonical record
+demonstrably terminates derivation across every consuming
+domain.<a href="#section-9.3-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-9.3-3">In a cross-substrate report, a single deployment-wide Level label
+is insufficient. The report <span class="bcp14">SHOULD</span> include the MAS tier, each
+consuming domain's tier, and the per-substrate scope statement.<a href="#section-9.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="using-the-vocabulary">
+<section id="section-10">
+      <h2 id="name-using-the-vocabulary">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-using-the-vocabulary" class="section-name selfRef">Using the Vocabulary</a>
+      </h2>
+<p id="section-10-1">The Capability Ladder, Resource Server Tiers, and Authorization
+Domain Tiers defined in this document are a <strong>reporting
+vocabulary</strong>, not a wire contract. Deployments use these labels in:<a href="#section-10-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10-2.1">
+          <p id="section-10-2.1.1">Release notes, case studies, and documentation describing what
+the deployment delivers.<a href="#section-10-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.2">
+          <p id="section-10-2.2.1">Migration roadmaps mapping current state to a target coordinate.<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.3">
+          <p id="section-10-2.3.1">Audit narratives describing where governance evidence is and
+is not enforced.<a href="#section-10-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.4">
+          <p id="section-10-2.4.1">Vendor positioning describing comparative capability.<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-10-3">Protocol-level capability negotiation between consumers and state
+authorities is performed through the substrate-specific
+<code>*_supported</code> metadata members defined by each profile (e.g.,
+<code>mission_status_endpoint</code>, <code>mission_enforcement_classes_supported</code>,
+<code>mission_sender_constraints_supported</code>,
+<code>authority_set_types_supported</code>). Consumers <span class="bcp14">MUST</span> make protocol
+decisions from those concrete feature advertisements, not from
+the labels defined here.<a href="#section-10-3" class="pilcrow">¶</a></p>
+<p id="section-10-4">This separation is deliberate. Tiers and Levels invite scoring
+and gaming when used as protocol signals; they are stable and
+useful when used as descriptive vocabulary. The substrate
+profiles capture every protocol-actionable capability through
+concrete flags. This document captures the human-facing
+positioning vocabulary that organizes those flags into
+recognizable maturity points.<a href="#section-10-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="reading-paths-by-capability-goal">
+<section id="section-11">
+      <h2 id="name-reading-paths-by-capability">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-reading-paths-by-capability" class="section-name selfRef">Reading Paths by Capability Goal</a>
+      </h2>
+<p id="section-11-1">If your deployment goal is...<a href="#section-11-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-2.1">
+          <p id="section-11-2.1.1"><strong>"Bind tokens to a Mission and revoke as one."</strong> Target Ladder
+Level 1 and Authorization Domain Tier 1. Read
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> and the OAuth or
+AAuth profile, plus this document.<a href="#section-11-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.2">
+          <p id="section-11-2.2.1"><strong>"Project one Mission across multiple authorization domains."</strong>
+Target Ladder Level 2 or higher and AD-2 at each participating
+issuer domain. Add <span>[<a href="#I-D.draft-mcguinness-mission-mas" class="cite xref">I-D.draft-mcguinness-mission-mas</a>]</span> if the
+domains need one shared canonical Mission record.<a href="#section-11-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.3">
+          <p id="section-11-2.3.1"><strong>"Resource Servers evaluate approved bounds at request time."</strong>
+Target Ladder Level 3 and RS-C. Read the audience-relevant
+Authority Set projection contracts from the OAuth profile, the
+AAuth profile, and (for cross-substrate) the MAS profile.<a href="#section-11-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.4">
+          <p id="section-11-2.4.1"><strong>"Every consequential action evaluated through a PDP."</strong> Target
+Ladder Level 4 and RS-D. Read
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span> Core.<a href="#section-11-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.5">
+          <p id="section-11-2.5.1"><strong>"Portable third-party-verifiable governance."</strong> Target Ladder
+Level 5. Add an interoperable specification for each claimed
+Runtime Enforcement Profile optional capability, such as
+Decision Receipt, Tool Binding, or Attestation. The optional
+module sketches in
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span> are not
+sufficient alone.<a href="#section-11-2.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-11-3">Migration guidance for deployments moving across coordinates lives
+in <span>[<a href="#I-D.draft-mcguinness-mission-migration" class="cite xref">I-D.draft-mcguinness-mission-migration</a>]</span>. Shaper guidance for
+deployments framing Mission Intents at the human-task layer lives
+in <span>[<a href="#I-D.draft-mcguinness-mission-shaper-profile" class="cite xref">I-D.draft-mcguinness-mission-shaper-profile</a>]</span>.<a href="#section-11-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="why-informational">
+<section id="section-12">
+      <h2 id="name-why-informational">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-why-informational" class="section-name selfRef">Why Informational</a>
+      </h2>
+<p id="section-12-1">This document is Informational. The coordinate, the adoption
+claims, and the metadata field semantics are reporting tools.
+Conformance is claimed against the testable wire requirements of
+a substrate profile or the Runtime Enforcement Profile.<a href="#section-12-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12-2.1">
+          <p id="section-12-2.1.1">A deployment claims conformance to
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span> by satisfying its
+OAuth wire contract.<a href="#section-12-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.2">
+          <p id="section-12-2.2.1">A deployment claims conformance to
+<span>[<a href="#I-D.draft-mcguinness-mission-aauth-profile" class="cite xref">I-D.draft-mcguinness-mission-aauth-profile</a>]</span> by satisfying its
+AAuth composition contract.<a href="#section-12-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.3">
+          <p id="section-12-2.3.1">A deployment claims conformance to
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span> by satisfying
+its PDP, PEP, and evidence contracts within a named
+enforcement scope.<a href="#section-12-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.4">
+          <p id="section-12-2.4.1">A deployment claims conformance to
+<span>[<a href="#I-D.draft-mcguinness-mission-mas" class="cite xref">I-D.draft-mcguinness-mission-mas</a>]</span> by satisfying its
+canonical-record, projection-issuance, and Mission Status
+contracts.<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-12-3">A capability coordinate reports against this document's vocabulary.
+A capability coordinate is not itself a conformance claim. An
+implementation <span class="bcp14">MUST NOT</span> claim "conformance to" this document; an
+implementation describes its position on the coordinate.<a href="#section-12-3" class="pilcrow">¶</a></p>
+<p id="section-12-4">This document has no IANA actions and defines no new wire surface.
+The tiers and levels are vocabulary; protocol-level capability
+advertisement is performed through the substrate-specific
+<code>*_supported</code> metadata members each profile already defines.
+For these reasons, the Informational category is the appropriate
+publication track.<a href="#section-12-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-13">
+      <h2 id="name-iana-considerations">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-13-1">This document has no IANA actions. The Capability Ladder Levels,
+Resource Server Tiers, and Authorization Domain Tiers defined
+here are a vocabulary for documentation and positioning, not a
+protocol-actionable advertisement. They are listed below for
+reference; consumers <span class="bcp14">MUST NOT</span> make protocol decisions from the
+labels.<a href="#section-13-1" class="pilcrow">¶</a></p>
+<p id="section-13-2">Protocol-level capability advertisement is performed through the
+substrate-specific <code>*_supported</code> metadata members defined by
+each profile (see <a href="#using-the-vocabulary" class="auto internal xref">Section 10</a>).<a href="#section-13-2" class="pilcrow">¶</a></p>
+<div id="capability-ladder-level-identifiers">
+<section id="section-13.1">
+        <h3 id="name-capability-ladder-levels-vo">
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-capability-ladder-levels-vo" class="section-name selfRef">Capability Ladder Levels (vocabulary)</a>
+        </h3>
+<table class="center" id="table-4">
+          <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Identifier</th>
+              <th class="text-left" rowspan="1" colspan="1">Short name</th>
+              <th class="text-left" rowspan="1" colspan="1">Section</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>0</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Substrate-only</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#level-0-substrate-only" class="auto internal xref">Section 5.1</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>1</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission-bound issuance</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#level-1-mission-bound-issuance" class="auto internal xref">Section 5.2</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>2</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission-aware projection</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#level-2-mission-aware-projection" class="auto internal xref">Section 5.3</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>3</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission-aware Resource Server</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#level-3-mission-aware-resource-server" class="auto internal xref">Section 5.4</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>4</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Full Runtime Enforcement</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#level-4-full-runtime-enforcement" class="auto internal xref">Section 5.5</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>5</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Verifiable governance</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#level-5-verifiable-governance" class="auto internal xref">Section 5.6</a>
+</td>
+            </tr>
+          </tbody>
+        </table>
+</section>
+</div>
+<div id="resource-server-tier-identifiers">
+<section id="section-13.2">
+        <h3 id="name-resource-server-tiers-vocab">
+<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-resource-server-tiers-vocab" class="section-name selfRef">Resource Server Tiers (vocabulary)</a>
+        </h3>
+<table class="center" id="table-5">
+          <caption><a href="#table-5" class="selfRef">Table 5</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Identifier</th>
+              <th class="text-left" rowspan="1" colspan="1">Short name</th>
+              <th class="text-left" rowspan="1" colspan="1">Section</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>RS-A</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Token-only</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#rs-a-token-only" class="auto internal xref">Section 6.1</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>RS-B</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission-bound credentials</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#rs-b-mission-bound-credentials" class="auto internal xref">Section 6.2</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>RS-C</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Authority-aware</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#rs-c-authority-aware" class="auto internal xref">Section 6.3</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>RS-D</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">PDP-evaluated</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#rs-d-pdp-evaluated" class="auto internal xref">Section 6.4</a>
+</td>
+            </tr>
+          </tbody>
+        </table>
+</section>
+</div>
+<div id="authorization-domain-tier-identifiers">
+<section id="section-13.3">
+        <h3 id="name-authorization-domain-tiers-">
+<a href="#section-13.3" class="section-number selfRef">13.3. </a><a href="#name-authorization-domain-tiers-" class="section-name selfRef">Authorization Domain Tiers (vocabulary)</a>
+        </h3>
+<table class="center" id="table-6">
+          <caption><a href="#table-6" class="selfRef">Table 6</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Identifier</th>
+              <th class="text-left" rowspan="1" colspan="1">Short name</th>
+              <th class="text-left" rowspan="1" colspan="1">Section</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>AD-1</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission-bound issuance</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#ad-1-mission-bound-issuance" class="auto internal xref">Section 7.1</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>AD-2</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission-aware projection</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#ad-2-mission-aware-projection" class="auto internal xref">Section 7.2</a>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>AD-3</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Authority-aware projection plus authenticated Mission Status</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#ad-3-authority-aware-projection-plus-authenticated-mission-status" class="auto internal xref">Section 7.3</a>
+</td>
+            </tr>
+          </tbody>
+        </table>
+</section>
+</div>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-14">
+      <h2 id="name-security-considerations">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-14-1">This document defines no new wire surface and no new credentials.
+Security properties of Mission-Bound Authorization derive from the
+substrate profiles and the Mission Framework. The following
+considerations relate to the use of the capability coordinate as
+a reporting tool.<a href="#section-14-1" class="pilcrow">¶</a></p>
+<p id="section-14-2"><strong>Coordinate is not conformance.</strong> A capability coordinate reports
+deployed capability against the vocabulary defined here. It is not
+a conformance claim and does not testify to the correctness of any
+substrate-profile or runtime-profile implementation. A relying
+party <span class="bcp14">SHOULD</span> verify the underlying profile conformance claims
+separately rather than relying on the coordinate alone.<a href="#section-14-2" class="pilcrow">¶</a></p>
+<p id="section-14-3"><strong>Scope is load-bearing.</strong> A Level 4 claim without a published
+enforcement-scope manifest is uninformative and potentially
+misleading. A relying party <span class="bcp14">SHOULD</span> treat an unscoped Level 4 or
+Level 5 claim with skepticism. Action paths the deployment cannot
+mediate (debug shells, unsanctioned egress routes, direct
+connectors outside the named scope, agent-side invocations not
+gated by an orchestrator PEP) fall outside the claim and may
+invalidate its operational value.<a href="#section-14-3" class="pilcrow">¶</a></p>
+<p id="section-14-4"><strong>Self-reported capability.</strong> A deployment claim of "Capability
+Ladder Level 4" in documentation or marketing is self-reported.
+Readers learn what the deployment claims to support; they do not
+learn that any particular request or Mission was handled at that
+level. The Mission Framework's integrity-anchor and Mission
+Status contracts provide the per-Mission and per-decision
+evidence mechanisms; the vocabulary defined here is descriptive
+and orthogonal.<a href="#section-14-4" class="pilcrow">¶</a></p>
+<p id="section-14-5"><strong>Misaligned tiers can mislead.</strong> A deployment reporting
+<code>L4 / RS-A / AD-1</code> is internally inconsistent. Relying parties
+<span class="bcp14">SHOULD</span> reject inconsistent coordinates rather than choosing one
+component to believe.<a href="#section-14-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="section-15">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="section-15-1">The author thanks the implementers and reviewers of the
+Mission-Bound Authorization architecture for feedback that shaped
+this specification.<a href="#section-15-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-16">
+      <h2 id="name-references">
+<a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-16.1">
+        <h3 id="name-normative-references">
+<a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-framework">[I-D.draft-mcguinness-mission-framework]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+      <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-16.2">
+        <h3 id="name-informative-references">
+<a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-aauth-profile">[I-D.draft-mcguinness-mission-aauth-profile]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-mas">[I-D.draft-mcguinness-mission-mas]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-migration">[I-D.draft-mcguinness-mission-migration]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-oauth-profile">[I-D.draft-mcguinness-mission-oauth-profile]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-runtime-profile">[I-D.draft-mcguinness-mission-runtime-profile]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-shaper-profile">[I-D.draft-mcguinness-mission-shaper-profile]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-rfc9728bis">[I-D.draft-mcguinness-oauth-rfc9728bis]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span> and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"Update to OAuth 2.0 Protected Resource Metadata Resource Identifier Validation"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-rfc9728bis-01</span>, <time datetime="2026-02-24" class="refDate">24 February 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-rfc9728bis-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-rfc9728bis-01</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6749">[RFC6749]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6749">https://www.rfc-editor.org/rfc/rfc6749</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9396">[RFC9396]</dt>
+        <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9728">[RFC9728]</dt>
+      <dd>
+<span class="refAuthor">Jones, M.B.</span>, <span class="refAuthor">Hunt, P.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth 2.0 Protected Resource Metadata"</span>, <span class="seriesInfo">RFC 9728</span>, <span class="seriesInfo">DOI 10.17487/RFC9728</span>, <time datetime="2025-04" class="refDate">April 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9728">https://www.rfc-editor.org/rfc/rfc9728</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-A">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
