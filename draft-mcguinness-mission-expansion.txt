@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            10 June 2026
-Expires: 12 December 2026
+Intended status: Standards Track                            11 June 2026
+Expires: 13 December 2026
 
 
                            Mission Expansion
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 December 2026.
+   This Internet-Draft will expire on 13 December 2026.
 
 Copyright Notice
 
@@ -99,12 +99,16 @@ Table of Contents
      5.6.  Expansion vs step-up
      5.7.  Concurrent expansion exposure
      5.8.  Audit linkage
-   6.  IANA Considerations
-     6.1.  mission.predecessor Attribute
-     6.2.  mission.expansion_mode Attribute
-     6.3.  Concurrent Expansion Reconciliation Status Codes
-     6.4.  Eligibility-Signaling Field Names
-     6.5.  What this document does NOT register
+   6.  Privacy Considerations
+     6.1.  Predecessor-chain correlation
+     6.2.  Requested-authority and consent disclosure
+     6.3.  Ticket non-correlation
+   7.  IANA Considerations
+     7.1.  mission.predecessor Attribute
+     7.2.  mission.expansion_mode Attribute
+     7.3.  Concurrent Expansion Reconciliation Status Codes
+     7.4.  Eligibility-Signaling Field Names
+     7.5.  What this document does NOT register
    Acknowledgments
    References
      Normative References
@@ -310,7 +314,8 @@ Table of Contents
 
    when eligible is true):  The minimum authority the issuer determined
       is needed to satisfy the denied request.  Each entry conforms to
-      the Framework's Authority Set entry shape, including type,
+      the Framework's Authority Set entry shape
+      (urn:mbo:schema:authority-set-entry:1), including type,
       specification_uri or schema_digest, schema_version, authority, and
       narrowing_profile.  The state authority's approval event MAY
       further narrow or refuse entries.
@@ -574,7 +579,7 @@ Table of Contents
        for the predecessor.
 
    If any check fails, the state authority returns one of the
-   reconciliation status codes defined in Section 6.3.  The closed set
+   reconciliation status codes defined in Section 7.3.  The closed set
    defined here is:
 
    *  superseded_by_concurrent_expansion: A concurrent Replacement
@@ -628,8 +633,8 @@ Table of Contents
 
    *  *Unpredictability*: A Ticket MUST be cryptographically
       unpredictable.  Implementations MUST use a cryptographically
-      secure random source.  A Ticket MUST carry at least 128 bits of
-      entropy.
+      secure random source meeting the requirements of [RFC4086].  A
+      Ticket MUST carry at least 128 bits of entropy.
 
    *  *Single use*: A Ticket MUST NOT be reused.  The state authority
       MUST invalidate the Ticket on first successful presentation,
@@ -801,17 +806,64 @@ Table of Contents
    implementation that omits these attributes breaks audit linkage and
    defeats one of the core governance properties of expansion.
 
-6.  IANA Considerations
+6.  Privacy Considerations
 
-   This document creates the following registrations and registry
-   entries.  Each entry is registered as a Mission record attribute
-   conceptually owned by this specification; substrate profiles
+   The privacy surface introduced by expansion is concentrated in the
+   lineage attributes and in the authority and consent detail disclosed
+   when a Mission is expanded.  The considerations below are the
+   expansion-specific additions to the Framework's privacy treatment.
+
+6.1.  Predecessor-chain correlation
+
+   The same mission.predecessor and mission.expansion_mode attributes
+   that provide governance audit linkage (Section 5.8) are also a
+   correlation surface: they link a successor or child Mission to its
+   predecessor across distinct approval events.  A party authorized to
+   read the lineage -- or to read Mission Status projections that expose
+   it -- can correlate the evolving task over time and across the
+   Missions in a chain, which is more than any single Mission discloses
+   on its own.  This linkage is intrinsic to the governance value of
+   expansion and is not a defect, but deployments SHOULD scope read
+   access to lineage attributes and to Mission Status lineage
+   projections to the parties with a governance need, rather than
+   exposing the chain to every credential audience.
+
+6.2.  Requested-authority and consent disclosure
+
+   The requested_authority carried in an eligibility-bearing denial, and
+   the consent disclosure rendered at the expansion approval event,
+   reveal how the approved task is evolving.  A denial that surfaces
+   requested_authority to a party broader than the orchestrator
+   discloses intent that party may not need.  Substrate profiles binding
+   the eligibility contract SHOULD surface requested_authority only to
+   the orchestrator entitled to act on it, and the state authority
+   SHOULD render consent disclosure only to the approving principal and
+   authorized governance consumers.
+
+6.3.  Ticket non-correlation
+
+   The Mission Expansion Ticket is opaque, single-use, and carries no
+   parseable identity or authority (Section 4); it is not a correlation
+   handle.  A holder cannot derive the predecessor identity, the
+   subject, or the requested authority from the Ticket, and a used or
+   expired Ticket links nothing.  The correlation surface of expansion
+   is the lineage attributes, not the Ticket.
+
+7.  IANA Considerations
+
+   This document creates one new registry (the Mission Expansion
+   Reconciliation Status registry, Section 7.3) and defines two Mission
+   record attributes.  Consistent with the Framework, which does not
+   IANA-register the fields of the Mission record, the
+   mission.predecessor and mission.expansion_mode attributes are defined
+   by this specification rather than registered in a dedicated IANA
+   registry; substrate profiles
    ([I-D.draft-mcguinness-mission-oauth-profile],
    [I-D.draft-mcguinness-mission-aauth-profile]) register the substrate-
-   specific names through which the conceptual attribute is surfaced
-   (e.g., JWT claim names, AAuth fields).
+   specific wire names through which each attribute is surfaced (e.g.,
+   JWT claim names, AAuth fields).
 
-6.1.  mission.predecessor Attribute
+7.1.  mission.predecessor Attribute
 
    *  *Name*: mission.predecessor.
 
@@ -835,7 +887,7 @@ Table of Contents
       [I-D.draft-mcguinness-mission-aauth-profile] registers the AAuth-
       side surfacing.
 
-6.2.  mission.expansion_mode Attribute
+7.2.  mission.expansion_mode Attribute
 
    *  *Name*: mission.expansion_mode.
 
@@ -853,7 +905,7 @@ Table of Contents
    *  *Substrate registration*: As for mission.predecessor, substrate
       profiles register the on-the-wire surfacing.
 
-6.3.  Concurrent Expansion Reconciliation Status Codes
+7.3.  Concurrent Expansion Reconciliation Status Codes
 
    This document registers a new "Mission Expansion Reconciliation
    Status" registry.
@@ -885,7 +937,7 @@ Table of Contents
    transport (e.g., HTTP status codes, OAuth error codes, AAuth error
    codes).
 
-6.4.  Eligibility-Signaling Field Names
+7.4.  Eligibility-Signaling Field Names
 
    This document defines, but does NOT itself register on any substrate
    wire, the abstract field names eligible, access_request_uri, ticket,
@@ -898,7 +950,7 @@ Table of Contents
    expansion request envelope carries the Ticket and requested_authority
    consistently across substrates.
 
-6.5.  What this document does NOT register
+7.5.  What this document does NOT register
 
    *  A Mission Expansion Ticket media type.  Tickets are opaque strings
       surfaced through substrate-defined transport; no new media type is
@@ -945,10 +997,10 @@ Informative References
    [I-D.draft-mcguinness-mission-oauth-profile]
               "*** BROKEN REFERENCE ***".
 
-   [RFC9396]  Lodderstedt, T., Richer, J., and B. Campbell, "OAuth 2.0
-              Rich Authorization Requests", RFC 9396,
-              DOI 10.17487/RFC9396, May 2023,
-              <https://www.rfc-editor.org/rfc/rfc9396>.
+   [RFC4086]  Eastlake 3rd, D., Schiller, J., and S. Crocker,
+              "Randomness Requirements for Security", BCP 106, RFC 4086,
+              DOI 10.17487/RFC4086, June 2005,
+              <https://www.rfc-editor.org/rfc/rfc4086>.
 
    [RFC9470]  Bertocci, V. and B. Campbell, "OAuth 2.0 Step Up
               Authentication Challenge Protocol", RFC 9470,
