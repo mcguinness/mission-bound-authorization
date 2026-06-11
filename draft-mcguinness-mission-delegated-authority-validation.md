@@ -29,6 +29,9 @@ author:
 normative:
   RFC2119:
   RFC8174:
+  RFC3339:
+  RFC8259:
+  RFC8414:
   I-D.draft-mcguinness-mission-framework:
   I-D.draft-mcguinness-mission-expansion:
 
@@ -185,7 +188,7 @@ it can classify locally.
 The validation request is an HTTPS POST from the originating AS to
 the Resource AS. The validation endpoint URL is advertised by the
 Resource AS as `mission_authority_validation_endpoint` in its OAuth
-Authorization Server metadata.
+Authorization Server metadata {{RFC8414}}.
 
 The deployment selects a mutual-authentication mechanism. Acceptable
 mechanisms include mutual TLS or signed JWT request authentication.
@@ -195,8 +198,8 @@ authentication requirements are normative and are stated in
 
 ## Validation request
 
-The validation request is a JSON document with media type
-`application/mission-authority-validation-request+json` and the
+The validation request is a JSON document {{RFC8259}} with media
+type `application/mission-authority-validation-request+json` and the
 following members:
 
 - `originating_as` (string, required): the issuer URL of the
@@ -208,7 +211,7 @@ following members:
   Authority Set entry per {{I-D.draft-mcguinness-mission-framework}}.
 - `request_id` (string, required): a unique, unpredictable identifier
   used to bind the response.
-- `request_time` (RFC 3339 timestamp, required).
+- `request_time` ({{RFC3339}} timestamp, required).
 - `ontology_version_hint` (string, optional): the schema version of
   the Resource AS's action ontology the originating AS believes
   applies. Used to detect skew per
@@ -235,17 +238,70 @@ Mission Status query against the `origin` state authority per
 {{I-D.draft-mcguinness-mission-framework}}; it is not required to
 take the projection on its face.
 
+### Validation request JSON Schema {#validation-request-schema}
+
+The `requested_authority` entries are full Authority Set entries per
+the Framework (`urn:mbo:schema:authority-set-entry:1`). The request
+validates against:
+
+~~~ json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mbo:schema:mission-authority-validation-request:1",
+  "title": "Mission Authority Validation Request",
+  "type": "object",
+  "required": [
+    "originating_as", "mission", "requested_authority",
+    "request_id", "request_time"
+  ],
+  "properties": {
+    "originating_as": { "type": "string", "format": "uri" },
+    "mission": {
+      "type": "object",
+      "required": [
+        "origin", "authority_hash", "policy_version", "state",
+        "audience", "expires_at"
+      ],
+      "oneOf": [
+        { "required": ["id"] },
+        { "required": ["ref"] }
+      ],
+      "properties": {
+        "id":             { "type": "string" },
+        "ref":            { "type": "string" },
+        "origin":         { "type": "string", "format": "uri" },
+        "authority_hash": { "type": "string" },
+        "policy_version": { "type": "string" },
+        "state":          { "const": "active" },
+        "audience":       { "type": "string" },
+        "expires_at": {
+          "type": "string", "format": "date-time"
+        }
+      }
+    },
+    "requested_authority": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "urn:mbo:schema:authority-set-entry:1" }
+    },
+    "request_id":   { "type": "string" },
+    "request_time": { "type": "string", "format": "date-time" },
+    "ontology_version_hint": { "type": "string" }
+  }
+}
+~~~
+
 ## Validation response
 
-The validation response is a JSON document with media type
-`application/mission-authority-validation-response+json` and the
+The validation response is a JSON document {{RFC8259}} with media
+type `application/mission-authority-validation-response+json` and the
 following members:
 
 - `request_id` (string, required): MUST match the request's
   `request_id`.
 - `resource_as` (string, required): issuer URL of the Resource AS
   producing the classification.
-- `evaluated_at` (RFC 3339 timestamp, required).
+- `evaluated_at` ({{RFC3339}} timestamp, required).
 - `ontology_version` (string, required): schema version of the
   Resource AS's action ontology used in evaluation.
 - `classifications` (array of object, required): per-entry results,
@@ -263,6 +319,73 @@ The originating AS MUST verify the response's `request_id`, that it
 was produced by the expected Resource AS audience, and that its
 mutual-authentication binding is valid before acting on any
 classification.
+
+### Validation response JSON Schema {#validation-response-schema}
+
+The response validates against:
+
+~~~ json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mbo:schema:mission-authority-validation-response:1",
+  "title": "Mission Authority Validation Response",
+  "type": "object",
+  "required": [
+    "request_id", "resource_as", "evaluated_at",
+    "ontology_version", "classifications"
+  ],
+  "properties": {
+    "request_id":       { "type": "string" },
+    "resource_as":      { "type": "string", "format": "uri" },
+    "evaluated_at":     { "type": "string", "format": "date-time" },
+    "ontology_version": { "type": "string" },
+    "classifications": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["result"],
+        "properties": {
+          "result": {
+            "type": "string",
+            "enum": [
+              "in_bounds", "out_of_bounds",
+              "out_of_bounds_eligible", "version_mismatch",
+              "unknown_resource", "unknown_action"
+            ]
+          },
+          "reason": { "type": "string" },
+          "expansion": {
+            "type": "object",
+            "required": [
+              "access_request_uri", "ticket", "requested_authority"
+            ],
+            "properties": {
+              "access_request_uri": {
+                "type": "string", "format": "uri"
+              },
+              "ticket": { "type": "string" },
+              "requested_authority": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "urn:mbo:schema:authority-set-entry:1"
+                }
+              }
+            }
+          }
+        },
+        "if": {
+          "properties": {
+            "result": { "const": "out_of_bounds_eligible" }
+          }
+        },
+        "then": { "required": ["expansion"] }
+      }
+    }
+  }
+}
+~~~
 
 ## Resource AS responsibilities
 
@@ -359,13 +482,18 @@ Content-Type: application/mission-authority-validation-response+json
         "access_request_uri":
           "https://docs-as.example.com/expansion-request",
         "ticket": "exp_tkt_K8m...",
-        "requested_authority": {
-          "type": "mission_resource_access",
-          "authority": {
-            "resource": "https://docs.example.com",
-            "actions": ["documents.share_external"]
+        "requested_authority": [
+          {
+            "type": "mission_resource_access",
+            "schema_digest": "sha-256:rA3kQ9xN7vM2tY8pB1sF6wL0dH5gJ4",
+            "schema_version": "1",
+            "authority": {
+              "resource": "https://docs.example.com",
+              "actions": ["documents.share_external"]
+            },
+            "narrowing_profile": "urn:mbo:narrowing:default-v1"
           }
-        }
+        ]
       }
     }
   ]
@@ -676,6 +804,49 @@ across consuming originating ASes. The Resource AS MUST advertise
 its current `ontology_version` in metadata so originating ASes can
 refresh their hints.
 
+# Privacy Considerations {#privacy-considerations}
+
+This protocol is privacy-protective by construction: its central
+mechanism is disclosure minimization ({{disclosure-minimization}}),
+which bounds what the Resource AS learns about a Mission to the
+minimum needed to classify against its own ontology. The
+considerations below frame that mechanism from the privacy angle and
+are additional to the Framework's privacy treatment.
+
+## What the Resource AS learns
+
+A validation request necessarily reveals to the Resource AS that a
+Mission exists whose authority is being proposed against the
+Resource AS's audience, together with the specific
+`requested_authority` entries and the Mission's `authority_hash`,
+`policy_version`, lifecycle `state`, and expiry. It does NOT reveal,
+by default, the Mission's business purpose, the subject or other
+principals, the consent disclosure, or authority addressed to other
+audiences ({{disclosure-minimization}}). The disclosure floor in
+{{disclosure-minimization}} is therefore also the privacy boundary:
+the originating AS MUST treat it as a maximum, and any enlargement
+requires deployment-policy authorization out of scope here.
+
+## No principal data by default
+
+The standard validation request carries no `subject`,
+`approving_principal`, or `requesting_client` identifiers, and omits
+the `proposal_hash` and `consent_disclosure_hash` anchors. A Resource
+AS therefore cannot, from a conforming request, attribute the
+proposed authority to an identified user or correlate it with the
+consent record. Deployments that enlarge the disclosure to include
+principal data forfeit this property and MUST justify it under
+documented policy.
+
+## Audience binding limits correlation
+
+The Mission projection's `audience` member binds each projection to a
+single Resource AS, and the originating AS MUST NOT send the same
+projection to a different Resource AS ({{disclosure-minimization}}).
+This prevents one Resource AS from receiving a projection scoped to
+another and limits cross-Resource-AS correlation of a Mission to what
+each audience is independently entitled to see.
+
 # IANA Considerations
 
 This document creates the following IANA registrations.
@@ -728,7 +899,7 @@ returned in a validation response's `classifications` array.
 ## AS metadata member
 
 This document registers the following member in the OAuth
-Authorization Server Metadata registry ({{!RFC8414}}):
+Authorization Server Metadata registry ({{RFC8414}}):
 
 - `mission_authority_validation_endpoint`: URL at which a Resource
   AS accepts delegated authority validation requests per this
