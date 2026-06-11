@@ -1719,7 +1719,13 @@ classification.<a href="#section-3.3-3" class="pilcrow">¶</a></p>
                 "type": "string", "format": "uri"
               },
               "ticket": { "type": "string" },
-              "requested_authority": { "type": "object" }
+              "requested_authority": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "urn:mbo:schema:authority-set-entry:1"
+                }
+              }
             }
           }
         },
@@ -1855,13 +1861,18 @@ Content-Type: application/mission-authority-validation-response+json
         "access_request_uri":
           "https://docs-as.example.com/expansion-request",
         "ticket": "exp_tkt_K8m...",
-        "requested_authority": {
-          "type": "mission_resource_access",
-          "authority": {
-            "resource": "https://docs.example.com",
-            "actions": ["documents.share_external"]
+        "requested_authority": [
+          {
+            "type": "mission_resource_access",
+            "schema_digest": "sha-256:rA3kQ9xN7vM2tY8pB1sF6wL0dH5gJ4",
+            "schema_version": "1",
+            "authority": {
+              "resource": "https://docs.example.com",
+              "actions": ["documents.share_external"]
+            },
+            "narrowing_profile": "urn:mbo:narrowing:default-v1"
           }
-        }
+        ]
       }
     }
   ]

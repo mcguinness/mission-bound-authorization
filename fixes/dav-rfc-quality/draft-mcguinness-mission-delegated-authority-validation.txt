@@ -428,7 +428,13 @@ Table of Contents
                    "type": "string", "format": "uri"
                  },
                  "ticket": { "type": "string" },
-                 "requested_authority": { "type": "object" }
+                 "requested_authority": {
+                   "type": "array",
+                   "minItems": 1,
+                   "items": {
+                     "$ref": "urn:mbo:schema:authority-set-entry:1"
+                   }
+                 }
                }
              }
            },
@@ -524,33 +530,38 @@ Content-Type: application/mission-authority-validation-request+json
 
    Response:
 
-   HTTP/1.1 200 OK
-   Content-Type: application/mission-authority-validation-response+json
+  HTTP/1.1 200 OK
+  Content-Type: application/mission-authority-validation-response+json
 
-   {
-     "request_id": "req_7Q2x...",
-     "resource_as": "https://docs-as.example.com",
-     "evaluated_at": "2026-06-09T17:32:01Z",
-     "ontology_version": "docs-as.example.com:ontology@2026-05-15",
-     "classifications": [
-       {
-         "result": "out_of_bounds_eligible",
-         "reason": "external_sharing_requires_expansion",
-         "expansion": {
-           "access_request_uri":
-             "https://docs-as.example.com/expansion-request",
-           "ticket": "exp_tkt_K8m...",
-           "requested_authority": {
-             "type": "mission_resource_access",
-             "authority": {
-               "resource": "https://docs.example.com",
-               "actions": ["documents.share_external"]
-             }
-           }
-         }
-       }
-     ]
-   }
+  {
+    "request_id": "req_7Q2x...",
+    "resource_as": "https://docs-as.example.com",
+    "evaluated_at": "2026-06-09T17:32:01Z",
+    "ontology_version": "docs-as.example.com:ontology@2026-05-15",
+    "classifications": [
+      {
+        "result": "out_of_bounds_eligible",
+        "reason": "external_sharing_requires_expansion",
+        "expansion": {
+          "access_request_uri":
+            "https://docs-as.example.com/expansion-request",
+          "ticket": "exp_tkt_K8m...",
+          "requested_authority": [
+            {
+              "type": "mission_resource_access",
+              "schema_digest": "sha-256:rA3kQ9xN7vM2tY8pB1sF6wL0dH5gJ4",
+              "schema_version": "1",
+              "authority": {
+                "resource": "https://docs.example.com",
+                "actions": ["documents.share_external"]
+              },
+              "narrowing_profile": "urn:mbo:narrowing:default-v1"
+            }
+          ]
+        }
+      }
+    ]
+  }
 
 4.  Disclosure Minimization
 
