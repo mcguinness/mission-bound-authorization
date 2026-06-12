@@ -1,0 +1,2502 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission-Bound Authorization Migration Guide</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       This document is an operational migration guide for an existing
+OAuth 2.0 deployment adopting Mission-Bound Authorization. It
+defines a Stage 0 through Stage 5 incremental adoption path. Each
+stage names what the Authorization Server ships, what (if anything)
+clients and Resource Servers change, what is observed versus
+enforced, and what compatibility hazards apply. The guide makes no
+new normative wire requirements beyond what the Mission Framework
+and Mission-Bound OAuth Profile already specify; it provides
+deployment guidance for sequencing the adoption of those
+specifications. 
+    " name="description">
+<meta content="xml2rfc 3.33.0" name="generator">
+<meta content="mission" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="oauth" name="keyword">
+<meta content="migration" name="keyword">
+<meta content="adoption" name="keyword">
+<meta content="governance" name="keyword">
+<meta content="draft-mcguinness-mission-migration-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.33.0
+    Python 3.12.13
+    ConfigArgParse 1.7
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.0.2
+    platformdirs 4.9.6
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.7.0
+-->
+<link href="draft-mcguinness-mission-migration.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Mission Migration</td>
+<td class="right">June 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 14 December 2026</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-mission-migration-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-06-12" class="published">12 June 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Informational</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2026-12-14">14 December 2026</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission-Bound Authorization Migration Guide</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">This document is an operational migration guide for an existing
+OAuth 2.0 deployment adopting Mission-Bound Authorization. It
+defines a Stage 0 through Stage 5 incremental adoption path. Each
+stage names what the Authorization Server ships, what (if anything)
+clients and Resource Servers change, what is observed versus
+enforced, and what compatibility hazards apply. The guide makes no
+new normative wire requirements beyond what the Mission Framework
+and Mission-Bound OAuth Profile already specify; it provides
+deployment guidance for sequencing the adoption of those
+specifications.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-migration.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-migration.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-mission-migration/">https://datatracker.ietf.org/doc/draft-mcguinness-mission-migration/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 14 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
+                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-audience-and-scope" class="internal xref">Audience and scope</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-definitions" class="internal xref">Conventions and Definitions</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-migration-path-at-a-glance" class="internal xref">Migration Path at a Glance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-stage-0-where-you-are-today" class="internal xref">Stage 0: Where You Are Today</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-existing-oauth-deployment-b" class="internal xref">Existing OAuth deployment baseline</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-pre-mission-state" class="internal xref">Pre-Mission state</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-stage-1-shadow-mission" class="internal xref">Stage 1: Shadow Mission</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-goal" class="internal xref">Goal</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-what-ships" class="internal xref">What ships</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-what-clients-and-resource-s" class="internal xref">What clients and Resource Servers change</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
+                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-exit-criteria" class="internal xref">Exit criteria</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-stage-2-gate-refresh-and-ex" class="internal xref">Stage 2: Gate Refresh and Exchange on Mission State</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-goal-2" class="internal xref">Goal</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-what-ships-2" class="internal xref">What ships</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
+                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-per-tier-rollout" class="internal xref">Per-tier rollout</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.4">
+                <p id="section-toc.1-1.6.2.4.1"><a href="#section-6.4" class="auto internal xref">6.4</a>.  <a href="#name-what-clients-and-resource-se" class="internal xref">What clients and Resource Servers change</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.5">
+                <p id="section-toc.1-1.6.2.5.1"><a href="#section-6.5" class="auto internal xref">6.5</a>.  <a href="#name-exit-criteria-2" class="internal xref">Exit criteria</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-stage-3-narrow-authority-fr" class="internal xref">Stage 3: Narrow Authority from the Approved Mission</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-goal-3" class="internal xref">Goal</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-what-ships-at-the-as" class="internal xref">What ships at the AS</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
+                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-client-side-changes" class="internal xref">Client-side changes</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.4">
+                <p id="section-toc.1-1.7.2.4.1"><a href="#section-7.4" class="auto internal xref">7.4</a>.  <a href="#name-approval-ux-changes" class="internal xref">Approval UX changes</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.5">
+                <p id="section-toc.1-1.7.2.5.1"><a href="#section-7.5" class="auto internal xref">7.5</a>.  <a href="#name-what-resource-servers-chang" class="internal xref">What Resource Servers change</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.6">
+                <p id="section-toc.1-1.7.2.6.1"><a href="#section-7.6" class="auto internal xref">7.6</a>.  <a href="#name-exit-criteria-3" class="internal xref">Exit criteria</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-stage-4-resource-server-upt" class="internal xref">Stage 4: Resource Server Uptake</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-goal-4" class="internal xref">Goal</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-rs-a-bearer-of-authority" class="internal xref">RS-A: bearer of authority</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.3">
+                <p id="section-toc.1-1.8.2.3.1"><a href="#section-8.3" class="auto internal xref">8.3</a>.  <a href="#name-rs-b-mission-snapshot-consu" class="internal xref">RS-B: Mission-snapshot consumer</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.4">
+                <p id="section-toc.1-1.8.2.4.1"><a href="#section-8.4" class="auto internal xref">8.4</a>.  <a href="#name-rs-c-per-request-mission-st" class="internal xref">RS-C: per-request Mission Status</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.5">
+                <p id="section-toc.1-1.8.2.5.1"><a href="#section-8.5" class="auto internal xref">8.5</a>.  <a href="#name-when-mission-status-reads-b" class="internal xref">When Mission Status reads become required</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.6">
+                <p id="section-toc.1-1.8.2.6.1"><a href="#section-8.6" class="auto internal xref">8.6</a>.  <a href="#name-per-tier-rollout-and-exit-c" class="internal xref">Per-tier rollout and exit criteria</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-stage-5-cross-as-continuity" class="internal xref">Stage 5: Cross-AS Continuity</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-goal-5" class="internal xref">Goal</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-multi-as-bindings" class="internal xref">Multi-AS bindings</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
+                <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-what-ships-3" class="internal xref">What ships</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.4">
+                <p id="section-toc.1-1.9.2.4.1"><a href="#section-9.4" class="auto internal xref">9.4</a>.  <a href="#name-optional-move-to-mas-topolo" class="internal xref">Optional move to MAS topology</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.5">
+                <p id="section-toc.1-1.9.2.5.1"><a href="#section-9.5" class="auto internal xref">9.5</a>.  <a href="#name-exit-criteria-4" class="internal xref">Exit criteria</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-compatibility-hazards" class="internal xref">Compatibility Hazards</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-backward-compatibility-with" class="internal xref">Backward compatibility with non-Mission-aware clients</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-mixed-rs-tier-handling" class="internal xref">Mixed-RS tier handling</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
+                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-refresh-token-leakage-acros" class="internal xref">Refresh-token leakage across stages</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.4">
+                <p id="section-toc.1-1.10.2.4.1"><a href="#section-10.4" class="auto internal xref">10.4</a>.  <a href="#name-token-ttl-recommendations-d" class="internal xref">Token TTL recommendations during transition</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.5">
+                <p id="section-toc.1-1.10.2.5.1"><a href="#section-10.5" class="auto internal xref">10.5</a>.  <a href="#name-mission-status-caching-and-" class="internal xref">Mission Status caching and approval-event races</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.6">
+                <p id="section-toc.1-1.10.2.6.1"><a href="#section-10.6" class="auto internal xref">10.6</a>.  <a href="#name-rollback-considerations" class="internal xref">Rollback considerations</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.1">
+                <p id="section-toc.1-1.15.2.1.1"><a href="#section-15.1" class="auto internal xref">15.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.2">
+                <p id="section-toc.1-1.15.2.2.1"><a href="#section-15.2" class="auto internal xref">15.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">The Mission Framework <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>
+defines the Mission as a durable, integrity-anchored,
+lifecycle-governed governance object for an approved task. The
+Mission-Bound OAuth Profile
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span> binds that object
+to the OAuth 2.0 substrate: Mission Intent submitted through PAR
+<span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>, derived authority carried as <code>authorization_details</code>
+        <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>, a <code>mission</code> JWT claim on access tokens, sender-
+constrained issuance via DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> or mTLS <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>,
+Token Exchange <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> gated on Mission state, and a dedicated
+Mission Status operation distinct from token introspection
+<span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">A deployment that already runs OAuth 2.0 cannot reach this end
+state in a single change. Clients, Authorization Servers, and
+Resource Servers (per RFC 9728 <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>) have independent
+release cadences; forcing all of them to move at once converts a
+sequencing problem into an outage.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">This document defines an incremental adoption path. Each stage
+preserves backward compatibility. A deployment exits Stage 0 by
+enabling Mission recording, gates derivation on Mission state in
+Stage 2, derives authority from the approved Mission in Stage 3,
+and continues through Resource Server uptake (Stage 4) and
+cross-AS continuity (Stage 5). The end state is the Mission-Bound
+OAuth Profile as written; the path is sequenced so each step has
+a defensible rollback.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">The Framework and OAuth Profile are the destinations. Where they
+already specify a wire artifact, this guide cites it rather than
+restating it. Where this guide uses BCP 14 keywords, the keywords
+apply to the operational practice (the recommended order of
+adoption), not to the wire (which is owned by the Framework and
+the OAuth Profile).<a href="#section-1-4" class="pilcrow">¶</a></p>
+<div id="audience-and-scope">
+<section id="section-1.1">
+        <h3 id="name-audience-and-scope">
+<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-audience-and-scope" class="section-name selfRef">Audience and scope</a>
+        </h3>
+<p id="section-1.1-1">This document is written for the operator of an existing OAuth
+2.0 Authorization Server deployment. It assumes familiarity with
+RFC 6749 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>, RFC 6750 <span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>, RFC 9068 <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span>,
+PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>, RAR <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>, Token Exchange <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>,
+sender-constrained credentials (DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> or mTLS
+<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>), and the OAuth 2.0 Security BCP <span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span>.<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+<p id="section-1.1-2">The path described here is OAuth-substrate-centric. Deployments
+on the AAuth substrate, or deployments adopting the Mission
+Authority Server (MAS) topology, follow analogous stages through
+their respective profiles; this guide does not enumerate those
+paths.<a href="#section-1.1-2" class="pilcrow">¶</a></p>
+<p id="section-1.1-3">This guide does not define new wire parameters, claims, error
+codes, registries, or endpoints; wire-level normative
+requirements live in
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> and
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>. It does not
+replace per-deployment risk analysis, specify test vectors, or
+address runtime per-action enforcement beyond the OAuth Profile's
+enforcement classes.<a href="#section-1.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="conventions-and-definitions">
+<section id="section-2">
+      <h2 id="name-conventions-and-definitions">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-definitions" class="section-name selfRef">Conventions and Definitions</a>
+      </h2>
+<p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">Terms from <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> (Mission,
+Mission Proposal, Authority Set, <code>mission</code> claim, Mission Status,
+state authority, integrity anchor, canonical <code>mission.id</code>) and
+from
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span> (<code>mission_intent</code>,
+<code>mission_resource_access</code>, <code>mission_inactive</code>, enforcement
+classes <code>issuance</code>, <code>introspection</code>, <code>event_driven</code>,
+<code>per_request</code>, <code>mission_max_stale_seconds</code>) are inherited
+unchanged.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">This document uses the following operational terms:<a href="#section-2-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-4">
+        <dt id="section-2-4.1">
+<strong>Pre-Mission deployment</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.2">
+          <p id="section-2-4.2.1">An OAuth 2.0 deployment without any Mission-Bound capabilities
+enabled. The Stage 0 baseline.<a href="#section-2-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.3">
+<strong>Shadow Mission</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.4">
+          <p id="section-2-4.4.1">A Mission record created and maintained alongside an existing
+OAuth flow whose issuance is unaffected by Mission state. Used to
+validate Mission recording before enforcement.<a href="#section-2-4.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.5">
+<strong>Gating</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.6">
+          <p id="section-2-4.6.1">Refusing a derivation (refresh, Token Exchange, ID-JAG issuance)
+when Mission state disallows it. Gating produces the
+<code>mission_inactive</code> error from the OAuth Profile.<a href="#section-2-4.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.7">
+<strong>Narrowing</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.8">
+          <p id="section-2-4.8.1">Deriving <code>authorization_details</code> from the approved Authority
+Set, per the narrowing rules registered for each Authority Set
+entry type.<a href="#section-2-4.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.9">
+<strong>RS-A / RS-B / RS-C</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.10">
+          <p id="section-2-4.10.1">Resource Server tiers used informally in this guide to describe
+uptake order: an RS-A consumes the access token only as a bearer
+of authority (no Mission awareness); an RS-B reads Mission state
+from token introspection or accepts pushed Mission-state events;
+an RS-C queries Mission Status per request for high-assurance
+operations. These map onto the enforcement classes the AS
+advertises per <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>.<a href="#section-2-4.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.11"></dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.12">
+          <p id="section-2-4.12.1">These labels describe the <em>order in which Resource Servers take up
+Mission state</em> during migration; they are not identical to the
+formal Resource Server Tiers (RS-A through RS-D) defined by the
+Capability Model <span>[<a href="#I-D.draft-mcguinness-mission-capability-model" class="cite xref">I-D.draft-mcguinness-mission-capability-model</a>]</span>,
+which classify authority-enforcement depth. The two labelings are
+related but sit on different axes: this guide sequences Mission-state
+freshness mechanisms (introspection, events, per-request status),
+while the Capability Model classifies what a Resource Server does
+with the Mission's authority. A deployment reporting a formal
+capability coordinate uses the Capability Model's tiers, not these
+migration-ordering labels.<a href="#section-2-4.12.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="migration-path-at-a-glance">
+<section id="section-3">
+      <h2 id="name-migration-path-at-a-glance">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-migration-path-at-a-glance" class="section-name selfRef">Migration Path at a Glance</a>
+      </h2>
+<table class="center" id="table-1">
+        <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Stage</th>
+            <th class="text-left" rowspan="1" colspan="1">What ships at the AS</th>
+            <th class="text-left" rowspan="1" colspan="1">Client changes</th>
+            <th class="text-left" rowspan="1" colspan="1">RS changes</th>
+            <th class="text-left" rowspan="1" colspan="1">First enforcement</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">0</td>
+            <td class="text-left" rowspan="1" colspan="1">Existing OAuth 2.0</td>
+            <td class="text-left" rowspan="1" colspan="1">None</td>
+            <td class="text-left" rowspan="1" colspan="1">None</td>
+            <td class="text-left" rowspan="1" colspan="1">None (baseline)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">1</td>
+            <td class="text-left" rowspan="1" colspan="1">Shadow Mission recording</td>
+            <td class="text-left" rowspan="1" colspan="1">None</td>
+            <td class="text-left" rowspan="1" colspan="1">None</td>
+            <td class="text-left" rowspan="1" colspan="1">None (audit only)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">2</td>
+            <td class="text-left" rowspan="1" colspan="1">Gate refresh and exchange on Mission state</td>
+            <td class="text-left" rowspan="1" colspan="1">None</td>
+            <td class="text-left" rowspan="1" colspan="1">None</td>
+            <td class="text-left" rowspan="1" colspan="1">Refresh/exchange refused for revoked or suspended Missions</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">3</td>
+            <td class="text-left" rowspan="1" colspan="1">Derive <code>authorization_details</code> from approved Authority Set</td>
+            <td class="text-left" rowspan="1" colspan="1">Submit Mission Intent through PAR</td>
+            <td class="text-left" rowspan="1" colspan="1">None</td>
+            <td class="text-left" rowspan="1" colspan="1">Issued scope narrows to approved authority</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">4</td>
+            <td class="text-left" rowspan="1" colspan="1">Resource Server uptake of Mission state</td>
+            <td class="text-left" rowspan="1" colspan="1">None additional</td>
+            <td class="text-left" rowspan="1" colspan="1">Read Mission snapshot; optionally per-request Mission Status</td>
+            <td class="text-left" rowspan="1" colspan="1">RS-level revocation propagation</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">5</td>
+            <td class="text-left" rowspan="1" colspan="1">Cross-AS continuity</td>
+            <td class="text-left" rowspan="1" colspan="1">Optional Token Exchange and ID-JAG carriage</td>
+            <td class="text-left" rowspan="1" colspan="1">Optional resource-side Mission consumption</td>
+            <td class="text-left" rowspan="1" colspan="1">Mission state preserved across AS hops</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-3-2">Each stage is additive. A deployment <span class="bcp14">SHOULD</span> complete each stage
+before beginning the next, but <span class="bcp14">MAY</span> run two adjacent stages
+concurrently across distinct tenants or audiences when the
+deployment can independently roll back each.<a href="#section-3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="stage-0-where-you-are-today">
+<section id="section-4">
+      <h2 id="name-stage-0-where-you-are-today">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-stage-0-where-you-are-today" class="section-name selfRef">Stage 0: Where You Are Today</a>
+      </h2>
+<div id="existing-oauth-deployment-baseline">
+<section id="section-4.1">
+        <h3 id="name-existing-oauth-deployment-b">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-existing-oauth-deployment-b" class="section-name selfRef">Existing OAuth deployment baseline</a>
+        </h3>
+<p id="section-4.1-1">Stage 0 is the pre-Mission OAuth 2.0 deployment. It includes
+some subset of: authorization and token endpoints (RFC 6749
+<span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>); bearer or sender-constrained access tokens (RFC
+6750 <span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>, with DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> or mTLS <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>
+where deployed); JWT access tokens (RFC 9068 <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span>) or
+opaque tokens introspected via RFC 7662 <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>; Token
+Exchange (RFC 8693 <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>); PAR (RFC 9126 <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>) and
+RAR (RFC 9396 <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>) where adopted; token revocation
+(RFC 7009 <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span>); AS metadata (RFC 8414 <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>) and
+Protected Resource Metadata (RFC 9728 <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>).<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-2">Authority in Stage 0 is carried by <code>scope</code>, or by typed
+<code>authorization_details</code> entries that the deployment defined ad
+hoc.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="pre-mission-state">
+<section id="section-4.2">
+        <h3 id="name-pre-mission-state">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-pre-mission-state" class="section-name selfRef">Pre-Mission state</a>
+        </h3>
+<p id="section-4.2-1">In Stage 0, no Mission record exists for any approved task.
+Revocation is per token or per refresh family; there is no
+Mission Status operation; tokens do not carry a <code>mission</code> claim;
+there is no <code>mission_intent</code> parameter; and Resource Servers
+have no Mission lifecycle event channel.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.2-2">A deployment <span class="bcp14">SHOULD</span> audit its Stage 0 surface before beginning
+Stage 1: inventory clients and target which will submit Mission
+Intent in Stage 3; classify Resource Servers by target tier
+(RS-A, RS-B, or RS-C) for Stage 4 planning; confirm PAR
+deployability (the OAuth Profile requires <code>mission_intent</code>
+submission through PAR); confirm DPoP or mTLS deployability
+(the OAuth Profile requires sender-constrained issuance); and
+identify the planned state authority origin
+(<code>mission.origin</code>) and its metadata document location.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+<p id="section-4.2-3">A deployment that cannot satisfy the OAuth 2.0 Security BCP
+<span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span> in Stage 0 <span class="bcp14">SHOULD</span> address those issues before
+adopting Mission-Bound semantics. Mission-Bound Authorization
+adds governance; it does not substitute for the credential-grade
+protections the underlying OAuth deployment already requires.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="stage-1-shadow-mission">
+<section id="section-5">
+      <h2 id="name-stage-1-shadow-mission">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-stage-1-shadow-mission" class="section-name selfRef">Stage 1: Shadow Mission</a>
+      </h2>
+<div id="goal">
+<section id="section-5.1">
+        <h3 id="name-goal">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-goal" class="section-name selfRef">Goal</a>
+        </h3>
+<p id="section-5.1-1">Record a Mission in parallel with existing OAuth flows. Validate
+that the Mission data model, integrity anchors, and Mission
+Status operation work end to end without affecting any issued
+credential.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="what-ships">
+<section id="section-5.2">
+        <h3 id="name-what-ships">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-what-ships" class="section-name selfRef">What ships</a>
+        </h3>
+<p id="section-5.2-1">The AS gains the following, non-enforcing:<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.2-2.1">
+            <p id="section-5.2-2.1.1">A state authority module that creates a Mission Proposal when
+a client interaction implies one. The AS <span class="bcp14">MAY</span> synthesize Mission
+Intent from the authorization request's scope, resource
+parameter, and any RAR entries already present.<a href="#section-5.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-2.2">
+            <p id="section-5.2-2.2.1">An approval-event hook on the authorization endpoint that
+promotes a Proposal to a Mission per the approval-event
+semantics in <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>.<a href="#section-5.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-2.3">
+            <p id="section-5.2-2.3.1">A Mission record store computing <code>proposal_hash</code>,
+<code>authority_hash</code>, and <code>consent_disclosure_hash</code> per the
+Framework's domain-separated, authorization-domain-bound hash
+rules.<a href="#section-5.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-2.4">
+            <p id="section-5.2-2.4.1">The Mission Status operation per
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>, returning
+records for shadow Missions to authorized callers.<a href="#section-5.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-2.5">
+            <p id="section-5.2-2.5.1">AS metadata extensions advertising <code>mission_status_endpoint</code>,
+<code>mission_intent_schema_uri</code>, <code>authority_set_types_supported</code>,
+and <code>mission_framework_versions_supported</code>. Enforcement-class
+metadata is omitted at this stage, indicating no enforcement.<a href="#section-5.2-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.2-3">The AS continues issuance by its existing logic. Tokens do not
+yet carry a <code>mission</code> claim. Mission state has no effect on any
+issuance decision.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="what-clients-and-resource-servers-change">
+<section id="section-5.3">
+        <h3 id="name-what-clients-and-resource-s">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-what-clients-and-resource-s" class="section-name selfRef">What clients and Resource Servers change</a>
+        </h3>
+<p id="section-5.3-1">Nothing required at clients or Resource Servers. Clients <span class="bcp14">MAY</span>
+begin to send <code>mission_intent</code> through PAR; the AS does not
+require it.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="exit-criteria">
+<section id="section-5.4">
+        <h3 id="name-exit-criteria">
+<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-exit-criteria" class="section-name selfRef">Exit criteria</a>
+        </h3>
+<p id="section-5.4-1">A deployment exits Stage 1 when:<a href="#section-5.4-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.4-2.1">
+            <p id="section-5.4-2.1.1">The AS reliably creates Mission Proposals and Missions for the
+flows targeted in this stage.<a href="#section-5.4-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.4-2.2">
+            <p id="section-5.4-2.2.1">Integrity-anchor computation matches the Framework reference
+test vectors.<a href="#section-5.4-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.4-2.3">
+            <p id="section-5.4-2.3.1">Mission Status responses pass the authentication, freshness,
+audience, and integrity properties from the Framework.<a href="#section-5.4-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.4-2.4">
+            <p id="section-5.4-2.4.1">Operators can audit Mission records and trace each to its
+originating authorization request without depending on the
+issued credential.<a href="#section-5.4-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.4-3">A deployment <span class="bcp14">SHOULD NOT</span> advance to Stage 2 until Stage 1 has run
+long enough to expose silent failure modes such as approval-event
+races, normalization bugs, and Mission Status caller-authorization
+bugs.<a href="#section-5.4-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="stage-2-gate-refresh-and-exchange-on-mission-state">
+<section id="section-6">
+      <h2 id="name-stage-2-gate-refresh-and-ex">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-stage-2-gate-refresh-and-ex" class="section-name selfRef">Stage 2: Gate Refresh and Exchange on Mission State</a>
+      </h2>
+<div id="goal-1">
+<section id="section-6.1">
+        <h3 id="name-goal-2">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-goal-2" class="section-name selfRef">Goal</a>
+        </h3>
+<p id="section-6.1-1">First enforcement. The Mission record becomes load-bearing for
+derivation events. After Stage 2, a revoked or suspended Mission
+prevents new credentials from being derived past it.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="what-ships-1">
+<section id="section-6.2">
+        <h3 id="name-what-ships-2">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-what-ships-2" class="section-name selfRef">What ships</a>
+        </h3>
+<p id="section-6.2-1">The AS adopts the <code>issuance</code> enforcement class per
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>. Each derivation
+event consults Mission state:<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.2-2.1">
+            <p id="section-6.2-2.1.1">Refresh token grants: Mission must be <code>active</code>.<a href="#section-6.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.2-2.2">
+            <p id="section-6.2-2.2.1">Token Exchange grants (RFC 8693 <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>): Mission must be
+<code>active</code>. The exchanged token references the same Mission as
+the subject token.<a href="#section-6.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.2-2.3">
+            <p id="section-6.2-2.3.1">ID-JAG issuance (where deployed, per
+<span>[<a href="#I-D.draft-ietf-oauth-identity-assertion-authz-grant" class="cite xref">I-D.draft-ietf-oauth-identity-assertion-authz-grant</a>]</span>):
+Mission must be <code>active</code>.<a href="#section-6.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-6.2-3">When Mission state disallows derivation, the AS returns the
+<code>mission_inactive</code> error per the OAuth Profile.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<p id="section-6.2-4">The AS adds the <code>mission</code> claim to newly issued JWT access tokens
+(per RFC 9068 <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span>) and includes a Mission snapshot in
+introspection responses for opaque tokens. The AS advertises
+<code>mission_enforcement_classes_supported</code> including <code>issuance</code> and
+<code>mission_max_stale_seconds</code>.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="per-tier-rollout">
+<section id="section-6.3">
+        <h3 id="name-per-tier-rollout">
+<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-per-tier-rollout" class="section-name selfRef">Per-tier rollout</a>
+        </h3>
+<p id="section-6.3-1">A deployment <span class="bcp14">SHOULD</span> enable <code>issuance</code>-class enforcement
+progressively: by audience (begin with audiences whose Resource
+Servers are confirmed Mission-unaware, i.e. target RS-A in Stage
+4); by client (a staged client allowlist allows quick rollback if
+a client misbehaves under the new error surface); and by tenant
+(multi-tenant deployments <span class="bcp14">SHOULD</span> gate at the tenant boundary so
+cross-tenant blast radius is bounded).<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+<p id="section-6.3-2">Access-token TTLs <span class="bcp14">SHOULD</span> be aligned with the declared
+<code>mission_max_stale_seconds</code>. OAuth defaults of one hour are
+typically too long once revocation propagation matters; values
+in the range 60 to 300 seconds are typical for <code>issuance</code>-only
+deployments where revocation matters. Deployments adopting
+<code>event_driven</code> or <code>per_request</code> later (Stage 4) <span class="bcp14">MAY</span> lengthen
+TTLs at that point.<a href="#section-6.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="what-clients-and-resource-servers-change-1">
+<section id="section-6.4">
+        <h3 id="name-what-clients-and-resource-se">
+<a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-what-clients-and-resource-se" class="section-name selfRef">What clients and Resource Servers change</a>
+        </h3>
+<p id="section-6.4-1">Nothing required in the steady-state flow. Clients <span class="bcp14">SHOULD</span> handle
+the <code>mission_inactive</code> error by surfacing a user-visible signal
+that the task has been revoked or suspended, not by silently
+retrying. Existing clients that do not recognize the code will
+fall through to their generic OAuth error handling and <span class="bcp14">SHOULD</span>
+recover by requesting a fresh authorization, which the AS
+treats as a new Mission Proposal.<a href="#section-6.4-1" class="pilcrow">¶</a></p>
+<p id="section-6.4-2">Resource Servers continue to receive existing credentials and
+validate them as before. The added <code>mission</code> claim is
+informational at this stage; an RS that does not consume it is
+unaffected.<a href="#section-6.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="exit-criteria-1">
+<section id="section-6.5">
+        <h3 id="name-exit-criteria-2">
+<a href="#section-6.5" class="section-number selfRef">6.5. </a><a href="#name-exit-criteria-2" class="section-name selfRef">Exit criteria</a>
+        </h3>
+<p id="section-6.5-1">A deployment exits Stage 2 when refresh and Token Exchange refuse
+derivation past revoked and suspended Missions end to end; the
+declared <code>mission_max_stale_seconds</code> is honored in practice;
+lifecycle operations on the Mission (revoke, suspend, resume,
+complete) per the OAuth Profile's lifecycle endpoint are
+exercised in production; and the <code>mission_inactive</code> error
+surface has been exercised against the client population without
+unrecoverable failures.<a href="#section-6.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="stage-3-narrow-authority-from-the-approved-mission">
+<section id="section-7">
+      <h2 id="name-stage-3-narrow-authority-fr">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-stage-3-narrow-authority-fr" class="section-name selfRef">Stage 3: Narrow Authority from the Approved Mission</a>
+      </h2>
+<div id="goal-2">
+<section id="section-7.1">
+        <h3 id="name-goal-3">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-goal-3" class="section-name selfRef">Goal</a>
+        </h3>
+<p id="section-7.1-1">Move from coarse scopes to derived authority. After Stage 3, the
+<code>authorization_details</code> on a newly issued token are derived from
+the approved Authority Set carried by the Mission, not from
+free-form scope strings.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="what-ships-at-the-as">
+<section id="section-7.2">
+        <h3 id="name-what-ships-at-the-as">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-what-ships-at-the-as" class="section-name selfRef">What ships at the AS</a>
+        </h3>
+<p id="section-7.2-1">The AS adopts the full Mission Intent submission path per
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>: accept
+<code>mission_intent</code> only through PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> with validation
+against the published <code>mission_intent_schema_uri</code>; render
+Mission Intent to the approving principal as part of the consent
+disclosure, computing <code>consent_disclosure_hash</code> per the
+Framework; on approval, derive an Authority Set from Mission
+Intent under the AS's policy (<code>policy_version</code>), with
+<code>mission_resource_access</code> entries as defined in the OAuth
+Profile; emit derived <code>authorization_details</code> to clients in
+token responses.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.2-2">Coarse <code>scope</code> continues to be emitted alongside derived
+<code>authorization_details</code> for legacy consumers. The relationship
+between coarse <code>scope</code> and the derived Authority Set is a
+deployment-policy decision audit-anchored by <code>proposal_hash</code> and
+<code>authority_hash</code>.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="client-side-changes">
+<section id="section-7.3">
+        <h3 id="name-client-side-changes">
+<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-client-side-changes" class="section-name selfRef">Client-side changes</a>
+        </h3>
+<p id="section-7.3-1">Clients adopting Stage 3 submit <code>mission_intent</code> through PAR
+including a structured <code>goal</code>, <code>objects</code>, <code>constraints</code>, and
+<code>success_criteria</code> per the Framework's Mission Intent schema, a
+<code>mission_expiry</code> aligned to the task's intended duration, and
+optionally <code>purpose</code> and <code>context</code>. Submission is through PAR
+<span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> per the OAuth Profile; the client uses the
+<code>request_uri</code> returned from PAR in the subsequent authorization
+request.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+<p id="section-7.3-2">Clients that do not adopt <code>mission_intent</code> in Stage 3 continue
+to work: the AS synthesizes a Mission Intent from the legacy
+authorization request shape as in Stage 1 and Stage 2. Clients
+<span class="bcp14">SHOULD</span> adopt <code>mission_intent</code> because the synthesized Intent
+loses fidelity the explicit form captures.<a href="#section-7.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="approval-ux-changes">
+<section id="section-7.4">
+        <h3 id="name-approval-ux-changes">
+<a href="#section-7.4" class="section-number selfRef">7.4. </a><a href="#name-approval-ux-changes" class="section-name selfRef">Approval UX changes</a>
+        </h3>
+<p id="section-7.4-1">The consent screen changes shape. Where Stage 0 displayed
+requested scopes, Stage 3 displays the Mission Intent's goal,
+objects, and constraints, with the derived Authority Set surfaced
+as the concrete authority being granted. Deployments <span class="bcp14">SHOULD</span> adopt
+a consent-disclosure template registered in their consent
+template registry; the disclosure template version is recorded
+in the Mission record per the Framework.<a href="#section-7.4-1" class="pilcrow">¶</a></p>
+<p id="section-7.4-2">Approval continues to occur at the authorization endpoint (or
+through an out-of-band admin workflow where deployed). The
+approval event is the same atomic Proposal-to-Mission transition
+the AS implemented in Stage 1; what changes in Stage 3 is the
+information surfaced to the approver.<a href="#section-7.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="what-resource-servers-change">
+<section id="section-7.5">
+        <h3 id="name-what-resource-servers-chang">
+<a href="#section-7.5" class="section-number selfRef">7.5. </a><a href="#name-what-resource-servers-chang" class="section-name selfRef">What Resource Servers change</a>
+        </h3>
+<p id="section-7.5-1">Resource Servers <span class="bcp14">SHOULD</span> begin to enforce against the derived
+<code>authorization_details</code> rather than <code>scope</code> where the Authority
+Set carries the relevant authority. RSes that do not yet consume
+<code>authorization_details</code> continue to enforce against <code>scope</code> and
+remain operational; the issued credential will carry both until
+the deployment retires the coarse representation.<a href="#section-7.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="exit-criteria-2">
+<section id="section-7.6">
+        <h3 id="name-exit-criteria-3">
+<a href="#section-7.6" class="section-number selfRef">7.6. </a><a href="#name-exit-criteria-3" class="section-name selfRef">Exit criteria</a>
+        </h3>
+<p id="section-7.6-1">A deployment exits Stage 3 when a measurable fraction of newly
+issued tokens carry derived <code>authorization_details</code> matching the
+Mission's approved Authority Set under the registered narrowing
+rules; Mission Intent submission through PAR is exercised by the
+client population the deployment expects to convert; consent
+disclosure renders the approved Intent and records the
+disclosure-template version and <code>consent_disclosure_hash</code>; and
+the AS can prove, for any issued token, the derivation chain
+from Mission Intent (via <code>proposal_hash</code>) to Authority Set (via
+<code>authority_hash</code>) to issued <code>authorization_details</code>.<a href="#section-7.6-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="stage-4-resource-server-uptake">
+<section id="section-8">
+      <h2 id="name-stage-4-resource-server-upt">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-stage-4-resource-server-upt" class="section-name selfRef">Stage 4: Resource Server Uptake</a>
+      </h2>
+<div id="goal-3">
+<section id="section-8.1">
+        <h3 id="name-goal-4">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-goal-4" class="section-name selfRef">Goal</a>
+        </h3>
+<p id="section-8.1-1">Move enforcement past the AS boundary. Resource Servers begin to
+read Mission state and react to lifecycle events. This is where
+revocation propagation becomes real for already-issued tokens.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="rs-a-bearer-of-authority">
+<section id="section-8.2">
+        <h3 id="name-rs-a-bearer-of-authority">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-rs-a-bearer-of-authority" class="section-name selfRef">RS-A: bearer of authority</a>
+        </h3>
+<p id="section-8.2-1">RS-A is the baseline tier. The RS accepts a Mission-bound access
+token, validates it per its sender constraint and signature (RFC
+9068 <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span> for JWTs or RFC 7662 <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> for opaque
+tokens), and enforces against <code>scope</code> and <code>authorization_details</code>
+exactly as it does without Mission awareness. An RS-A does
+nothing additional in Stage 4. Deployments where every Resource
+Server is RS-A complete their migration at Stage 3 plus AS-side
+<code>issuance</code> enforcement.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="rs-b-mission-snapshot-consumer">
+<section id="section-8.3">
+        <h3 id="name-rs-b-mission-snapshot-consu">
+<a href="#section-8.3" class="section-number selfRef">8.3. </a><a href="#name-rs-b-mission-snapshot-consu" class="section-name selfRef">RS-B: Mission-snapshot consumer</a>
+        </h3>
+<p id="section-8.3-1">RS-B reads the Mission snapshot. There are two non-exclusive
+mechanisms, both defined in
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>:<a href="#section-8.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.3-2.1">
+            <p id="section-8.3-2.1.1"><strong>Introspection projection.</strong> The RS introspects the token
+(RFC 7662 <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>) and consumes the Mission snapshot the
+AS includes in the response. The AS advertises the
+<code>introspection</code> enforcement class. The RS treats an
+<code>active=false</code> response as authoritative even if the token
+itself has not expired.<a href="#section-8.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.3-2.2">
+            <p id="section-8.3-2.2.1"><strong>Event-driven invalidation.</strong> The deployment delivers Mission
+lifecycle events to the RS via Shared Signals/CAEP or
+equivalent. The AS advertises the <code>event_driven</code> enforcement
+class. The RS marks affected tokens unusable on receipt of a
+Mission revocation or suspension event.<a href="#section-8.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-8.3-3">A deployment <span class="bcp14">SHOULD</span> adopt event-driven invalidation when latency
+matters and <code>event_driven</code> infrastructure exists. Introspection
+projection alone does not reduce revocation latency below the
+access-token TTL for RSes that cache token validation.<a href="#section-8.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="rs-c-per-request-mission-status">
+<section id="section-8.4">
+        <h3 id="name-rs-c-per-request-mission-st">
+<a href="#section-8.4" class="section-number selfRef">8.4. </a><a href="#name-rs-c-per-request-mission-st" class="section-name selfRef">RS-C: per-request Mission Status</a>
+        </h3>
+<p id="section-8.4-1">RS-C queries Mission Status per consequential request for the
+freshest possible state. The AS advertises the <code>per_request</code>
+enforcement class. The RS calls the Mission Status endpoint with
+caller authentication and a nonce, validates the response per
+the Framework's authentication, freshness, audience, and
+integrity properties, and refuses the request if Mission state
+is anything other than <code>active</code> (or if the response is stale
+past the deployment's tolerance). Deployments <span class="bcp14">SHOULD</span> reserve
+RS-C for high-assurance operations where the cost of acting on
+stale Mission state exceeds the cost of an additional round trip.<a href="#section-8.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="when-mission-status-reads-become-required">
+<section id="section-8.5">
+        <h3 id="name-when-mission-status-reads-b">
+<a href="#section-8.5" class="section-number selfRef">8.5. </a><a href="#name-when-mission-status-reads-b" class="section-name selfRef">When Mission Status reads become required</a>
+        </h3>
+<p id="section-8.5-1">Mission Status reads are <span class="bcp14">RECOMMENDED</span> for RS-B (via introspection
+projection) and required in practice for RS-C. A deployment
+publishing an <code>event_driven</code> or <code>per_request</code> enforcement class
+is committing to a maximum tolerated stale interval; RSes
+participating in that commitment <span class="bcp14">SHOULD</span> have a Mission Status
+read path as a fallback when event delivery fails.<a href="#section-8.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="per-tier-rollout-and-exit-criteria">
+<section id="section-8.6">
+        <h3 id="name-per-tier-rollout-and-exit-c">
+<a href="#section-8.6" class="section-number selfRef">8.6. </a><a href="#name-per-tier-rollout-and-exit-c" class="section-name selfRef">Per-tier rollout and exit criteria</a>
+        </h3>
+<p id="section-8.6-1">A deployment <span class="bcp14">SHOULD</span> roll out tiers in order: RS-A baseline,
+then RS-B, then RS-C for the high-assurance subset. Mixed-tier
+deployments are supported; the AS advertises the union of
+enforcement classes and each RS opts into the classes it
+consumes. Clients do not change in Stage 4.<a href="#section-8.6-1" class="pilcrow">¶</a></p>
+<p id="section-8.6-2">A deployment exits Stage 4 when each Resource Server has been
+classified to a tier and operates at that tier; for RS-B
+participants Mission revocation propagates within the
+deployment's <code>mission_max_stale_seconds</code> interval; and for RS-C
+participants per-request Mission Status reads are authenticated,
+audience-bound, and observe freshness per the Framework.<a href="#section-8.6-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="stage-5-cross-as-continuity">
+<section id="section-9">
+      <h2 id="name-stage-5-cross-as-continuity">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-stage-5-cross-as-continuity" class="section-name selfRef">Stage 5: Cross-AS Continuity</a>
+      </h2>
+<div id="goal-4">
+<section id="section-9.1">
+        <h3 id="name-goal-5">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-goal-5" class="section-name selfRef">Goal</a>
+        </h3>
+<p id="section-9.1-1">Preserve Mission identity and state across Authorization Server
+boundaries. This stage applies only to multi-AS deployments. A
+single-AS deployment completes its migration at Stage 4.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="multi-as-bindings">
+<section id="section-9.2">
+        <h3 id="name-multi-as-bindings">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-multi-as-bindings" class="section-name selfRef">Multi-AS bindings</a>
+        </h3>
+<p id="section-9.2-1">A deployment with two or more Authorization Servers composes
+with two existing OAuth mechanisms:<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9.2-2.1">
+            <p id="section-9.2-2.1.1"><strong>Token Exchange (RFC 8693 <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>).</strong> A token from AS1,
+exchanged at AS2, produces a credential bearing the same
+Mission reference. The <code>mission</code> claim is preserved across
+the exchange. Mission state is consulted at the exchange step
+per the <code>issuance</code> enforcement class from Stage 2.<a href="#section-9.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.2-2.2">
+            <p id="section-9.2-2.2.1"><strong>Identity Assertion Authorization Grant (ID-JAG)</strong>
+              <span>[<a href="#I-D.draft-ietf-oauth-identity-assertion-authz-grant" class="cite xref">I-D.draft-ietf-oauth-identity-assertion-authz-grant</a>]</span>. In
+the common-IdP scenario, the IdP issues an ID-JAG that
+Resource ASes consume to mint audience-bound credentials. The
+Mission reference threads through the ID-JAG per
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>.<a href="#section-9.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-9.2-3">For same-IdP SaaS-to-SaaS chains, the Identity Continuation
+Assertion
+<span>[<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>
+composes with ID-JAG to carry the Mission reference through
+onward issuance. For cross-trust-domain mapping (where issuer
+and subject identifiers differ across domains), the Identity
+Chaining draft <span>[<a href="#I-D.draft-ietf-oauth-identity-chaining" class="cite xref">I-D.draft-ietf-oauth-identity-chaining</a>]</span> is the
+composition substrate.<a href="#section-9.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="what-ships-2">
+<section id="section-9.3">
+        <h3 id="name-what-ships-3">
+<a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-what-ships-3" class="section-name selfRef">What ships</a>
+        </h3>
+<p id="section-9.3-1">Each AS that participates in cross-AS continuity recognizes the
+<code>mission</code> claim on incoming subject tokens at the Token Exchange
+endpoint and preserves the canonical <code>mission.id</code> on the
+exchanged token; consults Mission Status at the state authority
+identified by <code>mission.origin</code> before issuing a derived
+credential, per the <code>issuance</code> class; and cascades Mission
+revocation to all derived credentials it has issued.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
+<p id="section-9.3-2">For Token Exchange, the exchanged token's <code>mission</code> claim is the
+binding. For ID-JAG, the Mission reference is carried in the
+ID-JAG per <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>; the
+Resource AS consuming the ID-JAG validates the issuing IdP's
+authority over the Mission and gates issuance on Mission state
+per the <code>issuance</code> class.<a href="#section-9.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="optional-move-to-mas-topology">
+<section id="section-9.4">
+        <h3 id="name-optional-move-to-mas-topolo">
+<a href="#section-9.4" class="section-number selfRef">9.4. </a><a href="#name-optional-move-to-mas-topolo" class="section-name selfRef">Optional move to MAS topology</a>
+        </h3>
+<p id="section-9.4-1">When governance lives outside any one credential issuer (for
+example, when OAuth and AAuth substrates share a governance
+object, or when multiple ASes share Mission ownership), the
+Mission Authority Server (MAS) topology centralizes the state
+authority. A future Mission Authority Server profile defines
+this topology; this guide notes the MAS move as a forward-
+looking option. A deployment <span class="bcp14">SHOULD NOT</span> adopt the MAS topology
+before completing Stages 0 through 5 on at least one AS. MAS
+adoption is a topology change, not an incremental gating step,
+and inherits all the lifecycle and revocation semantics this
+guide walks through.<a href="#section-9.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="exit-criteria-3">
+<section id="section-9.5">
+        <h3 id="name-exit-criteria-4">
+<a href="#section-9.5" class="section-number selfRef">9.5. </a><a href="#name-exit-criteria-4" class="section-name selfRef">Exit criteria</a>
+        </h3>
+<p id="section-9.5-1">A deployment exits Stage 5 when Token Exchange and (where
+deployed) ID-JAG issuance preserve the canonical <code>mission.id</code>
+across AS hops, and Mission revocation at the originating state
+authority blocks derivation at downstream ASes within the
+deployment's stated <code>mission_max_stale_seconds</code> interval.<a href="#section-9.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="compatibility-hazards">
+<section id="section-10">
+      <h2 id="name-compatibility-hazards">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-compatibility-hazards" class="section-name selfRef">Compatibility Hazards</a>
+      </h2>
+<div id="backward-compatibility-with-non-mission-aware-clients">
+<section id="section-10.1">
+        <h3 id="name-backward-compatibility-with">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-backward-compatibility-with" class="section-name selfRef">Backward compatibility with non-Mission-aware clients</a>
+        </h3>
+<p id="section-10.1-1">In every stage through Stage 3, clients that have not adopted
+Mission Intent submission continue to function. In Stages 1
+through 3 the AS synthesizes a Mission Intent from the legacy
+authorization request shape (scope, resource parameter, RAR
+entries). The synthesized Intent is necessarily coarser than an
+explicit <code>mission_intent</code>. Deployments <span class="bcp14">SHOULD</span> set an explicit
+deprecation horizon for legacy clients rather than supporting
+synthesized Intent indefinitely.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<p id="section-10.1-2">Clients that do not handle the <code>mission_inactive</code> error code
+specifically will treat it as a generic OAuth error. This is
+acceptable for backward compatibility but degrades user
+experience by losing the signal that the user's task was revoked
+or suspended.<a href="#section-10.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mixed-rs-tier-handling">
+<section id="section-10.2">
+        <h3 id="name-mixed-rs-tier-handling">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-mixed-rs-tier-handling" class="section-name selfRef">Mixed-RS tier handling</a>
+        </h3>
+<p id="section-10.2-1">Stage 4 admits a mix of RS-A, RS-B, and RS-C Resource Servers
+within the same deployment. The AS advertises the union of
+enforcement classes it supports; each RS consumes only the
+classes it participates in. Mission revocation propagates to
+RS-B and RS-C per their respective mechanisms; RS-A receives
+propagation only through access-token expiry, bounded by the
+TTL the AS sets per Stage 2.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<p id="section-10.2-2">A deployment <span class="bcp14">SHOULD NOT</span> claim a tighter <code>mission_max_stale_seconds</code>
+than its lowest-tier RS can deliver. If an RS-A audience must be
+covered, the access-token TTL bounds the achievable stale
+interval. If a deployment needs a tighter interval than TTL
+allows, the affected RSes must move to RS-B or RS-C tiering.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="refresh-token-leakage-across-stages">
+<section id="section-10.3">
+        <h3 id="name-refresh-token-leakage-acros">
+<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-refresh-token-leakage-acros" class="section-name selfRef">Refresh-token leakage across stages</a>
+        </h3>
+<p id="section-10.3-1">A deployment transitioning from Stage 2 to Stage 3 holds refresh
+tokens issued under Stage 2's coarse <code>authorization_details</code> (or
+<code>scope</code>) shape. The AS <span class="bcp14">SHOULD</span> continue to honor those refresh
+tokens but <span class="bcp14">SHOULD</span> progressively narrow them on each refresh by
+re-deriving <code>authorization_details</code> from the current Mission's
+Authority Set. This is a one-way narrowing: a Stage 2 refresh
+token does not gain authority on its first Stage 3 refresh; it
+only converges to its Mission-derived bound.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+<p id="section-10.3-2">A deployment that revokes a Mission while refresh tokens are
+outstanding <span class="bcp14">SHOULD</span> rely on Stage 2 gating (which refuses the
+refresh) plus Stage 4 propagation (which invalidates already-
+issued access tokens for RS-B and RS-C). The deployment <span class="bcp14">SHOULD NOT</span> assume Stage 2 alone invalidates already-issued access
+tokens; those tokens remain valid until natural expiry unless
+introspection, event-driven, or per-request enforcement covers
+their audience.<a href="#section-10.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="token-ttl-recommendations-during-transition">
+<section id="section-10.4">
+        <h3 id="name-token-ttl-recommendations-d">
+<a href="#section-10.4" class="section-number selfRef">10.4. </a><a href="#name-token-ttl-recommendations-d" class="section-name selfRef">Token TTL recommendations during transition</a>
+        </h3>
+<p id="section-10.4-1">Access-token TTL is the dominant control on revocation latency
+for RS-A audiences. During the transition:<a href="#section-10.4-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.4-2.1">
+            <p id="section-10.4-2.1.1"><strong>Stage 1.</strong> TTL choice is independent of Mission state.<a href="#section-10.4-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.4-2.2">
+            <p id="section-10.4-2.2.1"><strong>Stage 2 onward.</strong> TTLs <span class="bcp14">SHOULD</span> be aligned with the declared
+<code>mission_max_stale_seconds</code>. One-hour defaults are typically
+too long; values in the range 60 to 300 seconds are typical
+when revocation propagation matters and only <code>issuance</code>
+enforcement is deployed.<a href="#section-10.4-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.4-2.3">
+            <p id="section-10.4-2.3.1"><strong>Stage 4 (RS-B with <code>event_driven</code>, RS-C with <code>per_request</code>).</strong>
+TTLs <span class="bcp14">MAY</span> be lengthened for audiences covered by those
+enforcement classes because revocation propagates out-of-band
+of TTL.<a href="#section-10.4-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-10.4-3">Deployments <span class="bcp14">SHOULD</span> set per-audience TTLs aligned with per-
+audience tiering rather than a single global TTL.<a href="#section-10.4-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-status-caching-and-approval-event-races">
+<section id="section-10.5">
+        <h3 id="name-mission-status-caching-and-">
+<a href="#section-10.5" class="section-number selfRef">10.5. </a><a href="#name-mission-status-caching-and-" class="section-name selfRef">Mission Status caching and approval-event races</a>
+        </h3>
+<p id="section-10.5-1">Mission Status responses declare <code>issued_at</code> and <code>expires_at</code>
+per the Framework. Consumers cache responses within these bounds
+and fail closed after expiration. Operators <span class="bcp14">SHOULD NOT</span> extend
+cache lifetime past <code>expires_at</code>; the freshness property is the
+substrate for the revocation-latency claim.<a href="#section-10.5-1" class="pilcrow">¶</a></p>
+<p id="section-10.5-2">A client retrying an authorization that has already produced a
+Mission Proposal can race the approval event. The Framework's
+approval event is idempotent on <code>proposal_id</code>; deployments
+<span class="bcp14">SHOULD</span> ensure client retry logic, network proxies, and approval
+workflow preserve the <code>proposal_id</code> so retries do not produce
+duplicate records or partial commits.<a href="#section-10.5-2" class="pilcrow">¶</a></p>
+<p id="section-10.5-3">In Stage 3 the consent disclosure changes shape from "scopes
+requested" to "Mission Intent rendered." Operators <span class="bcp14">SHOULD</span> A/B
+test the new disclosure before cutover. The
+<code>consent_disclosure_hash</code> captures what was presented; the
+operator owns whether that disclosure was comprehensible.<a href="#section-10.5-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="rollback-considerations">
+<section id="section-10.6">
+        <h3 id="name-rollback-considerations">
+<a href="#section-10.6" class="section-number selfRef">10.6. </a><a href="#name-rollback-considerations" class="section-name selfRef">Rollback considerations</a>
+        </h3>
+<p id="section-10.6-1">Each stage <span class="bcp14">SHOULD</span> have a defensible rollback path. Stage 1
+rollback disables shadow recording with no client or RS impact.
+Stage 2 rollback disables <code>issuance</code> enforcement; Mission state
+returns to advisory and revocation latency returns to TTL.
+Stage 3 rollback continues to record Missions but emits legacy
+<code>scope</code> or ad hoc <code>authorization_details</code> on issuance; clients
+that submit <code>mission_intent</code> still function because the AS
+parses and records the Intent. Stage 4 rollback is per RS: an
+RS reverts to RS-A while other RSes continue at their adopted
+tier, with the AS adjusting its advertised enforcement classes.
+Stage 5 rollback is per cross-AS hop. Rollback <span class="bcp14">SHOULD NOT</span> be
+the first response to a problem; the stages exist to provide
+testable forward progress.<a href="#section-10.6-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-11">
+      <h2 id="name-security-considerations">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-11-1">This document is operational guidance and inherits the security
+considerations of the Mission Framework
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>, the Mission-Bound
+OAuth Profile <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>, and
+the OAuth 2.0 Security BCP <span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span>. The following are
+specific to the migration sequence.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-11-2">Every stage transition changes either what is recorded or what
+is enforced. Each transition <span class="bcp14">SHOULD</span> be treated as a change-
+control event with the usual disciplines: staged rollout,
+observability, kill-switches, and customer communication. A
+botched migration that loses audit records is worse than a
+slower, well-controlled migration.<a href="#section-11-2" class="pilcrow">¶</a></p>
+<p id="section-11-3">Stages 1 through 3 may rely on the AS synthesizing a Mission
+Intent from the legacy authorization request shape. The
+synthesized Intent is a transitional artifact: it permits the
+migration but does not by itself deliver the audit and narrowing
+value that explicit <code>mission_intent</code> submission provides. The
+synthesized Intent's <code>proposal_hash</code> anchors what the AS
+recorded, but what was recorded may not reflect what the user
+would have approved if shown a full Mission Intent.<a href="#section-11-3" class="pilcrow">¶</a></p>
+<p id="section-11-4">Access-token TTLs are the dominant control on revocation latency
+for RS-A audiences. A deployment that advances through Stages 2
+and 3 with unchanged one-hour TTLs effectively has a one-hour
+revocation latency for those audiences. This is correct OAuth
+behavior, but operators <span class="bcp14">SHOULD</span> set per-audience TTLs aligned
+with the declared <code>mission_max_stale_seconds</code> rather than
+publishing a value they cannot meet.<a href="#section-11-4" class="pilcrow">¶</a></p>
+<p id="section-11-5">Deployments advertising multiple enforcement classes (<code>issuance</code>
+plus <code>event_driven</code>, or plus <code>per_request</code>) <span class="bcp14">SHOULD</span> ensure each
+RS's claimed class is honored. Misadvertisement leads consumers
+to assume revocation propagation guarantees that do not hold for
+their audience.<a href="#section-11-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-12">
+      <h2 id="name-privacy-considerations">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-12-1">This document is operational guidance and adds no new privacy
+surface of its own. The privacy properties of Mission records,
+Mission Intent, consent disclosures, the <code>mission</code> claim, and
+cross-audience correlation via the canonical <code>mission.id</code> derive
+from the Mission Framework
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> and the Mission-Bound
+OAuth Profile <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span> and
+are addressed in their Privacy Considerations.<a href="#section-12-1" class="pilcrow">¶</a></p>
+<p id="section-12-2">One consideration is specific to the migration itself. Beginning at
+Stage 1, the Authorization Server starts recording Mission records --
+Mission Intent (possibly synthesized from the legacy authorization
+request), the consent disclosure, and principal-model evidence --
+for flows that previously retained no such governance data. The
+migration therefore introduces a new store of task and consent data,
+and a new cross-audience correlation handle (<code>mission.id</code>) in audit,
+for credentials a Stage 0 deployment did not previously link. As
+part of the migration, a deployment <span class="bcp14">SHOULD</span> extend its existing
+data-handling, retention, and access-control policies to cover the
+new Mission record store from Stage 1 onward, rather than treating
+Mission recording as purely an availability-neutral audit addition.
+Shadow Missions recorded in Stage 1 already contain this data even
+though they are not yet load-bearing for issuance.<a href="#section-12-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-13">
+      <h2 id="name-iana-considerations">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-13-1">This document is Informational and has no IANA actions. Wire-
+level registrations (parameters, claims, error codes, metadata
+members, media types) belong to
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> and
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>.<a href="#section-13-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="section-14">
+      <h2 id="name-acknowledgments">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="section-14-1">This document is part of the Mission-Bound Authorization
+specification set. The Mission Framework
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> and Mission-Bound
+OAuth Profile <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>
+are the destinations this guide leads to; the operational
+practice described here is informed by their normative content.<a href="#section-14-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-15">
+      <h2 id="name-references">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-15.1">
+        <h3 id="name-normative-references">
+<a href="#section-15.1" class="section-number selfRef">15.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-framework">[I-D.draft-mcguinness-mission-framework]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-oauth-profile">[I-D.draft-mcguinness-mission-oauth-profile]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+      <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-15.2">
+        <h3 id="name-informative-references">
+<a href="#section-15.2" class="section-number selfRef">15.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-ietf-oauth-identity-assertion-authz-grant">[I-D.draft-ietf-oauth-identity-assertion-authz-grant]</dt>
+        <dd>
+<span class="refAuthor">Parecki, A.</span>, <span class="refAuthor">McGuinness, K.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"Identity Assertion JWT Authorization Grant"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-identity-assertion-authz-grant-04</span>, <time datetime="2026-05-21" class="refDate">21 May 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-assertion-authz-grant-04">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-assertion-authz-grant-04</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-ietf-oauth-identity-chaining">[I-D.draft-ietf-oauth-identity-chaining]</dt>
+        <dd>
+<span class="refAuthor">Schwenkschuster, A.</span>, <span class="refAuthor">Kasselman, P.</span>, <span class="refAuthor">Burgin, K.</span>, <span class="refAuthor">Jenkins, M. J.</span>, <span class="refAuthor">Campbell, B.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth Identity and Authorization Chaining Across Domains"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-identity-chaining-14</span>, <time datetime="2026-06-02" class="refDate">2 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-chaining-14">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-chaining-14</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-capability-model">[I-D.draft-mcguinness-mission-capability-model]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-id-continuation-assertion">[I-D.draft-mcguinness-oauth-id-continuation-assertion]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6749">[RFC6749]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6749">https://www.rfc-editor.org/rfc/rfc6749</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6750">[RFC6750]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span> and <span class="refAuthor">D. Hardt</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework: Bearer Token Usage"</span>, <span class="seriesInfo">RFC 6750</span>, <span class="seriesInfo">DOI 10.17487/RFC6750</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6750">https://www.rfc-editor.org/rfc/rfc6750</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7009">[RFC7009]</dt>
+        <dd>
+<span class="refAuthor">Lodderstedt, T., Ed.</span>, <span class="refAuthor">Dronia, S.</span>, and <span class="refAuthor">M. Scurtescu</span>, <span class="refTitle">"OAuth 2.0 Token Revocation"</span>, <span class="seriesInfo">RFC 7009</span>, <span class="seriesInfo">DOI 10.17487/RFC7009</span>, <time datetime="2013-08" class="refDate">August 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7009">https://www.rfc-editor.org/rfc/rfc7009</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7662">[RFC7662]</dt>
+        <dd>
+<span class="refAuthor">Richer, J., Ed.</span>, <span class="refTitle">"OAuth 2.0 Token Introspection"</span>, <span class="seriesInfo">RFC 7662</span>, <span class="seriesInfo">DOI 10.17487/RFC7662</span>, <time datetime="2015-10" class="refDate">October 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7662">https://www.rfc-editor.org/rfc/rfc7662</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8414">[RFC8414]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8414">https://www.rfc-editor.org/rfc/rfc8414</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8693">[RFC8693]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8693">https://www.rfc-editor.org/rfc/rfc8693</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8705">[RFC8705]</dt>
+        <dd>
+<span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">T. Lodderstedt</span>, <span class="refTitle">"OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens"</span>, <span class="seriesInfo">RFC 8705</span>, <span class="seriesInfo">DOI 10.17487/RFC8705</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8705">https://www.rfc-editor.org/rfc/rfc8705</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9068">[RFC9068]</dt>
+        <dd>
+<span class="refAuthor">Bertocci, V.</span>, <span class="refTitle">"JSON Web Token (JWT) Profile for OAuth 2.0 Access Tokens"</span>, <span class="seriesInfo">RFC 9068</span>, <span class="seriesInfo">DOI 10.17487/RFC9068</span>, <time datetime="2021-10" class="refDate">October 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9068">https://www.rfc-editor.org/rfc/rfc9068</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9126">[RFC9126]</dt>
+        <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Sakimura, N.</span>, <span class="refAuthor">Tonge, D.</span>, and <span class="refAuthor">F. Skokan</span>, <span class="refTitle">"OAuth 2.0 Pushed Authorization Requests"</span>, <span class="seriesInfo">RFC 9126</span>, <span class="seriesInfo">DOI 10.17487/RFC9126</span>, <time datetime="2021-09" class="refDate">September 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9126">https://www.rfc-editor.org/rfc/rfc9126</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9396">[RFC9396]</dt>
+        <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9449">[RFC9449]</dt>
+        <dd>
+<span class="refAuthor">Fett, D.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Jones, M.</span>, and <span class="refAuthor">D. Waite</span>, <span class="refTitle">"OAuth 2.0 Demonstrating Proof of Possession (DPoP)"</span>, <span class="seriesInfo">RFC 9449</span>, <span class="seriesInfo">DOI 10.17487/RFC9449</span>, <time datetime="2023-09" class="refDate">September 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9449">https://www.rfc-editor.org/rfc/rfc9449</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9700">[RFC9700]</dt>
+        <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Labunets, A.</span>, and <span class="refAuthor">D. Fett</span>, <span class="refTitle">"Best Current Practice for OAuth 2.0 Security"</span>, <span class="seriesInfo">BCP 240</span>, <span class="seriesInfo">RFC 9700</span>, <span class="seriesInfo">DOI 10.17487/RFC9700</span>, <time datetime="2025-01" class="refDate">January 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9700">https://www.rfc-editor.org/rfc/rfc9700</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9728">[RFC9728]</dt>
+      <dd>
+<span class="refAuthor">Jones, M.B.</span>, <span class="refAuthor">Hunt, P.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth 2.0 Protected Resource Metadata"</span>, <span class="seriesInfo">RFC 9728</span>, <span class="seriesInfo">DOI 10.17487/RFC9728</span>, <time datetime="2025-04" class="refDate">April 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9728">https://www.rfc-editor.org/rfc/rfc9728</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-A">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,2568 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Delegated Authority Validation</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       This document defines a narrow server-to-server protocol by which an
+originating Authorization Server delegates authority validation to a
+Resource Authorization Server (Resource AS) at the moment the
+originating AS lacks the Resource AS's action ontology. The Resource
+AS examines a minimized requested authority together with an
+audience-filtered Mission projection and returns one of three
+classification outcomes: in-bounds, out-of-bounds, or out-of-bounds
+but eligible for governed expansion. The protocol composes with the
+Mission Framework and with Mission Expansion. Scope is intentionally
+narrow: this document defines the AS-to-Resource-AS handoff at
+issuance or expansion time only. Runtime per-action authority
+evaluation between a Policy Enforcement Point and a Policy Decision
+Point is defined by the Mission-Bound Runtime Enforcement Profile and
+is out of scope here. 
+    " name="description">
+<meta content="xml2rfc 3.33.0" name="generator">
+<meta content="mission" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="oauth" name="keyword">
+<meta content="resource-as" name="keyword">
+<meta content="delegation" name="keyword">
+<meta content="ontology" name="keyword">
+<meta content="draft-mcguinness-mission-delegated-authority-validation-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.33.0
+    Python 3.12.13
+    ConfigArgParse 1.7
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.0.2
+    platformdirs 4.9.6
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.7.0
+-->
+<link href="draft-mcguinness-mission-delegated-authority-validation.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Delegated Authority Validation</td>
+<td class="right">June 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 14 December 2026</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-mission-delegated-authority-validation-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-06-12" class="published">12 June 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2026-12-14">14 December 2026</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Delegated Authority Validation</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">This document defines a narrow server-to-server protocol by which an
+originating Authorization Server delegates authority validation to a
+Resource Authorization Server (Resource AS) at the moment the
+originating AS lacks the Resource AS's action ontology. The Resource
+AS examines a minimized requested authority together with an
+audience-filtered Mission projection and returns one of three
+classification outcomes: in-bounds, out-of-bounds, or out-of-bounds
+but eligible for governed expansion. The protocol composes with the
+Mission Framework and with Mission Expansion. Scope is intentionally
+narrow: this document defines the AS-to-Resource-AS handoff at
+issuance or expansion time only. Runtime per-action authority
+evaluation between a Policy Enforcement Point and a Policy Decision
+Point is defined by the Mission-Bound Runtime Enforcement Profile and
+is out of scope here.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-delegated-authority-validation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-delegated-authority-validation.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-mission-delegated-authority-validation/">https://datatracker.ietf.org/doc/draft-mcguinness-mission-delegated-authority-validation/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 14 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
+                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-trigger-condition" class="internal xref">Trigger condition</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.2">
+                <p id="section-toc.1-1.1.2.2.1" class="keepWithNext"><a href="#section-1.2" class="auto internal xref">1.2</a>.  <a href="#name-relationship-to-other-missi" class="internal xref">Relationship to other Mission-Bound specs</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.3">
+                <p id="section-toc.1-1.1.2.3.1" class="keepWithNext"><a href="#section-1.3" class="auto internal xref">1.3</a>.  <a href="#name-scope-and-non-scope" class="internal xref">Scope and non-scope</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-definitions" class="internal xref">Conventions and Definitions</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-the-as-to-resource-as-valid" class="internal xref">The AS-to-Resource-AS Validation Request and Response</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
+                <p id="section-toc.1-1.3.2.1.1"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-transport" class="internal xref">Transport</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2">
+                <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-validation-request" class="internal xref">Validation request</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2.2.1">
+                    <p id="section-toc.1-1.3.2.2.2.1.1"><a href="#section-3.2.1" class="auto internal xref">3.2.1</a>.  <a href="#name-audience-filtered-mission-p" class="internal xref">Audience-filtered Mission projection</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2.2.2">
+                    <p id="section-toc.1-1.3.2.2.2.2.1"><a href="#section-3.2.2" class="auto internal xref">3.2.2</a>.  <a href="#name-validation-request-json-sch" class="internal xref">Validation request JSON Schema</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-validation-response" class="internal xref">Validation response</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3.2.1">
+                    <p id="section-toc.1-1.3.2.3.2.1.1"><a href="#section-3.3.1" class="auto internal xref">3.3.1</a>.  <a href="#name-validation-response-json-sc" class="internal xref">Validation response JSON Schema</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.4">
+                <p id="section-toc.1-1.3.2.4.1"><a href="#section-3.4" class="auto internal xref">3.4</a>.  <a href="#name-resource-as-responsibilitie" class="internal xref">Resource AS responsibilities</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.5">
+                <p id="section-toc.1-1.3.2.5.1"><a href="#section-3.5" class="auto internal xref">3.5</a>.  <a href="#name-single-example" class="internal xref">Single example</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-disclosure-minimization" class="internal xref">Disclosure Minimization</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-classification-outcomes" class="internal xref">Classification Outcomes</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-trust-establishment" class="internal xref">Trust Establishment</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-composition-with-mission-ex" class="internal xref">Composition with Mission Expansion</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-failure-modes" class="internal xref">Failure Modes</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-resource-as-unreachable" class="internal xref">Resource AS unreachable</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-classification-timeout" class="internal xref">Classification timeout</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.3">
+                <p id="section-toc.1-1.8.2.3.1"><a href="#section-8.3" class="auto internal xref">8.3</a>.  <a href="#name-mismatched-ontology-version" class="internal xref">Mismatched ontology versions</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.4">
+                <p id="section-toc.1-1.8.2.4.1"><a href="#section-8.4" class="auto internal xref">8.4</a>.  <a href="#name-unknown-resource-or-action" class="internal xref">Unknown resource or action</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.5">
+                <p id="section-toc.1-1.8.2.5.1"><a href="#section-8.5" class="auto internal xref">8.5</a>.  <a href="#name-replay-and-binding" class="internal xref">Replay and binding</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-boundary-with-runtime-enfor" class="internal xref">Boundary with Runtime Enforcement</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-disclosure-minimization-2" class="internal xref">Disclosure minimization</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-false-positives-and-false-n" class="internal xref">False positives and false negatives</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
+                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-resource-as-compromise" class="internal xref">Resource AS compromise</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.4">
+                <p id="section-toc.1-1.10.2.4.1"><a href="#section-10.4" class="auto internal xref">10.4</a>.  <a href="#name-request-and-response-bindin" class="internal xref">Request and response binding</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.5">
+                <p id="section-toc.1-1.10.2.5.1"><a href="#section-10.5" class="auto internal xref">10.5</a>.  <a href="#name-audience-confusion" class="internal xref">Audience confusion</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.6">
+                <p id="section-toc.1-1.10.2.6.1"><a href="#section-10.6" class="auto internal xref">10.6</a>.  <a href="#name-fail-closed-default" class="internal xref">Fail-closed default</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.7">
+                <p id="section-toc.1-1.10.2.7.1"><a href="#section-10.7" class="auto internal xref">10.7</a>.  <a href="#name-expansion-ticket-handling" class="internal xref">Expansion ticket handling</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.8">
+                <p id="section-toc.1-1.10.2.8.1"><a href="#section-10.8" class="auto internal xref">10.8</a>.  <a href="#name-ontology-version-skew" class="internal xref">Ontology version skew</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-what-the-resource-as-learns" class="internal xref">What the Resource AS learns</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-no-principal-data-by-defaul" class="internal xref">No principal data by default</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.3">
+                <p id="section-toc.1-1.11.2.3.1"><a href="#section-11.3" class="auto internal xref">11.3</a>.  <a href="#name-audience-binding-limits-cor" class="internal xref">Audience binding limits correlation</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
+                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-media-types" class="internal xref">Media Types</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.2">
+                <p id="section-toc.1-1.12.2.2.1"><a href="#section-12.2" class="auto internal xref">12.2</a>.  <a href="#name-mission-authority-validatio" class="internal xref">Mission Authority Validation Classification Result Codes</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.3">
+                <p id="section-toc.1-1.12.2.3.1"><a href="#section-12.3" class="auto internal xref">12.3</a>.  <a href="#name-as-metadata-member" class="internal xref">AS metadata member</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref"></a><a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
+                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref"></a><a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2">
+                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref"></a><a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">The Mission Framework <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>
+defines the Mission record, the typed Authority Set, integrity
+anchors, and the Mission Status interface. The Mission-Bound OAuth
+Profile <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span> binds those
+elements to OAuth, including the <code>mission_resource_access</code> Rich
+Authorization Request <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> type. Mission Expansion
+<span>[<a href="#I-D.draft-mcguinness-mission-expansion" class="cite xref">I-D.draft-mcguinness-mission-expansion</a>]</span> defines how an
+out-of-bounds request becomes a governed authority addition.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">In some deployments the originating Authorization Server that holds
+the Mission record does not own the action ontology of the Resource
+Server it is issuing credentials for. The Resource Server is fronted
+by a Resource AS <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>, and only the Resource AS knows whether
+a proposed <code>mission_resource_access</code> entry, action set, or constraint
+set is meaningful against its local resource and policy model. Token
+Exchange topologies, cross-vendor tool catalogs, and open-world
+MCP-style integrations all produce this gap.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">This document defines the narrow wire protocol the originating AS
+uses to ask the Resource AS to classify a proposed authority entry
+against the Resource AS's local ontology at issuance time or at
+Mission Expansion time. The protocol returns one of three outcomes:
+<code>in_bounds</code>, <code>out_of_bounds</code>, or <code>out_of_bounds_eligible</code>. The
+originating AS uses the result to issue, refuse, or refuse with an
+expansion eligibility signal carried back to its client per
+<span>[<a href="#I-D.draft-mcguinness-mission-expansion" class="cite xref">I-D.draft-mcguinness-mission-expansion</a>]</span>.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<div id="trigger-condition">
+<section id="section-1.1">
+        <h3 id="name-trigger-condition">
+<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-trigger-condition" class="section-name selfRef">Trigger condition</a>
+        </h3>
+<p id="section-1.1-1">This protocol fires only when the originating AS lacks the Resource
+AS's action ontology and cannot classify the proposed authority on
+its own. An originating AS that holds enough of the Resource AS's
+ontology to classify the proposed authority <span class="bcp14">MUST</span> classify locally
+and <span class="bcp14">MUST NOT</span> delegate. Delegation is the fallback path for ontology
+gaps, not a general validation surface.<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="relationship-to-other-mission-bound-specs">
+<section id="section-1.2">
+        <h3 id="name-relationship-to-other-missi">
+<a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-relationship-to-other-missi" class="section-name selfRef">Relationship to other Mission-Bound specs</a>
+        </h3>
+<p id="section-1.2-1">This document does not define the Mission Expansion workflow; that
+lives in <span>[<a href="#I-D.draft-mcguinness-mission-expansion" class="cite xref">I-D.draft-mcguinness-mission-expansion</a>]</span>. This document
+signals expansion eligibility using the field names that Mission
+Expansion already defines (<code>access_request_uri</code>, <code>ticket</code>,
+<code>requested_authority</code>).<a href="#section-1.2-1" class="pilcrow">¶</a></p>
+<p id="section-1.2-2">This document and the Mission-Bound Runtime Enforcement Profile
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span> both classify
+requests against Mission authority but fire at different times
+between different actors. The boundary is normative and is restated
+in <a href="#boundary-with-runtime-enforcement" class="auto internal xref">Section 9</a>.<a href="#section-1.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="scope-and-non-scope">
+<section id="section-1.3">
+        <h3 id="name-scope-and-non-scope">
+<a href="#section-1.3" class="section-number selfRef">1.3. </a><a href="#name-scope-and-non-scope" class="section-name selfRef">Scope and non-scope</a>
+        </h3>
+<p id="section-1.3-1">This document defines: the AS-to-Resource-AS validation request and
+response messages; disclosure minimization rules for the request;
+the classification outcomes and their consequences for the
+originating AS; trust establishment; composition with Mission
+Expansion eligibility signaling; and failure modes when the Resource
+AS is unreachable, classification times out, or ontology versions
+mismatch.<a href="#section-1.3-1" class="pilcrow">¶</a></p>
+<p id="section-1.3-2">This document does NOT define: the Mission record, Mission Intent,
+or Authority Set shapes (see
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>); the OAuth wire binding
+of <code>mission_resource_access</code> (see
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>); the Mission
+Expansion workflow, replacement and branch semantics, or
+reconciliation rules (see
+<span>[<a href="#I-D.draft-mcguinness-mission-expansion" class="cite xref">I-D.draft-mcguinness-mission-expansion</a>]</span>); runtime per-action
+authority evaluation (see
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span>); disclosure of the
+full Mission Intent to a Resource AS (business purpose, unrelated
+objects, and authority for other resources are excluded by default);
+or negotiation by which a Resource AS demonstrates a policy need for
+additional Mission fields (deployment policy, out of scope).<a href="#section-1.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="conventions-and-definitions">
+<section id="section-2">
+      <h2 id="name-conventions-and-definitions">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-definitions" class="section-name selfRef">Conventions and Definitions</a>
+      </h2>
+<p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">Terms from <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> are inherited.
+Additional definitions:<a href="#section-2-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-3">
+        <dt id="section-2-3.1">
+<strong>Originating AS</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.2">
+          <p id="section-2-3.2.1">The Authorization Server that holds the Mission record and is
+issuing or expanding authority. The state authority for the Mission.<a href="#section-2-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.3">
+<strong>Resource AS</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.4">
+          <p id="section-2-3.4.1">The Authorization Server adjacent to the target Resource Server.
+Authoritative for the Resource Server's action ontology, local
+constraint semantics, and Resource policy.<a href="#section-2-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.5">
+<strong>Action ontology</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.6">
+          <p id="section-2-3.6.1">The local vocabulary, schema, and semantics by which a Resource AS
+interprets actions, resources, and constraints. The Resource AS is
+authoritative for its action ontology.<a href="#section-2-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.7">
+<strong>Audience-filtered Mission projection</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.8">
+          <p id="section-2-3.8.1">A minimal projection of the Mission record bounded to the Resource
+AS's audience, carrying Mission state and the integrity anchors
+needed to bind the classification, with all Authority Set entries
+other than those addressed to the Resource AS's audience removed.<a href="#section-2-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.9">
+<strong>Proposed authority entry</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.10">
+          <p id="section-2-3.10.1">A single typed Authority Set entry the originating AS proposes to
+issue or add. A validation request carries one or more proposed
+entries.<a href="#section-2-3.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.11">
+<strong>Classification outcome</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.12">
+          <p id="section-2-3.12.1">The Resource AS's determination for a proposed authority entry:
+<code>in_bounds</code>, <code>out_of_bounds</code>, or <code>out_of_bounds_eligible</code>.<a href="#section-2-3.12.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="the-as-to-resource-as-validation-request-and-response">
+<section id="section-3">
+      <h2 id="name-the-as-to-resource-as-valid">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-the-as-to-resource-as-valid" class="section-name selfRef">The AS-to-Resource-AS Validation Request and Response</a>
+      </h2>
+<p id="section-3-1">This section defines the two messages exchanged between the
+originating AS and the Resource AS. The protocol fires only under
+the trigger condition stated in <a href="#introduction" class="auto internal xref">Section 1</a>: the originating AS
+lacks the Resource AS's action ontology for the proposed authority
+entries. The originating AS <span class="bcp14">MUST NOT</span> use this protocol for entries
+it can classify locally.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<div id="transport">
+<section id="section-3.1">
+        <h3 id="name-transport">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-transport" class="section-name selfRef">Transport</a>
+        </h3>
+<p id="section-3.1-1">The validation request is an HTTPS POST from the originating AS to
+the Resource AS. The validation endpoint URL is advertised by the
+Resource AS as <code>mission_authority_validation_endpoint</code> in its OAuth
+Authorization Server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+<p id="section-3.1-2">The deployment selects a mutual-authentication mechanism. Acceptable
+mechanisms include mutual TLS or signed JWT request authentication.
+The chosen mechanism <span class="bcp14">MUST</span> bind the response to the request. The
+authentication requirements are normative and are stated in
+<a href="#trust-establishment" class="auto internal xref">Section 6</a>.<a href="#section-3.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="validation-request">
+<section id="section-3.2">
+        <h3 id="name-validation-request">
+<a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-validation-request" class="section-name selfRef">Validation request</a>
+        </h3>
+<p id="section-3.2-1">The validation request is a JSON document <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> with media
+type <code>application/mission-authority-validation-request+json</code> and the
+following members:<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.2-2.1">
+            <p id="section-3.2-2.1.1"><code>originating_as</code> (string, required): the issuer URL of the
+originating AS.<a href="#section-3.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-2.2">
+            <p id="section-3.2-2.2.1"><code>mission</code> (object, required): the audience-filtered Mission
+projection per <a href="#audience-filtered-mission-projection" class="auto internal xref">Section 3.2.1</a>.<a href="#section-3.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-2.3">
+            <p id="section-3.2-2.3.1"><code>requested_authority</code> (array of object, required): one or more
+proposed authority entries to classify. Each element is a typed
+Authority Set entry per <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>.<a href="#section-3.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-2.4">
+            <p id="section-3.2-2.4.1"><code>request_id</code> (string, required): a unique, unpredictable identifier
+used to bind the response.<a href="#section-3.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-2.5">
+            <p id="section-3.2-2.5.1"><code>request_time</code> (<span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp, required).<a href="#section-3.2-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-2.6">
+            <p id="section-3.2-2.6.1"><code>ontology_version_hint</code> (string, optional): the schema version of
+the Resource AS's action ontology the originating AS believes
+applies. Used to detect skew per
+<a href="#mismatched-ontology-versions" class="auto internal xref">Section 8.3</a>.<a href="#section-3.2-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.2-3">The originating AS <span class="bcp14">MUST NOT</span> include Mission Intent fields,
+principal-model fields, or Authority Set entries beyond what
+<a href="#disclosure-minimization" class="auto internal xref">Section 4</a> permits.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
+<div id="audience-filtered-mission-projection">
+<section id="section-3.2.1">
+          <h4 id="name-audience-filtered-mission-p">
+<a href="#section-3.2.1" class="section-number selfRef">3.2.1. </a><a href="#name-audience-filtered-mission-p" class="section-name selfRef">Audience-filtered Mission projection</a>
+          </h4>
+<p id="section-3.2.1-1">The <code>mission</code> member carries: <code>id</code> or <code>ref</code> (exactly one, per
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>); <code>origin</code> (state
+authority issuer URL); <code>authority_hash</code> (integrity anchor committed
+at the approval event); <code>policy_version</code> (the derivation
+<code>policy_version</code> recorded on the Mission record); <code>state</code> (lifecycle
+state, <span class="bcp14">MUST</span> be <code>active</code> for any request sent through this protocol);
+<code>audience</code> (the Resource AS audience identifier the projection is
+bounded to); and <code>expires_at</code> (the Mission's <code>mission_expiry</code>
+ceiling).<a href="#section-3.2.1-1" class="pilcrow">¶</a></p>
+<p id="section-3.2.1-2">The Resource AS <span class="bcp14">MAY</span> verify the Mission projection by an out-of-band
+Mission Status query against the <code>origin</code> state authority per
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>; it is not required to
+take the projection on its face.<a href="#section-3.2.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="validation-request-schema">
+<section id="section-3.2.2">
+          <h4 id="name-validation-request-json-sch">
+<a href="#section-3.2.2" class="section-number selfRef">3.2.2. </a><a href="#name-validation-request-json-sch" class="section-name selfRef">Validation request JSON Schema</a>
+          </h4>
+<p id="section-3.2.2-1">The <code>requested_authority</code> entries are full Authority Set entries per
+the Framework (<code>urn:mbo:schema:authority-set-entry:1</code>). The request
+validates against:<a href="#section-3.2.2-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-3.2.2-2">
+<pre>
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mbo:schema:mission-authority-validation-request:1",
+  "title": "Mission Authority Validation Request",
+  "type": "object",
+  "required": [
+    "originating_as", "mission", "requested_authority",
+    "request_id", "request_time"
+  ],
+  "properties": {
+    "originating_as": { "type": "string", "format": "uri" },
+    "mission": {
+      "type": "object",
+      "required": [
+        "origin", "authority_hash", "policy_version", "state",
+        "audience", "expires_at"
+      ],
+      "oneOf": [
+        { "required": ["id"] },
+        { "required": ["ref"] }
+      ],
+      "properties": {
+        "id":             { "type": "string" },
+        "ref":            { "type": "string" },
+        "origin":         { "type": "string", "format": "uri" },
+        "authority_hash": { "type": "string" },
+        "policy_version": { "type": "string" },
+        "state":          { "const": "active" },
+        "audience":       { "type": "string" },
+        "expires_at": {
+          "type": "string", "format": "date-time"
+        }
+      }
+    },
+    "requested_authority": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "urn:mbo:schema:authority-set-entry:1" }
+    },
+    "request_id":   { "type": "string" },
+    "request_time": { "type": "string", "format": "date-time" },
+    "ontology_version_hint": { "type": "string" }
+  }
+}
+</pre><a href="#section-3.2.2-2" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="validation-response">
+<section id="section-3.3">
+        <h3 id="name-validation-response">
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-validation-response" class="section-name selfRef">Validation response</a>
+        </h3>
+<p id="section-3.3-1">The validation response is a JSON document <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> with media
+type <code>application/mission-authority-validation-response+json</code> and the
+following members:<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.3-2.1">
+            <p id="section-3.3-2.1.1"><code>request_id</code> (string, required): <span class="bcp14">MUST</span> match the request's
+<code>request_id</code>.<a href="#section-3.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.3-2.2">
+            <p id="section-3.3-2.2.1"><code>resource_as</code> (string, required): issuer URL of the Resource AS
+producing the classification.<a href="#section-3.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.3-2.3">
+            <p id="section-3.3-2.3.1"><code>evaluated_at</code> (<span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp, required).<a href="#section-3.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.3-2.4">
+            <p id="section-3.3-2.4.1"><code>ontology_version</code> (string, required): schema version of the
+Resource AS's action ontology used in evaluation.<a href="#section-3.3-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.3-2.5">
+            <p id="section-3.3-2.5.1"><code>classifications</code> (array of object, required): per-entry results,
+positionally corresponding to <code>requested_authority</code> in the
+request. Each element carries <code>result</code> (one of <code>in_bounds</code>,
+<code>out_of_bounds</code>, <code>out_of_bounds_eligible</code>, <code>version_mismatch</code>,
+<code>unknown_resource</code>, <code>unknown_action</code>); optional <code>reason</code>
+(machine-readable identifier); and conditional <code>expansion</code> object
+carrying the Mission Expansion eligibility-signaling fields per
+<span>[<a href="#I-D.draft-mcguinness-mission-expansion" class="cite xref">I-D.draft-mcguinness-mission-expansion</a>]</span> (<code>access_request_uri</code>,
+<code>ticket</code>, <code>requested_authority</code>) when <code>result</code> is
+<code>out_of_bounds_eligible</code>.<a href="#section-3.3-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.3-3">The originating AS <span class="bcp14">MUST</span> verify the response's <code>request_id</code>, that it
+was produced by the expected Resource AS audience, and that its
+mutual-authentication binding is valid before acting on any
+classification.<a href="#section-3.3-3" class="pilcrow">¶</a></p>
+<div id="validation-response-schema">
+<section id="section-3.3.1">
+          <h4 id="name-validation-response-json-sc">
+<a href="#section-3.3.1" class="section-number selfRef">3.3.1. </a><a href="#name-validation-response-json-sc" class="section-name selfRef">Validation response JSON Schema</a>
+          </h4>
+<p id="section-3.3.1-1">The response validates against:<a href="#section-3.3.1-1" class="pilcrow">¶</a></p>
+<div class="breakable lang-json sourcecode" id="section-3.3.1-2">
+<pre>
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mbo:schema:mission-authority-validation-response:1",
+  "title": "Mission Authority Validation Response",
+  "type": "object",
+  "required": [
+    "request_id", "resource_as", "evaluated_at",
+    "ontology_version", "classifications"
+  ],
+  "properties": {
+    "request_id":       { "type": "string" },
+    "resource_as":      { "type": "string", "format": "uri" },
+    "evaluated_at":     { "type": "string", "format": "date-time" },
+    "ontology_version": { "type": "string" },
+    "classifications": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["result"],
+        "properties": {
+          "result": {
+            "type": "string",
+            "enum": [
+              "in_bounds", "out_of_bounds",
+              "out_of_bounds_eligible", "version_mismatch",
+              "unknown_resource", "unknown_action"
+            ]
+          },
+          "reason": { "type": "string" },
+          "expansion": {
+            "type": "object",
+            "required": [
+              "access_request_uri", "ticket", "requested_authority"
+            ],
+            "properties": {
+              "access_request_uri": {
+                "type": "string", "format": "uri"
+              },
+              "ticket": { "type": "string" },
+              "requested_authority": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "urn:mbo:schema:authority-set-entry:1"
+                }
+              }
+            }
+          }
+        },
+        "if": {
+          "properties": {
+            "result": { "const": "out_of_bounds_eligible" }
+          }
+        },
+        "then": { "required": ["expansion"] }
+      }
+    }
+  }
+}
+</pre><a href="#section-3.3.1-2" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="resource-as-responsibilities">
+<section id="section-3.4">
+        <h3 id="name-resource-as-responsibilitie">
+<a href="#section-3.4" class="section-number selfRef">3.4. </a><a href="#name-resource-as-responsibilitie" class="section-name selfRef">Resource AS responsibilities</a>
+        </h3>
+<p id="section-3.4-1">The Resource AS:<a href="#section-3.4-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-3.4-2">
+<li id="section-3.4-2.1">
+            <p id="section-3.4-2.1.1"><span class="bcp14">MUST</span> examine only the minimized <code>requested_authority</code> entries and
+the audience-filtered Mission projection. The Resource AS <span class="bcp14">MUST NOT</span>
+require, and the originating AS <span class="bcp14">MUST NOT</span> send by default, Mission
+Intent fields, principal-model fields, or unrelated Authority Set
+entries.<a href="#section-3.4-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-3.4-2.2">
+            <p id="section-3.4-2.2.1"><span class="bcp14">MAY</span> consult Mission Status at the <code>origin</code> state authority to
+verify the projection's <code>state</code>, <code>authority_hash</code>, and
+<code>policy_version</code>.<a href="#section-3.4-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-3.4-2.3">
+            <p id="section-3.4-2.3.1"><span class="bcp14">MUST</span> evaluate each <code>requested_authority</code> entry against its local
+ontology under its current <code>ontology_version</code>.<a href="#section-3.4-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-3.4-2.4">
+            <p id="section-3.4-2.4.1"><span class="bcp14">MUST</span> return one classification per <code>requested_authority</code> entry in
+positional order.<a href="#section-3.4-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-3.4-2.5">
+            <p id="section-3.4-2.5.1"><span class="bcp14">MUST</span> return <code>out_of_bounds_eligible</code> only when the Resource AS's
+local policy declares the requested authority eligible for
+governed Mission Expansion per
+<span>[<a href="#I-D.draft-mcguinness-mission-expansion" class="cite xref">I-D.draft-mcguinness-mission-expansion</a>]</span>.<a href="#section-3.4-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-3.4-2.6">
+            <p id="section-3.4-2.6.1"><span class="bcp14">MUST NOT</span> issue any credentials, mint any tokens, or alter any
+Mission state in response to this protocol. The Resource AS
+classifies only.<a href="#section-3.4-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-3.4-2.7">
+            <p id="section-3.4-2.7.1"><span class="bcp14">MUST</span> return <code>version_mismatch</code> when an <code>ontology_version_hint</code>
+in the request does not match the Resource AS's current
+ontology version and the Resource AS cannot evaluate against the
+hinted version.<a href="#section-3.4-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+</section>
+</div>
+<div id="single-example">
+<section id="section-3.5">
+        <h3 id="name-single-example">
+<a href="#section-3.5" class="section-number selfRef">3.5. </a><a href="#name-single-example" class="section-name selfRef">Single example</a>
+        </h3>
+<p id="section-3.5-1">The following example shows a validation request for one
+<code>mission_resource_access</code> entry that the Resource AS classifies as
+<code>out_of_bounds_eligible</code>. The originating AS would surface the
+expansion eligibility to its client per
+<span>[<a href="#I-D.draft-mcguinness-mission-expansion" class="cite xref">I-D.draft-mcguinness-mission-expansion</a>]</span>.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
+<p id="section-3.5-2">Request:<a href="#section-3.5-2" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-3.5-3">
+<pre>
+POST /mission-authority-validation HTTP/1.1
+Host: docs-as.example.com
+Content-Type: application/mission-authority-validation-request+json
+
+{
+  "originating_as": "https://as.example.com",
+  "mission": {
+    "id": "msn_01J9Z2P8BQ4Y3F0V0K9D6Z7M1",
+    "origin": "https://as.example.com",
+    "authority_hash": "sha-256:rA3...",
+    "policy_version": "as.example.com:standard@2026-06-01",
+    "state": "active",
+    "audience": "https://docs.example.com",
+    "expires_at": "2026-06-09T18:00:00Z"
+  },
+  "requested_authority": [
+    {
+      "type": "mission_resource_access",
+      "specification_uri":
+        "https://mcguinness.github.io/mission-bound-authorization/specs/mission_resource_access-v1",
+      "schema_version": "1",
+      "authority": {
+        "resource": "https://docs.example.com",
+        "actions": ["documents.share_external"],
+        "constraints": {
+          "folder": "board-materials"
+        }
+      },
+      "narrowing_profile": "urn:mbo:narrowing:default-v1"
+    }
+  ],
+  "request_id": "req_7Q2x...",
+  "request_time": "2026-06-09T17:32:01Z",
+  "ontology_version_hint": "docs-as.example.com:ontology@2026-05-15"
+}
+</pre><a href="#section-3.5-3" class="pilcrow">¶</a>
+</div>
+<p id="section-3.5-4">Response:<a href="#section-3.5-4" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-3.5-5">
+<pre>
+HTTP/1.1 200 OK
+Content-Type: application/mission-authority-validation-response+json
+
+{
+  "request_id": "req_7Q2x...",
+  "resource_as": "https://docs-as.example.com",
+  "evaluated_at": "2026-06-09T17:32:01Z",
+  "ontology_version": "docs-as.example.com:ontology@2026-05-15",
+  "classifications": [
+    {
+      "result": "out_of_bounds_eligible",
+      "reason": "external_sharing_requires_expansion",
+      "expansion": {
+        "access_request_uri":
+          "https://docs-as.example.com/expansion-request",
+        "ticket": "exp_tkt_K8m...",
+        "requested_authority": [
+          {
+            "type": "mission_resource_access",
+            "schema_digest": "sha-256:rA3kQ9xN7vM2tY8pB1sF6wL0dH5gJ4",
+            "schema_version": "1",
+            "authority": {
+              "resource": "https://docs.example.com",
+              "actions": ["documents.share_external"]
+            },
+            "narrowing_profile": "urn:mbo:narrowing:default-v1"
+          }
+        ]
+      }
+    }
+  ]
+}
+</pre><a href="#section-3.5-5" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="disclosure-minimization">
+<section id="section-4">
+      <h2 id="name-disclosure-minimization">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-disclosure-minimization" class="section-name selfRef">Disclosure Minimization</a>
+      </h2>
+<p id="section-4-1">The validation request is bounded to the smallest set of fields the
+Resource AS needs to classify against its local ontology. This
+section enumerates that bound normatively.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2">The originating AS <span class="bcp14">MUST</span> send: the audience-filtered Mission
+projection per <a href="#audience-filtered-mission-projection" class="auto internal xref">Section 3.2.1</a>, bounded to
+the Resource AS's audience; the proposed <code>requested_authority</code>
+entries that target the Resource AS's audience; and the
+<code>request_id</code>, <code>request_time</code>, and <code>originating_as</code> identifier.<a href="#section-4-2" class="pilcrow">¶</a></p>
+<p id="section-4-3">The originating AS <span class="bcp14">MUST NOT</span> send by default:<a href="#section-4-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4-4.1">
+          <p id="section-4-4.1.1">Mission Intent <code>goal</code>, <code>purpose</code>, <code>context</code>, <code>success_criteria</code>,
+or any descriptive narrative.<a href="#section-4-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-4.2">
+          <p id="section-4-4.2.1">Mission Intent <code>objects</code> entries unrelated to the Resource AS's
+audience.<a href="#section-4-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-4.3">
+          <p id="section-4-4.3.1">Authority Set entries for resources other than the Resource AS's
+audience.<a href="#section-4-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-4.4">
+          <p id="section-4-4.4.1">Principal-model fields. The standard request does not carry
+<code>subject</code>, <code>approving_principal</code>, or <code>requesting_client</code>
+identifiers.<a href="#section-4-4.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-4.5">
+          <p id="section-4-4.5.1"><code>proposal_hash</code> or <code>consent_disclosure_hash</code> integrity anchors.
+The <code>authority_hash</code> is the only anchor the Resource AS needs to
+bind the classification to the Mission's authority commitment.<a href="#section-4-4.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-4.6">
+          <p id="section-4-4.6.1">Identifiers of unrelated Missions, other tenants, or other
+Resource ASes.<a href="#section-4-4.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-4-5">A Resource AS <span class="bcp14">MAY</span> require additional Mission fields only when its
+local policy declares a registered need. The mechanism by which a
+Resource AS demonstrates such a need, and by which the originating
+AS authorizes the additional disclosure, is out of scope of this
+document and is governed by deployment policy. In the absence of a
+registered need, the originating AS <span class="bcp14">MUST NOT</span> enlarge the disclosure.<a href="#section-4-5" class="pilcrow">¶</a></p>
+<p id="section-4-6">The Mission projection's <code>audience</code> member binds the projection to
+the Resource AS. The originating AS <span class="bcp14">MUST</span> set <code>audience</code> to the
+Resource AS's audience identifier and <span class="bcp14">MUST NOT</span> send the same
+projection bytes to a different Resource AS. A Resource AS <span class="bcp14">MUST</span>
+refuse a projection whose <code>audience</code> does not match its own.<a href="#section-4-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="classification-outcomes">
+<section id="section-5">
+      <h2 id="name-classification-outcomes">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-classification-outcomes" class="section-name selfRef">Classification Outcomes</a>
+      </h2>
+<p id="section-5-1">The Resource AS returns one classification per <code>requested_authority</code>
+entry. The outcomes and their consequences for the originating AS
+are normative.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2"><strong><code>in_bounds</code></strong>: the proposed authority is meaningful under the
+Resource AS's ontology and acceptable for the projected Mission.
+The originating AS <span class="bcp14">MAY</span> issue or expand authority for this entry,
+subject to its own derivation policy and the Framework's narrowing
+rules.<a href="#section-5-2" class="pilcrow">¶</a></p>
+<p id="section-5-3"><strong><code>out_of_bounds</code></strong>: the proposed authority is meaningful but not
+acceptable. The Resource AS declares no expansion eligibility. The
+originating AS <span class="bcp14">MUST NOT</span> issue or expand authority for this entry
+and surfaces the refusal to its client per the substrate profile
+in use.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-4"><strong><code>out_of_bounds_eligible</code></strong>: the proposed authority is meaningful,
+not within current bounds, but eligible for governed Mission
+Expansion per <span>[<a href="#I-D.draft-mcguinness-mission-expansion" class="cite xref">I-D.draft-mcguinness-mission-expansion</a>]</span>. The
+response's <code>expansion</code> object carries the eligibility-signaling
+fields. The originating AS <span class="bcp14">MUST NOT</span> issue or expand authority on
+this classification alone; it surfaces the eligibility signal to
+its client per the Mission Expansion substrate binding. The client
+follows the Mission Expansion workflow to obtain a successor
+Mission, after which a fresh validation request reflects the
+post-expansion state.<a href="#section-5-4" class="pilcrow">¶</a></p>
+<p id="section-5-5"><code>version_mismatch</code>, <code>unknown_resource</code>, and <code>unknown_action</code> are
+classification failures rather than authority decisions; they are
+addressed in <a href="#failure-modes" class="auto internal xref">Section 8</a>.<a href="#section-5-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="trust-establishment">
+<section id="section-6">
+      <h2 id="name-trust-establishment">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-trust-establishment" class="section-name selfRef">Trust Establishment</a>
+      </h2>
+<p id="section-6-1">Trust between the originating AS and the Resource AS is two-way and
+asymmetric.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">The originating AS trusts the Resource AS's classification because
+the Resource AS owns the action ontology of its Resource Server and
+is authoritative for what its actions, constraints, and Resource
+policy mean. No other party is better positioned to classify. The
+originating AS <span class="bcp14">MUST</span> authenticate the Resource AS's response and <span class="bcp14">MUST</span>
+verify it was produced by the expected Resource AS audience.<a href="#section-6-2" class="pilcrow">¶</a></p>
+<p id="section-6-3">The Resource AS trusts the originating AS's Mission projection
+because the originating AS is the state authority and is
+authoritative for the Mission record, the <code>authority_hash</code>, the
+lifecycle state, and the derivation <code>policy_version</code>. The Resource
+AS <span class="bcp14">MUST</span> authenticate the originating AS and <span class="bcp14">MAY</span> independently verify
+the projection against the state authority's Mission Status
+interface per <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> before
+classifying.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-4">The validation request and response <span class="bcp14">MUST</span> be exchanged over a
+mutually authenticated channel. The chosen mechanism <span class="bcp14">MUST</span> bind the
+response to the request such that the originating AS can verify that
+the response is the Resource AS's response to this specific request.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-5">The Resource AS is NOT delegated to mint Mission-bound credentials.
+It classifies a proposed authority entry; it does not issue or
+expand authority. Credential issuance and Mission Expansion remain
+with the originating AS or the appropriate state authority per the
+Framework's role definitions.<a href="#section-6-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="composition-with-mission-expansion">
+<section id="section-7">
+      <h2 id="name-composition-with-mission-ex">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-composition-with-mission-ex" class="section-name selfRef">Composition with Mission Expansion</a>
+      </h2>
+<p id="section-7-1">The <code>out_of_bounds_eligible</code> classification outcome composes
+directly with the Mission Expansion eligibility contract defined in
+<span>[<a href="#I-D.draft-mcguinness-mission-expansion" class="cite xref">I-D.draft-mcguinness-mission-expansion</a>]</span>.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2">When the Resource AS returns <code>out_of_bounds_eligible</code>, the response's
+<code>expansion</code> object carries the same eligibility-signaling members
+that Mission Expansion defines for substrate denial:
+<code>access_request_uri</code> (the URL at which the client submits an
+AuthZEN Access Request), <code>ticket</code> (an opaque, single-use,
+time-limited bearer token bound to this eligibility signal), and
+<code>requested_authority</code> (the proposed authority entry that prompted
+the eligibility classification). This document does not redefine
+these fields; it uses the field names and semantics defined by
+<span>[<a href="#I-D.draft-mcguinness-mission-expansion" class="cite xref">I-D.draft-mcguinness-mission-expansion</a>]</span>.<a href="#section-7-2" class="pilcrow">¶</a></p>
+<p id="section-7-3">The originating AS surfaces the eligibility signal to its client per
+the substrate profile in use. For OAuth, this is the binding defined
+in <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>. The originating AS
+<span class="bcp14">MUST NOT</span> alter the <code>ticket</code>, <span class="bcp14">MUST NOT</span> extend its validity, and <span class="bcp14">MUST NOT</span> bind it to a different audience.<a href="#section-7-3" class="pilcrow">¶</a></p>
+<p id="section-7-4">After Mission Expansion produces a successor Mission per
+<span>[<a href="#I-D.draft-mcguinness-mission-expansion" class="cite xref">I-D.draft-mcguinness-mission-expansion</a>]</span>, the originating AS <span class="bcp14">MAY</span>
+issue authority that was previously classified
+<code>out_of_bounds_eligible</code> only after a fresh delegated validation
+request against the successor Mission's projection returns
+<code>in_bounds</code>. The originating AS <span class="bcp14">MUST NOT</span> carry forward a prior
+<code>out_of_bounds_eligible</code> classification across a Mission Expansion
+event.<a href="#section-7-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="failure-modes">
+<section id="section-8">
+      <h2 id="name-failure-modes">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-failure-modes" class="section-name selfRef">Failure Modes</a>
+      </h2>
+<p id="section-8-1">The originating AS <span class="bcp14">MUST</span> fail closed when delegated validation cannot
+complete. Failing closed means refusing issuance or expansion for
+the proposed authority entries. The originating AS <span class="bcp14">MUST NOT</span>
+default-permit on any failure mode in this section.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<div id="resource-as-unreachable">
+<section id="section-8.1">
+        <h3 id="name-resource-as-unreachable">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-resource-as-unreachable" class="section-name selfRef">Resource AS unreachable</a>
+        </h3>
+<p id="section-8.1-1">When the originating AS cannot reach the Resource AS's validation
+endpoint within the deployment's bounded request timeout, the
+originating AS <span class="bcp14">MUST</span> refuse the affected <code>requested_authority</code>
+entries. It <span class="bcp14">MAY</span> surface a transient-failure indication to its
+client. It <span class="bcp14">MUST NOT</span> cache prior classifications across an
+unreachable interval beyond the cache validity declared by the
+Resource AS's response.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="classification-timeout">
+<section id="section-8.2">
+        <h3 id="name-classification-timeout">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-classification-timeout" class="section-name selfRef">Classification timeout</a>
+        </h3>
+<p id="section-8.2-1">When the originating AS reaches the Resource AS but does not receive
+a response within the deployment's bounded classification timeout,
+the originating AS <span class="bcp14">MUST</span> refuse the affected entries and <span class="bcp14">SHOULD</span> log
+the timeout. The Resource AS <span class="bcp14">SHOULD</span> advertise its expected maximum
+response time in its metadata so the originating AS can set a
+compatible timeout.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mismatched-ontology-versions">
+<section id="section-8.3">
+        <h3 id="name-mismatched-ontology-version">
+<a href="#section-8.3" class="section-number selfRef">8.3. </a><a href="#name-mismatched-ontology-version" class="section-name selfRef">Mismatched ontology versions</a>
+        </h3>
+<p id="section-8.3-1">When the request's <code>ontology_version_hint</code> does not match the
+Resource AS's current ontology version and the Resource AS cannot
+evaluate against the hinted version, the Resource AS <span class="bcp14">MUST</span> return
+<code>version_mismatch</code> for each affected entry and <span class="bcp14">MUST</span> include its
+current <code>ontology_version</code> in the response. On receiving
+<code>version_mismatch</code>, the originating AS <span class="bcp14">MUST NOT</span> issue or expand
+authority for the affected entries; it <span class="bcp14">MAY</span> re-issue the request
+with the Resource AS's current ontology version after consulting
+the Resource AS's metadata.<a href="#section-8.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="unknown-resource-or-action">
+<section id="section-8.4">
+        <h3 id="name-unknown-resource-or-action">
+<a href="#section-8.4" class="section-number selfRef">8.4. </a><a href="#name-unknown-resource-or-action" class="section-name selfRef">Unknown resource or action</a>
+        </h3>
+<p id="section-8.4-1"><code>unknown_resource</code> and <code>unknown_action</code> indicate that the proposed
+authority entry references a resource or action the Resource AS does
+not recognize. The originating AS <span class="bcp14">MUST</span> refuse the affected entries.
+These results <span class="bcp14">MUST NOT</span> be conflated with <code>out_of_bounds</code>: an unknown
+identifier is an ontology classification failure, not an authority
+decision.<a href="#section-8.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="replay-and-binding">
+<section id="section-8.5">
+        <h3 id="name-replay-and-binding">
+<a href="#section-8.5" class="section-number selfRef">8.5. </a><a href="#name-replay-and-binding" class="section-name selfRef">Replay and binding</a>
+        </h3>
+<p id="section-8.5-1">The response's <code>request_id</code> binds it to a specific validation
+request. The originating AS <span class="bcp14">MUST</span> refuse to act on a response whose
+<code>request_id</code> does not match an outstanding request.<a href="#section-8.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="boundary-with-runtime-enforcement">
+<section id="section-9">
+      <h2 id="name-boundary-with-runtime-enfor">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-boundary-with-runtime-enfor" class="section-name selfRef">Boundary with Runtime Enforcement</a>
+      </h2>
+<p id="section-9-1">This document and the Mission-Bound Runtime Enforcement Profile
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span> both classify
+requests against Mission authority. The boundary is normative.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-1">
+        <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Property</th>
+            <th class="text-left" rowspan="1" colspan="1">This document</th>
+            <th class="text-left" rowspan="1" colspan="1">Runtime Enforcement Profile</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">When</td>
+            <td class="text-left" rowspan="1" colspan="1">Issuance or Mission Expansion time</td>
+            <td class="text-left" rowspan="1" colspan="1">Per consequential action at runtime</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Between</td>
+            <td class="text-left" rowspan="1" colspan="1">Originating AS and Resource AS</td>
+            <td class="text-left" rowspan="1" colspan="1">PEP and PDP</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Subject</td>
+            <td class="text-left" rowspan="1" colspan="1">A proposed Authority Set entry</td>
+            <td class="text-left" rowspan="1" colspan="1">A specific action request</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Output</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>in_bounds</code> / <code>out_of_bounds</code> / <code>out_of_bounds_eligible</code> per entry</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>permit</code> / <code>deny</code> / <code>expandable_deny</code> per request</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Trigger</td>
+            <td class="text-left" rowspan="1" colspan="1">Originating AS lacks Resource AS's ontology</td>
+            <td class="text-left" rowspan="1" colspan="1">Every action in the deployment's enforcement-scope manifest</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Side effects</td>
+            <td class="text-left" rowspan="1" colspan="1">None</td>
+            <td class="text-left" rowspan="1" colspan="1">Authoritative counters (e.g., <code>max_invocations</code>), Decision Evidence, Execution Evidence</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-9-3">A deployment <span class="bcp14">MUST NOT</span> use this protocol as a substitute for runtime
+enforcement. A <code>in_bounds</code> classification at issuance does not
+permit any specific runtime action; the Runtime Enforcement Profile
+evaluates per-action decisions on its own inputs.<a href="#section-9-3" class="pilcrow">¶</a></p>
+<p id="section-9-4">A deployment <span class="bcp14">MAY</span> use the same ontology, the same <code>mission_resource_access</code>
+schema, and the same denial vocabulary across both protocols. The
+two operations remain separate because they fire at different times
+between different actors.<a href="#section-9-4" class="pilcrow">¶</a></p>
+<p id="section-9-5">If implementer experience shows the boundary between this document
+and the Runtime Enforcement Profile to be unstable, this document
+folds into the Runtime Enforcement Profile in a future revision.<a href="#section-9-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-10">
+      <h2 id="name-security-considerations">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<div id="disclosure-minimization-1">
+<section id="section-10.1">
+        <h3 id="name-disclosure-minimization-2">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-disclosure-minimization-2" class="section-name selfRef">Disclosure minimization</a>
+        </h3>
+<p id="section-10.1-1">The Resource AS receives the smallest subset of the Mission record
+needed to classify. Enlarging the disclosure to include Mission
+Intent fields, principal-model fields, or unrelated Authority Set
+entries creates an information surface the Resource AS does not
+need and increases the impact of a Resource AS compromise. The
+originating AS <span class="bcp14">MUST</span> treat the disclosure floor in
+<a href="#disclosure-minimization" class="auto internal xref">Section 4</a> as a maximum, not a minimum. Any
+enlargement requires deployment-policy authorization that is out of
+scope of this document.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="false-positives-and-false-negatives">
+<section id="section-10.2">
+        <h3 id="name-false-positives-and-false-n">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-false-positives-and-false-n" class="section-name selfRef">False positives and false negatives</a>
+        </h3>
+<p id="section-10.2-1">A Resource AS that returns <code>in_bounds</code> for an entry the Resource
+Server will later refuse at runtime creates an authority mismatch
+detectable only at runtime. A Resource AS that returns
+<code>out_of_bounds</code> for an entry the Resource Server would have accepted
+creates an availability impact on the Mission. Both classes of
+error are local to the Resource AS's ontology and policy. The
+Resource AS is authoritative for both and is responsible for keeping
+issuance-time classification consistent with runtime enforcement.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="resource-as-compromise">
+<section id="section-10.3">
+        <h3 id="name-resource-as-compromise">
+<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-resource-as-compromise" class="section-name selfRef">Resource AS compromise</a>
+        </h3>
+<p id="section-10.3-1">A compromised Resource AS can return arbitrary classifications.
+Worst-case impact is bounded: the originating AS does not issue
+credentials beyond the Mission's Authority Set narrowing rules
+regardless of the classification (the originating AS <span class="bcp14">MUST</span> apply its
+own narrowing per <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>); a
+compromised Resource AS cannot mint credentials (issuance remains
+at the originating AS); and a compromised Resource AS can deny
+legitimate issuance (availability) or falsely declare expansion
+eligibility (governance). Deployments <span class="bcp14">SHOULD</span> audit Resource AS
+classifications against runtime denial patterns to detect
+divergence.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="request-and-response-binding">
+<section id="section-10.4">
+        <h3 id="name-request-and-response-bindin">
+<a href="#section-10.4" class="section-number selfRef">10.4. </a><a href="#name-request-and-response-bindin" class="section-name selfRef">Request and response binding</a>
+        </h3>
+<p id="section-10.4-1">A response not bound to its specific request can be replayed against
+a different request to misrepresent a classification. The
+<code>request_id</code> binding and the mutual-authentication mechanism's
+response-to-request binding mitigate this. The originating AS <span class="bcp14">MUST</span>
+refuse responses that do not bind to an outstanding request and <span class="bcp14">MUST</span>
+refuse responses whose mutual-authentication binding fails to
+verify.<a href="#section-10.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="audience-confusion">
+<section id="section-10.5">
+        <h3 id="name-audience-confusion">
+<a href="#section-10.5" class="section-number selfRef">10.5. </a><a href="#name-audience-confusion" class="section-name selfRef">Audience confusion</a>
+        </h3>
+<p id="section-10.5-1">A Mission projection sent to the wrong Resource AS audience could
+be acted on by the wrong party. The projection's <code>audience</code> member,
+the mutual-authentication channel, and the originating AS's
+audience-filtering requirements together prevent audience confusion.
+A Resource AS <span class="bcp14">MUST</span> refuse a projection whose <code>audience</code> does not
+match its own.<a href="#section-10.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="fail-closed-default">
+<section id="section-10.6">
+        <h3 id="name-fail-closed-default">
+<a href="#section-10.6" class="section-number selfRef">10.6. </a><a href="#name-fail-closed-default" class="section-name selfRef">Fail-closed default</a>
+        </h3>
+<p id="section-10.6-1">Every failure mode in <a href="#failure-modes" class="auto internal xref">Section 8</a> requires the originating AS
+to refuse issuance or expansion. A deployment that default-permits
+on classification failure produces silent privilege enlargement and
+is non-conformant.<a href="#section-10.6-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="expansion-ticket-handling">
+<section id="section-10.7">
+        <h3 id="name-expansion-ticket-handling">
+<a href="#section-10.7" class="section-number selfRef">10.7. </a><a href="#name-expansion-ticket-handling" class="section-name selfRef">Expansion ticket handling</a>
+        </h3>
+<p id="section-10.7-1">The <code>ticket</code> member of the <code>expansion</code> object is an opaque,
+single-use, time-limited bearer token. The originating AS, in
+forwarding it to its client, <span class="bcp14">MUST NOT</span> extend its validity, <span class="bcp14">MUST NOT</span>
+rebind it to a different audience, and <span class="bcp14">MUST NOT</span> log it in a form
+that survives the eligibility window. Ticket semantics are defined
+by <span>[<a href="#I-D.draft-mcguinness-mission-expansion" class="cite xref">I-D.draft-mcguinness-mission-expansion</a>]</span>.<a href="#section-10.7-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="ontology-version-skew">
+<section id="section-10.8">
+        <h3 id="name-ontology-version-skew">
+<a href="#section-10.8" class="section-number selfRef">10.8. </a><a href="#name-ontology-version-skew" class="section-name selfRef">Ontology version skew</a>
+        </h3>
+<p id="section-10.8-1">A Resource AS that updates its ontology without coordinating with
+its originating ASes can return <code>version_mismatch</code> for previously
+working requests. Deployments <span class="bcp14">SHOULD</span> coordinate ontology updates
+across consuming originating ASes. The Resource AS <span class="bcp14">MUST</span> advertise
+its current <code>ontology_version</code> in metadata so originating ASes can
+refresh their hints.<a href="#section-10.8-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-11">
+      <h2 id="name-privacy-considerations">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-11-1">This protocol is privacy-protective by construction: its central
+mechanism is disclosure minimization (<a href="#disclosure-minimization" class="auto internal xref">Section 4</a>),
+which bounds what the Resource AS learns about a Mission to the
+minimum needed to classify against its own ontology. The
+considerations below frame that mechanism from the privacy angle and
+are additional to the Framework's privacy treatment.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<div id="what-the-resource-as-learns">
+<section id="section-11.1">
+        <h3 id="name-what-the-resource-as-learns">
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-what-the-resource-as-learns" class="section-name selfRef">What the Resource AS learns</a>
+        </h3>
+<p id="section-11.1-1">A validation request necessarily reveals to the Resource AS that a
+Mission exists whose authority is being proposed against the
+Resource AS's audience, together with the specific
+<code>requested_authority</code> entries and the Mission's <code>authority_hash</code>,
+<code>policy_version</code>, lifecycle <code>state</code>, and expiry. It does NOT reveal,
+by default, the Mission's business purpose, the subject or other
+principals, the consent disclosure, or authority addressed to other
+audiences (<a href="#disclosure-minimization" class="auto internal xref">Section 4</a>). The disclosure floor in
+<a href="#disclosure-minimization" class="auto internal xref">Section 4</a> is therefore also the privacy boundary:
+the originating AS <span class="bcp14">MUST</span> treat it as a maximum, and any enlargement
+requires deployment-policy authorization out of scope here.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="no-principal-data-by-default">
+<section id="section-11.2">
+        <h3 id="name-no-principal-data-by-defaul">
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-no-principal-data-by-defaul" class="section-name selfRef">No principal data by default</a>
+        </h3>
+<p id="section-11.2-1">The standard validation request carries no <code>subject</code>,
+<code>approving_principal</code>, or <code>requesting_client</code> identifiers, and omits
+the <code>proposal_hash</code> and <code>consent_disclosure_hash</code> anchors. A Resource
+AS therefore cannot, from a conforming request, attribute the
+proposed authority to an identified user or correlate it with the
+consent record. Deployments that enlarge the disclosure to include
+principal data forfeit this property and <span class="bcp14">MUST</span> justify it under
+documented policy.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="audience-binding-limits-correlation">
+<section id="section-11.3">
+        <h3 id="name-audience-binding-limits-cor">
+<a href="#section-11.3" class="section-number selfRef">11.3. </a><a href="#name-audience-binding-limits-cor" class="section-name selfRef">Audience binding limits correlation</a>
+        </h3>
+<p id="section-11.3-1">The Mission projection's <code>audience</code> member binds each projection to a
+single Resource AS, and the originating AS <span class="bcp14">MUST NOT</span> send the same
+projection to a different Resource AS (<a href="#disclosure-minimization" class="auto internal xref">Section 4</a>).
+This prevents one Resource AS from receiving a projection scoped to
+another and limits cross-Resource-AS correlation of a Mission to what
+each audience is independently entitled to see.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-12">
+      <h2 id="name-iana-considerations">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-12-1">This document creates the following IANA registrations.<a href="#section-12-1" class="pilcrow">¶</a></p>
+<div id="media-types">
+<section id="section-12.1">
+        <h3 id="name-media-types">
+<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-media-types" class="section-name selfRef">Media Types</a>
+        </h3>
+<p id="section-12.1-1">This document registers two media types per <span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>:<a href="#section-12.1-1" class="pilcrow">¶</a></p>
+<p id="section-12.1-2"><code>application/mission-authority-validation-request+json</code>. Type
+name: application. Subtype: mission-authority-validation-request+json.
+Required parameters: none. Encoding considerations: binary; JSON
+over HTTPS. Security considerations: see Security Considerations of
+this document. Published specification: this document. Applications:
+Authorization Servers and Resource Authorization Servers
+implementing Mission-Bound Delegated Authority Validation. Change
+controller: IETF. Provisional registration: yes.<a href="#section-12.1-2" class="pilcrow">¶</a></p>
+<p id="section-12.1-3"><code>application/mission-authority-validation-response+json</code>. All fields
+as above except subtype, which is
+mission-authority-validation-response+json.<a href="#section-12.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-authority-validation-classification-result-codes">
+<section id="section-12.2">
+        <h3 id="name-mission-authority-validatio">
+<a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-mission-authority-validatio" class="section-name selfRef">Mission Authority Validation Classification Result Codes</a>
+        </h3>
+<p id="section-12.2-1">This document creates a new IANA registry, "Mission Authority
+Validation Classification Result Codes", tracking the result codes
+returned in a validation response's <code>classifications</code> array.<a href="#section-12.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12.2-2.1">
+            <p id="section-12.2-2.1.1"><strong>Registration Policy</strong>: Specification Required.<a href="#section-12.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-12.2-2.2">
+            <p id="section-12.2-2.2.1"><strong>Required fields per entry</strong>: <code>result</code>, defining specification,
+consequence for the originating AS, change controller.<a href="#section-12.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-12.2-2.3">
+            <p id="section-12.2-2.3.1"><strong>Initial entries</strong>:<a href="#section-12.2-2.3.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12.2-2.3.2.1">
+                <p id="section-12.2-2.3.2.1.1"><code>in_bounds</code>: this document. The proposed authority is meaningful
+and acceptable for the projected Mission. The originating AS <span class="bcp14">MAY</span>
+proceed.<a href="#section-12.2-2.3.2.1.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-12.2-2.3.2.2">
+                <p id="section-12.2-2.3.2.2.1"><code>out_of_bounds</code>: this document. The proposed authority is
+meaningful but not acceptable. The originating AS <span class="bcp14">MUST</span> refuse.<a href="#section-12.2-2.3.2.2.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-12.2-2.3.2.3">
+                <p id="section-12.2-2.3.2.3.1"><code>out_of_bounds_eligible</code>: this document. The proposed authority
+is meaningful, out of bounds, and eligible for governed Mission
+Expansion. The originating AS <span class="bcp14">MUST NOT</span> issue on this
+classification alone and surfaces expansion eligibility.<a href="#section-12.2-2.3.2.3.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-12.2-2.3.2.4">
+                <p id="section-12.2-2.3.2.4.1"><code>version_mismatch</code>: this document. The Resource AS's ontology
+version does not match the request. The originating AS <span class="bcp14">MUST</span>
+refuse and <span class="bcp14">MAY</span> retry.<a href="#section-12.2-2.3.2.4.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-12.2-2.3.2.5">
+                <p id="section-12.2-2.3.2.5.1"><code>unknown_resource</code>: this document. The Resource AS does not
+recognize the requested resource. The originating AS <span class="bcp14">MUST</span>
+refuse.<a href="#section-12.2-2.3.2.5.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-12.2-2.3.2.6">
+                <p id="section-12.2-2.3.2.6.1"><code>unknown_action</code>: this document. The Resource AS does not
+recognize the requested action. The originating AS <span class="bcp14">MUST</span> refuse.<a href="#section-12.2-2.3.2.6.1" class="pilcrow">¶</a></p>
+</li>
+            </ul>
+</li>
+        </ul>
+</section>
+</div>
+<div id="as-metadata-member">
+<section id="section-12.3">
+        <h3 id="name-as-metadata-member">
+<a href="#section-12.3" class="section-number selfRef">12.3. </a><a href="#name-as-metadata-member" class="section-name selfRef">AS metadata member</a>
+        </h3>
+<p id="section-12.3-1">This document registers the following member in the OAuth
+Authorization Server Metadata registry (<span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>):<a href="#section-12.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12.3-2.1">
+            <p id="section-12.3-2.1.1"><code>mission_authority_validation_endpoint</code>: URL at which a Resource
+AS accepts delegated authority validation requests per this
+document.<a href="#section-12.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-12.3-2.2">
+            <p id="section-12.3-2.2.1"><strong>Change controller</strong>: IETF<a href="#section-12.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-12.3-2.3">
+            <p id="section-12.3-2.3.1"><strong>Reference</strong>: this document<a href="#section-12.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="section-13">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="section-13-1">The author thanks the Mission-Bound Authorization implementer
+community for feedback that shaped the narrow scope of this
+specification.<a href="#section-13-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-14">
+      <h2 id="name-references">
+<a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-14.1">
+        <h3 id="name-normative-references">
+<a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-expansion">[I-D.draft-mcguinness-mission-expansion]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-framework">[I-D.draft-mcguinness-mission-framework]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC3339">[RFC3339]</dt>
+        <dd>
+<span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8259">[RFC8259]</dt>
+        <dd>
+<span class="refAuthor">Bray, T., Ed.</span>, <span class="refTitle">"The JavaScript Object Notation (JSON) Data Interchange Format"</span>, <span class="seriesInfo">STD 90</span>, <span class="seriesInfo">RFC 8259</span>, <span class="seriesInfo">DOI 10.17487/RFC8259</span>, <time datetime="2017-12" class="refDate">December 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8259">https://www.rfc-editor.org/rfc/rfc8259</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8414">[RFC8414]</dt>
+      <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8414">https://www.rfc-editor.org/rfc/rfc8414</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-14.2">
+        <h3 id="name-informative-references">
+<a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-oauth-profile">[I-D.draft-mcguinness-mission-oauth-profile]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-runtime-profile">[I-D.draft-mcguinness-mission-runtime-profile]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6838">[RFC6838]</dt>
+        <dd>
+<span class="refAuthor">Freed, N.</span>, <span class="refAuthor">Klensin, J.</span>, and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"Media Type Specifications and Registration Procedures"</span>, <span class="seriesInfo">BCP 13</span>, <span class="seriesInfo">RFC 6838</span>, <span class="seriesInfo">DOI 10.17487/RFC6838</span>, <time datetime="2013-01" class="refDate">January 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6838">https://www.rfc-editor.org/rfc/rfc6838</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8693">[RFC8693]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8693">https://www.rfc-editor.org/rfc/rfc8693</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9396">[RFC9396]</dt>
+      <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-A">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>

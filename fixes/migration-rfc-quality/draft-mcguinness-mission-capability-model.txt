@@ -1,0 +1,1156 @@
+
+
+
+
+Network Working Group                                      K. McGuinness
+Internet-Draft                                               Independent
+Intended status: Informational                              12 June 2026
+Expires: 14 December 2026
+
+
+              Mission-Bound Authorization Capability Model
+            draft-mcguinness-mission-capability-model-latest
+
+Abstract
+
+   This document defines a substrate-neutral capability and adoption
+   model for Mission-Bound Authorization.  Capability is reported as a
+   coordinate on three axes: the Capability Ladder (Levels 0 through 5),
+   Resource Server Tiers (RS-A through RS-D), and Authorization Domain
+   Tiers (AD-1 through AD-3).  The document names three adoption claims
+   (Mission-Bound Issuance, Mission-Bound Runtime Enforcement, and
+   Mission-Bound Cross-Domain Projection) that map onto the coordinate,
+   and describes how OAuth-only, AAuth-only, and cross-substrate
+   deployments report against the coordinate.  This document is
+   Informational: it defines a descriptive vocabulary for deployment
+   maturity, not a protocol-actionable advertisement.  Conformance is
+   claimed against substrate or runtime profile specifications; the
+   coordinate here is a reporting vocabulary used in documentation,
+   migration roadmaps, and positioning.
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://mcguinness.github.io/mission-bound-authorization/draft-
+   mcguinness-mission-capability-model.html.  Status information for
+   this document may be found at https://datatracker.ietf.org/doc/draft-
+   mcguinness-mission-capability-model/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/mcguinness/mission-bound-authorization.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 14 December 2026.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+   2.  Conventions and Definitions
+   3.  Three Adoption Claims
+     3.1.  Mission-Bound Issuance
+     3.2.  Mission-Bound Runtime Enforcement
+     3.3.  Mission-Bound Cross-Domain Projection
+   4.  The Three Axes
+     4.1.  Capability Ladder
+     4.2.  Resource Server Tiers
+     4.3.  Authorization Domain Tiers
+   5.  Capability Ladder
+     5.1.  Level 0: Substrate-only
+     5.2.  Level 1: Mission-bound issuance
+     5.3.  Level 2: Mission-aware projection
+     5.4.  Level 3: Mission-aware Resource Server
+     5.5.  Level 4: Full Runtime Enforcement
+     5.6.  Level 5: Verifiable governance
+   6.  Resource Server Tiers
+     6.1.  RS-A: Token-only
+     6.2.  RS-B: Mission-bound credentials
+     6.3.  RS-C: Authority-aware
+     6.4.  RS-D: PDP-evaluated
+     6.5.  Ladder requirements at each level
+   7.  Authorization Domain Tiers
+     7.1.  AD-1: Mission-bound issuance
+     7.2.  AD-2: Mission-aware projection
+     7.3.  AD-3: Authority-aware projection plus authenticated Mission
+           Status
+   8.  The Coordinate, Not the Score
+     8.1.  Mixed-tier handling
+     8.2.  Scope statements
+   9.  Cross-Substrate Mapping
+     9.1.  OAuth-only
+     9.2.  AAuth-only
+     9.3.  Cross-substrate under MAS
+   10. Using the Vocabulary
+   11. Reading Paths by Capability Goal
+   12. Why Informational
+   13. IANA Considerations
+     13.1.  Capability Ladder Levels (vocabulary)
+     13.2.  Resource Server Tiers (vocabulary)
+     13.3.  Authorization Domain Tiers (vocabulary)
+   14. Security Considerations
+   15. Privacy Considerations
+   Acknowledgments
+   References
+     Normative References
+     Informative References
+   Author's Address
+
+1.  Introduction
+
+   The Mission-Bound Authorization architecture is composed of a
+   framework specification and several profile specifications.  A
+   deployment that implements some subset of these profiles delivers
+   some subset of the architecture's governance and enforcement
+   capabilities.  Different deployments will sit at different points of
+   maturity, in different substrates, and with different Resource Server
+   behavior, for reasons that are appropriate to their environment.  A
+   single conformance label cannot describe these positions without
+   either flattening real differences or implying that every deployment
+   should climb to the top of one ladder.
+
+   This document defines a capability and adoption vocabulary for
+   Mission-Bound Authorization.  The vocabulary treats capability as a
+   coordinate on three independent axes:
+
+   *  The *Capability Ladder* (Levels 0 through 5) describes end-to-end
+      maturity of Mission governance and enforcement across the
+      deployment.
+
+   *  *Resource Server Tiers* (RS-A through RS-D) describe what an
+      individual Resource Server does with a Mission-bound credential at
+      request time.
+
+   *  *Authorization Domain Tiers* (AD-1 through AD-3) describe what an
+      authorization domain (an OAuth Authorization Server, an AAuth
+      Person Server, or a Mission Authority Server) delivers to its
+      clients, downstream domains, and Resource Servers.
+
+   A deployment reports a coordinate composed of one value from each
+   axis, optionally per Resource Server and per authorization domain,
+   together with the scope of the claim and the substrate profile
+   versions it implements.  The coordinate preserves detail that one
+   score would hide and prevents contradictory claims such as a Level 4
+   deployment whose consequential actions all pass through RS-A Resource
+   Servers.
+
+   Three named adoption claims sit above the coordinate as headline
+   signals: Mission-Bound Issuance, Mission-Bound Runtime Enforcement,
+   and Mission-Bound Cross-Domain Projection.  Each maps to a coordinate
+   range on the three axes.  They are convenient labels for sentences in
+   release notes and case studies; they are not independent
+   interoperability or certification claims.
+
+   This document is Informational.  Conformance is claimed against the
+   testable wire requirements of a substrate profile or the Runtime
+   Enforcement Profile.  The Capability Ladder, the Resource Server
+   Tiers, and the Authorization Domain Tiers are reporting tools.  An
+   implementation describes its position on the coordinate; it does not
+   "conform" to a level or tier as if these were independent wire
+   contracts.  This document has no IANA actions; the tiers and levels
+   are vocabulary, not protocol identifiers.
+
+2.  Conventions and Definitions
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   The following terms are used as defined in
+   [I-D.draft-mcguinness-mission-framework]:
+
+   *  Mission, Mission Proposal, Mission Intent, Authority Set, Mission-
+      bound credential, state authority, integrity anchors, Mission
+      Status.
+
+   The following terms are used as defined in
+   [I-D.draft-mcguinness-mission-runtime-profile]:
+
+   *  Policy Decision Point (PDP), Policy Enforcement Point (PEP),
+      Decision Evidence Object, Execution Evidence Object, enforcement-
+      scope manifest.
+
+   The following terms are used as defined in [RFC6749] and [RFC9728]:
+
+   *  Authorization Server (AS), Resource Server (RS), Protected
+      Resource Metadata (PRM).
+
+   This document defines no new wire surface.  It introduces named
+   identifiers for capability reporting and the closed enumerations that
+   hold them.
+
+3.  Three Adoption Claims
+
+   Three named adoption claims serve as the headline signal that a
+   deployment, vendor, or working group can rally around when describing
+   itself in a sentence.  Each claim has a clear yes-or-no answer at
+   audit time and maps directly to coordinates on the three axes defined
+   later.
+
+3.1.  Mission-Bound Issuance
+
+   The state authority records an Approved Mission with integrity
+   anchors, issues Mission-bound credentials, and gates credential
+   derivation (refresh, exchange, substrate-native re-derivation) on
+   Mission state.  Resource Servers MAY remain unchanged.  The
+   deployment gains revocation, audit binding on the Mission identifier,
+   and a user-visible Mission inventory without changing Resource Server
+   code.
+
+   This claim maps to:
+
+   *  Capability Ladder Level 1.
+
+   *  Resource Server Tier A (RS-A) for in-scope Resource Servers.
+
+   *  Authorization Domain Tier 1 (AD-1) at the state authority.
+
+   Mission-Bound Issuance is the smallest deployable Mission-Bound
+   Authorization claim.  It is appropriate for deployments that want the
+   Mission-layer governance benefits (one user approval driving
+   revocable, auditable credential derivation) without buying into
+   Resource Server changes or runtime enforcement on day one.
+
+3.2.  Mission-Bound Runtime Enforcement
+
+   Within a deployment-named enforcement scope, every consequential
+   action is evaluated by a Policy Decision Point against the Mission's
+   versioned policy view, the audience-relevant Authority Set
+   projection, authenticated actor context, and current Resource policy,
+   producing a Decision Evidence Object and Execution Evidence Object
+   per consequential decision.
+
+   This claim maps to:
+
+   *  Capability Ladder Level 4.
+
+   *  Resource Server Tier D (RS-D) for every consequential Resource
+      Server and local-action enforcement point in the named enforcement
+      scope.
+
+   *  Authorization Domain Tier 3 (AD-3) at the state authority.
+
+   *  The Runtime Enforcement Profile Core
+      [I-D.draft-mcguinness-mission-runtime-profile].
+
+   The scope is explicit and bounded.  A Mission-Bound Runtime
+   Enforcement claim is valid only for the action classes, Resource
+   Servers, and execution boundaries listed in the deployment's
+   enforcement-scope manifest.  Action paths the deployment cannot stop
+   (debug shells, unsanctioned egress routes, direct database connectors
+   outside an RS-D Resource Server, agent-side tool invocations not
+   gated by an orchestrator PEP) fall outside the claim.
+
+3.3.  Mission-Bound Cross-Domain Projection
+
+   A canonical Mission record is consumed by more than one authorization
+   domain (one or more OAuth Authorization Servers, one or more AAuth
+   Person Servers, or both), each consuming domain validates the
+   projection before issuing local credentials, and revocation at the
+   canonical record demonstrably terminates derivation across every
+   consuming domain.
+
+   This claim maps to:
+
+   *  Capability Ladder Level 2 or higher.
+
+   *  The Mission Authority Server (MAS) topology
+      [I-D.draft-mcguinness-mission-authority-server] or an equivalent
+      multi-domain validation rule.
+
+   *  Authorization Domain Tier 2 (AD-2) at each consuming domain, plus
+      the projection-validation contract from each substrate's profile.
+
+   The three claims are independent in principle.  A deployment can ship
+   Mission-Bound Cross-Domain Projection without Mission-Bound Runtime
+   Enforcement, or Mission-Bound Runtime Enforcement without Mission-
+   Bound Cross-Domain Projection.  In practice they tend to climb
+   together, since each new claim adds enforcement points and
+   authorization domains that the Authority Set must remain coherent
+   across.  The detailed maturity description for any combination is the
+   coordinate on the three axes.
+
+4.  The Three Axes
+
+   Capability is not a single number.  A deployment reports a coordinate
+   on three related axes.  Three axes are useful because each answers a
+   different question:
+
+   *  The Capability Ladder describes _how much_ of the Mission-Bound
+      Authorization spine the deployment implements end to end.
+
+   *  Resource Server Tiers describe _what each Resource Server does at
+      request time_.
+
+   *  Authorization Domain Tiers describe _what each authorization
+      domain offers to its issuers and consumers_.
+
+   The coordinate preserves detail that one score would hide.  It also
+   prevents contradictory claims.  A deployment cannot, for example,
+   report Capability Ladder Level 4 if its consequential Resource
+   Servers are all RS-A, because Level 4 by definition requires RS-D for
+   the consequential Resource Servers in scope.
+
+4.1.  Capability Ladder
+
+   Mission-Bound Authorization is designed for incremental adoption.  A
+   deployment can sit at any level on the Capability Ladder and gain
+   value; higher levels add capability without invalidating lower ones.
+   The Ladder is a property of the deployment as a whole, scoped to the
+   deployment-named scope of the claim.
+
+                 +=======+===============================+
+                 | Level | Short name                    |
+                 +=======+===============================+
+                 | 0     | Substrate-only                |
+                 +-------+-------------------------------+
+                 | 1     | Mission-bound issuance        |
+                 +-------+-------------------------------+
+                 | 2     | Mission-aware projection      |
+                 +-------+-------------------------------+
+                 | 3     | Mission-aware Resource Server |
+                 +-------+-------------------------------+
+                 | 4     | Full Runtime Enforcement      |
+                 +-------+-------------------------------+
+                 | 5     | Verifiable governance         |
+                 +-------+-------------------------------+
+
+                                  Table 1
+
+   The Ladder is described in detail in Section 4.1.
+
+4.2.  Resource Server Tiers
+
+   Resource Server Tiers describe what an individual Resource Server
+   does with a Mission-bound credential at request time.  They are
+   reported per Resource Server.  A deployment-wide Ladder claim is
+   bounded by the minimum tier among consequential Resource Servers
+   included in that claim.
+
+                   +======+===========================+
+                   | Tier | Short name                |
+                   +======+===========================+
+                   | RS-A | Token-only                |
+                   +------+---------------------------+
+                   | RS-B | Mission-bound credentials |
+                   +------+---------------------------+
+                   | RS-C | Authority-aware           |
+                   +------+---------------------------+
+                   | RS-D | PDP-evaluated             |
+                   +------+---------------------------+
+
+                                 Table 2
+
+   The tiers are described in detail in Section 4.2.
+
+4.3.  Authorization Domain Tiers
+
+   Authorization Domain Tiers describe what an authorization domain (an
+   OAuth Authorization Server, an AAuth Person Server, or a Mission
+   Authority Server) delivers to its clients, downstream domains, and
+   Resource Servers.  They are reported per authorization domain.
+
+                +======+=================================+
+                | Tier | Short name                      |
+                +======+=================================+
+                | AD-1 | Mission-bound issuance          |
+                +------+---------------------------------+
+                | AD-2 | Mission-aware projection        |
+                +------+---------------------------------+
+                | AD-3 | Authority-aware projection plus |
+                |      | authenticated Mission Status    |
+                +------+---------------------------------+
+
+                                 Table 3
+
+   The tiers are described in detail in Section 4.3.
+
+5.  Capability Ladder
+
+   The Capability Ladder describes end-to-end deployment maturity.  Each
+   level corresponds to a coherent governance outcome.
+
+5.1.  Level 0: Substrate-only
+
+   The deployment runs baseline OAuth 2.0 [RFC6749], OpenID Connect, or
+   native AAuth without making a Mission-Bound Authorization governance
+   claim.  Native AAuth may carry its own native Mission construct
+   without making this document's Mission-Bound governance claim; in
+   that case it remains Level 0 in this capability model.
+
+   Level 0 is a correct destination for any deployment that does not
+   need Mission-layer governance.  Single-call user-driven web flows,
+   machine-to-machine service credentials, short-lived consumer
+   authorizations where the credential lifetime is the task lifetime,
+   and any non-agentic deployment without a cross-hop audit requirement
+   SHOULD remain at Level 0.  The Ladder measures progress _for
+   deployments that have chosen to adopt Mission-Bound governance_. It
+   does not imply that every OAuth deployment is behind or that every
+   deployment should climb.
+
+5.2.  Level 1: Mission-bound issuance
+
+   The state authority stores the governance Mission, commits approved
+   authority and integrity anchors, issues Mission-bound credentials,
+   and gates new derivation on Mission state.  Mission lifecycle
+   operations (revoke, suspend, resume, complete) are exposed.  Resource
+   Servers MAY remain at RS-A and need no changes.
+
+   Required surfaces:
+
+   *  OAuth substrate: the OAuth Profile Core
+      [I-D.draft-mcguinness-mission-oauth-profile].
+
+   *  AAuth substrate: the AAuth Composition Profile Core
+      [I-D.draft-mcguinness-mission-aauth-profile], which includes the
+      governance mapping, Authority Set commitment, hash separation, and
+      lifecycle projection over the native AAuth Mission.
+
+   What a Level 1 deployment buys on day one:
+
+   *  One user approval drives many resource-specific credentials.
+      Revocation at the state authority terminates future derivation
+      across every audience.
+
+   *  Refresh and exchange become governable.  A long-running agent
+      cannot refresh past a Mission that the user revoked.
+
+   *  Audit reconstruction across audiences becomes a Mission-binding
+      join, not log stitching by timestamp.
+
+   *  The user has a single place to see and stop in-flight Missions,
+      independent of credential expiry.
+
+   What Level 1 does not require:
+
+   *  Reading the mission claim at the Resource Server.
+
+   *  Cross-AS ID-JAG, Mission Expansion wire mechanics, Delegated
+      Authority Validation, Concurrent Expansion reconciliation, Same-
+      IdP Chain Continuation Assertions, Transaction Token Chaining,
+      Capability Source Binding, or any Runtime Enforcement Profile
+      surface.
+
+   *  The MAS topology, cross-substrate Authority Set serialization,
+      audience-filtered authority projection (AD-3), or verifiable
+      governance evidence (Level 5).
+
+   *  A Mission Status endpoint, expansion handles, or access-request
+      submission.  Clients fail-and-restart on inactive Missions at this
+      level.
+
+5.3.  Level 2: Mission-aware projection
+
+   Audience-specific credentials and assertions preserve the Mission
+   binding and remain bounded by the Mission's approved authority.  When
+   a second authorization domain is involved, that domain validates the
+   projection before issuing local credentials.
+
+   Required surfaces:
+
+   *  Same-domain audience projection is sufficient where the deployment
+      has one authorization domain.
+
+   *  Multi-AS OAuth additionally uses ID-JAG and the Multi-AS
+      validation rules from
+      [I-D.draft-mcguinness-mission-oauth-profile].
+
+   *  AAuth preserves native and governance references through resource
+      and auth-token flows per
+      [I-D.draft-mcguinness-mission-aauth-profile].
+
+   *  Cross-substrate deployments add MAS
+      [I-D.draft-mcguinness-mission-authority-server]; each substrate is
+      an authorized projection issuer.
+
+   Level 2 does not require Resource Server changes by itself.
+   Projection correctness is primarily an issuer and authorization-
+   domain property at this level.  Resource Servers remain at RS-A
+   unless the deployment also claims Level 3 or higher.
+
+5.4.  Level 3: Mission-aware Resource Server
+
+   Resource Servers validate Mission state and enforce audience-relevant
+   Mission authority against each request.
+
+   Required surfaces:
+
+   *  Level 2.
+
+   *  RS-C for every consequential Resource Server in scope.
+
+   *  AD-3 Mission Status at the state authority, or an equivalent
+      authenticated issuer-provided view of Mission state and the
+      audience-relevant Authority Set projection.
+
+   Level 3 is a strong default for production deployments that have
+   adopted Mission-Bound issuance and now want per-request enforcement
+   against approved authority, but do not need or want runtime PDP
+   evaluation.
+
+5.5.  Level 4: Full Runtime Enforcement
+
+   Every consequential action within the deployment's named enforcement
+   scope is evaluated against a versioned Mission policy view through a
+   PEP that can prevent the action, and produces a runtime evidence
+   record per consequential decision.
+
+   Required surfaces:
+
+   *  Level 3.
+
+   *  RS-D for every consequential Resource Server and local-action
+      enforcement point in scope.
+
+   *  The Runtime Enforcement Profile Core
+      [I-D.draft-mcguinness-mission-runtime-profile].
+
+   *  An explicit named enforcement scope (the enforcement-scope
+      manifest) listing the action classes, Resource Servers, and
+      execution boundaries actually mediated by a PEP.
+
+   Core surfaces required at Level 4 include reproducible policy
+   materialization, PEP placement, Capability Source Binding for
+   catalog-sourced actions, parameter binding, runtime failure handling,
+   AuthZEN evaluation, authority-expandable denial handling, the
+   Decision Evidence Object, and the Execution Evidence Object.
+
+   A Level 4 claim is valid only for the consequential action classes
+   and Resource Servers whose execution paths are actually mediated by
+   an RS-D or runtime-PEP enforcement boundary.  The deployment's Level
+   4 claim SHOULD name those action classes and resources.  Action paths
+   the deployment cannot stop fall outside the claim regardless of how
+   comprehensive the rest of the runtime story is.
+
+5.6.  Level 5: Verifiable governance
+
+   Selected governance evidence is portable and independently verifiable
+   across the claim's trust boundaries.
+
+   Required surfaces:
+
+   *  Level 4.
+
+   *  Interoperable specifications for each claimed optional capability.
+      Examples include portable Decision Receipts, Tool Binding, and
+      Attestation.
+
+   The optional module sketches in
+   [I-D.draft-mcguinness-mission-runtime-profile] are a roadmap rather
+   than sufficient by themselves for a portable Level 5 claim.  When an
+   optional module reaches sufficient implementation maturity, it is
+   expected to be specified as its own draft and to be available to
+   underwrite Level 5 claims that cite it.  Until those module
+   specifications exist, Level 5 is best understood as the named
+   capacity for cross-organizational portability rather than a
+   coordinate any deployment can claim today.
+
+6.  Resource Server Tiers
+
+   Resource Server Tiers describe what an individual Resource Server
+   does with a Mission-bound credential at request time.  They are
+   reported per Resource Server.
+
+6.1.  RS-A: Token-only
+
+   The Resource Server validates the credential (audience, expiry,
+   scope, signature, sender constraint) and ignores Mission state and
+   the mission claim.  RS-A is compatible with the AS-narrowed
+   credential bounds the issuer applies at issuance time and relies on
+   the credential issuer to enforce Mission gating at derivation.
+
+   RS-A is the credential-only floor.  Existing Resource Servers need no
+   changes to participate in a Level 1 deployment.
+
+6.2.  RS-B: Mission-bound credentials
+
+   The Resource Server reads the mission claim from the credential,
+   validates that the Mission is active (per local cache, recent event,
+   or freshness rules), and refuses requests on inactive Missions.  It
+   does not evaluate per-request authority and does not consult a PDP.
+
+   RS-B is appropriate for Resource Servers that want to refuse requests
+   on a revoked or completed Mission without taking on the work of
+   evaluating Authority Set entries.
+
+6.3.  RS-C: Authority-aware
+
+   The Resource Server validates Mission state and enforces Authority
+   Set entries (per-resource authority, action permits, constraints) for
+   the audience-relevant projection at request time.
+
+   RS-C is the Level 3 minimum for consequential Resource Servers.  It
+   delivers per-request enforcement against approved authority without
+   the PDP wiring required at Level 4.
+
+6.4.  RS-D: PDP-evaluated
+
+   The Resource Server consults a PDP for every consequential request.
+   The PDP evaluates the request against the Mission's versioned policy
+   view plus current Resource policy and produces a Decision Evidence
+   Object.  The Resource Server (or its PEP) records an Execution
+   Evidence Object per consequential action.
+
+   RS-D is the Level 4 minimum for consequential Resource Servers and
+   follows the full Runtime Enforcement contract in
+   [I-D.draft-mcguinness-mission-runtime-profile].
+
+6.5.  Ladder requirements at each level
+
+   *  Level 1: RS-A is sufficient.  The Ladder's enforcement at this
+      level is at the credential-issuance gate, not at the Resource
+      Server.
+
+   *  Level 2: RS-A is still permitted.  Projection correctness is
+      primarily an issuer and authorization-domain property.
+
+   *  Level 3: RS-C minimum for every consequential Resource Server in
+      scope.
+
+   *  Level 4: RS-D for every consequential Resource Server and local-
+      action enforcement point in scope.
+
+   *  Level 5: RS-D plus interoperable specifications for each claimed
+      verifiable-governance capability.
+
+   A deployment with mixed-tier Resource Servers (some RS-A, some RS-D)
+   is normal.  The reported coordinate SHOULD name its scope, as
+   discussed in Section 8.1.
+
+7.  Authorization Domain Tiers
+
+   Authorization Domain Tiers describe what an authorization domain (an
+   Authorization Server, a Person Server, or a Mission Authority Server)
+   delivers to its clients, downstream domains, and Resource Servers.
+   The three tiers map roughly onto the Ladder but are described from
+   the issuer's perspective rather than the deployment's.  Authorization
+   Servers and Person Servers are credential issuers, not Resource
+   Servers, so their responsibilities cannot be described only by an RS
+   tier.
+
+7.1.  AD-1: Mission-bound issuance
+
+   The authorization domain accepts a Mission Intent (or a substrate-
+   appropriate proposal), validates and stores a Mission, issues
+   Mission-bound credentials, gates derivation on Mission state, and
+   exposes a Mission inventory and lifecycle operations.
+
+   AD-1 is required for Ladder Level 1 and above.
+
+7.2.  AD-2: Mission-aware projection
+
+   The authorization domain delivers AD-1 plus the ability to issue
+   audience-specific Mission-bound credentials or assertions that
+   preserve the Mission binding.  When projection crosses an
+   authorization-domain boundary, the receiving domain validates the
+   binding before issuing local credentials.
+
+   AD-2 is required for Ladder Level 2 and above.
+
+7.3.  AD-3: Authority-aware projection plus authenticated Mission Status
+
+   The authorization domain delivers AD-2 plus an authenticated Mission
+   Status interface exposing state, integrity hashes, the audience-
+   filtered Authority Set projection, and policy_version (when Runtime
+   Enforcement is enabled), for Resource Servers and PDPs.  When the
+   state authority also issued the credential, an authenticated issuer
+   endpoint MAY combine this view with credential introspection;
+   otherwise the services remain separate.
+
+   AD-3 is required for Ladder Level 3 and above.
+
+   A deployment reports one Authorization Domain Tier per authorization
+   domain.  In a MAS topology, the MAS reports its governance tier and
+   each consuming AS or PS separately reports the projection behavior it
+   implements.  There is no separate AD-4 for Runtime Enforcement.  The
+   Runtime Enforcement Profile composes AD-3 at the state authority with
+   RS-D at the Resource Servers.
+
+8.  The Coordinate, Not the Score
+
+   A deployment's capability description is a coordinate, not a single
+   number.  Each component of the coordinate answers a different
+   question and is independently auditable.  Example coordinates:
+
+   *  *L1 / RS-A / AD-1.* The state authority issues Mission-bound
+      credentials, but Resource Servers ignore the Mission.  The
+      deployment gets the governance layer (revocation, audit,
+      inventory) without per-request enforcement.
+
+   *  *L3 / RS-C / AD-3.* Resource Servers enforce Authority Set entries
+      and Mission state.  The state authority exposes authenticated
+      Mission Status.  No PDP.  A strong default for production
+      deployments without Runtime Enforcement.
+
+   *  *L4 / RS-D / AD-3.* PDPs evaluate each consequential request.
+      Decision evidence is recorded.  Full Runtime Enforcement.
+
+   *  *L5 / RS-D / AD-3 plus interoperable optional-capability
+      specifications.* Portable cryptographic receipts, verifiable
+      capability-source bindings, attestation, or another independently
+      verifiable capability cited by name.  Suitable for cross-
+      organizational governance claims.
+
+8.1.  Mixed-tier handling
+
+   A deployment with mixed-tier Resource Servers is the common case.  An
+   organization can report Level 4 for a bounded agent platform whose
+   consequential actions all pass through RS-D, while separately
+   reporting legacy RS-A resources outside that scope.  It cannot report
+   Level 4 for the whole deployment if consequential in-scope actions
+   bypass RS-D.
+
+   When a deployment reports a coordinate with mixed-tier Resource
+   Servers, it SHOULD:
+
+   *  Name the scope of the claim, including the action classes,
+      Resource Servers, and execution boundaries covered.
+
+   *  Identify the in-scope Resource Servers and the tier each one
+      implements.
+
+   *  Identify the out-of-scope Resource Servers reachable from the same
+      issuer (if any), and state that they are not covered by the claim.
+
+   Per-Resource-Server capability advertisement at the Resource Server
+   itself is out of scope for this document.  The relevant mechanisms
+   are PRM [RFC9728] and, when available,
+   [I-D.draft-mcguinness-oauth-rfc9728bis] for OAuth-substrate Resource
+   Servers, and the substrate-specific Resource metadata for AAuth
+   Resource Servers.  The exact field names belong to the relevant
+   substrate profile rather than to this document.
+
+8.2.  Scope statements
+
+   A capability coordinate is meaningful only when accompanied by a
+   scope statement.  A scope statement names what the coordinate covers
+   and what it does not.  At minimum, a scope statement SHOULD identify:
+
+   *  The substrate or substrates in scope (OAuth, AAuth, MAS).
+
+   *  The Resource Servers in scope and the tier each implements.
+
+   *  For a Level 4 claim, the enforcement-scope manifest published by
+      the deployment per [I-D.draft-mcguinness-mission-runtime-profile].
+
+   *  The Authorization Domain Tier reported by each authorization
+      domain in scope.
+
+   *  The Mission Framework version and substrate profile versions the
+      deployment implements.
+
+   *  Known capabilities outside the claim, especially action paths the
+      deployment cannot mediate (debug shells, unsanctioned egress
+      routes, direct database connectors outside an RS-D Resource
+      Server, agent-side tool invocations not gated by an orchestrator
+      PEP).
+
+   A coordinate without a scope statement is not a complete capability
+   report.
+
+9.  Cross-Substrate Mapping
+
+   The coordinate is substrate-neutral.  The same Levels and Tiers
+   describe deployments built on OAuth alone, on AAuth alone, and on
+   cross-substrate compositions through a Mission Authority Server.  The
+   protocol obligations are not identical across substrates; each
+   substrate satisfies its own profile contract.  This section names the
+   substrate-specific mapping for each case.
+
+9.1.  OAuth-only
+
+   OAuth-only deployments map onto the Ladder through
+   [I-D.draft-mcguinness-mission-oauth-profile].  The default Mission
+   record home is the OAuth Authorization Server.
+
+   *  Level 1 corresponds to the OAuth Profile Core.
+
+   *  Level 2 adds same-domain audience projection or, for multi-AS
+      deployments, ID-JAG and the Multi-AS validation rules.
+
+   *  Level 3 adds RS-C at consequential Resource Servers and AD-3
+      Mission Status (authenticated) at the AS, typically through the
+      Mission-snapshot introspection projection.
+
+   *  Level 4 adds Runtime Enforcement Profile Core and RS-D at the
+      consequential Resource Servers.
+
+   *  Level 5 adds interoperable optional-module specifications cited by
+      name.
+
+9.2.  AAuth-only
+
+   AAuth-only deployments map onto the Ladder through
+   [I-D.draft-mcguinness-mission-aauth-profile].  The default Mission
+   record home is the AAuth Person Server.
+
+   *  Native AAuth without the AAuth Composition Profile remains Level 0
+      in this capability model even though it carries its own native
+      Mission.  The Level 0 designation reflects the absence of the
+      Mission-Bound governance mapping, Authority Set commitment, hash
+      separation, and lifecycle projection that the composition profile
+      adds.
+
+   *  Level 1 corresponds to the AAuth Composition Profile Core, which
+      adds the governance mapping over the native Mission.
+
+   *  Level 2 preserves native and governance references through
+      resource and auth-token flows.
+
+   *  Level 3 adds RS-C behavior at AAuth Resource Servers and the
+      authenticated Mission Status projection at the PS.
+
+   *  Level 4 adds Runtime Enforcement Profile Core composed with the
+      AAuth substrate.
+
+   *  Level 5 adds interoperable optional-module specifications.
+
+9.3.  Cross-substrate under MAS
+
+   Cross-substrate deployments add the MAS topology
+   [I-D.draft-mcguinness-mission-authority-server].  The canonical
+   Mission record lives at the MAS.  Each consuming substrate (one or
+   more OAuth Authorization Servers, one or more AAuth Person Servers,
+   or both) is an authorized projection issuer.
+
+   *  The MAS reports its own Authorization Domain Tier (AD-1 or higher,
+      depending on the projection and Mission Status surfaces it
+      offers).
+
+   *  Each consuming AS or PS separately reports the Authorization
+      Domain Tier it implements for projection validation, local
+      credential issuance, and (at AD-3) authenticated Mission Status
+      for downstream Resource Servers.
+
+   *  The deployment's Capability Ladder claim is bounded by the minimum
+      coordinate among the consuming substrates that are in scope for
+      the claim.
+
+   *  The Mission-Bound Cross-Domain Projection adoption claim is met
+      when the MAS canonical record is consumed by more than one
+      consuming domain and revocation at the canonical record
+      demonstrably terminates derivation across every consuming domain.
+
+   In a cross-substrate report, a single deployment-wide Level label is
+   insufficient.  The report SHOULD include the MAS tier, each consuming
+   domain's tier, and the per-substrate scope statement.
+
+10.  Using the Vocabulary
+
+   The Capability Ladder, Resource Server Tiers, and Authorization
+   Domain Tiers defined in this document are a *reporting vocabulary*,
+   not a wire contract.  Deployments use these labels in:
+
+   *  Release notes, case studies, and documentation describing what the
+      deployment delivers.
+
+   *  Migration roadmaps mapping current state to a target coordinate.
+
+   *  Audit narratives describing where governance evidence is and is
+      not enforced.
+
+   *  Vendor positioning describing comparative capability.
+
+   Protocol-level capability negotiation between consumers and state
+   authorities is performed through the substrate-specific *_supported
+   metadata members defined by each profile (e.g.,
+   mission_status_endpoint, mission_enforcement_classes_supported,
+   mission_sender_constraints_supported, authority_set_types_supported).
+   Consumers MUST make protocol decisions from those concrete feature
+   advertisements, not from the labels defined here.
+
+   This separation is deliberate.  Tiers and Levels invite scoring and
+   gaming when used as protocol signals; they are stable and useful when
+   used as descriptive vocabulary.  The substrate profiles capture every
+   protocol-actionable capability through concrete flags.  This document
+   captures the human-facing positioning vocabulary that organizes those
+   flags into recognizable maturity points.
+
+11.  Reading Paths by Capability Goal
+
+   If your deployment goal is...
+
+   *  *"Bind tokens to a Mission and revoke as one."* Target Ladder
+      Level 1 and Authorization Domain Tier 1.  Read
+      [I-D.draft-mcguinness-mission-framework] and the OAuth or AAuth
+      profile, plus this document.
+
+   *  *"Project one Mission across multiple authorization domains."*
+      Target Ladder Level 2 or higher and AD-2 at each participating
+      issuer domain.  Add
+      [I-D.draft-mcguinness-mission-authority-server] if the domains
+      need one shared canonical Mission record.
+
+   *  *"Resource Servers evaluate approved bounds at request time."*
+      Target Ladder Level 3 and RS-C.  Read the audience-relevant
+      Authority Set projection contracts from the OAuth profile, the
+      AAuth profile, and (for cross-substrate) the MAS profile.
+
+   *  *"Every consequential action evaluated through a PDP."* Target
+      Ladder Level 4 and RS-D.  Read
+      [I-D.draft-mcguinness-mission-runtime-profile] Core.
+
+   *  *"Portable third-party-verifiable governance."* Target Ladder
+      Level 5.  Add an interoperable specification for each claimed
+      Runtime Enforcement Profile optional capability, such as Decision
+      Receipt, Tool Binding, or Attestation.  The optional module
+      sketches in [I-D.draft-mcguinness-mission-runtime-profile] are not
+      sufficient alone.
+
+   Migration guidance for deployments moving across coordinates lives in
+   [I-D.draft-mcguinness-mission-migration].  Shaper guidance for
+   deployments framing Mission Intents at the human-task layer lives in
+   [I-D.draft-mcguinness-mission-shaper-profile].
+
+12.  Why Informational
+
+   This document is Informational.  The coordinate, the adoption claims,
+   and the metadata field semantics are reporting tools.  Conformance is
+   claimed against the testable wire requirements of a substrate profile
+   or the Runtime Enforcement Profile.
+
+   *  A deployment claims conformance to
+      [I-D.draft-mcguinness-mission-oauth-profile] by satisfying its
+      OAuth wire contract.
+
+   *  A deployment claims conformance to
+      [I-D.draft-mcguinness-mission-aauth-profile] by satisfying its
+      AAuth composition contract.
+
+   *  A deployment claims conformance to
+      [I-D.draft-mcguinness-mission-runtime-profile] by satisfying its
+      PDP, PEP, and evidence contracts within a named enforcement scope.
+
+   *  A deployment claims conformance to
+      [I-D.draft-mcguinness-mission-authority-server] by satisfying its
+      canonical-record, projection-issuance, and Mission Status
+      contracts.
+
+   A capability coordinate reports against this document's vocabulary.
+   A capability coordinate is not itself a conformance claim.  An
+   implementation MUST NOT claim "conformance to" this document; an
+   implementation describes its position on the coordinate.
+
+   This document has no IANA actions and defines no new wire surface.
+   The tiers and levels are vocabulary; protocol-level capability
+   advertisement is performed through the substrate-specific *_supported
+   metadata members each profile already defines.  For these reasons,
+   the Informational category is the appropriate publication track.
+
+13.  IANA Considerations
+
+   This document has no IANA actions.  The Capability Ladder Levels,
+   Resource Server Tiers, and Authorization Domain Tiers defined here
+   are a vocabulary for documentation and positioning, not a protocol-
+   actionable advertisement.  They are listed below for reference;
+   consumers MUST NOT make protocol decisions from the labels.
+
+   Protocol-level capability advertisement is performed through the
+   substrate-specific *_supported metadata members defined by each
+   profile (see Section 10).
+
+13.1.  Capability Ladder Levels (vocabulary)
+
+       +============+===============================+=============+
+       | Identifier | Short name                    | Section     |
+       +============+===============================+=============+
+       | 0          | Substrate-only                | Section 5.1 |
+       +------------+-------------------------------+-------------+
+       | 1          | Mission-bound issuance        | Section 5.2 |
+       +------------+-------------------------------+-------------+
+       | 2          | Mission-aware projection      | Section 5.3 |
+       +------------+-------------------------------+-------------+
+       | 3          | Mission-aware Resource Server | Section 5.4 |
+       +------------+-------------------------------+-------------+
+       | 4          | Full Runtime Enforcement      | Section 5.5 |
+       +------------+-------------------------------+-------------+
+       | 5          | Verifiable governance         | Section 5.6 |
+       +------------+-------------------------------+-------------+
+
+                                 Table 4
+
+13.2.  Resource Server Tiers (vocabulary)
+
+         +============+===========================+=============+
+         | Identifier | Short name                | Section     |
+         +============+===========================+=============+
+         | RS-A       | Token-only                | Section 6.1 |
+         +------------+---------------------------+-------------+
+         | RS-B       | Mission-bound credentials | Section 6.2 |
+         +------------+---------------------------+-------------+
+         | RS-C       | Authority-aware           | Section 6.3 |
+         +------------+---------------------------+-------------+
+         | RS-D       | PDP-evaluated             | Section 6.4 |
+         +------------+---------------------------+-------------+
+
+                                 Table 5
+
+13.3.  Authorization Domain Tiers (vocabulary)
+
+      +============+=================================+=============+
+      | Identifier | Short name                      | Section     |
+      +============+=================================+=============+
+      | AD-1       | Mission-bound issuance          | Section 7.1 |
+      +------------+---------------------------------+-------------+
+      | AD-2       | Mission-aware projection        | Section 7.2 |
+      +------------+---------------------------------+-------------+
+      | AD-3       | Authority-aware projection plus | Section 7.3 |
+      |            | authenticated Mission Status    |             |
+      +------------+---------------------------------+-------------+
+
+                                 Table 6
+
+14.  Security Considerations
+
+   This document defines no new wire surface and no new credentials.
+   Security properties of Mission-Bound Authorization derive from the
+   substrate profiles and the Mission Framework.  The following
+   considerations relate to the use of the capability coordinate as a
+   reporting tool.
+
+   *Coordinate is not conformance.* A capability coordinate reports
+   deployed capability against the vocabulary defined here.  It is not a
+   conformance claim and does not testify to the correctness of any
+   substrate-profile or runtime-profile implementation.  A relying party
+   SHOULD verify the underlying profile conformance claims separately
+   rather than relying on the coordinate alone.
+
+   *Scope is load-bearing.* A Level 4 claim without a published
+   enforcement-scope manifest is uninformative and potentially
+   misleading.  A relying party SHOULD treat an unscoped Level 4 or
+   Level 5 claim with skepticism.  Action paths the deployment cannot
+   mediate (debug shells, unsanctioned egress routes, direct connectors
+   outside the named scope, agent-side invocations not gated by an
+   orchestrator PEP) fall outside the claim and may invalidate its
+   operational value.
+
+   *Self-reported capability.* A deployment claim of "Capability Ladder
+   Level 4" in documentation or marketing is self-reported.  Readers
+   learn what the deployment claims to support; they do not learn that
+   any particular request or Mission was handled at that level.  The
+   Mission Framework's integrity-anchor and Mission Status contracts
+   provide the per-Mission and per-decision evidence mechanisms; the
+   vocabulary defined here is descriptive and orthogonal.
+
+   *Misaligned tiers can mislead.* A deployment reporting L4 / RS-A /
+   AD-1 is internally inconsistent.  Relying parties SHOULD reject
+   inconsistent coordinates rather than choosing one component to
+   believe.
+
+15.  Privacy Considerations
+
+   This document defines a reporting vocabulary.  It introduces no new
+   identifiers, credentials, data flows, or wire surface, and therefore
+   adds no privacy surface beyond that of the Mission Framework and the
+   substrate profiles a deployment implements.  The privacy properties
+   of Mission-bound credentials, Mission Status, and any cross-domain
+   projection derive from those specifications, not from the coordinate
+   defined here.
+
+   One consideration is specific to publishing a coordinate.  A
+   capability coordinate accompanied by a scope statement (Section 8.2)
+   names, by design, the action paths a deployment does and does not
+   mediate -- including those it cannot stop.  A detailed scope
+   statement therefore discloses where a deployment's enforcement is
+   weakest.  This is an information-exposure consideration rather than a
+   personal-data one: the disclosure concerns the deployment's own
+   posture, but it can aid an adversary.  As noted in Section 14 ("Scope
+   is load-bearing"), a deployment SHOULD weigh the audience when
+   publishing a detailed scope statement, sharing the full enforcement-
+   gap detail with auditors and relying parties that need it rather than
+   in open-ended marketing material.
+
+Acknowledgments
+
+   The author thanks the implementers and reviewers of the Mission-Bound
+   Authorization architecture for feedback that shaped this
+   specification.
+
+References
+
+Normative References
+
+   [I-D.draft-mcguinness-mission-framework]
+              "*** BROKEN REFERENCE ***".
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+Informative References
+
+   [I-D.draft-mcguinness-mission-aauth-profile]
+              "*** BROKEN REFERENCE ***".
+
+   [I-D.draft-mcguinness-mission-authority-server]
+              "*** BROKEN REFERENCE ***".
+
+   [I-D.draft-mcguinness-mission-migration]
+              "*** BROKEN REFERENCE ***".
+
+   [I-D.draft-mcguinness-mission-oauth-profile]
+              "*** BROKEN REFERENCE ***".
+
+   [I-D.draft-mcguinness-mission-runtime-profile]
+              "*** BROKEN REFERENCE ***".
+
+   [I-D.draft-mcguinness-mission-shaper-profile]
+              "*** BROKEN REFERENCE ***".
+
+   [I-D.draft-mcguinness-oauth-rfc9728bis]
+              McGuinness, K. and A. Parecki, "Update to OAuth 2.0
+              Protected Resource Metadata Resource Identifier
+              Validation", Work in Progress, Internet-Draft, draft-
+              mcguinness-oauth-rfc9728bis-01, 24 February 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-rfc9728bis-01>.
+
+   [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
+              RFC 6749, DOI 10.17487/RFC6749, October 2012,
+              <https://www.rfc-editor.org/rfc/rfc6749>.
+
+   [RFC9728]  Jones, M.B., Hunt, P., and A. Parecki, "OAuth 2.0
+              Protected Resource Metadata", RFC 9728,
+              DOI 10.17487/RFC9728, April 2025,
+              <https://www.rfc-editor.org/rfc/rfc9728>.
+
+Author's Address
+
+   Karl McGuinness
+   Independent
+   Email: public@karlmcguinness.com
