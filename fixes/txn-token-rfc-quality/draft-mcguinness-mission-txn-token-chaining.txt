@@ -324,8 +324,10 @@ Table of Contents
    The Mission-bound members of txn_claims validate against the
    following schema.  The members reuse the inherited shapes verbatim:
    mission is the OAuth Profile mission claim (urn:mbo:schema:oauth-
-   mission-claim:1) and each mission_resource_access entry is the OAuth
-   Profile RAR entry (urn:mbo:schema:mission-resource-access:1).  The
+   mission-claim:1) and each mission_resource_access entry is a full
+   Authority Set entry (urn:mbo:schema:authority-set-entry:1) of type
+   mission_resource_access, whose inner authority payload conforms to
+   the OAuth Profile's urn:mbo:schema:mission-resource-access:1.  The
    schema describes the Mission-bound members only; the full txn_claims
    object carries additional members defined by
    [I-D.draft-fletcher-transaction-token-chaining-profile], so
@@ -343,8 +345,9 @@ Table of Contents
        "mission": { "$ref": "urn:mbo:schema:oauth-mission-claim:1" },
        "mission_resource_access": {
          "type": "array",
+         "minItems": 1,
          "items": {
-           "$ref": "urn:mbo:schema:mission-resource-access:1"
+           "$ref": "urn:mbo:schema:authority-set-entry:1"
          }
        },
        "transcription_profile": {
