@@ -1,0 +1,2101 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission-Bound Transaction Token Chaining Composition</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       This document defines the composition between Mission-Bound
+Authorization and the Transaction Token Chaining Profile. It
+specifies how a Mission handle and the audience-filtered Authority
+Set from a Mission-Bound access token are transcribed into the
+ txn_claims  object of the JWT Authorization Grant exchanged between
+Authorization Servers across trust domains. It defines validation
+rules at the receiving Authorization Server, the cross-domain
+Mission Status reach-back, and the trust-boundary considerations
+that follow from carrying a governance reference across a
+Cross-Domain Trust Agreement. 
+    " name="description">
+<meta content="xml2rfc 3.33.0" name="generator">
+<meta content="mission" name="keyword">
+<meta content="oauth" name="keyword">
+<meta content="transaction-tokens" name="keyword">
+<meta content="chaining" name="keyword">
+<meta content="rar" name="keyword">
+<meta content="cross-domain" name="keyword">
+<meta content="draft-mcguinness-mission-txn-token-chaining-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.33.0
+    Python 3.12.13
+    ConfigArgParse 1.7
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.0.2
+    platformdirs 4.9.6
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.7.0
+-->
+<link href="draft-mcguinness-mission-txn-token-chaining.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Mission Txn Token Chaining</td>
+<td class="right">June 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 14 December 2026</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-mission-txn-token-chaining-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-06-12" class="published">12 June 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2026-12-14">14 December 2026</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission-Bound Transaction Token Chaining Composition</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">This document defines the composition between Mission-Bound
+Authorization and the Transaction Token Chaining Profile. It
+specifies how a Mission handle and the audience-filtered Authority
+Set from a Mission-Bound access token are transcribed into the
+<code>txn_claims</code> object of the JWT Authorization Grant exchanged between
+Authorization Servers across trust domains. It defines validation
+rules at the receiving Authorization Server, the cross-domain
+Mission Status reach-back, and the trust-boundary considerations
+that follow from carrying a governance reference across a
+Cross-Domain Trust Agreement.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-txn-token-chaining.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-txn-token-chaining.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-mission-txn-token-chaining/">https://datatracker.ietf.org/doc/draft-mcguinness-mission-txn-token-chaining/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 14 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
+                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-relationship-to-other-speci" class="internal xref">Relationship to Other Specifications</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.2">
+                <p id="section-toc.1-1.1.2.2.1" class="keepWithNext"><a href="#section-1.2" class="auto internal xref">1.2</a>.  <a href="#name-conventions-and-definitions" class="internal xref">Conventions and Definitions</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-composition-model" class="internal xref">Composition Model</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-mission-carriage-in-txn_cla" class="internal xref">Mission Carriage in <code>txn_claims</code></a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
+                <p id="section-toc.1-1.3.2.1.1"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-the-mission-member-of-txn_c" class="internal xref">The <code>mission</code> Member of <code>txn_claims</code></a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2">
+                <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-audience-filtered-authority" class="internal xref">Audience-Filtered Authority Set</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-top-level-resource-and-scop" class="internal xref">Top-Level <code>resource</code> and <code>scope</code> Mapping</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.4">
+                <p id="section-toc.1-1.3.2.4.1"><a href="#section-3.4" class="auto internal xref">3.4</a>.  <a href="#name-transcription-profile-ident" class="internal xref">Transcription Profile Identifier</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-worked-example" class="internal xref">Worked Example</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-validation-at-the-receiving" class="internal xref">Validation at the Receiving AS</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-issuer-trust" class="internal xref">Issuer Trust</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-audience-and-freshness" class="internal xref">Audience and Freshness</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-mission-state-reach-back" class="internal xref">Mission State Reach-Back</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
+                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-failure-modes" class="internal xref">Failure Modes</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5">
+                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-derived-token-binding" class="internal xref">Derived Token Binding</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-trust-boundary-consideratio" class="internal xref">Trust-Boundary Considerations Between Transaction Token Issuers</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-mission-status-consumer-pre" class="internal xref">Mission Status Consumer Pre-Registration</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-origin-resolution-trust" class="internal xref">Origin Resolution Trust</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-cross-domain-mission-identi" class="internal xref">Cross-Domain Mission Identifier</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-audience-confusion" class="internal xref">Audience Confusion</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
+                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-replay" class="internal xref">Replay</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.4">
+                <p id="section-toc.1-1.7.2.4.1"><a href="#section-7.4" class="auto internal xref">7.4</a>.  <a href="#name-stale-authority-hash" class="internal xref">Stale Authority Hash</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.5">
+                <p id="section-toc.1-1.7.2.5.1"><a href="#section-7.5" class="auto internal xref">7.5</a>.  <a href="#name-transcription-profile-negot" class="internal xref">Transcription Profile Negotiation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.6">
+                <p id="section-toc.1-1.7.2.6.1"><a href="#section-7.6" class="auto internal xref">7.6</a>.  <a href="#name-mission-status-endpoint-as-" class="internal xref">Mission Status Endpoint as a High-Value Target</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-txn_claims-mission-bound-me" class="internal xref"><code>txn_claims</code> Mission-Bound Members</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-mission-transcription-profi" class="internal xref">Mission Transcription Profile Registry</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.3">
+                <p id="section-toc.1-1.8.2.3.1"><a href="#section-8.3" class="auto internal xref">8.3</a>.  <a href="#name-updates-to-existing-registr" class="internal xref">Updates to Existing Registries</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref"></a><a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref"></a><a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref"></a><a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">The Transaction Token Chaining Profile
+<span>[<a href="#I-D.draft-fletcher-transaction-token-chaining-profile" class="cite xref">I-D.draft-fletcher-transaction-token-chaining-profile</a>]</span> defines
+how an Authorization Server in one trust domain (AS-A) converts an
+internal Transaction Token (Txn-Token) into a JWT Authorization
+Grant <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span><span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> that an Authorization Server in a
+different trust domain (AS-B) consumes to issue a partner-domain
+access token. The grant carries a curated <code>txn_claims</code> object that
+projects a minimized subset of the Txn-Token's claims for AS-B's
+authorization decision.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">Appendix B.1 of
+<span>[<a href="#I-D.draft-fletcher-transaction-token-chaining-profile" class="cite xref">I-D.draft-fletcher-transaction-token-chaining-profile</a>]</span> notes
+that Rich Authorization Requests <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> integration is not
+defined in that profile and that a future revision may specify how
+<code>authorization_details</code> from a Txn-Token are transcribed into the
+JWT Authorization Grant. The Mission-Bound OAuth Profile
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span> carries authority as
+<code>authorization_details</code> of type <code>mission_resource_access</code> bound to
+a <code>mission</code> claim that references a Mission record per the Mission
+Framework <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>. Without an
+explicit composition rule, deployments that chain Mission-Bound
+credentials across trust domains either drop the governance
+reference at the boundary or invent ad-hoc carriage that AS-B cannot
+validate.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">This document defines that composition. It places the Mission
+handle and the audience-filtered Authority Set inside <code>txn_claims</code>,
+specifies how <code>mission_resource_access</code> entries are filtered against
+the Cross-Domain Trust Agreement (CDTA) that AS-A and AS-B have
+pre-established, and specifies validation rules at AS-B including a
+cross-domain Mission Status reach-back to AS-A's state authority.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">This document does not modify the Mission Framework, the
+Mission-Bound OAuth Profile, or the Transaction Token Chaining
+Profile. It composes them.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<div id="relationship-to-other-specifications">
+<section id="section-1.1">
+        <h3 id="name-relationship-to-other-speci">
+<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-relationship-to-other-speci" class="section-name selfRef">Relationship to Other Specifications</a>
+        </h3>
+<ul class="normal">
+<li class="normal" id="section-1.1-1.1">
+            <p id="section-1.1-1.1.1"><span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> (Framework) owns the
+Mission record, the Mission Status interface, the typed Authority
+Set, the canonical <code>mission.id</code> identifier model, and the
+integrity anchors. This document references these without
+redefining them.<a href="#section-1.1-1.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-1.2">
+            <p id="section-1.1-1.2.1"><span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span> (OAuth Profile)
+owns the <code>mission</code> JWT claim, the <code>mission_resource_access</code> RAR
+type, and the AS-side derivation of <code>authorization_details</code>. This
+document reuses these shapes verbatim in <code>txn_claims</code>.<a href="#section-1.1-1.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-1.3">
+            <p id="section-1.1-1.3.1"><span>[<a href="#I-D.draft-fletcher-transaction-token-chaining-profile" class="cite xref">I-D.draft-fletcher-transaction-token-chaining-profile</a>]</span> (Txn
+Chaining Profile) owns the JWT Authorization Grant shape,
+<code>txn_claims</code> semantics, the Cross-Domain Trust Agreement (CDTA)
+concept, and the AS-A to AS-B exchange.<a href="#section-1.1-1.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-1.4">
+            <p id="section-1.1-1.4.1"><span>[<a href="#I-D.draft-ietf-oauth-transaction-tokens" class="cite xref">I-D.draft-ietf-oauth-transaction-tokens</a>]</span> (Txn-Tokens) is the
+intra-trust-domain substrate that AS-A's transcription draws
+from.<a href="#section-1.1-1.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-1.5">
+            <p id="section-1.1-1.5.1"><span>[<a href="#I-D.draft-ietf-oauth-identity-chaining" class="cite xref">I-D.draft-ietf-oauth-identity-chaining</a>]</span> (Identity Chaining) is
+the cross-trust-domain identity-mapping neighbor; this document
+composes with Txn Chaining, not Identity Chaining directly,
+though deployments may use both.<a href="#section-1.1-1.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="conventions-and-definitions">
+<section id="section-1.2">
+        <h3 id="name-conventions-and-definitions">
+<a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-conventions-and-definitions" class="section-name selfRef">Conventions and Definitions</a>
+        </h3>
+<p id="section-1.2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-1.2-1" class="pilcrow">¶</a></p>
+<p id="section-1.2-2">In this document the following terms are used as defined elsewhere:<a href="#section-1.2-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1.2-3.1">
+            <p id="section-1.2-3.1.1"><strong>Mission</strong>, <strong>Mission record</strong>, <strong>Mission Intent</strong>, <strong>Authority
+Set</strong>, <strong>Mission Status</strong>, <strong><code>mission.id</code></strong>,
+<strong><code>mission.origin</code></strong>, <strong><code>authority_hash</code></strong>: per
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>.<a href="#section-1.2-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.2-3.2">
+            <p id="section-1.2-3.2.1"><strong><code>mission</code> claim</strong>, <strong><code>mission_resource_access</code></strong>: per
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>.<a href="#section-1.2-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.2-3.3">
+            <p id="section-1.2-3.3.1"><strong>JWT Authorization Grant</strong>, <strong><code>txn_claims</code></strong>, <strong>Txn-Token</strong>,
+<strong>Cross-Domain Trust Agreement (CDTA)</strong>, <strong>AS-A</strong>, <strong>AS-B</strong>: per
+<span>[<a href="#I-D.draft-fletcher-transaction-token-chaining-profile" class="cite xref">I-D.draft-fletcher-transaction-token-chaining-profile</a>]</span>.<a href="#section-1.2-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-1.2-4">This document additionally defines:<a href="#section-1.2-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1.2-5.1">
+            <p id="section-1.2-5.1.1"><strong>Transcribing AS</strong>: the Authorization Server that converts a
+Mission-Bound Txn-Token into a JWT Authorization Grant. Equivalent
+to AS-A in the chaining profile.<a href="#section-1.2-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.2-5.2">
+            <p id="section-1.2-5.2.1"><strong>Receiving AS</strong>: the Authorization Server in the partner trust
+domain that consumes the JWT Authorization Grant. Equivalent to
+AS-B.<a href="#section-1.2-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.2-5.3">
+            <p id="section-1.2-5.3.1"><strong>Cross-Domain Mission Status Consumer</strong>: a Receiving AS that has
+been pre-registered at the Transcribing AS's Mission Status
+endpoint per the CDTA.<a href="#section-1.2-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.2-5.4">
+            <p id="section-1.2-5.4.1"><strong>Transcription Profile</strong>: a named, registered rule set governing
+how Mission-bound <code>txn_claims</code> members are produced and validated.
+This document defines the initial entry
+<code>urn:mbo:txn-chain:transcription:default-v1</code>.<a href="#section-1.2-5.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+</section>
+</div>
+<div id="composition-model">
+<section id="section-2">
+      <h2 id="name-composition-model">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-composition-model" class="section-name selfRef">Composition Model</a>
+      </h2>
+<p id="section-2-1">The Transaction Token Chaining Profile treats <code>txn_claims</code> as the
+curated, minimized projection of the Txn-Token's claims for the
+partner AS's policy. Mission-bound members therefore live inside
+<code>txn_claims</code>, not at the top level of the JWT Authorization Grant.
+Top-level grant claims (<code>iss</code>, <code>sub</code>, <code>aud</code>, <code>iat</code>, <code>exp</code>, <code>jti</code>,
+<code>scope</code>, <code>resource</code>, <code>txn</code>) retain the semantics defined by
+<span>[<a href="#I-D.draft-fletcher-transaction-token-chaining-profile" class="cite xref">I-D.draft-fletcher-transaction-token-chaining-profile</a>]</span>; this
+document specifies only how Mission-bound state populates and
+constrains them.<a href="#section-2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-carriage-in-txnclaims">
+<section id="section-3">
+      <h2 id="name-mission-carriage-in-txn_cla">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-mission-carriage-in-txn_cla" class="section-name selfRef">Mission Carriage in <code>txn_claims</code></a>
+      </h2>
+<p id="section-3-1">A Transcribing AS that has issued a Mission-Bound access token, or
+whose internal Txn-Token carries a Mission reference, <span class="bcp14">MUST</span> place
+Mission-bound state into <code>txn_claims</code> as defined in this section
+when producing a JWT Authorization Grant for AS-B.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<div id="the-mission-member-of-txnclaims">
+<section id="section-3.1">
+        <h3 id="name-the-mission-member-of-txn_c">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-the-mission-member-of-txn_c" class="section-name selfRef">The <code>mission</code> Member of <code>txn_claims</code></a>
+        </h3>
+<p id="section-3.1-1"><code>txn_claims.mission</code> <span class="bcp14">MUST</span> carry the same object shape as the
+<code>mission</code> claim defined in <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+<p id="section-3.1-2">In canonical mode:<a href="#section-3.1-2" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-3.1-3">
+<pre>
+{
+  "mission": {
+    "id": "msn_01J9Z2P8BQ4Y3F0V0K9D6Z7M1",
+    "origin": "https://as-a.example.com",
+    "authority_hash": "sha-256:fS8h4w7Z3Lq...",
+    "version": 1
+  }
+}
+</pre><a href="#section-3.1-3" class="pilcrow">¶</a>
+</div>
+<p id="section-3.1-4">The members carry the following meaning at the trust boundary:<a href="#section-3.1-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.1-5.1">
+            <p id="section-3.1-5.1.1"><code>id</code>: the canonical <code>mission.id</code> identifying the Mission handle.<a href="#section-3.1-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-5.2">
+            <p id="section-3.1-5.2.1"><code>origin</code>: the Transcribing AS's issuer URL. This is the resolution
+anchor that AS-B uses to discover the Mission Status endpoint per
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>.<a href="#section-3.1-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-5.3">
+            <p id="section-3.1-5.3.1"><code>authority_hash</code>: the integrity anchor for the Authority Set the
+Mission record holds at the time of transcription.<a href="#section-3.1-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-5.4">
+            <p id="section-3.1-5.4.1"><code>version</code>: the Mission record version used to produce this grant.<a href="#section-3.1-5.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.1-6"><code>txn_claims.mission</code> is a copy of the Mission reference captured by
+AS-A at the moment of transcription. It is not a claim AS-B can
+forge a Mission state from. AS-B <span class="bcp14">MUST</span> validate Mission state by
+reach-back (see <a href="#validation" class="auto internal xref">Section 5</a>).<a href="#section-3.1-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="audience-filtered-authority-set">
+<section id="section-3.2">
+        <h3 id="name-audience-filtered-authority">
+<a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-audience-filtered-authority" class="section-name selfRef">Audience-Filtered Authority Set</a>
+        </h3>
+<p id="section-3.2-1"><code>txn_claims.mission_resource_access</code> <span class="bcp14">MUST</span> carry a JSON array of
+Authority Set entries of type <code>mission_resource_access</code> as defined
+in <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>. The array is the
+audience-filtered projection of the Mission record's Authority Set
+for AS-B.<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+<p id="section-3.2-2">An entry is included in <code>txn_claims.mission_resource_access</code> if and
+only if all of the following hold:<a href="#section-3.2-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-3.2-3">
+<li id="section-3.2-3.1">
+            <p id="section-3.2-3.1.1">The entry's <code>type</code> is <code>mission_resource_access</code>.<a href="#section-3.2-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-3.2-3.2">
+            <p id="section-3.2-3.2.1">The entry's <code>authority.resource</code> lies within the resource scope
+that the CDTA grants AS-B.<a href="#section-3.2-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-3.2-3.3">
+            <p id="section-3.2-3.3.1">The entry's <code>narrowing_profile</code> is one the CDTA permits for
+cross-domain projection.<a href="#section-3.2-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-3.2-4">Entries outside CDTA scope <span class="bcp14">MUST</span> be dropped. The Transcribing AS
+<span class="bcp14">MUST NOT</span> widen any entry, <span class="bcp14">MUST NOT</span> alter <code>actions</code>, <code>constraints</code>,
+or <code>narrowing_profile</code>, and <span class="bcp14">MUST NOT</span> introduce new keys. The
+transcribed entry is byte-equal to the entry the Mission record
+holds for the matching resource after audience filtering.<a href="#section-3.2-4" class="pilcrow">¶</a></p>
+<p id="section-3.2-5">Entries of Authority Set types other than <code>mission_resource_access</code>
+are out of scope for this document and <span class="bcp14">MUST NOT</span> be transcribed by
+an implementation conforming to
+<code>urn:mbo:txn-chain:transcription:default-v1</code>. Future Transcription
+Profiles may define transcription rules for additional types.<a href="#section-3.2-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="top-level-resource-and-scope-mapping">
+<section id="section-3.3">
+        <h3 id="name-top-level-resource-and-scop">
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-top-level-resource-and-scop" class="section-name selfRef">Top-Level <code>resource</code> and <code>scope</code> Mapping</a>
+        </h3>
+<p id="section-3.3-1">The top-level <code>resource</code> claim in the JWT Authorization Grant <span class="bcp14">MUST</span>
+contain the set of distinct <code>authority.resource</code> values drawn from
+the included <code>txn_claims.mission_resource_access</code> entries. This
+maintains the invariant defined by
+<span>[<a href="#I-D.draft-fletcher-transaction-token-chaining-profile" class="cite xref">I-D.draft-fletcher-transaction-token-chaining-profile</a>]</span> that
+top-level <code>resource</code> enumerates the Protected Resources the grant
+authorizes.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+<p id="section-3.3-2">The top-level <code>scope</code> claim <span class="bcp14">MAY</span> be derived from the union of the
+included entries' <code>authority.actions</code> per a deployment-stated
+mapping, or <span class="bcp14">MAY</span> be absent. Deployments that rely entirely on the
+RAR-style <code>mission_resource_access</code> projection for authority <span class="bcp14">MUST NOT</span> use <code>scope</code> to expand authority beyond what the Authority Set
+expresses.<a href="#section-3.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="transcription-profile-identifier">
+<section id="section-3.4">
+        <h3 id="name-transcription-profile-ident">
+<a href="#section-3.4" class="section-number selfRef">3.4. </a><a href="#name-transcription-profile-ident" class="section-name selfRef">Transcription Profile Identifier</a>
+        </h3>
+<p id="section-3.4-1">The JWT Authorization Grant <span class="bcp14">MUST</span> carry the Transcription Profile
+identifier as <code>txn_claims.transcription_profile</code>. The initial
+registered value is <code>urn:mbo:txn-chain:transcription:default-v1</code>,
+which incorporates the rules in this section verbatim.<a href="#section-3.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="worked-example">
+<section id="section-4">
+      <h2 id="name-worked-example">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-worked-example" class="section-name selfRef">Worked Example</a>
+      </h2>
+<p id="section-4-1">A minimal JWT Authorization Grant payload illustrating
+Mission-bound <code>txn_claims</code> carriage (signature and unrelated
+optional claims omitted):<a href="#section-4-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4-2">
+<pre>
+{
+  "iss": "https://as-a.example.com",
+  "sub": "user-mapped-for-partner-b@as-a.example.com",
+  "aud": "https://as-b.partner.example.com",
+  "iat": 1750000000,
+  "exp": 1750000300,
+  "jti": "kZ9q3-tj...",
+  "txn": "txn-7f3c...",
+  "resource": ["https://docs.partner.example.com"],
+  "txn_claims": {
+    "transcription_profile":
+      "urn:mbo:txn-chain:transcription:default-v1",
+    "mission": {
+      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+      "origin": "https://as-a.example.com",
+      "authority_hash": "sha-256:fS8h4w7Z3Lq...",
+      "version": 1
+    },
+    "mission_resource_access": [
+      {
+        "type": "mission_resource_access",
+        "specification_uri":
+          "https://mcguinness.github.io/mission-bound-authorization/specs/mission_resource_access-v1",
+        "schema_digest": "sha-256:9Hf...",
+        "schema_version": "1",
+        "authority": {
+          "resource": "https://docs.partner.example.com",
+          "actions": ["documents.read"],
+          "constraints": { "folder": "shared-with-b" }
+        },
+        "narrowing_profile": "urn:mbo:narrowing:default-v1"
+      }
+    ]
+  }
+}
+</pre><a href="#section-4-2" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="validation">
+<section id="section-5">
+      <h2 id="name-validation-at-the-receiving">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-validation-at-the-receiving" class="section-name selfRef">Validation at the Receiving AS</a>
+      </h2>
+<p id="section-5-1">A Receiving AS that accepts a JWT Authorization Grant carrying
+Mission-bound <code>txn_claims</code> <span class="bcp14">MUST</span> perform the validations in this
+section in addition to the validations defined by
+<span>[<a href="#I-D.draft-fletcher-transaction-token-chaining-profile" class="cite xref">I-D.draft-fletcher-transaction-token-chaining-profile</a>]</span>.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<div id="issuer-trust">
+<section id="section-5.1">
+        <h3 id="name-issuer-trust">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-issuer-trust" class="section-name selfRef">Issuer Trust</a>
+        </h3>
+<p id="section-5.1-1">The Receiving AS <span class="bcp14">MUST</span> validate that the top-level <code>iss</code> is a
+Cross-Domain Trust Agreement (CDTA) partner per its issuer trust
+policy. The Receiving AS <span class="bcp14">MUST</span> validate the JWT signature against
+keys discovered through the issuer's metadata document per
+<span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span> and the issuer trust agreement.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.1-2">The Receiving AS <span class="bcp14">MUST</span> validate that <code>txn_claims.mission.origin</code>
+matches a metadata document anchored to the trusted <code>iss</code>. The
+Receiving AS <span class="bcp14">MUST NOT</span> accept a <code>txn_claims.mission.origin</code> that
+resolves to a metadata document outside the CDTA-trusted issuer
+set, even if the JWT signature is otherwise valid.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="audience-and-freshness">
+<section id="section-5.2">
+        <h3 id="name-audience-and-freshness">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-audience-and-freshness" class="section-name selfRef">Audience and Freshness</a>
+        </h3>
+<p id="section-5.2-1">The Receiving AS <span class="bcp14">MUST</span> validate that the top-level <code>aud</code> matches its
+own issuer URL, that <code>exp</code> has not passed, that <code>iat</code> is within
+acceptable clock skew, and that <code>jti</code> has not been previously
+consumed within the configured replay window.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.2-2">The Receiving AS <span class="bcp14">MUST</span> validate that
+<code>txn_claims.transcription_profile</code> is a value its policy permits.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-state-reach-back">
+<section id="section-5.3">
+        <h3 id="name-mission-state-reach-back">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-mission-state-reach-back" class="section-name selfRef">Mission State Reach-Back</a>
+        </h3>
+<p id="section-5.3-1">The Receiving AS <span class="bcp14">MUST</span> query the Mission Status endpoint discovered
+through <code>txn_claims.mission.origin</code> per
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> and
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>. The query <span class="bcp14">MUST</span> use
+the canonical <code>mission.id</code> carried in <code>txn_claims.mission.id</code> and
+<span class="bcp14">MUST</span> be authenticated as the Cross-Domain Mission Status Consumer
+pre-registered at the Transcribing AS.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<p id="section-5.3-2">The Receiving AS <span class="bcp14">MUST</span> require all of the following from the Mission
+Status response to issue a partner-domain access token:<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5.3-3">
+<li id="section-5.3-3.1">
+            <p id="section-5.3-3.1.1">The Mission state is <code>active</code>.<a href="#section-5.3-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.3-3.2">
+            <p id="section-5.3-3.2.1">The returned <code>authority_hash</code> equals
+<code>txn_claims.mission.authority_hash</code>. A divergence indicates the
+Mission record has been re-derived since transcription and the
+grant is stale.<a href="#section-5.3-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.3-3.3">
+            <p id="section-5.3-3.3.1">The returned <code>version</code> equals <code>txn_claims.mission.version</code>, or
+the deployment policy explicitly permits version drift within a
+bounded window.<a href="#section-5.3-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.3-3.4">
+            <p id="section-5.3-3.4.1">The audience-filtered Authority Set projection the Transcribing
+AS returns for the Receiving AS's sector is a superset of the
+entries carried in <code>txn_claims.mission_resource_access</code>. The
+Receiving AS <span class="bcp14">MUST NOT</span> issue authority beyond the intersection of
+the projection it observes and the transcribed entries.<a href="#section-5.3-3.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.3-3.5">
+            <p id="section-5.3-3.5.1">The response satisfies the authentication, freshness, audience,
+and integrity properties defined in
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>.<a href="#section-5.3-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-5.3-4">A Mission Status response indicating any non-<code>active</code> state, an
+unknown reference, an unauthorized reference, or an
+integrity-mismatched response <span class="bcp14">MUST</span> cause the Receiving AS to refuse
+the grant.<a href="#section-5.3-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="failure-modes">
+<section id="section-5.4">
+        <h3 id="name-failure-modes">
+<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-failure-modes" class="section-name selfRef">Failure Modes</a>
+        </h3>
+<p id="section-5.4-1">If the Mission Status endpoint is unreachable, the Receiving AS
+<span class="bcp14">MUST</span> fail closed unless the Transcribing AS has advertised a
+bounded degraded mode in its metadata per
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span> and the Receiving AS
+explicitly accepts it under the CDTA. A degraded mode that exceeds
+the deployment's <code>mission_max_stale_seconds</code> advertisement is not a
+permitted fallback.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="derived-token-binding">
+<section id="section-5.5">
+        <h3 id="name-derived-token-binding">
+<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-derived-token-binding" class="section-name selfRef">Derived Token Binding</a>
+        </h3>
+<p id="section-5.5-1">When the Receiving AS issues a partner-domain access token from a
+validated JWT Authorization Grant, the issued token's <code>mission</code>
+claim <span class="bcp14">MUST</span> be set as follows:<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.5-2.1">
+            <p id="section-5.5-2.1.1"><code>origin</code>: the Transcribing AS's issuer URL (unchanged).<a href="#section-5.5-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.5-2.2">
+            <p id="section-5.5-2.2.1"><code>id</code> or <code>ref</code>: identical to <code>txn_claims.mission</code>. The Receiving
+AS is not the state authority for the Mission and <span class="bcp14">MUST NOT</span> mint
+a new Mission reference.<a href="#section-5.5-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.5-2.3">
+            <p id="section-5.5-2.3.1"><code>authority_hash</code> and <code>version</code>: identical to <code>txn_claims.mission</code>
+values, subject to the validation above.<a href="#section-5.5-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.5-3">Subsequent refresh or exchange at the Receiving AS is gated on
+Mission state per <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>.
+The Receiving AS <span class="bcp14">MAY</span> re-query Mission Status on its own freshness
+schedule and <span class="bcp14">MUST</span> refuse derivation when Mission state is not
+<code>active</code>.<a href="#section-5.5-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="trust-boundary-considerations-between-transaction-token-issuers">
+<section id="section-6">
+      <h2 id="name-trust-boundary-consideratio">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-trust-boundary-consideratio" class="section-name selfRef">Trust-Boundary Considerations Between Transaction Token Issuers</a>
+      </h2>
+<p id="section-6-1">The Transaction Token Chaining Profile requires a Cross-Domain
+Trust Agreement to bilaterally establish that AS-A and AS-B accept
+each other for chained authorization. Mission carriage extends the
+CDTA with three additional concerns.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<div id="mission-status-consumer-pre-registration">
+<section id="section-6.1">
+        <h3 id="name-mission-status-consumer-pre">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-mission-status-consumer-pre" class="section-name selfRef">Mission Status Consumer Pre-Registration</a>
+        </h3>
+<p id="section-6.1-1">The CDTA <span class="bcp14">MUST</span> establish AS-B as a Cross-Domain Mission Status
+Consumer at AS-A's Mission Status endpoint. Pre-registration
+covers:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.1-2.1">
+            <p id="section-6.1-2.1.1">AS-B's client credentials at AS-A's Mission Status endpoint
+(<code>client_credentials</code>, mTLS, or DPoP-bound bearer per the
+applicable OAuth Profile authentication options).<a href="#section-6.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-2.2">
+            <p id="section-6.1-2.2.1">The maximum tolerated staleness AS-B will accept on responses
+from AS-A.<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-6.1-3">Without pre-registration, AS-A's Mission Status endpoint <span class="bcp14">MUST</span>
+refuse the reach-back as an unauthorized reference,
+indistinguishable from an unknown reference per
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="origin-resolution-trust">
+<section id="section-6.2">
+        <h3 id="name-origin-resolution-trust">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-origin-resolution-trust" class="section-name selfRef">Origin Resolution Trust</a>
+        </h3>
+<p id="section-6.2-1">A Receiving AS <span class="bcp14">MUST NOT</span> accept a <code>txn_claims.mission.origin</code> value
+solely because it appears inside a signed grant from a CDTA
+partner. The CDTA enumerates which Mission Status endpoints AS-B
+trusts for the partner. A grant whose <code>txn_claims.mission.origin</code>
+resolves outside that enumeration <span class="bcp14">MUST</span> be refused, even when the
+grant's <code>iss</code> is a CDTA partner. This prevents a compromised or
+misconfigured AS-A from redirecting Mission Status to an attacker.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-7">
+      <h2 id="name-security-considerations">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<div id="cross-domain-mission-identifier">
+<section id="section-7.1">
+        <h3 id="name-cross-domain-mission-identi">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-cross-domain-mission-identi" class="section-name selfRef">Cross-Domain Mission Identifier</a>
+        </h3>
+<p id="section-7.1-1">The canonical <code>mission.id</code> emitted into <code>txn_claims.mission</code>
+reaches AS-B in plaintext within the signed grant. AS-B observes
+the same <code>mission.id</code> that AS-A's other partners observe; cross-
+partner correlation via Mission identifier is possible by design,
+consistent with the Framework's canonical-only identifier model.
+Deployments where cross-partner correlation matters compose with
+a profile extension to the Framework defining a pairwise Mission
+identifier; such extensions are out of scope.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.1-2">A Transcribing AS <span class="bcp14">MUST</span> treat the grant payload as carrying
+correlation-class data and <span class="bcp14">SHOULD</span> restrict its distribution
+through CDTA terms rather than through wire confidentiality alone.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="audience-confusion">
+<section id="section-7.2">
+        <h3 id="name-audience-confusion">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-audience-confusion" class="section-name selfRef">Audience Confusion</a>
+        </h3>
+<p id="section-7.2-1">The composition relies on two audience signals that <span class="bcp14">MUST</span> agree:
+top-level <code>aud</code> and the partner identity in the CDTA. A mismatch
+between these signals <span class="bcp14">MUST</span> cause the grant to be refused.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="replay">
+<section id="section-7.3">
+        <h3 id="name-replay">
+<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-replay" class="section-name selfRef">Replay</a>
+        </h3>
+<p id="section-7.3-1">The grant is bound by <code>jti</code>, <code>iat</code>, and <code>exp</code> per
+<span>[<a href="#I-D.draft-fletcher-transaction-token-chaining-profile" class="cite xref">I-D.draft-fletcher-transaction-token-chaining-profile</a>]</span>. Mission
+state reach-back additionally binds the grant to current Mission
+state at the moment of consumption. A grant that successfully
+validates against the chaining profile's anti-replay controls <span class="bcp14">MUST</span>
+still be refused if Mission Status reports <code>suspended</code>, <code>revoked</code>,
+<code>completed</code>, or <code>expired</code> at consumption time.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="stale-authority-hash">
+<section id="section-7.4">
+        <h3 id="name-stale-authority-hash">
+<a href="#section-7.4" class="section-number selfRef">7.4. </a><a href="#name-stale-authority-hash" class="section-name selfRef">Stale Authority Hash</a>
+        </h3>
+<p id="section-7.4-1"><code>txn_claims.mission.authority_hash</code> is captured at transcription.
+If the Mission record's Authority Set changes between transcription
+and consumption (for example, narrowing during expansion review),
+the hash returned by Mission Status diverges. The Receiving AS
+<span class="bcp14">MUST</span> refuse on divergence rather than accepting either the
+transcribed or the freshly returned Authority Set. The Transcribing
+AS issues a new grant against the current Mission record on the
+next chained request.<a href="#section-7.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="transcription-profile-negotiation">
+<section id="section-7.5">
+        <h3 id="name-transcription-profile-negot">
+<a href="#section-7.5" class="section-number selfRef">7.5. </a><a href="#name-transcription-profile-negot" class="section-name selfRef">Transcription Profile Negotiation</a>
+        </h3>
+<p id="section-7.5-1">A Receiving AS <span class="bcp14">MUST NOT</span> accept Transcription Profiles outside the
+CDTA-permitted set. Permitting unknown profiles permits a
+Transcribing AS to alter transcription rules unilaterally, which
+could widen authority beyond what AS-B's policy intended.<a href="#section-7.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-status-endpoint-as-a-high-value-target">
+<section id="section-7.6">
+        <h3 id="name-mission-status-endpoint-as-">
+<a href="#section-7.6" class="section-number selfRef">7.6. </a><a href="#name-mission-status-endpoint-as-" class="section-name selfRef">Mission Status Endpoint as a High-Value Target</a>
+        </h3>
+<p id="section-7.6-1">Aggregating cross-domain reach-back to a single Mission Status
+endpoint concentrates trust. Operational guidance from
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span> applies: the endpoint
+authenticates callers, refuses bearer use of Mission references,
+returns indistinguishable responses for unknown and unauthorized
+references, and binds responses to the requesting caller, audience,
+and nonce.<a href="#section-7.6-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-8">
+      <h2 id="name-iana-considerations">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<div id="txnclaims-mission-bound-members">
+<section id="section-8.1">
+        <h3 id="name-txn_claims-mission-bound-me">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-txn_claims-mission-bound-me" class="section-name selfRef"><code>txn_claims</code> Mission-Bound Members</a>
+        </h3>
+<p id="section-8.1-1">This document requests registration of the following members within
+the <code>txn_claims</code> object defined by
+<span>[<a href="#I-D.draft-fletcher-transaction-token-chaining-profile" class="cite xref">I-D.draft-fletcher-transaction-token-chaining-profile</a>]</span>, in the
+registry that document creates for <code>txn_claims</code> members. If that
+registry does not exist at the time of publication, these members
+are documented descriptively in this document.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.1-2.1">
+            <p id="section-8.1-2.1.1"><code>mission</code>: object carrying the Mission reference per
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>. Members: <code>id</code>
+(string, canonical <code>mission.id</code>), <code>origin</code> (URL),
+<code>authority_hash</code> (string), <code>version</code> (integer).<a href="#section-8.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.2">
+            <p id="section-8.1-2.2.1"><code>mission_resource_access</code>: array of audience-filtered Authority
+Set entries of type <code>mission_resource_access</code> per
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>.<a href="#section-8.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.3">
+            <p id="section-8.1-2.3.1"><code>transcription_profile</code>: string identifier of the Transcription
+Profile applied by the Transcribing AS.<a href="#section-8.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-8.1-3">Change Controller: IETF. Reference: this document.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-transcription-profile-registry">
+<section id="section-8.2">
+        <h3 id="name-mission-transcription-profi">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-mission-transcription-profi" class="section-name selfRef">Mission Transcription Profile Registry</a>
+        </h3>
+<p id="section-8.2-1">This document requests creation of a new IANA registry,
+<strong>Mission Transcription Profiles</strong>, with the following columns:<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.2-2.1">
+            <p id="section-8.2-2.1.1">Profile identifier (URI).<a href="#section-8.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-2.2">
+            <p id="section-8.2-2.2.1">Specification reference (immutable).<a href="#section-8.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-2.3">
+            <p id="section-8.2-2.3.1">Permitted Authority Set entry types.<a href="#section-8.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-2.4">
+            <p id="section-8.2-2.4.1">Audience-filtering rule reference.<a href="#section-8.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-2.5">
+            <p id="section-8.2-2.5.1">Narrowing profiles permitted for cross-domain projection.<a href="#section-8.2-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-2.6">
+            <p id="section-8.2-2.6.1">Change controller.<a href="#section-8.2-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-8.2-3">Registration policy: Specification Required.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
+<p id="section-8.2-4">Initial entry:<a href="#section-8.2-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.2-5.1">
+            <p id="section-8.2-5.1.1">Identifier: <code>urn:mbo:txn-chain:transcription:default-v1</code>.<a href="#section-8.2-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-5.2">
+            <p id="section-8.2-5.2.1">Specification reference: this document.<a href="#section-8.2-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-5.3">
+            <p id="section-8.2-5.3.1">Permitted Authority Set entry types: <code>mission_resource_access</code>.<a href="#section-8.2-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-5.4">
+            <p id="section-8.2-5.4.1">Audience-filtering rule reference: <a href="#audience-filtered-authority-set" class="auto internal xref">Section 3.2</a>
+of this document.<a href="#section-8.2-5.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-5.5">
+            <p id="section-8.2-5.5.1">Narrowing profiles permitted: those advertised under the
+applicable CDTA; <code>urn:mbo:narrowing:default-v1</code> permitted by
+default.<a href="#section-8.2-5.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-5.6">
+            <p id="section-8.2-5.6.1">Change controller: IETF.<a href="#section-8.2-5.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="updates-to-existing-registries">
+<section id="section-8.3">
+        <h3 id="name-updates-to-existing-registr">
+<a href="#section-8.3" class="section-number selfRef">8.3. </a><a href="#name-updates-to-existing-registr" class="section-name selfRef">Updates to Existing Registries</a>
+        </h3>
+<p id="section-8.3-1">This document does not register new JWT claims. The top-level
+grant claims (<code>iss</code>, <code>aud</code>, <code>sub</code>, <code>exp</code>, <code>iat</code>, <code>jti</code>, <code>scope</code>,
+<code>resource</code>, <code>txn</code>, <code>txn_claims</code>) remain registered by
+<span>[<a href="#I-D.draft-fletcher-transaction-token-chaining-profile" class="cite xref">I-D.draft-fletcher-transaction-token-chaining-profile</a>]</span> and
+referenced specifications. The <code>mission</code> member nested inside
+<code>txn_claims</code> is registered by this document at the <code>txn_claims</code>
+level only; the top-level <code>mission</code> JWT claim is registered by
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span> and unchanged here.<a href="#section-8.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="section-9">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="section-9-1">The author thanks the editors and contributors of
+<span>[<a href="#I-D.draft-fletcher-transaction-token-chaining-profile" class="cite xref">I-D.draft-fletcher-transaction-token-chaining-profile</a>]</span>,
+<span>[<a href="#I-D.draft-ietf-oauth-transaction-tokens" class="cite xref">I-D.draft-ietf-oauth-transaction-tokens</a>]</span>, and the
+Mission-Bound Authorization architecture for the discussions that
+shaped this composition.<a href="#section-9-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-10">
+      <h2 id="name-references">
+<a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-10.1">
+        <h3 id="name-normative-references">
+<a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-fletcher-transaction-token-chaining-profile">[I-D.draft-fletcher-transaction-token-chaining-profile]</dt>
+        <dd>
+<span class="refAuthor">Fletcher, G.</span>, <span class="refTitle">"Transaction Token Authorization Grant Profile for OAuth Identity and Authorization Chaining"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-fletcher-transaction-token-chaining-profile-00</span>, <time datetime="2026-05-11" class="refDate">11 May 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-fletcher-transaction-token-chaining-profile-00">https://datatracker.ietf.org/doc/html/draft-fletcher-transaction-token-chaining-profile-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-framework">[I-D.draft-mcguinness-mission-framework]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-oauth-profile">[I-D.draft-mcguinness-mission-oauth-profile]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7519">[RFC7519]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Token (JWT)"</span>, <span class="seriesInfo">RFC 7519</span>, <span class="seriesInfo">DOI 10.17487/RFC7519</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7519">https://www.rfc-editor.org/rfc/rfc7519</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8693">[RFC8693]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8693">https://www.rfc-editor.org/rfc/rfc8693</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9396">[RFC9396]</dt>
+      <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-10.2">
+        <h3 id="name-informative-references">
+<a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-ietf-oauth-identity-assertion-authz-grant">[I-D.draft-ietf-oauth-identity-assertion-authz-grant]</dt>
+        <dd>
+<span class="refAuthor">Parecki, A.</span>, <span class="refAuthor">McGuinness, K.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"Identity Assertion JWT Authorization Grant"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-identity-assertion-authz-grant-04</span>, <time datetime="2026-05-21" class="refDate">21 May 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-assertion-authz-grant-04">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-assertion-authz-grant-04</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-ietf-oauth-identity-chaining">[I-D.draft-ietf-oauth-identity-chaining]</dt>
+        <dd>
+<span class="refAuthor">Schwenkschuster, A.</span>, <span class="refAuthor">Kasselman, P.</span>, <span class="refAuthor">Burgin, K.</span>, <span class="refAuthor">Jenkins, M. J.</span>, <span class="refAuthor">Campbell, B.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth Identity and Authorization Chaining Across Domains"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-identity-chaining-14</span>, <time datetime="2026-06-02" class="refDate">2 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-chaining-14">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-chaining-14</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-ietf-oauth-transaction-tokens">[I-D.draft-ietf-oauth-transaction-tokens]</dt>
+        <dd>
+<span class="refAuthor">Tulshibagwale, A.</span>, <span class="refAuthor">Fletcher, G.</span>, and <span class="refAuthor">P. Kasselman</span>, <span class="refTitle">"Transaction Tokens"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-transaction-tokens-08</span>, <time datetime="2026-03-02" class="refDate">2 March 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-transaction-tokens-08">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-transaction-tokens-08</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8414">[RFC8414]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8414">https://www.rfc-editor.org/rfc/rfc8414</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9068">[RFC9068]</dt>
+        <dd>
+<span class="refAuthor">Bertocci, V.</span>, <span class="refTitle">"JSON Web Token (JWT) Profile for OAuth 2.0 Access Tokens"</span>, <span class="seriesInfo">RFC 9068</span>, <span class="seriesInfo">DOI 10.17487/RFC9068</span>, <time datetime="2021-10" class="refDate">October 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9068">https://www.rfc-editor.org/rfc/rfc9068</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9701">[RFC9701]</dt>
+      <dd>
+<span class="refAuthor">Lodderstedt, T., Ed.</span> and <span class="refAuthor">V. Dzhuvinov</span>, <span class="refTitle">"JSON Web Token (JWT) Response for OAuth Token Introspection"</span>, <span class="seriesInfo">RFC 9701</span>, <span class="seriesInfo">DOI 10.17487/RFC9701</span>, <time datetime="2025-01" class="refDate">January 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9701">https://www.rfc-editor.org/rfc/rfc9701</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-A">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
