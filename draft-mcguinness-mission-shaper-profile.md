@@ -34,7 +34,7 @@ normative:
 informative:
   RFC3339:
   RFC6749:
-  RFC9396:
+  RFC9126:
   I-D.draft-mcguinness-mission-oauth-profile:
   I-D.draft-mcguinness-mission-runtime-profile:
   I-D.draft-mcguinness-oauth-actor-profile:
@@ -299,6 +299,7 @@ The Framework defines the Mission Intent fields:
 - `success_criteria` (array of string, required).
 - `mission_expiry` (RFC 3339 timestamp, required).
 - `purpose` (URI, optional).
+- `language` (string, optional).
 - `context` (object, optional).
 - Extension fields prefixed with `x_*` (optional).
 
@@ -618,11 +619,11 @@ re-specify any of those contracts; it points at them.
 The Mission-Bound OAuth Profile
 {{I-D.draft-mcguinness-mission-oauth-profile}} defines a
 `mission_intent` parameter carried inside a Pushed Authorization
-Request (PAR) {{RFC9396}}. The Submitted Mission Intent the Shaper
+Request (PAR) {{RFC9126}}. The Submitted Mission Intent the Shaper
 produced is the value of that parameter. The Authorization Server
-acts as the state authority: it validates, narrows, and renders the
-consent disclosure, then creates a Mission Proposal and, on
-approval, a Mission with a derived Authority Set
+{{RFC6749}} acts as the state authority: it validates, narrows, and
+renders the consent disclosure, then creates a Mission Proposal and,
+on approval, a Mission with a derived Authority Set
 ({{I-D.draft-mcguinness-mission-oauth-profile}}).
 
 The Shaper does not invoke the OAuth Authorization Endpoint, does
@@ -808,6 +809,47 @@ boundary; its output is a client-side proposal subject to
 state-authority validation. Implementations SHOULD nonetheless
 record the model identifier and version in the Shaper Trace so
 that failures can be attributed.
+
+# Privacy Considerations {#privacy-considerations}
+
+The Shaper sits at the point where a user's natural-language prompt
+-- which may carry personal data, business-confidential content, or
+free-form expression -- is transformed into structured artifacts.
+The privacy surface follows from where that content flows.
+
+## Prompt content in Mission Intent fields
+
+The Shaper copies or paraphrases prompt content into `goal`,
+`objects`, `constraints`, and `context`, which the state authority
+renders in a consent disclosure the approving principal reads. A
+Shaper SHOULD carry into these fields only the content needed to
+describe the task, and SHOULD NOT widen `objects` or echo unrelated
+prompt content (per {{mission-intent-construction-rules}}). Content
+placed in `goal` in particular is read by the approving principal
+and may be retained in the Mission record and its audit trail, so a
+Shaper SHOULD avoid copying third-party personal data into it where
+a non-identifying description suffices.
+
+## The Shaper Trace as a content sink
+
+The Shaper Trace aggregates the prompt, applied defaults, derivation
+hints, and model outputs into a single artifact, and is therefore a
+concentrated sink of potentially sensitive prompt content. As noted
+in {{confidentiality-of-prompt-content}}, a Shaper Trace transmitted
+outside the client's trust domain (for example, shipped to a
+centralized audit store) SHOULD carry the same data-handling and
+retention controls the requesting client applies to any other prompt
+or user-content log. Implementations SHOULD be able to produce a
+redacted Trace for audiences that need the transformation provenance
+but not the raw prompt content.
+
+## No new identifiers
+
+The Shaper introduces no identifier of its own and is not a separate
+principal to the state authority ({{shaper-role-and-trust-boundary}}).
+It therefore adds no cross-party correlation surface beyond the
+prompt content it processes and the requesting-client identity the
+state authority already sees.
 
 # IANA Considerations
 
