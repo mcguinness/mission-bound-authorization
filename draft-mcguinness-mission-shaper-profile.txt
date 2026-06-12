@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                              11 June 2026
-Expires: 13 December 2026
+Intended status: Informational                              12 June 2026
+Expires: 14 December 2026
 
 
                          Mission Shaper Profile
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 13 December 2026.
+   This Internet-Draft will expire on 14 December 2026.
 
 Copyright Notice
 
@@ -111,10 +111,14 @@ Table of Contents
      11.4.  Confidentiality of prompt content
      11.5.  Shaper-to-client integrity inside a multi-process client
      11.6.  Reliance on language-model behavior
-   12. IANA Considerations
-   13. References
-     13.1.  Normative References
-     13.2.  Informative References
+   12. Privacy Considerations
+     12.1.  Prompt content in Mission Intent fields
+     12.2.  The Shaper Trace as a content sink
+     12.3.  No new identifiers
+   13. IANA Considerations
+   14. References
+     14.1.  Normative References
+     14.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -377,6 +381,8 @@ Table of Contents
    *  mission_expiry (RFC 3339 timestamp, required).
 
    *  purpose (URI, optional).
+
+   *  language (string, optional).
 
    *  context (object, optional).
 
@@ -713,11 +719,12 @@ Table of Contents
    The Mission-Bound OAuth Profile
    [I-D.draft-mcguinness-mission-oauth-profile] defines a mission_intent
    parameter carried inside a Pushed Authorization Request (PAR)
-   [RFC9396].  The Submitted Mission Intent the Shaper produced is the
-   value of that parameter.  The Authorization Server acts as the state
-   authority: it validates, narrows, and renders the consent disclosure,
-   then creates a Mission Proposal and, on approval, a Mission with a
-   derived Authority Set ([I-D.draft-mcguinness-mission-oauth-profile]).
+   [RFC9126].  The Submitted Mission Intent the Shaper produced is the
+   value of that parameter.  The Authorization Server [RFC6749] acts as
+   the state authority: it validates, narrows, and renders the consent
+   disclosure, then creates a Mission Proposal and, on approval, a
+   Mission with a derived Authority Set
+   ([I-D.draft-mcguinness-mission-oauth-profile]).
 
    The Shaper does not invoke the OAuth Authorization Endpoint, does not
    call the PAR endpoint, and does not handle the authorization
@@ -908,7 +915,47 @@ Table of Contents
    identifier and version in the Shaper Trace so that failures can be
    attributed.
 
-12.  IANA Considerations
+12.  Privacy Considerations
+
+   The Shaper sits at the point where a user's natural-language prompt
+   -- which may carry personal data, business-confidential content, or
+   free-form expression -- is transformed into structured artifacts.
+   The privacy surface follows from where that content flows.
+
+12.1.  Prompt content in Mission Intent fields
+
+   The Shaper copies or paraphrases prompt content into goal, objects,
+   constraints, and context, which the state authority renders in a
+   consent disclosure the approving principal reads.  A Shaper SHOULD
+   carry into these fields only the content needed to describe the task,
+   and SHOULD NOT widen objects or echo unrelated prompt content (per
+   Section 5).  Content placed in goal in particular is read by the
+   approving principal and may be retained in the Mission record and its
+   audit trail, so a Shaper SHOULD avoid copying third-party personal
+   data into it where a non-identifying description suffices.
+
+12.2.  The Shaper Trace as a content sink
+
+   The Shaper Trace aggregates the prompt, applied defaults, derivation
+   hints, and model outputs into a single artifact, and is therefore a
+   concentrated sink of potentially sensitive prompt content.  As noted
+   in Section 11.4, a Shaper Trace transmitted outside the client's
+   trust domain (for example, shipped to a centralized audit store)
+   SHOULD carry the same data-handling and retention controls the
+   requesting client applies to any other prompt or user-content log.
+   Implementations SHOULD be able to produce a redacted Trace for
+   audiences that need the transformation provenance but not the raw
+   prompt content.
+
+12.3.  No new identifiers
+
+   The Shaper introduces no identifier of its own and is not a separate
+   principal to the state authority (Section 3).  It therefore adds no
+   cross-party correlation surface beyond the prompt content it
+   processes and the requesting-client identity the state authority
+   already sees.
+
+13.  IANA Considerations
 
    This document has no IANA actions.  The Mission Shaper Profile is
    Informational.  It does not register media types, claim names,
@@ -917,9 +964,9 @@ Table of Contents
    would be a separate Standards Track document and would carry its own
    IANA registrations there.
 
-13.  References
+14.  References
 
-13.1.  Normative References
+14.1.  Normative References
 
    [I-D.draft-mcguinness-mission-framework]
               "*** BROKEN REFERENCE ***".
@@ -933,7 +980,7 @@ Table of Contents
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
-13.2.  Informative References
+14.2.  Informative References
 
    [I-D.draft-mcguinness-mission-oauth-profile]
               "*** BROKEN REFERENCE ***".
@@ -963,10 +1010,10 @@ Table of Contents
               RFC 6749, DOI 10.17487/RFC6749, October 2012,
               <https://www.rfc-editor.org/rfc/rfc6749>.
 
-   [RFC9396]  Lodderstedt, T., Richer, J., and B. Campbell, "OAuth 2.0
-              Rich Authorization Requests", RFC 9396,
-              DOI 10.17487/RFC9396, May 2023,
-              <https://www.rfc-editor.org/rfc/rfc9396>.
+   [RFC9126]  Lodderstedt, T., Campbell, B., Sakimura, N., Tonge, D.,
+              and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",
+              RFC 9126, DOI 10.17487/RFC9126, September 2021,
+              <https://www.rfc-editor.org/rfc/rfc9126>.
 
 Acknowledgments
 
