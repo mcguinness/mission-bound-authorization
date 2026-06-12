@@ -1,0 +1,779 @@
+
+
+
+
+Network Working Group                                      K. McGuinness
+Internet-Draft                                               Independent
+Intended status: Standards Track                            12 June 2026
+Expires: 14 December 2026
+
+
+          Mission-Bound Transaction Token Chaining Composition
+           draft-mcguinness-mission-txn-token-chaining-latest
+
+Abstract
+
+   This document defines the composition between Mission-Bound
+   Authorization and the Transaction Token Chaining Profile.  It
+   specifies how a Mission handle and the audience-filtered Authority
+   Set from a Mission-Bound access token are transcribed into the
+   txn_claims object of the JWT Authorization Grant exchanged between
+   Authorization Servers across trust domains.  It defines validation
+   rules at the receiving Authorization Server, the cross-domain Mission
+   Status reach-back, and the trust-boundary considerations that follow
+   from carrying a governance reference across a Cross-Domain Trust
+   Agreement.
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://mcguinness.github.io/mission-bound-authorization/draft-
+   mcguinness-mission-txn-token-chaining.html.  Status information for
+   this document may be found at https://datatracker.ietf.org/doc/draft-
+   mcguinness-mission-txn-token-chaining/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/mcguinness/mission-bound-authorization.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 14 December 2026.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+     1.1.  Relationship to Other Specifications
+     1.2.  Conventions and Definitions
+   2.  Composition Model
+   3.  Mission Carriage in txn_claims
+     3.1.  The mission Member of txn_claims
+     3.2.  Audience-Filtered Authority Set
+     3.3.  Top-Level resource and scope Mapping
+     3.4.  Transcription Profile Identifier
+     3.5.  Mission-Bound txn_claims Members JSON Schema
+   4.  Worked Example
+   5.  Validation at the Receiving AS
+     5.1.  Issuer Trust
+     5.2.  Audience and Freshness
+     5.3.  Mission State Reach-Back
+     5.4.  Failure Modes
+     5.5.  Derived Token Binding
+   6.  Trust-Boundary Considerations Between Transaction Token Issuers
+     6.1.  Mission Status Consumer Pre-Registration
+     6.2.  Origin Resolution Trust
+   7.  Security Considerations
+     7.1.  Cross-Domain Mission Identifier
+     7.2.  Audience Confusion
+     7.3.  Replay
+     7.4.  Stale Authority Hash
+     7.5.  Transcription Profile Negotiation
+     7.6.  Mission Status Endpoint as a High-Value Target
+   8.  Privacy Considerations
+     8.1.  Cross-partner correlation
+     8.2.  The grant payload is correlation-class data
+     8.3.  No new identifier
+   9.  IANA Considerations
+     9.1.  txn_claims Mission-Bound Members
+     9.2.  Mission Transcription Profile Registry
+     9.3.  Updates to Existing Registries
+   Acknowledgments
+   References
+     Normative References
+     Informative References
+   Author's Address
+
+1.  Introduction
+
+   The Transaction Token Chaining Profile
+   [I-D.draft-fletcher-transaction-token-chaining-profile] defines how
+   an Authorization Server in one trust domain (AS-A) converts an
+   internal Transaction Token (Txn-Token) into a JWT Authorization Grant
+   [RFC7519][RFC8693] that an Authorization Server in a different trust
+   domain (AS-B) consumes to issue a partner-domain access token.  The
+   grant carries a curated txn_claims object that projects a minimized
+   subset of the Txn-Token's claims for AS-B's authorization decision.
+
+   Appendix B.1 of
+   [I-D.draft-fletcher-transaction-token-chaining-profile] notes that
+   Rich Authorization Requests [RFC9396] integration is not defined in
+   that profile and that a future revision may specify how
+   authorization_details from a Txn-Token are transcribed into the JWT
+   Authorization Grant.  The Mission-Bound OAuth Profile
+   [I-D.draft-mcguinness-mission-oauth-profile] carries authority as
+   authorization_details of type mission_resource_access bound to a
+   mission claim that references a Mission record per the Mission
+   Framework [I-D.draft-mcguinness-mission-framework].  Without an
+   explicit composition rule, deployments that chain Mission-Bound
+   credentials across trust domains either drop the governance reference
+   at the boundary or invent ad-hoc carriage that AS-B cannot validate.
+
+   This document defines that composition.  It places the Mission handle
+   and the audience-filtered Authority Set inside txn_claims, specifies
+   how mission_resource_access entries are filtered against the Cross-
+   Domain Trust Agreement (CDTA) that AS-A and AS-B have pre-
+   established, and specifies validation rules at AS-B including a
+   cross-domain Mission Status reach-back to AS-A's state authority.
+
+   This document does not modify the Mission Framework, the Mission-
+   Bound OAuth Profile, or the Transaction Token Chaining Profile.  It
+   composes them.
+
+1.1.  Relationship to Other Specifications
+
+   *  [I-D.draft-mcguinness-mission-framework] (Framework) owns the
+      Mission record, the Mission Status interface, the typed Authority
+      Set, the canonical mission.id identifier model, and the integrity
+      anchors.  This document references these without redefining them.
+
+   *  [I-D.draft-mcguinness-mission-oauth-profile] (OAuth Profile) owns
+      the mission JWT claim, the mission_resource_access RAR type, and
+      the AS-side derivation of authorization_details.  This document
+      reuses these shapes verbatim in txn_claims.
+
+   *  [I-D.draft-fletcher-transaction-token-chaining-profile] (Txn
+      Chaining Profile) owns the JWT Authorization Grant shape,
+      txn_claims semantics, the Cross-Domain Trust Agreement (CDTA)
+      concept, and the AS-A to AS-B exchange.
+
+   *  [I-D.draft-ietf-oauth-transaction-tokens] (Txn-Tokens) is the
+      intra-trust-domain substrate that AS-A's transcription draws from.
+
+   *  [I-D.draft-ietf-oauth-identity-chaining] (Identity Chaining) is
+      the cross-trust-domain identity-mapping neighbor; this document
+      composes with Txn Chaining, not Identity Chaining directly, though
+      deployments may use both.
+
+1.2.  Conventions and Definitions
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   In this document the following terms are used as defined elsewhere:
+
+   *  *Mission*, *Mission record*, *Mission Intent*, *Authority Set*,
+      *Mission Status*, *mission.id*, *mission.origin*,
+      *authority_hash*: per [I-D.draft-mcguinness-mission-framework].
+
+   *  *mission claim*, *mission_resource_access*: per
+      [I-D.draft-mcguinness-mission-oauth-profile].
+
+   *  *JWT Authorization Grant*, *txn_claims*, *Txn-Token*, *Cross-
+      Domain Trust Agreement (CDTA)*, *AS-A*, *AS-B*: per
+      [I-D.draft-fletcher-transaction-token-chaining-profile].
+
+   This document additionally defines:
+
+   *  *Transcribing AS*: the Authorization Server that converts a
+      Mission-Bound Txn-Token into a JWT Authorization Grant.
+      Equivalent to AS-A in the chaining profile.
+
+   *  *Receiving AS*: the Authorization Server in the partner trust
+      domain that consumes the JWT Authorization Grant.  Equivalent to
+      AS-B.
+
+   *  *Cross-Domain Mission Status Consumer*: a Receiving AS that has
+      been pre-registered at the Transcribing AS's Mission Status
+      endpoint per the CDTA.
+
+   *  *Transcription Profile*: a named, registered rule set governing
+      how Mission-bound txn_claims members are produced and validated.
+      This document defines the initial entry urn:mbo:txn-
+      chain:transcription:default-v1.
+
+2.  Composition Model
+
+   The Transaction Token Chaining Profile treats txn_claims as the
+   curated, minimized projection of the Txn-Token's claims for the
+   partner AS's policy.  Mission-bound members therefore live inside
+   txn_claims, not at the top level of the JWT Authorization Grant.
+   Top-level grant claims (iss, sub, aud, iat, exp, jti, scope,
+   resource, txn) retain the semantics defined by
+   [I-D.draft-fletcher-transaction-token-chaining-profile]; this
+   document specifies only how Mission-bound state populates and
+   constrains them.
+
+3.  Mission Carriage in txn_claims
+
+   A Transcribing AS that has issued a Mission-Bound access token, or
+   whose internal Txn-Token carries a Mission reference, MUST place
+   Mission-bound state into txn_claims as defined in this section when
+   producing a JWT Authorization Grant for AS-B.
+
+3.1.  The mission Member of txn_claims
+
+   txn_claims.mission MUST carry the same object shape as the mission
+   claim defined in [I-D.draft-mcguinness-mission-oauth-profile].
+
+   In canonical mode:
+
+   {
+     "mission": {
+       "id": "msn_01J9Z2P8BQ4Y3F0V0K9D6Z7M1",
+       "origin": "https://as-a.example.com",
+       "authority_hash": "sha-256:fS8h4w7Z3Lq...",
+       "version": 1
+     }
+   }
+
+   The members carry the following meaning at the trust boundary:
+
+   *  id: the canonical mission.id identifying the Mission handle.
+
+   *  origin: the Transcribing AS's issuer URL.  This is the resolution
+      anchor that AS-B uses to discover the Mission Status endpoint per
+      [I-D.draft-mcguinness-mission-framework].
+
+   *  authority_hash: the integrity anchor for the Authority Set the
+      Mission record holds at the time of transcription.
+
+   *  version: the Mission record version used to produce this grant.
+
+   txn_claims.mission is a copy of the Mission reference captured by
+   AS-A at the moment of transcription.  It is not a claim AS-B can
+   forge a Mission state from.  AS-B MUST validate Mission state by
+   reach-back (see Section 5).
+
+3.2.  Audience-Filtered Authority Set
+
+   txn_claims.mission_resource_access MUST carry a JSON array of
+   Authority Set entries of type mission_resource_access as defined in
+   [I-D.draft-mcguinness-mission-oauth-profile].  The array is the
+   audience-filtered projection of the Mission record's Authority Set
+   for AS-B.
+
+   An entry is included in txn_claims.mission_resource_access if and
+   only if all of the following hold:
+
+   1.  The entry's type is mission_resource_access.
+
+   2.  The entry's authority.resource lies within the resource scope
+       that the CDTA grants AS-B.
+
+   3.  The entry's narrowing_profile is one the CDTA permits for cross-
+       domain projection.
+
+   Entries outside CDTA scope MUST be dropped.  The Transcribing AS MUST
+   NOT widen any entry, MUST NOT alter actions, constraints, or
+   narrowing_profile, and MUST NOT introduce new keys.  The transcribed
+   entry is byte-equal to the entry the Mission record holds for the
+   matching resource after audience filtering.
+
+   Entries of Authority Set types other than mission_resource_access are
+   out of scope for this document and MUST NOT be transcribed by an
+   implementation conforming to urn:mbo:txn-chain:transcription:default-
+   v1.  Future Transcription Profiles may define transcription rules for
+   additional types.
+
+3.3.  Top-Level resource and scope Mapping
+
+   The top-level resource claim in the JWT Authorization Grant MUST
+   contain the set of distinct authority.resource values drawn from the
+   included txn_claims.mission_resource_access entries.  This maintains
+   the invariant defined by
+   [I-D.draft-fletcher-transaction-token-chaining-profile] that top-
+   level resource enumerates the Protected Resources the grant
+   authorizes.
+
+   The top-level scope claim MAY be derived from the union of the
+   included entries' authority.actions per a deployment-stated mapping,
+   or MAY be absent.  Deployments that rely entirely on the RAR-style
+   mission_resource_access projection for authority MUST NOT use scope
+   to expand authority beyond what the Authority Set expresses.
+
+3.4.  Transcription Profile Identifier
+
+   The JWT Authorization Grant MUST carry the Transcription Profile
+   identifier as txn_claims.transcription_profile.  The initial
+   registered value is urn:mbo:txn-chain:transcription:default-v1, which
+   incorporates the rules in this section verbatim.
+
+3.5.  Mission-Bound txn_claims Members JSON Schema
+
+   The Mission-bound members of txn_claims validate against the
+   following schema.  The members reuse the inherited shapes verbatim:
+   mission is the OAuth Profile mission claim (urn:mbo:schema:oauth-
+   mission-claim:1) and each mission_resource_access entry is the OAuth
+   Profile RAR entry (urn:mbo:schema:mission-resource-access:1).  The
+   schema describes the Mission-bound members only; the full txn_claims
+   object carries additional members defined by
+   [I-D.draft-fletcher-transaction-token-chaining-profile], so
+   additional properties are permitted.
+
+   {
+     "$schema": "https://json-schema.org/draft/2020-12/schema",
+     "$id": "urn:mbo:schema:txn-chain-mission-claims:1",
+     "title": "Mission-Bound txn_claims Members",
+     "type": "object",
+     "required": [
+       "mission", "mission_resource_access", "transcription_profile"
+     ],
+     "properties": {
+       "mission": { "$ref": "urn:mbo:schema:oauth-mission-claim:1" },
+       "mission_resource_access": {
+         "type": "array",
+         "items": {
+           "$ref": "urn:mbo:schema:mission-resource-access:1"
+         }
+       },
+       "transcription_profile": {
+         "type": "string", "format": "uri"
+       }
+     }
+   }
+
+4.  Worked Example
+
+   A minimal JWT Authorization Grant payload illustrating Mission-bound
+   txn_claims carriage (signature and unrelated optional claims
+   omitted):
+
+   {
+     "iss": "https://as-a.example.com",
+     "sub": "user-mapped-for-partner-b@as-a.example.com",
+     "aud": "https://as-b.partner.example.com",
+     "iat": 1750000000,
+     "exp": 1750000300,
+     "jti": "kZ9q3-tj...",
+     "txn": "txn-7f3c...",
+     "resource": ["https://docs.partner.example.com"],
+     "txn_claims": {
+       "transcription_profile":
+         "urn:mbo:txn-chain:transcription:default-v1",
+       "mission": {
+         "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+         "origin": "https://as-a.example.com",
+         "authority_hash": "sha-256:fS8h4w7Z3Lq...",
+         "version": 1
+       },
+       "mission_resource_access": [
+         {
+           "type": "mission_resource_access",
+           "specification_uri":
+             "https://mcguinness.github.io/mission-bound-authorization/specs/mission_resource_access-v1",
+           "schema_digest": "sha-256:9Hf...",
+           "schema_version": "1",
+           "authority": {
+             "resource": "https://docs.partner.example.com",
+             "actions": ["documents.read"],
+             "constraints": { "folder": "shared-with-b" }
+           },
+           "narrowing_profile": "urn:mbo:narrowing:default-v1"
+         }
+       ]
+     }
+   }
+
+5.  Validation at the Receiving AS
+
+   A Receiving AS that accepts a JWT Authorization Grant carrying
+   Mission-bound txn_claims MUST perform the validations in this section
+   in addition to the validations defined by
+   [I-D.draft-fletcher-transaction-token-chaining-profile].
+
+5.1.  Issuer Trust
+
+   The Receiving AS MUST validate that the top-level iss is a Cross-
+   Domain Trust Agreement (CDTA) partner per its issuer trust policy.
+   The Receiving AS MUST validate the JWT signature against keys
+   discovered through the issuer's metadata document per [RFC8414] and
+   the issuer trust agreement.
+
+   The Receiving AS MUST validate that txn_claims.mission.origin matches
+   a metadata document anchored to the trusted iss.  The Receiving AS
+   MUST NOT accept a txn_claims.mission.origin that resolves to a
+   metadata document outside the CDTA-trusted issuer set, even if the
+   JWT signature is otherwise valid.
+
+5.2.  Audience and Freshness
+
+   The Receiving AS MUST validate that the top-level aud matches its own
+   issuer URL, that exp has not passed, that iat is within acceptable
+   clock skew, and that jti has not been previously consumed within the
+   configured replay window.
+
+   The Receiving AS MUST validate that txn_claims.transcription_profile
+   is a value its policy permits.
+
+5.3.  Mission State Reach-Back
+
+   The Receiving AS MUST query the Mission Status endpoint discovered
+   through txn_claims.mission.origin per
+   [I-D.draft-mcguinness-mission-framework] and
+   [I-D.draft-mcguinness-mission-oauth-profile].  The query MUST use the
+   canonical mission.id carried in txn_claims.mission.id and MUST be
+   authenticated as the Cross-Domain Mission Status Consumer pre-
+   registered at the Transcribing AS.
+
+   The Receiving AS MUST require all of the following from the Mission
+   Status response to issue a partner-domain access token:
+
+   1.  The Mission state is active.
+
+   2.  The returned authority_hash equals
+       txn_claims.mission.authority_hash.  A divergence indicates the
+       Mission record has been re-derived since transcription and the
+       grant is stale.
+
+   3.  The returned version equals txn_claims.mission.version, or the
+       deployment policy explicitly permits version drift within a
+       bounded window.
+
+   4.  The audience-filtered Authority Set projection the Transcribing
+       AS returns for the Receiving AS's sector is a superset of the
+       entries carried in txn_claims.mission_resource_access.  The
+       Receiving AS MUST NOT issue authority beyond the intersection of
+       the projection it observes and the transcribed entries.
+
+   5.  The response satisfies the authentication, freshness, audience,
+       and integrity properties defined in
+       [I-D.draft-mcguinness-mission-framework].
+
+   A Mission Status response indicating any non-active state, an unknown
+   reference, an unauthorized reference, or an integrity-mismatched
+   response MUST cause the Receiving AS to refuse the grant.
+
+5.4.  Failure Modes
+
+   If the Mission Status endpoint is unreachable, the Receiving AS MUST
+   fail closed unless the Transcribing AS has advertised a bounded
+   degraded mode in its metadata per
+   [I-D.draft-mcguinness-mission-oauth-profile] and the Receiving AS
+   explicitly accepts it under the CDTA.  A degraded mode that exceeds
+   the deployment's mission_max_stale_seconds advertisement is not a
+   permitted fallback.
+
+5.5.  Derived Token Binding
+
+   When the Receiving AS issues a partner-domain access token (for
+   example, a JWT access token [RFC9068]) from a validated JWT
+   Authorization Grant, the issued token's mission claim MUST be set as
+   follows:
+
+   *  origin: the Transcribing AS's issuer URL (unchanged).
+
+   *  id or ref: identical to txn_claims.mission.  The Receiving AS is
+      not the state authority for the Mission and MUST NOT mint a new
+      Mission reference.
+
+   *  authority_hash and version: identical to txn_claims.mission
+      values, subject to the validation above.
+
+   Subsequent refresh or exchange at the Receiving AS is gated on
+   Mission state per [I-D.draft-mcguinness-mission-oauth-profile].  The
+   Receiving AS MAY re-query Mission Status on its own freshness
+   schedule and MUST refuse derivation when Mission state is not active.
+
+6.  Trust-Boundary Considerations Between Transaction Token Issuers
+
+   The Transaction Token Chaining Profile requires a Cross-Domain Trust
+   Agreement to bilaterally establish that AS-A and AS-B accept each
+   other for chained authorization.  Mission carriage extends the CDTA
+   with three additional concerns.
+
+6.1.  Mission Status Consumer Pre-Registration
+
+   The CDTA MUST establish AS-B as a Cross-Domain Mission Status
+   Consumer at AS-A's Mission Status endpoint.  Pre-registration covers:
+
+   *  AS-B's client credentials at AS-A's Mission Status endpoint
+      (client_credentials, mTLS, or DPoP-bound bearer per the applicable
+      OAuth Profile authentication options).
+
+   *  The maximum tolerated staleness AS-B will accept on responses from
+      AS-A.
+
+   Without pre-registration, AS-A's Mission Status endpoint MUST refuse
+   the reach-back as an unauthorized reference, indistinguishable from
+   an unknown reference per [I-D.draft-mcguinness-mission-framework].
+
+6.2.  Origin Resolution Trust
+
+   A Receiving AS MUST NOT accept a txn_claims.mission.origin value
+   solely because it appears inside a signed grant from a CDTA partner.
+   The CDTA enumerates which Mission Status endpoints AS-B trusts for
+   the partner.  A grant whose txn_claims.mission.origin resolves
+   outside that enumeration MUST be refused, even when the grant's iss
+   is a CDTA partner.  This prevents a compromised or misconfigured AS-A
+   from redirecting Mission Status to an attacker.
+
+7.  Security Considerations
+
+7.1.  Cross-Domain Mission Identifier
+
+   The canonical mission.id emitted into txn_claims.mission reaches AS-B
+   in plaintext within the signed grant.  AS-B observes the same
+   mission.id that AS-A's other partners observe; cross- partner
+   correlation via Mission identifier is possible by design, consistent
+   with the Framework's canonical-only identifier model.  Deployments
+   where cross-partner correlation matters compose with a profile
+   extension to the Framework defining a pairwise Mission identifier;
+   such extensions are out of scope.
+
+   A Transcribing AS MUST treat the grant payload as carrying
+   correlation-class data and SHOULD restrict its distribution through
+   CDTA terms rather than through wire confidentiality alone.
+
+7.2.  Audience Confusion
+
+   The composition relies on two audience signals that MUST agree: top-
+   level aud and the partner identity in the CDTA.  A mismatch between
+   these signals MUST cause the grant to be refused.
+
+7.3.  Replay
+
+   The grant is bound by jti, iat, and exp per
+   [I-D.draft-fletcher-transaction-token-chaining-profile].  Mission
+   state reach-back additionally binds the grant to current Mission
+   state at the moment of consumption.  A grant that successfully
+   validates against the chaining profile's anti-replay controls MUST
+   still be refused if Mission Status reports suspended, revoked,
+   completed, or expired at consumption time.
+
+7.4.  Stale Authority Hash
+
+   txn_claims.mission.authority_hash is captured at transcription.  If
+   the Mission record's Authority Set changes between transcription and
+   consumption (for example, narrowing during expansion review), the
+   hash returned by Mission Status diverges.  The Receiving AS MUST
+   refuse on divergence rather than accepting either the transcribed or
+   the freshly returned Authority Set. The Transcribing AS issues a new
+   grant against the current Mission record on the next chained request.
+
+7.5.  Transcription Profile Negotiation
+
+   A Receiving AS MUST NOT accept Transcription Profiles outside the
+   CDTA-permitted set.  Permitting unknown profiles permits a
+   Transcribing AS to alter transcription rules unilaterally, which
+   could widen authority beyond what AS-B's policy intended.
+
+7.6.  Mission Status Endpoint as a High-Value Target
+
+   Aggregating cross-domain reach-back to a single Mission Status
+   endpoint concentrates trust.  Operational guidance from
+   [I-D.draft-mcguinness-mission-oauth-profile] applies: the endpoint
+   authenticates callers, refuses bearer use of Mission references,
+   returns indistinguishable responses for unknown and unauthorized
+   references, and binds responses to the requesting caller, audience,
+   and nonce.
+
+8.  Privacy Considerations
+
+   Carrying a Mission reference across a trust boundary introduces a
+   cross-domain correlation surface that does not exist when a Mission
+   stays within one domain.  The considerations below are additional to
+   the Framework's privacy treatment.
+
+8.1.  Cross-partner correlation
+
+   As described in Section 7.1, the canonical mission.id reaches AS-B in
+   plaintext inside the signed grant, and it is the same identifier
+   every CDTA partner of AS-A observes for that Mission.  Two partners
+   that both receive grants for the same Mission can therefore correlate
+   the user's activity across their domains through mission.id.  This is
+   inherent to the Framework's canonical-only identifier model and is
+   consented to at approval time; deployments that require cross-partner
+   Mission-identity isolation compose with a Framework profile extension
+   defining a pairwise Mission identifier (out of scope here).
+
+8.2.  The grant payload is correlation-class data
+
+   The JWT Authorization Grant carries the Mission reference, the mapped
+   subject, and the audience-filtered authority together.  A
+   Transcribing AS MUST treat the grant as correlation-class data
+   (Section 7.1) and SHOULD bound its distribution and retention through
+   CDTA terms rather than relying on transport confidentiality alone.
+   The audience-filtering requirement (Section 3.2) limits what each
+   partner learns about the Mission's authority to the resources within
+   that partner's CDTA scope.
+
+8.3.  No new identifier
+
+   This composition introduces no identifier of its own.  It carries the
+   canonical mission.id already defined by the Framework and the subject
+   mapping already defined by
+   [I-D.draft-fletcher-transaction-token-chaining-profile]; it adds no
+   correlation handle beyond those.
+
+9.  IANA Considerations
+
+9.1.  txn_claims Mission-Bound Members
+
+   This document requests registration of the following members within
+   the txn_claims object defined by
+   [I-D.draft-fletcher-transaction-token-chaining-profile], in the
+   registry that document creates for txn_claims members.  If that
+   registry does not exist at the time of publication, these members are
+   documented descriptively in this document.
+
+   *  mission: object carrying the Mission reference per
+      [I-D.draft-mcguinness-mission-oauth-profile].  Members: id
+      (string, canonical mission.id), origin (URL), authority_hash
+      (string), version (integer).
+
+   *  mission_resource_access: array of audience-filtered Authority Set
+      entries of type mission_resource_access per
+      [I-D.draft-mcguinness-mission-oauth-profile].
+
+   *  transcription_profile: string identifier of the Transcription
+      Profile applied by the Transcribing AS.
+
+   Change Controller: IETF.  Reference: this document.
+
+9.2.  Mission Transcription Profile Registry
+
+   This document requests creation of a new IANA registry, *Mission
+   Transcription Profiles*, with the following columns:
+
+   *  Profile identifier (URI).
+
+   *  Specification reference (immutable).
+
+   *  Permitted Authority Set entry types.
+
+   *  Audience-filtering rule reference.
+
+   *  Narrowing profiles permitted for cross-domain projection.
+
+   *  Change controller.
+
+   Registration policy: Specification Required.
+
+   Initial entry:
+
+   *  Identifier: urn:mbo:txn-chain:transcription:default-v1.
+
+   *  Specification reference: this document.
+
+   *  Permitted Authority Set entry types: mission_resource_access.
+
+   *  Audience-filtering rule reference: Section 3.2 of this document.
+
+   *  Narrowing profiles permitted: those advertised under the
+      applicable CDTA; urn:mbo:narrowing:default-v1 permitted by
+      default.
+
+   *  Change controller: IETF.
+
+9.3.  Updates to Existing Registries
+
+   This document does not register new JWT claims.  The top-level grant
+   claims (iss, aud, sub, exp, iat, jti, scope, resource, txn,
+   txn_claims) remain registered by
+   [I-D.draft-fletcher-transaction-token-chaining-profile] and
+   referenced specifications.  The mission member nested inside
+   txn_claims is registered by this document at the txn_claims level
+   only; the top-level mission JWT claim is registered by
+   [I-D.draft-mcguinness-mission-oauth-profile] and unchanged here.
+
+Acknowledgments
+
+   The author thanks the editors and contributors of
+   [I-D.draft-fletcher-transaction-token-chaining-profile],
+   [I-D.draft-ietf-oauth-transaction-tokens], and the Mission-Bound
+   Authorization architecture for the discussions that shaped this
+   composition.
+
+References
+
+Normative References
+
+   [I-D.draft-fletcher-transaction-token-chaining-profile]
+              Fletcher, G., "Transaction Token Authorization Grant
+              Profile for OAuth Identity and Authorization Chaining",
+              Work in Progress, Internet-Draft, draft-fletcher-
+              transaction-token-chaining-profile-00, 11 May 2026,
+              <https://datatracker.ietf.org/doc/html/draft-fletcher-
+              transaction-token-chaining-profile-00>.
+
+   [I-D.draft-mcguinness-mission-framework]
+              "*** BROKEN REFERENCE ***".
+
+   [I-D.draft-mcguinness-mission-oauth-profile]
+              "*** BROKEN REFERENCE ***".
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
+              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7519>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC8414]  Jones, M., Sakimura, N., and J. Bradley, "OAuth 2.0
+              Authorization Server Metadata", RFC 8414,
+              DOI 10.17487/RFC8414, June 2018,
+              <https://www.rfc-editor.org/rfc/rfc8414>.
+
+   [RFC8693]  Jones, M., Nadalin, A., Campbell, B., Ed., Bradley, J.,
+              and C. Mortimore, "OAuth 2.0 Token Exchange", RFC 8693,
+              DOI 10.17487/RFC8693, January 2020,
+              <https://www.rfc-editor.org/rfc/rfc8693>.
+
+   [RFC9396]  Lodderstedt, T., Richer, J., and B. Campbell, "OAuth 2.0
+              Rich Authorization Requests", RFC 9396,
+              DOI 10.17487/RFC9396, May 2023,
+              <https://www.rfc-editor.org/rfc/rfc9396>.
+
+Informative References
+
+   [I-D.draft-ietf-oauth-identity-chaining]
+              Schwenkschuster, A., Kasselman, P., Burgin, K., Jenkins,
+              M. J., Campbell, B., and A. Parecki, "OAuth Identity and
+              Authorization Chaining Across Domains", Work in Progress,
+              Internet-Draft, draft-ietf-oauth-identity-chaining-14, 2
+              June 2026, <https://datatracker.ietf.org/doc/html/draft-
+              ietf-oauth-identity-chaining-14>.
+
+   [I-D.draft-ietf-oauth-transaction-tokens]
+              Tulshibagwale, A., Fletcher, G., and P. Kasselman,
+              "Transaction Tokens", Work in Progress, Internet-Draft,
+              draft-ietf-oauth-transaction-tokens-08, 2 March 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              transaction-tokens-08>.
+
+   [RFC9068]  Bertocci, V., "JSON Web Token (JWT) Profile for OAuth 2.0
+              Access Tokens", RFC 9068, DOI 10.17487/RFC9068, October
+              2021, <https://www.rfc-editor.org/rfc/rfc9068>.
+
+Author's Address
+
+   Karl McGuinness
+   Independent
+   Email: public@karlmcguinness.com
