@@ -30,6 +30,7 @@ normative:
   RFC2119:
   RFC8174:
   RFC7519:
+  RFC8414:
   RFC8693:
   RFC9396:
   I-D.draft-mcguinness-mission-framework:
@@ -38,11 +39,8 @@ normative:
 
 informative:
   RFC9068:
-  RFC8414:
-  RFC9701:
   I-D.draft-ietf-oauth-transaction-tokens:
   I-D.draft-ietf-oauth-identity-chaining:
-  I-D.draft-ietf-oauth-identity-assertion-authz-grant:
 
 --- abstract
 
@@ -257,6 +255,46 @@ identifier as `txn_claims.transcription_profile`. The initial
 registered value is `urn:mbo:txn-chain:transcription:default-v1`,
 which incorporates the rules in this section verbatim.
 
+## Mission-Bound `txn_claims` Members JSON Schema {#txn-claims-schema}
+
+The Mission-bound members of `txn_claims` validate against the
+following schema. The members reuse the inherited shapes verbatim:
+`mission` is the OAuth Profile `mission` claim
+(`urn:mbo:schema:oauth-mission-claim:1`) and each
+`mission_resource_access` entry is a full Authority Set entry
+(`urn:mbo:schema:authority-set-entry:1`) of type
+`mission_resource_access`, whose inner `authority` payload conforms
+to the OAuth Profile's `urn:mbo:schema:mission-resource-access:1`.
+The schema describes the Mission-bound members only; the full
+`txn_claims` object carries additional members defined by
+{{I-D.draft-fletcher-transaction-token-chaining-profile}}, so
+additional properties are permitted.
+
+~~~ json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mbo:schema:txn-chain-mission-claims:1",
+  "title": "Mission-Bound txn_claims Members",
+  "type": "object",
+  "required": [
+    "mission", "mission_resource_access", "transcription_profile"
+  ],
+  "properties": {
+    "mission": { "$ref": "urn:mbo:schema:oauth-mission-claim:1" },
+    "mission_resource_access": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "urn:mbo:schema:authority-set-entry:1"
+      }
+    },
+    "transcription_profile": {
+      "type": "string", "format": "uri"
+    }
+  }
+}
+~~~
+
 # Worked Example
 
 A minimal JWT Authorization Grant payload illustrating
@@ -379,9 +417,10 @@ permitted fallback.
 
 ## Derived Token Binding
 
-When the Receiving AS issues a partner-domain access token from a
-validated JWT Authorization Grant, the issued token's `mission`
-claim MUST be set as follows:
+When the Receiving AS issues a partner-domain access token (for
+example, a JWT access token {{RFC9068}}) from a validated JWT
+Authorization Grant, the issued token's `mission` claim MUST be set
+as follows:
 
 - `origin`: the Transcribing AS's issuer URL (unchanged).
 - `id` or `ref`: identical to `txn_claims.mission`. The Receiving
@@ -490,6 +529,46 @@ authenticates callers, refuses bearer use of Mission references,
 returns indistinguishable responses for unknown and unauthorized
 references, and binds responses to the requesting caller, audience,
 and nonce.
+
+# Privacy Considerations {#privacy-considerations}
+
+Carrying a Mission reference across a trust boundary introduces a
+cross-domain correlation surface that does not exist when a Mission
+stays within one domain. The considerations below are additional to
+the Framework's privacy treatment.
+
+## Cross-partner correlation
+
+As described in {{cross-domain-mission-identifier}}, the canonical
+`mission.id` reaches AS-B in plaintext inside the signed grant, and
+it is the same identifier every CDTA partner of AS-A observes for
+that Mission. Two partners that both receive grants for the same
+Mission can therefore correlate the user's activity across their
+domains through `mission.id`. This is inherent to the Framework's
+canonical-only identifier model and is consented to at approval
+time; deployments that require cross-partner Mission-identity
+isolation compose with a Framework profile extension defining a
+pairwise Mission identifier (out of scope here).
+
+## The grant payload is correlation-class data
+
+The JWT Authorization Grant carries the Mission reference, the
+mapped subject, and the audience-filtered authority together. A
+Transcribing AS MUST treat the grant as correlation-class data
+({{cross-domain-mission-identifier}}) and SHOULD bound its
+distribution and retention through CDTA terms rather than relying on
+transport confidentiality alone. The audience-filtering requirement
+({{audience-filtered-authority-set}}) limits what each partner
+learns about the Mission's authority to the resources within that
+partner's CDTA scope.
+
+## No new identifier
+
+This composition introduces no identifier of its own. It carries the
+canonical `mission.id` already defined by the Framework and the
+subject mapping already defined by
+{{I-D.draft-fletcher-transaction-token-chaining-profile}}; it adds
+no correlation handle beyond those.
 
 # IANA Considerations
 
