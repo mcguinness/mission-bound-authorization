@@ -34,11 +34,10 @@ normative:
 
 informative:
   RFC6749:
-  RFC9396:
   RFC9728:
   I-D.draft-mcguinness-mission-oauth-profile:
   I-D.draft-mcguinness-mission-aauth-profile:
-  I-D.draft-mcguinness-mission-mas:
+  I-D.draft-mcguinness-mission-authority-server:
   I-D.draft-mcguinness-mission-runtime-profile:
   I-D.draft-mcguinness-mission-shaper-profile:
   I-D.draft-mcguinness-mission-migration:
@@ -214,7 +213,7 @@ This claim maps to:
 
 - Capability Ladder Level 2 or higher.
 - The Mission Authority Server (MAS) topology
-  {{I-D.draft-mcguinness-mission-mas}} or an equivalent
+  {{I-D.draft-mcguinness-mission-authority-server}} or an equivalent
   multi-domain validation rule.
 - Authorization Domain Tier 2 (AD-2) at each consuming domain, plus
   the projection-validation contract from each substrate's profile.
@@ -385,7 +384,7 @@ Required surfaces:
   resource and auth-token flows per
   {{I-D.draft-mcguinness-mission-aauth-profile}}.
 - Cross-substrate deployments add MAS
-  {{I-D.draft-mcguinness-mission-mas}}; each substrate is an
+  {{I-D.draft-mcguinness-mission-authority-server}}; each substrate is an
   authorized projection issuer.
 
 Level 2 does not require Resource Server changes by itself.
@@ -710,7 +709,7 @@ Mission record home is the AAuth Person Server.
 ## Cross-substrate under MAS
 
 Cross-substrate deployments add the MAS topology
-{{I-D.draft-mcguinness-mission-mas}}. The canonical Mission
+{{I-D.draft-mcguinness-mission-authority-server}}. The canonical Mission
 record lives at the MAS. Each consuming substrate (one or more
 OAuth Authorization Servers, one or more AAuth Person Servers, or
 both) is an authorized projection issuer.
@@ -775,7 +774,7 @@ If your deployment goal is...
   AAuth profile, plus this document.
 - **"Project one Mission across multiple authorization domains."**
   Target Ladder Level 2 or higher and AD-2 at each participating
-  issuer domain. Add {{I-D.draft-mcguinness-mission-mas}} if the
+  issuer domain. Add {{I-D.draft-mcguinness-mission-authority-server}} if the
   domains need one shared canonical Mission record.
 - **"Resource Servers evaluate approved bounds at request time."**
   Target Ladder Level 3 and RS-C. Read the audience-relevant
@@ -815,7 +814,7 @@ a substrate profile or the Runtime Enforcement Profile.
   its PDP, PEP, and evidence contracts within a named
   enforcement scope.
 - A deployment claims conformance to
-  {{I-D.draft-mcguinness-mission-mas}} by satisfying its
+  {{I-D.draft-mcguinness-mission-authority-server}} by satisfying its
   canonical-record, projection-issuance, and Mission Status
   contracts.
 
@@ -909,6 +908,30 @@ and orthogonal.
 `L4 / RS-A / AD-1` is internally inconsistent. Relying parties
 SHOULD reject inconsistent coordinates rather than choosing one
 component to believe.
+
+# Privacy Considerations
+
+This document defines a reporting vocabulary. It introduces no new
+identifiers, credentials, data flows, or wire surface, and therefore
+adds no privacy surface beyond that of the Mission Framework and the
+substrate profiles a deployment implements. The privacy properties
+of Mission-bound credentials, Mission Status, and any cross-domain
+projection derive from those specifications, not from the coordinate
+defined here.
+
+One consideration is specific to publishing a coordinate. A
+capability coordinate accompanied by a scope statement
+({{scope-statements}}) names, by design, the action paths a
+deployment does and does not mediate -- including those it cannot
+stop. A detailed scope statement therefore discloses where a
+deployment's enforcement is weakest. This is an information-exposure
+consideration rather than a personal-data one: the disclosure
+concerns the deployment's own posture, but it can aid an adversary.
+As noted in {{security-considerations}} ("Scope is load-bearing"), a
+deployment SHOULD weigh the audience when publishing a detailed
+scope statement, sharing the full enforcement-gap detail with
+auditors and relying parties that need it rather than in
+open-ended marketing material.
 
 # Acknowledgments
 {:numbered="false"}
