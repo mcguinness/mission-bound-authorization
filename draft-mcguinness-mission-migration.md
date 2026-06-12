@@ -49,6 +49,7 @@ informative:
   I-D.draft-ietf-oauth-identity-chaining:
   I-D.draft-ietf-oauth-identity-assertion-authz-grant:
   I-D.draft-mcguinness-oauth-id-continuation-assertion:
+  I-D.draft-mcguinness-mission-capability-model:
 
 --- abstract
 
@@ -169,6 +170,18 @@ from token introspection or accepts pushed Mission-state events;
 an RS-C queries Mission Status per request for high-assurance
 operations. These map onto the enforcement classes the AS
 advertises per {{I-D.draft-mcguinness-mission-oauth-profile}}.
+
+: These labels describe the *order in which Resource Servers take up
+Mission state* during migration; they are not identical to the
+formal Resource Server Tiers (RS-A through RS-D) defined by the
+Capability Model {{I-D.draft-mcguinness-mission-capability-model}},
+which classify authority-enforcement depth. The two labelings are
+related but sit on different axes: this guide sequences Mission-state
+freshness mechanisms (introspection, events, per-request status),
+while the Capability Model classifies what a Resource Server does
+with the Mission's authority. A deployment reporting a formal
+capability coordinate uses the Capability Model's tiers, not these
+migration-ordering labels.
 
 # Migration Path at a Glance
 
@@ -750,6 +763,32 @@ plus `event_driven`, or plus `per_request`) SHOULD ensure each
 RS's claimed class is honored. Misadvertisement leads consumers
 to assume revocation propagation guarantees that do not hold for
 their audience.
+
+# Privacy Considerations
+
+This document is operational guidance and adds no new privacy
+surface of its own. The privacy properties of Mission records,
+Mission Intent, consent disclosures, the `mission` claim, and
+cross-audience correlation via the canonical `mission.id` derive
+from the Mission Framework
+{{I-D.draft-mcguinness-mission-framework}} and the Mission-Bound
+OAuth Profile {{I-D.draft-mcguinness-mission-oauth-profile}} and
+are addressed in their Privacy Considerations.
+
+One consideration is specific to the migration itself. Beginning at
+Stage 1, the Authorization Server starts recording Mission records --
+Mission Intent (possibly synthesized from the legacy authorization
+request), the consent disclosure, and principal-model evidence --
+for flows that previously retained no such governance data. The
+migration therefore introduces a new store of task and consent data,
+and a new cross-audience correlation handle (`mission.id`) in audit,
+for credentials a Stage 0 deployment did not previously link. As
+part of the migration, a deployment SHOULD extend its existing
+data-handling, retention, and access-control policies to cover the
+new Mission record store from Stage 1 onward, rather than treating
+Mission recording as purely an availability-neutral audit addition.
+Shadow Missions recorded in Stage 1 already contain this data even
+though they are not yet load-bearing for issuance.
 
 # IANA Considerations
 
