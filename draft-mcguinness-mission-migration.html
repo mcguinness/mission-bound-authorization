@@ -1317,24 +1317,27 @@ specifications.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
-            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
-            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
-            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-references" class="internal xref">References</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
-                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2">
-                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.1">
+                <p id="section-toc.1-1.15.2.1.1"><a href="#section-15.1" class="auto internal xref">15.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.2">
+                <p id="section-toc.1-1.15.2.2.1"><a href="#section-15.2" class="auto internal xref">15.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
 </li>
             </ul>
 </li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
-            <p id="section-toc.1-1.15.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1465,6 +1468,21 @@ from token introspection or accepts pushed Mission-state events;
 an RS-C queries Mission Status per request for high-assurance
 operations. These map onto the enforcement classes the AS
 advertises per <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>.<a href="#section-2-4.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.11"></dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.12">
+          <p id="section-2-4.12.1">These labels describe the <em>order in which Resource Servers take up
+Mission state</em> during migration; they are not identical to the
+formal Resource Server Tiers (RS-A through RS-D) defined by the
+Capability Model <span>[<a href="#I-D.draft-mcguinness-mission-capability-model" class="cite xref">I-D.draft-mcguinness-mission-capability-model</a>]</span>,
+which classify authority-enforcement depth. The two labelings are
+related but sit on different axes: this guide sequences Mission-state
+freshness mechanisms (introspection, events, per-request status),
+while the Capability Model classifies what a Resource Server does
+with the Mission's authority. A deployment reporting a formal
+capability coordinate uses the Capability Model's tiers, not these
+migration-ordering labels.<a href="#section-2-4.12.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2294,40 +2312,69 @@ to assume revocation propagation guarantees that do not hold for
 their audience.<a href="#section-11-5" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="iana-considerations">
+<div id="privacy-considerations">
 <section id="section-12">
-      <h2 id="name-iana-considerations">
-<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      <h2 id="name-privacy-considerations">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
-<p id="section-12-1">This document is Informational and has no IANA actions. Wire-
+<p id="section-12-1">This document is operational guidance and adds no new privacy
+surface of its own. The privacy properties of Mission records,
+Mission Intent, consent disclosures, the <code>mission</code> claim, and
+cross-audience correlation via the canonical <code>mission.id</code> derive
+from the Mission Framework
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> and the Mission-Bound
+OAuth Profile <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span> and
+are addressed in their Privacy Considerations.<a href="#section-12-1" class="pilcrow">¶</a></p>
+<p id="section-12-2">One consideration is specific to the migration itself. Beginning at
+Stage 1, the Authorization Server starts recording Mission records --
+Mission Intent (possibly synthesized from the legacy authorization
+request), the consent disclosure, and principal-model evidence --
+for flows that previously retained no such governance data. The
+migration therefore introduces a new store of task and consent data,
+and a new cross-audience correlation handle (<code>mission.id</code>) in audit,
+for credentials a Stage 0 deployment did not previously link. As
+part of the migration, a deployment <span class="bcp14">SHOULD</span> extend its existing
+data-handling, retention, and access-control policies to cover the
+new Mission record store from Stage 1 onward, rather than treating
+Mission recording as purely an availability-neutral audit addition.
+Shadow Missions recorded in Stage 1 already contain this data even
+though they are not yet load-bearing for issuance.<a href="#section-12-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-13">
+      <h2 id="name-iana-considerations">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-13-1">This document is Informational and has no IANA actions. Wire-
 level registrations (parameters, claims, error codes, metadata
 members, media types) belong to
 <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> and
-<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>.<a href="#section-12-1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>.<a href="#section-13-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="acknowledgments">
-<section id="section-13">
+<section id="section-14">
       <h2 id="name-acknowledgments">
-<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="section-13-1">This document is part of the Mission-Bound Authorization
+<p id="section-14-1">This document is part of the Mission-Bound Authorization
 specification set. The Mission Framework
 <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> and Mission-Bound
 OAuth Profile <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>
 are the destinations this guide leads to; the operational
-practice described here is informed by their normative content.<a href="#section-13-1" class="pilcrow">¶</a></p>
+practice described here is informed by their normative content.<a href="#section-14-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
-<section id="section-14">
+<section id="section-15">
       <h2 id="name-references">
-<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-references" class="section-name selfRef">References</a>
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-references" class="section-name selfRef">References</a>
       </h2>
 <div id="sec-normative-references">
-<section id="section-14.1">
+<section id="section-15.1">
         <h3 id="name-normative-references">
-<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+<a href="#section-15.1" class="section-number selfRef">15.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
 <dt id="I-D.draft-mcguinness-mission-framework">[I-D.draft-mcguinness-mission-framework]</dt>
@@ -2350,9 +2397,9 @@ practice described here is informed by their normative content.<a href="#section
 </section>
 </div>
 <div id="sec-informative-references">
-<section id="section-14.2">
+<section id="section-15.2">
         <h3 id="name-informative-references">
-<a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+<a href="#section-15.2" class="section-number selfRef">15.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
 <dt id="I-D.draft-ietf-oauth-identity-assertion-authz-grant">[I-D.draft-ietf-oauth-identity-assertion-authz-grant]</dt>
@@ -2362,6 +2409,10 @@ practice described here is informed by their normative content.<a href="#section
 <dt id="I-D.draft-ietf-oauth-identity-chaining">[I-D.draft-ietf-oauth-identity-chaining]</dt>
         <dd>
 <span class="refAuthor">Schwenkschuster, A.</span>, <span class="refAuthor">Kasselman, P.</span>, <span class="refAuthor">Burgin, K.</span>, <span class="refAuthor">Jenkins, M. J.</span>, <span class="refAuthor">Campbell, B.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth Identity and Authorization Chaining Across Domains"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-identity-chaining-14</span>, <time datetime="2026-06-02" class="refDate">2 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-chaining-14">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-chaining-14</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-capability-model">[I-D.draft-mcguinness-mission-capability-model]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-id-continuation-assertion">[I-D.draft-mcguinness-oauth-id-continuation-assertion]</dt>
         <dd>

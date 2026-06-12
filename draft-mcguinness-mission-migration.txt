@@ -115,11 +115,12 @@ Table of Contents
      10.5.  Mission Status caching and approval-event races
      10.6.  Rollback considerations
    11. Security Considerations
-   12. IANA Considerations
-   13. Acknowledgments
-   14. References
-     14.1.  Normative References
-     14.2.  Informative References
+   12. Privacy Considerations
+   13. IANA Considerations
+   14. Acknowledgments
+   15. References
+     15.1.  Normative References
+     15.2.  Informative References
    Author's Address
 
 1.  Introduction
@@ -220,6 +221,18 @@ Table of Contents
       for high-assurance operations.  These map onto the enforcement
       classes the AS advertises per
       [I-D.draft-mcguinness-mission-oauth-profile].
+
+      These labels describe the _order in which Resource Servers take up
+      Mission state_ during migration; they are not identical to the
+      formal Resource Server Tiers (RS-A through RS-D) defined by the
+      Capability Model [I-D.draft-mcguinness-mission-capability-model],
+      which classify authority-enforcement depth.  The two labelings are
+      related but sit on different axes: this guide sequences Mission-
+      state freshness mechanisms (introspection, events, per-request
+      status), while the Capability Model classifies what a Resource
+      Server does with the Mission's authority.  A deployment reporting
+      a formal capability coordinate uses the Capability Model's tiers,
+      not these migration-ordering labels.
 
 3.  Migration Path at a Glance
 
@@ -819,14 +832,39 @@ Table of Contents
    revocation propagation guarantees that do not hold for their
    audience.
 
-12.  IANA Considerations
+12.  Privacy Considerations
+
+   This document is operational guidance and adds no new privacy surface
+   of its own.  The privacy properties of Mission records, Mission
+   Intent, consent disclosures, the mission claim, and cross-audience
+   correlation via the canonical mission.id derive from the Mission
+   Framework [I-D.draft-mcguinness-mission-framework] and the Mission-
+   Bound OAuth Profile [I-D.draft-mcguinness-mission-oauth-profile] and
+   are addressed in their Privacy Considerations.
+
+   One consideration is specific to the migration itself.  Beginning at
+   Stage 1, the Authorization Server starts recording Mission records --
+   Mission Intent (possibly synthesized from the legacy authorization
+   request), the consent disclosure, and principal-model evidence -- for
+   flows that previously retained no such governance data.  The
+   migration therefore introduces a new store of task and consent data,
+   and a new cross-audience correlation handle (mission.id) in audit,
+   for credentials a Stage 0 deployment did not previously link.  As
+   part of the migration, a deployment SHOULD extend its existing data-
+   handling, retention, and access-control policies to cover the new
+   Mission record store from Stage 1 onward, rather than treating
+   Mission recording as purely an availability-neutral audit addition.
+   Shadow Missions recorded in Stage 1 already contain this data even
+   though they are not yet load-bearing for issuance.
+
+13.  IANA Considerations
 
    This document is Informational and has no IANA actions.  Wire- level
    registrations (parameters, claims, error codes, metadata members,
    media types) belong to [I-D.draft-mcguinness-mission-framework] and
    [I-D.draft-mcguinness-mission-oauth-profile].
 
-13.  Acknowledgments
+14.  Acknowledgments
 
    This document is part of the Mission-Bound Authorization
    specification set.  The Mission Framework
@@ -835,9 +873,9 @@ Table of Contents
    destinations this guide leads to; the operational practice described
    here is informed by their normative content.
 
-14.  References
+15.  References
 
-14.1.  Normative References
+15.1.  Normative References
 
    [I-D.draft-mcguinness-mission-framework]
               "*** BROKEN REFERENCE ***".
@@ -854,7 +892,7 @@ Table of Contents
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
-14.2.  Informative References
+15.2.  Informative References
 
    [I-D.draft-ietf-oauth-identity-assertion-authz-grant]
               Parecki, A., McGuinness, K., and B. Campbell, "Identity
@@ -871,6 +909,9 @@ Table of Contents
               Internet-Draft, draft-ietf-oauth-identity-chaining-14, 2
               June 2026, <https://datatracker.ietf.org/doc/html/draft-
               ietf-oauth-identity-chaining-14>.
+
+   [I-D.draft-mcguinness-mission-capability-model]
+              "*** BROKEN REFERENCE ***".
 
    [I-D.draft-mcguinness-oauth-id-continuation-assertion]
               "*** BROKEN REFERENCE ***".
