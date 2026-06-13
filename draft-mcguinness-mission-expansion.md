@@ -221,7 +221,7 @@ parts: eligibility signaling (a property of denial), the expansion
 workflow (the request and its outcomes), and the predecessor-to-
 successor binding.
 
-## Eligibility-Signaling Abstract Contract
+## Eligibility-Signaling Abstract Contract {#eligibility-signaling-abstract-contract}
 
 When a state authority, credential issuer, Resource Authorization
 Server, or Policy Decision Point denies a request because the
@@ -414,7 +414,7 @@ completed in synchronous mode. The orchestrator MAY request a fresh
 denial-with-eligibility from the denying party to obtain a new
 ticket; the original ticket MUST NOT be reused.
 
-## Replacement and Branch
+## Replacement and Branch {#replacement-and-branch}
 
 A successful expansion creates either a successor Mission
 (Replacement) or a child Mission (Branch). The orchestrator declares
@@ -514,7 +514,7 @@ approval event that establishes a new Mission carrying the relevant
 authority; the lineage is preserved through `mission.predecessor`
 chaining.
 
-## Concurrent Expansion Reconciliation
+## Concurrent Expansion Reconciliation {#concurrent-expansion-reconciliation}
 
 More than one expansion request MAY be in flight against the same
 predecessor Mission at the same time. Reconciliation rules ensure
@@ -784,6 +784,33 @@ correlation handle. A holder cannot derive the predecessor identity,
 the subject, or the requested authority from the Ticket, and a used
 or expired Ticket links nothing. The correlation surface of
 expansion is the lineage attributes, not the Ticket.
+
+# Conformance {#conformance}
+
+An implementation claims conformance to this document by identifying
+its short name and revision and the role(s) it implements.
+
+A conforming **state authority** (the party that adjudicates
+expansion) MUST: issue Mission Expansion Tickets meeting the
+opacity, entropy, single-use, time-limit, binding, and
+audience-scoping requirements of {{ticket}}; adjudicate an expansion
+request as a new approval event resolving the predecessor from the
+validated Ticket, not from orchestrator input; enforce the
+replacement and branch semantics of {{replacement-and-branch}}
+including atomic successor activation and the successor-expiry rule;
+and serialize concurrent expansions with the reconciliation
+semantics of {{concurrent-expansion-reconciliation}}.
+
+A conforming **denying party** (a credential issuer, Resource AS, or
+PDP that surfaces eligibility) MUST surface the eligibility-signaling
+fields of {{eligibility-signaling-abstract-contract}} only when the
+deployment's governance policy permits expansion, and MUST NOT
+present an eligibility signal as an authorization decision.
+
+The substrate-specific transport of the eligibility fields and the
+expansion request is defined by the substrate profile a deployment
+also conforms to; this document defines the substrate-neutral
+semantics only.
 
 # IANA Considerations
 

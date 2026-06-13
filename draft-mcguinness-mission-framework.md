@@ -783,7 +783,7 @@ Continuing the example from {{mission-intent}}:
 }
 ~~~
 
-## Lifecycle state machines
+## Lifecycle state machines {#lifecycle-state-machines}
 
 ### Mission Proposal lifecycle
 
@@ -2830,7 +2830,7 @@ registry:
 These will register as the design stabilizes and implementer
 interest emerges.
 
-# Reference Test Vectors
+# Reference Test Vectors {#reference-test-vectors}
 
 This specification includes reference test vectors as a first-class
 deliverable. Test vectors are published in the `vectors/` directory
@@ -3221,6 +3221,47 @@ obligations. The garbage-collection stub of {{mission-record-garbage-collection-
 provides the retention-side residual; deployments needing full
 erasure rather than retirement MUST extend the garbage-collection
 flow to remove the stub when lawfully required.
+
+# Conformance {#conformance}
+
+An implementation claims conformance to this document by identifying:
+
+- The document short name and revision (e.g.,
+  `draft-mcguinness-mission-framework-00`).
+- The role(s) it implements. This document defines the **state
+  authority** role (creating Missions at the approval event,
+  computing integrity anchors, owning lifecycle, and serving the
+  Mission Status interface). A consumer of state-authority output
+  (credential issuer, Resource Server, PDP, auditor) conforms to the
+  roles defined by the substrate and feature specifications that
+  compose this Framework.
+- The optional features it supports: which Authority Set entry types
+  ({{authority-set-type-registry}}), which Common Constraints
+  ({{common-constraints-framework}}), and which Normalization
+  Profiles ({{normalization-profile-registry}}).
+- The reference test-vector classes it has been validated against
+  (see below).
+
+A conforming state authority MUST:
+
+- Satisfy the normative (BCP 14) requirements stated throughout
+  this document.
+- Produce byte-identical canonicalization and integrity-anchor
+  output to the published reference test vectors
+  ({{reference-test-vectors}}). Reproducing the published vectors
+  byte-for-byte is the conformance floor: an implementation that
+  does not reproduce a vector class is not conformant to that class.
+- Implement the Mission Proposal and Mission lifecycle state
+  machines ({{lifecycle-state-machines}}) including refusal of
+  every transition not permitted by the current state.
+- Serve a Mission Status interface satisfying the authentication,
+  freshness, audience, integrity, anti-oracle, request-binding, and
+  caching properties of {{mission-status-interface}}.
+
+Conformance to this Framework is necessary but not sufficient for a
+deployable system: a deployment also conforms to at least one
+substrate profile (OAuth, AAuth, or the Mission Authority Server)
+that binds these abstract requirements to a wire.
 
 # IANA Considerations {#iana-considerations}
 

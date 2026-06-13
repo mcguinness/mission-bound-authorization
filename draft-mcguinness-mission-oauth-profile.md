@@ -69,6 +69,7 @@ informative:
   I-D.draft-mcguinness-mission-txn-token-chaining:
   I-D.draft-mcguinness-mission-authority-server:
   I-D.draft-mcguinness-mission-runtime-profile:
+  I-D.draft-mcguinness-mission-capability-model:
   I-D.draft-ietf-oauth-v2-1:
 
 --- abstract
@@ -1899,6 +1900,40 @@ target audience and can correlate Missions by target. The AS
 SHOULD limit retention of resource-parameter values beyond the
 audit window or generalize them to deployment-internal audience
 identifiers in logs.
+
+# Conformance {#conformance}
+
+An implementation claims conformance to this profile by identifying
+its short name and revision, the role(s) it implements, the optional
+features it supports, and (through the composed Framework) the
+reference test-vector classes it has been validated against.
+
+This profile defines requirements for two roles:
+
+- A conforming **Authorization Server** (state authority on the
+  OAuth substrate) MUST: accept `mission_intent` only through PAR
+  ({{mission-intent-parameter}}); derive `authorization_details`
+  containing `mission_resource_access` entries under the registered
+  narrowing rules; emit the complete `mission` claim
+  ({{mission-claim-schema}}); gate code redemption, refresh, Token
+  Exchange, and ID-JAG issuance on Mission state
+  ({{lifecycle-gating}}); sender-constrain issued credentials via
+  DPoP or mTLS; expose the dedicated Mission Status operation
+  ({{dedicated-mission-status-operation}}) and the Mission Lifecycle
+  endpoint; and advertise its supported enforcement classes and
+  `mission_max_stale_seconds`.
+- A conforming **Resource Server** implements the tier it claims
+  (RS-A through RS-D per
+  {{I-D.draft-mcguinness-mission-capability-model}}); an RS above
+  RS-A MUST honor the Mission state it consumes through its
+  advertised enforcement class.
+
+Optional features a conformance claim names include: pairwise
+identifiers (not supported in this revision; canonical-only),
+support for `mission_id` adoption of MAS-held Missions
+({{mission-id-parameter}}), ID-JAG issuance ({{id-jag-binding}}),
+and the introspection Mission projection. A deployment also conforms
+to {{I-D.draft-mcguinness-mission-framework}}.
 
 # IANA Considerations {#iana}
 
