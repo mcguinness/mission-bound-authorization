@@ -60,11 +60,13 @@ informative:
   RFC9470:
   RFC9700:
   RFC9728:
+  RFC7523:
   I-D.draft-ietf-oauth-identity-chaining:
   I-D.draft-ietf-oauth-identity-assertion-authz-grant:
   I-D.draft-mcguinness-oauth-actor-profile:
   I-D.draft-mcguinness-oauth-client-instance-assertion:
   I-D.draft-mcguinness-oauth-id-continuation-assertion:
+  I-D.draft-mcguinness-mission-txn-token-chaining:
   I-D.draft-ietf-oauth-v2-1:
 
 --- abstract
@@ -229,7 +231,7 @@ A Mission-Bound OAuth AS implements these surfaces:
    `authorization_details` containing one or more `mission_resource_access`
    RAR entries {{RFC9396}}.
 4. Issues access tokens (JWT per {{RFC9068}} or opaque) carrying a
-   `mission` claim with `id`/`ref`, `origin`, `authority_hash`, and
+   `mission` claim with `id`, `origin`, `authority_hash`, and
    `version`.
 5. Gates refresh, Token Exchange {{RFC8693}}, and any other
    credential-derivation path on Mission state.
@@ -809,6 +811,91 @@ across the exchange.
 If the Mission's state at exchange time is not `active`, the AS
 MUST refuse the exchange with the `mission_inactive` error response
 defined in {{lifecycle-gating}}.
+
+# ID-JAG Issuance and Cross-AS Continuity {#id-jag-binding}
+
+When a deployment uses the Identity Assertion Authorization Grant
+{{I-D.draft-ietf-oauth-identity-assertion-authz-grant}} (ID-JAG) to
+let Resource Authorization Servers mint audience-bound credentials
+in the common-IdP scenario, this section binds Mission continuity
+to that flow. ID-JAG support is OPTIONAL; an AS that does not issue
+ID-JAGs ignores this section.
+
+## Subject-token rules
+
+The inputs the IdP-side AS accepts for ID-JAG issuance are those
+the ID-JAG specification defines: an OpenID Connect ID Token or
+SAML 2.0 assertion presented through Token Exchange with
+`requested_token_type` identifying the ID-JAG token type, or an
+IdP refresh token where the ID-JAG refresh-token extension is
+supported. A Mission-bound access token is NOT an ID-JAG subject
+token; access tokens derive within their own audience through
+refresh and Token Exchange ({{token-exchange}}).
+
+## Issuance gating
+
+ID-JAG issuance is a derivation event ({{lifecycle-gating}}). Before
+minting an ID-JAG for a Mission-bound interaction, the AS MUST
+verify that:
+
+1. The referenced Mission is `active`; otherwise the AS refuses
+   with the `mission_inactive` error response.
+2. The requested `resource` is within the Mission's approved
+   Authority Set.
+3. The requested `audience` (the Resource AS) is authorized for
+   that resource under the Mission's audience policy.
+
+## Mission carriage on the ID-JAG
+
+An ID-JAG issued for a Mission-bound interaction MUST carry the
+`mission` claim with the full shape of {{mission-claim-schema}}
+(`id`, `origin`, `authority_hash`, `version`), the
+audience-filtered authority projection relevant to the target
+Resource AS, and the `act` chain when delegation occurred. The
+client presents the ID-JAG to the Resource AS using the JWT-bearer
+grant {{RFC7523}} per the ID-JAG specification.
+
+## Validation at the Resource AS
+
+A Resource AS consuming a Mission-bound ID-JAG:
+
+- MUST validate the assertion issuer against its configured issuer
+  trust policy before accepting any Mission reference. The Resource
+  AS MUST NOT accept a `mission.origin` solely because it appears
+  inside a signed assertion; the origin MUST be bound to the
+  trusted assertion issuer by local trust policy or issuer
+  metadata.
+- MUST validate assertion freshness. The default freshness model is
+  the fresh-assertion model: Mission-bound ID-JAGs MUST be
+  short-lived, the Resource AS MUST validate the assertion expiry
+  before issuing local tokens, and a deployment SHOULD set a
+  concrete maximum ID-JAG lifetime (300 seconds is a reasonable
+  default). Deployments MAY add Mission Status queries at
+  `mission.origin` ({{mission-status}}) or SSF/CAEP event
+  subscriptions on top of -- not in place of -- the fresh-assertion
+  bound for higher-risk audiences.
+- MUST preserve the Mission binding on any local access token it
+  issues: the local token's `mission` claim carries the `id`,
+  `origin`, `authority_hash`, and `version` from the validated
+  ID-JAG unchanged. The Resource AS is not the state authority and
+  MUST NOT mint a new Mission reference.
+- MUST apply its own local authorization policy in addition to the
+  Mission projection; Mission approval does not obligate the
+  Resource AS to authorize any specific request.
+
+Cross-AS Mission-state disclosure is minimal: the Resource AS needs
+the Mission state, the Mission expiry, the audience-relevant
+authority projection, and `authority_hash`. It obtains these
+through the Mission Status operation at `mission.origin`
+({{dedicated-mission-status-operation}}), which audience-filters
+the projection; entries addressed to other audiences are not
+disclosed.
+
+Same-IdP SaaS-to-SaaS continuation composes with
+{{I-D.draft-mcguinness-oauth-id-continuation-assertion}};
+cross-trust-domain carriage composes with
+{{I-D.draft-mcguinness-mission-txn-token-chaining}} and
+{{I-D.draft-ietf-oauth-identity-chaining}}.
 
 # Mission Record at the AS {#mission-record-at-the-as}
 

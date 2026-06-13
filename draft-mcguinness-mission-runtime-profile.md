@@ -51,6 +51,7 @@ informative:
   RFC9701:
   I-D.draft-mcguinness-mission-oauth-profile:
   I-D.draft-mcguinness-mission-aauth-profile:
+  I-D.draft-mcguinness-mission-capability-model:
   I-D.draft-mcguinness-oauth-actor-profile:
   I-D.draft-mcguinness-oauth-insufficient-claims:
 
@@ -187,12 +188,14 @@ Runtime Enforcement conformance claim.
 
 This profile is modular:
 
-- **Core**: defines the required PDP contract, PEP placement,
-  Decision Evidence, Execution Evidence, parameter binding, and
+- **Core**: defines the required PDP contract, action
+  classification, PEP placement, Decision Evidence, Execution
+  Evidence, parameter binding, Capability Source Binding, and
   denial classification.
-- **Optional Modules**: separate per-module specifications adding
-  Tool Binding, Decision Receipt, Purpose Registry, Attestation,
-  Policy Projection.
+- **Optional Modules**: Tool Binding, Decision Receipt, Purpose
+  Registry, Actor Provenance, Attestation, and Policy Projection.
+  Each is sketched in {{optional-module-sketches}} and becomes its
+  own specification as implementation interest justifies it.
 
 Conformance claims name which modules the implementation supports.
 The Core profile is the minimum for any Mission-Bound Runtime
@@ -262,7 +265,7 @@ A Resource Server claiming RS-D MUST:
 
 1. Identify every consequential action in its enforcement scope.
 2. For each such action, call the PDP before allowing the action.
-3. Pass to the PDP the inputs defined in Section 7.
+3. Pass to the PDP the inputs defined in {{pdp-request}}.
 4. Enforce the PDP decision.
 5. Emit Execution Evidence after the action's outcome is determined.
 
@@ -271,6 +274,36 @@ consequential actions outside that scope to bypass the PDP MUST NOT
 claim RS-D for those actions. The enforcement-scope manifest names
 covered action classes; uncovered actions are explicitly outside
 the claim.
+
+# Action Classification {#action-classification}
+
+The boundary between consequential and non-consequential actions is
+deployment policy, but this profile defines a default classification
+that deployments SHOULD adopt. The classification determines, per
+action, whether a PDP decision is required and whether parameter
+binding ({{pdp-request}}) is required. The
+`action_classes_covered` strings in the enforcement-scope manifest
+({{enforcement-scope-manifest}}) SHOULD use these class names so
+that enforcement claims are comparable across deployments.
+
+| Class | Examples | PDP decision | Parameter binding |
+|---|---|---|---|
+| `non_consequential` | Internal reasoning, cache reads, planning steps with no external visibility | Not required; the PEP MAY proceed inline | Not applicable |
+| `consequential_read` | Reading user data, fetching documents, querying APIs that log access | REQUIRED | Not required |
+| `consequential_write` | Updating records, creating resources, posting messages | REQUIRED | REQUIRED |
+| `irreversible_action` | Sending email, executing payment, deleting data, deploying code | REQUIRED | REQUIRED, with execution-time digest reverification |
+| `external_commitment` | Signing on behalf of a user, accepting terms, making promises to third parties | REQUIRED | REQUIRED, with execution-time digest reverification and Decision Evidence |
+| `privileged_administration` | Granting access, modifying policy, changing tenant configuration | REQUIRED | REQUIRED, with execution-time digest reverification, Decision Evidence, and a human-in-the-loop signal recorded in evidence |
+
+Although `consequential_read` does not require parameter binding,
+the complete evaluation request still appears in the Decision
+Evidence record, or through a privacy-preserving request digest
+where parameters are sensitive ({{privacy-considerations}}).
+
+Deployment policy MAY further restrict a class for specific
+`purpose` URIs: a purpose can raise the required class for an
+operation, but MUST NOT silently downgrade an operation below the
+resource owner's minimum classification.
 
 # PEP Placement Rules {#pep-placement-rules}
 
@@ -339,10 +372,19 @@ populate this from the credential the PEP receives:
 - AAuth Profile: the actor chain reconstructed from the AAuth
   resource-token's actor-context binding.
 
+The `actor` object carries the delegation chain only. Provenance
+beyond the delegation chain -- the tool a request invoked, a named
+workflow step, a human-in-the-loop approver, an attested execution
+environment -- MUST NOT be encoded inside the `act` chain. Such
+provenance is recorded in dedicated evidence fields where the
+deployment captures it ({{optional-module-sketches}}, Actor
+Provenance), so that the delegation chain remains a faithful record
+of who acted on whose behalf.
+
 ## `context.parameters` and `context.parameter_digest`
 
-When parameter binding is required for the requested action, the
-PEP supplies:
+When parameter binding is required for the requested action's class
+({{action-classification}}), the PEP supplies:
 
 - `parameters` (object, conditional): the action's parameters as a
   JSON object. The shape is action-specific.
@@ -773,6 +815,10 @@ When the PDP returns a denial, the denial is one of:
   independently of Mission authority.
 - **`quota_exceeded`**: a runtime budget (e.g., `max_invocations`)
   has been exhausted.
+- **`capability_drift`**: a catalog-sourced action's current
+  capability-source digest differs from the digest committed at
+  derivation ({{capability-source-binding}}), or the presented
+  `tool_id` is outside the approved set.
 
 ## Expansion eligibility
 
@@ -799,6 +845,69 @@ The PDP returns a structured error response per AuthZEN
 {{OIDC-AUTHZEN}}. Profiles MAY compose with {{RFC9457}} Problem
 Details for additional structured error information when the PDP
 is consumed over HTTP outside the AuthZEN envelope.
+
+# Capability Source Binding {#capability-source-binding}
+
+Consequential actions an agent discovers at runtime -- through a
+Model Context Protocol tool catalog, an OpenAPI document, a
+Protected Resource Metadata-linked catalog, or an equivalent
+capability source -- MUST identify the source they came from, so
+that a Mission's approved authority remains bound to concrete tools
+rather than to bare action names a later catalog revision could
+redefine. This is a Core requirement of this profile for
+catalog-sourced consequential actions; the cross-format mechanics
+are an Optional Module ({{optional-module-sketches}}).
+
+The minimum binding, committed by the validating server at
+derivation and presented by the executing component at request
+time, is:
+
+~~~ json
+{
+  "tool_id": "mcp://docs.example.com/tools/write_document",
+  "source_uri": "https://docs.example.com/.well-known/mcp",
+  "source_digest": "sha-256:Qm0a...base64url-no-pad",
+  "operation_ref": "tools/write_document"
+}
+~~~
+
+- `tool_id` (string): a stable capability identifier the executing
+  component asserts the action invokes.
+- `source_uri` (string): the discovery source the capability was
+  resolved from.
+- `source_digest` (string): the integrity-anchor encoded form
+  computed over the exact retrieved source representation, recorded
+  at derivation time.
+- `operation_ref` (string): the source-format-specific operation
+  reference (MCP tool name, OpenAPI `operationId`, RAR-type
+  operation, or equivalent).
+
+Rules:
+
+- The validating server MUST record `tool_id`, `source_uri`,
+  `source_digest`, and `operation_ref` for every consequential
+  action sourced from a discovered catalog. These values are part
+  of the approved Mission's derived authority and are therefore
+  covered by `authority_hash`
+  ({{I-D.draft-mcguinness-mission-framework}}).
+- The PEP MUST present `tool_id` on consequential requests for
+  catalog-sourced actions. The PDP MUST refuse with
+  `capability_drift` ({{runtime-denial-classification}}) when the
+  presented `tool_id` is outside the approved set.
+- When the current source digest differs from the digest recorded
+  at derivation, the validating server or PDP MUST treat the change
+  as drift: refuse the action with `capability_drift` and require
+  Mission Expansion, or refuse outright, per declared policy.
+- Actions not sourced from a discovered catalog (deployment-
+  registered RAR types, first-party operations with stable
+  identity established at client registration) do not require this
+  binding.
+
+Cross-format canonicalization, signed capability manifests,
+version-label semantics, and media-type negotiation across MCP,
+OpenAPI, A2A Agent Cards, and proprietary catalogs are the Tool
+Binding Optional Module ({{optional-module-sketches}}); Core
+requires only the stable identifier plus source evidence above.
 
 # `max_invocations` Constraint {#max-invocations-constraint}
 
@@ -1093,6 +1202,85 @@ local `file.write` action:
 The PDP applies the same denial classification and evidence-emission
 rules to local actions as to substrate-mediated actions.
 
+# Optional Module Sketches {#optional-module-sketches}
+
+The modules below compose on top of Core. A deployment claims Core
+conformance without any of them. These are sketches of the
+composition point each module occupies, not normative module
+definitions; each becomes its own specification when implementation
+interest justifies it, at which point a Capability Model Level 5
+claim ({{I-D.draft-mcguinness-mission-capability-model}}) may cite
+it. Implementing a sketch locally does not by itself create an
+interoperable Level 5 claim.
+
+## Tool Binding
+
+Capability Source Binding ({{capability-source-binding}}) is Core:
+every catalog-sourced consequential action carries `tool_id`,
+`source_uri`, `source_digest`, and `operation_ref`. The Tool
+Binding module adds the cross-format work Core leaves open --
+per-source-format canonicalization (MCP `tools/list`, OpenAPI,
+PRM, A2A Agent Cards), signed-capability-manifest verification,
+version-label semantics, and media-type negotiation. It binds
+approved authority to concrete tools with format-aware integrity
+rather than byte-digest evidence alone, and would carry the
+bindings as a sibling `action_bindings` array on the OAuth
+Profile's `mission_resource_access` entries without changing the
+`actions` string-array schema.
+
+## Decision Receipt
+
+A portable cryptographic receipt that an external auditor verifies
+across organizational or trust-domain boundaries without access to
+the originating server's storage, layered on the Core Decision
+Evidence shape. A deployment within one trust domain ships Core
+evidence only and adds this module for cross-domain auditability.
+
+## Purpose Registry
+
+A governed registry of Mission Intent `purpose` URIs, each
+declaring allowed resource types and actions, required and
+forbidden constraints, risk class and escalation rules, consent
+display strings, and maximum Mission lifetime. Free-form `purpose`
+URIs are sufficient for Core; the registry adds governance at
+scale.
+
+## Actor Provenance
+
+Core requires authenticated actor context on every decision, and
+the delegation chain stays pure ({{pdp-request}}). The Actor
+Provenance module adds dedicated evidence fields for provenance
+beyond the delegation chain, kept out of the `act` chain:
+
+- `tool` / `tool_id`: the source-bound capability the action
+  invoked (Tool Binding).
+- `workflow_step`: the named workflow step.
+- `approver`: a human-in-the-loop approver of a specific action.
+- `execution_environment`: the attested runtime (Attestation
+  composition).
+
+OAuth deployments MAY compose with the OAuth Actor Profile
+{{I-D.draft-mcguinness-oauth-actor-profile}}; it is not a Core
+requirement.
+
+## Attestation
+
+Binds the credential sender key or authenticated execution context
+to an attested agent identity or environment, consumed by the PDP
+alongside the actor chain. The substrate may compose with RATS
+Prove-Transform-Verify or WIMSE workload identity. The Mission
+object itself defines no `cnf` claim.
+
+## Policy Projection
+
+A state-authority-to-PDP/PEP wire shape carrying a materialized
+policy view to capable Resource Servers
+({{mission-to-policy-materialization}}). AuthZEN is the evaluation
+API, not a policy language; a general module needs a typed
+policy-view entry and substrate-specific carriage rules. This
+profile names the composition point but does not define a claimable
+module.
+
 # Security Considerations {#security-considerations}
 
 ## Decision Evidence vs Execution Evidence
@@ -1293,7 +1481,8 @@ Each member's change controller is IETF; reference is this
 document.
 
 Optional Runtime modules (`tool_binding`, `decision_receipt`,
-`purpose_registry`, `attestation`, `policy_projection`) are
+`purpose_registry`, `actor_provenance`, `attestation`,
+`policy_projection`), sketched in {{optional-module-sketches}}, are
 defined in separate companion specifications; each module
 specification registers its own metadata member at its substrate's
 metadata registry. The Runtime Profile does not maintain a central
