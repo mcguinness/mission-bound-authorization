@@ -512,12 +512,26 @@ The PDP emits a Decision Evidence Object for every runtime decision.
 - `mission` (object, required): a copy of the PDP request's
   `context.mission` object (carrying `id`, `origin`,
   `authority_hash`, `policy_version`, `policy_view_id`,
-  `policy_view_version`).
+  `policy_view_version`), and additionally `proposal_hash` and
+  `consent_disclosure_hash` so the evidence chains back to the
+  exact approved Mission Intent and consent disclosure an auditor
+  can later reconstruct.
 - `actor`, `subject`, `resource`, `action`, `parameter_digest`,
   `audience`: PDP inputs as supplied (verbatim, after PDP-side
   normalization).
 - `decision` (string, required): one of `permit`, `deny`,
   `expandable_deny`.
+- `contributing_constraints` (array of string, required when the
+  decision turned on one or more Authority Set or Common Constraint
+  entries): the identifiers of the constraints the PDP evaluated to
+  reach this decision (constraint `name`s, Authority Set entry
+  `type`s). For a permit this records what was checked; for a deny
+  it records what failed. This is what lets an auditor reconstruct
+  *which* policy elements were evaluated weeks later.
+- `sequence` (integer, required): a per-Mission monotonically
+  increasing sequence number the state authority or PDP assigns to
+  each decision under a Mission, so the decision stream for a
+  Mission has a verifiable order and gaps are detectable.
 - `denial_reason` (string, conditional): when `decision` is `deny`
   or `expandable_deny`. Values from
   {{runtime-denial-classification}} or registered constraint
@@ -540,7 +554,8 @@ The PDP emits a Decision Evidence Object for every runtime decision.
   "type": "object",
   "required": [
     "decision_id", "mission", "subject", "resource", "action",
-    "audience", "decision", "evaluated_at", "evidence_envelope"
+    "audience", "decision", "sequence", "evaluated_at",
+    "evidence_envelope"
   ],
   "additionalProperties": false,
   "properties": {
@@ -554,6 +569,8 @@ The PDP emits a Decision Evidence Object for every runtime decision.
         "id":     { "type": "string" },
         "origin": { "type": "string", "format": "uri" },
         "authority_hash": { "type": "string" },
+        "proposal_hash": { "type": "string" },
+        "consent_disclosure_hash": { "type": "string" },
         "policy_version": { "type": "string" },
         "policy_view_id": { "type": "string" },
         "policy_view_version": { "type": "string" }
@@ -569,6 +586,10 @@ The PDP emits a Decision Evidence Object for every runtime decision.
       "type": "string",
       "enum": ["permit", "deny", "expandable_deny"]
     },
+    "contributing_constraints": {
+      "type": "array", "items": { "type": "string" }
+    },
+    "sequence": { "type": "integer", "minimum": 0 },
     "denial_reason": { "type": "string" },
     "expansion": {
       "type": "object",
@@ -627,6 +648,10 @@ unregistered formats.
     "origin": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "proposal_hash":
+      "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+    "consent_disclosure_hash":
+      "sha-256:nB2xK5qY7vM3rL9pT4cE6sZ8wQ1bN0fH5jX9kV2sRdM",
     "policy_version": "deploy-policy:v17",
     "policy_view_id":
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mT5L",
@@ -651,6 +676,10 @@ unregistered formats.
     "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA1bRM",
   "audience": "https://erp.example.com",
   "decision": "permit",
+  "contributing_constraints": [
+    "mission_resource_access", "max_amount_usd"
+  ],
+  "sequence": 42,
   "evaluated_at": "2026-11-02T08:14:03Z",
   "evidence_envelope": {
     "format": "jws-compact",
@@ -1386,11 +1415,17 @@ PII if it could carry user-content payloads. The Execution Evidence
 `result_summary` member explicitly MUST NOT carry user-content
 payloads; it is metadata only (counts, identifiers, status codes).
 
-When the action's parameters are themselves PII (e.g., a recipient
-email address, a financial amount tied to a person), deployments
-SHOULD consider supplying only the `parameter_digest` to the PDP
-(omitting `parameters`). The PDP then evaluates against
-parameter-class policy without observing the raw values.
+The primary, durable Decision Evidence record MUST NOT contain the
+raw `parameters` object; it carries the `parameter_digest` and, at
+most, parameter-class metadata. Where the raw parameters must be
+retained for audit, they are held in a separately access-controlled
+store linked by `decision_id`, not inlined in the integrity-
+protected Decision Evidence that propagates to consumers. When the
+action's parameters are themselves PII (e.g., a recipient email
+address, a financial amount tied to a person), the PEP SHOULD
+supply only the `parameter_digest` to the PDP (omitting
+`parameters`), so the PDP evaluates against parameter-class policy
+without observing the raw values at all.
 
 ## Actor chain exposure
 

@@ -871,6 +871,17 @@ At the approval event the state authority MUST:
    version, signer key identifier).
 6. Create the Mission record atomically with the above evidence.
 
+The consent disclosure object MUST bind the Validated Mission Intent
+and the complete derived Authority Set the approving principal was
+shown (via `mission_intent_canonical_hash` and
+`authority_set_canonical_hash`, see {{consent-disclosure-schema}}).
+If the derivation policy, resource metadata, or derived Authority Set
+changes between disclosure and the binding consent signal such that
+the Authority Set no longer matches the one bound in the disclosure,
+the state authority MUST refuse to activate and MUST render a fresh
+disclosure for a new approval. This ensures the authority committed
+by `authority_hash` is exactly the authority the principal approved.
+
 The approval event MUST be atomic with Mission record creation. If
 the state authority cannot complete the atomic commit, the Proposal
 remains `pending_approval`; no partial Mission record exists.
@@ -1564,6 +1575,63 @@ state authority's consent template; the profile applies a default
 NFC + duplicate-rejection rule to all string fields and delegates
 URI normalization to the consent template's declared rules.
 
+### Consent disclosure object baseline members {#consent-disclosure-schema}
+
+A deployment's consent template extends, but MUST carry, the
+following baseline members so that `consent_disclosure_hash` commits
+to a known structural floor across deployments:
+
+~~~ json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mbo:schema:consent-disclosure:1",
+  "title": "Mission Consent Disclosure (baseline)",
+  "type": "object",
+  "required": [
+    "mission_intent_canonical_hash",
+    "authority_set_canonical_hash",
+    "template_id", "template_version", "presented_at"
+  ],
+  "properties": {
+    "mission_intent_canonical_hash": { "type": "string" },
+    "authority_set_canonical_hash":  { "type": "string" },
+    "locale":          { "type": "string" },
+    "template_id":     { "type": "string" },
+    "template_version":{ "type": "string" },
+    "material_notices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["notice_id", "text"],
+        "properties": {
+          "notice_id": { "type": "string" },
+          "text":      { "type": "string" }
+        }
+      }
+    },
+    "presented_at": { "type": "string", "format": "date-time" },
+    "principal_assurance": {
+      "type": "object",
+      "properties": {
+        "acr": { "type": "string" },
+        "amr": {
+          "type": "array", "items": { "type": "string" }
+        },
+        "auth_time": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}
+~~~
+
+The `mission_intent_canonical_hash` and `authority_set_canonical_hash`
+members bind the disclosure to the exact Validated Mission Intent and
+derived Authority Set the approving principal was shown, so that the
+authority later committed by `authority_hash` is provably the
+authority that was disclosed. A state authority MUST refuse to
+activate a Mission if the derived Authority Set has changed from the
+one bound in the approved disclosure ({{approval-event}}).
+
 ## Domain-separated, authorization-domain-bound envelope {#integrity-envelope}
 
 After normalization, the hash input is wrapped in an envelope with
@@ -1952,6 +2020,37 @@ under the `principals` member of the Mission Record schema (see
 The principal model is recorded at the approval event and is
 immutable thereafter (the Mission's `subject`, `approving_principal`,
 and other principal fields MUST NOT change after activation).
+
+## Approval anchors for no-user-present approval {#approval-anchors}
+
+When no human approving principal is interactively present at the
+approval event (a scheduled, triggered, or otherwise headless
+Mission), the state authority MUST anchor the approval to one of the
+following, recorded as the `approving_principal` and in the binding
+evidence:
+
+- A human-approved **template Mission**: a Mission Intent and
+  Authority Set a human principal approved in advance, against which
+  the headless Mission is an instance bounded by the approved
+  template.
+- A **standing organizational policy**: an auditable, versioned
+  policy a human governance authority established, identified by
+  `policy_version`, that authorizes the Mission class without
+  per-instance human approval.
+- A **verifiable standing delegation**: a delegation credential or
+  record, attributable to a human principal and independently
+  verifiable, that authorizes the requesting client to obtain
+  Missions of this class.
+
+A state authority MUST NOT treat any of the following as a
+sufficient approval anchor: intent inferred by a language model or
+the requesting client; configuration the agent or client supplies
+at request time; or a general-purpose credential (an access token,
+client credential, or broad scope grant) that does not itself carry
+an attributable, auditable authorization for the Mission class.
+These produce a Mission with no accountable approver and MUST be
+refused. The anchor in force is recorded so an auditor can trace a
+headless Mission to the human authority that stands behind it.
 
 Dynamic actor context (the current delegation chain at a derived
 artifact) is carried on projections (derived credentials) and

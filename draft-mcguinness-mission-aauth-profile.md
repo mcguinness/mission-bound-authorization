@@ -548,6 +548,42 @@ Server applies its own Resource policy in addition.
 The PS-Access Server relationship is established through native
 AAuth federation. This profile does not add a new trust mechanism.
 
+# Call-Chaining Semantics {#call-chaining}
+
+AAuth does not require a downstream request's authority to be a
+subset of the upstream authority. When an intermediary Resource acts
+as an Agent toward a further Resource, it sends the downstream
+resource token, its own agent token, and the upstream auth token to
+the PS or Access Server, which verifies the upstream token, extends
+the `act` chain, and evaluates the new request against the Mission
+context. A composing PS preserves that native behavior and binds it
+to the Mission as follows:
+
+- Downstream authority is NOT required to be a subset of the
+  upstream authority.
+- Downstream authority MUST fit the downstream audience's entry in
+  the Mission's committed Authority Set
+  ({{authority-projection}}). The attenuation comparison is
+  **requested downstream authority versus the Mission's downstream
+  projection**, not downstream token versus upstream token.
+- The PS MUST evaluate each downstream request independently against
+  the Mission and its log; it MUST NOT infer downstream authorization
+  solely from the upstream token's authority.
+- The downstream Resource or Access Server applies its own Resource
+  policy in addition.
+- A downstream request for authority not represented in the
+  Mission's Authority Set MUST be refused; obtaining that authority
+  requires Mission Expansion ({{wire-extension-expansion}}), not a
+  chained derivation.
+
+This rule is load-bearing for legitimate orthogonal chains. A
+booking Resource calling a payment Resource needs payment authority
+that is not a subset of booking authority; both were approved as
+parts of one Mission, so each fits its own audience's Authority Set
+entry while neither is a subset of the other. Applying token-subset
+attenuation here would break the chain; evaluating each hop against
+the Mission's per-audience projection authorizes it correctly.
+
 # Optional AAuth Wire Extensions {#wire-extensions}
 
 This section defines wire extensions that change AAuth's wire by
@@ -710,6 +746,14 @@ The request body is a JSON object {{RFC8259}} and carries:
   requesting consumer.
 - `nonce` (string, required): a client-generated nonce for
   request-binding.
+- `credential_issuer` (string, optional): a consumer identity (the
+  registered credential issuer or its issuer URL) whose
+  authorization to project this Mission the caller wants verified.
+  When present, the response carries `projection_issuer_authorized`
+  and `projection_issuer`. This lets a Resource or Access Server
+  holding a credential issued by another party confirm that issuer
+  was authorized to project the referenced Mission, rather than
+  trusting the credential's signature alone.
 
 The request MUST be authenticated. The PS MUST accept AAuth-native
 HTTP Message Signatures {{RFC9421}} for request authentication and
@@ -742,6 +786,12 @@ The response payload includes:
       "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
     },
     "origin": "https://ps.example.com",
+    "projection_issuer_authorized": true,
+    "projection_issuer": {
+      "issuer": "https://ps.example.com",
+      "substrate": "aauth_ps",
+      "audience": "https://workflow.example.com"
+    },
     "proposal_hash": "sha-256:...",
     "authority_hash": "sha-256:...",
     "consent_disclosure_hash": "sha-256:...",
@@ -773,6 +823,20 @@ The `state` value is the Framework governance state (`active`,
 projection. AAuth consumers that need only the AAuth-wire view MAY
 ignore Framework-specific states they do not recognize and treat
 all non-`active` states as denials of further derivation.
+
+The `projection_issuer_authorized` boolean and `projection_issuer`
+object are present only when the request supplied
+`credential_issuer`. `projection_issuer_authorized` is `true` if
+and only if the named issuer is a registered projection issuer
+authorized to project this Mission for the issuer's substrate and
+the Mission's tenant. A consumer holding a credential purportedly
+issued by that party MUST refuse the credential when
+`projection_issuer_authorized` is `false`, regardless of the
+credential's signature validity; this is the defense against a
+rogue or mis-configured issuer projecting a Mission it was never
+authorized to project. The PS MUST NOT disclose, through this
+field, the registration status of any consumer other than the named
+`credential_issuer`.
 
 Each entry of `authority_set_projection` is a full Authority Set
 entry per {{authority-projection}} -- it validates against the
@@ -826,6 +890,16 @@ Mission's own expiry per the Framework.
           }
         },
         "origin": { "type": "string", "format": "uri" },
+        "projection_issuer_authorized": { "type": "boolean" },
+        "projection_issuer": {
+          "type": "object",
+          "required": ["issuer", "substrate", "audience"],
+          "properties": {
+            "issuer":    { "type": "string", "format": "uri" },
+            "substrate": { "type": "string" },
+            "audience":  { "type": "string" }
+          }
+        },
         "proposal_hash":           { "type": "string" },
         "authority_hash":          { "type": "string" },
         "consent_disclosure_hash": { "type": "string" },
