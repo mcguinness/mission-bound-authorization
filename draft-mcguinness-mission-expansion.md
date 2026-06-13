@@ -78,12 +78,18 @@ Mission and any successor Mission, and the reconciliation rules
 that apply when multiple expansion requests are in flight.
 
 This document does NOT define a wire format for eligibility
-signaling. The OAuth Profile {{I-D.draft-mcguinness-mission-oauth-profile}}
-defines the OAuth wire binding. The AAuth Profile
+signaling. The AAuth Profile
 {{I-D.draft-mcguinness-mission-aauth-profile}} defines the AAuth
-wire binding. Resource-side detection of out-of-bounds requests is
-defined by Delegated Authority Validation
-{{I-D.draft-mcguinness-mission-delegated-authority-validation}}.
+wire binding (the `mission-expansion-signaling-v1` wire extension).
+The OAuth Profile {{I-D.draft-mcguinness-mission-oauth-profile}}
+defers its wire binding to a coordinated revision once this
+specification stabilizes; until that revision, no OAuth eligibility
+binding exists and OAuth deployments surface denials without
+expansion eligibility. Resource-side detection of out-of-bounds
+requests is defined by Delegated Authority Validation
+{{I-D.draft-mcguinness-mission-delegated-authority-validation}},
+whose validation response carries this document's eligibility
+fields server-to-server.
 
 Expansion is a governance operation. It is distinct from
 authentication step-up {{RFC9470}}. A request denied because an
@@ -375,10 +381,31 @@ mechanism.
 **Denied**:
 : The approval event terminated with rejection or withdrawal. The
 state authority returns a denial outcome. The denial MAY include a
-reason code from the Framework's denial vocabulary. A denial does
+reason code from the closed set defined in
+{{expansion-denial-reasons}}. A denial does
 not invalidate the Expansion Ticket beyond its single-use semantics
 (an expired or used ticket is rejected; an unused ticket whose
 expansion was denied is consumed and MUST NOT be reused).
+
+### Expansion denial reasons {#expansion-denial-reasons}
+
+A denial outcome MAY carry one machine-readable reason code:
+
+- `out_of_policy`: the state authority's governance policy refuses
+  the requested authority class for this Mission, independent of
+  who approves.
+- `approver_rejected`: the approving principal declined the
+  expansion at the consent step.
+- `out_of_scope_for_purpose`: the requested authority is
+  incompatible with the Mission's recorded `purpose`; a different
+  Mission (not an expansion) is the appropriate vehicle.
+
+A state authority MUST NOT use a reason code to disclose policy
+boundaries beyond the adjudicated request
+({{concurrent-expansion-exposure}}); omitting the reason code is
+always permitted. Substrate profiles map these codes to
+substrate-appropriate transport. The set is registered in
+{{iana-denial-reasons}}.
 
 **Expired**:
 : The Expansion Ticket expired before submission, or the AuthZEN
@@ -684,7 +711,7 @@ denials route to expansion. The `eligible` field signals expansion
 eligibility specifically; it is not a generic "additional input
 required" marker.
 
-## Concurrent expansion exposure
+## Concurrent expansion exposure {#concurrent-expansion-exposure}
 
 A long-running orchestrator could in principle submit many
 expansion requests for the same predecessor, attempting to discover
@@ -751,9 +778,11 @@ expansion is the lineage attributes, not the Ticket.
 
 # IANA Considerations
 
-This document creates one new registry (the Mission Expansion
-Reconciliation Status registry, {{reconciliation-status-codes}})
-and defines two Mission record attributes. Consistent with the
+This document creates two new registries (the Mission Expansion
+Reconciliation Status registry, {{reconciliation-status-codes}},
+and the Mission Expansion Denial Reason registry,
+{{iana-denial-reasons}}) and defines two Mission record
+attributes. Consistent with the
 Framework, which does not IANA-register the fields of the Mission
 record, the `mission.predecessor` and `mission.expansion_mode`
 attributes are defined by this specification rather than registered
@@ -820,6 +849,24 @@ Status" registry.
 Substrate profiles map these symbolic codes to substrate-appropriate
 transport (e.g., HTTP status codes, OAuth error codes, AAuth error
 codes).
+
+## Mission Expansion Denial Reasons {#iana-denial-reasons}
+
+This document registers a new "Mission Expansion Denial Reason"
+registry, tracking the reason codes a denial outcome MAY carry
+({{expansion-denial-reasons}}).
+
+- **Registration policy**: Specification Required.
+- **Required fields per entry**: `name`, `summary`, defining
+  specification, change controller.
+- **Initial entries**:
+  - `out_of_policy` (this document): governance policy refuses the
+    requested authority class for this Mission.
+  - `approver_rejected` (this document): the approving principal
+    declined the expansion at the consent step.
+  - `out_of_scope_for_purpose` (this document): the requested
+    authority is incompatible with the Mission's recorded
+    `purpose`.
 
 ## Eligibility-Signaling Field Names
 

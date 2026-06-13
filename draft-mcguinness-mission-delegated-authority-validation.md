@@ -223,7 +223,7 @@ principal-model fields, or Authority Set entries beyond what
 
 ### Audience-filtered Mission projection
 
-The `mission` member carries: `id` or `ref` (exactly one, per
+The `mission` member carries: `id` (the canonical `mission.id` per
 {{I-D.draft-mcguinness-mission-framework}}); `origin` (state
 authority issuer URL); `authority_hash` (integrity anchor committed
 at the approval event); `policy_version` (the derivation
@@ -259,16 +259,11 @@ validates against:
     "mission": {
       "type": "object",
       "required": [
-        "origin", "authority_hash", "policy_version", "state",
+        "id", "origin", "authority_hash", "policy_version", "state",
         "audience", "expires_at"
-      ],
-      "oneOf": [
-        { "required": ["id"] },
-        { "required": ["ref"] }
       ],
       "properties": {
         "id":             { "type": "string" },
-        "ref":            { "type": "string" },
         "origin":         { "type": "string", "format": "uri" },
         "authority_hash": { "type": "string" },
         "policy_version": { "type": "string" },

@@ -423,7 +423,7 @@ Authorization Grant, the issued token's `mission` claim MUST be set
 as follows:
 
 - `origin`: the Transcribing AS's issuer URL (unchanged).
-- `id` or `ref`: identical to `txn_claims.mission`. The Receiving
+- `id`: identical to `txn_claims.mission.id`. The Receiving
   AS is not the state authority for the Mission and MUST NOT mint
   a new Mission reference.
 - `authority_hash` and `version`: identical to `txn_claims.mission`
