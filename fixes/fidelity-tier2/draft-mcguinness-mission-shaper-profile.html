@@ -1,0 +1,2583 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission Shaper Profile</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       This document is an Informational profile describing the Mission
+Shaper, a client-side component that transforms a user prompt or
+upstream trigger into a structured Mission Intent for submission to
+a Mission state authority per the Mission Framework. This profile
+defines role boundaries, trust-boundary placement, and recommended
+behavior for Shaper implementations. It does not define a portable
+wire protocol, register media types or claim names, or claim
+cross-vendor conformance. A future portable Shaper protocol, if
+warranted, would be a separate Standards Track specification with
+its own discovery surface and conformance requirements. 
+    " name="description">
+<meta content="xml2rfc 3.33.0" name="generator">
+<meta content="mission" name="keyword">
+<meta content="shaper" name="keyword">
+<meta content="intent" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="delegation" name="keyword">
+<meta content="draft-mcguinness-mission-shaper-profile-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.33.0
+    Python 3.12.13
+    ConfigArgParse 1.7
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.0.2
+    platformdirs 4.9.6
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.7.0
+-->
+<link href="draft-mcguinness-mission-shaper-profile.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Mission Shaper Profile</td>
+<td class="right">June 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 15 December 2026</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-mission-shaper-profile-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-06-13" class="published">13 June 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Informational</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2026-12-15">15 December 2026</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission Shaper Profile</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">This document is an Informational profile describing the Mission
+Shaper, a client-side component that transforms a user prompt or
+upstream trigger into a structured Mission Intent for submission to
+a Mission state authority per the Mission Framework. This profile
+defines role boundaries, trust-boundary placement, and recommended
+behavior for Shaper implementations. It does not define a portable
+wire protocol, register media types or claim names, or claim
+cross-vendor conformance. A future portable Shaper protocol, if
+warranted, would be a separate Standards Track specification with
+its own discovery surface and conformance requirements.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaper-profile.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaper-profile.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-mission-shaper-profile/">https://datatracker.ietf.org/doc/draft-mcguinness-mission-shaper-profile/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 15 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-definitions" class="internal xref">Conventions and Definitions</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-shaper-role-and-trust-bound" class="internal xref">Shaper Role and Trust Boundary</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
+                <p id="section-toc.1-1.3.2.1.1" class="keepWithNext"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-client-side-placement" class="internal xref">Client-side placement</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2">
+                <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-the-shaper-does-not-issue-a" class="internal xref">The Shaper does not issue authority</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-untrusted-output-principle" class="internal xref">Untrusted output principle</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.4">
+                <p id="section-toc.1-1.3.2.4.1"><a href="#section-3.4" class="auto internal xref">3.4</a>.  <a href="#name-the-shaper-never-crosses-th" class="internal xref">The Shaper never crosses the trust boundary</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-discovery-snapshot" class="internal xref">Discovery Snapshot</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-what-the-shaper-consumes" class="internal xref">What the Shaper consumes</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-snapshot-versioning-for-aud" class="internal xref">Snapshot versioning for audit reproducibility</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-mission-intent-construction" class="internal xref">Mission Intent Construction Rules</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-goal" class="internal xref"><code>goal</code></a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-objects" class="internal xref"><code>objects</code></a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-constraints" class="internal xref"><code>constraints</code></a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
+                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-success_criteria" class="internal xref"><code>success_criteria</code></a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5">
+                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-mission_expiry" class="internal xref"><code>mission_expiry</code></a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.6">
+                <p id="section-toc.1-1.5.2.6.1"><a href="#section-5.6" class="auto internal xref">5.6</a>.  <a href="#name-purpose" class="internal xref"><code>purpose</code></a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.7">
+                <p id="section-toc.1-1.5.2.7.1"><a href="#section-5.7" class="auto internal xref">5.7</a>.  <a href="#name-context" class="internal xref"><code>context</code></a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.8">
+                <p id="section-toc.1-1.5.2.8.1"><a href="#section-5.8" class="auto internal xref">5.8</a>.  <a href="#name-extensions-x_" class="internal xref">Extensions (<code>x_*</code>)</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-recommended-ambiguity-surfa" class="internal xref">Recommended Ambiguity-Surfacing Behavior</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-when-to-ask-for-clarificati" class="internal xref">When to ask for clarification</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-when-to-apply-a-default" class="internal xref">When to apply a default</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
+                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-what-ambiguity-surfacing-is" class="internal xref">What ambiguity surfacing is not</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-recommended-non-authoritati" class="internal xref">Recommended Non-Authoritative Derivation-Hint Content</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-recommended-refusal-behavio" class="internal xref">Recommended Refusal Behavior</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-when-the-shaper-should-refu" class="internal xref">When the Shaper SHOULD refuse</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-when-the-shaper-should-not-" class="internal xref">When the Shaper SHOULD NOT refuse</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.3">
+                <p id="section-toc.1-1.8.2.3.1"><a href="#section-8.3" class="auto internal xref">8.3</a>.  <a href="#name-how-refusal-is-surfaced" class="internal xref">How refusal is surfaced</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-shaper-trace-non-normative-" class="internal xref">Shaper Trace (non-normative example)</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-composition-with-substrate-" class="internal xref">Composition with Substrate Profiles</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-oauth-profile" class="internal xref">OAuth Profile</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-aauth-profile" class="internal xref">AAuth Profile</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
+                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-mission-authority-server-ma" class="internal xref">Mission Authority Server (MAS)</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.4">
+                <p id="section-toc.1-1.10.2.4.1"><a href="#section-10.4" class="auto internal xref">10.4</a>.  <a href="#name-runtime-enforcement-profile" class="internal xref">Runtime Enforcement Profile</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-shaper-compromise-does-not-" class="internal xref">Shaper compromise does not directly grant authority</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-untrusted-shaper-output-pri" class="internal xref">Untrusted Shaper output principle</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.3">
+                <p id="section-toc.1-1.11.2.3.1"><a href="#section-11.3" class="auto internal xref">11.3</a>.  <a href="#name-prompt-injection-at-the-sha" class="internal xref">Prompt injection at the Shaper boundary</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.4">
+                <p id="section-toc.1-1.11.2.4.1"><a href="#section-11.4" class="auto internal xref">11.4</a>.  <a href="#name-confidentiality-of-prompt-c" class="internal xref">Confidentiality of prompt content</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.5">
+                <p id="section-toc.1-1.11.2.5.1"><a href="#section-11.5" class="auto internal xref">11.5</a>.  <a href="#name-shaper-to-client-integrity-" class="internal xref">Shaper-to-client integrity inside a multi-process client</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.6">
+                <p id="section-toc.1-1.11.2.6.1"><a href="#section-11.6" class="auto internal xref">11.6</a>.  <a href="#name-reliance-on-language-model-" class="internal xref">Reliance on language-model behavior</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
+                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-prompt-content-in-mission-i" class="internal xref">Prompt content in Mission Intent fields</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.2">
+                <p id="section-toc.1-1.12.2.2.1"><a href="#section-12.2" class="auto internal xref">12.2</a>.  <a href="#name-the-shaper-trace-as-a-conte" class="internal xref">The Shaper Trace as a content sink</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.3">
+                <p id="section-toc.1-1.12.2.3.1"><a href="#section-12.3" class="auto internal xref">12.3</a>.  <a href="#name-no-new-identifiers" class="internal xref">No new identifiers</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
+                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2">
+                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">The Mission Framework <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>
+defines the Mission Intent as the structured task proposal a client
+submits to a state authority (an OAuth Authorization Server, an
+AAuth Person Server, or a Mission Authority Server). The Framework
+specifies the schema, validation, narrowing, and approval semantics
+of Mission Intent. It does not specify how a client produces the
+Mission Intent in the first place.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">In practice, agentic clients produce Mission Intent from one of two
+sources:<a href="#section-1-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-1-3">
+<li id="section-1-3.1">
+          <p id="section-1-3.1.1">A natural-language prompt from a human user.<a href="#section-1-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-1-3.2">
+          <p id="section-1-3.2.1">An upstream trigger such as an event, a schedule, an API call,
+or an inbound message.<a href="#section-1-3.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-1-4">The component inside the client that performs this transformation is
+called the <strong>Mission Shaper</strong>. The Shaper is a client-side
+function. It is not a credential issuer, not a Resource Server, not
+a state authority, and not a Policy Decision Point. The Shaper does
+not approve Missions, does not issue authority, and does not certify
+its own output. Its output is a proposal that the requesting client
+submits to the state authority, which is the only party authorized
+to validate it, narrow it, and bind authority to it.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">This document is an Informational profile. It describes role
+boundaries, recommended behavior, and an audit artifact (the Shaper
+Trace) for Shaper implementations. It is deliberately non-portable:
+the Framework defines the wire shape for Submitted Mission Intent
+through its substrate profiles, and the Shaper merely produces a
+value of that shape. Different client implementations may construct
+Mission Intent differently, may use different language models or
+heuristics, and may make different ambiguity-resolution choices.
+This profile defines only the role contract the Shaper occupies
+inside the trust model and the behaviors a sound implementation
+follows.<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-6">This document does not define:<a href="#section-1-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1-7.1">
+          <p id="section-1-7.1.1">A wire format for invoking a Shaper.<a href="#section-1-7.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-7.2">
+          <p id="section-1-7.2.1">A discovery endpoint for Shaper-as-a-service.<a href="#section-1-7.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-7.3">
+          <p id="section-1-7.3.1">A media type or claim name.<a href="#section-1-7.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-7.4">
+          <p id="section-1-7.4.1">A conformance test suite.<a href="#section-1-7.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-7.5">
+          <p id="section-1-7.5.1">A normative algorithm for prompt-to-Intent transformation.<a href="#section-1-7.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-1-8">The reason this profile is Informational is recorded in the
+architecture decision log: client-side prompt processing is loosely
+shaped by deployment policy, language-model choice, and product
+ergonomics. A Standards Track document would overclaim, because no
+two deployments will agree on the transformation. The role
+boundaries and trust posture, however, are stable and worth
+documenting.<a href="#section-1-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conventions-and-definitions">
+<section id="section-2">
+      <h2 id="name-conventions-and-definitions">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-definitions" class="section-name selfRef">Conventions and Definitions</a>
+      </h2>
+<p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">Terms defined in the Mission Framework
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> are inherited here,
+including Mission Intent, Submitted Mission Intent, Validated
+Mission Intent, Mission Proposal, Mission, Authority Set, state
+authority, requesting client, and approving principal.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">This document additionally uses:<a href="#section-2-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-4">
+        <dt id="section-2-4.1">
+<strong>Mission Shaper</strong> (or "Shaper"):</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.2">
+          <p id="section-2-4.2.1">A client-side component that transforms a user prompt or upstream
+trigger into a Submitted Mission Intent. Defined informally in the
+Framework's terminology and given a role contract here.<a href="#section-2-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.3">
+<strong>Prompt</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.4">
+          <p id="section-2-4.4.1">The natural-language or structured input the Shaper consumes. A
+prompt may be a free-text user utterance, a templated user
+interaction, or an upstream event payload.<a href="#section-2-4.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.5">
+<strong>Trigger</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.6">
+          <p id="section-2-4.6.1">A non-prompt input that initiates Shaper invocation. Examples:
+inbound webhook, scheduled job, message arrival, prior Mission
+completion.<a href="#section-2-4.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.7">
+<strong>Discovery snapshot</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.8">
+          <p id="section-2-4.8.1">A captured-at-construction record of the state-authority discovery
+metadata the Shaper consulted while constructing the Submitted
+Mission Intent. Used for audit reproducibility, not for wire
+exchange.<a href="#section-2-4.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.9">
+<strong>Derivation hint</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.10">
+          <p id="section-2-4.10.1">A non-authoritative suggestion the Shaper attaches to its output
+to assist downstream tooling (e.g., a list of objects the prompt
+appeared to mention). A derivation hint is advisory; it <span class="bcp14">MUST NOT</span> be
+treated as authority by any downstream party.<a href="#section-2-4.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.11">
+<strong>Shaper Trace</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.12">
+          <p id="section-2-4.12.1">An audit artifact recording the inputs the Shaper consumed, the
+discovery snapshot used, the Mission Intent produced, and any
+ambiguity decisions or refusal flags. Non-normative.<a href="#section-2-4.12.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="shaper-role-and-trust-boundary">
+<section id="section-3">
+      <h2 id="name-shaper-role-and-trust-bound">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-shaper-role-and-trust-bound" class="section-name selfRef">Shaper Role and Trust Boundary</a>
+      </h2>
+<p id="section-3-1">The Mission Shaper occupies a single, narrow role inside the
+client. This section defines that role and the trust boundary the
+Shaper does not cross.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<div id="client-side-placement">
+<section id="section-3.1">
+        <h3 id="name-client-side-placement">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-client-side-placement" class="section-name selfRef">Client-side placement</a>
+        </h3>
+<p id="section-3.1-1">The Shaper executes inside the requesting client (per Framework
+terminology). It runs in the same trust domain as the rest of the
+client. Its output is consumed by the client and submitted to the
+state authority through the substrate's Mission Intent submission
+contract (the OAuth Profile, AAuth Profile, or MAS profile).<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+<p id="section-3.1-2">The Shaper is not a separate principal. It has no identity of its
+own to the state authority; the state authority sees the requesting
+client.<a href="#section-3.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="the-shaper-does-not-issue-authority">
+<section id="section-3.2">
+        <h3 id="name-the-shaper-does-not-issue-a">
+<a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-the-shaper-does-not-issue-a" class="section-name selfRef">The Shaper does not issue authority</a>
+        </h3>
+<p id="section-3.2-1">The Mission Shaper <span class="bcp14">MUST NOT</span> issue, derive, or certify authority of
+any kind.<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+<p id="section-3.2-2">The Shaper produces Submitted Mission Intent. Submitted Mission
+Intent is, by Framework definition, untrusted until the state
+authority validates it and produces Validated Mission Intent on a
+Mission Proposal. The Shaper's output therefore has no authority
+implications until the state authority approves a Mission from it
+and derives an Authority Set.<a href="#section-3.2-2" class="pilcrow">¶</a></p>
+<p id="section-3.2-3">A Shaper that signs its output, attaches an authority assertion,
+emits a credential, or otherwise behaves as a credential issuer is
+acting outside the role this profile defines and is <span class="bcp14">NOT RECOMMENDED</span>.
+Implementations that wish to integrity-bind Shaper output for
+client-side reasons (e.g., to prevent tampering between Shaper and
+the submission step inside a multi-process client) <span class="bcp14">MAY</span> do so, but
+that binding has no authority semantics at the state authority and
+<span class="bcp14">MUST NOT</span> be relied upon by anything beyond the client process.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="untrusted-output-principle">
+<section id="section-3.3">
+        <h3 id="name-untrusted-output-principle">
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-untrusted-output-principle" class="section-name selfRef">Untrusted output principle</a>
+        </h3>
+<p id="section-3.3-1">A state authority that receives Submitted Mission Intent <span class="bcp14">MUST</span> treat
+that input as untrusted under the Framework's validation rules.
+Nothing in this profile changes that. A Shaper <span class="bcp14">SHOULD NOT</span> structure
+its output to imply otherwise. In particular, the Shaper <span class="bcp14">SHOULD NOT</span>
+include fields that look like state-authority outputs (<code>mission.id</code>,
+<code>proposal_hash</code>, <code>authority_hash</code>, <code>consent_disclosure_hash</code>,
+<code>authority_set</code>, lifecycle state, approving-principal evidence).
+Those fields are produced by the state authority on the Mission
+Proposal and Mission records, not by the client. A Shaper that
+emits them is either confused about its role or attempting to
+mislead an auditor.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="the-shaper-never-crosses-the-trust-boundary">
+<section id="section-3.4">
+        <h3 id="name-the-shaper-never-crosses-th">
+<a href="#section-3.4" class="section-number selfRef">3.4. </a><a href="#name-the-shaper-never-crosses-th" class="section-name selfRef">The Shaper never crosses the trust boundary</a>
+        </h3>
+<p id="section-3.4-1">The trust boundary in the Mission-Bound Authorization architecture
+separates the client (where the Shaper lives) from the state
+authority (where Validated Mission Intent and Authority Set are
+created). Crossing that boundary is a state-authority action. The
+Shaper produces an input; the client transmits the input; the state
+authority decides what to do with it. The Shaper does not initiate
+the submission, does not select the recipient state authority on
+its own authority, and does not attest to the submission's
+correctness on behalf of the state authority.<a href="#section-3.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="discovery-snapshot">
+<section id="section-4">
+      <h2 id="name-discovery-snapshot">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-discovery-snapshot" class="section-name selfRef">Discovery Snapshot</a>
+      </h2>
+<p id="section-4-1">A Shaper needs information about the state authority it is shaping
+Intent for. At minimum, this includes the Mission Intent schema the
+state authority will validate against, the Authority Set entry
+types the state authority supports, and any deployment-specific
+policy bounds the deployment exposes through metadata.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2">The Framework defines a discovery metadata document at
+<code>{mission.origin}/.well-known/mission-authority</code>
+        <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> containing fields
+including <code>mission_intent_schema_uri</code>,
+<code>authority_set_types_supported</code>, and
+<code>mission_framework_versions_supported</code>. The OAuth Profile,
+AAuth Profile, and MAS profile each add their substrate-specific
+fields.<a href="#section-4-2" class="pilcrow">¶</a></p>
+<div id="what-the-shaper-consumes">
+<section id="section-4.1">
+        <h3 id="name-what-the-shaper-consumes">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-what-the-shaper-consumes" class="section-name selfRef">What the Shaper consumes</a>
+        </h3>
+<p id="section-4.1-1">A Shaper <span class="bcp14">SHOULD</span> consult the following sources when constructing a
+Submitted Mission Intent:<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-4.1-2">
+<li id="section-4.1-2.1">
+            <p id="section-4.1-2.1.1">The state-authority discovery document for the target state
+authority, retrieved at the URL the requesting client is
+configured to use.<a href="#section-4.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.1-2.2">
+            <p id="section-4.1-2.2.1">The Mission Intent schema referenced by
+<code>mission_intent_schema_uri</code> in that document.<a href="#section-4.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.1-2.3">
+            <p id="section-4.1-2.3.1">The list of Authority Set entry types the state authority
+advertises in <code>authority_set_types_supported</code>, so the Shaper can
+express objects, actions, and constraints in a vocabulary the
+state authority will accept.<a href="#section-4.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.1-2.4">
+            <p id="section-4.1-2.4.1">Any deployment-specific narrowing-profile URIs or constraint
+registries referenced from the state-authority discovery
+document.<a href="#section-4.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.1-2.5">
+            <p id="section-4.1-2.5.1">Client-local configuration, including the client's registered
+<code>purpose</code> URIs (if used), default <code>mission_expiry</code> ceilings, and
+product-level deployment policy.<a href="#section-4.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-4.1-3">A Shaper that does not consult discovery before constructing
+Mission Intent is more likely to produce input the state authority
+will reject. There is no wire penalty for skipping discovery; the
+penalty is functional.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="snapshot-versioning-for-audit-reproducibility">
+<section id="section-4.2">
+        <h3 id="name-snapshot-versioning-for-aud">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-snapshot-versioning-for-aud" class="section-name selfRef">Snapshot versioning for audit reproducibility</a>
+        </h3>
+<p id="section-4.2-1">A Shaper <span class="bcp14">SHOULD</span> record a discovery snapshot describing exactly
+which discovery sources, at exactly which versions, it relied upon
+when constructing a particular Submitted Mission Intent. The
+purpose of the snapshot is to allow an auditor to reproduce, after
+the fact, the inputs the Shaper had available.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.2-2">A discovery snapshot <span class="bcp14">SHOULD</span> include, for each discovery source
+consulted:<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.2-3.1">
+            <p id="section-4.2-3.1.1">The URL retrieved.<a href="#section-4.2-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.2-3.2">
+            <p id="section-4.2-3.2.1">A content hash of the retrieved document, computed by the Shaper.<a href="#section-4.2-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.2-3.3">
+            <p id="section-4.2-3.3.1">The timestamp of retrieval, in RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> format.<a href="#section-4.2-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.2-3.4">
+            <p id="section-4.2-3.4.1">Any version identifier the document itself exposed (e.g.,
+<code>mission_framework_versions_supported</code>).<a href="#section-4.2-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-4.2-4">The snapshot is a Shaper-internal artifact. It is not transmitted
+on the wire to the state authority, and the state authority does
+not validate it. This profile does not define a snapshot schema or
+file format. The snapshot is recorded inside the Shaper Trace
+(below) when an implementation supports tracing.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
+<p id="section-4.2-5">A Shaper <span class="bcp14">MAY</span> cache discovery documents for performance; if it does,
+the cached version's content hash and original retrieval timestamp
+are the values recorded in the snapshot, not a refreshed timestamp.
+Misrepresenting the snapshot would defeat the audit purpose.<a href="#section-4.2-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="mission-intent-construction-rules">
+<section id="section-5">
+      <h2 id="name-mission-intent-construction">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-mission-intent-construction" class="section-name selfRef">Mission Intent Construction Rules</a>
+      </h2>
+<p id="section-5-1">The Framework defines the Mission Intent fields:<a href="#section-5-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5-2.1">
+          <p id="section-5-2.1.1"><code>goal</code> (string, required).<a href="#section-5-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.2">
+          <p id="section-5-2.2.1"><code>objects</code> (array of string, required).<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.3">
+          <p id="section-5-2.3.1"><code>constraints</code> (array of string, required).<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.4">
+          <p id="section-5-2.4.1"><code>success_criteria</code> (array of string, required).<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.5">
+          <p id="section-5-2.5.1"><code>mission_expiry</code> (RFC 3339 timestamp, required).<a href="#section-5-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.6">
+          <p id="section-5-2.6.1"><code>purpose</code> (URI, optional).<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.7">
+          <p id="section-5-2.7.1"><code>language</code> (string, optional).<a href="#section-5-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.8">
+          <p id="section-5-2.8.1"><code>context</code> (object, optional).<a href="#section-5-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.9">
+          <p id="section-5-2.9.1">Extension fields prefixed with <code>x_*</code> (optional).<a href="#section-5-2.9.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-5-3">This section gives recommended construction rules for mapping a
+prompt or trigger onto these fields. These are guidance; they are
+not a normative algorithm.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<div id="goal">
+<section id="section-5.1">
+        <h3 id="name-goal">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-goal" class="section-name selfRef"><code>goal</code></a>
+        </h3>
+<p id="section-5.1-1">The <code>goal</code> <span class="bcp14">SHOULD</span> be a concise, user-readable summary of the task
+in the form the approving principal will see at consent time. The
+Shaper <span class="bcp14">SHOULD</span> preserve the user's own framing where possible
+(rather than paraphrasing into Shaper vocabulary), so that the
+consent disclosure presented by the state authority matches the
+user's understanding of what they asked for.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.1-2">The <code>goal</code> <span class="bcp14">SHOULD NOT</span> include verbatim quoted prompt text that
+contains instructions or commands. Quoting an attacker-controlled
+instruction into a field the approving principal will read invites
+the approving principal to act on instructions that did not come
+from them.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="objects">
+<section id="section-5.2">
+        <h3 id="name-objects">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-objects" class="section-name selfRef"><code>objects</code></a>
+        </h3>
+<p id="section-5.2-1">The <code>objects</code> array <span class="bcp14">SHOULD</span> enumerate the resources, datasets,
+tools, or domains the prompt referenced. A Shaper <span class="bcp14">SHOULD</span> prefer
+canonical identifiers (e.g., a resource URI the requesting client
+recognizes) where the prompt can be resolved to one, and <span class="bcp14">SHOULD</span>
+fall back to a user-readable label only when no canonical
+identifier is available.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.2-2">A Shaper <span class="bcp14">SHOULD NOT</span> widen <code>objects</code> beyond what the prompt
+referenced. Adding objects "for convenience" enlarges the surface
+the state authority will validate and, if approved, enlarges the
+authority bound to the Mission.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="constraints">
+<section id="section-5.3">
+        <h3 id="name-constraints">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-constraints" class="section-name selfRef"><code>constraints</code></a>
+        </h3>
+<p id="section-5.3-1">The <code>constraints</code> array <span class="bcp14">SHOULD</span> reflect bounds the user expressed
+("read-only", "today only", "no more than three messages"). A
+Shaper <span class="bcp14">SHOULD</span> also add deployment-policy constraints that the
+requesting client always applies (e.g., a fixed maximum spend, a
+fixed cohort restriction), so the approving principal sees the full
+set of bounds at consent time.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<p id="section-5.3-2">A Shaper <span class="bcp14">MUST NOT</span> silently drop a constraint the user expressed
+because the Shaper cannot map it to a known constraint type. If the
+constraint cannot be expressed in a vocabulary the state authority
+will accept, the Shaper <span class="bcp14">SHOULD</span> either ask the user to clarify (per
+the ambiguity-surfacing behavior below) or refuse to produce the
+Mission Intent (per the refusal behavior below).<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="successcriteria">
+<section id="section-5.4">
+        <h3 id="name-success_criteria">
+<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-success_criteria" class="section-name selfRef"><code>success_criteria</code></a>
+        </h3>
+<p id="section-5.4-1">The <code>success_criteria</code> array <span class="bcp14">SHOULD</span> record what would make this
+task complete from the user's perspective. The Shaper <span class="bcp14">SHOULD</span> avoid
+encoding open-ended criteria ("until I tell you to stop") in a way
+that disables the Framework's <code>mission_expiry</code> ceiling. The
+state authority owns lifecycle; the Shaper proposes criteria the
+state authority and runtime evaluate.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="missionexpiry">
+<section id="section-5.5">
+        <h3 id="name-mission_expiry">
+<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-mission_expiry" class="section-name selfRef"><code>mission_expiry</code></a>
+        </h3>
+<p id="section-5.5-1">The <code>mission_expiry</code> <span class="bcp14">SHOULD</span> be the smallest ceiling that lets the
+task complete. The Shaper <span class="bcp14">SHOULD</span> prefer a short, task-shaped
+expiry over a long, calendar-shaped expiry (one hour for a
+one-shot task; one work day for a follow-the-thread task; not one
+year). The state authority <span class="bcp14">MAY</span> narrow <code>mission_expiry</code> further
+under deployment policy; the Shaper's job is to start tight, not to
+ask for the maximum the state authority allows.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+<p id="section-5.5-2">If the prompt does not name a time bound, the Shaper <span class="bcp14">SHOULD</span> apply
+a deployment default rather than asking the user for an expiry on
+every prompt. Defaults <span class="bcp14">SHOULD</span> be conservative.<a href="#section-5.5-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="purpose">
+<section id="section-5.6">
+        <h3 id="name-purpose">
+<a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-purpose" class="section-name selfRef"><code>purpose</code></a>
+        </h3>
+<p id="section-5.6-1">The <code>purpose</code> URI is optional. If the requesting client has
+registered purposes with the state authority or the deployment
+ecosystem, the Shaper <span class="bcp14">SHOULD</span> select the purpose URI that most
+closely matches the prompt, rather than omitting <code>purpose</code> or
+inventing a new URI. Inventing URIs at Shaper time defeats the
+purpose registry.<a href="#section-5.6-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="context">
+<section id="section-5.7">
+        <h3 id="name-context">
+<a href="#section-5.7" class="section-number selfRef">5.7. </a><a href="#name-context" class="section-name selfRef"><code>context</code></a>
+        </h3>
+<p id="section-5.7-1">The <code>context</code> object carries machine-actionable bounds keyed by
+constraint type. The Shaper <span class="bcp14">SHOULD</span> only emit <code>context</code> keys the
+state-authority discovery snapshot advertised as supported
+constraint types. Emitting unknown keys gives the state authority
+no choice but to reject the Mission Intent.<a href="#section-5.7-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="extensions-x">
+<section id="section-5.8">
+        <h3 id="name-extensions-x_">
+<a href="#section-5.8" class="section-number selfRef">5.8. </a><a href="#name-extensions-x_" class="section-name selfRef">Extensions (<code>x_*</code>)</a>
+        </h3>
+<p id="section-5.8-1">A Shaper <span class="bcp14">MAY</span> emit <code>x_*</code> extension fields the requesting client and
+state authority have agreed on. The Shaper <span class="bcp14">SHOULD NOT</span> invent
+<code>x_*</code> fields opportunistically: per the Framework, an extension
+field that claims authority-relevant semantics will be rejected by
+the state authority unless registered.<a href="#section-5.8-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="recommended-ambiguity-surfacing-behavior">
+<section id="section-6">
+      <h2 id="name-recommended-ambiguity-surfa">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-recommended-ambiguity-surfa" class="section-name selfRef">Recommended Ambiguity-Surfacing Behavior</a>
+      </h2>
+<p id="section-6-1">A prompt is often underspecified relative to what the Mission
+Intent schema requires. The Shaper has two ways to resolve
+underspecification: ask the user a clarifying question, or apply a
+deployment default. This section gives guidance on the choice.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<div id="when-to-ask-for-clarification">
+<section id="section-6.1">
+        <h3 id="name-when-to-ask-for-clarificati">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-when-to-ask-for-clarificati" class="section-name selfRef">When to ask for clarification</a>
+        </h3>
+<p id="section-6.1-1">The Shaper <span class="bcp14">SHOULD</span> ask the user a clarifying question when:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6.1-2">
+<li id="section-6.1-2.1">
+            <p id="section-6.1-2.1.1">The prompt names a class of objects but not a specific instance,
+and the choice of instance is consequential (e.g., "send the
+report" when there are several reports).<a href="#section-6.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.1-2.2">
+            <p id="section-6.1-2.2.1">The prompt requests an action whose impact varies sharply
+depending on a bound the user did not state (e.g., "spend up to
+X" when X is missing).<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.1-2.3">
+            <p id="section-6.1-2.3.1">The prompt could plausibly mean either a small task or a large
+task, and the difference matters for what authority will be
+approved.<a href="#section-6.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.1-2.4">
+            <p id="section-6.1-2.4.1">The deployment policy requires user confirmation of a parameter
+(e.g., the cohort of users a broadcast will reach).<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+</section>
+</div>
+<div id="when-to-apply-a-default">
+<section id="section-6.2">
+        <h3 id="name-when-to-apply-a-default">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-when-to-apply-a-default" class="section-name selfRef">When to apply a default</a>
+        </h3>
+<p id="section-6.2-1">The Shaper <span class="bcp14">MAY</span> apply a deployment default, rather than asking,
+when:<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6.2-2">
+<li id="section-6.2-2.1">
+            <p id="section-6.2-2.1.1">The missing field has a conservative default the user would
+reasonably expect (e.g., applying a one-hour <code>mission_expiry</code>
+when no time bound was stated).<a href="#section-6.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.2">
+            <p id="section-6.2-2.2.1">Asking would impose more friction than the disambiguation is
+worth, and the consent step at the state authority will surface
+the default to the approving principal anyway.<a href="#section-6.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.3">
+            <p id="section-6.2-2.3.1">The deployment policy explicitly designates this case as
+default-applicable.<a href="#section-6.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+</section>
+</div>
+<div id="what-ambiguity-surfacing-is-not">
+<section id="section-6.3">
+        <h3 id="name-what-ambiguity-surfacing-is">
+<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-what-ambiguity-surfacing-is" class="section-name selfRef">What ambiguity surfacing is not</a>
+        </h3>
+<p id="section-6.3-1">Asking the user a clarifying question is not approval. The user's
+response is incorporated into the Submitted Mission Intent. The
+state authority still validates, narrows, and presents the consent
+disclosure for binding approval. A Shaper <span class="bcp14">SHOULD NOT</span> skip the
+state-authority consent step on the grounds that the user already
+"answered enough questions". The Shaper is not the approving
+principal's agent for consent.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="recommended-non-authoritative-derivation-hint-content">
+<section id="section-7">
+      <h2 id="name-recommended-non-authoritati">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-recommended-non-authoritati" class="section-name selfRef">Recommended Non-Authoritative Derivation-Hint Content</a>
+      </h2>
+<p id="section-7-1">Some deployments find it useful for the Shaper to attach
+non-authoritative hints to its output, to help downstream
+orchestration tools render the Mission Intent for user review, log
+the Shaper's reasoning, or prefetch resources. These are
+derivation hints. They are advisory.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2">A derivation hint:<a href="#section-7-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-3.1">
+          <p id="section-7-3.1.1"><span class="bcp14">SHOULD</span> be carried in a Shaper-local data structure (or, if
+transmitted over a substrate, in a field the substrate clearly
+marks as advisory).<a href="#section-7-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-3.2">
+          <p id="section-7-3.2.1"><span class="bcp14">MUST NOT</span> be carried in fields the state authority interprets as
+authoritative (the Validated Mission Intent fields, the Authority
+Set, integrity-anchor inputs, approving-principal evidence).<a href="#section-7-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-3.3">
+          <p id="section-7-3.3.1"><span class="bcp14">SHOULD NOT</span> be transmitted to a Resource Server, a Policy Decision
+Point, or a Policy Enforcement Point as a basis for an
+authorization decision. A PDP that consults Shaper-emitted hints
+for authorization is conflating the Shaper with a credential
+issuer, which this profile explicitly disclaims.<a href="#section-7-3.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-7-4">Examples of reasonable derivation-hint content:<a href="#section-7-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-5.1">
+          <p id="section-7-5.1.1">A list of objects the Shaper inferred from the prompt, with a
+confidence label per item, for client-side UI.<a href="#section-7-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-5.2">
+          <p id="section-7-5.2.1">A list of candidate Authority Set entry types the Shaper expects
+the state authority will derive (for prefetch of policy
+documents, not for authorization).<a href="#section-7-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-5.3">
+          <p id="section-7-5.3.1">The provenance of each Mission Intent field (prompt text, user
+clarification, deployment default).<a href="#section-7-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-5.4">
+          <p id="section-7-5.4.1">The language-model identifier and version that produced the
+field, when the Shaper used a model.<a href="#section-7-5.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-7-6">A downstream party that wants to rely on any of these hints <span class="bcp14">SHOULD</span>
+verify them against authoritative artifacts: the Validated Mission
+Intent on the Mission Proposal, the Authority Set on the Mission,
+or the runtime PDP decision. Derivation hints are inputs to user
+experience and audit, not to authorization.<a href="#section-7-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="recommended-refusal-behavior">
+<section id="section-8">
+      <h2 id="name-recommended-refusal-behavio">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-recommended-refusal-behavio" class="section-name selfRef">Recommended Refusal Behavior</a>
+      </h2>
+<p id="section-8-1">There are inputs the Shaper <span class="bcp14">SHOULD</span> refuse to produce Mission Intent
+from. Refusal is a Shaper-internal decision; it does not require
+state-authority involvement, and this profile does not define a
+wire-level refusal error.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<div id="when-the-shaper-should-refuse">
+<section id="section-8.1">
+        <h3 id="name-when-the-shaper-should-refu">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-when-the-shaper-should-refu" class="section-name selfRef">When the Shaper SHOULD refuse</a>
+        </h3>
+<p id="section-8.1-1">The Shaper <span class="bcp14">SHOULD</span> refuse to produce Mission Intent when:<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-8.1-2">
+<li id="section-8.1-2.1">
+            <p id="section-8.1-2.1.1">The prompt contains instructions evidently designed to enlarge
+authority beyond what the user has stated (prompt-injection
+patterns directed at the Shaper).<a href="#section-8.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-8.1-2.2">
+            <p id="section-8.1-2.2.1">The prompt requests action against an object the deployment
+policy categorically forbids (e.g., a domain the requesting
+client is configured to never touch).<a href="#section-8.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-8.1-2.3">
+            <p id="section-8.1-2.3.1">The Shaper cannot map the requested action to any Authority Set
+entry type the discovery snapshot advertises, and no fallback
+constraint vocabulary applies. Submitting such an Intent only
+wastes a state-authority validation cycle.<a href="#section-8.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-8.1-2.4">
+            <p id="section-8.1-2.4.1">The requested <code>mission_expiry</code>, if honored, would exceed any
+deployment ceiling the Shaper is aware of, and the Shaper has
+no policy basis for narrowing it on the user's behalf.<a href="#section-8.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-8.1-2.5">
+            <p id="section-8.1-2.5.1">The prompt contains content that, if echoed into the consent
+disclosure, would mislead the approving principal (e.g., a
+crafted string disguised as a system instruction).<a href="#section-8.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+</section>
+</div>
+<div id="when-the-shaper-should-not-refuse">
+<section id="section-8.2">
+        <h3 id="name-when-the-shaper-should-not-">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-when-the-shaper-should-not-" class="section-name selfRef">When the Shaper SHOULD NOT refuse</a>
+        </h3>
+<p id="section-8.2-1">The Shaper <span class="bcp14">SHOULD NOT</span> refuse merely because the requested authority
+is broad. Breadth is the state authority's decision, not the
+Shaper's. The state authority will narrow under deployment policy
+and surface the result to the approving principal. The Shaper
+refusing on breadth grounds substitutes its own judgment for the
+approving principal's.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<p id="section-8.2-2">The Shaper <span class="bcp14">SHOULD NOT</span> refuse on the grounds that the Authority Set
+the state authority would derive looks expensive. That is a
+runtime concern, not a Shaper concern.<a href="#section-8.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="how-refusal-is-surfaced">
+<section id="section-8.3">
+        <h3 id="name-how-refusal-is-surfaced">
+<a href="#section-8.3" class="section-number selfRef">8.3. </a><a href="#name-how-refusal-is-surfaced" class="section-name selfRef">How refusal is surfaced</a>
+        </h3>
+<p id="section-8.3-1">When the Shaper refuses, it <span class="bcp14">SHOULD</span> return a structured refusal to
+the requesting client, including:<a href="#section-8.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.3-2.1">
+            <p id="section-8.3-2.1.1">A category label (e.g., "prompt-injection", "out-of-policy",
+"unmappable").<a href="#section-8.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.3-2.2">
+            <p id="section-8.3-2.2.1">A short user-readable explanation suitable for the client to
+display.<a href="#section-8.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.3-2.3">
+            <p id="section-8.3-2.3.1">The Shaper Trace artifact (below), so the client and any
+downstream auditor can review the inputs.<a href="#section-8.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-8.3-3">The requesting client decides what to do with the refusal: prompt
+the user for a different formulation, route to a different
+workflow, log and discard, or escalate. The refusal itself is not
+an authority decision; it is the Shaper declining to manufacture
+input.<a href="#section-8.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="shaper-trace-non-normative-example">
+<section id="section-9">
+      <h2 id="name-shaper-trace-non-normative-">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-shaper-trace-non-normative-" class="section-name selfRef">Shaper Trace (non-normative example)</a>
+      </h2>
+<p id="section-9-1">The Shaper Trace is an audit artifact recording the prompt-to-Intent
+transformation. It is non-normative. This profile does not define
+a schema for the Shaper Trace, does not register a media type for
+it, and does not specify how it is transmitted. Implementations
+that find a trace useful may shape it as they wish.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">A Shaper Trace might record fields such as:<a href="#section-9-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9-3.1">
+          <p id="section-9-3.1.1"><code>prompt</code>: the prompt or trigger payload the Shaper consumed.<a href="#section-9-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-3.2">
+          <p id="section-9-3.2.1"><code>discovery_snapshot</code>: the discovery snapshot the Shaper relied
+on (URLs, content hashes, retrieval timestamps).<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-3.3">
+          <p id="section-9-3.3.1"><code>clarifications</code>: any clarifying questions the Shaper asked the
+user and the responses received.<a href="#section-9-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-3.4">
+          <p id="section-9-3.4.1"><code>defaults_applied</code>: deployment defaults the Shaper used to fill
+underspecified fields, with the rationale per field.<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-3.5">
+          <p id="section-9-3.5.1"><code>mission_intent</code>: the Submitted Mission Intent the Shaper
+produced (or the refusal record, if the Shaper refused).<a href="#section-9-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-3.6">
+          <p id="section-9-3.6.1"><code>derivation_hints</code>: any non-authoritative hints the Shaper
+attached.<a href="#section-9-3.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-3.7">
+          <p id="section-9-3.7.1"><code>model</code>: an identifier and version for the language model or
+ruleset the Shaper used, where applicable.<a href="#section-9-3.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-3.8">
+          <p id="section-9-3.8.1"><code>created_at</code>: an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-9-3.8.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-9-4">A non-normative sketch of a Shaper Trace record:<a href="#section-9-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-9-5">
+<pre>
+{
+  "prompt": "schedule a follow-up with our top 5 customers this week",
+  "discovery_snapshot": {
+    "sources": [
+      {
+        "url": "https://as.example/.well-known/mission-authority",
+        "content_hash": "sha-256:...",
+        "retrieved_at": "2026-06-09T14:02:11Z"
+      }
+    ]
+  },
+  "defaults_applied": [
+    {"field": "mission_expiry", "reason": "deployment-default-7d"}
+  ],
+  "mission_intent": {
+    "goal": "schedule a follow-up with our top 5 customers this week",
+    "objects": ["crm.customers", "calendar.primary"],
+    "constraints": ["read-only access to CRM", "one event per customer"],
+    "success_criteria": ["5 calendar events created"],
+    "mission_expiry": "2026-06-16T14:02:11Z"
+  },
+  "derivation_hints": {
+    "expected_authority_types": ["mission_resource_access"]
+  },
+  "model": "example-shaper/0.3",
+  "created_at": "2026-06-09T14:02:11Z"
+}
+</pre><a href="#section-9-5" class="pilcrow">¶</a>
+</div>
+<p id="section-9-6">This example is illustrative. It is not a vector, not a schema, and
+not a recommended on-the-wire shape. A deployment may use a
+completely different structure or none at all.<a href="#section-9-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="composition-with-substrate-profiles">
+<section id="section-10">
+      <h2 id="name-composition-with-substrate-">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-composition-with-substrate-" class="section-name selfRef">Composition with Substrate Profiles</a>
+      </h2>
+<p id="section-10-1">The Mission Shaper produces Submitted Mission Intent. The
+substrate profile defines how that Submitted Mission Intent enters
+the state authority's submission contract. This profile does not
+re-specify any of those contracts; it points at them.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<div id="oauth-profile">
+<section id="section-10.1">
+        <h3 id="name-oauth-profile">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-oauth-profile" class="section-name selfRef">OAuth Profile</a>
+        </h3>
+<p id="section-10.1-1">The Mission-Bound OAuth Profile
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span> defines a
+<code>mission_intent</code> parameter carried inside a Pushed Authorization
+Request (PAR) <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>. The Submitted Mission Intent the Shaper
+produced is the value of that parameter. The Authorization Server
+<span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> acts as the state authority: it validates, narrows, and
+renders the consent disclosure, then creates a Mission Proposal and,
+on approval, a Mission with a derived Authority Set
+(<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>).<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<p id="section-10.1-2">The Shaper does not invoke the OAuth Authorization Endpoint, does
+not call the PAR endpoint, and does not handle the authorization
+response. Those are requesting-client responsibilities. The Shaper
+hands its output to the requesting client, which performs the
+OAuth flow.<a href="#section-10.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="aauth-profile">
+<section id="section-10.2">
+        <h3 id="name-aauth-profile">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-aauth-profile" class="section-name selfRef">AAuth Profile</a>
+        </h3>
+<p id="section-10.2-1">The Mission-Bound AAuth Composition Profile defines a native
+Mission Intent submission shape on top of AAuth's two-state
+lifecycle. The Submitted Mission Intent the Shaper produced is
+carried into the AAuth submission as that profile specifies.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<p id="section-10.2-2">The relationship between the Shaper and the AAuth Person Server is
+the same as between the Shaper and an OAuth AS: the Shaper does not
+talk to the Person Server. The requesting client (the AAuth agent)
+talks to the Person Server, carrying Shaper output.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-authority-server-mas">
+<section id="section-10.3">
+        <h3 id="name-mission-authority-server-ma">
+<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-mission-authority-server-ma" class="section-name selfRef">Mission Authority Server (MAS)</a>
+        </h3>
+<p id="section-10.3-1">When the state authority is a Mission Authority Server holding a
+substrate-neutral Mission record, the Mission Authority Server
+profile defines the Submitted Mission Intent submission shape. The
+Shaper's output enters that submission shape. The MAS validates,
+narrows, and approves; downstream OAuth and AAuth substrates
+project from the MAS-held Mission.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+<p id="section-10.3-2">Across all three substrates, the Shaper role is identical: produce
+a Submitted Mission Intent; let the state authority validate and
+bind authority to it. The differences between substrates are in
+the submission and projection wire shapes, not in what the Shaper
+does.<a href="#section-10.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="runtime-enforcement-profile">
+<section id="section-10.4">
+        <h3 id="name-runtime-enforcement-profile">
+<a href="#section-10.4" class="section-number selfRef">10.4. </a><a href="#name-runtime-enforcement-profile" class="section-name selfRef">Runtime Enforcement Profile</a>
+        </h3>
+<p id="section-10.4-1">The Mission-Bound Runtime Enforcement Profile
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span> defines the PDP
+and PEP contract for per-action enforcement. The runtime does not
+consume Shaper output. It consumes Validated Mission Intent (on
+the Mission record) and the Authority Set (also on the Mission
+record), both produced by the state authority, not by the Shaper.
+A runtime that reads Shaper derivation hints or Shaper Traces for
+authorization is misusing them.<a href="#section-10.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-11">
+      <h2 id="name-security-considerations">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-11-1">The Shaper sits at the prompt-to-Intent boundary. This section
+identifies the security properties that follow from its role
+contract and the threats that bear on its operation.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<div id="shaper-compromise-does-not-directly-grant-authority">
+<section id="section-11.1">
+        <h3 id="name-shaper-compromise-does-not-">
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-shaper-compromise-does-not-" class="section-name selfRef">Shaper compromise does not directly grant authority</a>
+        </h3>
+<p id="section-11.1-1">A compromised Shaper can produce arbitrary Submitted Mission
+Intent. It cannot, by itself, cause the state authority to approve
+that Intent. The state authority validates the Intent against the
+deployment's schema and policy, renders a consent disclosure to the
+approving principal, and binds authority only at the approval
+event.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+<p id="section-11.1-2">A compromised Shaper can therefore:<a href="#section-11.1-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11.1-3.1">
+            <p id="section-11.1-3.1.1">Cause spurious Mission Proposals to be submitted.<a href="#section-11.1-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.1-3.2">
+            <p id="section-11.1-3.2.1">Mis-shape Intent in ways that lead the approving principal to
+approve a task different from the one they intended.<a href="#section-11.1-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.1-3.3">
+            <p id="section-11.1-3.3.1">Leak prompts or context outward through Shaper-local logging.<a href="#section-11.1-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-11.1-4">A compromised Shaper cannot:<a href="#section-11.1-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11.1-5.1">
+            <p id="section-11.1-5.1.1">Issue credentials.<a href="#section-11.1-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.1-5.2">
+            <p id="section-11.1-5.2.1">Set or change Mission lifecycle state.<a href="#section-11.1-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.1-5.3">
+            <p id="section-11.1-5.3.1">Bypass the approval event.<a href="#section-11.1-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.1-5.4">
+            <p id="section-11.1-5.4.1">Cause a Resource Server to act without state-authority-issued
+authority.<a href="#section-11.1-5.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-11.1-6">The trust posture is intentional. The Shaper's role is shaping, not
+authorizing. Authority is created at the approval event by the
+state authority.<a href="#section-11.1-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="untrusted-shaper-output-principle">
+<section id="section-11.2">
+        <h3 id="name-untrusted-shaper-output-pri">
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-untrusted-shaper-output-pri" class="section-name selfRef">Untrusted Shaper output principle</a>
+        </h3>
+<p id="section-11.2-1">State authorities, Resource Servers, PDPs, PEPs, and auditors <span class="bcp14">MUST</span>
+treat Shaper output as untrusted client input. The Framework
+already requires this for Submitted Mission Intent; this profile
+reinforces it for any Shaper-emitted artifact, including
+derivation hints, Shaper Traces, and structured refusals.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
+<p id="section-11.2-2">Implementations that grant authority on the basis of a
+Shaper-emitted artifact (e.g., a Resource Server that lets a client
+in because the client included a "trusted Shaper attestation")
+have constructed a side channel around the Framework's authority
+model. This profile does not endorse such constructions. If a
+deployment finds itself building one, the right response is to push
+the authority creation back to the state authority, not to harden
+the side channel.<a href="#section-11.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="prompt-injection-at-the-shaper-boundary">
+<section id="section-11.3">
+        <h3 id="name-prompt-injection-at-the-sha">
+<a href="#section-11.3" class="section-number selfRef">11.3. </a><a href="#name-prompt-injection-at-the-sha" class="section-name selfRef">Prompt injection at the Shaper boundary</a>
+        </h3>
+<p id="section-11.3-1">The Shaper's input is, by assumption, partially or wholly
+attacker-influenceable. Prompts come from users, but prompts may
+contain content the user pasted, content the user was tricked into
+typing, or content arriving through a non-prompt trigger such as
+an inbound email or webhook. Prompt injection at the Shaper
+boundary is a realistic threat.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
+<p id="section-11.3-2">Concrete prompt-injection threats include:<a href="#section-11.3-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11.3-3.1">
+            <p id="section-11.3-3.1.1">An attacker-crafted document attempts to instruct the Shaper to
+expand the <code>objects</code> array beyond what the user requested.<a href="#section-11.3-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.3-3.2">
+            <p id="section-11.3-3.2.1">A crafted string in a triggered email body attempts to set
+<code>mission_expiry</code> further into the future than deployment policy
+allows.<a href="#section-11.3-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.3-3.3">
+            <p id="section-11.3-3.3.1">An instruction disguised as a system message attempts to suppress
+one of the user's stated constraints.<a href="#section-11.3-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.3-3.4">
+            <p id="section-11.3-3.4.1">A request attempts to specify a <code>purpose</code> URI that maps to a
+task class the user did not select.<a href="#section-11.3-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-11.3-4">Mitigations the Shaper <span class="bcp14">SHOULD</span> apply:<a href="#section-11.3-4" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-11.3-5">
+<li id="section-11.3-5.1">
+            <p id="section-11.3-5.1.1">Treat all prompt content as untrusted data, not as
+instructions to the Shaper itself. Do not let prompt content
+alter Shaper policy or override deployment defaults.<a href="#section-11.3-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-11.3-5.2">
+            <p id="section-11.3-5.2.1">Apply the recommended refusal behavior (above) when the prompt
+exhibits patterns characteristic of injection.<a href="#section-11.3-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-11.3-5.3">
+            <p id="section-11.3-5.3.1">Do not echo verbatim prompt-derived instruction text into
+<code>goal</code> or <code>constraints</code> fields the approving principal will
+read. Paraphrase, or quote with clear attribution to the prompt
+source, but do not present injected content as if it came from
+the user.<a href="#section-11.3-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-11.3-5.4">
+            <p id="section-11.3-5.4.1">Use the discovery snapshot's <code>authority_set_types_supported</code>
+and constraint vocabulary as a hard whitelist. Do not infer new
+authority types from the prompt.<a href="#section-11.3-5.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-11.3-5.5">
+            <p id="section-11.3-5.5.1">Record the prompt, the parsed intent, and the chosen defaults
+in the Shaper Trace so an auditor can reconstruct what the
+Shaper saw.<a href="#section-11.3-5.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-11.3-6">Even with these mitigations, prompt injection cannot be fully
+eliminated at the Shaper. The Framework's defense in depth is the
+approving principal seeing the Validated Mission Intent in a
+consent disclosure rendered by the state authority, not by the
+Shaper, before authority is bound. A Shaper that builds Intent
+truthfully from the prompt, and a state authority that renders
+disclosure truthfully from the Validated Mission Intent, together
+make injection visible at the approval step.<a href="#section-11.3-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="confidentiality-of-prompt-content">
+<section id="section-11.4">
+        <h3 id="name-confidentiality-of-prompt-c">
+<a href="#section-11.4" class="section-number selfRef">11.4. </a><a href="#name-confidentiality-of-prompt-c" class="section-name selfRef">Confidentiality of prompt content</a>
+        </h3>
+<p id="section-11.4-1">Prompts may carry sensitive content (PII, business data, free-form
+user expression). The Shaper <span class="bcp14">SHOULD</span> apply the requesting client's
+data-handling policy to prompt content, including the Shaper Trace.
+A Shaper Trace transmitted outside the client's trust domain (e.g.,
+shipped to a centralized audit store) <span class="bcp14">SHOULD</span> apply the same
+controls the client applies to any other prompt or user-content
+log.<a href="#section-11.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="shaper-to-client-integrity-inside-a-multi-process-client">
+<section id="section-11.5">
+        <h3 id="name-shaper-to-client-integrity-">
+<a href="#section-11.5" class="section-number selfRef">11.5. </a><a href="#name-shaper-to-client-integrity-" class="section-name selfRef">Shaper-to-client integrity inside a multi-process client</a>
+        </h3>
+<p id="section-11.5-1">In a client where the Shaper runs in a different process or
+machine from the OAuth or AAuth submission code, the
+Shaper-to-submission step is an in-client boundary. An attacker
+sitting between the two could alter the Submitted Mission Intent
+before submission. The state authority will still validate the
+altered Intent and present its consent disclosure, so the
+approving principal remains the final line of defense, but the
+altered Intent will not match the prompt the Shaper actually
+shaped.<a href="#section-11.5-1" class="pilcrow">¶</a></p>
+<p id="section-11.5-2">Implementations <span class="bcp14">MAY</span> apply client-internal integrity protection
+between the Shaper output and the submission code (e.g., a
+client-local signature, a process-isolated channel). Such
+integrity protection has no semantics at the state authority and
+<span class="bcp14">MUST NOT</span> be carried into the Submitted Mission Intent as if it
+did.<a href="#section-11.5-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="reliance-on-language-model-behavior">
+<section id="section-11.6">
+        <h3 id="name-reliance-on-language-model-">
+<a href="#section-11.6" class="section-number selfRef">11.6. </a><a href="#name-reliance-on-language-model-" class="section-name selfRef">Reliance on language-model behavior</a>
+        </h3>
+<p id="section-11.6-1">A Shaper that uses a language model to construct Mission Intent
+inherits that model's failure modes: hallucinated objects,
+fabricated constraints, inconsistent paraphrase, sensitivity to
+small input perturbations. The model is not part of the trust
+boundary; its output is a client-side proposal subject to
+state-authority validation. Implementations <span class="bcp14">SHOULD</span> nonetheless
+record the model identifier and version in the Shaper Trace so
+that failures can be attributed.<a href="#section-11.6-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-12">
+      <h2 id="name-privacy-considerations">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-12-1">The Shaper sits at the point where a user's natural-language prompt
+-- which may carry personal data, business-confidential content, or
+free-form expression -- is transformed into structured artifacts.
+The privacy surface follows from where that content flows.<a href="#section-12-1" class="pilcrow">¶</a></p>
+<div id="prompt-content-in-mission-intent-fields">
+<section id="section-12.1">
+        <h3 id="name-prompt-content-in-mission-i">
+<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-prompt-content-in-mission-i" class="section-name selfRef">Prompt content in Mission Intent fields</a>
+        </h3>
+<p id="section-12.1-1">The Shaper copies or paraphrases prompt content into <code>goal</code>,
+<code>objects</code>, <code>constraints</code>, and <code>context</code>, which the state authority
+renders in a consent disclosure the approving principal reads. A
+Shaper <span class="bcp14">SHOULD</span> carry into these fields only the content needed to
+describe the task, and <span class="bcp14">SHOULD NOT</span> widen <code>objects</code> or echo unrelated
+prompt content (per <a href="#mission-intent-construction-rules" class="auto internal xref">Section 5</a>). Content
+placed in <code>goal</code> in particular is read by the approving principal
+and may be retained in the Mission record and its audit trail, so a
+Shaper <span class="bcp14">SHOULD</span> avoid copying third-party personal data into it where
+a non-identifying description suffices.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="the-shaper-trace-as-a-content-sink">
+<section id="section-12.2">
+        <h3 id="name-the-shaper-trace-as-a-conte">
+<a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-the-shaper-trace-as-a-conte" class="section-name selfRef">The Shaper Trace as a content sink</a>
+        </h3>
+<p id="section-12.2-1">The Shaper Trace aggregates the prompt, applied defaults, derivation
+hints, and model outputs into a single artifact, and is therefore a
+concentrated sink of potentially sensitive prompt content. As noted
+in <a href="#confidentiality-of-prompt-content" class="auto internal xref">Section 11.4</a>, a Shaper Trace transmitted
+outside the client's trust domain (for example, shipped to a
+centralized audit store) <span class="bcp14">SHOULD</span> carry the same data-handling and
+retention controls the requesting client applies to any other prompt
+or user-content log. Implementations <span class="bcp14">SHOULD</span> be able to produce a
+redacted Trace for audiences that need the transformation provenance
+but not the raw prompt content.<a href="#section-12.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="no-new-identifiers">
+<section id="section-12.3">
+        <h3 id="name-no-new-identifiers">
+<a href="#section-12.3" class="section-number selfRef">12.3. </a><a href="#name-no-new-identifiers" class="section-name selfRef">No new identifiers</a>
+        </h3>
+<p id="section-12.3-1">The Shaper introduces no identifier of its own and is not a separate
+principal to the state authority (<a href="#shaper-role-and-trust-boundary" class="auto internal xref">Section 3</a>).
+It therefore adds no cross-party correlation surface beyond the
+prompt content it processes and the requesting-client identity the
+state authority already sees.<a href="#section-12.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-13">
+      <h2 id="name-iana-considerations">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-13-1">This document has no IANA actions. The Mission Shaper Profile is
+Informational. It does not register media types, claim names,
+endpoint names, parameter names, error codes, metadata fields, or
+namespace URIs. A future portable Shaper protocol, if specified,
+would be a separate Standards Track document and would carry its
+own IANA registrations there.<a href="#section-13-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-14">
+      <h2 id="name-references">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-14.1">
+        <h3 id="name-normative-references">
+<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-framework">[I-D.draft-mcguinness-mission-framework]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+      <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-14.2">
+        <h3 id="name-informative-references">
+<a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-oauth-profile">[I-D.draft-mcguinness-mission-oauth-profile]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-runtime-profile">[I-D.draft-mcguinness-mission-runtime-profile]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-actor-profile">[I-D.draft-mcguinness-oauth-actor-profile]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth Actor Profile for Delegation"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-actor-profile-00</span>, <time datetime="2026-04-30" class="refDate">30 April 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-profile-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-profile-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-client-instance-assertion">[I-D.draft-mcguinness-oauth-client-instance-assertion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Instance Assertions using Actor Tokens"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-assertion-00</span>, <time datetime="2026-05-05" class="refDate">5 May 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC3339">[RFC3339]</dt>
+        <dd>
+<span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6749">[RFC6749]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6749">https://www.rfc-editor.org/rfc/rfc6749</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9126">[RFC9126]</dt>
+      <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Sakimura, N.</span>, <span class="refAuthor">Tonge, D.</span>, and <span class="refAuthor">F. Skokan</span>, <span class="refTitle">"OAuth 2.0 Pushed Authorization Requests"</span>, <span class="seriesInfo">RFC 9126</span>, <span class="seriesInfo">DOI 10.17487/RFC9126</span>, <time datetime="2021-09" class="refDate">September 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9126">https://www.rfc-editor.org/rfc/rfc9126</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-A">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-A-1">This profile builds on the Mission Framework
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> and complements the
+Mission-Bound OAuth Profile
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>, the AAuth
+Composition Profile, the Mission Authority Server profile, and the
+Mission-Bound Runtime Enforcement Profile
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-profile" class="cite xref">I-D.draft-mcguinness-mission-runtime-profile</a>]</span>. The placement of
+the Shaper as a non-authority-issuing client-side role, and the
+explicit untrusted-output principle, draw on the architecture
+discussion captured in the Mission-Bound Authorization spec
+breakdown. Related delegation and instance-identity work referenced
+informatively includes the OAuth Actor Profile for Delegation
+<span>[<a href="#I-D.draft-mcguinness-oauth-actor-profile" class="cite xref">I-D.draft-mcguinness-oauth-actor-profile</a>]</span> and the OAuth Client
+Instance Assertion
+<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>

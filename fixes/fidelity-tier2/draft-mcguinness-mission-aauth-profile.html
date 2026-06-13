@@ -1,0 +1,3251 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission-Bound AAuth Composition Profile</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       This profile composes the Mission Framework with AAuth. AAuth
+already defines a native Mission: an agent submits a proposal to the
+Person Server (PS) mission endpoint, the PS returns an approved
+immutable mission blob, and the PS returns an AAuth-Mission header
+carrying an approver identifier and the SHA-256 hash of the approved
+mission body. This profile does not introduce a parallel Mission. It
+defines wire-preserving local mappings between AAuth's native Mission
+and the Framework's governance object so that AAuth deployments can
+participate in cross-substrate governance without changing their wire
+shape, and it defines a small set of explicitly optional AAuth wire
+extensions that require coordination with the AAuth working group
+before they can be claimed as interoperable. 
+    " name="description">
+<meta content="xml2rfc 3.33.0" name="generator">
+<meta content="aauth" name="keyword">
+<meta content="mission" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="governance" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="delegation" name="keyword">
+<meta content="draft-mcguinness-mission-aauth-profile-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.33.0
+    Python 3.12.13
+    ConfigArgParse 1.7
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.0.2
+    platformdirs 4.9.6
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.7.0
+-->
+<link href="draft-mcguinness-mission-aauth-profile.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Mission AAuth Profile</td>
+<td class="right">June 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 15 December 2026</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-mission-aauth-profile-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-06-13" class="published">13 June 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2026-12-15">15 December 2026</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission-Bound AAuth Composition Profile</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">This profile composes the Mission Framework with AAuth. AAuth
+already defines a native Mission: an agent submits a proposal to the
+Person Server (PS) mission endpoint, the PS returns an approved
+immutable mission blob, and the PS returns an AAuth-Mission header
+carrying an approver identifier and the SHA-256 hash of the approved
+mission body. This profile does not introduce a parallel Mission. It
+defines wire-preserving local mappings between AAuth's native Mission
+and the Framework's governance object so that AAuth deployments can
+participate in cross-substrate governance without changing their wire
+shape, and it defines a small set of explicitly optional AAuth wire
+extensions that require coordination with the AAuth working group
+before they can be claimed as interoperable.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth-profile.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth-profile.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-mission-aauth-profile/">https://datatracker.ietf.org/doc/draft-mcguinness-mission-aauth-profile/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 15 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
+                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-relationship-to-the-framewo" class="internal xref">Relationship to the Framework</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.2">
+                <p id="section-toc.1-1.1.2.2.1" class="keepWithNext"><a href="#section-1.2" class="auto internal xref">1.2</a>.  <a href="#name-relationship-to-aauths-nati" class="internal xref">Relationship to AAuth's native Mission</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.3">
+                <p id="section-toc.1-1.1.2.3.1" class="keepWithNext"><a href="#section-1.3" class="auto internal xref">1.3</a>.  <a href="#name-relationship-to-the-oauth-p" class="internal xref">Relationship to the OAuth Profile</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-definitions" class="internal xref">Conventions and Definitions</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-profile-at-a-glance" class="internal xref">Profile at a Glance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-wire-preserving-local-mappi" class="internal xref">Wire-Preserving Local Mappings</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-identifier-mapping" class="internal xref">Identifier Mapping</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-hash-domain-separation" class="internal xref">Hash Domain Separation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-governance-record-linkage" class="internal xref">Governance-Record Linkage</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.4">
+                <p id="section-toc.1-1.4.2.4.1"><a href="#section-4.4" class="auto internal xref">4.4</a>.  <a href="#name-local-lifecycle-projection" class="internal xref">Local Lifecycle Projection</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.5">
+                <p id="section-toc.1-1.4.2.5.1"><a href="#section-4.5" class="auto internal xref">4.5</a>.  <a href="#name-authority-set-projection-in" class="internal xref">Authority Set Projection into Native Tokens</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-native-token-projection-rul" class="internal xref">Native-Token Projection Rules</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-resource-tokens" class="internal xref">Resource Tokens</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-auth-tokens" class="internal xref">Auth Tokens</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-federated-access-server-con" class="internal xref">Federated Access Server Considerations</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-call-chaining-semantics" class="internal xref">Call-Chaining Semantics</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-optional-aauth-wire-extensi" class="internal xref">Optional AAuth Wire Extensions</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-metadata-advertisement" class="internal xref">Metadata Advertisement</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-mission-expansion-signaling" class="internal xref">Mission Expansion Signaling</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
+                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-mission-status-fields-or-en" class="internal xref">Mission Status Fields or Endpoint</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-mission-status" class="internal xref">Mission Status</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-request" class="internal xref">Request</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-response" class="internal xref">Response</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2.2.1">
+                    <p id="section-toc.1-1.8.2.2.2.1.1"><a href="#section-8.2.1" class="auto internal xref">8.2.1</a>.  <a href="#name-response-payload-json-schem" class="internal xref">Response payload JSON Schema</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.3">
+                <p id="section-toc.1-1.8.2.3.1"><a href="#section-8.3" class="auto internal xref">8.3</a>.  <a href="#name-anti-oracle-property" class="internal xref">Anti-Oracle Property</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.4">
+                <p id="section-toc.1-1.8.2.4.1"><a href="#section-8.4" class="auto internal xref">8.4</a>.  <a href="#name-errors" class="internal xref">Errors</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.5">
+                <p id="section-toc.1-1.8.2.5.1"><a href="#section-8.5" class="auto internal xref">8.5</a>.  <a href="#name-relationship-to-native-aaut" class="internal xref">Relationship to Native AAuth Permissions</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-mission-identifier" class="internal xref">Mission Identifier</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-resumable-suspension-compos" class="internal xref">Resumable Suspension Composition Extension</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-hold-pattern" class="internal xref">Hold Pattern</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-resumption-discovery" class="internal xref">Resumption Discovery</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
+                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-bounded-resume-window" class="internal xref">Bounded Resume Window</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.4">
+                <p id="section-toc.1-1.10.2.4.1"><a href="#section-10.4" class="auto internal xref">10.4</a>.  <a href="#name-promotion-to-a-separate-spe" class="internal xref">Promotion to a Separate Specification</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-cross-substrate-composition" class="internal xref">Cross-Substrate Composition</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-what-this-profile-does-not-" class="internal xref">What This Profile Does NOT Define</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-hash-domain-confusion" class="internal xref">Hash Domain Confusion</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
+                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-reference-substitution" class="internal xref">Reference Substitution</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.3">
+                <p id="section-toc.1-1.13.2.3.1"><a href="#section-13.3" class="auto internal xref">13.3</a>.  <a href="#name-projection-issuer-authoriza" class="internal xref">Projection Issuer Authorization</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.4">
+                <p id="section-toc.1-1.13.2.4.1"><a href="#section-13.4" class="auto internal xref">13.4</a>.  <a href="#name-lifecycle-ambiguity" class="internal xref">Lifecycle Ambiguity</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.5">
+                <p id="section-toc.1-1.13.2.5.1"><a href="#section-13.5" class="auto internal xref">13.5</a>.  <a href="#name-ps-asserted-trust-confusion" class="internal xref">PS-Asserted Trust Confusion</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.6">
+                <p id="section-toc.1-1.13.2.6.1"><a href="#section-13.6" class="auto internal xref">13.6</a>.  <a href="#name-mission-status-enumeration" class="internal xref">Mission Status Enumeration</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.7">
+                <p id="section-toc.1-1.13.2.7.1"><a href="#section-13.7" class="auto internal xref">13.7</a>.  <a href="#name-sender-constraint-and-proof" class="internal xref">Sender Constraint and Proof of Possession</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.8">
+                <p id="section-toc.1-1.13.2.8.1"><a href="#section-13.8" class="auto internal xref">13.8</a>.  <a href="#name-wire-extension-risk" class="internal xref">Wire-Extension Risk</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.9">
+                <p id="section-toc.1-1.13.2.9.1"><a href="#section-13.9" class="auto internal xref">13.9</a>.  <a href="#name-resumable-suspension-hold-r" class="internal xref">Resumable Suspension Hold Risk</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.10">
+                <p id="section-toc.1-1.13.2.10.1"><a href="#section-13.10" class="auto internal xref">13.10</a>. <a href="#name-integrity-anchor-non-guaran" class="internal xref">Integrity Anchor Non-Guarantees</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
+                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-cross-consumer-correlation" class="internal xref">Cross-consumer correlation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2">
+                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-data-concentration-in-the-g" class="internal xref">Data concentration in the governance record</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.3">
+                <p id="section-toc.1-1.14.2.3.1"><a href="#section-14.3" class="auto internal xref">14.3</a>.  <a href="#name-authority-projection-minimi" class="internal xref">Authority projection minimization</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.1">
+                <p id="section-toc.1-1.15.2.1.1"><a href="#section-15.1" class="auto internal xref">15.1</a>.  <a href="#name-mission-authority-set-type-" class="internal xref">Mission Authority Set Type Registry</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.2">
+                <p id="section-toc.1-1.15.2.2.1"><a href="#section-15.2" class="auto internal xref">15.2</a>.  <a href="#name-aauth-side-governance-mappi" class="internal xref">AAuth-side Governance-Mapping Fields</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.3">
+                <p id="section-toc.1-1.15.2.3.1"><a href="#section-15.3" class="auto internal xref">15.3</a>.  <a href="#name-no-jwt-or-oauth-registry-ac" class="internal xref">No JWT or OAuth Registry Actions</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.4">
+                <p id="section-toc.1-1.15.2.4.1"><a href="#section-15.4" class="auto internal xref">15.4</a>.  <a href="#name-no-new-media-types" class="internal xref">No New Media Types</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#section-17" class="auto internal xref"></a><a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.1">
+                <p id="section-toc.1-1.17.2.1.1"><a href="#section-17.1" class="auto internal xref"></a><a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.2">
+                <p id="section-toc.1-1.17.2.2.1"><a href="#section-17.2" class="auto internal xref"></a><a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
+            <p id="section-toc.1-1.18.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">AAuth <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span> defines an agent-native
+authorization protocol with signed requests, agent identity at the
+protocol edge, conversational deferred approval, and a Person Server
+(PS) that mediates between agents, users, and resources. AAuth <code>-01</code>
+introduced a native Mission model: a structured proposal submitted to
+the PS mission endpoint, an approved immutable mission blob, an
+AAuth-Mission header carrying an approver identifier and a SHA-256
+digest of the exact approved body, mission-aware resource and auth
+token choreography, a two-state lifecycle (<code>active</code>, <code>terminated</code>),
+and PS-side governance endpoints for permissions, interaction, and
+audit.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">The Mission Framework <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>
+defines a substrate-neutral governance object: a durable,
+integrity-anchored Mission record with a Proposal/Mission split,
+typed Authority Set, integrity anchors over a structured Mission
+Intent, an authority set, a consent disclosure object, a richer
+lifecycle, a principal model, and a Mission Status interface.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">AAuth has already reached the conclusion that an approved task is a
+first-class governance object. This profile does not deposition that
+conclusion. AAuth's native Mission is treated as the Mission for
+AAuth-substrate deployments. This profile defines the composition
+contract that lets AAuth's native Mission also carry Framework
+governance semantics, and it draws a sharp line between two kinds of
+work that must not be conflated:<a href="#section-1-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1-4.1">
+          <p id="section-1-4.1.1"><strong>Wire-preserving local mappings.</strong> Mappings that a composing PS
+applies locally without changing any AAuth-defined parameter,
+header, error code, or endpoint. AAuth implementations not aware
+of the Framework <span class="bcp14">MUST</span> be able to interoperate with a
+composition-aware PS on the AAuth wire. These mappings are the
+primary subject of this profile and the recommended baseline.<a href="#section-1-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-4.2">
+          <p id="section-1-4.2.1"><strong>Optional AAuth wire extensions.</strong> Each extension changes the
+interoperable AAuth wire by introducing a new field, header
+member, error code, or endpoint. Every extension is explicitly
+marked, versioned, advertised in AAuth metadata, and requires
+coordination with the AAuth working group before a deployment may
+claim interoperability for it. A composing PS <span class="bcp14">MUST NOT</span> advertise
+or rely on any of these extensions absent that coordination.<a href="#section-1-4.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-1-5">The architectural intent of the profile is to maximize the surface
+area an AAuth-aware client can interoperate with at the wire-
+preserving baseline, and to minimize and explicitly mark the surface
+area that requires AAuth-side change. AAuth's native Mission is the
+substrate; the Framework's governance object is composed on top of
+it.<a href="#section-1-5" class="pilcrow">¶</a></p>
+<div id="relationship-to-the-framework">
+<section id="section-1.1">
+        <h3 id="name-relationship-to-the-framewo">
+<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-relationship-to-the-framewo" class="section-name selfRef">Relationship to the Framework</a>
+        </h3>
+<p id="section-1.1-1">The Framework <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> defines:<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1.1-2.1">
+            <p id="section-1.1-2.1.1">The Mission Proposal and Mission data model and lifecycles.<a href="#section-1.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-2.2">
+            <p id="section-1.1-2.2.1">The Mission Intent JSON schema.<a href="#section-1.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-2.3">
+            <p id="section-1.1-2.3.1">The typed Authority Set entry shape.<a href="#section-1.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-2.4">
+            <p id="section-1.1-2.4.1">The Principal Model.<a href="#section-1.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-2.5">
+            <p id="section-1.1-2.5.1">The Mission Status interface (abstract).<a href="#section-1.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-2.6">
+            <p id="section-1.1-2.6.1">Integrity anchors over domain-separated, authorization-domain-bound
+envelopes.<a href="#section-1.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-1.1-3">The Framework's Mission Status interface is abstract; profiles bind
+the wire format and protection mechanism. This profile binds Mission
+Status protection to AAuth-native HTTP Message Signatures <span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span>
+and proof-of-possession rather than introducing a new JWS media type.
+See <a href="#mission-status" class="auto internal xref">Section 8</a>.<a href="#section-1.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="relationship-to-aauths-native-mission">
+<section id="section-1.2">
+        <h3 id="name-relationship-to-aauths-nati">
+<a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-relationship-to-aauths-nati" class="section-name selfRef">Relationship to AAuth's native Mission</a>
+        </h3>
+<p id="section-1.2-1">AAuth's native Mission is the substrate. This profile <span class="bcp14">MUST NOT</span> be
+read as proposing a replacement Mission, a parallel Mission, or a
+shadow Mission. A composing PS:<a href="#section-1.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1.2-2.1">
+            <p id="section-1.2-2.1.1">Continues to use AAuth's mission endpoint, mission blob,
+AAuth-Mission header, mission-aware resource and auth tokens, and
+AAuth-native two-state lifecycle.<a href="#section-1.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.2-2.2">
+            <p id="section-1.2-2.2.1">Maintains an internal mapping from AAuth's native Mission
+reference to the Framework's governance object.<a href="#section-1.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.2-2.3">
+            <p id="section-1.2-2.3.1">Computes the Framework's structured integrity hashes
+(<code>proposal_hash</code>, <code>authority_hash</code>, <code>consent_disclosure_hash</code>)
+in addition to AAuth's native <code>s256</code> hash. The hash domains are
+disjoint; see <a href="#hash-domain-separation" class="auto internal xref">Section 4.2</a>.<a href="#section-1.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.2-2.4">
+            <p id="section-1.2-2.4.1">Projects the Framework's richer lifecycle into AAuth's native two
+states per Resolved Decision 18. See <a href="#lifecycle-projection" class="auto internal xref">Section 4.4</a>.<a href="#section-1.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="relationship-to-the-oauth-profile">
+<section id="section-1.3">
+        <h3 id="name-relationship-to-the-oauth-p">
+<a href="#section-1.3" class="section-number selfRef">1.3. </a><a href="#name-relationship-to-the-oauth-p" class="section-name selfRef">Relationship to the OAuth Profile</a>
+        </h3>
+<p id="section-1.3-1">The OAuth Profile <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span> binds
+the Framework to OAuth 2.0 and defines OAuth-side wire shapes
+(<code>mission_intent</code> through PAR, <code>mission_resource_access</code> RAR type,
+<code>mission</code> JWT claim, dedicated Mission Status response media type,
+lifecycle endpoint). This profile does not depend on the OAuth
+Profile. Where this profile and the OAuth Profile describe the same
+Framework element, the wire bindings are independent: AAuth keeps its
+native shapes; OAuth keeps its OAuth-defined shapes. Cross-substrate
+composition of one canonical Mission across OAuth and AAuth is the
+subject of a separate specification on the Mission Authority Server
+and is OUT OF SCOPE here.<a href="#section-1.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="conventions-and-definitions">
+<section id="section-2">
+      <h2 id="name-conventions-and-definitions">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-definitions" class="section-name selfRef">Conventions and Definitions</a>
+      </h2>
+<p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">Terms defined in the Framework
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span> are inherited here. Terms
+defined in AAuth <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span> are
+inherited here. This document additionally uses:<a href="#section-2-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-3">
+        <dt id="section-2-3.1">
+<strong>Person Server (PS)</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.2">
+          <p id="section-2-3.2.1">The AAuth Person Server, acting as the state authority for Missions
+per the Framework's terminology in AAuth-substrate deployments.<a href="#section-2-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.3">
+<strong>Native Mission reference</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.4">
+          <p id="section-2-3.4.1">The AAuth <code>(approver, s256)</code> tuple that identifies the approved
+mission blob.<a href="#section-2-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.5">
+<strong>Native mission blob</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.6">
+          <p id="section-2-3.6.1">The exact response-body bytes of the PS mission-endpoint response
+on approval. AAuth's <code>s256</code> digest is computed over those bytes.<a href="#section-2-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.7">
+<strong>Governance Mission reference</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.8">
+          <p id="section-2-3.8.1">The Framework's <code>(id, origin)</code> Mission reference.<a href="#section-2-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.9">
+<strong>Wire-preserving local mapping</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.10">
+          <p id="section-2-3.10.1">A composition mapping a PS applies locally without changing any
+AAuth-defined parameter, header, error code, or endpoint.<a href="#section-2-3.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.11">
+<strong>Wire extension</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.12">
+          <p id="section-2-3.12.1">A composition feature that changes the AAuth wire by introducing a
+new field, header member, error code, or endpoint. Wire extensions
+are <span class="bcp14">OPTIONAL</span> and require AAuth WG coordination before a deployment
+may claim interoperability.<a href="#section-2-3.12.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="profile-at-a-glance">
+<section id="section-3">
+      <h2 id="name-profile-at-a-glance">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-profile-at-a-glance" class="section-name selfRef">Profile at a Glance</a>
+      </h2>
+<p id="section-3-1">A Mission-Bound AAuth composition has two layers.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">The wire-preserving baseline:<a href="#section-3-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-3-3">
+<li id="section-3-3.1">
+          <p id="section-3-3.1.1">The PS uses AAuth's native mission endpoint, mission blob, and
+AAuth-Mission header without modification.<a href="#section-3-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-3.2">
+          <p id="section-3-3.2.1">The PS maintains a local mapping between AAuth's native Mission
+reference and the Framework's governance Mission reference, and
+computes the Framework's structured integrity hashes in addition
+to AAuth's <code>s256</code>.<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-3.3">
+          <p id="section-3-3.3.1">The PS projects the Framework's richer lifecycle into AAuth's
+native two states per <a href="#lifecycle-projection" class="auto internal xref">Section 4.4</a>.<a href="#section-3-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-3.4">
+          <p id="section-3-3.4.1">The PS projects Authority Set entries into the AAuth surfaces
+where derived authority is already represented (resource tokens
+and auth tokens) without changing required base fields. See
+<a href="#authority-projection" class="auto internal xref">Section 4.5</a>.<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-3.5">
+          <p id="section-3-3.5.1">The PS exposes a Mission Status interface authenticated and
+signed using AAuth's native HTTP Message Signatures and
+proof-of-possession. See <a href="#mission-status" class="auto internal xref">Section 8</a>.<a href="#section-3-3.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-3-4">The optional wire-extension layer (each item is <span class="bcp14">OPTIONAL</span>, advertised
+in AAuth metadata, and requires AAuth WG coordination):<a href="#section-3-4" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-3-5">
+<li id="section-3-5.1">
+          <p id="section-3-5.1.1">Mission Expansion eligibility signaling on the AAuth wire. See
+<a href="#wire-extension-expansion" class="auto internal xref">Section 7.2</a>.<a href="#section-3-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-5.2">
+          <p id="section-3-5.2.1">Mission Status as a registered AAuth header field member or as a
+PS-exposed endpoint integrated into AAuth metadata. See
+<a href="#wire-extension-status" class="auto internal xref">Section 7.3</a>.<a href="#section-3-5.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-3-6">The Resumable Suspension composition extension is presented in
+<a href="#resumable-suspension" class="auto internal xref">Section 10</a> as an additional optional composition
+extension that may be promoted to its own specification if its scope
+broadens beyond AAuth.<a href="#section-3-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="wire-preserving">
+<section id="section-4">
+      <h2 id="name-wire-preserving-local-mappi">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-wire-preserving-local-mappi" class="section-name selfRef">Wire-Preserving Local Mappings</a>
+      </h2>
+<p id="section-4-1">The mappings in this section are local to a composing PS. A PS that
+implements all of <a href="#identifier-mapping" class="auto internal xref">Section 4.1</a>, <a href="#hash-domain-separation" class="auto internal xref">Section 4.2</a>,
+<a href="#governance-record-linkage" class="auto internal xref">Section 4.3</a>, <a href="#lifecycle-projection" class="auto internal xref">Section 4.4</a>, and
+<a href="#authority-projection" class="auto internal xref">Section 4.5</a> interoperates on the AAuth wire with AAuth
+implementations that are unaware of the Framework.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<div id="identifier-mapping">
+<section id="section-4.1">
+        <h3 id="name-identifier-mapping">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-identifier-mapping" class="section-name selfRef">Identifier Mapping</a>
+        </h3>
+<p id="section-4.1-1">AAuth's native Mission reference is the tuple <code>(approver, s256)</code>
+carried in the AAuth-Mission header. The Framework's governance
+Mission reference is <code>(id, origin)</code>.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-2">A composing PS <span class="bcp14">MUST NOT</span> treat the AAuth <code>(approver, s256)</code> tuple
+and the Framework <code>(id, origin)</code> tuple as interchangeable strings.
+The PS <span class="bcp14">MUST</span> maintain an authoritative internal mapping:<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4.1-3">
+<pre>
+{
+  "mission": {
+    "id": "msn_01J9Z2P8BQ4Y3F0V0K9D6Z7M1",
+    "origin": "https://ps.example.com"
+  },
+  "aauth_mission": {
+    "approver": "https://ps.example.com",
+    "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+  }
+}
+</pre><a href="#section-4.1-3" class="pilcrow">¶</a>
+</div>
+<p id="section-4.1-4">Rules:<a href="#section-4.1-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.1-5.1">
+            <p id="section-4.1-5.1.1"><code>mission.id</code> is the canonical Mission identifier minted at the
+approval event per the Framework.<a href="#section-4.1-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.1-5.2">
+            <p id="section-4.1-5.2.1"><code>mission.origin</code> is the PS issuer URL and resolves via
+<code>{origin}/.well-known/mission-authority</code> per the Framework.<a href="#section-4.1-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.1-5.3">
+            <p id="section-4.1-5.3.1"><code>approver</code> and <code>s256</code> are AAuth-native values per
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>.<a href="#section-4.1-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.1-5.4">
+            <p id="section-4.1-5.4.1">The mapping is one-to-one: exactly one governance Mission
+corresponds to each native Mission reference and conversely.<a href="#section-4.1-5.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.1-5.5">
+            <p id="section-4.1-5.5.1">The PS <span class="bcp14">MUST</span> be the only party that can derive one identifier from
+the other. A client, agent, resource, or auth-token-issuing
+Access Server <span class="bcp14">MUST NOT</span> attempt to derive the governance reference
+from the native reference or conversely; it queries the PS via
+Mission Status.<a href="#section-4.1-5.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.1-5.6">
+            <p id="section-4.1-5.6.1">The Framework <span class="bcp14">MUST NOT</span> require a wire change to AAuth's
+AAuth-Mission header to carry the governance reference. Where a
+consumer requires the governance reference, it obtains it through
+Mission Status. See <a href="#wire-extension-status" class="auto internal xref">Section 7.3</a> for an <span class="bcp14">OPTIONAL</span> wire
+extension that may carry the governance reference directly.<a href="#section-4.1-5.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="hash-domain-separation">
+<section id="section-4.2">
+        <h3 id="name-hash-domain-separation">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-hash-domain-separation" class="section-name selfRef">Hash Domain Separation</a>
+        </h3>
+<p id="section-4.2-1">AAuth and the Framework commit different objects with hashes:<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.2-2.1">
+            <p id="section-4.2-2.1.1">AAuth's <code>s256</code> is the SHA-256 digest of the exact approved mission
+response-body bytes per
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>.<a href="#section-4.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.2-2.2">
+            <p id="section-4.2-2.2.1">The Framework's <code>proposal_hash</code> is the SHA-256 digest of the
+semantically normalized, JCS-canonical Validated Mission Intent
+wrapped in a domain-separated, authorization-domain-bound
+envelope per <span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>.<a href="#section-4.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.2-2.3">
+            <p id="section-4.2-2.3.1">The Framework's <code>authority_hash</code> is the SHA-256 digest of the
+semantically normalized, JCS-canonical Authority Set wrapped in a
+domain-separated, authorization-domain-bound envelope.<a href="#section-4.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.2-2.4">
+            <p id="section-4.2-2.4.1">The Framework's <code>consent_disclosure_hash</code> is the SHA-256 digest of
+the semantically normalized, JCS-canonical consent disclosure
+object wrapped in a domain-separated, authorization-domain-bound
+envelope.<a href="#section-4.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-4.2-3">A composing PS <span class="bcp14">MUST</span> compute and record all four hashes. The hashes
+commit different objects and <span class="bcp14">MUST NOT</span> be conflated.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
+<p id="section-4.2-4">A PS <span class="bcp14">MUST NOT</span> equate <code>s256</code> with <code>proposal_hash</code> even if the
+deployment carries the JCS-canonical Validated Mission Intent inside
+the AAuth mission blob. The two hashes commit different objects:
+<code>s256</code> commits the entire mission response-body bytes (including
+AAuth-native fields like <code>approver</code>, <code>agent</code>, <code>approved_at</code>,
+<code>description</code>, and any optional AAuth fields). <code>proposal_hash</code>
+commits only the Validated Mission Intent wrapped in the Framework's
+authorization-domain-bound envelope.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
+<p id="section-4.2-5">A PS <span class="bcp14">MUST NOT</span> recompute <code>s256</code> over a Framework-canonical object,
+and <span class="bcp14">MUST NOT</span> recompute <code>proposal_hash</code>, <code>authority_hash</code>, or
+<code>consent_disclosure_hash</code> over AAuth response-body bytes. Each hash
+is computed over its own committed object as defined by its owning
+specification.<a href="#section-4.2-5" class="pilcrow">¶</a></p>
+<p id="section-4.2-6">The reason for strict domain separation is that AAuth's exact-body
+hash anchors the AAuth-native client-side check (an agent computes
+<code>s256</code> over the bytes it received and compares against the value
+returned in AAuth-Mission). Cross-tenant or cross-authority
+transplantation of any of these hashes <span class="bcp14">MUST</span> be refused because the
+Framework's hashes are bound to the authorization domain and state
+authority in their envelopes per
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>.<a href="#section-4.2-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="governance-record-linkage">
+<section id="section-4.3">
+        <h3 id="name-governance-record-linkage">
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-governance-record-linkage" class="section-name selfRef">Governance-Record Linkage</a>
+        </h3>
+<p id="section-4.3-1">A composing PS holds two linked records for each approved Mission:<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.3-2.1">
+            <p id="section-4.3-2.1.1">The AAuth-native record: the approved mission blob, the
+<code>(approver, s256)</code> tuple, AAuth-native state, audit log, and
+permission records.<a href="#section-4.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.3-2.2">
+            <p id="section-4.3-2.2.1">The Framework governance record: the Mission record per
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>, including
+<code>mission.id</code>, <code>mission.origin</code>, the Validated Mission Intent, the
+Authority Set, the three integrity anchors, the Principal Model
+fields, binding evidence, lifecycle state, and the source
+<code>proposal_id</code>.<a href="#section-4.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-4.3-3">The records are linked through the identifier mapping in
+<a href="#identifier-mapping" class="auto internal xref">Section 4.1</a>. Both records refer to the same approved
+task. The AAuth-native record is what AAuth consumers see; the
+governance record is what Framework consumers see.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
+<p id="section-4.3-4">The PS <span class="bcp14">MUST</span> treat the governance record as authoritative for
+governance state (the Framework lifecycle, the Authority Set, the
+integrity anchors). The PS <span class="bcp14">MUST</span> treat the AAuth-native record as
+authoritative for AAuth-native protocol behavior (the mission blob,
+the AAuth-Mission header value, the AAuth lifecycle state visible to
+AAuth clients).<a href="#section-4.3-4" class="pilcrow">¶</a></p>
+<p id="section-4.3-5">A PS <span class="bcp14">MUST</span> atomically link the two records at the approval event: an
+approved AAuth Mission <span class="bcp14">MUST</span> be created with a Framework governance
+record, and conversely. A failure to commit either record <span class="bcp14">MUST</span> roll
+back the other. Partial creation is forbidden, parallel to the
+approval atomicity contract in
+<span>[<a href="#I-D.draft-mcguinness-mission-framework" class="cite xref">I-D.draft-mcguinness-mission-framework</a>]</span>.<a href="#section-4.3-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="lifecycle-projection">
+<section id="section-4.4">
+        <h3 id="name-local-lifecycle-projection">
+<a href="#section-4.4" class="section-number selfRef">4.4. </a><a href="#name-local-lifecycle-projection" class="section-name selfRef">Local Lifecycle Projection</a>
+        </h3>
+<p id="section-4.4-1">Per Resolved Decision 18, AAuth wire behavior preserves AAuth's
+native two states (<code>active</code>, <code>terminated</code>). The Framework's richer
+lifecycle is governance state visible to Framework consumers (via
+Mission Status). The AAuth wire sees only the projected two-state
+view.<a href="#section-4.4-1" class="pilcrow">¶</a></p>
+<p id="section-4.4-2">The mapping is:<a href="#section-4.4-2" class="pilcrow">¶</a></p>
+<table class="center" id="table-1">
+          <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Framework state</th>
+              <th class="text-left" rowspan="1" colspan="1">AAuth-native state</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>active</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>active</code>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>revoked</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>completed</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>expired</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>suspended</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code> for the suspension duration (see below)</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-4.4-4">AAuth-native <code>terminated</code> covers each Framework terminal state
+(<code>revoked</code>, <code>completed</code>, <code>expired</code>) because AAuth defines no
+distinction between these terminal causes on the wire. The
+governance record retains the specific Framework terminal state and
+the cause; Mission Status returns the precise state. AAuth-wire
+consumers that do not query Mission Status see only <code>terminated</code>.<a href="#section-4.4-4" class="pilcrow">¶</a></p>
+<p id="section-4.4-5">The Framework states that have no AAuth wire representation
+(<code>pending_approval</code>, <code>rejected</code>, <code>withdrawn</code>, <code>expired_as_pending</code>)
+exist only at the Mission Proposal layer and never produce a native
+AAuth Mission. A Proposal in any of these states has no
+corresponding AAuth mission blob, no <code>s256</code>, and no AAuth-Mission
+header value.<a href="#section-4.4-5" class="pilcrow">¶</a></p>
+<p id="section-4.4-6">Suspension <span class="bcp14">MUST</span> project to AAuth <code>terminated</code> for the suspension
+duration in the wire-preserving baseline. Resumption from
+<code>suspended</code> requires a new Mission Proposal flow at the AAuth
+substrate: a new agent proposal, a new PS approval, a new mission
+blob, and a new <code>(approver, s256)</code> tuple. The successor governance
+Mission is linked to the predecessor through Mission Expansion
+<a href="#wire-extension-expansion" class="auto internal xref">Section 7.2</a> or through Framework Mission lineage
+fields.<a href="#section-4.4-6" class="pilcrow">¶</a></p>
+<p id="section-4.4-7">The rationale for this projection is the AAuth design constraint
+that there is no push channel from the PS to the agent: AAuth agents
+poll. A long-lived suspended state with no defined resumption signal
+is operationally equivalent to termination from the agent's
+perspective. The wire-preserving baseline reflects that constraint
+honestly.<a href="#section-4.4-7" class="pilcrow">¶</a></p>
+<p id="section-4.4-8">Deployments that need a Hold pattern (the AAuth Mission remains
+<code>active</code> on the wire while the PS refuses governed requests with a
+distinct temporary-denial signal) <span class="bcp14">MAY</span> use the Resumable Suspension
+composition extension in <a href="#resumable-suspension" class="auto internal xref">Section 10</a>. That extension is
+explicitly marked <span class="bcp14">OPTIONAL</span> and requires AAuth WG coordination.<a href="#section-4.4-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authority-projection">
+<section id="section-4.5">
+        <h3 id="name-authority-set-projection-in">
+<a href="#section-4.5" class="section-number selfRef">4.5. </a><a href="#name-authority-set-projection-in" class="section-name selfRef">Authority Set Projection into Native Tokens</a>
+        </h3>
+<p id="section-4.5-1">The Framework's Authority Set is a substrate-neutral typed container
+of approved authority. AAuth represents derived authority on its own
+wire through:<a href="#section-4.5-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.5-2.1">
+            <p id="section-4.5-2.1.1">resource tokens (issued by Resources to agents, used by the agent
+to request an auth token from the PS);<a href="#section-4.5-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.5-2.2">
+            <p id="section-4.5-2.2.1">auth tokens (issued by the PS or by a Resource's Access Server,
+presented by the agent to the Resource for authorized access);<a href="#section-4.5-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.5-2.3">
+            <p id="section-4.5-2.3.1">AAuth-native permission representations on resource and auth
+tokens.<a href="#section-4.5-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-4.5-3">A composing PS projects applicable Authority Set entries into AAuth
+resource-token and auth-token requests, and into AAuth-native
+permission representations, using existing AAuth extension points
+without changing required base fields. The projection rules are:<a href="#section-4.5-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.5-4.1">
+            <p id="section-4.5-4.1.1">The PS selects the entries of the Authority Set relevant to the
+audience of the credential being issued (the Resource, or the
+Resource's Access Server in federated mode).<a href="#section-4.5-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.5-4.2">
+            <p id="section-4.5-4.2.1">AAuth-native authority surfaces (the requested scope, the
+permission descriptors carried on resource and auth tokens) are
+populated from the relevant entries.<a href="#section-4.5-4.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.5-4.3">
+            <p id="section-4.5-4.3.1">An AAuth client unaware of the Framework <span class="bcp14">MUST</span> be able to use the
+resulting tokens through native AAuth processing. The projection
+<span class="bcp14">MUST NOT</span> require Framework awareness on the client side at the
+baseline.<a href="#section-4.5-4.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.5-4.4">
+            <p id="section-4.5-4.4.1">A PS <span class="bcp14">MUST NOT</span> translate Authority Set entries into OAuth
+<code>authorization_details</code> on the AAuth wire. OAuth-side
+serialization is a different profile.<a href="#section-4.5-4.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.5-4.5">
+            <p id="section-4.5-4.5.1">Each typed Authority Set entry preserves its <code>type</code>,
+<code>specification_uri</code>, <code>schema_digest</code>, <code>schema_version</code>,
+<code>authority</code>, and <code>narrowing_profile</code> per the Framework when the
+entry is exposed through Mission Status or governance audit.<a href="#section-4.5-4.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.5-4.6">
+            <p id="section-4.5-4.6.1">AAuth-native projection of an entry <span class="bcp14">MUST NOT</span> exceed the entry's
+approved authority (subset semantics per the entry's registered
+type and <code>narrowing_profile</code>).<a href="#section-4.5-4.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-4.5-5">When the AAuth Mission record itself carries authority hints (for
+example <code>approved_tools</code> or <code>capabilities</code> in the AAuth mission
+blob), those hints remain authoritative on the AAuth wire as
+specified by AAuth. The composing PS <span class="bcp14">MUST</span> ensure that AAuth-side
+authority hints are consistent with the Framework Authority Set the
+PS has approved; inconsistency is a deployment error and the PS <span class="bcp14">MUST</span>
+refuse to issue.<a href="#section-4.5-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="native-token-projection">
+<section id="section-5">
+      <h2 id="name-native-token-projection-rul">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-native-token-projection-rul" class="section-name selfRef">Native-Token Projection Rules</a>
+      </h2>
+<p id="section-5-1">This section makes the Authority Set projection rules in
+<a href="#authority-projection" class="auto internal xref">Section 4.5</a> explicit for AAuth's two native credential
+classes.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<div id="resource-tokens">
+<section id="section-5.1">
+        <h3 id="name-resource-tokens">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-resource-tokens" class="section-name selfRef">Resource Tokens</a>
+        </h3>
+<p id="section-5.1-1">A resource token is issued by an AAuth Resource to the agent so the
+agent can request an auth token from the PS or a Resource's Access
+Server.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.1-2">When the PS is in the issuance path for a resource token (in
+modes where the PS mediates), the PS <span class="bcp14">MAY</span> include the AAuth-native
+Mission reference (the <code>(approver, s256)</code> tuple) in the resource
+token per AAuth-native semantics. No Framework wire addition is
+required at the baseline.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
+<p id="section-5.1-3">Authority hints embedded in the resource token (for example a
+requested scope or capability list) <span class="bcp14">MUST</span> be derived from and bounded
+by the relevant Authority Set entries. The PS <span class="bcp14">MUST NOT</span> inflate
+resource-token authority hints beyond what the Authority Set
+approves.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="auth-tokens">
+<section id="section-5.2">
+        <h3 id="name-auth-tokens">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-auth-tokens" class="section-name selfRef">Auth Tokens</a>
+        </h3>
+<p id="section-5.2-1">An auth token is what the agent presents to a Resource for authorized
+access. In three-party mode the PS issues it directly; in
+four-party (federated) mode the Resource's Access Server issues it
+and the PS delivers it to the agent.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.2-2">A composing PS or composing Access Server preserves AAuth-native
+auth-token structure and:<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.2-3.1">
+            <p id="section-5.2-3.1.1">Includes the AAuth-native Mission reference in the token per AAuth.<a href="#section-5.2-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-3.2">
+            <p id="section-5.2-3.2.1">Projects only Authority Set entries the audience (the target
+Resource) is entitled to.<a href="#section-5.2-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-3.3">
+            <p id="section-5.2-3.3.1"><span class="bcp14">MAY</span> publish, in the auth token, AAuth-native scope, permission, or
+capability fields populated from the projected entries.<a href="#section-5.2-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-3.4">
+            <p id="section-5.2-3.4.1"><span class="bcp14">MUST</span> sender-constrain the auth token through AAuth's native
+proof-of-possession binding. The Framework's sender-constraint
+obligation is satisfied by AAuth's native mechanism on AAuth
+credentials; this profile <span class="bcp14">MUST NOT</span> require DPoP or mTLS on AAuth
+credentials.<a href="#section-5.2-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.2-4">A composing implementation <span class="bcp14">MUST NOT</span> insert an unregistered nested
+shape into AAuth's native <code>mission</code> claim on auth tokens. The
+governance reference rides through Mission Status (see
+<a href="#mission-status" class="auto internal xref">Section 8</a>) or through the <span class="bcp14">OPTIONAL</span> wire extension in
+<a href="#wire-extension-status" class="auto internal xref">Section 7.3</a>, not through an ad-hoc claim addition.<a href="#section-5.2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="federated-access-server-considerations">
+<section id="section-5.3">
+        <h3 id="name-federated-access-server-con">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-federated-access-server-con" class="section-name selfRef">Federated Access Server Considerations</a>
+        </h3>
+<p id="section-5.3-1">In federated access, the Resource's Access Server issues the auth
+token. A composing Access Server cooperates with the PS via the PS's
+Mission Status interface to obtain the governance Mission state and
+the audience-filtered Authority Set projection. The Access Server
+treats the PS as the state authority for Mission state. The Access
+Server applies its own Resource policy in addition.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<p id="section-5.3-2">The PS-Access Server relationship is established through native
+AAuth federation. This profile does not add a new trust mechanism.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="call-chaining">
+<section id="section-6">
+      <h2 id="name-call-chaining-semantics">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-call-chaining-semantics" class="section-name selfRef">Call-Chaining Semantics</a>
+      </h2>
+<p id="section-6-1">AAuth does not require a downstream request's authority to be a
+subset of the upstream authority. When an intermediary Resource acts
+as an Agent toward a further Resource, it sends the downstream
+resource token, its own agent token, and the upstream auth token to
+the PS or Access Server, which verifies the upstream token, extends
+the <code>act</code> chain, and evaluates the new request against the Mission
+context. A composing PS preserves that native behavior and binds it
+to the Mission as follows:<a href="#section-6-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6-2.1">
+          <p id="section-6-2.1.1">Downstream authority is NOT required to be a subset of the
+upstream authority.<a href="#section-6-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.2">
+          <p id="section-6-2.2.1">Downstream authority <span class="bcp14">MUST</span> fit the downstream audience's entry in
+the Mission's committed Authority Set
+(<a href="#authority-projection" class="auto internal xref">Section 4.5</a>). The attenuation comparison is
+<strong>requested downstream authority versus the Mission's downstream
+projection</strong>, not downstream token versus upstream token.<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.3">
+          <p id="section-6-2.3.1">The PS <span class="bcp14">MUST</span> evaluate each downstream request independently against
+the Mission and its log; it <span class="bcp14">MUST NOT</span> infer downstream authorization
+solely from the upstream token's authority.<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.4">
+          <p id="section-6-2.4.1">The downstream Resource or Access Server applies its own Resource
+policy in addition.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.5">
+          <p id="section-6-2.5.1">A downstream request for authority not represented in the
+Mission's Authority Set <span class="bcp14">MUST</span> be refused; obtaining that authority
+requires Mission Expansion (<a href="#wire-extension-expansion" class="auto internal xref">Section 7.2</a>), not a
+chained derivation.<a href="#section-6-2.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-6-3">This rule is load-bearing for legitimate orthogonal chains. A
+booking Resource calling a payment Resource needs payment authority
+that is not a subset of booking authority; both were approved as
+parts of one Mission, so each fits its own audience's Authority Set
+entry while neither is a subset of the other. Applying token-subset
+attenuation here would break the chain; evaluating each hop against
+the Mission's per-audience projection authorizes it correctly.<a href="#section-6-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="wire-extensions">
+<section id="section-7">
+      <h2 id="name-optional-aauth-wire-extensi">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-optional-aauth-wire-extensi" class="section-name selfRef">Optional AAuth Wire Extensions</a>
+      </h2>
+<p id="section-7-1">This section defines wire extensions that change AAuth's wire by
+introducing a new field, header member, error code, or endpoint
+member. Each extension is:<a href="#section-7-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-2.1">
+          <p id="section-7-2.1.1">explicitly marked <span class="bcp14">OPTIONAL</span>;<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.2">
+          <p id="section-7-2.2.1">versioned through a profile version identifier;<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.3">
+          <p id="section-7-2.3.1">advertised in AAuth metadata when supported by a deployment;<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.4">
+          <p id="section-7-2.4.1">subject to coordination with the AAuth working group before a
+deployment may claim interoperability.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-7-3">A composing PS <span class="bcp14">MUST NOT</span> advertise or rely on any of these extensions
+unless the relevant coordination with the AAuth WG has occurred. A
+PS that does not advertise an extension <span class="bcp14">MUST NOT</span> receive requests
+exercising it. The wire-preserving baseline of <a href="#wire-preserving" class="auto internal xref">Section 4</a>
+remains the default.<a href="#section-7-3" class="pilcrow">¶</a></p>
+<div id="metadata-advertisement">
+<section id="section-7.1">
+        <h3 id="name-metadata-advertisement">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-metadata-advertisement" class="section-name selfRef">Metadata Advertisement</a>
+        </h3>
+<p id="section-7.1-1">A composing PS that supports any of the wire extensions in this
+section advertises them through additions to AAuth's metadata
+document (the AAuth-side analog of <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span> OAuth Authorization
+Server Metadata). Pending AAuth-side metadata-shape coordination,
+the proposed members are:<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.1-2.1">
+            <p id="section-7.1-2.1.1"><code>mission_framework_versions_supported</code> (array of strings): spec
+revisions of the Framework this PS composes with.<a href="#section-7.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.2">
+            <p id="section-7.1-2.2.1"><code>mission_wire_extensions_supported</code> (array of strings): identifiers
+of the wire extensions in this section the PS supports. Defined
+values are listed below as each extension is introduced.<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.3">
+            <p id="section-7.1-2.3.1"><code>mission_status_endpoint</code> (URL): Mission Status endpoint URL. See
+<a href="#mission-status" class="auto internal xref">Section 8</a>.<a href="#section-7.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-7.1-3">These metadata members are themselves part of the wire-extension
+surface and are subject to AAuth WG coordination.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="wire-extension-expansion">
+<section id="section-7.2">
+        <h3 id="name-mission-expansion-signaling">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-mission-expansion-signaling" class="section-name selfRef">Mission Expansion Signaling</a>
+        </h3>
+<p id="section-7.2-1">The Mission Expansion specification
+<span>[<a href="#I-D.draft-mcguinness-mission-expansion" class="cite xref">I-D.draft-mcguinness-mission-expansion</a>]</span> defines replacement and
+branch expansion semantics substrate-neutrally. When an action falls
+outside the Authority Set of an active Mission but is eligible for
+governed expansion, a substrate denial <span class="bcp14">MUST</span> surface the
+eligibility-signaling fields the Mission Expansion specification
+defines (<code>eligible</code>, <code>access_request_uri</code>, <code>ticket</code>,
+<code>requested_authority</code>).<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.2-2">This extension defines how a composing PS surfaces those fields on
+the AAuth wire. The extension identifier is
+<code>mission-expansion-signaling-v1</code>.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+<p id="section-7.2-3">When the PS denies an AAuth request because the requested authority
+exceeds the Mission's Authority Set but the deployment supports
+governed expansion, the PS <span class="bcp14">MAY</span> include a Mission Expansion
+eligibility object in the error response in addition to AAuth's
+native denial:<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-7.2-4">
+<pre>
+{
+  "error": "permission_denied",
+  "mission_expansion": {
+    "eligible": true,
+    "access_request_uri": "https://ps.example.com/expand",
+    "ticket": "opq_eligibilityTicket_128bits...",
+    "requested_authority": {
+      "type": "aauth_scope",
+      "authority": {
+        "resource": "https://docs.example.com",
+        "scope": ["documents.delete"]
+      }
+    }
+  }
+}
+</pre><a href="#section-7.2-4" class="pilcrow">¶</a>
+</div>
+<p id="section-7.2-5">Rules:<a href="#section-7.2-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.2-6.1">
+            <p id="section-7.2-6.1.1">The <code>mission_expansion</code> object is <span class="bcp14">OPTIONAL</span> on every denial. The
+PS <span class="bcp14">MUST NOT</span> include it when expansion is not eligible.<a href="#section-7.2-6.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.2-6.2">
+            <p id="section-7.2-6.2.1">The <code>ticket</code> is single-use and time-limited per
+<span>[<a href="#I-D.draft-mcguinness-mission-expansion" class="cite xref">I-D.draft-mcguinness-mission-expansion</a>]</span>.<a href="#section-7.2-6.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.2-6.3">
+            <p id="section-7.2-6.3.1">An AAuth client unaware of this extension <span class="bcp14">MUST</span> safely ignore the
+<code>mission_expansion</code> field and treat the response as a native
+permission denial.<a href="#section-7.2-6.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.2-6.4">
+            <p id="section-7.2-6.4.1">The PS <span class="bcp14">MUST</span> advertise <code>mission-expansion-signaling-v1</code> in
+<code>mission_wire_extensions_supported</code> when this extension is
+enabled.<a href="#section-7.2-6.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-7.2-7">Mission Expansion request submission (the workflow the agent uses
+once it holds an eligibility ticket) defers to
+<span>[<a href="#I-D.draft-mcguinness-mission-expansion" class="cite xref">I-D.draft-mcguinness-mission-expansion</a>]</span>. This profile defines
+only the denial-side eligibility signaling on the AAuth wire.<a href="#section-7.2-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="wire-extension-status">
+<section id="section-7.3">
+        <h3 id="name-mission-status-fields-or-en">
+<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-mission-status-fields-or-en" class="section-name selfRef">Mission Status Fields or Endpoint</a>
+        </h3>
+<p id="section-7.3-1">The wire-preserving baseline in <a href="#mission-status" class="auto internal xref">Section 8</a> exposes Mission
+Status using a PS endpoint authenticated and signed via AAuth-native
+HTTP Message Signatures. That baseline does not require AAuth-side
+wire change because consumers can reach the endpoint directly from
+the PS metadata document.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+<p id="section-7.3-2">Two <span class="bcp14">OPTIONAL</span> wire extensions go further:<a href="#section-7.3-2" class="pilcrow">¶</a></p>
+<p id="section-7.3-3">The first <span class="bcp14">OPTIONAL</span> extension is integrating the Mission Status
+endpoint into AAuth's metadata document via the
+<code>mission_status_endpoint</code> member. Pending AAuth WG coordination,
+this extension is identified as <code>mission-status-endpoint-v1</code>.<a href="#section-7.3-3" class="pilcrow">¶</a></p>
+<p id="section-7.3-4">The second <span class="bcp14">OPTIONAL</span> extension is registering Mission-Bound governance
+projection fields directly on AAuth-defined surfaces (for example,
+adding <code>mission.id</code> and <code>mission.origin</code> to AAuth's native <code>mission</code>
+claim on auth tokens, or adding governance-reference parameters to
+AAuth-Mission). Pending AAuth WG coordination, this extension is
+identified as <code>mission-governance-projection-v1</code>. A composing
+implementation <span class="bcp14">MUST NOT</span> add unregistered nested shapes to AAuth's
+native <code>mission</code> claim absent that coordination.<a href="#section-7.3-4" class="pilcrow">¶</a></p>
+<p id="section-7.3-5">Both extensions are advertised in
+<code>mission_wire_extensions_supported</code> when supported. Both are
+strictly <span class="bcp14">OPTIONAL</span>: the wire-preserving baseline remains the default
+and does not require either.<a href="#section-7.3-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="mission-status">
+<section id="section-8">
+      <h2 id="name-mission-status">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-mission-status" class="section-name selfRef">Mission Status</a>
+      </h2>
+<p id="section-8-1">The Framework defines Mission Status as a by-mission-reference
+operation distinct from token introspection. The Framework's abstract
+contract requires authentication, freshness, audience, integrity,
+anti-oracle, request-binding, and caching properties.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-2">A composing PS exposes Mission Status. The wire-preserving baseline
+binds Mission Status protection to AAuth-native mechanisms: requests
+are AAuth-signed using HTTP Message Signatures <span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span>;
+responses are AAuth-signed using the PS's published signing key.<a href="#section-8-2" class="pilcrow">¶</a></p>
+<p id="section-8-3">This profile does NOT introduce a new JWS-signed media type for
+Mission Status responses (the OAuth Profile introduces
+<code>application/mission-status-response+jwt</code> because OAuth's
+substrate is OAuth-native and JWS-aligned; AAuth's substrate is HTTP
+Message Signatures, and Mission Status uses that mechanism for
+consistency).<a href="#section-8-3" class="pilcrow">¶</a></p>
+<div id="request">
+<section id="section-8.1">
+        <h3 id="name-request">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-request" class="section-name selfRef">Request</a>
+        </h3>
+<p id="section-8.1-1">The Mission Status request is an HTTPS POST to the PS's Mission
+Status endpoint. The PS advertises this endpoint either through its
+metadata document (when the <span class="bcp14">OPTIONAL</span> <code>mission-status-endpoint-v1</code>
+extension in <a href="#wire-extension-status" class="auto internal xref">Section 7.3</a> is enabled) or out-of-band
+to authorized consumers.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-2">The request body is a JSON object <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> and carries:<a href="#section-8.1-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.1-3.1">
+            <p id="section-8.1-3.1.1"><code>mission</code> (object, required): the Mission reference. In canonical
+mode the value is <code>{ "id": "...", "origin": "..." }</code>. AAuth
+consumers <span class="bcp14">MAY</span> alternatively present the native AAuth reference as
+<code>{ "approver": "...", "s256": "..." }</code>. The PS resolves either
+form to the same governance record via its mapping
+(<a href="#identifier-mapping" class="auto internal xref">Section 4.1</a>).<a href="#section-8.1-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-3.2">
+            <p id="section-8.1-3.2.1"><code>audience</code> (string, required): the audience identifier of the
+requesting consumer.<a href="#section-8.1-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-3.3">
+            <p id="section-8.1-3.3.1"><code>nonce</code> (string, required): a client-generated nonce for
+request-binding.<a href="#section-8.1-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-3.4">
+            <p id="section-8.1-3.4.1"><code>credential_issuer</code> (string, optional): a consumer identity (the
+registered credential issuer or its issuer URL) whose
+authorization to project this Mission the caller wants verified.
+When present, the response carries <code>projection_issuer_authorized</code>
+and <code>projection_issuer</code>. This lets a Resource or Access Server
+holding a credential issued by another party confirm that issuer
+was authorized to project the referenced Mission, rather than
+trusting the credential's signature alone.<a href="#section-8.1-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-8.1-4">The request <span class="bcp14">MUST</span> be authenticated. The PS <span class="bcp14">MUST</span> accept AAuth-native
+HTTP Message Signatures <span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span> for request authentication and
+<span class="bcp14">SHOULD</span> treat the requesting party's AAuth-native key as the
+authenticated identity for authorization purposes.<a href="#section-8.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="response">
+<section id="section-8.2">
+        <h3 id="name-response">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-response" class="section-name selfRef">Response</a>
+        </h3>
+<p id="section-8.2-1">On success the PS returns an AAuth-signed response. The signature
+covers the response payload and binds the requesting consumer
+identity, the requested Mission reference, the audience, and the
+nonce. The signature mechanism is HTTP Message Signatures <span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span>
+applied to the response, with the PS's published signing key.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<p id="section-8.2-2">The response payload includes:<a href="#section-8.2-2" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-8.2-3">
+<pre>
+{
+  "iss": "https://ps.example.com",
+  "aud": "https://workflow.example.com",
+  "sub": "access_server_or_consumer_identifier",
+  "nonce": "client-provided-nonce",
+  "iat": 1718380800,
+  "exp": 1718380860,
+  "mission_status": {
+    "state": "active",
+    "mission_id": "msn_01J9Z2...",
+    "aauth_mission": {
+      "approver": "https://ps.example.com",
+      "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+    },
+    "origin": "https://ps.example.com",
+    "projection_issuer_authorized": true,
+    "projection_issuer": {
+      "issuer": "https://ps.example.com",
+      "substrate": "aauth_ps",
+      "audience": "https://workflow.example.com"
+    },
+    "proposal_hash": "sha-256:...",
+    "authority_hash": "sha-256:...",
+    "consent_disclosure_hash": "sha-256:...",
+    "policy_version": "ps.example.com:standard@2026-06-01",
+    "authority_set_projection": [
+      {
+        "type": "aauth_scope",
+        "schema_digest": "sha-256:cZ8Hh1Qv7nR2tY4mP6sB0wQ9xK3dF5gJ8",
+        "schema_version": "1",
+        "authority": {
+          "resource": "https://docs.example.com",
+          "scope": ["documents.read"]
+        },
+        "narrowing_profile": "urn:mbo:narrowing:default-v1"
+      }
+    ],
+    "issued_at": "2026-06-09T15:00:00Z",
+    "expires_at": "2026-06-09T15:01:00Z",
+    "mission_expiry": "2026-12-31T23:59:59Z",
+    "version": 1
+  }
+}
+</pre><a href="#section-8.2-3" class="pilcrow">¶</a>
+</div>
+<p id="section-8.2-4">The <code>aauth_mission</code> member is included so AAuth consumers can
+correlate the response with the native Mission reference they hold.
+The <code>state</code> value is the Framework governance state (<code>active</code>,
+<code>suspended</code>, <code>revoked</code>, <code>completed</code>, <code>expired</code>), not AAuth's wire
+projection. AAuth consumers that need only the AAuth-wire view <span class="bcp14">MAY</span>
+ignore Framework-specific states they do not recognize and treat
+all non-<code>active</code> states as denials of further derivation.<a href="#section-8.2-4" class="pilcrow">¶</a></p>
+<p id="section-8.2-5">The <code>projection_issuer_authorized</code> boolean and <code>projection_issuer</code>
+object are present only when the request supplied
+<code>credential_issuer</code>. <code>projection_issuer_authorized</code> is <code>true</code> if
+and only if the named issuer is a registered projection issuer
+authorized to project this Mission for the issuer's substrate and
+the Mission's tenant. A consumer holding a credential purportedly
+issued by that party <span class="bcp14">MUST</span> refuse the credential when
+<code>projection_issuer_authorized</code> is <code>false</code>, regardless of the
+credential's signature validity; this is the defense against a
+rogue or mis-configured issuer projecting a Mission it was never
+authorized to project. The PS <span class="bcp14">MUST NOT</span> disclose, through this
+field, the registration status of any consumer other than the named
+<code>credential_issuer</code>.<a href="#section-8.2-5" class="pilcrow">¶</a></p>
+<p id="section-8.2-6">Each entry of <code>authority_set_projection</code> is a full Authority Set
+entry per <a href="#authority-projection" class="auto internal xref">Section 4.5</a> -- it validates against the
+Framework's Authority Set entry schema
+(<code>urn:mbo:schema:authority-set-entry:1</code>) -- audience-filtered to the
+requesting consumer. <code>issued_at</code>, <code>expires_at</code>, and <code>mission_expiry</code>
+are <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamps: <code>issued_at</code>/<code>expires_at</code> bound the
+freshness of this response, while <code>mission_expiry</code> mirrors the
+Mission's own expiry per the Framework.<a href="#section-8.2-6" class="pilcrow">¶</a></p>
+<div id="aauth-status-response-schema">
+<section id="section-8.2.1">
+          <h4 id="name-response-payload-json-schem">
+<a href="#section-8.2.1" class="section-number selfRef">8.2.1. </a><a href="#name-response-payload-json-schem" class="section-name selfRef">Response payload JSON Schema</a>
+          </h4>
+<div class="breakable lang-json sourcecode" id="section-8.2.1-1">
+<pre>
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mbo:schema:aauth-mission-status-response:1",
+  "title": "AAuth Mission Status Response Payload",
+  "type": "object",
+  "required": [
+    "iss", "aud", "sub", "nonce", "iat", "exp", "mission_status"
+  ],
+  "properties": {
+    "iss":   { "type": "string", "format": "uri" },
+    "aud":   { "type": "string" },
+    "sub":   { "type": "string" },
+    "nonce": { "type": "string" },
+    "iat":   { "type": "integer" },
+    "exp":   { "type": "integer" },
+    "mission_status": {
+      "type": "object",
+      "required": [
+        "state", "mission_id", "aauth_mission", "origin",
+        "proposal_hash", "authority_hash", "consent_disclosure_hash",
+        "policy_version", "authority_set_projection",
+        "issued_at", "expires_at", "mission_expiry", "version"
+      ],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "active", "suspended", "revoked", "completed", "expired"
+          ]
+        },
+        "mission_id": { "type": "string" },
+        "aauth_mission": {
+          "type": "object",
+          "required": ["approver", "s256"],
+          "properties": {
+            "approver": { "type": "string", "format": "uri" },
+            "s256":     { "type": "string" }
+          }
+        },
+        "origin": { "type": "string", "format": "uri" },
+        "projection_issuer_authorized": { "type": "boolean" },
+        "projection_issuer": {
+          "type": "object",
+          "required": ["issuer", "substrate", "audience"],
+          "properties": {
+            "issuer":    { "type": "string", "format": "uri" },
+            "substrate": { "type": "string" },
+            "audience":  { "type": "string" }
+          }
+        },
+        "proposal_hash":           { "type": "string" },
+        "authority_hash":          { "type": "string" },
+        "consent_disclosure_hash": { "type": "string" },
+        "policy_version":          { "type": "string" },
+        "authority_set_projection": {
+          "type": "array",
+          "items": { "$ref": "urn:mbo:schema:authority-set-entry:1" }
+        },
+        "issued_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "mission_expiry": {
+          "type": "string", "format": "date-time"
+        },
+        "version": { "type": "integer" }
+      }
+    }
+  }
+}
+</pre><a href="#section-8.2.1-1" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="anti-oracle-property">
+<section id="section-8.3">
+        <h3 id="name-anti-oracle-property">
+<a href="#section-8.3" class="section-number selfRef">8.3. </a><a href="#name-anti-oracle-property" class="section-name selfRef">Anti-Oracle Property</a>
+        </h3>
+<p id="section-8.3-1">The PS <span class="bcp14">MUST</span> authenticate the requester and authorize the requester
+for the requested Mission reference and audience. A Mission reference
+(native or governance) is never a bearer capability.<a href="#section-8.3-1" class="pilcrow">¶</a></p>
+<p id="section-8.3-2">Unknown Mission references and known-but-unauthorized references
+<span class="bcp14">MUST</span> produce indistinguishable responses, parallel to the Framework's
+abstract anti-oracle requirement.<a href="#section-8.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="errors">
+<section id="section-8.4">
+        <h3 id="name-errors">
+<a href="#section-8.4" class="section-number selfRef">8.4. </a><a href="#name-errors" class="section-name selfRef">Errors</a>
+        </h3>
+<p id="section-8.4-1">Mission Status responses use the Framework error symbol set,
+transported over HTTP status codes:<a href="#section-8.4-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-2">
+          <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Symbol</th>
+              <th class="text-left" rowspan="1" colspan="1">HTTP</th>
+              <th class="text-left" rowspan="1" colspan="1">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>ok</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">200</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission found and visible.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>unauthorized</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">401</td>
+              <td class="text-left" rowspan="1" colspan="1">Request not authenticated.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>not_found</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">404</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission reference does not exist OR is not visible to this consumer.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">410</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission is in a Framework terminal state.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>suspended</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">423</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission is suspended.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>rate_limited</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">429</td>
+              <td class="text-left" rowspan="1" colspan="1">Consumer is rate-limited.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>unavailable</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">503</td>
+              <td class="text-left" rowspan="1" colspan="1">PS temporarily can't serve status.</td>
+            </tr>
+          </tbody>
+        </table>
+</section>
+</div>
+<div id="relationship-to-native-aauth-permissions">
+<section id="section-8.5">
+        <h3 id="name-relationship-to-native-aaut">
+<a href="#section-8.5" class="section-number selfRef">8.5. </a><a href="#name-relationship-to-native-aaut" class="section-name selfRef">Relationship to Native AAuth Permissions</a>
+        </h3>
+<p id="section-8.5-1">AAuth defines a native permissions endpoint at the PS. The Mission
+Status endpoint is distinct: Mission Status reports governance
+Mission state and the audience-filtered Authority Set projection;
+the AAuth permissions endpoint reports per-permission decisions on
+specific operations. Both may be queried in the same deployment;
+they answer different questions.<a href="#section-8.5-1" class="pilcrow">¶</a></p>
+<p id="section-8.5-2">A composing PS <span class="bcp14">MAY</span> internally use the Authority Set projection from
+Mission Status when computing AAuth permission decisions. Consumers
+that do not need Authority Set projection or governance lifecycle
+state <span class="bcp14">MAY</span> continue to use AAuth's native permission endpoint
+without invoking Mission Status.<a href="#section-8.5-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="pairwise">
+<section id="section-9">
+      <h2 id="name-mission-identifier">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-mission-identifier" class="section-name selfRef">Mission Identifier</a>
+      </h2>
+<p id="section-9-1">Consistent with the Framework's canonical-only Mission identifier
+model, this profile emits <code>mission.id</code> (canonical) on
+AAuth-substrate Missions. The AAuth-native Mission reference (the
+<code>(approver, s256)</code> tuple) is itself canonical: it is the same
+value across every AAuth consumer that sees the same Mission.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">Multiple Resources, Access Servers, and other AAuth consumers
+that observe the same Mission can correlate activity through the
+AAuth-native <code>(approver, s256)</code> tuple regardless of any
+governance-side identifier choice; the canonical <code>mission.id</code>
+adds no correlation surface beyond what the AAuth substrate
+already exposes. Cross-consumer user correlation (linking a
+user's activity across resources) is addressed by the AAuth
+substrate's existing <code>approver</code> privacy mechanisms, not by a
+governance-layer pairwise identifier.<a href="#section-9-2" class="pilcrow">¶</a></p>
+<p id="section-9-3">Deployments that need stronger cross-consumer Mission-identity
+isolation define a pairwise Mission identifier through a profile
+extension to the Framework; such extensions are out of scope for
+this profile.<a href="#section-9-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="resumable-suspension">
+<section id="section-10">
+      <h2 id="name-resumable-suspension-compos">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-resumable-suspension-compos" class="section-name selfRef">Resumable Suspension Composition Extension</a>
+      </h2>
+<p id="section-10-1">This section sketches an <span class="bcp14">OPTIONAL</span> composition extension that may be
+promoted to its own specification (<code>draft-mcguinness-mission-
+resumable-suspension</code>) if its scope broadens beyond AAuth. The
+extension identifier is <code>mission-resumable-suspension-v1</code>.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<p id="section-10-2">The baseline lifecycle projection in <a href="#lifecycle-projection" class="auto internal xref">Section 4.4</a>
+projects <code>suspended</code> to AAuth <code>terminated</code> for the suspension
+duration, with resumption requiring a new Mission Proposal flow per
+Resolved Decision 18. That baseline preserves AAuth wire behavior
+but does not satisfy enterprise deployments that need administrative
+hold workflows (compliance review, scheduled maintenance, risk-team
+pause) where the AAuth Mission reference <span class="bcp14">SHOULD</span> remain valid across
+the hold.<a href="#section-10-2" class="pilcrow">¶</a></p>
+<p id="section-10-3">The Resumable Suspension extension defines a wire surface for that
+pattern. It is <span class="bcp14">OPTIONAL</span>, advertised in
+<code>mission_wire_extensions_supported</code>, and requires AAuth WG
+coordination on the new error code and the resume-probe object.<a href="#section-10-3" class="pilcrow">¶</a></p>
+<div id="hold-pattern">
+<section id="section-10.1">
+        <h3 id="name-hold-pattern">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-hold-pattern" class="section-name selfRef">Hold Pattern</a>
+        </h3>
+<p id="section-10.1-1">While the governance Mission is <code>suspended</code> and the PS supports this
+extension, the PS keeps the AAuth-native Mission state as <code>active</code>
+on the wire but refuses governed requests with a distinct
+temporary-denial signal:<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-10.1-2">
+<pre>
+{
+  "error": "mission_suspended",
+  "mission_status": "suspended",
+  "resume_probe": {
+    "method": "status_poll",
+    "endpoint": "https://ps.example.com/mission-status",
+    "earliest_resume": "2026-10-15T18:00:00Z",
+    "max_wait": "PT4H"
+  }
+}
+</pre><a href="#section-10.1-2" class="pilcrow">¶</a>
+</div>
+<p id="section-10.1-3">Rules:<a href="#section-10.1-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1-4.1">
+            <p id="section-10.1-4.1.1">The <code>mission_suspended</code> error symbol is distinct from AAuth's
+native <code>mission_terminated</code>.<a href="#section-10.1-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.1-4.2">
+            <p id="section-10.1-4.2.1">A client unaware of this extension <span class="bcp14">MUST</span> treat <code>mission_suspended</code>
+as a temporary failure and back off.<a href="#section-10.1-4.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.1-4.3">
+            <p id="section-10.1-4.3.1">A client aware of this extension uses the <code>resume_probe</code> field to
+detect resumption.<a href="#section-10.1-4.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.1-4.4">
+            <p id="section-10.1-4.4.1">The native AAuth <code>(approver, s256)</code> tuple remains valid through
+the hold. Resumption restores governed-request servicing under
+the same tuple.<a href="#section-10.1-4.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.1-4.5">
+            <p id="section-10.1-4.5.1">A PS that supports this extension <span class="bcp14">MUST</span> advertise
+<code>mission-resumable-suspension-v1</code> in
+<code>mission_wire_extensions_supported</code>.<a href="#section-10.1-4.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="resumption-discovery">
+<section id="section-10.2">
+        <h3 id="name-resumption-discovery">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-resumption-discovery" class="section-name selfRef">Resumption Discovery</a>
+        </h3>
+<p id="section-10.2-1">Two patterns are defined:<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.2-2.1">
+            <p id="section-10.2-2.1.1"><strong>Status polling.</strong> The agent re-queries Mission Status at
+<code>mission.origin</code> at the cadence indicated by <code>earliest_resume</code>
+and <code>max_wait</code>. When the response indicates <code>state: "active"</code>,
+the agent resumes governed requests.<a href="#section-10.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.2-2.2">
+            <p id="section-10.2-2.2.1"><strong>Event-driven.</strong> The agent subscribes to a Shared Signals
+Framework <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span> or CAEP <span>[<a href="#OIDC-CAEP" class="cite xref">OIDC-CAEP</a>]</span> event channel; the PS
+publishes a <code>mission.resumed</code> event when the Mission transitions
+back to <code>active</code>. This pattern is <span class="bcp14">OPTIONAL</span> and depends on the
+deployment having event infrastructure; it is not required by the
+extension.<a href="#section-10.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-10.2-3">A composing PS <span class="bcp14">MAY</span> support either or both.<a href="#section-10.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="bounded-resume-window">
+<section id="section-10.3">
+        <h3 id="name-bounded-resume-window">
+<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-bounded-resume-window" class="section-name selfRef">Bounded Resume Window</a>
+        </h3>
+<p id="section-10.3-1">A suspended Mission with no resumption signal after a
+deployment-configured ceiling <span class="bcp14">SHOULD</span> transition to a Framework
+terminal state (<code>revoked</code> or <code>expired</code> depending on cause). The
+extension does not erase AAuth's original architectural concern
+that indefinite suspension is operationally equivalent to
+termination; it gives short-bounded suspensions a clean wire shape.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="promotion-to-a-separate-specification">
+<section id="section-10.4">
+        <h3 id="name-promotion-to-a-separate-spe">
+<a href="#section-10.4" class="section-number selfRef">10.4. </a><a href="#name-promotion-to-a-separate-spe" class="section-name selfRef">Promotion to a Separate Specification</a>
+        </h3>
+<p id="section-10.4-1">If implementation interest demonstrates that the Resumable
+Suspension pattern generalizes beyond AAuth (for example, that it
+applies equally to the OAuth Profile or to the MAS topology), this
+section will be removed from this profile and promoted to a separate
+specification. Until that demonstration, the extension lives here as
+a sketch.<a href="#section-10.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="cross-substrate-composition">
+<section id="section-11">
+      <h2 id="name-cross-substrate-composition">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-cross-substrate-composition" class="section-name selfRef">Cross-Substrate Composition</a>
+      </h2>
+<p id="section-11-1">A deployment that needs one canonical governance object shared
+between OAuth and AAuth uses the Mission Authority Server (MAS)
+topology defined in a separate specification. This profile does not
+define the MAS protocol.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-11-2">Under a MAS topology:<a href="#section-11-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-3.1">
+          <p id="section-11-3.1.1">The PS remains the AAuth protocol endpoint and the AAuth-native
+<code>approver</code> value.<a href="#section-11-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-3.2">
+          <p id="section-11-3.2.1">The MAS is the state authority for the canonical Mission record,
+Authority Set, lifecycle, and Principal Model.<a href="#section-11-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-3.3">
+          <p id="section-11-3.3.1">The PS registers as an authorized Mission consumer and
+projection issuer at the MAS.<a href="#section-11-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-3.4">
+          <p id="section-11-3.4.1">The PS retains a local AAuth-native record (the mission blob,
+AAuth-Mission tuple, audit log) linked to the MAS canonical
+governance record.<a href="#section-11-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-3.5">
+          <p id="section-11-3.5.1">AAuth credentials are issued by the PS (or by a Resource's Access
+Server in federated mode); the MAS does not issue AAuth
+credentials.<a href="#section-11-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-3.6">
+          <p id="section-11-3.6.1">Mission Status and Mission lifecycle queries can be served by
+either the PS or the MAS; the MAS's view is authoritative for
+governance state.<a href="#section-11-3.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-11-4">Cross-substrate consumption is OUT OF SCOPE for this profile. The
+MAS profile owns the cross-substrate trust mechanism, the MAS
+metadata document, and cross-substrate revocation propagation.<a href="#section-11-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="what-this-profile-does-not-define">
+<section id="section-12">
+      <h2 id="name-what-this-profile-does-not-">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-what-this-profile-does-not-" class="section-name selfRef">What This Profile Does NOT Define</a>
+      </h2>
+<p id="section-12-1">To bound scope:<a href="#section-12-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12-2.1">
+          <p id="section-12-2.1.1">OAuth-side wire bindings: defined in
+<span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>.<a href="#section-12-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.2">
+          <p id="section-12-2.2.1">Runtime per-action enforcement on AAuth requests: defined in the
+Mission-Bound Runtime Enforcement Profile (a separate
+specification).<a href="#section-12-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.3">
+          <p id="section-12-2.3.1">Cross-substrate Mission Authority Server topology: defined in the
+Mission Authority Server specification.<a href="#section-12-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.4">
+          <p id="section-12-2.4.1">Mission Expansion semantics: defined in
+<span>[<a href="#I-D.draft-mcguinness-mission-expansion" class="cite xref">I-D.draft-mcguinness-mission-expansion</a>]</span>. This profile defines
+only the AAuth-side eligibility-signaling wire extension.<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.5">
+          <p id="section-12-2.5.1">Unannounced changes to AAuth-defined parameters, headers, error
+codes, or endpoints. This profile <span class="bcp14">MUST NOT</span> be read as authorizing
+silent AAuth-wire change.<a href="#section-12-2.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-13">
+      <h2 id="name-security-considerations">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<div id="hash-domain-confusion">
+<section id="section-13.1">
+        <h3 id="name-hash-domain-confusion">
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-hash-domain-confusion" class="section-name selfRef">Hash Domain Confusion</a>
+        </h3>
+<p id="section-13.1-1">The four hashes computed in a composing PS (AAuth <code>s256</code>,
+<code>proposal_hash</code>, <code>authority_hash</code>, <code>consent_disclosure_hash</code>) commit
+different objects. An implementation that conflates them produces
+incorrect integrity claims. In particular:<a href="#section-13.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13.1-2.1">
+            <p id="section-13.1-2.1.1">Equating <code>s256</code> with <code>proposal_hash</code> allows attackers to substitute
+Mission Intent content while preserving the AAuth-native body
+hash (or vice versa).<a href="#section-13.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-2.2">
+            <p id="section-13.1-2.2.1">Recomputing <code>proposal_hash</code> over AAuth response-body bytes
+produces a value that does not commit the Validated Mission
+Intent in the Framework's envelope, breaking cross-substrate
+governance audit.<a href="#section-13.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-2.3">
+            <p id="section-13.1-2.3.1">Cross-tenant or cross-authority transplantation of any Framework
+hash <span class="bcp14">MUST</span> be refused: the Framework's hashes are bound to the
+authorization domain and state authority in their envelopes.<a href="#section-13.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-13.1-3">Implementations <span class="bcp14">MUST</span> treat each hash as committed to a specific
+object and a specific envelope. The reference test vectors published
+with the Framework specification validate hash computation; this
+profile defers vector publication to the Framework.<a href="#section-13.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="reference-substitution">
+<section id="section-13.2">
+        <h3 id="name-reference-substitution">
+<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-reference-substitution" class="section-name selfRef">Reference Substitution</a>
+        </h3>
+<p id="section-13.2-1">An attacker that combines a valid AAuth-Mission tuple with a
+different governance Mission reference can mislead a Framework
+consumer about which governance object the AAuth Mission corresponds
+to. The PS <span class="bcp14">MUST</span> be the only party that maintains and asserts the
+mapping. Consumers <span class="bcp14">MUST</span> resolve the mapping via authenticated
+Mission Status, not by accepting client-asserted pairings.<a href="#section-13.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="projection-issuer-authorization">
+<section id="section-13.3">
+        <h3 id="name-projection-issuer-authoriza">
+<a href="#section-13.3" class="section-number selfRef">13.3. </a><a href="#name-projection-issuer-authoriza" class="section-name selfRef">Projection Issuer Authorization</a>
+        </h3>
+<p id="section-13.3-1">A PS or Access Server projecting authority for a Mission <span class="bcp14">MUST</span> be
+authorized for the relevant tenant, substrate, and audience. Mission
+Status responses bind the projection issuer's identity, the
+requested Mission, the audience, and the nonce; a consumer that
+receives a Mission Status response signed by a party not authorized
+to project for the requested audience <span class="bcp14">MUST</span> refuse the response.<a href="#section-13.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="lifecycle-ambiguity">
+<section id="section-13.4">
+        <h3 id="name-lifecycle-ambiguity">
+<a href="#section-13.4" class="section-number selfRef">13.4. </a><a href="#name-lifecycle-ambiguity" class="section-name selfRef">Lifecycle Ambiguity</a>
+        </h3>
+<p id="section-13.4-1">The wire-preserving lifecycle projection in
+<a href="#lifecycle-projection" class="auto internal xref">Section 4.4</a> maps several distinct Framework terminal
+states to AAuth <code>terminated</code>. AAuth-wire consumers that need to
+distinguish causes (audit, compliance reporting) <span class="bcp14">MUST</span> query Mission
+Status to obtain the Framework state. A consumer that infers
+specific terminal causes from <code>terminated</code> alone is operating on
+incomplete information.<a href="#section-13.4-1" class="pilcrow">¶</a></p>
+<p id="section-13.4-2">The Resumable Suspension extension reduces the ambiguity for
+suspended Missions at the cost of requiring extension-aware clients
+and AAuth WG coordination.<a href="#section-13.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="ps-asserted-trust-confusion">
+<section id="section-13.5">
+        <h3 id="name-ps-asserted-trust-confusion">
+<a href="#section-13.5" class="section-number selfRef">13.5. </a><a href="#name-ps-asserted-trust-confusion" class="section-name selfRef">PS-Asserted Trust Confusion</a>
+        </h3>
+<p id="section-13.5-1">In AAuth's PS-asserted access mode, a Resource accepts identity
+claims and consent context from the PS but applies its own Resource
+policy. A composing PS <span class="bcp14">MUST NOT</span> represent that the Resource is
+required to authorize a specific request because the PS approved
+the Mission. Mission approval is a governance decision at the PS;
+Resource authorization remains the Resource's responsibility.<a href="#section-13.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-status-enumeration">
+<section id="section-13.6">
+        <h3 id="name-mission-status-enumeration">
+<a href="#section-13.6" class="section-number selfRef">13.6. </a><a href="#name-mission-status-enumeration" class="section-name selfRef">Mission Status Enumeration</a>
+        </h3>
+<p id="section-13.6-1">Per the anti-oracle property, the PS <span class="bcp14">MUST NOT</span> distinguish unknown
+Mission references from known-but-unauthorized references at the
+Mission Status endpoint. Implementations that leak this distinction
+expose the Mission space to enumeration.<a href="#section-13.6-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sender-constraint-and-proof-of-possession">
+<section id="section-13.7">
+        <h3 id="name-sender-constraint-and-proof">
+<a href="#section-13.7" class="section-number selfRef">13.7. </a><a href="#name-sender-constraint-and-proof" class="section-name selfRef">Sender Constraint and Proof of Possession</a>
+        </h3>
+<p id="section-13.7-1">AAuth credentials are sender-constrained via AAuth-native HTTP
+Message Signatures and proof-of-possession binding. This profile
+<span class="bcp14">MUST NOT</span> require DPoP or mTLS on AAuth credentials and <span class="bcp14">MUST NOT</span>
+weaken AAuth's proof-of-possession requirements. Mission-Bound
+governance does not introduce a parallel sender-constraint
+mechanism on AAuth.<a href="#section-13.7-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="wire-extension-risk">
+<section id="section-13.8">
+        <h3 id="name-wire-extension-risk">
+<a href="#section-13.8" class="section-number selfRef">13.8. </a><a href="#name-wire-extension-risk" class="section-name selfRef">Wire-Extension Risk</a>
+        </h3>
+<p id="section-13.8-1">Each wire extension in <a href="#wire-extensions" class="auto internal xref">Section 7</a> changes the AAuth wire.
+A deployment that advertises support for an extension that has not
+been coordinated with the AAuth WG risks interoperability problems:
+other AAuth implementations may reject, misinterpret, or future-
+conflict with the extension fields. The metadata
+<code>mission_wire_extensions_supported</code> is the deployment's honest
+declaration of which extensions it implements; consumers <span class="bcp14">MUST</span>
+consult that declaration before issuing extension-bearing requests.<a href="#section-13.8-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="resumable-suspension-hold-risk">
+<section id="section-13.9">
+        <h3 id="name-resumable-suspension-hold-r">
+<a href="#section-13.9" class="section-number selfRef">13.9. </a><a href="#name-resumable-suspension-hold-r" class="section-name selfRef">Resumable Suspension Hold Risk</a>
+        </h3>
+<p id="section-13.9-1">The Resumable Suspension extension keeps the AAuth-native Mission
+reference valid across a hold. A poorly bounded hold (no
+<code>max_wait</code>, no <code>earliest_resume</code>) can leave an agent indefinitely
+waiting and producing repeated polled requests. Deployments
+implementing the extension <span class="bcp14">MUST</span> configure conservative ceilings and
+<span class="bcp14">MUST</span> transition long-suspended Missions to a Framework terminal
+state per the bounded-resume-window rule.<a href="#section-13.9-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="integrity-anchor-non-guarantees">
+<section id="section-13.10">
+        <h3 id="name-integrity-anchor-non-guaran">
+<a href="#section-13.10" class="section-number selfRef">13.10. </a><a href="#name-integrity-anchor-non-guaran" class="section-name selfRef">Integrity Anchor Non-Guarantees</a>
+        </h3>
+<p id="section-13.10-1">The Framework's Security Considerations enumerate non-guarantees of
+integrity anchors (faithful rendering, principal authenticity, real-
+time honesty). Those non-guarantees apply unchanged on AAuth: a
+correctly computed <code>consent_disclosure_hash</code> commits the disclosure
+object that was provided at consent rendering, but does not by
+itself prove the user comprehended that object or that the agent
+that asked for the Mission was operating in good faith. This
+profile inherits the Framework's enumeration without restating it.<a href="#section-13.10-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-14">
+      <h2 id="name-privacy-considerations">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-14-1">The privacy surface of this profile is thin by design: the
+composition adds governance semantics on top of AAuth's native
+Mission without introducing a new wire identifier or a new
+correlation handle. The substantive considerations are the
+following.<a href="#section-14-1" class="pilcrow">¶</a></p>
+<div id="cross-consumer-correlation">
+<section id="section-14.1">
+        <h3 id="name-cross-consumer-correlation">
+<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-cross-consumer-correlation" class="section-name selfRef">Cross-consumer correlation</a>
+        </h3>
+<p id="section-14.1-1">Multiple AAuth consumers observing the same Mission can correlate
+the user's activity through the AAuth-native <code>(approver, s256)</code>
+tuple. This is inherent to AAuth's native Mission reference and
+exists independently of the Framework's <code>mission.id</code>; as noted in
+<a href="#pairwise" class="auto internal xref">Section 9</a>, the canonical <code>mission.id</code> adds no correlation surface
+beyond what the AAuth substrate already exposes. Deployments that
+need stronger cross-consumer unlinkability <span class="bcp14">MUST</span> select
+substrate-level mitigations (shorter Mission lifetimes, narrower
+Authority Sets, per-resource separate Missions) rather than
+expecting a governance-layer identifier to provide isolation absent
+from the substrate.<a href="#section-14.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="data-concentration-in-the-governance-record">
+<section id="section-14.2">
+        <h3 id="name-data-concentration-in-the-g">
+<a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-data-concentration-in-the-g" class="section-name selfRef">Data concentration in the governance record</a>
+        </h3>
+<p id="section-14.2-1">A composing PS holds the Framework governance record
+(<a href="#governance-record-linkage" class="auto internal xref">Section 4.3</a>) alongside the AAuth-native record:
+the Validated Mission Intent, the consent disclosure object, the
+Principal Model fields, and binding evidence. This is governance
+data the AAuth-native record alone does not expose. The PS <span class="bcp14">MUST</span>
+protect the governance record commensurate with the sensitivity of
+the principal and consent data it holds, and <span class="bcp14">MUST NOT</span> expose Mission
+Intent or consent-disclosure cleartext to consumers; consumers
+receive only integrity anchors and the audience-filtered Authority
+Set projection through Mission Status (<a href="#mission-status" class="auto internal xref">Section 8</a>).<a href="#section-14.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authority-projection-minimization">
+<section id="section-14.3">
+        <h3 id="name-authority-projection-minimi">
+<a href="#section-14.3" class="section-number selfRef">14.3. </a><a href="#name-authority-projection-minimi" class="section-name selfRef">Authority projection minimization</a>
+        </h3>
+<p id="section-14.3-1">The Authority Set projection returned in a Mission Status response
+(<a href="#authority-projection" class="auto internal xref">Section 4.5</a>) <span class="bcp14">MUST</span> be audience-filtered to the
+requesting consumer. A consumer receives only the entries relevant
+to its audience, which limits the authority detail -- and the
+inferences about the approved task -- disclosed to each consumer to
+the minimum it needs.<a href="#section-14.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="iana">
+<section id="section-15">
+      <h2 id="name-iana-considerations">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-15-1">This profile's IANA actions are subject to AAuth-side registry
+coordination. AAuth <code>-01</code> is an individual Internet-Draft and does
+not yet define a comprehensive IANA registry surface. Until AAuth-
+side registries are established, the actions in this section are
+proposed but not actionable.<a href="#section-15-1" class="pilcrow">¶</a></p>
+<div id="mission-authority-set-type-registry">
+<section id="section-15.1">
+        <h3 id="name-mission-authority-set-type-">
+<a href="#section-15.1" class="section-number selfRef">15.1. </a><a href="#name-mission-authority-set-type-" class="section-name selfRef">Mission Authority Set Type Registry</a>
+        </h3>
+<p id="section-15.1-1">This document does NOT register a new Authority Set entry type. The
+specific AAuth-side Authority Set entry type (an <code>aauth_scope</code>-style
+type or equivalent) <span class="bcp14">MAY</span> be registered in the Mission Authority Set
+Type Registry created by the Framework, in coordination with the
+AAuth working group when that registry surface stabilizes.<a href="#section-15.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="aauth-side-governance-mapping-fields">
+<section id="section-15.2">
+        <h3 id="name-aauth-side-governance-mappi">
+<a href="#section-15.2" class="section-number selfRef">15.2. </a><a href="#name-aauth-side-governance-mappi" class="section-name selfRef">AAuth-side Governance-Mapping Fields</a>
+        </h3>
+<p id="section-15.2-1">Pending AAuth WG coordination, the following fields are proposed for
+registration in AAuth's eventual extension registry:<a href="#section-15.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-15.2-2.1">
+            <p id="section-15.2-2.1.1"><code>mission_status_endpoint</code> (PS metadata): URL of the PS's Mission
+Status endpoint per <a href="#mission-status" class="auto internal xref">Section 8</a>.<a href="#section-15.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-15.2-2.2">
+            <p id="section-15.2-2.2.1"><code>mission_framework_versions_supported</code> (PS metadata): array of
+Framework spec revisions supported.<a href="#section-15.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-15.2-2.3">
+            <p id="section-15.2-2.3.1"><code>mission_wire_extensions_supported</code> (PS metadata): array of
+wire-extension identifiers (e.g.
+<code>mission-expansion-signaling-v1</code>,
+<code>mission-status-endpoint-v1</code>,
+<code>mission-governance-projection-v1</code>,
+<code>mission-resumable-suspension-v1</code>).<a href="#section-15.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-15.2-2.4">
+            <p id="section-15.2-2.4.1"><code>mission_expansion</code> (object): denial-response member carrying the
+eligibility-signaling fields defined in
+<a href="#wire-extension-expansion" class="auto internal xref">Section 7.2</a>.<a href="#section-15.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-15.2-2.5">
+            <p id="section-15.2-2.5.1"><code>mission_suspended</code> (error code): temporary-denial error code
+defined in <a href="#resumable-suspension" class="auto internal xref">Section 10</a>.<a href="#section-15.2-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-15.2-2.6">
+            <p id="section-15.2-2.6.1"><code>resume_probe</code> (object): error-response member defined in
+<a href="#resumable-suspension" class="auto internal xref">Section 10</a>.<a href="#section-15.2-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-15.2-3">A composing PS <span class="bcp14">MUST NOT</span> publish any of these fields on the AAuth
+wire until the relevant AAuth registry action has occurred.<a href="#section-15.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="no-jwt-or-oauth-registry-actions">
+<section id="section-15.3">
+        <h3 id="name-no-jwt-or-oauth-registry-ac">
+<a href="#section-15.3" class="section-number selfRef">15.3. </a><a href="#name-no-jwt-or-oauth-registry-ac" class="section-name selfRef">No JWT or OAuth Registry Actions</a>
+        </h3>
+<p id="section-15.3-1">This profile does NOT register OAuth parameters, OAuth error codes,
+JWT claims, or OAuth metadata members. Those registrations belong
+in the OAuth Profile <span>[<a href="#I-D.draft-mcguinness-mission-oauth-profile" class="cite xref">I-D.draft-mcguinness-mission-oauth-profile</a>]</span>.
+Where this profile and the OAuth Profile describe parallel
+behaviors, the two are independent.<a href="#section-15.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="no-new-media-types">
+<section id="section-15.4">
+        <h3 id="name-no-new-media-types">
+<a href="#section-15.4" class="section-number selfRef">15.4. </a><a href="#name-no-new-media-types" class="section-name selfRef">No New Media Types</a>
+        </h3>
+<p id="section-15.4-1">This profile does NOT register a new media type for Mission Status
+responses. The OAuth Profile registers
+<code>application/mission-status-response+jwt</code> because OAuth's substrate
+is OAuth-native and JWS-aligned. AAuth's substrate is HTTP Message
+Signatures, and Mission Status responses are signed per <span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span>
+without a new media type.<a href="#section-15.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="section-16">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="section-16-1">The author thanks Dick Hardt for the AAuth protocol and the
+mission-aware additions in <code>-01</code> that made this composition profile
+possible. The author thanks the implementers and reviewers of the
+Mission-Bound Authorization architecture for feedback that shaped
+this specification.<a href="#section-16-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-17">
+      <h2 id="name-references">
+<a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-17.1">
+        <h3 id="name-normative-references">
+<a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-hardt-oauth-aauth-protocol">[I-D.draft-hardt-oauth-aauth-protocol]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth: An Authorization Protocol for AI Agents"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-hardt-oauth-aauth-protocol-01</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-hardt-oauth-aauth-protocol/01/">https://datatracker.ietf.org/doc/draft-hardt-oauth-aauth-protocol/01/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-expansion">[I-D.draft-mcguinness-mission-expansion]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-framework">[I-D.draft-mcguinness-mission-framework]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC3339">[RFC3339]</dt>
+        <dd>
+<span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6234">[RFC6234]</dt>
+        <dd>
+<span class="refAuthor">Eastlake 3rd, D.</span> and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"US Secure Hash Algorithms (SHA and SHA-based HMAC and HKDF)"</span>, <span class="seriesInfo">RFC 6234</span>, <span class="seriesInfo">DOI 10.17487/RFC6234</span>, <time datetime="2011-05" class="refDate">May 2011</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6234">https://www.rfc-editor.org/rfc/rfc6234</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8259">[RFC8259]</dt>
+        <dd>
+<span class="refAuthor">Bray, T., Ed.</span>, <span class="refTitle">"The JavaScript Object Notation (JSON) Data Interchange Format"</span>, <span class="seriesInfo">STD 90</span>, <span class="seriesInfo">RFC 8259</span>, <span class="seriesInfo">DOI 10.17487/RFC8259</span>, <time datetime="2017-12" class="refDate">December 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8259">https://www.rfc-editor.org/rfc/rfc8259</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8785">[RFC8785]</dt>
+        <dd>
+<span class="refAuthor">Rundgren, A.</span>, <span class="refAuthor">Jordan, B.</span>, and <span class="refAuthor">S. Erdtman</span>, <span class="refTitle">"JSON Canonicalization Scheme (JCS)"</span>, <span class="seriesInfo">RFC 8785</span>, <span class="seriesInfo">DOI 10.17487/RFC8785</span>, <time datetime="2020-06" class="refDate">June 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8785">https://www.rfc-editor.org/rfc/rfc8785</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9421">[RFC9421]</dt>
+      <dd>
+<span class="refAuthor">Backman, A., Ed.</span>, <span class="refAuthor">Richer, J., Ed.</span>, and <span class="refAuthor">M. Sporny</span>, <span class="refTitle">"HTTP Message Signatures"</span>, <span class="seriesInfo">RFC 9421</span>, <span class="seriesInfo">DOI 10.17487/RFC9421</span>, <time datetime="2024-02" class="refDate">February 2024</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9421">https://www.rfc-editor.org/rfc/rfc9421</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-17.2">
+        <h3 id="name-informative-references">
+<a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-oauth-profile">[I-D.draft-mcguinness-mission-oauth-profile]</dt>
+        <dd>
+<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<dd class="break"></dd>
+<dt id="OIDC-CAEP">[OIDC-CAEP]</dt>
+        <dd>
+<span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"OpenID Continuous Access Evaluation Profile 1.0"</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://openid.net/specs/openid-caep-1_0.html">https://openid.net/specs/openid-caep-1_0.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="OIDC-SSF">[OIDC-SSF]</dt>
+        <dd>
+<span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"OpenID Shared Signals Framework Specification 1.0"</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://openid.net/specs/openid-sharedsignals-framework-1_0.html">https://openid.net/specs/openid-sharedsignals-framework-1_0.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7515">[RFC7515]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Signature (JWS)"</span>, <span class="seriesInfo">RFC 7515</span>, <span class="seriesInfo">DOI 10.17487/RFC7515</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7515">https://www.rfc-editor.org/rfc/rfc7515</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7517">[RFC7517]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refTitle">"JSON Web Key (JWK)"</span>, <span class="seriesInfo">RFC 7517</span>, <span class="seriesInfo">DOI 10.17487/RFC7517</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7517">https://www.rfc-editor.org/rfc/rfc7517</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7519">[RFC7519]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Token (JWT)"</span>, <span class="seriesInfo">RFC 7519</span>, <span class="seriesInfo">DOI 10.17487/RFC7519</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7519">https://www.rfc-editor.org/rfc/rfc7519</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8414">[RFC8414]</dt>
+      <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8414">https://www.rfc-editor.org/rfc/rfc8414</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-A">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
