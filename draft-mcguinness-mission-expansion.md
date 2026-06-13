@@ -453,6 +453,15 @@ The state authority MUST:
   {{I-D.draft-mcguinness-mission-framework}}); the predecessor's
   counter is final.
 
+The successor's `mission_expiry` MUST NOT exceed the predecessor's
+`mission_expiry` unless the state authority's derivation policy
+explicitly permits extension and the extension is disclosed to the
+approving principal at the expansion consent event. Expansion is an
+authority-addition mechanism, not a lifetime-extension mechanism; a
+successor that silently outlives its predecessor would let expansion
+launder a longer-lived Mission past the originally approved horizon.
+The same rule applies to a Branch child's `mission_expiry`.
+
 If the atomic activation fails, the predecessor remains `active`
 and no successor record exists. The state authority MUST NOT
 produce a partial Mission record.

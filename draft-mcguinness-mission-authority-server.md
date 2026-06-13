@@ -717,7 +717,39 @@ issuer learns of a new Mission is either:
 - Subscription to the MAS event stream
   (`mission.lifecycle-change` event with `state=active`); or
 - Polling Mission Status on demand when a client presents a
-  Mission reference for substrate-local credential issuance.
+  Mission handle for substrate-local credential issuance, as
+  defined in {{flow-b-handle}}.
+
+### Flow B Mission handle and client-to-AS handoff {#flow-b-handle}
+
+When Flow B activates a Mission, the MAS returns to the client a
+**Mission handle**: a sender-constrained, consumer-specific
+reference the client presents to a projection issuer to obtain
+substrate-local credentials, without the client ever holding the
+canonical `mission.id`. The handle:
+
+- is bound to the requesting client and to the specific projection
+  issuer (consumer) the client will redeem it at, so a handle
+  leaked to a different party is not usable;
+- is sender-constrained to the client's proof-of-possession key
+  (DPoP {{RFC9449}} or mTLS {{RFC8705}}); and
+- resolves at the MAS, through Mission Status
+  ({{mission-status}}), to the canonical Mission and to the
+  named projection issuer's authorization
+  (`projection_issuer_authorized`).
+
+For an OAuth projection issuer, the client presents the handle as
+the `mission_id` Pushed Authorization Request parameter defined in
+the OAuth Profile
+({{I-D.draft-mcguinness-mission-oauth-profile}}); the AS validates
+the handle against MAS Mission Status, confirms it is bound to the
+requesting client and to the AS as projection issuer, and issues a
+Mission-bound authorization code. An AS MUST reject a request that
+carries both `mission_id` and `mission_intent`: the former adopts
+an existing MAS-held Mission, the latter proposes a new one. For an
+AAuth projection issuer, the client presents the handle through the
+PS's native submission interface and the PS performs the equivalent
+validation before issuing AAuth credentials.
 
 ## Submission errors {#submission-errors}
 
@@ -882,8 +914,19 @@ binding nonce as a query parameter (`nonce`); the response is bound
 to the authenticated caller's identity (no separate `audience` body
 parameter is needed).
 
+A caller MAY additionally supply a `credential_issuer` query
+parameter naming a consumer (by its registered consumer identifier
+or issuer URL) whose authorization to project this Mission the
+caller wants verified. This lets a downstream party that holds a
+credential issued by some other consumer ask the MAS whether that
+issuer was in fact authorized to project the referenced Mission --
+the cross-substrate check a Resource AS cannot perform on its own.
+When `credential_issuer` is supplied, the response carries
+`projection_issuer_authorized` and `projection_issuer`
+({{response-payload}}).
+
 ~~~ http-message
-GET /missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-/status?nonce=nonce_K9pV4nT2sR7mB1xQ HTTP/1.1
+GET /missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-/status?nonce=nonce_K9pV4nT2sR7mB1xQ&credential_issuer=as_acme_primary HTTP/1.1
 Host: mas.example.com
 Accept: application/mas-mission-status-response+jwt
 Authorization: ...
@@ -943,6 +986,13 @@ The `mas_mission_status` body:
   "policy_version":          "mas.example.com:standard@2026-06-01",
   "version":                 1,
   "mission_expiry":          "2026-12-31T23:59:59Z",
+  "projection_issuer_authorized": true,
+  "projection_issuer": {
+    "issuer":    "https://as.example.com",
+    "substrate": "oauth_as",
+    "tenant":    "tenant_01J9...",
+    "audience":  "https://erp.example.com"
+  },
   "authority_set_projection": {
     "neutral":         [ /* neutral Authority Set entries */ ],
     "substrate_view": {
@@ -972,6 +1022,22 @@ substrate-neutral Authority Set serialization defined in
 object MAY be present when the calling consumer is bound to a single
 substrate and the MAS pre-computes the substrate projection
 ({{per-substrate-projection}}).
+
+The `projection_issuer_authorized` boolean and `projection_issuer`
+object are present only when the request supplied a
+`credential_issuer` parameter ({{request}}). `projection_issuer_authorized`
+is `true` if and only if the named credential issuer holds a current
+consumer registration authorizing it to project this Mission for the
+Mission's tenant and the issuer's substrate; otherwise it is
+`false`. When `true`, `projection_issuer` echoes the resolved
+issuer's `issuer` URL, `substrate`, `tenant`, and registered
+`audience`. A consumer that receives a Mission-bound credential
+purportedly issued by some party MUST treat
+`projection_issuer_authorized: false` as a rogue or
+unauthorized projection and MUST refuse the credential, regardless
+of the credential's own signature validity. The MAS MUST NOT reveal,
+through this field, whether an unrelated consumer that is not the
+named `credential_issuer` is registered.
 
 ### Mission Status response JSON Schema {#mas-status-response-schema}
 
@@ -1022,6 +1088,17 @@ the Framework's Authority Set entry schema
         "version":                 { "type": "integer" },
         "mission_expiry": {
           "type": "string", "format": "date-time"
+        },
+        "projection_issuer_authorized": { "type": "boolean" },
+        "projection_issuer": {
+          "type": "object",
+          "required": ["issuer", "substrate", "tenant", "audience"],
+          "properties": {
+            "issuer":    { "type": "string", "format": "uri" },
+            "substrate": { "type": "string" },
+            "tenant":    { "type": "string" },
+            "audience":  { "type": "string" }
+          }
         },
         "authority_set_projection": {
           "type": "object",

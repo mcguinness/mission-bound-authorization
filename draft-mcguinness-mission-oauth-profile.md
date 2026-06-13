@@ -67,6 +67,8 @@ informative:
   I-D.draft-mcguinness-oauth-client-instance-assertion:
   I-D.draft-mcguinness-oauth-id-continuation-assertion:
   I-D.draft-mcguinness-mission-txn-token-chaining:
+  I-D.draft-mcguinness-mission-authority-server:
+  I-D.draft-mcguinness-mission-runtime-profile:
   I-D.draft-ietf-oauth-v2-1:
 
 --- abstract
@@ -374,6 +376,44 @@ Clients MUST NOT submit `authorization_details` directly when
 submitting `mission_intent`; the AS derives `authorization_details`
 from the Validated Mission Intent. A request carrying both
 MUST be refused with `invalid_request`.
+
+## `mission_id` parameter (MAS Flow B adoption) {#mission-id-parameter}
+
+When the Mission's state authority is a Mission Authority Server
+(MAS) and the Mission was created through the MAS direct-submission
+flow (Flow B,
+{{I-D.draft-mcguinness-mission-authority-server}}), the client
+already holds an activated Mission and adopts it at the AS rather
+than proposing a new one. The client submits, through PAR, a
+`mission_id` parameter instead of `mission_intent`:
+
+- `mission_id` (string): the MAS-issued Mission handle for this
+  client and this AS. It is the consumer-specific, sender-
+  constrained reference defined in
+  {{I-D.draft-mcguinness-mission-authority-server}}; it is not
+  necessarily the canonical `mission.id`.
+
+A request MUST carry exactly one of `mission_intent` or
+`mission_id`; an AS MUST refuse a request carrying both with
+`invalid_request`. An AS that does not operate as a MAS consumer
+MAY omit support for `mission_id`.
+
+On receiving `mission_id`, the AS:
+
+1. Resolves the handle against the MAS Mission Status operation at
+   the Mission's `origin`, authenticating as a registered MAS
+   consumer.
+2. Confirms the handle is bound to the requesting client and that
+   the AS itself is an authorized projection issuer for the Mission
+   (`projection_issuer_authorized: true` in the MAS Mission Status
+   response).
+3. Confirms the Mission state is `active`; otherwise it refuses
+   per {{lifecycle-gating}}.
+4. Issues a Mission-bound authorization code whose derived
+   credentials carry the canonical `mission.id` the MAS resolved,
+   with `mission.origin` set to the MAS issuer URL. The AS MUST NOT
+   mint a new Mission identifier; it is a projection issuer, not the
+   state authority.
 
 ## Client registration extensions {#client-registration-extensions}
 
@@ -1695,6 +1735,44 @@ When mTLS is used, the AS MUST validate the certificate against
 its trust anchors and against the client's registered
 `tls_client_auth_*` metadata members.
 
+## Token size at delegation depth {#token-size-at-depth}
+
+Nested `act` chains grow with delegation depth. A JWT access token
+carrying a multi-hop `act` chain plus the `mission` claim, derived
+`authorization_details`, and a `cnf` confirmation can approach the
+8-16 KB HTTP header buffer limits common at ingress proxies. Shallow
+delegation (3-4 hops) does not need mitigation; deployments
+expecting deeper chains SHOULD apply one of:
+
+- **Bounded delegation depth with opaque fallback.** Declare a
+  maximum JWT delegation depth; past it, derivation switches to
+  opaque reference tokens. The Mission record at `mission.origin`
+  retains the full chain server-side, resolved through
+  introspection.
+- **Chain-digest summarization.** Carry `act_chain_digest` (the
+  integrity-anchor encoded form over the JCS-canonical nested `act`
+  chain) plus only the immediate actor in `act`. The full chain is
+  retained at the issuer and resolved through introspection or
+  Mission Status; a consumer MUST verify the digest before treating
+  the resolved chain as authentic. This preserves audit
+  reconstruction without inflating the credential.
+- **Flat-array projection at the PDP.** The credential carries the
+  nested `act` per {{RFC8693}}; the PEP translates it to a
+  flat-ordered array for the runtime evaluation context per
+  {{I-D.draft-mcguinness-mission-runtime-profile}}. The flat array
+  is a serialization convenience, not a separate authority claim;
+  an actor is not independently authorized merely by appearing in
+  the flat form.
+
+The sender-constraint choice interacts with depth: DPoP carries one
+JWK thumbprint plus a per-request proof header, keeping the
+credential smaller at depth; mTLS carries a certificate thumbprint
+in `cnf` and shifts the size cost to the transport layer. Whichever
+pattern is used, the Mission record at `mission.origin` remains the
+canonical source of the full delegation chain, and runtime evidence
+({{I-D.draft-mcguinness-mission-runtime-profile}}) records the
+authenticated chain regardless of credential format.
+
 ## Mission Status response replay
 
 A Mission Status response is bound to (caller, audience, nonce,
@@ -1837,6 +1915,16 @@ location.
 - Parameter Name: `mission_intent`
 - Parameter Usage Location: Authorization Request (REQUIRED via PAR
   only; see {{mission-intent-parameter}})
+- Change Controller: IETF
+- Specification Document(s): this document
+
+This document also registers `mission_id` in the OAuth Parameters
+Registry under the same usage location, for adopting a MAS-held
+Mission (Flow B, {{mission-id-parameter}}):
+
+- Parameter Name: `mission_id`
+- Parameter Usage Location: Authorization Request (via PAR;
+  mutually exclusive with `mission_intent`)
 - Change Controller: IETF
 - Specification Document(s): this document
 
