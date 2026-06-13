@@ -90,7 +90,7 @@ originating AS uses the result to issue, refuse, or refuse with an
 expansion eligibility signal carried back to its client per
 {{I-D.draft-mcguinness-mission-expansion}}.
 
-## Trigger condition
+## Trigger condition {#trigger-condition}
 
 This protocol fires only when the originating AS lacks the Resource
 AS's action ontology and cannot classify the proposed authority on
@@ -570,7 +570,7 @@ post-expansion state.
 classification failures rather than authority decisions; they are
 addressed in {{failure-modes}}.
 
-# Trust Establishment
+# Trust Establishment {#trust-establishment}
 
 Trust between the originating AS and the Resource AS is two-way and
 asymmetric.
@@ -634,7 +634,7 @@ request against the successor Mission's projection returns
 `out_of_bounds_eligible` classification across a Mission Expansion
 event.
 
-# Failure Modes
+# Failure Modes {#failure-modes}
 
 The originating AS MUST fail closed when delegated validation cannot
 complete. Failing closed means refusing issuance or expansion for
@@ -841,6 +841,33 @@ projection to a different Resource AS ({{disclosure-minimization}}).
 This prevents one Resource AS from receiving a projection scoped to
 another and limits cross-Resource-AS correlation of a Mission to what
 each audience is independently entitled to see.
+
+# Conformance {#conformance}
+
+An implementation claims conformance to this document by identifying
+its short name and revision and the role(s) it implements.
+
+A conforming **originating AS** MUST: invoke this protocol only when
+it lacks the Resource AS's action ontology
+({{trigger-condition}}); send no more than the audience-filtered
+Mission projection and the minimized `requested_authority`
+({{disclosure-minimization}}); verify the response binding before
+acting on a classification; and fail closed on every failure mode
+of {{failure-modes}}.
+
+A conforming **Resource AS** MUST: classify each
+`requested_authority` entry against its local ontology and return
+one result per entry in positional order; return
+`out_of_bounds_eligible` only when its policy declares the authority
+eligible for governed expansion; issue or mint nothing in response
+to this protocol (it classifies only); and authenticate the
+originating AS over the mutually authenticated channel of
+{{trust-establishment}}.
+
+A deployment also conforms to
+{{I-D.draft-mcguinness-mission-framework}} and to
+{{I-D.draft-mcguinness-mission-expansion}} for the eligibility
+contract this protocol carries.
 
 # IANA Considerations
 

@@ -1447,6 +1447,41 @@ inherent to the Mission's role as a governance handle and is the
 intended audit property; deployments MUST NOT treat this as
 unintended cross-correlation.
 
+# Conformance {#conformance}
+
+An implementation claims conformance to this profile by identifying
+its short name and revision, the role(s) it implements, and -- as
+the Runtime Enforcement claim turns entirely on scope -- its
+published enforcement-scope manifest.
+
+A conforming **Resource Server / PEP** (RS-D) MUST: call the PDP
+before every consequential action in its enforcement scope and
+enforce the decision ({{resource-side-enforcement-contract-rs-d}});
+classify actions per {{action-classification}} and apply parameter
+binding with execution-time digest reverification where the class
+requires it; present Capability Source Binding for catalog-sourced
+actions ({{capability-source-binding}}); emit Execution Evidence;
+and be placed at the last controllable boundary
+({{pep-placement-rules}}).
+
+A conforming **PDP** MUST: evaluate against the materialized policy
+view, the audience-relevant Authority Set projection, authenticated
+actor context, and current Resource policy; perform the consistency
+checks of {{pdp-request}}; classify denials per
+{{runtime-denial-classification}}; enforce `max_invocations` with
+the atomic reserve-and-finalize protocol
+({{max-invocations-constraint}}); and emit Decision Evidence.
+
+A Runtime Enforcement conformance claim is bounded by the
+enforcement-scope manifest ({{enforcement-scope-manifest}}): it
+covers only the action classes, Resource Servers, and execution
+boundaries the manifest names, and action paths the deployment
+cannot mediate fall outside the claim. The Optional Modules
+({{optional-module-sketches}}) are not part of Core conformance. A
+deployment also conforms to
+{{I-D.draft-mcguinness-mission-framework}}, at least one substrate
+profile, and the OpenID AuthZEN Authorization API.
+
 # IANA Considerations {#iana}
 
 This document requests the following IANA actions.

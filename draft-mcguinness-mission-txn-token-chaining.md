@@ -162,7 +162,7 @@ Top-level grant claims (`iss`, `sub`, `aud`, `iat`, `exp`, `jti`,
 document specifies only how Mission-bound state populates and
 constrains them.
 
-# Mission Carriage in `txn_claims`
+# Mission Carriage in `txn_claims` {#mission-carriage}
 
 A Transcribing AS that has issued a Mission-Bound access token, or
 whose internal Txn-Token carries a Mission reference, MUST place
@@ -569,6 +569,32 @@ canonical `mission.id` already defined by the Framework and the
 subject mapping already defined by
 {{I-D.draft-fletcher-transaction-token-chaining-profile}}; it adds
 no correlation handle beyond those.
+
+# Conformance {#conformance}
+
+An implementation claims conformance to this document by identifying
+its short name and revision and the role(s) it implements.
+
+A conforming **Transcribing AS** MUST: place Mission-bound state in
+`txn_claims` per {{mission-carriage}}; include a
+`mission_resource_access` entry only when it is within CDTA scope
+and transcribe it byte-equal after audience filtering (no widening);
+carry the `transcription_profile` identifier; and treat the grant
+payload as correlation-class data.
+
+A conforming **Receiving AS** MUST: perform the validations of
+{{validation}} in addition to the base chaining
+profile's validations -- issuer trust, audience and freshness, the
+permitted-`transcription_profile` check, and the Mission Status
+reach-back requiring `active` state, matching `authority_hash`, and
+a projection superset; preserve the Mission binding unchanged on any
+derived token; and fail closed when the reach-back cannot complete
+within the agreed staleness bound.
+
+A deployment also conforms to
+{{I-D.draft-mcguinness-mission-framework}},
+{{I-D.draft-mcguinness-mission-oauth-profile}}, and
+{{I-D.draft-fletcher-transaction-token-chaining-profile}}.
 
 # IANA Considerations
 

@@ -1977,6 +1977,34 @@ caller identity recorded in the audit log
 avoid placing sensitive personal data in `reason` strings, which
 propagate to consumers inside `mission.lifecycle-change` events.
 
+# Conformance {#conformance}
+
+An implementation claims conformance to this document by identifying
+its short name and revision and the role(s) it implements.
+
+A conforming **MAS** MUST: own the canonical Mission record and
+perform the approval event atomically ({{mas-as-state-authority}});
+publish the metadata document and serve the resource model of
+{{rest-resource-model}}; support consumer-mediated submission (Flow
+A) and, when advertised, direct submission (Flow B) including the
+Mission-handle handoff ({{flow-b-handle}}); serve the JWS-signed
+Mission Status binding ({{mission-status}}) with the anti-oracle and
+projection-issuer-authorization properties; authenticate every
+consumer request against the consumer registration; and propagate
+lifecycle transitions to registered consumers per
+{{cross-substrate-revocation-propagation}}.
+
+A conforming **consumer** (OAuth AS or AAuth PS) MUST: register at
+the MAS; treat MAS lifecycle propagation as authoritative; never
+mint a Mission identifier or claim to be the state authority for a
+MAS-held Mission; and refuse `projection_issuer_authorized: false`
+when it verifies another issuer's projection.
+
+Cross-MAS federation and MAS-to-MAS migration are out of scope; an
+implementation MUST NOT claim conformance for them. A deployment
+also conforms to {{I-D.draft-mcguinness-mission-framework}} and to
+the substrate profile each consumer implements.
+
 # IANA Considerations {#iana}
 
 This document creates registrations across several existing

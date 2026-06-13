@@ -1279,6 +1279,32 @@ to its audience, which limits the authority detail -- and the
 inferences about the approved task -- disclosed to each consumer to
 the minimum it needs.
 
+# Conformance {#conformance}
+
+An implementation claims conformance to this profile by identifying
+its short name and revision, the role(s) it implements, and which
+optional wire extensions it supports.
+
+A conforming **composing Person Server** MUST: implement the
+wire-preserving local mappings of {{wire-preserving}} -- identifier
+mapping, hash domain separation, governance-record linkage,
+lifecycle projection, and Authority Set projection into native
+tokens -- such that an AAuth client unaware of the Framework
+interoperates on the unmodified AAuth wire; compute and keep
+distinct all four hashes ({{hash-domain-separation}}); evaluate
+call-chained requests against the Mission's per-audience projection
+({{call-chaining}}); and expose Mission Status
+({{mission-status}}) with the anti-oracle property.
+
+The optional AAuth wire extensions ({{wire-extensions}}) -- Mission
+Expansion signaling, Mission Status endpoint/field integration, and
+Resumable Suspension -- are each OPTIONAL; a conforming PS MUST NOT
+advertise or rely on one absent the AAuth WG coordination that
+extension requires, and names the extensions it implements in its
+conformance claim. Pairwise Mission identifiers are not supported in
+this revision (canonical-only). A deployment also conforms to
+{{I-D.draft-mcguinness-mission-framework}}.
+
 # IANA Considerations {#iana}
 
 This profile's IANA actions are subject to AAuth-side registry
