@@ -551,7 +551,7 @@ the client submitted. How a client produces the Mission Intent (for
 example, a "Mission Shaper" that derives it from a natural-language
 instruction) is out of scope for this document.
 
-# Authorization Derivation {#authorization-derivation}
+# Mission Authority {#authorization-derivation}
 
 From the Mission Intent, the AS derives the **Authority Set**: one or
 more {{RFC9396}} `authorization_details` entries of type
@@ -767,7 +767,7 @@ deferred to future work; it would extend the delegation and subset
 model of this document ({{delegation-constraints}}, {{subset}})
 rather than introduce a new entry type.
 
-# The Approval Event {#approval-event}
+# Mission Approval {#approval-event}
 
 The approval event is the atomic transition at which the Approver
 consents and the AS creates the Mission. It runs as an OAuth 2.0
@@ -942,7 +942,7 @@ to computing an anchor and to comparing committed values:
   so `resource` and every other URI MUST match exactly (this governs
   the `resource` equality test of {{subset}}).
 
-# The Mission {#mission-record}
+# Mission Record {#mission-record}
 
 A Mission is the durable record created at the approval event. It is
 immutable except for its `state` and is identified by a `mission_id`.
