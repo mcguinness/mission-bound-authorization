@@ -52,6 +52,7 @@ normative:
 informative:
   RFC6750:
   RFC7009:
+  RFC8935:
   RFC9493:
   RFC9700:
   RFC9728:
@@ -208,6 +209,42 @@ normative carriage of Mission context
 in Transaction Tokens (shown only illustratively in the end-to-end
 example appendix), and a cross-domain status or event-distribution
 mechanism for tighter revocation.
+
+## Non-goals
+
+The following are deliberately out of scope. Each is a recurring
+question for agent authorization; naming it here records that it was
+considered and where it belongs, not that it was overlooked.
+
+- **Semantic / intent verification.** This profile binds a token to an
+  approved authority and task; it does not evaluate whether a given
+  runtime action serves the Mission's purpose beyond matching the
+  approved `authorization_details` and `constraints`. Per-action
+  evaluation is the runtime layer's role ({{runtime-boundary}}).
+  Verifying an agent's declared reasoning against the task is a further
+  attestation problem outside both layers.
+- **Just-in-time Mission expansion.** The Authority Set is committed at
+  approval; this profile defines no mid-stream, incremental
+  authorization upgrade. Widening requires a new approval (a successor
+  Mission); a JIT expansion protocol is future work.
+- **Lifecycle event distribution.** A Resource Server learns Mission
+  state from the token lifetime or optional introspection
+  ({{introspection}}); this profile defines no push-based notification
+  of Mission state changes. A Shared Signals ({{RFC8935}}) / CAEP
+  profile for Mission lifecycle events is future work.
+- **Human-in-the-loop suspension.** The lifecycle here is `active`,
+  `revoked`, `expired` ({{lifecycle}}); a `suspended` /
+  pending-human-approval state, and a holding-token pause-and-resume
+  protocol, are future lifecycle work.
+- **Multi-hop cross-domain provenance.** A single cross-domain hop is
+  supported ({{cross-domain}}); chaining a Mission across more than one
+  trust-domain boundary, and the verifiable provenance that would
+  require, are future work.
+- **Decentralized agent identity.** Agent identity and credentialing
+  are out of scope ({{I-D.draft-klrc-aiagent-auth}}, and workload
+  identity efforts such as WIMSE); this profile governs the
+  approved-task artifact those identities act within, not the
+  identities themselves.
 
 ## Requirements Language
 
@@ -405,7 +442,8 @@ following members:
 - `mission_expiry` (string, required): an RFC 3339 {{RFC3339}}
   date-time after which the Mission MUST NOT derive tokens.
 - `context` (object, optional): machine-actionable bounds. This
-  document defines two members; others MAY be added by deployments:
+  document defines the members below; others MAY be added by
+  deployments:
   - `acr` (string, optional): the minimum authentication context
     class the Approver MUST satisfy at the approval event.
   - `max_derivations` (integer, optional): a positive (1 or greater)
@@ -417,6 +455,24 @@ following members:
     derivation cap, not an end-to-end credential cap: it does not
     count local tokens a Resource AS mints from an ID-JAG, which the
     origin cannot observe ({{lifecycle}}).
+  - `max_budget` (object, optional): a hard cap on cumulative monetary
+    spend under the Mission, an object with `amount` (string, a decimal
+    number) and `currency` (string, an ISO 4217 currency code).
+  - `max_calls` (array of object, optional): hard caps on the count of
+    consequential call events, each an object with `scope` (string, the
+    named call class) and `count` (integer, 1 or greater).
+  - `max_duration` (string, optional): an RFC 3339 {{RFC3339}} duration
+    bounding cumulative wall-clock consequential activity under the
+    Mission. It is distinct from `mission_expiry`, which bounds
+    issuance rather than activity.
+
+  `max_budget`, `max_calls`, and `max_duration` are **consumption
+  bounds**: a deployment names them here so issuance and the runtime
+  layer share one vocabulary. They are carried on the Mission and
+  committed by `proposal_hash`, but, unlike `max_derivations`, they are
+  not enforced by the AS at issuance. They are enforced at the point of
+  use by the runtime layer ({{runtime-boundary}}); absent that layer
+  they are not enforced.
 
 Example Mission Intent:
 
@@ -436,7 +492,12 @@ Example Mission Intent:
   "mission_expiry": "2026-12-31T23:59:59Z",
   "context": {
     "acr": "urn:example:acr:mfa",
-    "max_derivations": 200
+    "max_derivations": 200,
+    "max_budget": { "amount": "5000.00", "currency": "USD" },
+    "max_calls": [
+      { "scope": "journal-entries.write", "count": 50 }
+    ],
+    "max_duration": "PT8H"
   }
 }
 ~~~
@@ -2121,7 +2182,12 @@ The agent submits this Mission Intent through PAR ({{mission-intent}}):
   "mission_expiry": "2026-12-31T23:59:59Z",
   "context": {
     "acr": "urn:example:acr:mfa",
-    "max_derivations": 200
+    "max_derivations": 200,
+    "max_budget": { "amount": "5000.00", "currency": "USD" },
+    "max_calls": [
+      { "scope": "journal-entries.write", "count": 50 }
+    ],
+    "max_duration": "PT8H"
   }
 }
 ~~~
