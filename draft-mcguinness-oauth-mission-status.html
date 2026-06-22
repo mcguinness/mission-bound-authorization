@@ -1441,21 +1441,30 @@ credential's <code>mission.origin</code>. The endpoint <span class="bcp14">MUST<
         </h3>
 <p id="section-3.1-1">The request is an HTTPS POST with an
 <code>application/x-www-form-urlencoded</code> body containing:<a href="#section-3.1-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-3.1-2.1">
-            <p id="section-3.1-2.1.1"><code>mission</code> (string, required): the canonical <code>mission_id</code>.<a href="#section-3.1-2.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-3.1-2.2">
-            <p id="section-3.1-2.2.1"><code>audience</code> (string, required): the audience identifier of the
-requesting consumer.<a href="#section-3.1-2.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-3.1-2.3">
-            <p id="section-3.1-2.3.1"><code>nonce</code> (string, required): a client-generated nonce binding the
+<span class="break"></span><dl class="dlParallel" id="section-3.1-2">
+          <dt id="section-3.1-2.1">
+<code>mission</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.1-2.2">
+            <p id="section-3.1-2.2.1"><span class="bcp14">REQUIRED</span>. A string. The canonical <code>mission_id</code>.<a href="#section-3.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.1-2.3">
+<code>audience</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.1-2.4">
+            <p id="section-3.1-2.4.1"><span class="bcp14">REQUIRED</span>. A string. The audience identifier of the
+requesting consumer.<a href="#section-3.1-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.1-2.5">
+<code>nonce</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.1-2.6">
+            <p id="section-3.1-2.6.1"><span class="bcp14">REQUIRED</span>. A string. A client-generated nonce binding the
 response to this request. It <span class="bcp14">MUST</span> be unique per request within the
 response lifetime; a consumer <span class="bcp14">MUST</span> reject a response whose <code>nonce</code>
-does not equal the one it sent.<a href="#section-3.1-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
+does not equal the one it sent.<a href="#section-3.1-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
 </section>
 </div>
 <div id="mission-status-authentication">
@@ -1859,22 +1868,34 @@ non-deriving, exactly as the base profile gates on <code>active</code>.<a href="
         </h3>
 <p id="section-5.1-1">The endpoint accepts authenticated POST requests with a
 form-urlencoded body:<a href="#section-5.1-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-5.1-2.1">
-            <p id="section-5.1-2.1.1"><code>mission</code> (string, required): the canonical <code>mission_id</code>.<a href="#section-5.1-2.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-5.1-2.2">
-            <p id="section-5.1-2.2.1"><code>operation</code> (string, required): one of <code>revoke</code>, <code>suspend</code>,
-<code>resume</code>, <code>complete</code>.<a href="#section-5.1-2.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-5.1-2.3">
-            <p id="section-5.1-2.3.1"><code>reason</code> (string, optional): a human-readable reason recorded in
-audit, maximum 1024 characters.<a href="#section-5.1-2.3.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-5.1-2.4">
-            <p id="section-5.1-2.4.1"><code>nonce</code> (string, required): a client-generated nonce.<a href="#section-5.1-2.4.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
+<span class="break"></span><dl class="dlParallel" id="section-5.1-2">
+          <dt id="section-5.1-2.1">
+<code>mission</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-2.2">
+            <p id="section-5.1-2.2.1"><span class="bcp14">REQUIRED</span>. A string. The canonical <code>mission_id</code>.<a href="#section-5.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-2.3">
+<code>operation</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-2.4">
+            <p id="section-5.1-2.4.1"><span class="bcp14">REQUIRED</span>. A string. One of <code>revoke</code>, <code>suspend</code>,
+<code>resume</code>, <code>complete</code>.<a href="#section-5.1-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-2.5">
+<code>reason</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-2.6">
+            <p id="section-5.1-2.6.1"><span class="bcp14">OPTIONAL</span>. A string. A human-readable reason recorded in
+audit, maximum 1024 characters.<a href="#section-5.1-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-2.7">
+<code>nonce</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-2.8">
+            <p id="section-5.1-2.8.1"><span class="bcp14">REQUIRED</span>. A string. A client-generated nonce.<a href="#section-5.1-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
 <p id="section-5.1-3">The operations are:<a href="#section-5.1-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-5.1-4.1">
@@ -2085,39 +2106,54 @@ Metadata"). Unlike the issuance profile, which advertises only that
 boolean, this document defines OAuth AS metadata members for the
 endpoints and classes it introduces, so a consumer discovers them
 through standard <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span> discovery.<a href="#section-7-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-7-2.1">
-          <p id="section-7-2.1.1"><code>mission_status_endpoint</code> (string, URL, optional): the URL of the
+<span class="break"></span><dl class="dlParallel" id="section-7-2">
+        <dt id="section-7-2.1">
+<code>mission_status_endpoint</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.2">
+          <p id="section-7-2.2.1"><span class="bcp14">OPTIONAL</span>. A string containing a URL. The URL of the
 dedicated Mission Status operation (<a href="#mission-status" class="auto internal xref">Section 3</a>). Present
-when the AS supports it.<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-7-2.2">
-          <p id="section-7-2.2.1"><code>mission_status_auth_methods_supported</code> (array of strings,
-optional): the authentication mechanisms the Status endpoint
+when the AS supports it.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.3">
+<code>mission_status_auth_methods_supported</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.4">
+          <p id="section-7-2.4.1"><span class="bcp14">OPTIONAL</span>. An array of strings. The authentication mechanisms the Status endpoint
 accepts, each one of <code>mtls</code>, <code>dpop_bearer</code>, <code>private_key_jwt</code>
-(<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>).<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-7-2.3">
-          <p id="section-7-2.3.1"><code>mission_lifecycle_endpoint</code> (string, URL, optional): the URL of the
+(<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>).<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.5">
+<code>mission_lifecycle_endpoint</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.6">
+          <p id="section-7-2.6.1"><span class="bcp14">OPTIONAL</span>. A string containing a URL. The URL of the
 Mission Lifecycle endpoint (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>). Present
-when the AS supports it.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-7-2.4">
-          <p id="section-7-2.4.1"><code>mission_lifecycle_auth_methods_supported</code> (array of strings,
-optional): the authentication mechanisms the Lifecycle endpoint
-accepts, with the same value space as the Status methods.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-7-2.5">
-          <p id="section-7-2.5.1"><code>mission_enforcement_classes_supported</code> (array of strings,
-optional): one or more of <code>issuance</code>, <code>introspection</code>,
-<code>event_driven</code>, <code>per_request</code> (<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>).<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-7-2.6">
-          <p id="section-7-2.6.1"><code>mission_max_stale_seconds</code> (integer, optional): the maximum
+when the AS supports it.<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.7">
+<code>mission_lifecycle_auth_methods_supported</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.8">
+          <p id="section-7-2.8.1"><span class="bcp14">OPTIONAL</span>. An array of strings. The authentication mechanisms the Lifecycle endpoint
+accepts, with the same value space as the Status methods.<a href="#section-7-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.9">
+<code>mission_enforcement_classes_supported</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.10">
+          <p id="section-7-2.10.1"><span class="bcp14">OPTIONAL</span>. An array of strings. One or more of <code>issuance</code>, <code>introspection</code>,
+<code>event_driven</code>, <code>per_request</code> (<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>).<a href="#section-7-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.11">
+<code>mission_max_stale_seconds</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.12">
+          <p id="section-7-2.12.1"><span class="bcp14">OPTIONAL</span>. An integer. The maximum
 tolerated interval, in seconds, for revocation propagation
-(<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>).<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
+(<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>).<a href="#section-7-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
 <p id="section-7-3">DPoP and mTLS support for issued credentials are read from the
 standard <code>dpop_signing_alg_values_supported</code> <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> and
 <code>tls_client_certificate_bound_access_tokens</code> <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> metadata;
