@@ -201,15 +201,16 @@ This document is a self-contained, minimum-viable profile: it binds
 Missions to OAuth 2.0 and is implementable on its own, depending only
 on the OAuth and JOSE specifications it cites. A single cross-domain
 hop is supported as an optional binding ({{cross-domain}}); the
-single-domain core is implementable without it. Deferred to future work, and not required to implement this
-document, are: a substrate-neutral generalization of the Mission model
-(across non-OAuth authorization substrates), additional integrity
-anchors (such as a `consent_rendering_hash` over a structured consent
-disclosure object, {{consent-binding}}), mission expansion, the
-normative carriage of Mission context
-in Transaction Tokens (shown only illustratively in the end-to-end
-example appendix), and a cross-domain status or event-distribution
-mechanism for tighter revocation.
+single-domain core is implementable without it.
+
+Deferred to future work, and not required to implement this document,
+are: a substrate-neutral generalization of the Mission model (across
+non-OAuth authorization substrates), additional integrity anchors (such
+as a `consent_rendering_hash` over a structured consent disclosure
+object, {{consent-binding}}), mission expansion, the normative carriage
+of Mission context in Transaction Tokens (shown only illustratively in
+the end-to-end example appendix), and a cross-domain status or
+event-distribution mechanism for tighter revocation.
 
 ## Non-Goals
 
@@ -2031,8 +2032,7 @@ individual runtime actions. In particular, it does not:
 
 - evaluate a request's parameters against the Mission at the point of
   use;
-- produce per-action decision evidence (a policy-decision record per
-  call);
+- produce runtime enforcement evidence for each consequential action;
 - bind tool or function identities to the Mission; or
 - re-evaluate at execution time to close the
   approval-to-execution (time-of-check to time-of-use) gap.
