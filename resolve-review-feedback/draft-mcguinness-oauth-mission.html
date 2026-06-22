@@ -2081,11 +2081,19 @@ constrain what the AS <span class="bcp14">MAY</span> derive, never widen it.<a h
           <p id="section-4-5.1.1"><code>type</code> (string, required): <code>mission_resource_access</code>.<a href="#section-4-5.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-4-5.2">
-          <p id="section-4-5.2.1"><code>resource</code> (string, required): the protected resource URI. This is a
-type-specific member of <code>mission_resource_access</code>, identifying the
-single resource the entry applies to. It is not the <span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>
-            <code>resource</code> authorization-request parameter, nor the <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>
-common <code>locations</code> field; an implementer <span class="bcp14">MUST NOT</span> treat it as either.<a href="#section-4-5.2.1" class="pilcrow">¶</a></p>
+          <p id="section-4-5.2.1"><code>resource</code> (string, required): the single protected resource the
+entry applies to, an absolute URI identifying an OAuth protected
+resource (<span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>) or a Protected Resource (<span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>). It is
+the same kind of identifier as the <span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span> <code>resource</code> value, and
+the AS derives the token <code>aud</code> from the <code>resource</code> of each carried
+entry. It is carried here as a type-specific member of each
+<code>mission_resource_access</code> entry, which <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> permits; carrying
+it per entry (rather than once for the request, as the <span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>
+            <code>resource</code> request parameter does) lets one token scope distinct
+authority to distinct resources. Per <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>, the <code>resource</code>
+request parameter does not affect how the AS processes
+<code>authorization_details</code>, and this member is distinct from the
+<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> common <code>locations</code> field.<a href="#section-4-5.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-4-5.3">
           <p id="section-4-5.3.1"><code>actions</code> (array of string, required): permitted action
