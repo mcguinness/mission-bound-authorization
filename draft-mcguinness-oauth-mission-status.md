@@ -1,9 +1,9 @@
 ---
-title: "Mission-Bound Authorization for OAuth 2.0: Extensions"
-abbrev: "OAuth Mission Extensions"
+title: "Mission Status and Lifecycle for OAuth 2.0"
+abbrev: "Mission Status"
 category: std
 
-docname: draft-mcguinness-oauth-mission-extensions-latest
+docname: draft-mcguinness-oauth-mission-status-latest
 submissiontype: IETF
 number:
 date:
@@ -15,10 +15,11 @@ keyword:
  - agent
  - authorization
  - status
+ - lifecycle
  - revocation
 venue:
   github: "mcguinness/draft-mcguinness-oauth-mission"
-  latest: "https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-extensions.html"
+  latest: "https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-status.html"
 
 author:
  -
@@ -31,7 +32,6 @@ normative:
   RFC7009:
   RFC7515:
   RFC7521:
-  RFC8126:
   RFC8259:
   RFC8414:
   RFC8705:
@@ -56,15 +56,16 @@ informative:
 The Mission-Bound Authorization for OAuth 2.0 profile
 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") binds
 issued authority to a durable, human-approved Mission and gates
-issuance on Mission state, but it deliberately defers several
-operational surfaces: a canonical by-`mission_id` Mission Status
-operation, a management endpoint for explicit lifecycle transitions,
-graduated revocation-enforcement classes, signed status evidence, and
-a registry of common machine-actionable constraints. This document
-defines those surfaces as OPTIONAL extensions to the issuance profile.
-Each capability is independently optional; an implementation MAY adopt
-any subset, and one that adopts none remains a conforming issuance
-profile. This document does not restate the base profile.
+issuance on Mission state, but it observes Mission state only through
+token lifetime and optional by-token introspection. This document
+defines the Mission state-management surfaces it defers: a canonical
+by-`mission_id` Mission Status operation, a management endpoint for
+explicit lifecycle transitions (`revoke`, `suspend`, `resume`,
+`complete`), graduated revocation-enforcement classes, and signed
+status evidence. Each capability is independently optional; an
+implementation MAY adopt any subset, and one that adopts none remains
+a conforming issuance profile. This document does not restate the base
+profile.
 
 --- middle
 
@@ -98,9 +99,6 @@ that build on the issuance profile. The capabilities are:
 - **Revocation Enforcement Classes** ({{revocation-enforcement-classes}})
   that let a deployment advertise how promptly Mission state changes
   take effect.
-- A **Common Constraints** registry ({{common-constraints}}) that
-  standardizes the machine-actionable `constraints` keys the issuance
-  profile leaves deployment-defined.
 - **Authorization Server metadata** members
   ({{as-metadata}}) advertising the endpoints and classes above.
 
@@ -617,63 +615,6 @@ with the declared `mission_max_stale_seconds`. Standard OAuth defaults
 `event_driven` or `per_request` enforcement MAY use longer TTLs
 because revocation propagates out of band.
 
-# Common Constraints {#common-constraints}
-
-This section is OPTIONAL. A `mission_resource_access` entry's
-`constraints` object carries machine-actionable per-resource bounds,
-and the issuance profile leaves their member semantics
-deployment-defined ({{I-D.draft-mcguinness-oauth-mission}}, Section
-"Mission Authority"). This document establishes a **Common
-Constraints** registry ({{iana-common-constraints}}) so that
-independently developed deployments interpret, narrow, and compare a
-shared vocabulary of constraint keys identically.
-
-A Common Constraint is a registered `constraints` member name with a
-defined value syntax and a defined narrowing semantics. Each registry
-entry states:
-
-- **Name**: the `constraints` member name (for example,
-  `max_amount_usd`). Names MUST match `^[A-Za-z0-9_.:-]+$`.
-- **Value syntax**: the JSON {{RFC8259}} value type and any
-  additional syntactic rules.
-- **Subset rule**: how a candidate value is judged no broader than a
-  reference value, used by the subset comparison of
-  {{I-D.draft-mcguinness-oauth-mission}} (Section "Subset Rule"), in
-  which a constraint key present in the reference entry MUST also be
-  present, and no broader, in a narrowing entry.
-- **Intersection rule**: how two values for the same key combine when
-  intersecting two entries; the result MUST be no broader than either
-  operand.
-
-A constraint whose member name is a registered Common Constraint is
-interpreted per the registry. A `constraints` member whose name is not
-a registered Common Constraint remains deployment-defined and is
-interpreted only within the issuing deployment; a consumer in another
-deployment that does not recognize it MUST fail closed, as the
-issuance profile requires of any unenforceable constraint
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Resource Server
-Enforcement").
-
-This document seeds the registry with the constraints used in the
-issuance profile's examples:
-
-- `max_amount_usd` (number): a per-action ceiling, in US dollars, on a
-  monetary amount. Subset: a candidate is no broader than a reference
-  when its value is less than or equal to the reference value.
-  Intersection: the minimum of the two values.
-- `issued_after` (string, an {{RFC8259}} date-time): the action
-  applies only to resources issued at or after this instant. Subset: a
-  candidate is no broader when its value is greater than or equal to
-  the reference value. Intersection: the later of the two instants.
-- `issued_before` (string, an {{RFC8259}} date-time): the action
-  applies only to resources issued at or before this instant. Subset:
-  a candidate is no broader when its value is less than or equal to the
-  reference value. Intersection: the earlier of the two instants.
-
-The registry is the extension point; further constraints are added by
-registration ({{iana-common-constraints}}), not by revising this
-document.
-
 # Authorization Server Metadata {#as-metadata}
 
 This section is OPTIONAL and applies only to a deployment that adopts
@@ -706,9 +647,6 @@ through standard {{RFC8414}} discovery.
 - `mission_max_stale_seconds` (integer, optional): the maximum
   tolerated interval, in seconds, for revocation propagation
   ({{revocation-enforcement-classes}}).
-- `mission_common_constraints_supported` (array of strings,
-  optional): the registered Common Constraint names
-  ({{common-constraints}}) the AS issues and enforces.
 
 DPoP and mTLS support for issued credentials are read from the
 standard `dpop_signing_alg_values_supported` {{RFC9449}} and
@@ -753,10 +691,7 @@ Cache-Control: max-age=3600
   "mission_enforcement_classes_supported": [
     "issuance", "introspection"
   ],
-  "mission_max_stale_seconds": 60,
-  "mission_common_constraints_supported": [
-    "max_amount_usd", "issued_after", "issued_before"
-  ]
+  "mission_max_stale_seconds": 60
 }
 ~~~
 
@@ -877,10 +812,6 @@ An implementation claiming an extension MUST meet its requirements:
 - **Revocation Enforcement Classes**: honestly advertise the classes
   it implements ({{revocation-enforcement-classes}}) and
   `mission_max_stale_seconds`.
-- **Common Constraints**: interpret, narrow, and compare each
-  registered constraint it advertises in
-  `mission_common_constraints_supported` per its registry entry
-  ({{common-constraints}}).
 
 # IANA Considerations {#iana}
 
@@ -899,7 +830,6 @@ Change Controller IETF; Reference this document, {{as-metadata}}.
 - `mission_lifecycle_auth_methods_supported`
 - `mission_enforcement_classes_supported`
 - `mission_max_stale_seconds`
-- `mission_common_constraints_supported`
 
 ## Media Type Registry
 
@@ -926,27 +856,6 @@ IANA is requested to register one media type per {{RFC6838}}.
   <public@karlmcguinness.com>
 - Intended usage: COMMON
 - Author/Change controller: IETF
-
-## Mission Common Constraints Registry {#iana-common-constraints}
-
-IANA is requested to create the "Mission Common Constraints" registry.
-The registration policy is Specification Required {{RFC8126}}. Each
-entry has:
-
-- Name: the `constraints` member name, matching `^[A-Za-z0-9_.:-]+$`.
-- Value syntax: the JSON {{RFC8259}} value type and any rules.
-- Subset rule: the narrowing semantics ({{common-constraints}}).
-- Intersection rule: how two values combine.
-- Change Controller.
-- Reference.
-
-The registry is seeded with the entries defined in
-{{common-constraints}}; for each, Change Controller IETF and Reference
-this document:
-
-- `max_amount_usd`
-- `issued_after`
-- `issued_before`
 
 ## Well-Known URI
 
