@@ -166,10 +166,15 @@ credential's `mission.origin`. The endpoint MUST be served over TLS
 The request is an HTTPS POST with an
 `application/x-www-form-urlencoded` body containing:
 
-- `mission` (string, required): the canonical `mission_id`.
-- `audience` (string, required): the audience identifier of the
+`mission`:
+: REQUIRED. A string. The canonical `mission_id`.
+
+`audience`:
+: REQUIRED. A string. The audience identifier of the
   requesting consumer.
-- `nonce` (string, required): a client-generated nonce binding the
+
+`nonce`:
+: REQUIRED. A string. A client-generated nonce binding the
   response to this request. It MUST be unique per request within the
   response lifetime; a consumer MUST reject a response whose `nonce`
   does not equal the one it sent.
@@ -459,12 +464,19 @@ non-deriving, exactly as the base profile gates on `active`.
 The endpoint accepts authenticated POST requests with a
 form-urlencoded body:
 
-- `mission` (string, required): the canonical `mission_id`.
-- `operation` (string, required): one of `revoke`, `suspend`,
+`mission`:
+: REQUIRED. A string. The canonical `mission_id`.
+
+`operation`:
+: REQUIRED. A string. One of `revoke`, `suspend`,
   `resume`, `complete`.
-- `reason` (string, optional): a human-readable reason recorded in
+
+`reason`:
+: OPTIONAL. A string. A human-readable reason recorded in
   audit, maximum 1024 characters.
-- `nonce` (string, required): a client-generated nonce.
+
+`nonce`:
+: REQUIRED. A string. A client-generated nonce.
 
 The operations are:
 
@@ -628,23 +640,31 @@ boolean, this document defines OAuth AS metadata members for the
 endpoints and classes it introduces, so a consumer discovers them
 through standard {{RFC8414}} discovery.
 
-- `mission_status_endpoint` (string, URL, optional): the URL of the
+`mission_status_endpoint`:
+: OPTIONAL. A string containing a URL. The URL of the
   dedicated Mission Status operation ({{mission-status}}). Present
   when the AS supports it.
-- `mission_status_auth_methods_supported` (array of strings,
-  optional): the authentication mechanisms the Status endpoint
+
+`mission_status_auth_methods_supported`:
+: OPTIONAL. An array of strings. The authentication mechanisms the Status endpoint
   accepts, each one of `mtls`, `dpop_bearer`, `private_key_jwt`
   ({{mission-status-authentication}}).
-- `mission_lifecycle_endpoint` (string, URL, optional): the URL of the
+
+`mission_lifecycle_endpoint`:
+: OPTIONAL. A string containing a URL. The URL of the
   Mission Lifecycle endpoint ({{mission-lifecycle-endpoint}}). Present
   when the AS supports it.
-- `mission_lifecycle_auth_methods_supported` (array of strings,
-  optional): the authentication mechanisms the Lifecycle endpoint
+
+`mission_lifecycle_auth_methods_supported`:
+: OPTIONAL. An array of strings. The authentication mechanisms the Lifecycle endpoint
   accepts, with the same value space as the Status methods.
-- `mission_enforcement_classes_supported` (array of strings,
-  optional): one or more of `issuance`, `introspection`,
+
+`mission_enforcement_classes_supported`:
+: OPTIONAL. An array of strings. One or more of `issuance`, `introspection`,
   `event_driven`, `per_request` ({{revocation-enforcement-classes}}).
-- `mission_max_stale_seconds` (integer, optional): the maximum
+
+`mission_max_stale_seconds`:
+: OPTIONAL. An integer. The maximum
   tolerated interval, in seconds, for revocation propagation
   ({{revocation-enforcement-classes}}).
 

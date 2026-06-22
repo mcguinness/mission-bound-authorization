@@ -429,35 +429,52 @@ A Mission Intent is a JSON object describing the task. The client
 submits it instead of, or alongside a narrowed, `scope`. It has the
 following members:
 
-- `goal` (string, required): a human-readable statement of the task,
+`goal`:
+: REQUIRED. A string. A human-readable statement of the task,
   for rendering to the Approver. Maximum 4096 characters.
-- `resources` (array of string, required): the target resources the
+
+`resources`:
+: REQUIRED. An array of strings. The target resources the
   task needs, each an absolute URI identifying a protected resource
   (an OAuth resource per {{RFC8707}}-style indicators or a Protected
   Resource per {{RFC9728}}).
-- `constraints` (array of string, optional): human-readable bounds on
+
+`constraints`:
+: OPTIONAL. An array of strings. Human-readable bounds on
   the task (for example, "read only invoices from 2026"). These
   inform derivation and consent rendering.
-- `success_criteria` (array of string, optional): human-readable
+
+`success_criteria`:
+: OPTIONAL. An array of strings. Human-readable
   observable outcomes that indicate the task is complete. These are
   disclosure and audit material only: they are rendered to the
   Approver and committed by `proposal_hash` ({{integrity-anchors}}),
   but carry no machine semantics and MUST NOT be used to derive,
   widen, or gate authority.
-- `purpose` (string, optional): a URI identifying the purpose of the
+
+`purpose`:
+: OPTIONAL. A string. A URI identifying the purpose of the
   task, recorded for disclosure and audit. Its semantics are
   deployment- or registry-defined and opaque to this document; like
   `success_criteria` it MUST NOT be used to derive, widen, or gate
   authority. A deployment MAY consult it for out-of-band policy or
   logging that does not affect the authority derived here.
-- `mission_expiry` (string, required): an RFC 3339 {{RFC3339}}
+
+`mission_expiry`:
+: REQUIRED. A string. An RFC 3339 {{RFC3339}}
   date-time after which the Mission MUST NOT derive tokens.
-- `context` (object, optional): machine-actionable bounds. This
+
+`context`:
+: OPTIONAL. An object of machine-actionable bounds. This
   document defines the members below; others MAY be added by
   deployments:
-  - `acr` (string, optional): the minimum authentication context
+
+  `acr`:
+  : OPTIONAL. A string. The minimum authentication context
     class the Approver MUST satisfy at the approval event.
-  - `max_derivations` (integer, optional): a positive (1 or greater)
+
+  `max_derivations`:
+  : OPTIONAL. A positive integer. A positive (1 or greater)
     bound on the number of derivations the origin AS performs under the
     Mission, enforced per {{lifecycle}}. A value of 0 is invalid (it
     would forbid even the initial issuance); to stop a Mission, revoke
@@ -466,13 +483,29 @@ following members:
     derivation cap, not an end-to-end credential cap: it does not
     count local tokens a Resource AS mints from an ID-JAG, which the
     origin cannot observe ({{lifecycle}}).
-  - `max_budget` (object, optional): a hard cap on cumulative monetary
-    spend under the Mission, an object with `amount` (string, a decimal
-    number) and `currency` (string, an ISO 4217 currency code).
-  - `max_calls` (array of object, optional): hard caps on the count of
-    consequential call events, each an object with `scope` (string, the
-    named call class) and `count` (integer, 1 or greater).
-  - `max_duration` (string, optional): an ISO 8601 duration (for
+
+  `max_budget`:
+  : OPTIONAL. An object. A hard cap on cumulative monetary
+    spend under the Mission. Has the members:
+
+    `amount`:
+    : REQUIRED. A string. A decimal number.
+
+    `currency`:
+    : REQUIRED. A string. An ISO 4217 currency code.
+
+  `max_calls`:
+  : OPTIONAL. An array of objects. Hard caps on the count of
+    consequential call events. Each object has the members:
+
+    `scope`:
+    : REQUIRED. A string. The named call class.
+
+    `count`:
+    : REQUIRED. An integer. 1 or greater.
+
+  `max_duration`:
+  : OPTIONAL. A string. An ISO 8601 duration (for
     example, `PT8H`), matching the `duration` rule in Appendix A of
     {{RFC3339}}, bounding cumulative wall-clock consequential activity
     under the Mission. It is distinct from `mission_expiry`, which
@@ -591,8 +624,11 @@ constrain what the AS MAY derive, never widen it.
 A `mission_resource_access` entry is a {{RFC9396}}
 `authorization_details` object with these members:
 
-- `type` (string, required): `mission_resource_access`.
-- `resource` (string, required): the single protected resource the
+`type`:
+: REQUIRED. A string. `mission_resource_access`.
+
+`resource`:
+: REQUIRED. A string. The single protected resource the
   entry applies to, an absolute URI identifying an OAuth protected
   resource ({{RFC8707}}) or a Protected Resource ({{RFC9728}}). It is
   the same kind of identifier as the {{RFC8707}} `resource` value, and
@@ -605,26 +641,37 @@ A `mission_resource_access` entry is a {{RFC9396}}
   request parameter does not affect how the AS processes
   `authorization_details`, and this member is distinct from the
   {{RFC9396}} common `locations` field.
-- `actions` (array of string, required): permitted action
+
+`actions`:
+: REQUIRED. An array of strings. Permitted action
   identifiers, each matching `[A-Za-z0-9_.:-]+`.
-- `constraints` (object, optional): machine-actionable per-resource
+
+`constraints`:
+: OPTIONAL. An object. Machine-actionable per-resource
   bounds (for example, `max_amount_usd`). A member name registered as a
   Common Constraint ({{common-constraints}}) has shared semantics
   across deployments; any other name is deployment-defined.
+
   - Because a `constraints` member narrows authority, a Resource Server
     that cannot enforce one MUST fail closed ({{rs-enforcement}}).
   - To avoid that failure mode, the AS SHOULD emit for a given
     `resource` only `constraints` keys that the Resource Server serving
     it is known (by registration or deployment policy) to understand
     and enforce.
-- `delegation` (object, optional): the delegation policy for this
+
+`delegation`:
+: OPTIONAL. An object. The delegation policy for this
   entry ({{delegation-constraints}}). When absent, this entry's
   authority is non-delegable: it MUST NOT appear in a delegated
   token. When present, it has these members:
-  - `max_depth` (integer, required): the maximum delegation depth at
+
+  `max_depth`:
+  : REQUIRED. An integer. The maximum delegation depth at
     which this entry's authority may be exercised
     ({{delegation-constraints}}).
-  - `allowed_delegates` (array of object, optional): the permitted
+
+  `allowed_delegates`:
+  : OPTIONAL. An array of objects. The permitted
     delegates, each a `may_act`-style matcher
     ({{delegation-constraints}}): `{ "sub": "<client_id>" }` for a
     specific delegate, or `{ "sub_profile": "<actor-type>" }` for an
@@ -1018,33 +1065,60 @@ A Mission is the durable record created at the approval event. It is
 immutable except for its `state` and is identified by a `mission_id`.
 It has the following members:
 
-- `mission_id` (string, required): the canonical Mission identifier
+`mission_id`:
+: REQUIRED. A string. The canonical Mission identifier
   ({{mission-id}}).
-- `origin` (string, required): the issuer URL of the Mission Issuer
+
+`origin`:
+: REQUIRED. A string. The issuer URL of the Mission Issuer
   that approved the Mission. Equals the `iss` of tokens that AS
   derives; for cross-domain tokens it remains the originating AS even
   though the issuing `iss` differs ({{cross-domain}}).
-- `state` (string, required): one of `active`, `revoked`, `expired`
+
+`state`:
+: REQUIRED. A string. One of `active`, `revoked`, `expired`
   ({{lifecycle}}).
-- `mission_intent` (object, required): the approved Mission Intent.
-- `authority_set` (array, required): the consented Authority Set.
-- `authority_hash` (string, required): the consent commitment over
+
+`mission_intent`:
+: REQUIRED. An object. The approved Mission Intent.
+
+`authority_set`:
+: REQUIRED. An array. The consented Authority Set.
+
+`authority_hash`:
+: REQUIRED. A string. The consent commitment over
   the Authority Set ({{integrity-anchors}}).
-- `proposal_hash` (string, required): the integrity commitment over
+
+`proposal_hash`:
+: REQUIRED. A string. The integrity commitment over
   the approved Mission Intent ({{integrity-anchors}}), making the
   recorded task tamper-evident.
-- `subject` (object, required): the Subject, an object with `iss` and
+
+`subject`:
+: REQUIRED. An object. The Subject, an object with `iss` and
   `sub`.
-- `approver` (object, required): the Approver,
+
+`approver`:
+: REQUIRED. An object. The Approver,
   an object with `iss` and `sub`. MAY equal `subject`.
-- `client_id` (string, required): the Agent (OAuth client) that
+
+`client_id`:
+: REQUIRED. A string. The Agent (OAuth client) that
   submitted the Mission Intent.
-- `policy_version` (string, required): the derivation policy version
+
+`policy_version`:
+: REQUIRED. A string. The derivation policy version
   in effect at the approval event.
-- `approval_event_id` (string, required): a unique identifier of the
+
+`approval_event_id`:
+: REQUIRED. A string. A unique identifier of the
   approval event, used as the approval idempotency key.
-- `created_at` (string, required): RFC 3339 timestamp of creation.
-- `mission_expiry` (string, required): mirrors
+
+`created_at`:
+: REQUIRED. A string. RFC 3339 timestamp of creation.
+
+`mission_expiry`:
+: REQUIRED. A string. Mirrors
   `mission_intent.mission_expiry`.
 
 ## `mission_id` Format {#mission-id}
@@ -1200,9 +1274,14 @@ at the `exp` of the cross-domain grant it was minted from
 
 The `mission` claim is a JSON object:
 
-- `id` (string, required): the Mission's `mission_id`.
-- `origin` (string, required): the AS issuer URL.
-- `authority_hash` (string, required): the Mission's
+`id`:
+: REQUIRED. A string. The Mission's `mission_id`.
+
+`origin`:
+: REQUIRED. A string. The AS issuer URL.
+
+`authority_hash`:
+: REQUIRED. A string. The Mission's
   `authority_hash`, binding the token to the consented authority.
 
 The `mission` claim is an open object ({{extensibility}}): additional

@@ -263,17 +263,28 @@ authenticated as that section requires.
 The `mission` member identifies the governance record and its current
 materialized view:
 
-- `id` (string, required): the Mission's `id`.
-- `origin` (string, required, URI): the Mission's `origin`.
-- `authority_hash` (string, required): the Authority Set integrity
+`id`:
+: REQUIRED. A string. the Mission's `id`.
+
+`origin`:
+: REQUIRED. A string containing a URI. the Mission's `origin`.
+
+`authority_hash`:
+: REQUIRED. A string. the Authority Set integrity
   anchor, in the integrity-anchor encoded form
   ({{I-D.draft-mcguinness-oauth-mission}}).
-- `state` (string, required): the current Mission lifecycle state the
+
+`state`:
+: REQUIRED. A string. the current Mission lifecycle state the
   PEP established from its Mission state source
   ({{Section 6.1 of I-D.draft-mcguinness-oauth-mission-runtime}}).
-- `policy_version` (string, required): the `policy_version` recorded at
+
+`policy_version`:
+: REQUIRED. A string. the `policy_version` recorded at
   the approval event.
-- `policy_view_id` (string, required): the materialized view
+
+`policy_view_id`:
+: REQUIRED. A string. the materialized view
   identifier ({{mission-to-policy-materialization}}).
 
 ## `context.actor`
@@ -283,9 +294,12 @@ delegation is in effect, reconstructed from the access token's `act`
 claim and the token's authenticated client identity per
 {{I-D.draft-mcguinness-oauth-mission}}:
 
-- `client_id` (string): the authenticated client identity.
-- a client-instance identifier when present.
-- `act` (object or array): the delegation chain, ordered root to leaf.
+`client_id`:
+: A string. the authenticated client identity, and a client-instance
+  identifier when present.
+
+`act`:
+: An object or array. the delegation chain, ordered root to leaf.
 
 The `actor` member carries the delegation chain only. Provenance beyond
 the delegation chain -- the tool a request invoked, a named workflow
@@ -300,11 +314,14 @@ When parameter binding is required for the requested action's class
 ({{Section 3 of I-D.draft-mcguinness-oauth-mission-runtime}}), the PEP
 supplies:
 
-- `parameters` (object, conditional): the action's parameters as a
+`parameters`:
+: CONDITIONAL. An object. the action's parameters as a
   JSON object. The shape is action-specific. The PEP MAY omit
   `parameters` and supply only `parameter_digest` where the raw values
   are sensitive ({{privacy-considerations}}).
-- `parameter_digest` (string, required for parameter-bound classes):
+
+`parameter_digest`:
+: REQUIRED for parameter-bound classes. A string.
   the `parameter_digest` defined by
   {{Section 7 of I-D.draft-mcguinness-oauth-mission-runtime}}. This
   profile carries that value on the wire; it does not define a second
@@ -315,18 +332,29 @@ supplies:
 
 ## `context.audience` and `context.freshness`
 
-- `audience` (string, required): the PEP's audience or
+`audience`:
+: REQUIRED. A string. the PEP's audience or
   protected-resource identifier.
-- `freshness` (object, required): the freshness of the Mission state
+
+`freshness`:
+: REQUIRED. An object. the freshness of the Mission state
   the PEP relied on, conveying the runtime profile's freshness inputs
   ({{Section 6.1 of I-D.draft-mcguinness-oauth-mission-runtime}}) on the
   wire. Members:
-  - `mission_status_issued_at` (RFC 3339 {{RFC3339}} timestamp)
-  - `mission_status_expires_at` (RFC 3339 timestamp)
-  - `mode` (string): one of `fresh`, `cached`, or `event_driven`
-    ({{mission-status-composition}})
-  - `freshness_at` (RFC 3339 timestamp): when the PEP's view of the
-    Mission state was current
+
+    `mission_status_issued_at`:
+    : An RFC 3339 {{RFC3339}} timestamp.
+
+    `mission_status_expires_at`:
+    : An RFC 3339 timestamp.
+
+    `mode`:
+    : A string. one of `fresh`, `cached`, or `event_driven`
+      ({{mission-status-composition}}).
+
+    `freshness_at`:
+    : An RFC 3339 timestamp. when the PEP's view of the
+      Mission state was current.
 
 The deployment's maximum staleness bound, and the rule that a
 consequential action MUST fail closed when the Mission cannot be
@@ -427,9 +455,12 @@ concrete object an AuthZEN deployment emits.
 
 ## Members
 
-- `decision_id` (string, required): unique decision identifier. ABNF:
+`decision_id`:
+: REQUIRED. A string. unique decision identifier. ABNF:
   `1*64( ALPHA / DIGIT / "-" / "_" )`. At least 128 bits of entropy.
-- `mission` (object, required): the PDP request's `context.mission`
+
+`mission`:
+: REQUIRED. An object. the PDP request's `context.mission`
   object (`id`, `origin`, `authority_hash`, and, when known,
   `policy_version` and `policy_view_id`), extended with `proposal_hash`
   and, when known, a consent-disclosure commitment, so the evidence
@@ -438,27 +469,58 @@ concrete object an AuthZEN deployment emits.
   These hashes are the issuing AS's commitments cited as anchors; the
   PDP does not recompute them ({{Section 10 of
   I-D.draft-mcguinness-oauth-mission-runtime}}).
-- `subject` (object, required), `resource` (object, required),
-  `action` (object, required), `audience` (string, required): PDP
-  inputs as supplied, after PDP-side normalization.
-- `actor` (object, optional), `parameter_digest` (string, optional):
-  PDP inputs as supplied, after PDP-side normalization.
-- `decision` (string, required): one of `permit` or `deny`.
-- `contributing_constraints` (array of string, required when the
-  decision turned on one or more authority or constraint entries): the
+
+`subject`:
+: REQUIRED. An object. PDP inputs as supplied, after PDP-side
+  normalization.
+
+`resource`:
+: REQUIRED. An object. PDP inputs as supplied, after PDP-side
+  normalization.
+
+`action`:
+: REQUIRED. An object. PDP inputs as supplied, after PDP-side
+  normalization.
+
+`audience`:
+: REQUIRED. A string. PDP inputs as supplied, after PDP-side
+  normalization.
+
+`actor`:
+: OPTIONAL. An object. PDP inputs as supplied, after PDP-side
+  normalization.
+
+`parameter_digest`:
+: OPTIONAL. A string. PDP inputs as supplied, after PDP-side
+  normalization.
+
+`decision`:
+: REQUIRED. A string. one of `permit` or `deny`.
+
+`contributing_constraints`:
+: REQUIRED when the decision turned on one or more authority or
+  constraint entries. An array of strings. the
   identifiers of the constraints the PDP evaluated (`constraints`
   keys, `authorization_details` entry types). For a permit this
   records what was checked; for a deny, what failed.
-- `sequence` (integer, required): the per-Mission sequence indicator
+
+`sequence`:
+: REQUIRED. An integer. the per-Mission sequence indicator
   the runtime profile requires ({{Section 10 of
   I-D.draft-mcguinness-oauth-mission-runtime}}), so the decision stream
   has a verifiable order and gaps are detectable. MUST be zero or
   greater.
-- `denial_reason` (string, conditional): present when `decision` is
+
+`denial_reason`:
+: CONDITIONAL. A string. present when `decision` is
   `deny`. A value from {{runtime-denial-classification}} or a
   `constraints` key.
-- `evaluated_at` (RFC 3339 {{RFC3339}} timestamp, required).
-- `evidence_envelope` (object, required): integrity protection
+
+`evaluated_at`:
+: REQUIRED. An RFC 3339 {{RFC3339}} timestamp.
+
+`evidence_envelope`:
+: REQUIRED. An object. integrity protection
   ({{decision-evidence-integrity}}), carrying a `format` (string,
   required) and a `value` (string, required).
 
@@ -552,27 +614,48 @@ linked to the Decision Evidence by `decision_id`.
 
 ## Members
 
-- `execution_id` (string, required): unique execution identifier.
+`execution_id`:
+: REQUIRED. A string. unique execution identifier.
   ABNF: `1*64( ALPHA / DIGIT / "-" / "_" )`. At least 128 bits of
   entropy.
-- `decision_id` (string, required): the linked Decision Evidence.
-- `mission_id` (string, required): the Mission `id`, mirrored from the
+
+`decision_id`:
+: REQUIRED. A string. the linked Decision Evidence.
+
+`mission_id`:
+: REQUIRED. A string. the Mission `id`, mirrored from the
   linked Decision Evidence for join-key convenience.
-- `parameter_digest` (string, conditional): MUST be present when the
+
+`parameter_digest`:
+: CONDITIONAL. A string. MUST be present when the
   linked Decision Evidence carries one, and MUST match it.
-- `outcome` (string, required): one of `attempted`, `completed`,
+
+`outcome`:
+: REQUIRED. A string. one of `attempted`, `completed`,
   `failed`, or `suppressed`. `suppressed` means the action was
   permitted but the executor chose not to attempt it (for example, a
   kill-switch or a secondary deny).
-- `outcome_at` (RFC 3339 {{RFC3339}} timestamp, required).
-- `error` (string, conditional): error identifier when `outcome` is
+
+`outcome_at`:
+: REQUIRED. An RFC 3339 {{RFC3339}} timestamp.
+
+`error`:
+: CONDITIONAL. A string. error identifier when `outcome` is
   `failed`.
-- `attempted_at`, `completed_at` (RFC 3339 timestamps, optional):
-  timing context.
-- `result_summary` (object, optional): minimal action result metadata
+
+`attempted_at`:
+: OPTIONAL. An RFC 3339 timestamp. timing context.
+
+`completed_at`:
+: OPTIONAL. An RFC 3339 timestamp. timing context.
+
+`result_summary`:
+: OPTIONAL. An object. minimal action result metadata
   (for example, affected resource counts). MUST NOT carry user-content
   payloads.
-- `evidence_envelope` (object, required): integrity protection in the
+
+`evidence_envelope`:
+: REQUIRED. An object. integrity protection in the
   same form as Decision Evidence ({{decision-evidence-integrity}}),
   carrying a `format` (string, required) and a `value` (string,
   required).
@@ -706,14 +789,21 @@ and presented by the executing component at request time, is:
 }
 ~~~
 
-- `tool_id` (string): a stable capability identifier the executing
+`tool_id`:
+: A string. a stable capability identifier the executing
   component asserts the action invokes.
-- `source_uri` (string): the discovery source the capability was
+
+`source_uri`:
+: A string. the discovery source the capability was
   resolved from.
-- `source_digest` (string): the integrity-anchor encoded form
+
+`source_digest`:
+: A string. the integrity-anchor encoded form
   ({{I-D.draft-mcguinness-oauth-mission}}) over the exact retrieved
   source representation, recorded at derivation time.
-- `operation_ref` (string): the source-format-specific operation
+
+`operation_ref`:
+: A string. the source-format-specific operation
   reference (MCP tool name, OpenAPI `operationId`, or equivalent).
 
 Rules:
