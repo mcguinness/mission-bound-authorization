@@ -100,7 +100,7 @@ Table of Contents
      4.1.  Subset Rule
      4.2.  Other Authorization Details Types
      4.3.  Modeling Tools and Function Calls
-   5.  The Approval Event
+   5.  Mission Approval
      5.1.  Binding the Mission to the Grant
      5.2.  Single Accountable Approver
      5.3.  Integrity Anchors
@@ -864,7 +864,7 @@ Table of Contents
    model of this document (Section 10.1, Section 4.1) rather than
    introduce a new entry type.
 
-5.  The Approval Event
+5.  Mission Approval
 
    The approval event is the atomic transition at which the Approver
    consents and the AS creates the Mission.  It runs as an OAuth 2.0
