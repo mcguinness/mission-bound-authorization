@@ -323,10 +323,21 @@ issuance surfaces:
 A **Mission-aware Resource Server** implements Resource Server
 enforcement ({{rs-enforcement}}).
 
-Delegation ({{delegation}}), token introspection ({{introspection}}),
-and cross-domain Missions ({{cross-domain}}) are OPTIONAL for either
-role; an implementation that does not support one of them is still
-conformant, and each section states its own optionality.
+Beyond these mandatory roles, this profile defines three OPTIONAL
+capabilities that an implementation MAY additionally claim. Each is
+independent, and an implementation that supports none of them is still
+conformant:
+
+- **Delegation** ({{delegation}}): issuing and consuming derived tokens
+  that carry the `act` delegation chain.
+- **Introspection** ({{introspection}}): reporting Mission state through
+  the `mission` token introspection response member.
+- **Cross-Domain** ({{cross-domain}}): issuing or honoring the
+  cross-domain grant so a Mission spans more than one AS.
+
+A conforming implementation names the optional capabilities it supports
+(for example, "Mission Issuer with Delegation and Cross-Domain"); each
+capability's own section states its detailed requirements.
 
 The `mission_bound_authorization_supported` metadata ({{discovery}})
 advertises Mission Issuer support only. It makes no assertion about any
@@ -1640,6 +1651,10 @@ narrow it out too. The `mission` claim is unchanged.
 
 # Cross-Domain Missions {#cross-domain}
 
+This section is OPTIONAL. The single-domain core is complete without
+it; a deployment whose Missions never leave their issuing AS is
+unaffected.
+
 A Mission is approved and held by one Mission Issuer (its `origin`).
 This section lets a single Mission be honored by Authorization
 Servers in other trust domains, so a Mission can span more than one
@@ -1945,12 +1960,17 @@ This profile commits the task (`proposal_hash`) and the authority
 (`authority_hash`) the Approver consented to, but deliberately does
 not commit the **rendered consent disclosure** itself: the locale,
 disclosure-template version, and material notices the Approver was
-shown are not bound by any anchor here. A deployment that needs
-presentation-level audit evidence (proof that a specific disclosure
-object was the one presented) needs a `consent_rendering_hash` over a
-structured consent disclosure object; defining that object and anchor
-is deferred to future work, and an AS MAY record it out of band in
-the meantime.
+shown are not bound by any anchor here. Because of this gap, a buggy or
+malicious rendering layer could mislead the Approver — showing a
+narrower or different task than the Authority Set actually committed —
+without leaving any committed trace. A deployment whose Missions carry
+high-risk authority SHOULD therefore record presentation-level audit
+evidence out of band: for example, a hash over the exact consent
+disclosure rendered to the Approver, retained so the disclosure shown
+can be reconstructed and audited after the fact. Binding this on the
+wire (a `consent_rendering_hash` over a structured consent-disclosure
+object) requires defining that object and anchor and is deferred to
+future work; an AS MAY record the evidence out of band in the meantime.
 
 ## Mission Drift
 
