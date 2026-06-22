@@ -1324,7 +1324,9 @@ leaves to this layer to enforce (<a href="#metering" class="auto internal xref">
 <p id="section-1-5">The model is a Policy Enforcement Point (PEP) at each consequential
 execution boundary that, before the action runs, obtains a decision
 from a Policy Decision Point (PDP) evaluating the action against the
-Mission. Issuance is governance; this is enforcement.<a href="#section-1-5" class="pilcrow">¶</a></p>
+Mission. Mission-bound tokens bound what authority may exist; this
+profile defines where and how that authority is re-checked before
+consequential effects occur.<a href="#section-1-5" class="pilcrow">¶</a></p>
 <div id="relationship">
 <section id="section-1.1">
         <h3 id="name-relationship-to-the-issuanc">
@@ -1613,6 +1615,13 @@ that action's class (<a href="#pep-placement" class="auto internal xref">Section
 <p id="section-3-4">A deployment policy can require human confirmation, step-up
 authentication, or another local signal for privileged administration
 or external commitments. This profile does not define such a signal.<a href="#section-3-4" class="pilcrow">¶</a></p>
+<p id="section-3-5">Consequential reads do not require parameter binding by default.
+However, a deployment <span class="bcp14">MUST</span> bind or digest read parameters when those
+parameters materially change the effective resource set or disclosure
+risk. Examples include export-like reads, bulk reads, cross-tenant or
+cross-account queries, privacy-sensitive filters, field selection that
+controls sensitive attributes, destination or delivery parameters, and
+aggregation choices that affect re-identification risk.<a href="#section-3-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="pep-placement">
@@ -1698,7 +1707,8 @@ a PDP that evaluates the action against the Mission the acting token
 is bound to. This is the normative contract. The decision API wire
 format is a deployment choice; <a href="#authzen" class="auto internal xref">Section 11</a> gives a non-normative
 example binding.<a href="#section-6-1" class="pilcrow">¶</a></p>
-<p id="section-6-2">The PEP <span class="bcp14">MUST</span> supply, and the PDP <span class="bcp14">MUST</span> evaluate:<a href="#section-6-2" class="pilcrow">¶</a></p>
+<p id="section-6-2">The PEP <span class="bcp14">MUST</span> supply the inputs the PDP needs for the Mission-bound
+decision. Runtime enforcement <span class="bcp14">MUST</span> evaluate:<a href="#section-6-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-6-3.1">
           <p id="section-6-3.1.1"><strong>Authority.</strong> The action <span class="bcp14">MUST</span> be authorized by an applicable
@@ -1716,13 +1726,15 @@ semantics. Richer capability-source binding (source digests,
 cross-format identity) is out of scope (<a href="#deferred" class="auto internal xref">Section 12</a>).<a href="#section-6-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-3.2">
-          <p id="section-6-3.2.1"><strong>Resource policy.</strong> The PDP <span class="bcp14">MUST</span> evaluate any applicable Resource
-policy. A Mission-bound token and runtime permit are an upper bound
-on authority, not a command for the Resource Server to perform the
-action. The PDP <span class="bcp14">MUST</span> refuse when Resource policy, object-level
-authorization, tenant configuration, legal holds, service invariants,
-or risk policy prohibit the action, even if the action is otherwise
-within the Mission authority.<a href="#section-6-3.2.1" class="pilcrow">¶</a></p>
+          <p id="section-6-3.2.1"><strong>Resource policy.</strong> The runtime decision <span class="bcp14">MUST</span> include any
+applicable Resource policy. A Mission-bound token and runtime permit
+are an upper bound on authority, not a command for the Resource
+Server to perform the action. Resource policy <span class="bcp14">MAY</span> be evaluated by
+the PDP, by the Resource Server or PEP as a composed local
+authorization step, or by both. The action <span class="bcp14">MUST</span> fail closed unless
+both Mission authority and Resource policy permit it. Resource
+policy includes object-level authorization, tenant configuration,
+legal holds, service invariants, and risk policy.<a href="#section-6-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-3.3">
           <p id="section-6-3.3.1"><strong>Parameters.</strong> Every machine-enforceable <code>constraints</code> value on the
@@ -1872,7 +1884,8 @@ insufficient.<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
 counter for the named <code>scope</code> and <span class="bcp14">MUST</span> refuse a call past <code>count</code>.<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.3">
-          <p id="section-8-2.3.1"><code>max_duration</code> (an RFC 3339 duration): the PDP tracks elapsed
+          <p id="section-8-2.3.1"><code>max_duration</code> (an ISO 8601 duration, e.g. <code>PT8H</code>; the <code>duration</code>
+rule in Appendix A of <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>): the PDP tracks elapsed
 wall-clock consequential activity since Mission activation and <span class="bcp14">MUST</span>
 refuse past the bound.<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
 </li>

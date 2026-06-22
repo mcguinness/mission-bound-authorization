@@ -516,10 +516,11 @@ Table of Contents
       gate authority.
 
    *  purpose (string, optional): a URI identifying the purpose of the
-      task, for policy and audit.  Its semantics are deployment- or
-      registry-defined and opaque to this document; like
+      task, recorded for disclosure and audit.  Its semantics are
+      deployment- or registry-defined and opaque to this document; like
       success_criteria it MUST NOT be used to derive, widen, or gate
-      authority.
+      authority.  A deployment MAY consult it for out-of-band policy or
+      logging that does not affect the authority derived here.
 
    *  mission_expiry (string, required): an RFC 3339 [RFC3339] date-time
       after which the Mission MUST NOT derive tokens.
@@ -551,10 +552,11 @@ Table of Contents
          (string, the named call class) and count (integer, 1 or
          greater).
 
-      -  max_duration (string, optional): an RFC 3339 [RFC3339] duration
-         bounding cumulative wall-clock consequential activity under the
-         Mission.  It is distinct from mission_expiry, which bounds
-         issuance rather than activity.
+      -  max_duration (string, optional): an ISO 8601 duration (for
+         example, PT8H), matching the duration rule in Appendix A of
+         [RFC3339], bounding cumulative wall-clock consequential
+         activity under the Mission.  It is distinct from
+         mission_expiry, which bounds issuance rather than activity.
 
       max_budget, max_calls, and max_duration are *consumption bounds*:
       a deployment names them here so issuance and the runtime layer
@@ -660,16 +662,31 @@ Table of Contents
    *  Record the policy version used for derivation as the Mission's
       policy_version.
 
+   The derived Authority Set, not the Mission Intent, is the authority
+   the Approver consents to: the AS renders the Authority Set for
+   approval and commits it as authority_hash (Section 5).  The Intent's
+   goal, constraints, and other members describe and bound the task but
+   grant no authority by themselves (Section 3); they constrain what the
+   AS MAY derive, never widen it.
+
    A mission_resource_access entry is a [RFC9396] authorization_details
    object with these members:
 
    *  type (string, required): mission_resource_access.
 
-   *  resource (string, required): the protected resource URI.  This is
-      a type-specific member of mission_resource_access, identifying the
-      single resource the entry applies to.  It is not the [RFC8707]
-      resource authorization-request parameter, nor the [RFC9396] common
-      locations field; an implementer MUST NOT treat it as either.
+   *  resource (string, required): the single protected resource the
+      entry applies to, an absolute URI identifying an OAuth protected
+      resource ([RFC8707]) or a Protected Resource ([RFC9728]).  It is
+      the same kind of identifier as the [RFC8707] resource value, and
+      the AS derives the token aud from the resource of each carried
+      entry.  It is carried here as a type-specific member of each
+      mission_resource_access entry, which [RFC9396] permits; carrying
+      it per entry (rather than once for the request, as the [RFC8707]
+      resource request parameter does) lets one token scope distinct
+      authority to distinct resources.  Per [RFC9396], the resource
+      request parameter does not affect how the AS processes
+      authorization_details, and this member is distinct from the
+      [RFC9396] common locations field.
 
    *  actions (array of string, required): permitted action identifiers,
       each matching [A-Za-z0-9_.:-]+.
