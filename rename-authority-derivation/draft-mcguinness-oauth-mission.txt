@@ -96,7 +96,7 @@ Table of Contents
      2.2.  Protocol Flow
    3.  Mission Intent
      3.1.  Submission via PAR
-   4.  Authority Derivation
+   4.  Mission Authority
      4.1.  Subset Rule
      4.2.  Other Authorization Details Types
      4.3.  Modeling Tools and Function Calls
@@ -105,7 +105,7 @@ Table of Contents
      5.2.  Single Accountable Approver
      5.3.  Integrity Anchors
      5.4.  Canonicalization Rules
-   6.  The Mission
+   6.  Mission Record
      6.1.  mission_id Format
      6.2.  Worked Example
    7.  Mission-Bound Access Tokens
@@ -643,7 +643,7 @@ Table of Contents
    Mission Intent (for example, a "Mission Shaper" that derives it from
    a natural-language instruction) is out of scope for this document.
 
-4.  Authority Derivation
+4.  Mission Authority
 
    From the Mission Intent, the AS derives the *Authority Set*: one or
    more [RFC9396] authorization_details entries of type
@@ -1046,7 +1046,7 @@ Table of Contents
       so resource and every other URI MUST match exactly (this governs
       the resource equality test of Section 4.1).
 
-6.  The Mission
+6.  Mission Record
 
    A Mission is the durable record created at the approval event.  It is
    immutable except for its state and is identified by a mission_id.  It
