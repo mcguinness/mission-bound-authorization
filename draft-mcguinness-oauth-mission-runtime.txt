@@ -277,9 +277,10 @@ Table of Contents
 
    The PEP first validates the token as described in Section 5.  On
    permit the PEP reverifies the parameter binding, then executes; on
-   deny it refuses.  The PDP evaluates the action against the Mission's
-   authority, the entry constraints, the actor chain, the Mission's
-   current state, and Resource policy, as defined in Section 6.
+   deny it refuses.  The runtime decision evaluates the action against
+   the Mission's authority, the entry constraints, the actor chain, the
+   Mission's current state, and Resource policy, as defined in
+   Section 6.
 
 3.  Action classification
 
@@ -511,6 +512,31 @@ Table of Contents
       per action class and state source.  This document does not impose
       one universal value.
 
+   The following non-normative guidance illustrates freshness bounds
+   that are likely to match the risk of common action classes:
+
+        +================+=======================================+
+        | Class          | Suggested freshness posture           |
+        +================+=======================================+
+        | Consequential  | Token lifetime or a short state       |
+        | read           | lease; tighter for privacy-sensitive, |
+        |                | cross-tenant, or bulk reads           |
+        +----------------+---------------------------------------+
+        | Consequential  | A short state lease, typically        |
+        | write          | measured in minutes                   |
+        +----------------+---------------------------------------+
+        | Irreversible   | Immediate check or single-use permit  |
+        | action         |                                       |
+        +----------------+---------------------------------------+
+        | External       | Immediate check or single-use permit  |
+        | commitment     |                                       |
+        +----------------+---------------------------------------+
+        | Privileged     | Immediate check, suitable for         |
+        | administration | composition with local step-up        |
+        +----------------+---------------------------------------+
+
+                                 Table 2
+
 7.  Parameter binding and time-of-check to time-of-use
 
    A permit for an operation does not authorize arbitrary parameter
@@ -546,9 +572,16 @@ Table of Contents
 
    This closes the time-of-check to time-of-use gap and prevents a
    permit from being replayed for a different request.  Consequential
-   reads do not require a parameter digest; the evaluation request still
-   appears in the evidence record, by digest where the parameters are
-   sensitive (Section 10).
+   reads do not require a parameter digest by default; the evaluation
+   request still appears in the evidence record, by digest where the
+   parameters are sensitive (Section 10).
+
+   Deployments MUST require parameter binding for consequential reads
+   when read parameters materially change the effective resource set or
+   disclosure risk.  Examples include export-like or bulk reads, cross-
+   tenant queries, privacy-sensitive filters, selected fields,
+   destinations, and aggregation level.  Ordinary reads that do not
+   change the resource set or disclosure risk can remain unbound.
 
 8.  Consumption metering
 
@@ -665,7 +698,7 @@ Table of Contents
       | Mission's authority        | scope)                         |
       +----------------------------+--------------------------------+
 
-                                  Table 2
+                                  Table 3
 
 10.  Runtime enforcement evidence
 

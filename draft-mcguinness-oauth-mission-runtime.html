@@ -1524,9 +1524,10 @@ Mission lifecycle state or the freshness of that state
 </div>
 <p id="section-2.2-2">The PEP first validates the token as described in <a href="#token-validation" class="auto internal xref">Section 5</a>.
 On permit the PEP reverifies the parameter binding, then executes; on
-deny it refuses. The PDP evaluates the action against the Mission's
-authority, the entry constraints, the actor chain, the Mission's
-current state, and Resource policy, as defined in <a href="#decision" class="auto internal xref">Section 6</a>.<a href="#section-2.2-2" class="pilcrow">¶</a></p>
+deny it refuses. The runtime decision evaluates the action against the
+Mission's authority, the entry constraints, the actor chain, the
+Mission's current state, and Resource policy, as defined in
+<a href="#decision" class="auto internal xref">Section 6</a>.<a href="#section-2.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1813,6 +1814,39 @@ action class and state source. This document does not impose one
 universal value.<a href="#section-6.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
+<p id="section-6.1-3">The following non-normative guidance illustrates freshness bounds that
+are likely to match the risk of common action classes:<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+<table class="center" id="table-2">
+          <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Class</th>
+              <th class="text-left" rowspan="1" colspan="1">Suggested freshness posture</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Consequential read</td>
+              <td class="text-left" rowspan="1" colspan="1">Token lifetime or a short state lease; tighter for privacy-sensitive, cross-tenant, or bulk reads</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Consequential write</td>
+              <td class="text-left" rowspan="1" colspan="1">A short state lease, typically measured in minutes</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Irreversible action</td>
+              <td class="text-left" rowspan="1" colspan="1">Immediate check or single-use permit</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">External commitment</td>
+              <td class="text-left" rowspan="1" colspan="1">Immediate check or single-use permit</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Privileged administration</td>
+              <td class="text-left" rowspan="1" colspan="1">Immediate check, suitable for composition with local step-up</td>
+            </tr>
+          </tbody>
+        </table>
 </section>
 </div>
 </section>
@@ -1858,9 +1892,15 @@ changed parameters.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
       </ul>
 <p id="section-7-3">This closes the time-of-check to time-of-use gap and prevents a permit
 from being replayed for a different request. Consequential reads do
-not require a parameter digest; the evaluation request still appears
-in the evidence record, by digest where the parameters are sensitive
-(<a href="#evidence" class="auto internal xref">Section 10</a>).<a href="#section-7-3" class="pilcrow">¶</a></p>
+not require a parameter digest by default; the evaluation request still
+appears in the evidence record, by digest where the parameters are
+sensitive (<a href="#evidence" class="auto internal xref">Section 10</a>).<a href="#section-7-3" class="pilcrow">¶</a></p>
+<p id="section-7-4">Deployments <span class="bcp14">MUST</span> require parameter binding for consequential reads when
+read parameters materially change the effective resource set or
+disclosure risk. Examples include export-like or bulk reads,
+cross-tenant queries, privacy-sensitive filters, selected fields,
+destinations, and aggregation level. Ordinary reads that do not change
+the resource set or disclosure risk can remain unbound.<a href="#section-7-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="metering">
@@ -1933,8 +1973,8 @@ committed before execution; it <span class="bcp14">MUST NOT</span> leave the dec
 <span class="bcp14">MUST</span> behave as follows; in all cases the evidence record
 (<a href="#evidence" class="auto internal xref">Section 10</a>) <span class="bcp14">MUST</span> be sufficient to reconstruct which path produced a
 refusal.<a href="#section-9-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-2">
-        <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<table class="center" id="table-3">
+        <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Condition</th>
