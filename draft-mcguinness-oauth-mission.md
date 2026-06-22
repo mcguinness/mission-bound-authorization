@@ -50,6 +50,7 @@ normative:
   I-D.draft-mcguinness-oauth-actor-profile:
 
 informative:
+  RFC8126:
   RFC6750:
   RFC7009:
   RFC8935:
@@ -606,8 +607,9 @@ A `mission_resource_access` entry is a {{RFC9396}}
 - `actions` (array of string, required): permitted action
   identifiers, each matching `[A-Za-z0-9_.:-]+`.
 - `constraints` (object, optional): machine-actionable per-resource
-  bounds (for example, `max_amount_usd`). Member semantics are
-  deployment- or registration-defined.
+  bounds (for example, `max_amount_usd`). A member name registered as a
+  Common Constraint ({{common-constraints}}) has shared semantics
+  across deployments; any other name is deployment-defined.
   - Because a `constraints` member narrows authority, a Resource Server
     that cannot enforce one MUST fail closed ({{rs-enforcement}}).
   - To avoid that failure mode, the AS SHOULD emit for a given
@@ -658,13 +660,52 @@ when:
 2. A.`actions` is a subset of B.`actions`.
 3. For every key K in **B**.`constraints`, K MUST also be present in
    A.`constraints`, and A's value MUST be no broader than B's under
-   the constraint's deployment-defined comparison. A key present in B
-   but absent from A is treated as the broadest possible value and
-   therefore fails this test. In short, constraints MUST NOT be
-   dropped, only added or tightened.
+   K's subset rule: the registered rule when K is a Common Constraint
+   ({{common-constraints}}), the deployment-defined comparison
+   otherwise. A key present in B but absent from A is treated as the
+   broadest possible value and therefore fails this test. In short,
+   constraints MUST NOT be dropped, only added or tightened.
 
 The AS MUST refuse to derive an entry that is not a subset of some
 Mission Authority Set entry.
+
+## Common Constraints {#common-constraints}
+
+A `constraints` member name ({{authorization-derivation}}) is either a
+registered **Common Constraint** or a deployment-defined key. Common
+Constraints give independently developed deployments one vocabulary
+they interpret, narrow, and compare identically; the "Mission Common
+Constraints" registry ({{iana-common-constraints}}) is the extension
+point.
+
+A registered Common Constraint defines:
+
+- **Value syntax**: the JSON {{RFC8259}} value type and any additional
+  rules.
+- **Subset rule**: how a candidate value is judged no broader than a
+  reference value, used by the subset comparison of {{subset}}.
+- **Intersection rule**: how two values for the same key combine; the
+  result MUST be no broader than either operand.
+
+A `constraints` member whose name is registered is interpreted per the
+registry. A member whose name is not registered remains
+deployment-defined and is interpreted only within the issuing
+deployment; a consumer that does not recognize it MUST fail closed
+({{rs-enforcement}}).
+
+This document registers the initial Common Constraints:
+
+- `max_amount_usd` (number): a per-action ceiling, in US dollars, on a
+  monetary amount. Subset: no broader when less than or equal to the
+  reference value. Intersection: the minimum of the two values.
+- `issued_after` (string, an RFC 3339 {{RFC3339}} date-time): the
+  action applies only to resources issued at or after this instant.
+  Subset: no broader when greater than or equal to the reference.
+  Intersection: the later instant.
+- `issued_before` (string, an RFC 3339 {{RFC3339}} date-time): the
+  action applies only to resources issued at or before this instant.
+  Subset: no broader when less than or equal to the reference.
+  Intersection: the earlier instant.
 
 ## Other Authorization Details Types {#other-types}
 
@@ -2152,6 +2193,27 @@ Server Metadata" registry ({{RFC8414}}):
   Server supports the Mission Issuer core surfaces of this document.
 - Change Controller: IETF
 - Reference: this document, {{discovery}}
+
+## Mission Common Constraints Registry {#iana-common-constraints}
+
+IANA is requested to create the "Mission Common Constraints" registry.
+The registration policy is Specification Required {{RFC8126}}. Each
+entry has:
+
+- Name: the `constraints` member name, matching `^[A-Za-z0-9_.:-]+$`.
+- Value syntax: the JSON {{RFC8259}} value type and any rules.
+- Subset rule: the narrowing semantics ({{common-constraints}}).
+- Intersection rule: how two values combine.
+- Change Controller.
+- Reference.
+
+The registry is seeded with the constraints defined in
+{{common-constraints}}; for each, Change Controller IETF and Reference
+this document:
+
+- `max_amount_usd`
+- `issued_after`
+- `issued_before`
 
 --- back
 
