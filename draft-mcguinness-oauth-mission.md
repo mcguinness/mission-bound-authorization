@@ -579,11 +579,19 @@ A `mission_resource_access` entry is a {{RFC9396}}
 `authorization_details` object with these members:
 
 - `type` (string, required): `mission_resource_access`.
-- `resource` (string, required): the protected resource URI. This is a
-  type-specific member of `mission_resource_access`, identifying the
-  single resource the entry applies to. It is not the {{RFC8707}}
-  `resource` authorization-request parameter, nor the {{RFC9396}}
-  common `locations` field; an implementer MUST NOT treat it as either.
+- `resource` (string, required): the single protected resource the
+  entry applies to, an absolute URI identifying an OAuth protected
+  resource ({{RFC8707}}) or a Protected Resource ({{RFC9728}}). It is
+  the same kind of identifier as the {{RFC8707}} `resource` value, and
+  the AS derives the token `aud` from the `resource` of each carried
+  entry. It is carried here as a type-specific member of each
+  `mission_resource_access` entry, which {{RFC9396}} permits; carrying
+  it per entry (rather than once for the request, as the {{RFC8707}}
+  `resource` request parameter does) lets one token scope distinct
+  authority to distinct resources. Per {{RFC9396}}, the `resource`
+  request parameter does not affect how the AS processes
+  `authorization_details`, and this member is distinct from the
+  {{RFC9396}} common `locations` field.
 - `actions` (array of string, required): permitted action
   identifiers, each matching `[A-Za-z0-9_.:-]+`.
 - `constraints` (object, optional): machine-actionable per-resource
