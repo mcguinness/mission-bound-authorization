@@ -449,11 +449,25 @@ in the evidence record, by digest where the parameters are sensitive
 
 # Consumption metering {#metering}
 
-Consumption bounds the Mission carries as constraints, such as a call
-count, a spend budget, or a duration, are enforced here, not at
-issuance. When an applicable entry (or the Mission's `context`)
-carries such a bound, the PDP MUST meter use against it and MUST
-refuse a consequential action that would exceed it.
+Consumption bounds the Mission carries are enforced here, not at
+issuance. The issuance profile ({{I-D.draft-mcguinness-oauth-mission}})
+defines three Mission-level consumption bounds in the Mission
+`context` that this layer meters:
+
+- `max_budget` (`{ amount, currency }`): the PDP performs an atomic
+  reserve-or-charge against the remaining balance for each
+  consequential action and MUST refuse when the remaining balance is
+  insufficient.
+- `max_calls` (`[ { scope, count } ]`): the PDP increments an atomic
+  counter for the named `scope` and MUST refuse a call past `count`.
+- `max_duration` (an RFC 3339 duration): the PDP tracks elapsed
+  wall-clock consequential activity since Mission activation and MUST
+  refuse past the bound.
+
+A per-entry `constraints` value that expresses a consumption bound is
+metered the same way. When an applicable entry or the Mission's
+`context` carries such a bound, the PDP MUST meter use against it and
+MUST refuse a consequential action that would exceed it.
 
 The exactness of a consumption bound depends on the decision
 topology, and this profile does not overpromise:
