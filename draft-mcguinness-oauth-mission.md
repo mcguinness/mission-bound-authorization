@@ -1651,6 +1651,10 @@ narrow it out too. The `mission` claim is unchanged.
 
 # Cross-Domain Missions {#cross-domain}
 
+This section is OPTIONAL. The single-domain core is complete without
+it; a deployment whose Missions never leave their issuing AS is
+unaffected.
+
 A Mission is approved and held by one Mission Issuer (its `origin`).
 This section lets a single Mission be honored by Authorization
 Servers in other trust domains, so a Mission can span more than one
