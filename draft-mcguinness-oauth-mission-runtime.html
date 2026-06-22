@@ -1856,39 +1856,59 @@ in the evidence record, by digest where the parameters are sensitive
       <h2 id="name-consumption-metering">
 <a href="#section-8" class="section-number selfRef">8. </a><a href="#name-consumption-metering" class="section-name selfRef">Consumption metering</a>
       </h2>
-<p id="section-8-1">Consumption bounds the Mission carries as constraints, such as a call
-count, a spend budget, or a duration, are enforced here, not at
-issuance. When an applicable entry (or the Mission's <code>context</code>)
-carries such a bound, the PDP <span class="bcp14">MUST</span> meter use against it and <span class="bcp14">MUST</span>
-refuse a consequential action that would exceed it.<a href="#section-8-1" class="pilcrow">¶</a></p>
-<p id="section-8-2">The exactness of a consumption bound depends on the decision
-topology, and this profile does not overpromise:<a href="#section-8-2" class="pilcrow">¶</a></p>
+<p id="section-8-1">Consumption bounds the Mission carries are enforced here, not at
+issuance. The issuance profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>)
+defines three Mission-level consumption bounds in the Mission
+<code>context</code> that this layer meters:<a href="#section-8-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-8-3.1">
-          <p id="section-8-3.1.1">Under a <strong>single serializing PDP</strong> for the Mission, the check and
-decrement can be atomic, and the bound is exact.<a href="#section-8-3.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-8-2.1">
+          <p id="section-8-2.1.1"><code>max_budget</code> (<code>{ amount, currency }</code>): the PDP performs an atomic
+reserve-or-charge against the remaining balance for each
+consequential action and <span class="bcp14">MUST</span> refuse when the remaining balance is
+insufficient.<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-8-3.2">
-          <p id="section-8-3.2.1">Under <strong>multiple or distributed PDPs</strong> (for example, Resource
+        <li class="normal" id="section-8-2.2">
+          <p id="section-8-2.2.1"><code>max_calls</code> (<code>[ { scope, count } ]</code>): the PDP increments an atomic
+counter for the named <code>scope</code> and <span class="bcp14">MUST</span> refuse a call past <code>count</code>.<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.3">
+          <p id="section-8-2.3.1"><code>max_duration</code> (an RFC 3339 duration): the PDP tracks elapsed
+wall-clock consequential activity since Mission activation and <span class="bcp14">MUST</span>
+refuse past the bound.<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-8-3">A per-entry <code>constraints</code> value that expresses a consumption bound is
+metered the same way. When an applicable entry or the Mission's
+<code>context</code> carries such a bound, the PDP <span class="bcp14">MUST</span> meter use against it and
+<span class="bcp14">MUST</span> refuse a consequential action that would exceed it.<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">The exactness of a consumption bound depends on the decision
+topology, and this profile does not overpromise:<a href="#section-8-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8-5.1">
+          <p id="section-8-5.1.1">Under a <strong>single serializing PDP</strong> for the Mission, the check and
+decrement can be atomic, and the bound is exact.<a href="#section-8-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-5.2">
+          <p id="section-8-5.2.1">Under <strong>multiple or distributed PDPs</strong> (for example, Resource
 Server-hosted PDPs), an exact global counter is a distributed-counting
 problem. Such a deployment <span class="bcp14">MUST</span> publish the consistency bound it
 operates under (for example, per-PDP sub-budgets, or a bounded
 reconciliation window), and the effective guarantee is that bound,
-not exact-to-the-call enforcement.<a href="#section-8-3.2.1" class="pilcrow">¶</a></p>
+not exact-to-the-call enforcement.<a href="#section-8-5.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-8-4">A deployment <span class="bcp14">MUST NOT</span> advertise exact consumption enforcement it
+<p id="section-8-6">A deployment <span class="bcp14">MUST NOT</span> advertise exact consumption enforcement it
 cannot meet under its chosen topology. As with all constraints, an
 unmetered or unrecognized consumption bound <span class="bcp14">MUST</span> cause refusal rather
-than silent pass-through.<a href="#section-8-4" class="pilcrow">¶</a></p>
-<p id="section-8-5">For a metered permit, the PDP and PEP <span class="bcp14">MUST</span> define retry and idempotency
+than silent pass-through.<a href="#section-8-6" class="pilcrow">¶</a></p>
+<p id="section-8-7">For a metered permit, the PDP and PEP <span class="bcp14">MUST</span> define retry and idempotency
 behavior. A retry of the same normalized action under the same
 idempotency key or single-use decision identifier <span class="bcp14">MUST NOT</span> consume the
 bound twice. Reuse of an idempotency key or decision identifier for a
 different normalized action <span class="bcp14">MUST</span> cause refusal. For irreversible
 actions and external commitments, a deployment <span class="bcp14">MUST</span> define whether
 metering is reserved before execution and committed after success, or
-committed before execution; it <span class="bcp14">MUST NOT</span> leave the decrement ambiguous.<a href="#section-8-5" class="pilcrow">¶</a></p>
+committed before execution; it <span class="bcp14">MUST NOT</span> leave the decrement ambiguous.<a href="#section-8-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="failure-modes">
