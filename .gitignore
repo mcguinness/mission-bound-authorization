@@ -19,6 +19,7 @@
 Gemfile.lock
 archive.json
 draft-mcguinness-oauth-mission.xml
+draft-mcguinness-oauth-mission-runtime.xml
 package-lock.json
 report.xml
 !requirements.txt
