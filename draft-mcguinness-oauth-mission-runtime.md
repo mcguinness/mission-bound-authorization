@@ -236,9 +236,10 @@ Mission-bound token:
 
 The PEP first validates the token as described in {{token-validation}}.
 On permit the PEP reverifies the parameter binding, then executes; on
-deny it refuses. The PDP evaluates the action against the Mission's
-authority, the entry constraints, the actor chain, the Mission's
-current state, and Resource policy, as defined in {{decision}}.
+deny it refuses. The runtime decision evaluates the action against the
+Mission's authority, the entry constraints, the actor chain, the
+Mission's current state, and Resource policy, as defined in
+{{decision}}.
 
 # Action classification {#classification}
 
@@ -426,6 +427,17 @@ whose lifetime is the deployment's accepted state lease.
   action class and state source. This document does not impose one
   universal value.
 
+The following non-normative guidance illustrates freshness bounds that
+are likely to match the risk of common action classes:
+
+| Class | Suggested freshness posture |
+|---|---|
+| Consequential read | Token lifetime or a short state lease; tighter for privacy-sensitive, cross-tenant, or bulk reads |
+| Consequential write | A short state lease, typically measured in minutes |
+| Irreversible action | Immediate check or single-use permit |
+| External commitment | Immediate check or single-use permit |
+| Privileged administration | Immediate check, suitable for composition with local step-up |
+
 # Parameter binding and time-of-check to time-of-use {#parameter-binding}
 
 A permit for an operation does not authorize arbitrary parameter
@@ -456,9 +468,16 @@ that digest immediately before acting.
 
 This closes the time-of-check to time-of-use gap and prevents a permit
 from being replayed for a different request. Consequential reads do
-not require a parameter digest; the evaluation request still appears
-in the evidence record, by digest where the parameters are sensitive
-({{evidence}}).
+not require a parameter digest by default; the evaluation request still
+appears in the evidence record, by digest where the parameters are
+sensitive ({{evidence}}).
+
+Deployments MUST require parameter binding for consequential reads when
+read parameters materially change the effective resource set or
+disclosure risk. Examples include export-like or bulk reads,
+cross-tenant queries, privacy-sensitive filters, selected fields,
+destinations, and aggregation level. Ordinary reads that do not change
+the resource set or disclosure risk can remain unbound.
 
 # Consumption metering {#metering}
 
