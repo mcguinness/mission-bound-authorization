@@ -432,10 +432,11 @@ following members:
   but carry no machine semantics and MUST NOT be used to derive,
   widen, or gate authority.
 - `purpose` (string, optional): a URI identifying the purpose of the
-  task, for policy and audit. Its semantics are deployment- or
-  registry-defined and opaque to this document; like
+  task, recorded for disclosure and audit. Its semantics are
+  deployment- or registry-defined and opaque to this document; like
   `success_criteria` it MUST NOT be used to derive, widen, or gate
-  authority.
+  authority. A deployment MAY consult it for out-of-band policy or
+  logging that does not affect the authority derived here.
 - `mission_expiry` (string, required): an RFC 3339 {{RFC3339}}
   date-time after which the Mission MUST NOT derive tokens.
 - `context` (object, optional): machine-actionable bounds. This
@@ -458,10 +459,11 @@ following members:
   - `max_calls` (array of object, optional): hard caps on the count of
     consequential call events, each an object with `scope` (string, the
     named call class) and `count` (integer, 1 or greater).
-  - `max_duration` (string, optional): an RFC 3339 {{RFC3339}} duration
-    bounding cumulative wall-clock consequential activity under the
-    Mission. It is distinct from `mission_expiry`, which bounds
-    issuance rather than activity.
+  - `max_duration` (string, optional): an ISO 8601 duration (for
+    example, `PT8H`), matching the `duration` rule in Appendix A of
+    {{RFC3339}}, bounding cumulative wall-clock consequential activity
+    under the Mission. It is distinct from `mission_expiry`, which
+    bounds issuance rather than activity.
 
   `max_budget`, `max_calls`, and `max_duration` are **consumption
   bounds**: a deployment names them here so issuance and the runtime
@@ -565,6 +567,13 @@ more {{RFC9396}} `authorization_details` entries of type
   derive authority not supported by the Intent.
 - Record the policy version used for derivation as the Mission's
   `policy_version`.
+
+The derived Authority Set, not the Mission Intent, is the authority the
+Approver consents to: the AS renders the Authority Set for approval and
+commits it as `authority_hash` ({{approval-event}}). The Intent's
+`goal`, `constraints`, and other members describe and bound the task
+but grant no authority by themselves ({{mission-intent}}); they
+constrain what the AS MAY derive, never widen it.
 
 A `mission_resource_access` entry is a {{RFC9396}}
 `authorization_details` object with these members:

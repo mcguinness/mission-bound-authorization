@@ -107,7 +107,9 @@ leaves to this layer to enforce ({{metering}}).
 The model is a Policy Enforcement Point (PEP) at each consequential
 execution boundary that, before the action runs, obtains a decision
 from a Policy Decision Point (PDP) evaluating the action against the
-Mission. Issuance is governance; this is enforcement.
+Mission. Mission-bound tokens bound what authority may exist; this
+profile defines where and how that authority is re-checked before
+consequential effects occur.
 
 ## Relationship to the issuance profile {#relationship}
 
@@ -268,6 +270,14 @@ A deployment policy can require human confirmation, step-up
 authentication, or another local signal for privileged administration
 or external commitments. This profile does not define such a signal.
 
+Consequential reads do not require parameter binding by default.
+However, a deployment MUST bind or digest read parameters when those
+parameters materially change the effective resource set or disclosure
+risk. Examples include export-like reads, bulk reads, cross-tenant or
+cross-account queries, privacy-sensitive filters, field selection that
+controls sensitive attributes, destination or delivery parameters, and
+aggregation choices that affect re-identification risk.
+
 # PEP placement {#pep-placement}
 
 Enforcement only works at the component that can actually stop the
@@ -333,7 +343,8 @@ is bound to. This is the normative contract. The decision API wire
 format is a deployment choice; {{authzen}} gives a non-normative
 example binding.
 
-The PEP MUST supply, and the PDP MUST evaluate:
+The PEP MUST supply the inputs the PDP needs for the Mission-bound
+decision. Runtime enforcement MUST evaluate:
 
 - **Authority.** The action MUST be authorized by an applicable
   `authorization_details` entry in the token. For an entry of type
@@ -348,13 +359,15 @@ The PEP MUST supply, and the PDP MUST evaluate:
   and MUST refuse if it does not understand or cannot enforce those
   semantics. Richer capability-source binding (source digests,
   cross-format identity) is out of scope ({{deferred}}).
-- **Resource policy.** The PDP MUST evaluate any applicable Resource
-  policy. A Mission-bound token and runtime permit are an upper bound
-  on authority, not a command for the Resource Server to perform the
-  action. The PDP MUST refuse when Resource policy, object-level
-  authorization, tenant configuration, legal holds, service invariants,
-  or risk policy prohibit the action, even if the action is otherwise
-  within the Mission authority.
+- **Resource policy.** The runtime decision MUST include any
+  applicable Resource policy. A Mission-bound token and runtime permit
+  are an upper bound on authority, not a command for the Resource
+  Server to perform the action. Resource policy MAY be evaluated by
+  the PDP, by the Resource Server or PEP as a composed local
+  authorization step, or by both. The action MUST fail closed unless
+  both Mission authority and Resource policy permit it. Resource
+  policy includes object-level authorization, tenant configuration,
+  legal holds, service invariants, and risk policy.
 - **Parameters.** Every machine-enforceable `constraints` value on the
   applicable entry MUST be evaluated against the concrete action
   parameters. A constraint the PDP does not understand or cannot meter
@@ -460,7 +473,8 @@ defines three Mission-level consumption bounds in the Mission
   insufficient.
 - `max_calls` (`[ { scope, count } ]`): the PDP increments an atomic
   counter for the named `scope` and MUST refuse a call past `count`.
-- `max_duration` (an RFC 3339 duration): the PDP tracks elapsed
+- `max_duration` (an ISO 8601 duration, e.g. `PT8H`; the `duration`
+  rule in Appendix A of {{RFC3339}}): the PDP tracks elapsed
   wall-clock consequential activity since Mission activation and MUST
   refuse past the bound.
 
