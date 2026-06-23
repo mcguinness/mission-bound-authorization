@@ -539,8 +539,7 @@ mission=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 ~~~
 
 Revoke success response: the AS returns the updated status as a signed
-Mission Status Response ({{mission-status-response}}), with a
-`lifecycle_event` member recording the transition:
+Mission Status Response ({{mission-status-response}}):
 
 ~~~ http-message
 HTTP/1.1 200 OK
@@ -565,12 +564,6 @@ Decoded JWS payload:
     "origin": "https://as.example.com"
   },
   "state": "revoked",
-  "lifecycle_event": {
-    "operation": "revoke",
-    "at":        "2026-11-02T09:06:40Z",
-    "actor":     "user_3p2q8mN1a0kV7tR",
-    "reason":    "Quarterly reconcile completed early"
-  },
   "authority_hash":
     "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
   "policy_version": "deploy-policy:v17",
@@ -581,9 +574,9 @@ Decoded JWS payload:
 }
 ~~~
 
-The `lifecycle_event` member records the transition; it appears only
-on a Mission Status Response returned from this endpoint. The
-`version` increments on each AS-recorded state change.
+The AS records the operation, actor, time, and any `reason` in its
+audit log; the response confirms the outcome through `state` and the
+incremented `version`, which advances on each AS-recorded state change.
 
 ## Idempotency
 
