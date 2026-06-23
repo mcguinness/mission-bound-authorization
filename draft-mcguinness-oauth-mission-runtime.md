@@ -316,6 +316,20 @@ deployment SHOULD adopt, and a floor it MUST observe.
 | External commitment | signing, accepting terms for the user | MUST | MUST, with TOCTOU reverification and evidence |
 | Privileged administration | granting access, changing policy | MUST | MUST, with TOCTOU and evidence |
 
+The per-class requirements in the table -- the PDP gate and parameter
+binding -- are requirements for an action **once it is assigned to that
+class**. Assigning an action to a class is deployment policy, bounded
+by the floor below and by any Resource-policy minimum
+({{decision}}): the profile does not require every read to reach a PDP.
+A read that is already fully constrained by the token's audience,
+resource, and the Resource Server's object-level authorization, and
+that does not materially affect the resource set or disclosure risk,
+need not be classified a consequential read, and is then not
+separately PDP-gated by this profile. A deployment MUST NOT, however,
+use classification to evade the floor or a Resource-policy minimum, and
+once an action is a consequential write or higher it MUST be gated and
+bound as the table requires.
+
 **Classification floor.** Actions in the **irreversible**, **external
 commitment**, and **privileged administration** classes MUST be
 treated as consequential and gated. A Mission's `purpose`, or
