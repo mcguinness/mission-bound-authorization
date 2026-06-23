@@ -49,17 +49,6 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-status-latest
-
-informative:
-  I-D.draft-mcguinness-oauth-mission-harness:
-    title: "Mission-Aware Agent Harnesses for OAuth 2.0"
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-harness-latest
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     author:
@@ -69,6 +58,18 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
+
+informative:
+  RFC8126:
+  I-D.draft-mcguinness-oauth-mission-harness:
+    title: "Mission-Aware Agent Harnesses for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-harness-latest
 
 --- abstract
 
@@ -102,6 +103,43 @@ identifier and actor identity, but it cannot outlive, out-broaden, or
 escape the parent. The child is created through an explicit
 authorization step, not by inheriting a parent harness session.
 
+# Status: An OPTIONAL Extension {#optional-status}
+
+This document is OPTIONAL. It is a layered extension to the issuance
+profile, not a change to it. A deployment that implements
+{{I-D.draft-mcguinness-oauth-mission}} and never creates a Child
+Mission is fully conformant to that profile and is unaffected by this
+document: it accepts no `parent` or `parent_token` parameter, records
+no `parent` member, and applies no cascade revocation. The issuance
+profile's delegated-token mechanism is complete without Child Missions;
+the child machinery defined here is relevant only when a deployment
+creates Missions for sub-agents.
+
+A Mission Issuer claims conformance to this document only when it
+creates Child Missions ({{conformance}}); otherwise it remains a plain
+issuance-profile Mission Issuer. Nothing here places a new requirement
+back on the issuance profile.
+
+# Relationship to the Issuance Profile {#issuance-relationship}
+
+This document depends normatively on the issuance profile and is not
+implementable alone. It reuses, without restating, that profile's
+Mission Intent, submission via PAR, authority derivation, approval
+event with its integrity anchors, Mission record, the `mission` claim,
+the strict-subset rule, and the lifecycle and issuance gating. It uses
+the terms Agent (Client), Subject, Approver, Mission Issuer, Mission
+Intent, Authority Set, Mission, and derived token as defined there.
+
+A Child Mission is an ordinary Mission under the issuance profile with
+two additions: it is created under a parent grant rather than a
+first-party approval, and its record and tokens carry the `parent`
+member ({{parent-member}}). The child's own `authority_hash` remains
+the authority commitment for its tokens; the `parent` member is lineage
+and audit data only.
+
+Where this document refers to "the issuance profile" without a section,
+it means {{I-D.draft-mcguinness-oauth-mission}} as a whole.
+
 # Scope
 
 This document defines:
@@ -130,6 +168,27 @@ job, independent harness session, or separate audit lifecycle.
 
 A Child Mission is not a way to widen authority. It is a way to create
 a narrower, separately accountable authority record for a child actor.
+
+## Child Delegation Versus Act-Chain Delegation {#child-vs-act}
+
+This profile's child delegation is distinct from the in-Mission
+delegation the issuance profile already defines. In-Mission delegation
+extends a single Mission's `act` chain to additional actors, bounded by
+the per-entry `delegation` policy (`allowed_delegates`, `max_depth`) of
+{{I-D.draft-mcguinness-oauth-mission}}; no new Mission is created and
+authority is exercised under the original Mission. Child delegation, by
+contrast, creates a separate Child Mission with its own `mission_id`,
+actor, lifecycle, and `act` chain.
+
+Where this profile reuses the parent entry's `delegation` policy, it
+does so only to decide whether child creation is permitted and which
+`child_actor` is eligible: the parent entry's `delegation` member MUST
+explicitly permit child delegation, and `allowed_delegates` constrains
+the `child_actor` the parent may name. The issuance profile's `act`
+`max_depth` bounds act-chain nesting within a Mission and is not a
+child-generation counter; a Child Mission's own `act` chain restarts at
+depth 0. Child-generation depth and breadth are governed instead by the
+fan-out controls of {{fanout}}.
 
 # Conventions and Terminology {#conventions}
 
@@ -258,8 +317,14 @@ This profile defines these symbolic denial reasons:
 `policy_denied`:
 : Deployment policy denied child creation.
 
-These strings are for error bodies, evidence, and audit. They do not
-define OAuth error codes.
+These symbolic strings appear in error bodies, evidence, and audit,
+layered on the OAuth error codes the issuance profile uses:
+`parent_not_active` and `parent_mismatch` accompany `invalid_grant`;
+`delegation_not_permitted`, `child_actor_not_allowed`,
+`not_strict_subset`, and `fanout_exceeded` accompany `invalid_request`;
+and `policy_denied` accompanies `access_denied`. A child creation
+request presented on the front channel with `parent_token` MUST be
+rejected with `invalid_request` ({{child-creation}}).
 
 # The `parent` Member {#parent-member}
 
@@ -324,15 +389,19 @@ result. The `parent` value is immutable after creation.
 
 # Attenuation Rules {#attenuation}
 
-A Child Mission MUST be strictly bounded by the Parent Mission:
+A Child Mission MUST be bounded by the Parent Mission:
 
-- every child Authority Set entry MUST be a subset of a parent entry;
+- every child Authority Set entry MUST be a subset of a parent entry
+  under the subset rule of {{I-D.draft-mcguinness-oauth-mission}};
 - the child MUST NOT include a resource, action, constraint relaxation,
   or delegation right not present in the parent;
 - the child's `mission_expiry` MUST NOT be later than the parent's
-  `mission_expiry`;
-- child delegation depth MUST be lower than the remaining parent
-  delegation depth;
+  `mission_expiry` (so it transitively caps every child-derived token's
+  `exp`, per {{I-D.draft-mcguinness-oauth-mission}});
+- the child MUST be created only where the applicable parent entry's
+  `delegation` policy permits child delegation ({{child-vs-act}}), and
+  any delegation policy on a child entry MUST be strictly narrower than
+  the parent entry's;
 - non-delegable parent entries MUST NOT appear in child authority; and
 - child authority MUST be bound to the child actor identified in the
   request.
@@ -342,22 +411,21 @@ over the child Authority Set, not over the parent Authority Set. A
 Resource Server enforces child tokens exactly as Mission-bound tokens:
 the child `authority_hash` is the immediate authority commitment.
 
-## Strict Subset Evaluation {#strict-subset}
+## Subset Evaluation {#strict-subset}
 
-Strict subset means:
+The child Authority Set subset test is the subset rule of
+{{I-D.draft-mcguinness-oauth-mission}}, applied between each child entry
+and a parent entry: every child resource equal to or narrower than a
+parent resource; every child action a subset of (or deployment-defined
+as narrower than) a parent action; every child constraint equal to or
+stricter than the corresponding parent constraint; and no parent
+constraint removed unless the constrained authority is also removed.
+This profile adds one strict requirement specific to child delegation:
+a child entry's delegation policy MUST be strictly narrower than the
+parent entry's (lower `max_depth`, no broader `allowed_delegates`).
 
-- every child resource is equal to or narrower than a parent resource;
-- every child action is present in, or deployment-defined as narrower
-  than, a parent action;
-- every child constraint is equal to or stricter than the corresponding
-  parent constraint;
-- no parent constraint is removed unless the constrained authority is
-  also removed; and
-- the child delegation rights are strictly less than the remaining
-  parent delegation rights.
-
-If the Mission Issuer cannot prove subset for an entry, it MUST refuse
-child creation with `not_strict_subset`.
+If the Mission Issuer cannot prove the child Authority Set is a subset
+of the parent, it MUST refuse child creation with `not_strict_subset`.
 
 # Fan-Out Controls {#fanout}
 
@@ -395,9 +463,15 @@ limit.
 # Cascade Revocation {#cascade}
 
 A Child Mission depends on the Parent Mission. When the Parent Mission
-becomes non-active (`revoked`, `expired`, `suspended`, `completed`, or
-`superseded`), the Mission Issuer MUST prevent new derivation under
-dependent Child Missions.
+becomes non-active (`revoked` or `expired`
+({{I-D.draft-mcguinness-oauth-mission}}); `suspended` or `completed`
+({{I-D.draft-mcguinness-oauth-mission-status}})), the Mission Issuer
+MUST prevent new derivation under dependent Child Missions. The
+`superseded` state ({{I-D.draft-mcguinness-oauth-mission-expansion}}) is
+treated specially: rather than cascade-revoking the children, the
+Mission Issuer SHOULD re-bind dependent Child Missions to the successor
+Mission, or apply deployment policy, since under expansion the task
+continues under the successor.
 
 The Mission Issuer MUST implement one of these cascade modes and record
 it on the Child Mission:
@@ -458,7 +532,7 @@ This evidence is audit material and does not grant authority.
 
 ## Child Evidence Object {#child-evidence-object}
 
-A Child Evidence object has:
+A Child Evidence object is a JSON object {{RFC8259}} with:
 
 `evidence_id`:
 : REQUIRED. Unique identifier.
@@ -603,9 +677,39 @@ restrict child delegation evidence to authorized audit consumers.
 
 # IANA Considerations {#iana}
 
-This document makes no IANA request. It defines the `parent` member of
-the open Mission claim object by profile, without registering a new JWT
-claim.
+This document registers three parameters in the "OAuth Parameters"
+registry. For each: Parameter Usage Location authorization request;
+Change Controller IETF; Reference this document, {{child-creation}}.
+
+- `parent`
+- `parent_token`
+- `child_actor`
+
+As with `mission_intent` in the issuance profile, PAR {{RFC9126}}
+carries authorization-request parameters without a distinct usage
+location, so the pushed submission of these parameters needs no
+separate registration. `parent_token` carries a refresh token or other
+parent grant and MUST be submitted only through PAR on the
+authenticated back channel, never on a front-channel authorization
+request ({{child-creation}}).
+
+Consistent with the issuance profile, which registers the `mission`
+claim as an open object with no registry of its members, this document
+defines the `parent` member of the `mission` claim
+({{parent-member}}) without a separate claim registration: it is a
+member defined by this profile, carried inside the already-registered
+`mission` claim.
+
+This document defines one closed set of symbolic codes: the child
+creation denial reasons ({{denial-reasons}}). Like the issuance
+profile's restraint with `mission` members, these are documented in
+this specification rather than placed in a new IANA registry: they are
+conveyed inside existing OAuth error responses and evidence at
+deployment-defined locations, not on a new wire surface, and the closed
+set is small and fully specified here. Should interoperable extension
+prove necessary, a future revision can create a "Mission Child
+Delegation Denial Reason" registry with a Specification Required
+{{RFC8126}} policy; this document does not create it.
 
 --- back
 
