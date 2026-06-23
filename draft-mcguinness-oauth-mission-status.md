@@ -58,10 +58,10 @@ The Mission-Bound Authorization for OAuth 2.0 profile
 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") binds
 issued authority to a durable, human-approved Mission and gates
 issuance on Mission state, but it observes Mission state only through
-token lifetime and optional by-token introspection. This document
+token lifetime and optional token introspection. This document
 defines the Mission state-management surfaces it defers: a canonical
-by-`mission_id` Mission Status operation, a management endpoint for
-explicit lifecycle transitions (`revoke`, `suspend`, `resume`,
+Mission Status operation (keyed by `mission_id`), a management
+endpoint for explicit lifecycle transitions (`revoke`, `suspend`, `resume`,
 `complete`), graduated revocation-enforcement classes, and signed
 status evidence. Each capability is independently optional; an
 implementation MAY adopt any subset, and one that adopts none remains
@@ -77,18 +77,18 @@ Mission a first-class OAuth artifact: a structured, human-approved,
 integrity-bound task whose authority bounds and outlives every token
 an agent derives. It is, by design, a minimum-viable issuance layer.
 It gates derivation on Mission state, carries the `mission` claim on
-every derived token, and offers only OPTIONAL by-token introspection
+every derived token, and offers only OPTIONAL token introspection
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission State via
 Token Introspection") as a way for a Resource Server to observe
-Mission state. It explicitly leaves the canonical by-`mission_id`
-Mission Status surface, a standardized management endpoint for
-lifecycle transitions, signed status evidence, and graduated
+Mission state. It explicitly leaves the canonical Mission Status
+surface (keyed by `mission_id`), a standardized management endpoint
+for lifecycle transitions, signed status evidence, and graduated
 revocation enforcement to future work.
 
 This document specifies those deferred surfaces as OPTIONAL extensions
 that build on the issuance profile. The capabilities are:
 
-- A dedicated by-`mission_id` **Mission Status operation**
+- A dedicated **Mission Status operation**
   ({{mission-status}}), which any consumer holding a `mission_id`
   resolves, with responses signed as a JWS {{RFC7515}}.
 - An extension to OAuth token introspection that carries a Mission
@@ -142,14 +142,14 @@ JWS Compact Serialization {{RFC7515}} applies.
 # Mission Status Operation {#mission-status}
 
 This section is OPTIONAL. The issuance profile's stateless baseline
-needs no by-`mission_id` status surface
+needs no dedicated status surface
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Lifecycle and
 Gating"); a deployment that does not stand up this operation, and a
 consumer that does not use it, are unaffected.
 
-The dedicated Mission Status operation is the canonical
-by-`mission_id` surface the issuance profile defers. Unlike by-token
-introspection ({{introspection-projection}}), which answers "is this
+The dedicated Mission Status operation is the canonical status surface
+the issuance profile defers. Unlike token introspection
+({{introspection-projection}}), which answers "is this
 token's authorization still good," the Status operation answers "what
 is the state of this Mission" keyed by the `mission_id` alone. Any
 consumer holding a `mission_id` -- including an auditor or a
@@ -224,7 +224,7 @@ carries `typ` of `application/mission-status-response+jwt` (registered
 in {{iana}}) and a `kid` identifying the signing key.
 
 {{RFC9701}} signed introspection responses are scoped to token
-introspection and do not apply to a by-`mission_id` lookup; the
+introspection and do not apply to a lookup keyed by `mission_id`; the
 dedicated operation therefore uses a new media type and a JWS, not
 {{RFC9701}} (see {{rfc-9701-vs-media-type}}). Implementations MUST NOT
 use {{RFC9701}} for the dedicated operation.
@@ -389,7 +389,7 @@ body member in seconds.
 
 # Token Introspection Mission Projection {#introspection-projection}
 
-This section is OPTIONAL and is a thin delta over the by-token
+This section is OPTIONAL and is a thin delta over the token
 introspection of {{I-D.draft-mcguinness-oauth-mission}} (Section
 "Mission State via Token Introspection"). That section already
 defines a `mission` member on the introspection response carrying
@@ -447,7 +447,7 @@ for a token whose Mission is `active`:
 
 A consumer holding only a `mission_id`, or one that needs signed
 evidence independent of a specific token (an auditor or a cross-domain
-Resource AS), uses the dedicated by-`mission_id` operation
+Resource AS), uses the dedicated Mission Status operation
 ({{mission-status}}); the introspection projection is purely a
 same-call convenience for token-holding consumers and is never the
 sole Mission Status path.
@@ -604,7 +604,7 @@ lifecycle endpoint is the authoritative Mission state change.
 # Revocation Enforcement Classes {#revocation-enforcement-classes}
 
 This section is OPTIONAL. The issuance profile bounds outstanding
-self-contained tokens by their lifetime and OPTIONAL by-token
+self-contained tokens by their lifetime and OPTIONAL token
 introspection ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Revocation"). This section lets a deployment advertise, in graduated
 classes, how promptly a Mission state change takes effect at the
@@ -773,9 +773,9 @@ The introspection projection ({{introspection-projection}}) uses
 {{RFC9701}}, which is scoped to token introspection. The dedicated
 Mission Status operation uses a new media type
 (`application/mission-status-response+jwt`, {{iana}}) and a JWS
-{{RFC7515}}, because {{RFC9701}} does not apply to a by-`mission_id`
-lookup. Implementations MUST NOT use {{RFC9701}} for the dedicated
-operation, and MUST NOT accept an unsigned status or projection
+{{RFC7515}}, because {{RFC9701}} does not apply to a lookup keyed by
+`mission_id`. Implementations MUST NOT use {{RFC9701}} for the
+dedicated operation, and MUST NOT accept an unsigned status or projection
 response in place of the signed form these sections require.
 
 ## Signing-Key Retention for Audit
@@ -832,7 +832,7 @@ is still a conforming issuance profile.
 
 An implementation claiming an extension MUST meet its requirements:
 
-- **Mission Status**: serve the dedicated by-`mission_id` operation
+- **Mission Status**: serve the dedicated Mission Status operation
   ({{mission-status}}) with JWS-signed responses
   (`application/mission-status-response+jwt`), the authentication of
   {{mission-status-authentication}}, the anti-oracle property
