@@ -76,8 +76,8 @@ informative:
 
 The Mission Status and Lifecycle profile
 {{I-D.draft-mcguinness-oauth-mission-status}} names event-driven
-propagation -- Mission state changes reaching consumers over a Shared
-Signals or equivalent channel -- as one way to bound revocation
+propagation (Mission state changes reaching consumers over a Shared
+Signals or equivalent channel) as one way to bound revocation
 latency, but leaves the channel itself unspecified. This document
 specifies it: a profile
 of the OpenID Shared Signals Framework in which a Mission Issuer emits
@@ -98,7 +98,7 @@ tokens by their lifetime. The Mission Status and Lifecycle profile
 {{I-D.draft-mcguinness-oauth-mission-status}} adds surfaces for
 observing and changing state, and points to event-driven propagation
 for deployments that need Mission state changes to reach consumers
-promptly, without each consumer polling -- but does not define the
+promptly, without each consumer polling. It does not define the
 channel.
 
 This document defines the channel. When a Mission Issuer commits a
