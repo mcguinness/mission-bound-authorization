@@ -27,8 +27,6 @@ author:
     email: public@karlmcguinness.com
 
 normative:
-  RFC2119:
-  RFC8174:
   RFC3339:
   RFC6234:
   RFC8785:
@@ -198,6 +196,15 @@ Decision:
 : A PDP's permit-or-deny result for one action, bound to the inputs
   it evaluated ({{decision}}).
 
+Policy-view version:
+: A deployment-opaque identifier the PDP emits for the materialized
+  policy and Mission view it evaluated against, so a permit and its
+  evidence record tie to a reproducible decision basis. It is local to
+  the runtime layer and is distinct from the issuance profile's
+  `policy_version` Mission-record field
+  ({{I-D.draft-mcguinness-oauth-mission}}); this document does not
+  interpret it beyond correlation.
+
 Runtime enforcement evidence:
 : The record a consequential action produces for a PDP decision or a
   PEP refusal path ({{evidence}}).
@@ -261,9 +268,10 @@ deployment SHOULD adopt, and a floor it MUST observe.
 commitment**, and **privileged administration** classes MUST be
 treated as consequential and gated. A Mission's `purpose`, or
 deployment policy, MAY raise an action to a stricter class; it MUST
-NOT lower an action below the resource owner's minimum classification,
-and MUST NOT classify an irreversible, external-commitment, or
-privileged-administration action as non-consequential. A deployment
+NOT lower an action below any minimum classification the Resource
+policy ({{decision}}) sets for it, and in any case MUST NOT classify an
+irreversible, external-commitment, or privileged-administration action
+as non-consequential. A deployment
 that leaves such an action ungated does not enforce this profile for
 that action's class ({{pep-placement}}).
 
@@ -318,7 +326,9 @@ the access token is valid for the protected resource and request. For
 the Mission-bound JWT access tokens defined by the issuance profile,
 this means validating the JWT per {{RFC9068}}, verifying the issuer and
 audience, checking token expiry, and verifying any sender-constraint
-binding (`cnf`) according to the proof-of-possession profile in use.
+binding (`cnf`) under the proof-of-possession rules of the issuance
+profile ({{I-D.draft-mcguinness-oauth-mission}}); this profile defines
+no proof-of-possession mechanism of its own.
 
 A PEP MUST NOT ask a PDP to authorize an action from unverified token
 claims. If token validation fails, or if the deployment requires
@@ -380,9 +390,12 @@ decision. Runtime enforcement MUST evaluate:
   as the immediate actor.
 - **Time.** The PDP MUST refuse if the decision context indicates the
   token is expired or the requested action would execute outside the
-  permit validity window. If its Mission state source reports that the
-  Mission has expired, or reports a `mission_expiry` value that has
-  passed, the PDP MUST refuse independent of the token's own `exp`.
+  permit validity window. The issuance profile caps a derived token's
+  `exp` at `mission_expiry`, so the `exp` check enforces the Mission's
+  expiry transitively. The standard `mission` claim and introspection
+  do not surface `mission_expiry`; where a Mission state source does
+  expose it (or reports the Mission `expired`), the PDP MUST refuse on
+  it independent of the token's own `exp`.
 - **State.** The PDP MUST refuse unless the Mission is `active`
   ({{state-freshness}}).
 
@@ -459,18 +472,29 @@ that digest immediately before acting.
   available, token audience or protected resource, `sub`, `client_id`,
   actor context, sender-constraint confirmation key when present,
   action, resource, the authorizing `authorization_details` entry or
-  an entry digest, the PDP's policy-view version, and either a short
-  validity window or a single-use decision identifier.
+  an entry digest, the PDP's policy-view version, and a permit lifetime
+  control. For a reversible consequential write the control MAY be a
+  short validity window. For an irreversible action, an external
+  commitment, or privileged administration it MUST be a single-use
+  decision identifier: a validity window alone does not bound how many
+  times such a permit executes.
+- Where a single-use decision identifier is used, the enforcing
+  component MUST record consumed identifiers for at least the permit
+  lifetime and MUST refuse, fail closed, any second presentation of a
+  consumed identifier. This is independent of consumption metering and
+  applies even when the action carries no consumption bound.
 - The executing PEP MUST verify those bindings and MUST recompute the
   `parameter_digest` against the parameters it is about to use. A
   mismatch MUST cause refusal: the permit does not authorize the
   changed parameters.
 
 This closes the time-of-check to time-of-use gap and prevents a permit
-from being replayed for a different request. Consequential reads do
-not require a parameter digest by default; the evaluation request still
-appears in the evidence record, by digest where the parameters are
-sensitive ({{evidence}}).
+from being replayed, whether for a different request (the
+`parameter_digest` mismatches) or by re-presenting a single-use permit
+for the same irreversible action (the consumed identifier is refused).
+Consequential reads do not require a parameter digest by default; the
+evaluation request still appears in the evidence record, by digest
+where the parameters are sensitive ({{evidence}}).
 
 Deployments MUST require parameter binding for consequential reads when
 read parameters materially change the effective resource set or
@@ -493,9 +517,13 @@ defines three Mission-level consumption bounds in the Mission
 - `max_calls` (`[ { scope, count } ]`): the PDP increments an atomic
   counter for the named `scope` and MUST refuse a call past `count`.
 - `max_duration` (an ISO 8601 duration, e.g. `PT8H`; the `duration`
-  rule in Appendix A of {{RFC3339}}): the PDP tracks elapsed
-  wall-clock consequential activity since Mission activation and MUST
-  refuse past the bound.
+  rule in Appendix A of {{RFC3339}}): the cumulative wall-clock
+  duration of consequential activity under the Mission, as the issuance
+  profile defines it (distinct from `mission_expiry`). The PDP
+  accumulates the duration of consequential activity it permits and
+  MUST refuse once that total would exceed the bound; the operation
+  profile defines how a single action's duration is measured so that
+  PDPs accumulate consistently.
 
 A per-entry `constraints` value that expresses a consumption bound is
 metered the same way. When an applicable entry or the Mission's
@@ -548,6 +576,7 @@ refusal.
 | Unknown or unmetered constraint on the applicable entry | Refuse |
 | Consumption bound would be exceeded | Refuse |
 | `parameter_digest` mismatch at the executing PEP | Refuse |
+| Re-presentation of a consumed single-use decision identifier | Refuse (fail closed) |
 | `act` chain missing, malformed, or naming a disallowed actor | Refuse |
 | Invoked capability identity outside the approved `actions` | Refuse |
 | Resource policy refuses the action | Refuse |
@@ -555,15 +584,25 @@ refusal.
 
 # Runtime enforcement evidence {#evidence}
 
-Every PDP decision on a consequential action MUST produce a decision
-evidence record. A PEP refusal for a consequential action that occurs
-before a PDP decision (for example, token validation failure or PDP
-unreachability) or after a PDP permit (for example,
-`parameter_digest` mismatch) MUST also produce an enforcement evidence
-record with the available fields and the failure condition. This
-document fixes the record's content, its canonical form, and its local
-integrity; portable cross-domain receipts are out of scope
-({{deferred}}).
+Every PDP decision on a consequential action MUST produce a runtime
+enforcement evidence record. A PEP refusal for a consequential action,
+whether before a PDP decision (for example, token validation failure
+or PDP unreachability) or after a PDP permit (for example, a
+`parameter_digest` mismatch), MUST likewise produce a runtime
+enforcement evidence record with the available fields and the failure
+condition. This document fixes the record's content, its canonical
+form, and its local integrity; the separate Decision Evidence and
+Execution Evidence object schemas, and portable cross-domain receipts,
+are out of scope ({{deferred}}).
+
+For an irreversible action, an external commitment, or privileged
+administration, the executing PEP MUST also produce, after it acts, an
+execution-outcome record keyed to the permit's decision identifier,
+recording at least success or failure and the `parameter_digest`
+actually executed. This lets a decision and its execution be reconciled
+one to one, so a permit that was obtained but executed more than once,
+or executed for different parameters, is detectable after the fact. The
+detailed object schema is deferred ({{deferred}}).
 
 A record MUST contain:
 
@@ -580,9 +619,10 @@ and trusted for the refusal or decision path:
   `authority_hash` (and `intent_hash` when known) it operated under;
 - the token issuer and audience or protected-resource identifier when
   available;
-- the authenticated `sub`, `client_id`, client-instance identifier
-  when present, sender-constraint confirmation key when present, and
-  the `act` chain projection when delegation applies;
+- the authenticated `sub`, `client_id`, a client-instance identifier
+  (a deployment-defined correlator) when present, the sender-constraint
+  confirmation key when present, and the `act` chain projection when
+  delegation applies;
 - the action and resource identifiers (and the asserted capability
   identity when applicable);
 - the `authorization_details` type and authorizing entry, or a digest
@@ -674,7 +714,7 @@ work and are not required to enforce it:
 - risk-signal inputs to the decision (deployment-defined).
 
 Structured per-argument attenuation of tool grants
-({{?I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}) is a related
+({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}) is a related
 issuance/delegation-layer primitive, not part of this runtime profile.
 
 # Security Considerations
@@ -750,7 +790,7 @@ shared across resource boundaries can also correlate activity by
 `mission.id` and `authority_hash`; deployments that require
 unlinkability need an additional privacy design outside this profile.
 
-General OAuth security guidance {{?RFC9700}} applies to the underlying
+General OAuth security guidance {{RFC9700}} applies to the underlying
 credentials.
 
 # IANA Considerations
