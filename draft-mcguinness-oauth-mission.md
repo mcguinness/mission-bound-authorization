@@ -1471,10 +1471,10 @@ use short token lifetimes.
 
 The stateless baseline needs no status surface: a token is a
 self-contained authorization and verification is stateless. A
-deployment MAY additionally offer by-token introspection
+deployment MAY additionally offer token introspection
 ({{introspection}}) so a Resource Server can observe Mission state
 per request and cut off a revoked Mission without waiting out the
-token lifetime. The canonical by-`mission_id` Mission Status surface
+token lifetime. The canonical Mission Status surface (keyed by `mission_id`)
 and signed status responses remain deferred to future work.
 
 # Mission State via Token Introspection {#introspection}
@@ -1556,15 +1556,15 @@ An AS MUST NOT include `mission.state` in an introspection response
 unless it holds the Mission, that is, unless it is the Mission
 `origin`. A Resource AS introspecting a local token it minted from an
 ID-JAG ({{cross-domain}}) knows the Mission state only as of ID-JAG
-validation and has no by-`mission_id` query to the origin (this
+validation and has no query to the origin keyed by `mission_id` (this
 document defines none); it MUST omit `mission.state` rather than
 report a stale value as current. `authority_hash`, when included, is
 the origin reporting its own commitment, not the introspecting party
 recomputing a subset ({{consent-binding}}).
 
-This is by-token introspection: it answers "is this token's
+This is token introspection: it answers "is this token's
 authorization still good," keyed by the token presented. The
-canonical by-`mission_id` Mission Status surface remains out of scope
+canonical Mission Status surface (keyed by `mission_id`) remains out of scope
 ({{revocation}}).
 
 ## Example
@@ -2174,7 +2174,7 @@ by the 300-second cap of {{cross-domain}}, so a revoked Mission cannot
 continue to seed new downstream tokens for long.
 The introspection of {{introspection}} closes the revocation gap only
 single-domain: it requires the introspecting AS to hold the Mission,
-and a Resource AS has no by-`mission_id` query to the origin, so short
+and a Resource AS has no query to the origin keyed by `mission_id`, so short
 downstream lifetimes remain the only cross-domain control. Deployments
 needing tighter cross-domain revocation must add a status or
 event-distribution mechanism, which this document defers.
