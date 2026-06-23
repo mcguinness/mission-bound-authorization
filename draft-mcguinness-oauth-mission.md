@@ -150,6 +150,13 @@ does not govern the resulting work as it continues. The Mission is the
 durable object these project from: the approved task that bounds and
 outlives them, and that every derived token refers back to.
 
+Put plainly: Rich Authorization Requests express authority; a Mission
+expresses an approved task with a lifecycle. The Mission is a separate
+object because that approved-task lifecycle, not a new way to express
+authority, is what OAuth lacks. A Mission is therefore not another
+`authorization_details` type; it is the durable, approval-backed object
+an Authority Set is derived for and gated by.
+
 ## The Mission, the Plan, and Execution
 
 The Mission is the durable, AS-held object that commits the approved
@@ -621,6 +628,12 @@ commits it as `authority_hash` ({{approval-event}}). The Intent's
 but grant no authority by themselves ({{mission-intent}}); they
 constrain what the AS MAY derive, never widen it.
 
+Derivation is governed by local policy. Different Authorization Servers
+MAY derive different Authority Sets from the same Mission Intent. This
+profile fixes how the derived authority is committed, carried, and
+gated, not a portable derivation algorithm; the Mission's
+`policy_version` records which policy produced a given Authority Set.
+
 A `mission_resource_access` entry is a {{RFC9396}}
 `authorization_details` object with these members:
 
@@ -1063,7 +1076,9 @@ to computing an anchor and to comparing committed values:
 
 A Mission is the durable record created at the approval event. It is
 immutable except for its `state` and is identified by a `mission_id`.
-It has the following members:
+Operational issuance bookkeeping, such as the derivation count gated
+under {{lifecycle}}, is AS-side state about the Mission, not a member
+of the immutable record. The Mission record has the following members:
 
 `mission_id`:
 : REQUIRED. A string. The canonical Mission identifier
@@ -1484,6 +1499,11 @@ This section is OPTIONAL. The stateless baseline
 offer it, and a Resource Server that does not use it, are unaffected.
 It lets a Mission-state-aware Resource Server observe a Mission's
 current state per request instead of waiting out a token's lifetime.
+Because it can report Mission state for a token whose Mission is no
+longer `active`, this section deviates from the {{RFC7662}} default of
+omitting response members for an inactive token; that additional
+disclosure is governed by the caller-authorization and minimization
+rules below ({{caller-authorization-and-minimization}}).
 
 An AS MAY support OAuth 2.0 Token Introspection {{RFC7662}} for
 Mission-bound access tokens. When it does, the response for such a
@@ -1865,6 +1885,15 @@ presented grant per {{grant-binding}}, exactly as on any other
 refresh, and the grant therefore projects the agent's full Mission
 authority (audience-scoped), never a narrowed delegate's.
 
+This profile intentionally fixes the refresh-token subject mode to
+remove any ambiguity about which Mission authority a cross-domain grant
+projects: the refresh token resolves to exactly one Mission and its
+full authority, whereas an access token or delegated token could carry
+a narrowed or actor-specific subset. The cost is that this optional
+cross-domain binding is unavailable to a deployment that issues no
+refresh token; such a deployment uses the single-domain core, which
+needs no refresh token.
+
 The AS MUST reject an access token or a delegated token presented as
 `subject_token` for cross-domain issuance. The AS MUST NOT resolve the
 Mission from a client-supplied `mission_id`, nor from an identity
@@ -2073,6 +2102,17 @@ commits the approved Mission Intent, so an auditor can detect any
 later alteration of the recorded task, independently of the authority
 derived from it. The two anchors are domain-separated
 ({{integrity-anchors}}); neither is a substitute for the other.
+
+The task and the authority are committed separately, rather than folded
+into one hash over the whole Mission, because they are distinct objects
+with distinct uses. `authority_hash` commits what a Resource Server
+enforces and what a cross-domain projection carries, so it MUST be
+verifiable from a token that conveys only the authority, without the
+Intent. `intent_hash` commits the task as audit material, tamper-evident
+even where the authority is projected without the Intent travelling with
+it. One combined hash could not serve both a token that carries
+authority alone and an auditor that holds the task alone.
+
 Neither anchor proves the Approver understood the rendered task, nor
 that the AS rendered it faithfully; they commit what the AS
 recorded, and make post-hoc tampering of those records detectable.
@@ -2209,6 +2249,21 @@ distinct opaque identifier per audience and resolves them
 server-side, are the fuller mechanism for that and are deferred to
 future work. A deployment that carries the canonical `mission_id` on
 the wire SHOULD document this correlation property.
+
+## Authority Hash Is Not a Mission Identifier
+
+`authority_hash` commits the approved Authority Set, not the Mission.
+Two distinct Missions that approve byte-identical authority carry the
+same `authority_hash`: a successor Mission that re-approves the same
+Authority Set, or an unrelated Mission with the same derived authority,
+differs in its `intent_hash`, `approver`, and `mission_id` while
+sharing the `authority_hash`. It is therefore not globally unique to a
+Mission and MUST NOT be used as a Mission identifier or as a replay or
+idempotency key for a Mission. The canonical `mission_id` identifies
+the Mission; `authority_hash` identifies the authority the Mission
+approved. A consumer that needs to bind to or correlate a specific
+Mission uses `mission_id`, and `intent_hash` and `approver` distinguish
+Missions that share an Authority Set.
 
 # IANA Considerations
 
