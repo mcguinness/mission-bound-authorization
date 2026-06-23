@@ -73,11 +73,11 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Conventions and Definitions
+   2.  Conventions and Terminology
    3.  Mission Status Operation
      3.1.  Request
      3.2.  Authentication
-     3.3.  Worked request example
+     3.3.  Worked Request Example
      3.4.  Response
      3.5.  Caching
      3.6.  Anti-Oracle Property
@@ -106,8 +106,8 @@ Table of Contents
      9.2.  Status Audit Logging
    10. Conformance
    11. IANA Considerations
-     11.1.  OAuth Authorization Server Metadata
-     11.2.  Media Type Registry
+     11.1.  OAuth Authorization Server Metadata Registration
+     11.2.  Media Type Registration
        11.2.1.  application/mission-status-response+jwt
      11.3.  Well-Known URI
    Acknowledgments
@@ -163,7 +163,7 @@ Table of Contents
    in [I-D.draft-mcguinness-oauth-mission] and are referenced, not re-
    specified, here.
 
-2.  Conventions and Definitions
+2.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -208,7 +208,8 @@ Table of Contents
    The Mission Issuer publishes its Mission Status endpoint URL in
    Authorization Server metadata (Section 7) as mission_status_endpoint,
    which a consumer resolves from a credential's mission.origin.  The
-   endpoint MUST be served over TLS 1.2 or later (TLS 1.3 RECOMMENDED).
+   endpoint MUST be served over TLS 1.2 or later (TLS 1.3 RECOMMENDED),
+   following the recommendations of [RFC9325].
 
 3.1.  Request
 
@@ -239,7 +240,7 @@ Table of Contents
        header with a DPoP proof header; the token's cnf.jkt MUST match
        the proof key thumbprint.
 
-   3.  *Private-key-JWT client authentication* [RFC7521].  The client
+   3.  *Private-key-JWT client authentication* [RFC7523].  The client
        presents a signed JWT assertion as client_assertion.
 
    Plain Basic or POST client authentication MUST NOT be used for this
@@ -248,7 +249,7 @@ Table of Contents
    the supported mechanisms under mission_status_auth_methods_supported
    (Section 7).
 
-3.3.  Worked request example
+3.3.  Worked Request Example
 
    POST /as/mission/status HTTP/1.1
    Host: as.example.com
@@ -395,7 +396,10 @@ Table of Contents
 3.7.  Error Responses
 
    Mission Status responses use the following symbols, mapped to HTTP
-   status codes.  The body of a hard error is a JSON object [RFC8259].
+   status codes. ok, terminated, and suspended are successful outcomes
+   returned with a signed Mission Status Response; the remaining symbols
+   are hard errors.  The body of a hard error is a JSON object
+   [RFC8259].
 
    +==============+======+=============================================+
    | Symbol       | HTTP | Description                                 |
@@ -466,6 +470,16 @@ Table of Contents
       point until which the consumer MAY rely on the reported state
       without re-checking, governed by the caching rule of Section 3.5.
 
+   The projection nests state, authority_hash, and expires_at inside the
+   mission object, whereas the dedicated Mission Status Response
+   (Section 3.4) carries them at the top level.  The shapes differ
+   deliberately: the projection extends the existing nested mission
+   introspection member of [I-D.draft-mcguinness-oauth-mission]
+   (Section "Mission State via Token Introspection") and MUST NOT
+   reshape it, while the dedicated response is a standalone payload of
+   this document.  A consumer of both surfaces reads the same facts from
+   the two locations accordingly.
+
    Example [RFC9701]-signed introspection response (decoded payload),
    for a token whose Mission is active:
 
@@ -507,12 +521,13 @@ Table of Contents
    The AS publishes its Mission Lifecycle endpoint URL in Authorization
    Server metadata (Section 7) as mission_lifecycle_endpoint, distinct
    from [RFC7009] token revocation.  The endpoint MUST be served over
-   TLS 1.2 or later (TLS 1.3 RECOMMENDED).
+   TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the recommendations
+   of [RFC9325].
 
    Adopting this endpoint extends the issuance profile's lifecycle state
    space ([I-D.draft-mcguinness-oauth-mission], Section "Mission
-   Lifecycle and Gating") with two non-terminal-and-terminal states:
-   suspended (a paused Mission that derives no tokens until resumed) and
+   Lifecycle and Gating") with two additional states: suspended (a non-
+   terminal paused Mission that derives no tokens until resumed) and
    completed (a terminal state recording successful completion).
    Issuance gating treats any state other than active as non-deriving,
    exactly as the base profile gates on active.
@@ -877,10 +892,13 @@ Table of Contents
 
 11.  IANA Considerations
 
-   This document requests IANA actions for OAuth AS metadata members, a
-   media type, and a new registry.
+   This document requests IANA actions for OAuth AS metadata members and
+   a media type.  It defines no new registry: the authentication-method
+   and enforcement-class value spaces are closed sets defined inline; a
+   registry is the natural vehicle should future revisions need
+   enforcement-class extensibility.
 
-11.1.  OAuth Authorization Server Metadata
+11.1.  OAuth Authorization Server Metadata Registration
 
    IANA is requested to register the following in the "OAuth
    Authorization Server Metadata" registry [RFC8414].  For each: Change
@@ -898,7 +916,7 @@ Table of Contents
 
    *  mission_max_stale_seconds
 
-11.2.  Media Type Registry
+11.2.  Media Type Registration
 
    IANA is requested to register one media type per [RFC6838].
 
@@ -982,10 +1000,10 @@ Normative References
               Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
               2015, <https://www.rfc-editor.org/rfc/rfc7515>.
 
-   [RFC7521]  Campbell, B., Mortimore, C., Jones, M., and Y. Goland,
-              "Assertion Framework for OAuth 2.0 Client Authentication
-              and Authorization Grants", RFC 7521, DOI 10.17487/RFC7521,
-              May 2015, <https://www.rfc-editor.org/rfc/rfc7521>.
+   [RFC7523]  Jones, M., Campbell, B., and C. Mortimore, "JSON Web Token
+              (JWT) Profile for OAuth 2.0 Client Authentication and
+              Authorization Grants", RFC 7523, DOI 10.17487/RFC7523, May
+              2015, <https://www.rfc-editor.org/rfc/rfc7523>.
 
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
@@ -1006,6 +1024,12 @@ Normative References
               and Certificate-Bound Access Tokens", RFC 8705,
               DOI 10.17487/RFC8705, February 2020,
               <https://www.rfc-editor.org/rfc/rfc8705>.
+
+   [RFC9325]  Sheffer, Y., Saint-Andre, P., and T. Fossati,
+              "Recommendations for Secure Use of Transport Layer
+              Security (TLS) and Datagram Transport Layer Security
+              (DTLS)", BCP 195, RFC 9325, DOI 10.17487/RFC9325, November
+              2022, <https://www.rfc-editor.org/rfc/rfc9325>.
 
    [RFC9449]  Fett, D., Campbell, B., Bradley, J., Lodderstedt, T.,
               Jones, M., and D. Waite, "OAuth 2.0 Demonstrating Proof of

@@ -1174,7 +1174,7 @@ profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
-            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-definitions" class="internal xref">Conventions and Definitions</a></p>
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
             <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-mission-status-operation" class="internal xref">Mission Status Operation</a></p>
@@ -1186,7 +1186,7 @@ profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
                 <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-authentication" class="internal xref">Authentication</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
-                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-worked-request-example" class="internal xref">Worked request example</a></p>
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-worked-request-example" class="internal xref">Worked Request Example</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.4">
                 <p id="section-toc.1-1.3.2.4.1"><a href="#section-3.4" class="auto internal xref">3.4</a>.  <a href="#name-response" class="internal xref">Response</a></p>
@@ -1285,10 +1285,10 @@ profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
-                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-oauth-authorization-server-" class="internal xref">OAuth Authorization Server Metadata</a></p>
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-oauth-authorization-server-" class="internal xref">OAuth Authorization Server Metadata Registration</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
-                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-media-type-registry" class="internal xref">Media Type Registry</a></p>
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-media-type-registration" class="internal xref">Media Type Registration</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2.2.1">
                     <p id="section-toc.1-1.11.2.2.2.1.1"><a href="#section-11.2.1" class="auto internal xref">11.2.1</a>.  <a href="#name-application-mission-status-" class="internal xref">application/mission-status-response+jwt</a></p>
@@ -1381,8 +1381,8 @@ re-specified, here.<a href="#section-1-5" class="pilcrow">¶</a></p>
 </div>
 <div id="conventions-and-definitions">
 <section id="section-2">
-      <h2 id="name-conventions-and-definitions">
-<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-definitions" class="section-name selfRef">Conventions and Definitions</a>
+      <h2 id="name-conventions-and-terminology">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
       </h2>
 <p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
 "<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
@@ -1433,7 +1433,8 @@ issued.<a href="#section-3-2" class="pilcrow">¶</a></p>
 Authorization Server metadata (<a href="#as-metadata" class="auto internal xref">Section 7</a>) as
 <code>mission_status_endpoint</code>, which a consumer resolves from a
 credential's <code>mission.origin</code>. The endpoint <span class="bcp14">MUST</span> be served over TLS
-1.2 or later (TLS 1.3 <span class="bcp14">RECOMMENDED</span>).<a href="#section-3-3" class="pilcrow">¶</a></p>
+1.2 or later (TLS 1.3 <span class="bcp14">RECOMMENDED</span>), following the recommendations of
+<span>[<a href="#RFC9325" class="cite xref">RFC9325</a>]</span>.<a href="#section-3-3" class="pilcrow">¶</a></p>
 <div id="mission-status-request">
 <section id="section-3.1">
         <h3 id="name-request">
@@ -1487,7 +1488,7 @@ header with a <code>DPoP</code> proof header; the token's <code>cnf.jkt</code> <
 the proof key thumbprint.<a href="#section-3.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-3.2-2.3">
-            <p id="section-3.2-2.3.1"><strong>Private-key-JWT client authentication</strong> <span>[<a href="#RFC7521" class="cite xref">RFC7521</a>]</span>. The client
+            <p id="section-3.2-2.3.1"><strong>Private-key-JWT client authentication</strong> <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>. The client
 presents a signed JWT assertion as <code>client_assertion</code>.<a href="#section-3.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
@@ -1501,7 +1502,7 @@ supported mechanisms under <code>mission_status_auth_methods_supported</code>
 <div id="worked-request-example">
 <section id="section-3.3">
         <h3 id="name-worked-request-example">
-<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-worked-request-example" class="section-name selfRef">Worked request example</a>
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-worked-request-example" class="section-name selfRef">Worked Request Example</a>
         </h3>
 <div class="lang-http-message sourcecode" id="section-3.3-1">
 <pre>
@@ -1688,7 +1689,10 @@ the two cases.<a href="#section-3.6-2" class="pilcrow">¶</a></p>
 <a href="#section-3.7" class="section-number selfRef">3.7. </a><a href="#name-error-responses" class="section-name selfRef">Error Responses</a>
         </h3>
 <p id="section-3.7-1">Mission Status responses use the following symbols, mapped to HTTP
-status codes. The body of a hard error is a JSON object <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span>.<a href="#section-3.7-1" class="pilcrow">¶</a></p>
+status codes. <code>ok</code>, <code>terminated</code>, and <code>suspended</code> are successful
+outcomes returned with a signed Mission Status Response; the remaining
+symbols are hard errors. The body of a hard error is a JSON object
+<span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span>.<a href="#section-3.7-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
           <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
 <thead>
@@ -1807,9 +1811,18 @@ without re-checking, governed by the caching rule of
 <a href="#mission-status-caching" class="auto internal xref">Section 3.5</a>.<a href="#section-4-3.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-4-4">Example <span>[<a href="#RFC9701" class="cite xref">RFC9701</a>]</span>-signed introspection response (decoded payload),
-for a token whose Mission is <code>active</code>:<a href="#section-4-4" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-4-5">
+<p id="section-4-4">The projection nests <code>state</code>, <code>authority_hash</code>, and <code>expires_at</code> inside
+the <code>mission</code> object, whereas the dedicated Mission Status Response
+(<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>) carries them at the top level. The shapes
+differ deliberately: the projection extends the existing nested
+<code>mission</code> introspection member of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (Section "Mission State via
+Token Introspection") and <span class="bcp14">MUST NOT</span> reshape it, while the dedicated
+response is a standalone payload of this document. A consumer of both
+surfaces reads the same facts from the two locations accordingly.<a href="#section-4-4" class="pilcrow">¶</a></p>
+<p id="section-4-5">Example <span>[<a href="#RFC9701" class="cite xref">RFC9701</a>]</span>-signed introspection response (decoded payload),
+for a token whose Mission is <code>active</code>:<a href="#section-4-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4-6">
 <pre>
 {
   "iss":     "https://as.example.com",
@@ -1829,14 +1842,14 @@ for a token whose Mission is <code>active</code>:<a href="#section-4-4" class="p
     "expires_at": "2026-11-02T08:15:00Z"
   }
 }
-</pre><a href="#section-4-5" class="pilcrow">¶</a>
+</pre><a href="#section-4-6" class="pilcrow">¶</a>
 </div>
-<p id="section-4-6">A consumer holding only a <code>mission_id</code>, or one that needs signed
+<p id="section-4-7">A consumer holding only a <code>mission_id</code>, or one that needs signed
 evidence independent of a specific token (an auditor or a cross-domain
 Resource AS), uses the dedicated by-<code>mission_id</code> operation
 (<a href="#mission-status" class="auto internal xref">Section 3</a>); the introspection projection is purely a
 same-call convenience for token-holding consumers and is never the
-sole Mission Status path.<a href="#section-4-6" class="pilcrow">¶</a></p>
+sole Mission Status path.<a href="#section-4-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-lifecycle-endpoint">
@@ -1853,12 +1866,13 @@ section standardizes that management surface.<a href="#section-5-1" class="pilcr
 <p id="section-5-2">The AS publishes its Mission Lifecycle endpoint URL in Authorization
 Server metadata (<a href="#as-metadata" class="auto internal xref">Section 7</a>) as <code>mission_lifecycle_endpoint</code>,
 distinct from <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> token revocation. The endpoint <span class="bcp14">MUST</span> be
-served over TLS 1.2 or later (TLS 1.3 <span class="bcp14">RECOMMENDED</span>).<a href="#section-5-2" class="pilcrow">¶</a></p>
+served over TLS 1.2 or later (TLS 1.3 <span class="bcp14">RECOMMENDED</span>), following the
+recommendations of <span>[<a href="#RFC9325" class="cite xref">RFC9325</a>]</span>.<a href="#section-5-2" class="pilcrow">¶</a></p>
 <p id="section-5-3">Adopting this endpoint extends the issuance profile's lifecycle state
 space (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
-Lifecycle and Gating") with two non-terminal-and-terminal states:
-<code>suspended</code> (a paused Mission that derives no tokens until resumed)
-and <code>completed</code> (a terminal state recording successful completion).
+Lifecycle and Gating") with two additional states: <code>suspended</code> (a
+non-terminal paused Mission that derives no tokens until resumed) and
+<code>completed</code> (a terminal state recording successful completion).
 Issuance gating treats any state other than <code>active</code> as
 non-deriving, exactly as the base profile gates on <code>active</code>.<a href="#section-5-3" class="pilcrow">¶</a></p>
 <div id="operations">
@@ -2382,12 +2396,15 @@ it implements (<a href="#revocation-enforcement-classes" class="auto internal xr
       <h2 id="name-iana-considerations">
 <a href="#section-11" class="section-number selfRef">11. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-11-1">This document requests IANA actions for OAuth AS metadata members, a
-media type, and a new registry.<a href="#section-11-1" class="pilcrow">¶</a></p>
-<div id="oauth-authorization-server-metadata">
+<p id="section-11-1">This document requests IANA actions for OAuth AS metadata members and
+a media type. It defines no new registry: the authentication-method
+and enforcement-class value spaces are closed sets defined inline; a
+registry is the natural vehicle should future revisions need
+enforcement-class extensibility.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<div id="oauth-authorization-server-metadata-registration">
 <section id="section-11.1">
         <h3 id="name-oauth-authorization-server-">
-<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-oauth-authorization-server-" class="section-name selfRef">OAuth Authorization Server Metadata</a>
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-oauth-authorization-server-" class="section-name selfRef">OAuth Authorization Server Metadata Registration</a>
         </h3>
 <p id="section-11.1-1">IANA is requested to register the following in the "OAuth
 Authorization Server Metadata" registry <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. For each:
@@ -2414,10 +2431,10 @@ Change Controller IETF; Reference this document, <a href="#as-metadata" class="a
         </ul>
 </section>
 </div>
-<div id="media-type-registry">
+<div id="media-type-registration">
 <section id="section-11.2">
-        <h3 id="name-media-type-registry">
-<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-media-type-registry" class="section-name selfRef">Media Type Registry</a>
+        <h3 id="name-media-type-registration">
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-media-type-registration" class="section-name selfRef">Media Type Registration</a>
         </h3>
 <p id="section-11.2-1">IANA is requested to register one media type per <span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
 <div id="applicationmission-status-responsejwt">
@@ -2538,9 +2555,9 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
         <dd>
 <span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Signature (JWS)"</span>, <span class="seriesInfo">RFC 7515</span>, <span class="seriesInfo">DOI 10.17487/RFC7515</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7515">https://www.rfc-editor.org/rfc/rfc7515</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="RFC7521">[RFC7521]</dt>
+<dt id="RFC7523">[RFC7523]</dt>
         <dd>
-<span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Mortimore, C.</span>, <span class="refAuthor">Jones, M.</span>, and <span class="refAuthor">Y. Goland</span>, <span class="refTitle">"Assertion Framework for OAuth 2.0 Client Authentication and Authorization Grants"</span>, <span class="seriesInfo">RFC 7521</span>, <span class="seriesInfo">DOI 10.17487/RFC7521</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7521">https://www.rfc-editor.org/rfc/rfc7521</a>&gt;</span>. </dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Campbell, B.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"JSON Web Token (JWT) Profile for OAuth 2.0 Client Authentication and Authorization Grants"</span>, <span class="seriesInfo">RFC 7523</span>, <span class="seriesInfo">DOI 10.17487/RFC7523</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7523">https://www.rfc-editor.org/rfc/rfc7523</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8174">[RFC8174]</dt>
         <dd>
@@ -2557,6 +2574,10 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
 <dt id="RFC8705">[RFC8705]</dt>
         <dd>
 <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">T. Lodderstedt</span>, <span class="refTitle">"OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens"</span>, <span class="seriesInfo">RFC 8705</span>, <span class="seriesInfo">DOI 10.17487/RFC8705</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8705">https://www.rfc-editor.org/rfc/rfc8705</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9325">[RFC9325]</dt>
+        <dd>
+<span class="refAuthor">Sheffer, Y.</span>, <span class="refAuthor">Saint-Andre, P.</span>, and <span class="refAuthor">T. Fossati</span>, <span class="refTitle">"Recommendations for Secure Use of Transport Layer Security (TLS) and Datagram Transport Layer Security (DTLS)"</span>, <span class="seriesInfo">BCP 195</span>, <span class="seriesInfo">RFC 9325</span>, <span class="seriesInfo">DOI 10.17487/RFC9325</span>, <time datetime="2022-11" class="refDate">November 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9325">https://www.rfc-editor.org/rfc/rfc9325</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC9449">[RFC9449]</dt>
         <dd>
