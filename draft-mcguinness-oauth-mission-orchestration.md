@@ -70,6 +70,33 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-harness-latest
+  I-D.draft-mcguinness-oauth-mission-authzen:
+    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-authzen-latest
+  I-D.draft-mcguinness-oauth-mission-expansion:
+    title: "Mission Expansion for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
+  I-D.draft-mcguinness-oauth-mission-signals:
+    title: "Mission Lifecycle Signals for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
 
 --- abstract
 
@@ -142,10 +169,13 @@ format.
 
 {::boilerplate bcp14-tagged}
 
-This document uses the terms Mission, Mission state, consequential
-action, PEP, PDP, Decision Evidence, and Execution Evidence from
-{{I-D.draft-mcguinness-oauth-mission}} and
-{{I-D.draft-mcguinness-oauth-mission-runtime}}.
+This document uses the terms Mission, Mission state, and consequential
+action from {{I-D.draft-mcguinness-oauth-mission}}; PEP, PDP, and
+runtime enforcement evidence from
+{{I-D.draft-mcguinness-oauth-mission-runtime}}; and the Decision
+Evidence and Execution Evidence objects from
+{{I-D.draft-mcguinness-oauth-mission-authzen}} (the runtime profile
+defers those object schemas; the AuthZEN profile defines them).
 
 Orchestrator:
 : The component that schedules, sequences, retries, or coordinates
@@ -187,9 +217,20 @@ these reversibility classes before execution:
 `privileged_administration`:
 : The step changes policy, access, configuration, or security posture.
 
-The class MAY be raised by Resource policy or operation profile. It
-MUST NOT be lowered by the orchestrator at runtime to avoid review or
-compensation requirements.
+`irreversible_action`, `external_commitment`, and
+`privileged_administration` are the identically-named action classes of
+{{I-D.draft-mcguinness-oauth-mission-runtime}} (Section
+"Action classification"); a step's reversibility class MUST be
+consistent with, and no lower than, the runtime action class that
+profile assigns the same operation. `read_only` and `reversible_write`
+are a reversibility refinement this profile adds that the runtime
+classification does not separately track.
+
+The class MAY be raised by Resource policy or operation profile. As
+with the runtime classification floor
+({{I-D.draft-mcguinness-oauth-mission-runtime}}), it MUST NOT be lowered
+by the orchestrator at runtime to avoid review or compensation
+requirements.
 
 ## Action-Class Source {#action-class-source}
 
@@ -246,8 +287,12 @@ unwind plan. The plan has these members:
   `continue_to_safe_point` may proceed.
 
 `evidence_policy`:
-: OPTIONAL. Instructions for linking Decision Evidence, Execution
-  Evidence, Harness Evidence, and Orchestration Evidence.
+: OPTIONAL. Deployment-defined instructions for linking Decision
+  Evidence, Execution Evidence, Harness Evidence, and Orchestration
+  Evidence. Its members, including any retention token such as the
+  example's `mission_audit_horizon`, are deployment-defined; the
+  retention horizon aligns with the runtime profile's record-retention
+  guidance ({{I-D.draft-mcguinness-oauth-mission-runtime}}).
 
 The unwind plan does not authorize compensation by itself. A
 compensation action that is consequential MUST itself pass Mission or
@@ -258,7 +303,7 @@ deployment emergency authorization as defined by policy.
 ~~~ json
 {
   "step_id": "post_journal_entry",
-  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEd",
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "reversibility": "external_commitment",
   "pre_start_behavior": "human_review",
   "in_flight_behavior": "wait_then_review",
@@ -284,19 +329,26 @@ it MUST:
    whose unwind plan requires it; and
 5. emit Orchestration Evidence under {{orchestration-evidence}}.
 
-The states `revoked`, `expired`, `suspended`, `completed`, and
-`superseded` are non-active for this profile. A deployment MAY define
-different operator handling for each state, but none allows new
-governed execution without a fresh authority path.
+The states `revoked` and `expired` ({{I-D.draft-mcguinness-oauth-mission}}),
+`suspended` and `completed` ({{I-D.draft-mcguinness-oauth-mission-status}}),
+and `superseded` ({{I-D.draft-mcguinness-oauth-mission-expansion}}) are
+non-active for this profile. A deployment MAY define different operator
+handling for each state, but none allows new governed execution without
+a fresh authority path. In particular, a `superseded` Mission's work
+SHOULD re-bind to the successor Mission rather than be treated as a
+hard stop.
 
 ## Trigger Sources {#trigger-sources}
 
 An orchestrator can learn of Mission state change from:
 
-- Mission Status polling;
-- Mission lifecycle signals;
-- a runtime PDP denial;
-- a harness stop decision;
+- Mission Status polling ({{I-D.draft-mcguinness-oauth-mission-status}});
+- Mission lifecycle signals
+  ({{I-D.draft-mcguinness-oauth-mission-signals}});
+- a runtime PDP denial
+  ({{I-D.draft-mcguinness-oauth-mission-runtime}});
+- a harness stop decision
+  ({{I-D.draft-mcguinness-oauth-mission-harness}});
 - operator action; or
 - a deployment-specific governance event.
 
@@ -345,7 +397,7 @@ When the unwind plan requires cancellation, the orchestrator MUST:
 Cancellation acceptance by an upstream queue is not proof that an
 external action did not occur.
 
-# Compensation
+# Compensation {#compensation}
 
 Compensation is governed work. If a compensation action is performed
 under the original Mission after that Mission became non-active, the
@@ -391,11 +443,12 @@ An Orchestration Evidence record has these members:
 `event_id`:
 : REQUIRED. A unique identifier.
 
-`mission_id`:
-: REQUIRED. The Mission whose orchestration state changed.
-
-`mission_origin`:
-: REQUIRED. The Mission Issuer.
+`mission`:
+: REQUIRED. The Mission whose orchestration state changed, as the
+  nested `mission` object (`id`, `origin`, and, when known,
+  `authority_hash`), the same shape as the `mission` claim of
+  {{I-D.draft-mcguinness-oauth-mission}} and the Harness Evidence object
+  ({{I-D.draft-mcguinness-oauth-mission-harness}}).
 
 `workflow_id`:
 : REQUIRED. The workflow or task graph identifier.
@@ -407,12 +460,17 @@ An Orchestration Evidence record has these members:
 : REQUIRED. The state observed.
 
 `state_source`:
-: REQUIRED. The status, signal, runtime decision, or deployment source
-  used.
+: REQUIRED. One of `status`, `signal`, `runtime_decision`, or a
+  deployment-defined source, the same value space as the harness
+  `state_source` ({{I-D.draft-mcguinness-oauth-mission-harness}}).
 
 `orchestration_decision`:
 : REQUIRED. One of `suppress`, `pause`, `cancel`, `compensate`,
-  `human_review`, or `record_only`.
+  `human_review`, or `record_only`. An unwind plan's
+  `pre_start_behavior`/`in_flight_behavior` values map to these: both
+  `cancel_workflow` and `cancel_if_possible` record as `cancel`,
+  `wait_then_review` and a review queue record as `human_review`, and
+  `suppress`/`pause` carry through unchanged.
 
 `reason`:
 : REQUIRED. A string naming the condition.
@@ -441,12 +499,16 @@ Example:
 ~~~ json
 {
   "event_id": "orch_4r9SqLm8tY2p",
-  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEd",
-  "mission_origin": "https://as.example.com",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
   "workflow_id": "wf_invoice_recon_2026q3",
   "step_id": "post_journal_entry",
   "mission_state": "suspended",
-  "state_source": "mission_status",
+  "state_source": "status",
   "orchestration_decision": "human_review",
   "reason": "external_commitment_dispatched_unknown",
   "outcome_state": "unknown",
@@ -461,7 +523,7 @@ otherwise order evidence records when multiple steps are affected by
 the same state transition. Ordering lets an auditor reconstruct whether
 the orchestrator stopped before or after a given step committed.
 
-# Relationship to Harness and Runtime Profiles
+# Relationship to Harness and Runtime Profiles {#relationship}
 
 The harness profile
 {{I-D.draft-mcguinness-oauth-mission-harness}} governs whether a
