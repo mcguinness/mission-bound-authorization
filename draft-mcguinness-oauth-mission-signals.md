@@ -75,10 +75,11 @@ informative:
 --- abstract
 
 The Mission Status and Lifecycle profile
-{{I-D.draft-mcguinness-oauth-mission-status}} defines an
-`event_driven` revocation-enforcement class -- Mission state changes
-propagating to Resource Servers over an event channel -- but leaves
-the channel itself unspecified. This document specifies it: a profile
+{{I-D.draft-mcguinness-oauth-mission-status}} names event-driven
+propagation -- Mission state changes reaching consumers over a Shared
+Signals or equivalent channel -- as one way to bound revocation
+latency, but leaves the channel itself unspecified. This document
+specifies it: a profile
 of the OpenID Shared Signals Framework in which a Mission Issuer emits
 a Mission lifecycle Security Event Token when it commits a state
 transition, delivered push or poll, so a consumer learns of a
@@ -95,10 +96,10 @@ The issuance profile {{I-D.draft-mcguinness-oauth-mission}} gates
 derivation on Mission state and bounds outstanding self-contained
 tokens by their lifetime. The Mission Status and Lifecycle profile
 {{I-D.draft-mcguinness-oauth-mission-status}} adds surfaces for
-observing and changing state, and names an `event_driven`
-revocation-enforcement class for deployments that need Mission state
-changes to reach Resource Servers promptly, without each Resource
-Server polling. That profile defines the class but not the channel.
+observing and changing state, and points to event-driven propagation
+for deployments that need Mission state changes to reach consumers
+promptly, without each consumer polling -- but does not define the
+channel.
 
 This document defines the channel. When a Mission Issuer commits a
 Mission lifecycle transition (a revocation, expiry, suspension,
@@ -108,8 +109,9 @@ a profile of the OpenID Shared Signals Framework {{OIDC-SSF}}: pushed
 to a consumer's receiver {{RFC8935}} or made available for the consumer
 to poll {{RFC8936}}, as a Security Event Token (SET) {{RFC8417}}. A
 consumer that receives a non-`active` transition stops honoring the
-Mission ({{consumer-behavior}}), realizing the `event_driven` class
-({{event-driven}}).
+Mission ({{consumer-behavior}}). A deployment offers this channel by
+publishing the event stream ({{event-stream}}); consumers discover it
+from `mission_event_stream_endpoint` ({{as-metadata}}).
 
 This document is OPTIONAL. It defines no new Mission semantics: the
 Mission, its lifecycle states, and the `mission` claim are defined in
@@ -269,19 +271,18 @@ Issuer's advertised `mission_max_stale_seconds`
 ({{I-D.draft-mcguinness-oauth-mission-status}}), it SHOULD fall back to
 polling Mission Status rather than continue on possibly stale state.
 
-# Realizing the `event_driven` Enforcement Class {#event-driven}
+# Relationship to Revocation Propagation {#event-driven}
 
-A deployment that advertises the `event_driven`
-revocation-enforcement class of
-{{I-D.draft-mcguinness-oauth-mission-status}} realizes it with this
-document: the Mission Issuer emits `mission.lifecycle-change` events
-({{lifecycle-event}}) over the stream ({{event-stream}}), and consumers
-in `event_driven` mode subscribe and apply {{consumer-behavior}}. A
-deployment that advertises `event_driven` therefore MUST also advertise
-`mission_event_stream_endpoint` and at least one delivery mode
-({{as-metadata}}).
+This document is the event-driven mechanism the Status profile's
+revocation-propagation guidance points to
+({{I-D.draft-mcguinness-oauth-mission-status}}): a Mission Issuer that
+offers it emits `mission.lifecycle-change` events ({{lifecycle-event}})
+over the stream ({{event-stream}}), and consumers subscribe and apply
+{{consumer-behavior}}. A deployment that offers event-driven
+propagation MUST advertise `mission_event_stream_endpoint` and at least
+one delivery mode ({{as-metadata}}), so consumers discover it.
 
-This document neither requires nor presumes the `event_driven` class;
+This document neither requires nor presumes event-driven propagation;
 a Mission Issuer MAY emit lifecycle events for audit or operational
 purposes independent of any consumer's enforcement posture.
 
