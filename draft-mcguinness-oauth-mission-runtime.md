@@ -411,7 +411,7 @@ The Resource Server runtime profile MUST define:
   omitted optional fields, set-like array handling, idempotency-key
   handling, and duration measurement when duration can be metered;
 - the Mission state source, maximum staleness bound, and permit
-  lifetime bound used for each action class;
+  validity window used for each action class;
 - how Resource policy is evaluated and composed with Mission authority,
   including local object authorization, tenant configuration, legal
   holds, service invariants, and risk policy;
