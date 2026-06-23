@@ -31,6 +31,7 @@ normative:
   RFC6749:
   RFC6750:
   RFC6234:
+  RFC7662:
   RFC8785:
   RFC9068:
   RFC9700:
@@ -45,7 +46,6 @@ normative:
       Internet-Draft: draft-mcguinness-oauth-mission-latest
 
 informative:
-  RFC7662:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   AUTHZEN:
     target: https://openid.net/specs/authorization-api-1_0-final.html
@@ -65,14 +65,14 @@ agent takes within a token's lifetime. This document specifies the
 companion runtime layer for deployments that claim runtime Mission
 enforcement. Within a declared enforcement scope, each consequential
 action is evaluated, before it executes, against the Mission the
-acting credential is bound to: the action and its parameters against
-the Mission's approved authority and constraints, the actor context
-from the delegation chain, and the Mission against its current state.
-It defines where enforcement MUST sit, how a permit is bound to
-concrete parameters to close the time-of-check to time-of-use gap, how
-carried consumption bounds (budget, call counts, duration) are
-metered, and the runtime evidence each consequential action MUST
-produce.
+acting credential is bound to. The evaluation checks the action and its
+parameters against the Mission's approved authority and constraints,
+the actor context from the delegation chain, and the Mission against
+its current state. The document defines where enforcement MUST sit, how
+a permit is bound to concrete parameters to close the time-of-check to
+time-of-use gap, how carried consumption bounds (budget, call counts,
+duration) are metered, and the runtime evidence each consequential
+action MUST produce.
 
 --- middle
 
@@ -531,13 +531,15 @@ decision. Runtime enforcement MUST evaluate:
   `act` chain is present, the PDP MUST NOT treat `client_id` alone as
   the immediate actor.
 - **Time.** The PDP MUST refuse if the decision context indicates the
-  token is expired or the requested action would execute outside the
-  permit validity window. The issuance profile caps a derived token's
+  token is expired. The issuance profile caps a derived token's
   `exp` at `mission_expiry`, so the `exp` check enforces the Mission's
   expiry transitively. The standard `mission` claim and introspection
   do not surface `mission_expiry`; where a Mission state source does
   expose it (or reports the Mission `expired`), the PDP MUST refuse on
-  it independent of the token's own `exp`.
+  it independent of the token's own `exp`. The PDP sets the permit's
+  validity window from these inputs; that the action actually executes
+  within that window is the executing PEP's reverification, not a
+  decision input ({{parameter-binding}}).
 - **State.** The PDP MUST refuse unless the Mission is `active`
   ({{state-freshness}}).
 
@@ -663,8 +665,8 @@ defines three Mission-level consumption bounds in the Mission
   reserve-or-charge against the remaining balance for each
   consequential action and MUST refuse when the remaining balance is
   insufficient.
-- `max_calls` (`[ { scope, count } ]`): the PDP increments an atomic
-  counter for the named `scope` and MUST refuse a call past `count`.
+- `max_calls` (`[ { call_class, count } ]`): the PDP increments an atomic
+  counter for the named `call_class` and MUST refuse a call past `count`.
 - `max_duration` (an ISO 8601 duration, e.g. `PT8H`; the `duration`
   rule in Appendix A of {{RFC3339}}): the cumulative wall-clock
   duration of consequential activity under the Mission, as the issuance
@@ -765,7 +767,10 @@ A record MUST also contain the following fields when they are available
 and trusted for the refusal or decision path:
 
 - the Mission reference (`mission.id`, `mission.origin`) and the
-  `authority_hash` (and `intent_hash` when known) it operated under;
+  `authority_hash` (and `intent_hash` when known: it is carried in
+  neither the `mission` claim nor introspection, so it is available only
+  to a PDP with direct Mission-record access, and most deployments
+  record `authority_hash` alone) it operated under;
 - the token issuer and audience or protected-resource identifier when
   available;
 - the authenticated `sub`, `client_id`, a client-instance identifier
@@ -839,13 +844,19 @@ AuthZEN's open-ended `context` object:
 
 The AuthZEN `subject` remains the principal the decision is requested
 for; the invoked capability is the `action` and the target resource is
-the `resource`. An evaluation request might look like:
+the `resource`. Note that AuthZEN's `resource.type` is a resource-kind
+identifier, not the issuance profile's `authorization_details` type
+({{I-D.draft-mcguinness-oauth-mission}}): the example uses a deployment
+resource kind (`mission_resource`), and a deployment that needs to
+convey the `mission_resource_access` type carries it in
+`resource.properties` or `context`. An evaluation request might look
+like:
 
 ~~~ json
 {
   "subject":  { "type": "user", "id": "user_3p2q8mN1a0kV7tR" },
   "action":   { "name": "journal-entries.write" },
-  "resource": { "type": "mission_resource_access",
+  "resource": { "type": "mission_resource",
                 "id": "https://erp.example.com" },
   "context": {
     "mission": {
