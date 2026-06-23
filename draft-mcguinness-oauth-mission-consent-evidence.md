@@ -321,9 +321,17 @@ A Consent Evidence object has these members:
 : REQUIRED. A string. Unique evidence identifier.
 
 `mission`:
-: REQUIRED. An object containing `id`, `origin`, `intent_hash`,
-  `authority_hash`, and, when this profile records it on the Mission,
-  `consent_rendering_hash`.
+: REQUIRED. An object binding the evidence to what was approved. Its
+  shape depends on `decision`, because a Mission exists only after an
+  approval ({{I-D.draft-mcguinness-oauth-mission}}):
+  - When `decision` is `approved`, it contains `id`, `origin`,
+    `intent_hash`, `authority_hash`, and, when this profile records it
+    on the Mission, `consent_rendering_hash`.
+  - When `decision` is `declined`, no Mission was created
+    ({{declined-events}}), so there is no `id`. It instead contains
+    `origin` and the `intent_hash` and `authority_hash` the disclosure
+    corresponded to, matching the disclosure object's `source_hashes`
+    ({{consent-disclosure}}). It MUST NOT contain `id`.
 
 `approver`:
 : REQUIRED. An object identifying the authenticated Approver.
