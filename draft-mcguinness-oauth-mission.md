@@ -420,7 +420,7 @@ authoritative. A Mission Intent therefore has no protocol identifier
 of its own: two submissions of the same Intent produce two distinct
 pending requests, and a Mission acquires its `mission_id`
 ({{mission-record}}) only at activation. The approved Intent is
-recorded on the Mission and committed by `proposal_hash`
+recorded on the Mission and committed by `intent_hash`
 ({{integrity-anchors}}); it describes the task but commits no
 authority, which is committed separately by `authority_hash` over the
 derived Authority Set ({{authorization-derivation}}).
@@ -448,7 +448,7 @@ following members:
 : OPTIONAL. An array of strings. Human-readable
   observable outcomes that indicate the task is complete. These are
   disclosure and audit material only: they are rendered to the
-  Approver and committed by `proposal_hash` ({{integrity-anchors}}),
+  Approver and committed by `intent_hash` ({{integrity-anchors}}),
   but carry no machine semantics and MUST NOT be used to derive,
   widen, or gate authority.
 
@@ -514,7 +514,7 @@ following members:
   `max_budget`, `max_calls`, and `max_duration` are **consumption
   bounds**: a deployment names them here so issuance and the runtime
   layer share one vocabulary. They are carried on the Mission and
-  committed by `proposal_hash`, but, unlike `max_derivations`, they are
+  committed by `intent_hash`, but, unlike `max_derivations`, they are
   not enforced by the AS at issuance. They are enforced at the point of
   use by the runtime layer ({{runtime-boundary}}); absent that layer
   they are not enforced.
@@ -922,7 +922,7 @@ At the approval event the AS MUST, in order:
    is granted for.
 4. Compute the integrity anchors ({{integrity-anchors}}):
    `authority_hash` over the consented Authority Set and
-   `proposal_hash` over the approved Mission Intent.
+   `intent_hash` over the approved Mission Intent.
 5. Create the Mission record ({{mission-record}}) in the `active`
    state, atomically with issuance of the authorization code.
 
@@ -940,11 +940,11 @@ what was approved. A party holding only a narrowed subset cannot
 recompute it and treats it as an audit anchor (see {{consent-binding}}
 and {{cross-domain}}).
 
-The `proposal_hash` commits the **approved Mission Intent**: the
+The `intent_hash` commits the **approved Mission Intent**: the
 task the Approver consented to, as recorded on the Mission. It makes
 the recorded task tamper-evident: an auditor can verify the Mission's
-`mission_intent` against `proposal_hash` and detect any later
-alteration. `proposal_hash` commits the task; `authority_hash`
+`mission_intent` against `intent_hash` and detect any later
+alteration. `intent_hash` commits the task; `authority_hash`
 commits the authority derived from it.
 
 ## Binding the Mission to the Grant {#grant-binding}
@@ -1009,7 +1009,7 @@ issuer-bound envelope:
    }
    ~~~
 
-   For `proposal_hash`, `typ` is `mission-intent` and `value` is the
+   For `intent_hash`, `typ` is `mission-intent` and `value` is the
    approved Mission Intent object. For `authority_hash`, `typ` is
    `mission-authority-set` and `value` is the Authority Set as a JSON
    array of entries.
@@ -1045,7 +1045,7 @@ every byte. The following rules close the remaining gaps; they apply
 to computing an anchor and to comparing committed values:
 
 - The committed `value` is exactly the object the AS recorded on the
-  Mission: the approved `mission_intent` for `proposal_hash`, the
+  Mission: the approved `mission_intent` for `intent_hash`, the
   `authority_set` for `authority_hash`. An auditor reproduces a
   digest from the record alone.
 - The AS MUST reject an input object containing duplicate JSON member
@@ -1089,7 +1089,7 @@ It has the following members:
 : REQUIRED. A string. The consent commitment over
   the Authority Set ({{integrity-anchors}}).
 
-`proposal_hash`:
+`intent_hash`:
 : REQUIRED. A string. The integrity commitment over
   the approved Mission Intent ({{integrity-anchors}}), making the
   recorded task tamper-evident.
@@ -1152,7 +1152,7 @@ content. It MUST NOT be reused.
   ],
   "authority_hash":
     "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-  "proposal_hash":
+  "intent_hash":
     "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
   "subject": { "iss": "https://idp.example.com",
     "sub": "user_3p2q8mN1a0kV7tR" },
@@ -2068,7 +2068,7 @@ reject a token whose set does not match `authority_hash`; otherwise
 ({{cross-domain}}) and the Resource Server enforces the token's
 `authorization_details` directly ({{mission-bound-tokens}}).
 
-`proposal_hash` extends the same protection to the task itself: it
+`intent_hash` extends the same protection to the task itself: it
 commits the approved Mission Intent, so an auditor can detect any
 later alteration of the recorded task, independently of the authority
 derived from it. The two anchors are domain-separated
@@ -2077,7 +2077,7 @@ Neither anchor proves the Approver understood the rendered task, nor
 that the AS rendered it faithfully; they commit what the AS
 recorded, and make post-hoc tampering of those records detectable.
 
-This profile commits the task (`proposal_hash`) and the authority
+This profile commits the task (`intent_hash`) and the authority
 (`authority_hash`) the Approver consented to, but deliberately does
 not commit the **rendered consent disclosure** itself: the locale,
 disclosure-template version, and material notices the Approver was
@@ -2391,7 +2391,7 @@ After approval, the home AS records Mission
 `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` in the `active` state with
 `authority_hash`
 `sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ` and
-`proposal_hash`
+`intent_hash`
 `sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY`. The ERP is in
 the partner trust domain, so the agent's next step is a cross-domain
 projection rather than a home-domain access token.
