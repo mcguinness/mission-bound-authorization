@@ -70,7 +70,8 @@ Intent and Authority Set, but does not commit the exact consent
 disclosure shown to the Approver. This document defines an OPTIONAL
 Consent Evidence profile. It specifies a structured consent disclosure
 object, a `consent_rendering_hash` integrity anchor, and a signed
-Consent Evidence object that records what was shown, who approved it,
+Consent Evidence object that records the structured disclosure that was
+shown, which Approver the Authorization Server recorded as deciding,
 which Mission authority it corresponded to, and which notices or
 material risks were presented. The profile lets an auditor reconstruct
 the approval surface without making the disclosure itself an authority
@@ -78,7 +79,7 @@ grant.
 
 --- middle
 
-# Introduction
+# Introduction {#introduction}
 
 The issuance profile {{I-D.draft-mcguinness-oauth-mission}} binds a
 Mission to an approval event and commits two objects: the approved
@@ -87,17 +88,29 @@ remaining gap: the exact consent disclosure rendered to the Approver is
 not itself committed. A faulty or malicious rendering layer could show
 a narrower task than the Authority Set actually records.
 
-This document closes that gap. It defines a structured consent
+This document narrows that gap. It defines a structured consent
 disclosure object and a Consent Evidence object. The disclosure object
 is what the Authorization Server renders or commits to rendering. The
 evidence object records the approval event, the rendering context, the
 Mission anchors, and an integrity envelope over the evidence.
 
+This profile commits the structured disclosure that the Authorization
+Server says it rendered, and binds it to the same Mission anchors used
+for authority. It does not, and cannot, prove that the pixels actually
+presented to the Approver matched that structured object, that the
+Approver read or understood it, or that the rendering layer was honest.
+A faulty or malicious rendering layer that lies about what it displayed
+remains outside the reach of any server-side commitment. What this
+profile provides is a durable, integrity-protected record that ties a
+specific structured disclosure to a specific approval decision and
+Authority Set, so that divergence between the recorded disclosure and
+the enforced authority becomes detectable in audit.
+
 Consent Evidence does not grant authority. Authority remains the
 approved Mission and its Authority Set under
 {{I-D.draft-mcguinness-oauth-mission}}. Consent Evidence lets auditors
-verify that the approval surface corresponded to the authority later
-enforced.
+verify that the recorded approval surface corresponded to the authority
+later enforced.
 
 # Scope
 
@@ -206,7 +219,14 @@ A Consent Disclosure object has these members:
 
 `source_hashes`:
 : REQUIRED. An object containing the `intent_hash` and
-  `authority_hash` values the disclosure corresponds to.
+  `authority_hash` values the disclosure corresponds to. The disclosure
+  object carries these two hashes rather than the full `mission`
+  container ({{consent-evidence}}) because it is constructed before
+  approval commits the Mission: the Mission `id` and lifecycle do not
+  yet exist, and the disclosure must commit only to the proposed Intent
+  and Authority Set it actually renders. The Consent Evidence object,
+  recorded at or after the decision, carries the resolved `mission`
+  container with `id`, `origin`, and the same anchors.
 
 `shaping_evidence_hash`:
 : OPTIONAL. A string. A commitment to Shaping Evidence when shaping was
@@ -257,7 +277,8 @@ for this profile.
 # `consent_rendering_hash` {#consent-rendering-hash}
 
 `consent_rendering_hash` is the integrity-anchor encoded form of the
-SHA-256 of the JCS canonical bytes of this envelope:
+SHA-256 {{RFC6234}} of the JCS {{RFC8785}} canonical bytes of this
+envelope:
 
 ~~~
 {
@@ -267,13 +288,22 @@ SHA-256 of the JCS canonical bytes of this envelope:
 }
 ~~~
 
+The value uses the same algorithm-agile integrity-anchor encoding the
+issuance profile {{I-D.draft-mcguinness-oauth-mission}} defines for
+`intent_hash` and `authority_hash`: a collision-resistant hash-name
+prefix and the base64url digest, for example `sha-256:...`. A consumer
+MUST treat the prefix as identifying the hash function and MUST NOT
+assume SHA-256; this lets the commitment migrate to a stronger function
+without ambiguity.
+
 The hash commits the disclosure object, not pixels or browser state. A
 deployment MAY additionally retain screenshots or UI telemetry, but the
 interoperable commitment is the structured disclosure object.
 
 The Mission Issuer SHOULD record `consent_rendering_hash` on the
 Mission record. When the Mission claim is extended to carry the value,
-consumers MUST treat it as audit data only; it MUST NOT grant or widen
+it MUST carry the same prefixed integrity-anchor form, and consumers
+MUST treat it as audit data only; it MUST NOT grant or widen
 authority.
 
 The Consent Disclosure object MUST be constructed after Authority Set
@@ -492,7 +522,13 @@ disclosure during the retention window as an audit failure.
 The primary threat is rendering confusion: the Approver sees one thing
 while the Mission records another. This profile mitigates that by
 committing a structured disclosure object to the same Mission anchors
-used for authority.
+used for authority, so a disclosure that understates the Authority Set
+is detectable in audit. It does not eliminate the threat: a rendering
+layer that displays pixels inconsistent with the structured disclosure
+it commits remains outside any server-side commitment ({{introduction}}).
+Deployments that need assurance about the presented pixels MUST obtain
+it by other means, such as a trusted rendering path or client
+attestation.
 
 ## Template Downgrade
 
