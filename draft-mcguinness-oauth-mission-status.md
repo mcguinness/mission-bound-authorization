@@ -265,21 +265,20 @@ Decoded JWS payload:
   "exp": 1797840060,
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com"
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "state": "active",
+    "expires_at":     "2026-11-02T08:15:00Z",
+    "policy_version": "deploy-policy:v17",
+    "mission_expiry": "2026-12-31T23:59:59Z",
+    "version":        1
   },
-  "state": "active",
-  "authority_hash":
-    "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
   "authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["invoices.read", "journal-entries.write"] }
-  ],
-  "policy_version": "deploy-policy:v17",
-  "issued_at":      "2026-11-02T08:14:00Z",
-  "expires_at":     "2026-11-02T08:15:00Z",
-  "mission_expiry": "2026-12-31T23:59:59Z",
-  "version":        1
+  ]
 }
 ~~~
 
@@ -287,30 +286,37 @@ The members are:
 
 - The signed JWT envelope `iss`, `aud`, `sub`, `nonce`, `iat`, `exp`.
   The `aud` is the response's audience binding and the `nonce` its
-  request binding.
-- `mission`: the `id` and `origin` of the subject Mission, per the
-  `mission` claim of {{I-D.draft-mcguinness-oauth-mission}} (Section
-  "The mission Claim").
-- `state`: the current Mission lifecycle state. With this extension
-  the state space is `active`, `revoked`, `expired`
-  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Lifecycle
-  and Gating"), extended with `suspended` and `completed` when the
-  Mission Lifecycle endpoint ({{mission-lifecycle-endpoint}}) is
-  deployed.
-- `authority_hash`: the issuance profile's consent commitment over the
-  Authority Set ({{I-D.draft-mcguinness-oauth-mission}}, Section
-  "Integrity Anchors").
+  request binding. `exp` bounds the validity of the signed response
+  itself; how long the consumer MAY rely on the reported `state` is
+  given separately by `mission.expires_at` below.
+- `mission`: the `mission` object, the same shape as the `mission`
+  claim of {{I-D.draft-mcguinness-oauth-mission}} (Section "The
+  mission Claim") with status members added. It carries:
+  - `id`, `origin`: the subject Mission's identifier and origin.
+  - `authority_hash`: the issuance profile's consent commitment over
+    the Authority Set ({{I-D.draft-mcguinness-oauth-mission}}, Section
+    "Integrity Anchors").
+  - `state`: the current Mission lifecycle state. With this extension
+    the state space is `active`, `revoked`, `expired`
+    ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Lifecycle
+    and Gating"), extended with `suspended` and `completed` when the
+    Mission Lifecycle endpoint ({{mission-lifecycle-endpoint}}) is
+    deployed.
+  - `expires_at`: an {{RFC8259}} string giving the point until which
+    the consumer MAY rely on the reported `state` without re-checking,
+    governing caching ({{mission-status-caching}}). It is
+    report-freshness metadata, carried in `mission` so it travels with
+    `state` even on the introspection projection, which has no signed
+    envelope to carry it ({{introspection-projection}}).
+  - `policy_version`, `mission_expiry`, `version`: the derivation
+    policy version, the Mission expiry, and the Mission record version
+    at the time of the response.
 - `authorization_details`: the audience-scoped Authority Set entries
-  relevant to the requesting audience, as the
-  `mission_resource_access` shape of
-  {{I-D.draft-mcguinness-oauth-mission}} (Section "Mission
-  Authority"). Entries addressed to other audiences MUST NOT be
-  disclosed.
-- `policy_version`, `mission_expiry`, `version`: the derivation
-  policy version, the Mission expiry, and the Mission record version
-  at the time of the response.
-- `issued_at`, `expires_at`: the validity window of this response,
-  governing caching ({{mission-status-caching}}).
+  relevant to the requesting audience, as the `mission_resource_access`
+  shape of {{I-D.draft-mcguinness-oauth-mission}} (Section "Mission
+  Authority"), carried at the top level as a sibling of `mission` (as
+  on the token and in the introspection response). Entries addressed
+  to other audiences MUST NOT be disclosed.
 
 A consumer MUST verify, before honoring a response:
 
@@ -326,9 +332,9 @@ A consumer MUST verify, before honoring a response:
 ## Caching {#mission-status-caching}
 
 Consumers SHOULD cache a response keyed on (`mission_id`, audience)
-until `expires_at`. Consumers MUST NOT use a cached response after
-`expires_at`, with up to 30 seconds skew tolerance for the `active`
-state only and no tolerance for terminal states.
+until `mission.expires_at`. Consumers MUST NOT use a cached response
+after `mission.expires_at`, with up to 30 seconds skew tolerance for
+the `active` state only and no tolerance for terminal states.
 
 Consumers SHOULD honor a stale-while-revalidate window of up to twice
 the response lifetime when the AS is unreachable, provided deployment
@@ -417,15 +423,15 @@ This extension adds the following to that projection:
   without re-checking, governed by the caching rule of
   {{mission-status-caching}}.
 
-The projection nests `state`, `authority_hash`, and `expires_at` inside
-the `mission` object, whereas the dedicated Mission Status Response
-({{mission-status-response}}) carries them at the top level. The shapes
-differ deliberately: the projection extends the existing nested
-`mission` introspection member of
-{{I-D.draft-mcguinness-oauth-mission}} (Section "Mission State via
-Token Introspection") and MUST NOT reshape it, while the dedicated
-response is a standalone payload of this document. A consumer of both
-surfaces reads the same facts from the two locations accordingly.
+This projection and the dedicated Mission Status Response
+({{mission-status-response}}) carry Mission facts in a `mission` object
+of the same shape: the open `mission` claim object of
+{{I-D.draft-mcguinness-oauth-mission}} (Section "The mission Claim")
+with status members (`state`, `expires_at`, and, on the dedicated
+response, `policy_version`, `mission_expiry`, `version`) added. This
+projection populates the subset a token-holding consumer needs; the
+dedicated response populates more. Either way a consumer reads the
+same fact from the same place.
 
 Example {{RFC9701}}-signed introspection response (decoded payload),
 for a token whose Mission is `active`:
@@ -567,16 +573,15 @@ Decoded JWS payload:
   "exp": 1797843260,
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com"
-  },
-  "state": "revoked",
-  "authority_hash":
-    "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-  "policy_version": "deploy-policy:v17",
-  "issued_at":      "2026-11-02T09:06:40Z",
-  "expires_at":     "2026-11-02T09:11:40Z",
-  "mission_expiry": "2026-12-31T23:59:59Z",
-  "version":        2
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "state": "revoked",
+    "expires_at":     "2026-11-02T09:11:40Z",
+    "policy_version": "deploy-policy:v17",
+    "mission_expiry": "2026-12-31T23:59:59Z",
+    "version":        2
+  }
 }
 ~~~
 
@@ -750,13 +755,13 @@ the distinction exposes the Mission space to enumeration.
 
 A Mission Status Response is bound to (caller `sub`, audience,
 `nonce`, issuance time). Replay against a different caller or audience,
-or beyond `expires_at`, is detectable by signature verification and by
-verifying the bindings; a consumer MUST verify all six checks of
-{{mission-status-response}} before honoring a response. A response
-cached and replayed by the same caller within `expires_at` is
-equivalent to a fresh response; a consumer MUST NOT use a cached
-response after `expires_at`, with the skew tolerance of
-{{mission-status-caching}}.
+or beyond `mission.expires_at`, is detectable by signature
+verification and by verifying the bindings; a consumer MUST verify all
+six checks of {{mission-status-response}} before honoring a response. A
+response cached and replayed by the same caller within
+`mission.expires_at` is equivalent to a fresh response; a consumer MUST
+NOT use a cached response after `mission.expires_at`, with the skew
+tolerance of {{mission-status-caching}}.
 
 ## Mission Status Denial of Service
 
