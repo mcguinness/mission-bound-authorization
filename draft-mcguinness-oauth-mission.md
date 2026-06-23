@@ -45,6 +45,7 @@ normative:
   RFC7662:
   RFC8414:
   RFC7519:
+  RFC9728:
   I-D.draft-ietf-oauth-identity-assertion-authz-grant:
   I-D.draft-ietf-oauth-identity-chaining:
   I-D.draft-mcguinness-oauth-actor-profile:
@@ -56,7 +57,6 @@ informative:
   RFC8935:
   RFC9493:
   RFC9700:
-  RFC9728:
   I-D.draft-klrc-aiagent-auth:
   I-D.draft-ietf-oauth-transaction-tokens:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
@@ -209,6 +209,16 @@ Missions to OAuth 2.0 and is implementable on its own, depending only
 on the OAuth and JOSE specifications it cites. A single cross-domain
 hop is supported as an optional binding ({{cross-domain}}); the
 single-domain core is implementable without it.
+
+Two normative dependencies are on in-progress individual drafts, so
+this document cannot advance ahead of them: the OAuth Actor Profile
+({{I-D.draft-mcguinness-oauth-actor-profile}}) for the `act` chain, and
+the identity-chaining and ID-JAG drafts
+({{I-D.draft-ietf-oauth-identity-chaining}},
+{{I-D.draft-ietf-oauth-identity-assertion-authz-grant}}) for
+cross-domain projection. Both are confined to OPTIONAL capabilities
+(Delegation and Cross-Domain), so the mandatory single-domain core does
+not depend on them.
 
 Deferred to future work, and not required to implement this document,
 are: a substrate-neutral generalization of the Mission model (across
@@ -505,8 +515,10 @@ following members:
   : OPTIONAL. An array of objects. Hard caps on the count of
     consequential call events. Each object has the members:
 
-    `scope`:
-    : REQUIRED. A string. The named call class.
+    `call_class`:
+    : REQUIRED. A string. The named call class. (Named `call_class`
+      rather than `scope` to avoid collision with the OAuth `scope`
+      parameter and claim.)
 
     `count`:
     : REQUIRED. An integer. 1 or greater.
@@ -547,7 +559,7 @@ Example Mission Intent:
     "max_derivations": 200,
     "max_budget": { "amount": "5000.00", "currency": "USD" },
     "max_calls": [
-      { "scope": "journal-entries.write", "count": 50 }
+      { "call_class": "journal-entries.write", "count": 50 }
     ],
     "max_duration": "PT8H"
   }
@@ -1241,10 +1253,13 @@ The token-endpoint response conveys the granted authority to the
 client. Because the client submits `mission_intent` rather than
 `authorization_details`, the access token is otherwise the only place
 the granted authority appears, and a client is not expected to parse
-the access token. The AS therefore MUST return the granted
+the access token for authority. The AS therefore MUST return the granted
 `authorization_details` in the token-endpoint response, per
 {{RFC9396}} Section 7, reflecting exactly the (possibly narrowed) set
-assigned to the issued token. The same applies to refresh and Token
+assigned to the issued token. (A client does read the `mission` claim's
+`id` from the token to learn its `mission_id`, per {{grant-binding}};
+"not expected to parse for authority" refers only to the
+`authorization_details`, which the response echoes.) The same applies to refresh and Token
 Exchange responses.
 
 Mission-bound refresh tokens MUST be sender-constrained or use refresh
@@ -2122,8 +2137,8 @@ This profile commits the task (`intent_hash`) and the authority
 not commit the **rendered consent disclosure** itself: the locale,
 disclosure-template version, and material notices the Approver was
 shown are not bound by any anchor here. Because of this gap, a buggy or
-malicious rendering layer could mislead the Approver — showing a
-narrower or different task than the Authority Set actually committed —
+malicious rendering layer could mislead the Approver, showing a
+narrower or different task than the Authority Set actually committed,
 without leaving any committed trace. A deployment whose Missions carry
 high-risk authority SHOULD therefore record presentation-level audit
 evidence out of band: for example, a hash over the exact consent
@@ -2236,20 +2251,6 @@ resource and action mappings rather than free-form inference, and
 SHOULD record `policy_version` so a derivation can be audited and
 reproduced. General OAuth security guidance {{RFC9700}} applies.
 
-## Mission Identifier Correlation
-
-This document carries a single canonical `mission_id` on every
-derived token and ID-JAG. Any party that observes credentials for the
-same Mission, whether a Resource Server, a Resource AS, or an auditor
-spanning audiences, can correlate that activity by `mission_id`, and
-`mission.origin` further identifies the issuing AS. This profile does
-not provide cross-audience unlinkability. Audience-pairwise (or
-request-pairwise) Mission references, in which the origin projects a
-distinct opaque identifier per audience and resolves them
-server-side, are the fuller mechanism for that and are deferred to
-future work. A deployment that carries the canonical `mission_id` on
-the wire SHOULD document this correlation property.
-
 ## Authority Hash Is Not a Mission Identifier
 
 `authority_hash` commits the approved Authority Set, not the Mission.
@@ -2264,6 +2265,22 @@ the Mission; `authority_hash` identifies the authority the Mission
 approved. A consumer that needs to bind to or correlate a specific
 Mission uses `mission_id`, and `intent_hash` and `approver` distinguish
 Missions that share an Authority Set.
+
+# Privacy Considerations
+
+## Mission Identifier Correlation
+
+This document carries a single canonical `mission_id` on every
+derived token and ID-JAG. Any party that observes credentials for the
+same Mission, whether a Resource Server, a Resource AS, or an auditor
+spanning audiences, can correlate that activity by `mission_id`, and
+`mission.origin` further identifies the issuing AS. This profile does
+not provide cross-audience unlinkability. Audience-pairwise (or
+request-pairwise) Mission references, in which the origin projects a
+distinct opaque identifier per audience and resolves them
+server-side, are the fuller mechanism for that and are deferred to
+future work. A deployment that carries the canonical `mission_id` on
+the wire SHOULD document this correlation property.
 
 # IANA Considerations
 
@@ -2416,7 +2433,7 @@ The agent submits this Mission Intent through PAR ({{mission-intent}}):
     "max_derivations": 200,
     "max_budget": { "amount": "5000.00", "currency": "USD" },
     "max_calls": [
-      { "scope": "journal-entries.write", "count": 50 }
+      { "call_class": "journal-entries.write", "count": 50 }
     ],
     "max_duration": "PT8H"
   }
