@@ -32,6 +32,7 @@ normative:
   RFC7009:
   RFC7515:
   RFC7523:
+  RFC7662:
   RFC8259:
   RFC8414:
   RFC8705:
@@ -162,8 +163,8 @@ the issuance profile defers. Unlike token introspection
 ({{introspection-projection}}), which answers "is this
 token's authorization still good," the Status operation answers "what
 is the state of this Mission" keyed by the `mission_id` alone. Any
-consumer holding a `mission_id` -- including an auditor or a
-cross-domain Resource AS -- resolves it without holding a token the AS
+consumer holding a `mission_id` (including an auditor or a
+cross-domain Resource AS) resolves it without holding a token the AS
 issued.
 
 The Mission Issuer publishes its Mission Status endpoint URL in
@@ -232,8 +233,11 @@ mission=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 
 On success the AS returns a JWS Compact Serialization {{RFC7515}}
 signed with a key published in the AS's `jwks_uri`. The JWS header
-carries `typ` of `application/mission-status-response+jwt` (registered
-in {{iana}}) and a `kid` identifying the signing key.
+carries `typ` of `mission-status-response+jwt` and a `kid` identifying
+the signing key. Per {{RFC7515}} Section 4.1.9 the `typ` header omits
+the `application/` prefix; the full media type
+`application/mission-status-response+jwt` (registered in {{iana}}) is
+used as the HTTP `Content-Type`.
 
 {{RFC9701}} signed introspection responses are scoped to token
 introspection and do not apply to a lookup keyed by `mission_id`; the
@@ -259,7 +263,7 @@ Decoded JWS header:
 {
   "alg": "ES256",
   "kid": "sa-key-2026-q3",
-  "typ": "application/mission-status-response+jwt"
+  "typ": "mission-status-response+jwt"
 }
 ~~~
 
@@ -376,7 +380,12 @@ symbols are hard errors. The body of a hard error is a JSON object
 Terminal and suspended states return HTTP 200 with the signed Mission
 Status Response carrying `state`. Hard errors (`unauthorized`,
 `not_found`, `rate_limited`, `unavailable`) return the matching HTTP
-status with a JSON body:
+status with a JSON body. Note the distinction between the two access
+failures: `unauthorized` (401) means the request carried no valid
+authentication, whereas a request that is authenticated but not
+authorized for the referenced Mission returns `not_found` (404), never
+401, so that an unauthorized reference is indistinguishable from an
+unknown one ({{mission-status-anti-oracle}}). The error body is:
 
 ~~~ http-message
 HTTP/1.1 404 Not Found
@@ -399,9 +408,10 @@ body member in seconds.
 
 # Token Introspection Mission Projection {#introspection-projection}
 
-This section is OPTIONAL and is a thin delta over the token
-introspection of {{I-D.draft-mcguinness-oauth-mission}} (Section
-"Mission State via Token Introspection"). That section already
+This section is OPTIONAL and is a thin delta over the OAuth 2.0 Token
+Introspection {{RFC7662}} projection of
+{{I-D.draft-mcguinness-oauth-mission}} (Section "Mission State via
+Token Introspection"). That section already
 defines a `mission` member on the introspection response carrying
 `id`, `origin`, `authority_hash`, and (from the Mission origin) the
 lifecycle `state`, together with the caller-authorization,
@@ -423,7 +433,10 @@ This extension adds the following to that projection:
   additionally carry `expires_at`, an {{RFC8259}} string giving the
   point until which the consumer MAY rely on the reported `state`
   without re-checking, governed by the caching rule of
-  {{mission-status-caching}}.
+  {{mission-status-caching}}. When `expires_at` is absent (for example
+  a non-origin projection), the consumer MUST NOT cache the reported
+  `state` across requests and re-checks per use or relies on the
+  token's own lifetime.
 
 This projection and the dedicated Mission Status Response
 ({{mission-status-response}}) carry Mission facts in a `mission` object
@@ -552,7 +565,13 @@ mission=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 ~~~
 
 Revoke success response: the AS returns the updated status as a signed
-Mission Status Response ({{mission-status-response}}):
+Mission Status Response ({{mission-status-response}}). Because the
+Lifecycle request carries no `audience`, the AS sets `aud` to the
+authenticated requester and MAY omit `authorization_details` (a
+lifecycle confirmation reports `state`, not audience-scoped authority);
+`sub` is the authenticated requesting client, as for any Mission Status
+Response, while the human actor behind the operation is recorded only
+in the audit log.
 
 ~~~ http-message
 HTTP/1.1 200 OK
@@ -568,7 +587,7 @@ Decoded JWS payload:
 {
   "iss": "https://as.example.com",
   "aud": "https://erp.example.com",
-  "sub": "user_3p2q8mN1a0kV7tR",
+  "sub": "client_erp-recon-agent",
   "nonce": "nonce_8Y3vN0sM6tP1xR9bQ5",
   "iat": 1797843200,
   "exp": 1797843260,
@@ -765,8 +784,8 @@ requires.
 The AS signs Mission Status and Lifecycle responses with a key from
 its `jwks_uri`. The AS MUST retain the public JWK for every `kid` it
 has signed such a response under, indexed by `kid`, for at least the
-Mission record retention period -- even after the key is rotated out
-of the live `jwks_uri` -- so an archived
+Mission record retention period (even after the key is rotated out
+of the live `jwks_uri`), so an archived
 `application/mission-status-response+jwt` remains verifiable for audit
 and dispute. The AS MAY expose retired verification keys through a
 deployment-defined audit interface but MUST NOT serve them as active
@@ -798,8 +817,8 @@ never sees entries addressed to other audiences
 
 ## Status Audit Logging
 
-The AS records Status and Lifecycle requests -- containing
-`mission_id`, audience, caller, and timing -- in audit logs.
+The AS records Status and Lifecycle requests (containing
+`mission_id`, audience, caller, and timing) in audit logs.
 Deployments MUST treat these logs as PII sinks per the issuance
 profile's privacy considerations.
 
