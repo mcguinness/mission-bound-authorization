@@ -148,7 +148,7 @@ consequential action, Resource policy, decision, Mission state source,
 and enforcement scope are used as defined in
 {{I-D.draft-mcguinness-oauth-mission-runtime}}. The Mission claim
 (`id`, `origin`, `authority_hash`), the integrity anchors
-(`proposal_hash`, `authority_hash`), and `authorization_details`
+(`intent_hash`, `authority_hash`), and `authorization_details`
 entries of type `mission_resource_access` are used as defined in
 {{I-D.draft-mcguinness-oauth-mission}}.
 
@@ -462,7 +462,7 @@ concrete object an AuthZEN deployment emits.
 `mission`:
 : REQUIRED. An object. the PDP request's `context.mission`
   object (`id`, `origin`, `authority_hash`, and, when known,
-  `policy_version` and `policy_view_id`), extended with `proposal_hash`
+  `policy_version` and `policy_view_id`), extended with `intent_hash`
   and, when known, a consent-disclosure commitment, so the evidence
   chains back to the exact approved Mission. Within `mission`, `id`,
   `origin`, and `authority_hash` are required; the others are optional.
@@ -563,7 +563,7 @@ unregistered formats.
     "origin": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE",
-    "proposal_hash":
+    "intent_hash":
       "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6s",
     "policy_version": "deploy-policy:v17",
     "policy_view_id":

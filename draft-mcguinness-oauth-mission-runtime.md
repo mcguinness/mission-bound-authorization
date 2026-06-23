@@ -577,7 +577,7 @@ A record MUST also contain the following fields when they are available
 and trusted for the refusal or decision path:
 
 - the Mission reference (`mission.id`, `mission.origin`) and the
-  `authority_hash` (and `proposal_hash` when known) it operated under;
+  `authority_hash` (and `intent_hash` when known) it operated under;
 - the token issuer and audience or protected-resource identifier when
   available;
 - the authenticated `sub`, `client_id`, client-instance identifier
@@ -596,7 +596,7 @@ unverified token claims as authenticated facts. It MAY include a digest
 of the presented token or rejected claim set for correlation and
 forensics, subject to the privacy requirements below.
 
-The `authority_hash` and `proposal_hash` in a record are the
+The `authority_hash` and `intent_hash` in a record are the
 originating AS's commitments, cited as anchors; the PDP does not
 recompute them and is not required to hold the full Authority Set to
 record them, consistent with {{I-D.draft-mcguinness-oauth-mission}}.
