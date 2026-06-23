@@ -316,8 +316,8 @@ deployment SHOULD adopt, and a floor it MUST observe.
 | External commitment | signing, accepting terms for the user | MUST | MUST, with TOCTOU reverification and evidence |
 | Privileged administration | granting access, changing policy | MUST | MUST, with TOCTOU and evidence |
 
-The per-class requirements in the table -- the PDP gate and parameter
-binding -- are requirements for an action **once it is assigned to that
+The table's per-class requirements (the PDP gate and parameter
+binding) are requirements for an action **once it is assigned to that
 class**. Assigning an action to a class is deployment policy, bounded
 by the floor below and by any Resource-policy minimum
 ({{decision}}): the profile does not require every read to reach a PDP.
@@ -858,7 +858,7 @@ the `resource`. An evaluation request might look like:
 
 On permit, the AuthZEN response carries the policy-view version, a
 decision identifier, the `parameter_digest` for parameter-bound
-classes, and a short validity window -- for example:
+classes, and a short validity window, for example:
 
 ~~~ json
 {
