@@ -31,10 +31,11 @@ normative:
   RFC6838:
   RFC7009:
   RFC7515:
-  RFC7521:
+  RFC7523:
   RFC8259:
   RFC8414:
   RFC8705:
+  RFC9325:
   RFC9449:
   RFC9701:
   I-D.draft-mcguinness-oauth-mission:
@@ -115,7 +116,7 @@ token issuance, the subset rule, and lifecycle gating are all defined
 in {{I-D.draft-mcguinness-oauth-mission}} and are referenced, not
 re-specified, here.
 
-# Conventions and Definitions {#conventions-and-definitions}
+# Conventions and Terminology {#conventions-and-definitions}
 
 {::boilerplate bcp14-tagged}
 
@@ -159,7 +160,8 @@ The Mission Issuer publishes its Mission Status endpoint URL in
 Authorization Server metadata ({{as-metadata}}) as
 `mission_status_endpoint`, which a consumer resolves from a
 credential's `mission.origin`. The endpoint MUST be served over TLS
-1.2 or later (TLS 1.3 RECOMMENDED).
+1.2 or later (TLS 1.3 RECOMMENDED), following the recommendations of
+{{RFC9325}}.
 
 ## Request {#mission-status-request}
 
@@ -191,7 +193,7 @@ MUST use, exactly one of the following per request:
    Mission-Status-scoped DPoP-bound token in the `Authorization`
    header with a `DPoP` proof header; the token's `cnf.jkt` MUST match
    the proof key thumbprint.
-3. **Private-key-JWT client authentication** {{RFC7521}}. The client
+3. **Private-key-JWT client authentication** {{RFC7523}}. The client
    presents a signed JWT assertion as `client_assertion`.
 
 Plain Basic or POST client authentication MUST NOT be used for this
@@ -200,7 +202,7 @@ three mechanisms with `unauthorized` (HTTP 401). The AS advertises the
 supported mechanisms under `mission_status_auth_methods_supported`
 ({{as-metadata}}).
 
-## Worked request example
+## Worked Request Example
 
 ~~~ http-message
 POST /as/mission/status HTTP/1.1
@@ -346,7 +348,10 @@ the two cases.
 ## Error Responses {#mission-status-errors}
 
 Mission Status responses use the following symbols, mapped to HTTP
-status codes. The body of a hard error is a JSON object {{RFC8259}}.
+status codes. `ok`, `terminated`, and `suspended` are successful
+outcomes returned with a signed Mission Status Response; the remaining
+symbols are hard errors. The body of a hard error is a JSON object
+{{RFC8259}}.
 
 | Symbol | HTTP | Description |
 |---|---|---|
@@ -406,6 +411,16 @@ This extension adds two requirements to that projection:
   without re-checking, governed by the caching rule of
   {{mission-status-caching}}.
 
+The projection nests `state`, `authority_hash`, and `expires_at` inside
+the `mission` object, whereas the dedicated Mission Status Response
+({{mission-status-response}}) carries them at the top level. The shapes
+differ deliberately: the projection extends the existing nested
+`mission` introspection member of
+{{I-D.draft-mcguinness-oauth-mission}} (Section "Mission State via
+Token Introspection") and MUST NOT reshape it, while the dedicated
+response is a standalone payload of this document. A consumer of both
+surfaces reads the same facts from the two locations accordingly.
+
 Example {{RFC9701}}-signed introspection response (decoded payload),
 for a token whose Mission is `active`:
 
@@ -449,13 +464,14 @@ section standardizes that management surface.
 The AS publishes its Mission Lifecycle endpoint URL in Authorization
 Server metadata ({{as-metadata}}) as `mission_lifecycle_endpoint`,
 distinct from {{RFC7009}} token revocation. The endpoint MUST be
-served over TLS 1.2 or later (TLS 1.3 RECOMMENDED).
+served over TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the
+recommendations of {{RFC9325}}.
 
 Adopting this endpoint extends the issuance profile's lifecycle state
 space ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
-Lifecycle and Gating") with two non-terminal-and-terminal states:
-`suspended` (a paused Mission that derives no tokens until resumed)
-and `completed` (a terminal state recording successful completion).
+Lifecycle and Gating") with two additional states: `suspended` (a
+non-terminal paused Mission that derives no tokens until resumed) and
+`completed` (a terminal state recording successful completion).
 Issuance gating treats any state other than `active` as
 non-deriving, exactly as the base profile gates on `active`.
 
@@ -835,10 +851,13 @@ An implementation claiming an extension MUST meet its requirements:
 
 # IANA Considerations {#iana}
 
-This document requests IANA actions for OAuth AS metadata members, a
-media type, and a new registry.
+This document requests IANA actions for OAuth AS metadata members and
+a media type. It defines no new registry: the authentication-method
+and enforcement-class value spaces are closed sets defined inline; a
+registry is the natural vehicle should future revisions need
+enforcement-class extensibility.
 
-## OAuth Authorization Server Metadata
+## OAuth Authorization Server Metadata Registration
 
 IANA is requested to register the following in the "OAuth
 Authorization Server Metadata" registry {{RFC8414}}. For each:
@@ -851,7 +870,7 @@ Change Controller IETF; Reference this document, {{as-metadata}}.
 - `mission_enforcement_classes_supported`
 - `mission_max_stale_seconds`
 
-## Media Type Registry
+## Media Type Registration
 
 IANA is requested to register one media type per {{RFC6838}}.
 
