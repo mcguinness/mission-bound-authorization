@@ -25,6 +25,13 @@ This is the working area for individual Internet-Drafts.
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-status)
 * [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-status.diff)
 
+## Mission Lifecycle Signals for OAuth 2.0
+
+* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-signals.html)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-signals)
+* [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-signals)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-signals.diff)
+
 
 ## Contributing
 
