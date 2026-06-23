@@ -845,11 +845,12 @@ AuthZEN's open-ended `context` object:
 The AuthZEN `subject` remains the principal the decision is requested
 for; the invoked capability is the `action` and the target resource is
 the `resource`. Note that AuthZEN's `resource.type` is a resource-kind
-identifier, not the {{RFC9396}} `authorization_details` type: the
-example uses a deployment resource kind (`mission_resource`), and a
-deployment that needs to convey the `mission_resource_access` type
-carries it in `resource.properties` or `context`. An evaluation
-request might look like:
+identifier, not the issuance profile's `authorization_details` type
+({{I-D.draft-mcguinness-oauth-mission}}): the example uses a deployment
+resource kind (`mission_resource`), and a deployment that needs to
+convey the `mission_resource_access` type carries it in
+`resource.properties` or `context`. An evaluation request might look
+like:
 
 ~~~ json
 {
