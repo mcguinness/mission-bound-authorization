@@ -70,12 +70,12 @@ Intent and Authority Set, but does not commit the exact consent
 disclosure shown to the Approver. This document defines an OPTIONAL
 Consent Evidence profile. It specifies a structured consent disclosure
 object, a `consent_rendering_hash` integrity anchor, and a signed
-Consent Evidence object that records the structured disclosure that was
-shown, which Approver the Authorization Server recorded as deciding,
-which Mission authority it corresponded to, and which notices or
-material risks were presented. The profile lets an auditor reconstruct
-the approval surface without making the disclosure itself an authority
-grant.
+Consent Evidence object that records the structured disclosure the
+Authorization Server rendered or committed to rendering, which Approver
+it recorded as deciding, which Mission authority the disclosure
+corresponded to, and which notices or material risks it carried. The
+profile lets an auditor reconstruct the recorded approval surface
+without making the disclosure itself an authority grant.
 
 --- middle
 
@@ -135,8 +135,9 @@ This profile separates three artifacts:
 
 1. the Mission Intent and Authority Set, which define what is being
    approved under {{I-D.draft-mcguinness-oauth-mission}};
-2. the Consent Disclosure object, which defines what the Approver was
-   shown in structured form; and
+2. the Consent Disclosure object, which defines in structured form what
+   the Authorization Server rendered or committed to rendering for the
+   Approver; and
 3. the Consent Evidence object, which records the approval or decline
    event and integrity-protects the disclosure commitment.
 
