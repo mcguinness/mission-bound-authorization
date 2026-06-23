@@ -61,6 +61,15 @@ informative:
   I-D.draft-ietf-oauth-transaction-tokens:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   I-D.draft-cecchetti-oauth-rar-cedar:
+  I-D.draft-mcguinness-oauth-mission-status:
+    title: "Mission Status and Lifecycle for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-status-latest
 
 --- abstract
 
@@ -251,10 +260,13 @@ considered and where it belongs, not that it was overlooked.
   ({{introspection}}); this profile defines no push-based notification
   of Mission state changes. A Shared Signals ({{RFC8935}}) / CAEP
   profile for Mission lifecycle events is future work.
-- **Human-in-the-loop suspension.** The lifecycle here is `active`,
-  `revoked`, `expired` ({{lifecycle}}); a `suspended` /
-  pending-human-approval state, and a holding-token pause-and-resume
-  protocol, are future lifecycle work.
+- **Human-in-the-loop suspension.** The base lifecycle here is
+  `active`, `revoked`, `expired` ({{lifecycle}}). A `suspended` state
+  with `resume`/`complete` transitions is defined as an OPTIONAL
+  extension by the Mission Status and Lifecycle profile
+  ({{I-D.draft-mcguinness-oauth-mission-status}}); a
+  pending-human-approval state and a holding-token pause-and-resume
+  protocol remain future lifecycle work.
 - **Multi-hop cross-domain provenance.** A single cross-domain hop is
   supported ({{cross-domain}}); chaining a Mission across more than one
   trust-domain boundary, and the verifiable provenance that would
