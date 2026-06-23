@@ -593,8 +593,7 @@ Table of Contents
    &nonce=nonce_8Y3vN0sM6tP1xR9bQ5
 
    Revoke success response: the AS returns the updated status as a
-   signed Mission Status Response (Section 3.4), with a lifecycle_event
-   member recording the transition:
+   signed Mission Status Response (Section 3.4):
 
    HTTP/1.1 200 OK
    Content-Type: application/mission-status-response+jwt
@@ -616,12 +615,6 @@ Table of Contents
        "origin": "https://as.example.com"
      },
      "state": "revoked",
-     "lifecycle_event": {
-       "operation": "revoke",
-       "at":        "2026-11-02T09:06:40Z",
-       "actor":     "user_3p2q8mN1a0kV7tR",
-       "reason":    "Quarterly reconcile completed early"
-     },
      "authority_hash":
        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
      "policy_version": "deploy-policy:v17",
@@ -631,9 +624,9 @@ Table of Contents
      "version":        2
    }
 
-   The lifecycle_event member records the transition; it appears only on
-   a Mission Status Response returned from this endpoint.  The version
-   increments on each AS-recorded state change.
+   The AS records the operation, actor, time, and any reason in its
+   audit log; the response confirms the outcome through state and the
+   incremented version, which advances on each AS-recorded state change.
 
 5.5.  Idempotency
 

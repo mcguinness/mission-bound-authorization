@@ -1975,8 +1975,7 @@ mission=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 </pre><a href="#section-5.4-2" class="pilcrow">¶</a>
 </div>
 <p id="section-5.4-3">Revoke success response: the AS returns the updated status as a signed
-Mission Status Response (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>), with a
-<code>lifecycle_event</code> member recording the transition:<a href="#section-5.4-3" class="pilcrow">¶</a></p>
+Mission Status Response (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>):<a href="#section-5.4-3" class="pilcrow">¶</a></p>
 <div class="lang-http-message sourcecode" id="section-5.4-4">
 <pre>
 HTTP/1.1 200 OK
@@ -2001,12 +2000,6 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
     "origin": "https://as.example.com"
   },
   "state": "revoked",
-  "lifecycle_event": {
-    "operation": "revoke",
-    "at":        "2026-11-02T09:06:40Z",
-    "actor":     "user_3p2q8mN1a0kV7tR",
-    "reason":    "Quarterly reconcile completed early"
-  },
   "authority_hash":
     "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
   "policy_version": "deploy-policy:v17",
@@ -2017,9 +2010,9 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
 }
 </pre><a href="#section-5.4-6" class="pilcrow">¶</a>
 </div>
-<p id="section-5.4-7">The <code>lifecycle_event</code> member records the transition; it appears only
-on a Mission Status Response returned from this endpoint. The
-<code>version</code> increments on each AS-recorded state change.<a href="#section-5.4-7" class="pilcrow">¶</a></p>
+<p id="section-5.4-7">The AS records the operation, actor, time, and any <code>reason</code> in its
+audit log; the response confirms the outcome through <code>state</code> and the
+incremented <code>version</code>, which advances on each AS-recorded state change.<a href="#section-5.4-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="idempotency">
