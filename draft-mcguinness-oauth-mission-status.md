@@ -71,7 +71,7 @@ token lifetime and optional token introspection. This document
 defines the Mission state-management surfaces it defers: a canonical
 Mission Status operation (keyed by `mission_id`), a management
 endpoint for explicit lifecycle transitions (`revoke`, `suspend`, `resume`,
-`complete`), graduated revocation-enforcement classes, and signed
+`complete`), revocation-propagation guidance, and signed
 status evidence. Each capability is independently optional; an
 implementation MAY adopt any subset, and one that adopts none remains
 a conforming issuance profile. This document does not restate the base
@@ -91,8 +91,8 @@ every derived token, and offers only OPTIONAL token introspection
 Token Introspection") as a way for a Resource Server to observe
 Mission state. It explicitly leaves the canonical Mission Status
 surface (keyed by `mission_id`), a standardized management endpoint
-for lifecycle transitions, signed status evidence, and graduated
-revocation enforcement to future work.
+for lifecycle transitions, signed status evidence, and
+revocation-propagation guidance to future work.
 
 This document specifies those deferred surfaces as OPTIONAL extensions
 that build on the issuance profile. The capabilities are:
@@ -106,11 +106,12 @@ that build on the issuance profile. The capabilities are:
 - A **Mission Lifecycle endpoint** ({{mission-lifecycle-endpoint}})
   for explicit `revoke`, `suspend`, `resume`, and `complete`
   transitions, distinct from {{RFC7009}} token revocation.
-- **Revocation Enforcement Classes** ({{revocation-enforcement-classes}})
-  that let a deployment advertise how promptly Mission state changes
-  take effect.
+- **Revocation propagation** guidance
+  ({{revocation-enforcement-classes}}): a `mission_max_stale_seconds`
+  bound and how to size token lifetimes to the propagation mechanisms
+  in use.
 - **Authorization Server metadata** members
-  ({{as-metadata}}) advertising the endpoints and classes above.
+  ({{as-metadata}}) advertising the endpoints above.
 
 Each capability is independently optional. An implementation states
 which it supports through the metadata of {{as-metadata}} and the
@@ -608,55 +609,54 @@ Response.
 ## Relationship to RFC 7009
 
 A Mission revocation through this endpoint cascades to credentials
-derived from the Mission per the AS's advertised enforcement classes
-({{revocation-enforcement-classes}}). The AS MAY additionally invoke
+derived from the Mission per the AS's advertised revocation
+propagation ({{revocation-enforcement-classes}}). The AS MAY additionally invoke
 {{RFC7009}} token revocation for specific outstanding tokens when it
 knows their `jti`. {{RFC7009}} alone does NOT revoke a Mission; the
 lifecycle endpoint is the authoritative Mission state change.
 
-# Revocation Enforcement Classes {#revocation-enforcement-classes}
+# Revocation Propagation {#revocation-enforcement-classes}
 
 This section is OPTIONAL. The issuance profile bounds outstanding
 self-contained tokens by their lifetime and OPTIONAL token
 introspection ({{I-D.draft-mcguinness-oauth-mission}}, Section
-"Revocation"). This section lets a deployment advertise, in graduated
-classes, how promptly a Mission state change takes effect at the
-Resource Server, so a consumer can choose a token lifetime and
-enforcement posture to match.
+"Revocation"). A deployment that needs a Mission state change to take
+effect faster than token lifetime alone combines the propagation
+mechanisms this suite offers and sizes token lifetimes to match.
 
-A deployment advertises its enforcement classes under
-`mission_enforcement_classes_supported` ({{as-metadata}}). The defined
-classes are:
+The mechanisms are each discovered from their own metadata, not from a
+separate posture list:
 
-- **`issuance`**: Mission state is consulted at each derivation event
-  (the token endpoint, refresh, Token Exchange). Already-issued,
-  self-contained tokens are NOT invalidated; they remain valid until
-  natural expiry. This is the issuance profile's baseline behavior.
-- **`introspection`**: token introspection
-  ({{introspection-projection}}) returns `active: false` for a token
-  whose Mission state disallows use, even if the token itself has not
-  expired.
-- **`event_driven`**: the Mission Issuer emits Mission lifecycle
-  Security Event Tokens that propagate state changes to consumers over
-  a Shared Signals stream, as defined in
-  {{I-D.draft-mcguinness-oauth-mission-signals}}.
-- **`per_request`**: high-assurance Resource Servers query the Mission
-  Status operation ({{mission-status}}) or validate sufficiently fresh
-  state for each consequential request.
+- consulting Mission state at each derivation event (the token
+  endpoint, refresh, Token Exchange) -- the issuance profile's
+  always-present baseline, which does not invalidate already-issued
+  self-contained tokens;
+- token introspection ({{introspection-projection}}), which returns
+  `active: false` for a token whose Mission state disallows use even
+  before the token expires, discovered from `introspection_endpoint`
+  and `introspection_signing_alg_values_supported`;
+- the Mission Status operation ({{mission-status}}) for per-request
+  state checks by high-assurance Resource Servers, discovered from
+  `mission_status_endpoint`; and
+- event-driven propagation of state changes over a Shared Signals
+  stream ({{I-D.draft-mcguinness-oauth-mission-signals}}), discovered
+  from `mission_event_stream_endpoint`.
 
-A deployment also advertises `mission_max_stale_seconds`
-({{as-metadata}}), the maximum tolerated interval for revocation
-propagation.
+A deployment advertises `mission_max_stale_seconds` ({{as-metadata}}),
+the maximum interval it tolerates for a Mission state change to take
+effect, so a consumer can size token lifetimes and choose propagation
+mechanisms to match.
 
 ## Recommended Access-Token TTL
 
-Where Mission revocation propagation matters but only the `issuance`
-class is deployed, Mission-bound access tokens SHOULD use TTLs aligned
-with the declared `mission_max_stale_seconds`. Standard OAuth defaults
-(3600 seconds) may be too long; 60 to 300 seconds is typical for
-`issuance`-only deployments where revocation matters. Deployments with
-`event_driven` or `per_request` enforcement MAY use longer TTLs
-because revocation propagates out of band.
+Where Mission revocation must take effect but only the baseline
+derivation-time check is in use, Mission-bound access tokens SHOULD use
+TTLs aligned with the declared `mission_max_stale_seconds`. Standard
+OAuth defaults (3600 seconds) may be too long; 60 to 300 seconds is
+typical where revocation matters and no out-of-band propagation is
+deployed. Deployments where revocation propagates out of band (token
+introspection, per-request status checks, or the event stream) MAY use
+longer TTLs.
 
 # Authorization Server Metadata {#as-metadata}
 
@@ -689,10 +689,6 @@ through standard {{RFC8414}} discovery.
 `mission_lifecycle_auth_methods_supported`:
 : OPTIONAL. An array of strings. The authentication mechanisms the Lifecycle endpoint
   accepts, with the same value space as the Status methods.
-
-`mission_enforcement_classes_supported`:
-: OPTIONAL. An array of strings. One or more of `issuance`, `introspection`,
-  `event_driven`, `per_request` ({{revocation-enforcement-classes}}).
 
 `mission_max_stale_seconds`:
 : OPTIONAL. An integer. The maximum
@@ -739,9 +735,6 @@ Cache-Control: max-age=3600
   "mission_lifecycle_auth_methods_supported": [
     "mtls", "private_key_jwt"
   ],
-  "mission_enforcement_classes_supported": [
-    "issuance", "introspection"
-  ],
   "mission_max_stale_seconds": 60
 }
 ~~~
@@ -777,7 +770,8 @@ tolerance of {{mission-status-caching}}.
 ## Mission Status Denial of Service
 
 The Status endpoint is on the consumption path of every Mission-bound
-credential validation in deployments with `per_request` enforcement.
+credential validation in deployments where consumers query Mission
+Status per request.
 The AS MUST implement per-consumer rate limiting (returning
 `rate_limited`, {{mission-status-errors}}) and SHOULD encourage
 consumer-side caching ({{mission-status-caching}}) to reduce traffic.
@@ -862,17 +856,15 @@ An implementation claiming an extension MUST meet its requirements:
   ({{mission-lifecycle-endpoint}}), gate the `suspended` and
   `completed` states it introduces exactly as the base profile gates
   on non-`active` state, and advertise `mission_lifecycle_endpoint`.
-- **Revocation Enforcement Classes**: honestly advertise the classes
-  it implements ({{revocation-enforcement-classes}}) and
-  `mission_max_stale_seconds`.
+- **Revocation propagation**: advertise `mission_max_stale_seconds`
+  and size Mission-bound access-token TTLs to it
+  ({{revocation-enforcement-classes}}).
 
 # IANA Considerations {#iana}
 
 This document requests IANA actions for OAuth AS metadata members and
 a media type. It defines no new registry: the authentication-method
-and enforcement-class value spaces are closed sets defined inline; a
-registry is the natural vehicle should future revisions need
-enforcement-class extensibility.
+value space is a closed set defined inline.
 
 ## OAuth Authorization Server Metadata Registration
 
@@ -884,7 +876,6 @@ Change Controller IETF; Reference this document, {{as-metadata}}.
 - `mission_status_auth_methods_supported`
 - `mission_lifecycle_endpoint`
 - `mission_lifecycle_auth_methods_supported`
-- `mission_enforcement_classes_supported`
 - `mission_max_stale_seconds`
 
 ## Media Type Registration
