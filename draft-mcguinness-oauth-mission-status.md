@@ -210,9 +210,9 @@ MUST use, exactly one of the following per request:
 
 Plain Basic or POST client authentication MUST NOT be used for this
 endpoint. The AS MUST refuse a request not authenticated by one of the
-three mechanisms with `unauthorized` (HTTP 401). The AS advertises the
-supported mechanisms under `mission_status_auth_methods_supported`
-({{as-metadata}}).
+three mechanisms with `unauthorized` (HTTP 401). Which mechanisms the
+AS accepts is discovered through the AS's existing OAuth client-
+authentication metadata {{RFC8414}}.
 
 ## Worked Request Example
 
@@ -280,9 +280,7 @@ Decoded JWS payload:
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "state": "active",
     "expires_at":     "2026-11-02T08:15:00Z",
-    "policy_version": "deploy-policy:v17",
-    "mission_expiry": "2026-12-31T23:59:59Z",
-    "version":        1
+    "mission_expiry": "2026-12-31T23:59:59Z"
   },
   "authorization_details": [
     { "type": "mission_resource_access",
@@ -318,9 +316,8 @@ The members are:
     report-freshness metadata, carried in `mission` so it travels with
     `state` even on the introspection projection, which has no signed
     envelope to carry it ({{introspection-projection}}).
-  - `policy_version`, `mission_expiry`, `version`: the derivation
-    policy version, the Mission expiry, and the Mission record version
-    at the time of the response.
+  - `mission_expiry`: the point at which the Mission itself expires
+    ({{I-D.draft-mcguinness-oauth-mission}}).
 - `authorization_details`: the audience-scoped Authority Set entries
   relevant to the requesting audience, as the `mission_resource_access`
   shape of {{I-D.draft-mcguinness-oauth-mission}} (Section "Mission
@@ -345,11 +342,6 @@ Consumers SHOULD cache a response keyed on (`mission_id`, audience)
 until `mission.expires_at`. Consumers MUST NOT use a cached response
 after `mission.expires_at`, with up to 30 seconds skew tolerance for
 the `active` state only and no tolerance for terminal states.
-
-Consumers SHOULD honor a stale-while-revalidate window of up to twice
-the response lifetime when the AS is unreachable, provided deployment
-policy permits degraded-mode operation within the AS's advertised
-`mission_max_stale_seconds` ({{as-metadata}}).
 
 ## Anti-Oracle Property {#mission-status-anti-oracle}
 
@@ -438,7 +430,7 @@ This projection and the dedicated Mission Status Response
 of the same shape: the open `mission` claim object of
 {{I-D.draft-mcguinness-oauth-mission}} (Section "The mission Claim")
 with status members (`state`, `expires_at`, and, on the dedicated
-response, `policy_version`, `mission_expiry`, `version`) added. This
+response, `mission_expiry`) added. This
 projection populates the subset a token-holding consumer needs; the
 dedicated response populates more. Either way a consumer reads the
 same fact from the same place.
@@ -527,9 +519,8 @@ The operations are:
 
 The lifecycle endpoint uses the same authentication mechanisms as the
 Mission Status endpoint ({{mission-status-authentication}}): mTLS,
-DPoP-bound bearer, or private-key JWT. The AS advertises the supported
-mechanisms under `mission_lifecycle_auth_methods_supported`
-({{as-metadata}}).
+DPoP-bound bearer, or private-key JWT, discovered through the AS's
+existing OAuth client-authentication metadata {{RFC8414}}.
 
 ## Authorization
 
@@ -588,16 +579,14 @@ Decoded JWS payload:
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "state": "revoked",
     "expires_at":     "2026-11-02T09:11:40Z",
-    "policy_version": "deploy-policy:v17",
-    "mission_expiry": "2026-12-31T23:59:59Z",
-    "version":        2
+    "mission_expiry": "2026-12-31T23:59:59Z"
   }
 }
 ~~~
 
 The AS records the operation, actor, time, and any `reason` in its
-audit log; the response confirms the outcome through `state` and the
-incremented `version`, which advances on each AS-recorded state change.
+audit log; the response confirms the outcome through the updated
+`state`.
 
 ## Idempotency
 
@@ -651,10 +640,8 @@ mechanisms to match.
 
 Where Mission revocation must take effect but only the baseline
 derivation-time check is in use, Mission-bound access tokens SHOULD use
-TTLs aligned with the declared `mission_max_stale_seconds`. Standard
-OAuth defaults (3600 seconds) may be too long; 60 to 300 seconds is
-typical where revocation matters and no out-of-band propagation is
-deployed. Deployments where revocation propagates out of band (token
+TTLs no longer than the declared `mission_max_stale_seconds`.
+Deployments where revocation propagates out of band (token
 introspection, per-request status checks, or the event stream) MAY use
 longer TTLs.
 
@@ -676,19 +663,10 @@ through standard {{RFC8414}} discovery.
   dedicated Mission Status operation ({{mission-status}}). Present
   when the AS supports it.
 
-`mission_status_auth_methods_supported`:
-: OPTIONAL. An array of strings. The authentication mechanisms the Status endpoint
-  accepts, each one of `mtls`, `dpop_bearer`, `private_key_jwt`
-  ({{mission-status-authentication}}).
-
 `mission_lifecycle_endpoint`:
 : OPTIONAL. A string containing a URL. The URL of the
   Mission Lifecycle endpoint ({{mission-lifecycle-endpoint}}). Present
   when the AS supports it.
-
-`mission_lifecycle_auth_methods_supported`:
-: OPTIONAL. An array of strings. The authentication mechanisms the Lifecycle endpoint
-  accepts, with the same value space as the Status methods.
 
 `mission_max_stale_seconds`:
 : OPTIONAL. An integer. The maximum
@@ -727,14 +705,8 @@ Cache-Control: max-age=3600
 
   "mission_status_endpoint":
     "https://as.example.com/as/mission/status",
-  "mission_status_auth_methods_supported": [
-    "mtls", "dpop_bearer", "private_key_jwt"
-  ],
   "mission_lifecycle_endpoint":
     "https://as.example.com/as/mission/lifecycle",
-  "mission_lifecycle_auth_methods_supported": [
-    "mtls", "private_key_jwt"
-  ],
   "mission_max_stale_seconds": 60
 }
 ~~~
@@ -873,9 +845,7 @@ Authorization Server Metadata" registry {{RFC8414}}. For each:
 Change Controller IETF; Reference this document, {{as-metadata}}.
 
 - `mission_status_endpoint`
-- `mission_status_auth_methods_supported`
 - `mission_lifecycle_endpoint`
-- `mission_lifecycle_auth_methods_supported`
 - `mission_max_stale_seconds`
 
 ## Media Type Registration
