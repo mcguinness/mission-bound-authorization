@@ -78,7 +78,7 @@ Signals or equivalent channel) as one way to bound revocation
 latency, but leaves the channel itself unspecified. This document
 specifies it: a profile
 of the OpenID Shared Signals Framework in which a Mission Issuer emits
-a Mission lifecycle Security Event Token when it commits a state
+a Mission lifecycle-change Security Event Token when it commits a state
 transition, delivered push or poll, so a consumer learns of a
 revocation, expiry, or other transition without polling. It is
 OPTIONAL and builds on the issuance profile
@@ -101,8 +101,8 @@ channel.
 This document defines the channel. When a Mission Issuer commits a
 Mission lifecycle transition (a revocation, expiry, suspension,
 completion, or the approval event that activates a Mission), it emits
-a **Mission lifecycle Security Event Token** ({{lifecycle-event}}) over
-a profile of the OpenID Shared Signals Framework {{OIDC-SSF}}: pushed
+a **Mission lifecycle-change Security Event Token** ({{lifecycle-event}})
+over a profile of the OpenID Shared Signals Framework {{OIDC-SSF}}: pushed
 to a consumer's receiver {{RFC8935}} or made available for the consumer
 to poll {{RFC8936}}, as a Security Event Token (SET) {{RFC8417}}. A
 consumer that receives a non-`active` transition stops honoring the
@@ -182,6 +182,9 @@ approval event that activates a Mission. The event type URI, registered
 in {{iana}}, is:
 
 `https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change`
+
+This URI is the registered event-type identifier; `mission.lifecycle-change`
+is the short name this document uses for it in prose.
 
 The event is carried as the event-type-keyed value of the `events`
 claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
