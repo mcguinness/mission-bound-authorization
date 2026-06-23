@@ -15,7 +15,7 @@ token lifetime and optional token introspection. This document
 defines the Mission state-management surfaces it defers: a canonical
 Mission Status operation (keyed by  mission_id ), a management
 endpoint for explicit lifecycle transitions ( revoke ,  suspend ,  resume ,
- complete ), graduated revocation-enforcement classes, and signed
+ complete ), revocation-propagation guidance, and signed
 status evidence. Each capability is independently optional; an
 implementation  MAY  adopt any subset, and one that adopts none remains
 a conforming issuance profile. This document does not restate the base
@@ -1105,7 +1105,7 @@ token lifetime and optional token introspection. This document
 defines the Mission state-management surfaces it defers: a canonical
 Mission Status operation (keyed by <code>mission_id</code>), a management
 endpoint for explicit lifecycle transitions (<code>revoke</code>, <code>suspend</code>, <code>resume</code>,
-<code>complete</code>), graduated revocation-enforcement classes, and signed
+<code>complete</code>), revocation-propagation guidance, and signed
 status evidence. Each capability is independently optional; an
 implementation <span class="bcp14">MAY</span> adopt any subset, and one that adopts none remains
 a conforming issuance profile. This document does not restate the base
@@ -1229,7 +1229,7 @@ profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
-            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-revocation-enforcement-clas" class="internal xref">Revocation Enforcement Classes</a></p>
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-revocation-propagation" class="internal xref">Revocation Propagation</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
                 <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-recommended-access-token-tt" class="internal xref">Recommended Access-Token TTL</a></p>
@@ -1336,8 +1336,8 @@ every derived token, and offers only <span class="bcp14">OPTIONAL</span> token i
 Token Introspection") as a way for a Resource Server to observe
 Mission state. It explicitly leaves the canonical Mission Status
 surface (keyed by <code>mission_id</code>), a standardized management endpoint
-for lifecycle transitions, signed status evidence, and graduated
-revocation enforcement to future work.<a href="#section-1-1" class="pilcrow">¶</a></p>
+for lifecycle transitions, signed status evidence, and
+revocation-propagation guidance to future work.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">This document specifies those deferred surfaces as <span class="bcp14">OPTIONAL</span> extensions
 that build on the issuance profile. The capabilities are:<a href="#section-1-2" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -1357,13 +1357,14 @@ for explicit <code>revoke</code>, <code>suspend</code>, <code>resume</code>, and
 transitions, distinct from <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> token revocation.<a href="#section-1-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-3.4">
-          <p id="section-1-3.4.1"><strong>Revocation Enforcement Classes</strong> (<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>)
-that let a deployment advertise how promptly Mission state changes
-take effect.<a href="#section-1-3.4.1" class="pilcrow">¶</a></p>
+          <p id="section-1-3.4.1"><strong>Revocation propagation</strong> guidance
+(<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>): a <code>mission_max_stale_seconds</code>
+bound and how to size token lifetimes to the propagation mechanisms
+in use.<a href="#section-1-3.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-3.5">
           <p id="section-1-3.5.1"><strong>Authorization Server metadata</strong> members
-(<a href="#as-metadata" class="auto internal xref">Section 7</a>) advertising the endpoints and classes above.<a href="#section-1-3.5.1" class="pilcrow">¶</a></p>
+(<a href="#as-metadata" class="auto internal xref">Section 7</a>) advertising the endpoints above.<a href="#section-1-3.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-1-4">Each capability is independently optional. An implementation states
@@ -2047,8 +2048,8 @@ Response.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
 <a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-relationship-to-rfc-7009" class="section-name selfRef">Relationship to RFC 7009</a>
         </h3>
 <p id="section-5.6-1">A Mission revocation through this endpoint cascades to credentials
-derived from the Mission per the AS's advertised enforcement classes
-(<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>). The AS <span class="bcp14">MAY</span> additionally invoke
+derived from the Mission per the AS's advertised revocation
+propagation (<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>). The AS <span class="bcp14">MAY</span> additionally invoke
 <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> token revocation for specific outstanding tokens when it
 knows their <code>jti</code>. <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> alone does NOT revoke a Mission; the
 lifecycle endpoint is the authoritative Mission state change.<a href="#section-5.6-1" class="pilcrow">¶</a></p>
@@ -2058,59 +2059,58 @@ lifecycle endpoint is the authoritative Mission state change.<a href="#section-5
 </div>
 <div id="revocation-enforcement-classes">
 <section id="section-6">
-      <h2 id="name-revocation-enforcement-clas">
-<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-revocation-enforcement-clas" class="section-name selfRef">Revocation Enforcement Classes</a>
+      <h2 id="name-revocation-propagation">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-revocation-propagation" class="section-name selfRef">Revocation Propagation</a>
       </h2>
 <p id="section-6-1">This section is <span class="bcp14">OPTIONAL</span>. The issuance profile bounds outstanding
 self-contained tokens by their lifetime and <span class="bcp14">OPTIONAL</span> token
 introspection (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
-"Revocation"). This section lets a deployment advertise, in graduated
-classes, how promptly a Mission state change takes effect at the
-Resource Server, so a consumer can choose a token lifetime and
-enforcement posture to match.<a href="#section-6-1" class="pilcrow">¶</a></p>
-<p id="section-6-2">A deployment advertises its enforcement classes under
-<code>mission_enforcement_classes_supported</code> (<a href="#as-metadata" class="auto internal xref">Section 7</a>). The defined
-classes are:<a href="#section-6-2" class="pilcrow">¶</a></p>
+"Revocation"). A deployment that needs a Mission state change to take
+effect faster than token lifetime alone combines the propagation
+mechanisms this suite offers and sizes token lifetimes to match.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">The mechanisms are each discovered from their own metadata, not from a
+separate posture list:<a href="#section-6-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-6-3.1">
-          <p id="section-6-3.1.1"><strong><code>issuance</code></strong>: Mission state is consulted at each derivation event
-(the token endpoint, refresh, Token Exchange). Already-issued,
-self-contained tokens are NOT invalidated; they remain valid until
-natural expiry. This is the issuance profile's baseline behavior.<a href="#section-6-3.1.1" class="pilcrow">¶</a></p>
+          <p id="section-6-3.1.1">consulting Mission state at each derivation event (the token
+endpoint, refresh, Token Exchange) -- the issuance profile's
+always-present baseline, which does not invalidate already-issued
+self-contained tokens;<a href="#section-6-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-3.2">
-          <p id="section-6-3.2.1"><strong><code>introspection</code></strong>: token introspection
-(<a href="#introspection-projection" class="auto internal xref">Section 4</a>) returns <code>active: false</code> for a token
-whose Mission state disallows use, even if the token itself has not
-expired.<a href="#section-6-3.2.1" class="pilcrow">¶</a></p>
+          <p id="section-6-3.2.1">token introspection (<a href="#introspection-projection" class="auto internal xref">Section 4</a>), which returns
+<code>active: false</code> for a token whose Mission state disallows use even
+before the token expires, discovered from <code>introspection_endpoint</code>
+and <code>introspection_signing_alg_values_supported</code>;<a href="#section-6-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-3.3">
-          <p id="section-6-3.3.1"><strong><code>event_driven</code></strong>: the Mission Issuer emits Mission lifecycle
-Security Event Tokens that propagate state changes to consumers over
-a Shared Signals stream, as defined in
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>.<a href="#section-6-3.3.1" class="pilcrow">¶</a></p>
+          <p id="section-6-3.3.1">the Mission Status operation (<a href="#mission-status" class="auto internal xref">Section 3</a>) for per-request
+state checks by high-assurance Resource Servers, discovered from
+<code>mission_status_endpoint</code>; and<a href="#section-6-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-3.4">
-          <p id="section-6-3.4.1"><strong><code>per_request</code></strong>: high-assurance Resource Servers query the Mission
-Status operation (<a href="#mission-status" class="auto internal xref">Section 3</a>) or validate sufficiently fresh
-state for each consequential request.<a href="#section-6-3.4.1" class="pilcrow">¶</a></p>
+          <p id="section-6-3.4.1">event-driven propagation of state changes over a Shared Signals
+stream (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), discovered
+from <code>mission_event_stream_endpoint</code>.<a href="#section-6-3.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-6-4">A deployment also advertises <code>mission_max_stale_seconds</code>
-(<a href="#as-metadata" class="auto internal xref">Section 7</a>), the maximum tolerated interval for revocation
-propagation.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-4">A deployment advertises <code>mission_max_stale_seconds</code> (<a href="#as-metadata" class="auto internal xref">Section 7</a>),
+the maximum interval it tolerates for a Mission state change to take
+effect, so a consumer can size token lifetimes and choose propagation
+mechanisms to match.<a href="#section-6-4" class="pilcrow">¶</a></p>
 <div id="recommended-access-token-ttl">
 <section id="section-6.1">
         <h3 id="name-recommended-access-token-tt">
 <a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-recommended-access-token-tt" class="section-name selfRef">Recommended Access-Token TTL</a>
         </h3>
-<p id="section-6.1-1">Where Mission revocation propagation matters but only the <code>issuance</code>
-class is deployed, Mission-bound access tokens <span class="bcp14">SHOULD</span> use TTLs aligned
-with the declared <code>mission_max_stale_seconds</code>. Standard OAuth defaults
-(3600 seconds) may be too long; 60 to 300 seconds is typical for
-<code>issuance</code>-only deployments where revocation matters. Deployments with
-<code>event_driven</code> or <code>per_request</code> enforcement <span class="bcp14">MAY</span> use longer TTLs
-because revocation propagates out of band.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<p id="section-6.1-1">Where Mission revocation must take effect but only the baseline
+derivation-time check is in use, Mission-bound access tokens <span class="bcp14">SHOULD</span> use
+TTLs aligned with the declared <code>mission_max_stale_seconds</code>. Standard
+OAuth defaults (3600 seconds) may be too long; 60 to 300 seconds is
+typical where revocation matters and no out-of-band propagation is
+deployed. Deployments where revocation propagates out of band (token
+introspection, per-request status checks, or the event stream) <span class="bcp14">MAY</span> use
+longer TTLs.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2163,18 +2163,11 @@ accepts, with the same value space as the Status methods.<a href="#section-7-2.8
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.9">
-<code>mission_enforcement_classes_supported</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-7-2.10">
-          <p id="section-7-2.10.1"><span class="bcp14">OPTIONAL</span>. An array of strings. One or more of <code>issuance</code>, <code>introspection</code>,
-<code>event_driven</code>, <code>per_request</code> (<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>).<a href="#section-7-2.10.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-7-2.11">
 <code>mission_max_stale_seconds</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-7-2.12">
-          <p id="section-7-2.12.1"><span class="bcp14">OPTIONAL</span>. An integer. The maximum
+        <dd style="margin-left: 1.5em" id="section-7-2.10">
+          <p id="section-7-2.10.1"><span class="bcp14">OPTIONAL</span>. An integer. The maximum
 tolerated interval, in seconds, for revocation propagation
-(<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>).<a href="#section-7-2.12.1" class="pilcrow">¶</a></p>
+(<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>).<a href="#section-7-2.10.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2219,9 +2212,6 @@ Cache-Control: max-age=3600
     "https://as.example.com/as/mission/lifecycle",
   "mission_lifecycle_auth_methods_supported": [
     "mtls", "private_key_jwt"
-  ],
-  "mission_enforcement_classes_supported": [
-    "issuance", "introspection"
   ],
   "mission_max_stale_seconds": 60
 }
@@ -2274,7 +2264,8 @@ tolerance of <a href="#mission-status-caching" class="auto internal xref">Sectio
 <a href="#section-8.3" class="section-number selfRef">8.3. </a><a href="#name-mission-status-denial-of-se" class="section-name selfRef">Mission Status Denial of Service</a>
         </h3>
 <p id="section-8.3-1">The Status endpoint is on the consumption path of every Mission-bound
-credential validation in deployments with <code>per_request</code> enforcement.
+credential validation in deployments where consumers query Mission
+Status per request.
 The AS <span class="bcp14">MUST</span> implement per-consumer rate limiting (returning
 <code>rate_limited</code>, <a href="#mission-status-errors" class="auto internal xref">Section 3.7</a>) and <span class="bcp14">SHOULD</span> encourage
 consumer-side caching (<a href="#mission-status-caching" class="auto internal xref">Section 3.5</a>) to reduce traffic.<a href="#section-8.3-1" class="pilcrow">¶</a></p>
@@ -2395,9 +2386,9 @@ required.<a href="#section-10-3.2.1" class="pilcrow">¶</a></p>
 on non-<code>active</code> state, and advertise <code>mission_lifecycle_endpoint</code>.<a href="#section-10-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-3.4">
-          <p id="section-10-3.4.1"><strong>Revocation Enforcement Classes</strong>: honestly advertise the classes
-it implements (<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>) and
-<code>mission_max_stale_seconds</code>.<a href="#section-10-3.4.1" class="pilcrow">¶</a></p>
+          <p id="section-10-3.4.1"><strong>Revocation propagation</strong>: advertise <code>mission_max_stale_seconds</code>
+and size Mission-bound access-token TTLs to it
+(<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>).<a href="#section-10-3.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2409,9 +2400,7 @@ it implements (<a href="#revocation-enforcement-classes" class="auto internal xr
       </h2>
 <p id="section-11-1">This document requests IANA actions for OAuth AS metadata members and
 a media type. It defines no new registry: the authentication-method
-and enforcement-class value spaces are closed sets defined inline; a
-registry is the natural vehicle should future revisions need
-enforcement-class extensibility.<a href="#section-11-1" class="pilcrow">¶</a></p>
+value space is a closed set defined inline.<a href="#section-11-1" class="pilcrow">¶</a></p>
 <div id="oauth-authorization-server-metadata-registration">
 <section id="section-11.1">
         <h3 id="name-oauth-authorization-server-">
@@ -2434,10 +2423,7 @@ Change Controller IETF; Reference this document, <a href="#as-metadata" class="a
             <p id="section-11.1-2.4.1"><code>mission_lifecycle_auth_methods_supported</code><a href="#section-11.1-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.1-2.5">
-            <p id="section-11.1-2.5.1"><code>mission_enforcement_classes_supported</code><a href="#section-11.1-2.5.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-11.1-2.6">
-            <p id="section-11.1-2.6.1"><code>mission_max_stale_seconds</code><a href="#section-11.1-2.6.1" class="pilcrow">¶</a></p>
+            <p id="section-11.1-2.5.1"><code>mission_max_stale_seconds</code><a href="#section-11.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>

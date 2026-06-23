@@ -8,10 +8,11 @@
 <meta content="Karl McGuinness" name="author">
 <meta content="
        The Mission Status and Lifecycle profile
-  defines an
- event_driven  revocation-enforcement class -- Mission state changes
-propagating to Resource Servers over an event channel -- but leaves
-the channel itself unspecified. This document specifies it: a profile
+  names event-driven
+propagation -- Mission state changes reaching consumers over a Shared
+Signals or equivalent channel -- as one way to bound revocation
+latency, but leaves the channel itself unspecified. This document
+specifies it: a profile
 of the OpenID Shared Signals Framework in which a Mission Issuer emits
 a Mission lifecycle Security Event Token when it commits a state
 transition, delivered push or poll, so a consumer learns of a
@@ -1097,10 +1098,11 @@ svg {
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
 <p id="section-abstract-1">The Mission Status and Lifecycle profile
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> defines an
-<code>event_driven</code> revocation-enforcement class -- Mission state changes
-propagating to Resource Servers over an event channel -- but leaves
-the channel itself unspecified. This document specifies it: a profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> names event-driven
+propagation -- Mission state changes reaching consumers over a Shared
+Signals or equivalent channel -- as one way to bound revocation
+latency, but leaves the channel itself unspecified. This document
+specifies it: a profile
 of the OpenID Shared Signals Framework in which a Mission Issuer emits
 a Mission lifecycle Security Event Token when it commits a state
 transition, delivered push or poll, so a consumer learns of a
@@ -1187,7 +1189,7 @@ adopt it is unaffected.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-consumer-behavior-on-receip" class="internal xref">Consumer Behavior on Receipt</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
-            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-realizing-the-event_driven-" class="internal xref">Realizing the <code>event_driven</code> Enforcement Class</a></p>
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-relationship-to-revocation-" class="internal xref">Relationship to Revocation Propagation</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
             <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-authorization-server-metada" class="internal xref">Authorization Server Metadata</a></p>
@@ -1253,10 +1255,10 @@ adopt it is unaffected.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 derivation on Mission state and bounds outstanding self-contained
 tokens by their lifetime. The Mission Status and Lifecycle profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> adds surfaces for
-observing and changing state, and names an <code>event_driven</code>
-revocation-enforcement class for deployments that need Mission state
-changes to reach Resource Servers promptly, without each Resource
-Server polling. That profile defines the class but not the channel.<a href="#section-1-1" class="pilcrow">¶</a></p>
+observing and changing state, and points to event-driven propagation
+for deployments that need Mission state changes to reach consumers
+promptly, without each consumer polling -- but does not define the
+channel.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">This document defines the channel. When a Mission Issuer commits a
 Mission lifecycle transition (a revocation, expiry, suspension,
 completion, or the approval event that activates a Mission), it emits
@@ -1265,8 +1267,9 @@ a profile of the OpenID Shared Signals Framework <span>[<a href="#OIDC-SSF" clas
 to a consumer's receiver <span>[<a href="#RFC8935" class="cite xref">RFC8935</a>]</span> or made available for the consumer
 to poll <span>[<a href="#RFC8936" class="cite xref">RFC8936</a>]</span>, as a Security Event Token (SET) <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>. A
 consumer that receives a non-<code>active</code> transition stops honoring the
-Mission (<a href="#consumer-behavior" class="auto internal xref">Section 6</a>), realizing the <code>event_driven</code> class
-(<a href="#event-driven" class="auto internal xref">Section 7</a>).<a href="#section-1-2" class="pilcrow">¶</a></p>
+Mission (<a href="#consumer-behavior" class="auto internal xref">Section 6</a>). A deployment offers this channel by
+publishing the event stream (<a href="#event-stream" class="auto internal xref">Section 3</a>); consumers discover it
+from <code>mission_event_stream_endpoint</code> (<a href="#as-metadata" class="auto internal xref">Section 8</a>).<a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">This document is <span class="bcp14">OPTIONAL</span>. It defines no new Mission semantics: the
 Mission, its lifecycle states, and the <code>mission</code> claim are defined in
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, and the lifecycle states this
@@ -1469,19 +1472,18 @@ polling Mission Status rather than continue on possibly stale state.<a href="#se
 </div>
 <div id="event-driven">
 <section id="section-7">
-      <h2 id="name-realizing-the-event_driven-">
-<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-realizing-the-event_driven-" class="section-name selfRef">Realizing the <code>event_driven</code> Enforcement Class</a>
+      <h2 id="name-relationship-to-revocation-">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-relationship-to-revocation-" class="section-name selfRef">Relationship to Revocation Propagation</a>
       </h2>
-<p id="section-7-1">A deployment that advertises the <code>event_driven</code>
-revocation-enforcement class of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> realizes it with this
-document: the Mission Issuer emits <code>mission.lifecycle-change</code> events
-(<a href="#lifecycle-event" class="auto internal xref">Section 4</a>) over the stream (<a href="#event-stream" class="auto internal xref">Section 3</a>), and consumers
-in <code>event_driven</code> mode subscribe and apply <a href="#consumer-behavior" class="auto internal xref">Section 6</a>. A
-deployment that advertises <code>event_driven</code> therefore <span class="bcp14">MUST</span> also advertise
-<code>mission_event_stream_endpoint</code> and at least one delivery mode
-(<a href="#as-metadata" class="auto internal xref">Section 8</a>).<a href="#section-7-1" class="pilcrow">¶</a></p>
-<p id="section-7-2">This document neither requires nor presumes the <code>event_driven</code> class;
+<p id="section-7-1">This document is the event-driven mechanism the Status profile's
+revocation-propagation guidance points to
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>): a Mission Issuer that
+offers it emits <code>mission.lifecycle-change</code> events (<a href="#lifecycle-event" class="auto internal xref">Section 4</a>)
+over the stream (<a href="#event-stream" class="auto internal xref">Section 3</a>), and consumers subscribe and apply
+<a href="#consumer-behavior" class="auto internal xref">Section 6</a>. A deployment that offers event-driven
+propagation <span class="bcp14">MUST</span> advertise <code>mission_event_stream_endpoint</code> and at least
+one delivery mode (<a href="#as-metadata" class="auto internal xref">Section 8</a>), so consumers discover it.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2">This document neither requires nor presumes event-driven propagation;
 a Mission Issuer <span class="bcp14">MAY</span> emit lifecycle events for audit or operational
 purposes independent of any consumer's enforcement posture.<a href="#section-7-2" class="pilcrow">¶</a></p>
 </section>
