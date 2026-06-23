@@ -79,6 +79,24 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
+  I-D.draft-mcguinness-oauth-mission-expansion:
+    title: "Mission Expansion for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
+  I-D.draft-mcguinness-oauth-mission-consent-evidence:
+    title: "Mission Consent Evidence for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-consent-evidence-latest
 
 --- abstract
 
@@ -238,14 +256,21 @@ cross-domain projection. Both are confined to OPTIONAL capabilities
 (Delegation and Cross-Domain), so the mandatory single-domain core does
 not depend on them.
 
-Deferred to future work, and not required to implement this document,
-are: a substrate-neutral generalization of the Mission model (across
-non-OAuth authorization substrates), additional integrity anchors (such
-as a `consent_rendering_hash` over a structured consent disclosure
-object, {{consent-binding}}), mission expansion, the normative carriage
-of Mission context in Transaction Tokens (shown only illustratively in
-the end-to-end example appendix), and a cross-domain status or
-event-distribution mechanism for tighter revocation.
+Separate from this document, and not required to implement it, are
+several capabilities now specified as OPTIONAL companion profiles: an
+additional integrity anchor over a structured consent disclosure
+(`consent_rendering_hash`, {{consent-binding}}) is defined by Mission
+Consent Evidence {{I-D.draft-mcguinness-oauth-mission-consent-evidence}};
+mission expansion is defined by Mission Expansion
+{{I-D.draft-mcguinness-oauth-mission-expansion}}; and a cross-domain
+status or event-distribution mechanism for tighter revocation is defined
+by Mission Status {{I-D.draft-mcguinness-oauth-mission-status}} and
+Mission Lifecycle Signals {{I-D.draft-mcguinness-oauth-mission-signals}}.
+A deployment implements this document without any of them. Remaining
+future work, not yet specified, includes a substrate-neutral
+generalization of the Mission model across non-OAuth authorization
+substrates and the normative carriage of Mission context in Transaction
+Tokens (shown only illustratively in the end-to-end example appendix).
 
 ## Non-Goals
 
@@ -263,7 +288,9 @@ considered and where it belongs, not that it was overlooked.
 - **Just-in-time Mission expansion.** The Authority Set is committed at
   approval; this profile defines no mid-stream, incremental
   authorization upgrade. Widening requires a new approval (a successor
-  Mission); a JIT expansion protocol is future work.
+  Mission), as specified by Mission Expansion
+  {{I-D.draft-mcguinness-oauth-mission-expansion}}; a JIT, approval-free
+  expansion protocol remains future work.
 - **Lifecycle event distribution.** A Resource Server learns Mission
   state from the token lifetime or optional introspection
   ({{introspection}}); this profile defines no push-based notification
@@ -1527,8 +1554,11 @@ self-contained authorization and verification is stateless. A
 deployment MAY additionally offer token introspection
 ({{introspection}}) so a Resource Server can observe Mission state
 per request and cut off a revoked Mission without waiting out the
-token lifetime. The canonical Mission Status surface (keyed by `mission_id`)
-and signed status responses remain deferred to future work.
+token lifetime. A canonical Mission Status surface (keyed by
+`mission_id`) and signed status responses are specified separately as
+an OPTIONAL companion profile by Mission Status
+{{I-D.draft-mcguinness-oauth-mission-status}}; this document does not
+require them.
 
 # Mission State via Token Introspection {#introspection}
 
@@ -2165,12 +2195,16 @@ malicious rendering layer could mislead the Approver, showing a
 narrower or different task than the Authority Set actually committed,
 without leaving any committed trace. A deployment whose Missions carry
 high-risk authority SHOULD therefore record presentation-level audit
-evidence out of band: for example, a hash over the exact consent
-disclosure rendered to the Approver, retained so the disclosure shown
-can be reconstructed and audited after the fact. Binding this on the
-wire (a `consent_rendering_hash` over a structured consent-disclosure
-object) requires defining that object and anchor and is deferred to
-future work; an AS MAY record the evidence out of band in the meantime.
+evidence: for example, a hash over the exact consent disclosure
+rendered to the Approver, retained so the disclosure shown can be
+reconstructed and audited after the fact. Binding this on the wire (a
+`consent_rendering_hash` over a structured consent-disclosure object)
+is specified as an OPTIONAL companion profile by Mission Consent
+Evidence {{I-D.draft-mcguinness-oauth-mission-consent-evidence}}; an AS
+that does not implement it MAY record equivalent evidence out of band.
+As that profile makes explicit, such a commitment binds the structured
+disclosure the AS records, not the pixels actually presented; it
+narrows this gap for audit but does not close it.
 
 ## Mission Drift
 
@@ -2255,8 +2289,11 @@ The introspection of {{introspection}} closes the revocation gap only
 single-domain: it requires the introspecting AS to hold the Mission,
 and a Resource AS has no query to the origin keyed by `mission_id`, so short
 downstream lifetimes remain the only cross-domain control. Deployments
-needing tighter cross-domain revocation must add a status or
-event-distribution mechanism, which this document defers.
+needing tighter cross-domain revocation can add the status or
+event-distribution mechanisms specified separately by Mission Status
+{{I-D.draft-mcguinness-oauth-mission-status}} and Mission Lifecycle
+Signals {{I-D.draft-mcguinness-oauth-mission-signals}}, which this
+document does not require.
 
 ## Signing and Key Rotation
 

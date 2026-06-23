@@ -267,7 +267,8 @@ the session are still valid.
 
 # Event-Driven State Cache {#event-cache}
 
-A harness MAY maintain an event-driven Mission state cache using
+This section is OPTIONAL. A harness MAY maintain an event-driven
+Mission state cache using
 {{I-D.draft-mcguinness-oauth-mission-signals}}. The cache entry for a
 Mission MUST contain:
 
@@ -446,8 +447,9 @@ terminates, or resumes governed work due to Mission state. The evidence
 record SHOULD contain:
 
 - `event_id`;
-- `mission_id`;
-- `mission_origin`;
+- the `mission` object (`id`, `origin`, and, when known,
+  `authority_hash`), the same shape as the `mission` claim of
+  {{I-D.draft-mcguinness-oauth-mission}};
 - `session_id`;
 - task graph node or queue item identifier;
 - prior and resulting harness state;
@@ -456,12 +458,18 @@ record SHOULD contain:
 - timestamp; and
 - actor or sub-agent identifier when applicable.
 
-Harness Evidence complements runtime Decision Evidence. It records
+A Harness Evidence record carries the Mission as the nested `mission`
+object, mirroring the `mission` claim; the flat `mission_id` and
+`mission_origin` of Mission Binding ({{mission-binding}}) are a binding
+key, whereas the evidence record mirrors the claim shape.
+
+Harness Evidence complements runtime enforcement evidence
+({{I-D.draft-mcguinness-oauth-mission-runtime}}). It records
 execution-continuity decisions, not Resource Server authorization.
 
 ## Harness Evidence Object {#harness-evidence-object}
 
-A Harness Evidence object has:
+A Harness Evidence object is a JSON object {{RFC8259}} with:
 
 `event_id`:
 : REQUIRED. A unique identifier.
@@ -469,7 +477,9 @@ A Harness Evidence object has:
 `event_type`:
 : REQUIRED. One of `resume_allowed`, `resume_suppressed`,
   `queue_suppressed`, `cache_disabled`, `subagent_stopped`,
-  `subagent_continued`, or `mission_state_stale`.
+  `subagent_continued`, or `mission_state_stale`. `event_type`
+  categorizes the work item the record is about; the `decision` member
+  records the outcome, so the two are orthogonal.
 
 `mission`:
 : REQUIRED. Object containing `id`, `origin`, and, when known,
@@ -482,11 +492,21 @@ A Harness Evidence object has:
 : OPTIONAL. Task graph node, queue item, background job, or child
   handle identifier.
 
+`actor`:
+: OPTIONAL. The actor or sub-agent identifier the record concerns, when
+  applicable (for example, the child whose work was stopped or
+  continued under a `subagent_stopped` or `subagent_continued` event).
+
 `state`:
 : REQUIRED. The Mission state observed or `unknown`.
 
+`prior_harness_state`, `resulting_harness_state`:
+: OPTIONAL. The harness execution state before and after the recorded
+  decision (for example, `running` to `suppressed`).
+
 `state_source`:
-: REQUIRED. The status, signal, runtime decision, or local source used.
+: REQUIRED. One of `status`, `signal`, `runtime_decision`, or a
+  deployment-defined source, as in {{mission-binding}}.
 
 `freshness`:
 : OPTIONAL. Object containing `checked_at` and `expires_at`.
@@ -508,10 +528,10 @@ Example:
   "event_id": "hrn_7pQ4mN9s",
   "event_type": "resume_suppressed",
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEd",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE"
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },
   "session_id": "sess_agent_42",
   "work_item": "queue_invoice_retry_9",
