@@ -70,6 +70,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-status-latest
+  I-D.draft-mcguinness-oauth-mission-signals:
+    title: "Mission Lifecycle Signals for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
 
 --- abstract
 
@@ -259,7 +268,9 @@ considered and where it belongs, not that it was overlooked.
   state from the token lifetime or optional introspection
   ({{introspection}}); this profile defines no push-based notification
   of Mission state changes. A Shared Signals ({{RFC8935}}) / CAEP
-  profile for Mission lifecycle events is future work.
+  profile for Mission lifecycle events is specified separately by the
+  Mission Lifecycle Signals profile
+  ({{I-D.draft-mcguinness-oauth-mission-signals}}), not here.
 - **Human-in-the-loop suspension.** The base lifecycle here is
   `active`, `revoked`, `expired` ({{lifecycle}}). A `suspended` state
   with `resume`/`complete` transitions is defined as an OPTIONAL
@@ -335,7 +346,7 @@ Derived token:
   `authorization_details` and a `mission` claim
   ({{mission-bound-tokens}}).
 
-## Conformance {#conformance}
+# Conformance {#conformance}
 
 An implementation conforms in one of two roles.
 
@@ -415,29 +426,29 @@ layered in future versions and are not required here.
 ## Protocol Flow
 
 ~~~
- Agent (client)                    Mission Issuer (AS)
-     |                                  |
-     | 1. PAR: mission_intent --------> | derive authority
-     |    <------ request_uri --------- | (authz_details)
-     |                                  |
-     | 2. authorization request -----> | principal consents
-     |                                  | -> authority_hash
-     |    <-------- code ------------- | -> Mission active
-     |                                  |    (bound to the grant)
-     |                                  |
-     | 3. token request -------------> | gate: active?
-     |    <------ access token -------- | + authz_details
-     |                                  | + mission claim
-     v
- 4. Agent calls the RS with the token. The RS enforces the
-    authorization_details statelessly and MAY check the mission
-    claim. No callback to the AS is required.
-
- 5. Mission management revoke, or mission_expiry -> Mission revoked
-    or expired; the AS refuses further issuance and refresh. A
-    deployment MAY also compose RFC 7009 refresh-token revocation
-    with this (optional; see revocation section).
+ Agent (client)                       Mission Issuer (AS)
+      |                                     |
+      | 1. PAR: mission_intent ------------>| derive authority
+      |<----------- request_uri ------------| (authz_details)
+      |                                     |
+      | 2. authorization request ---------->| principal consents
+      |                                     |   -> authority_hash
+      |<-------------- code ----------------| -> Mission active
+      |                                     |   (bound to the grant)
+      |                                     |
+      | 3. token request ------------------>| gate: active?
+      |<----------- access token -----------| + authz_details
+      |                                     |   + mission claim
+      v
 ~~~
+
+The flow then leaves the AS: (4) the agent calls the Resource Server
+with the token; the RS enforces the `authorization_details`
+statelessly and MAY check the `mission` claim, with no callback to the
+AS required. (5) A management revoke or `mission_expiry` moves the
+Mission to `revoked` or `expired`, after which the AS refuses further
+issuance and refresh; a deployment MAY additionally compose RFC 7009
+{{RFC7009}} refresh-token revocation ({{revocation}}).
 
 # Mission Intent {#mission-intent}
 
@@ -1881,7 +1892,8 @@ any other ({{lifecycle}}). A Mission-bound cross-domain grant:
   `origin`, redeemable at the target Resource AS through the
   {{RFC7523}} JWT-bearer grant;
 - MUST be audienced to the target Resource AS, and MUST NOT have a
-  lifetime exceeding 300 seconds;
+  lifetime exceeding 300 seconds (a short lifetime bounds cross-domain
+  revocation latency; see {{cross-domain-revocation}});
 - MUST be sender-constrained ({{RFC7800}}) to the presenting client by
   the proof-of-possession mechanism the cross-domain grant profile
   defines (for the ID-JAG profile, as that specification defines). This
@@ -2226,7 +2238,7 @@ without revoking the rest of the chain. Deployments SHOULD keep
 delegated token lifetimes short and SHOULD make only the entries that
 need delegation delegable.
 
-## Cross-Domain Revocation Latency
+## Cross-Domain Revocation Latency {#cross-domain-revocation}
 
 Single-domain revocation is prompt: the AS that issued a token also
 honors its revocation ({{revocation}}). The cross-domain case
