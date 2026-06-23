@@ -140,7 +140,8 @@ Table of Contents
       JWS [RFC7515].
 
    *  An extension to OAuth token introspection that carries a Mission
-      projection as a [RFC9701]-signed response (Section 4).
+      projection, which a deployment MAY return as a [RFC9701]-signed
+      response (Section 4).
 
    *  A *Mission Lifecycle endpoint* (Section 5) for explicit revoke,
       suspend, resume, and complete transitions, distinct from [RFC7009]
@@ -458,13 +459,17 @@ Table of Contents
    minimization, and origin-only-reports-state rules.  This document
    does not restate those rules.
 
-   This extension adds two requirements to that projection:
+   This extension adds the following to that projection:
 
-   *  An introspection response that carries a Mission projection MUST
-      be a [RFC9701]-signed response, so the projection's integrity and
-      origin do not rest on TLS alone.  The AS advertises support
-      through the standard introspection_signing_alg_values_supported
-      metadata [RFC8414].
+   *  An introspection response that carries a Mission projection is
+      protected by TLS, as for token introspection generally
+      ([I-D.draft-mcguinness-oauth-mission], Section "Mission State via
+      Token Introspection").  Where the projection's integrity and
+      origin need to be verifiable independently of the transport -- for
+      example when the response transits intermediaries or is retained
+      for audit -- the AS SHOULD return it as a [RFC9701]-signed
+      response, advertised through the standard
+      introspection_signing_alg_values_supported metadata [RFC8414].
 
    *  When the responding AS is the Mission origin, the projection MAY
       additionally carry expires_at, an [RFC8259] string giving the
@@ -728,10 +733,10 @@ Table of Contents
    DPoP and mTLS support for issued credentials are read from the
    standard dpop_signing_alg_values_supported [RFC9449] and
    tls_client_certificate_bound_access_tokens [RFC8705] metadata; this
-   document defines no separate sender-constraint member.  The
-   [RFC9701]-signed introspection projection (Section 4) is discovered
-   through the standard introspection_signing_alg_values_supported
-   metadata.
+   document defines no separate sender-constraint member.  When the
+   introspection projection (Section 4) is signed, the signing is
+   discovered through the standard
+   introspection_signing_alg_values_supported metadata.
 
 7.1.  Worked Metadata Example
 
@@ -806,14 +811,14 @@ Table of Contents
 
 8.4.  RFC 9701 vs. New Media Type
 
-   The introspection projection (Section 4) uses [RFC9701], which is
-   scoped to token introspection.  The dedicated Mission Status
-   operation uses a new media type (application/mission-status-
-   response+jwt, Section 11) and a JWS [RFC7515], because [RFC9701] does
-   not apply to a lookup keyed by mission_id.  Implementations MUST NOT
-   use [RFC9701] for the dedicated operation, and MUST NOT accept an
-   unsigned status or projection response in place of the signed form
-   these sections require.
+   When the introspection projection is signed (Section 4), it uses
+   [RFC9701], which is scoped to token introspection.  The dedicated
+   Mission Status operation uses a new media type (application/mission-
+   status-response+jwt, Section 11) and a JWS [RFC7515], because
+   [RFC9701] does not apply to a lookup keyed by mission_id.
+   Implementations MUST NOT use [RFC9701] for the dedicated operation,
+   and MUST NOT accept an unsigned response from the dedicated Mission
+   Status operation in place of the signed form it requires.
 
 8.5.  Signing-Key Retention for Audit
 
@@ -840,13 +845,13 @@ Table of Contents
 
 9.1.  Status and Lifecycle as Disclosure Surfaces
 
-   The Mission Status operation (Section 3) and the [RFC9701]-signed
-   introspection projection (Section 4) disclose Mission state, the
-   authority_hash, and the audience-scoped authorization_details to the
-   authenticated, authorized requester.  A deployment MUST treat both as
-   Mission information-disclosure surfaces with the same privacy
-   posture, audience-filtering the disclosed authority so a consumer
-   never sees entries addressed to other audiences (Section 3.4).
+   The Mission Status operation (Section 3) and the introspection
+   projection (Section 4) disclose Mission state, the authority_hash,
+   and the audience-scoped authorization_details to the authenticated,
+   authorized requester.  A deployment MUST treat both as Mission
+   information-disclosure surfaces with the same privacy posture,
+   audience-filtering the disclosed authority so a consumer never sees
+   entries addressed to other audiences (Section 3.4).
 
 9.2.  Status Audit Logging
 
@@ -872,9 +877,9 @@ Table of Contents
       property (Section 3.6), and the error shape of Section 3.7; and
       advertise mission_status_endpoint.
 
-   *  *Introspection projection*: return a [RFC9701]-signed
-      introspection response carrying the Mission projection
-      (Section 4).
+   *  *Introspection projection*: carry the Mission projection on the
+      introspection response (Section 4), returning it as a [RFC9701]-
+      signed response where end-to-end integrity is required.
 
    *  *Mission Lifecycle*: serve the management endpoint (Section 5),
       gate the suspended and completed states it introduces exactly as
