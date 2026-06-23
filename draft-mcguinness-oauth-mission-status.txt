@@ -681,8 +681,10 @@ Table of Contents
       false for a token whose Mission state disallows use, even if the
       token itself has not expired.
 
-   *  *event_driven*: state changes propagate to Resource Servers over a
-      Shared Signals / CAEP or equivalent event channel.
+   *  *event_driven*: the Mission Issuer emits Mission lifecycle
+      Security Event Tokens that propagate state changes to consumers
+      over a Shared Signals stream, as defined in
+      [I-D.draft-mcguinness-oauth-mission-signals].
 
    *  *per_request*: high-assurance Resource Servers query the Mission
       Status operation (Section 3) or validate sufficiently fresh state
@@ -1050,6 +1052,13 @@ Normative References
               <https://www.rfc-editor.org/rfc/rfc9701>.
 
 Informative References
+
+   [I-D.draft-mcguinness-oauth-mission-signals]
+              McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              mission-signals, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-signals>.
 
    [RFC9110]  Fielding, R., Ed., Nottingham, M., Ed., and J. Reschke,
               Ed., "HTTP Semantics", STD 97, RFC 9110,
