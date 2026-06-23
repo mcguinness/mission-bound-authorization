@@ -51,6 +51,15 @@ normative:
 informative:
   RFC9110:
   RFC9700:
+  I-D.draft-mcguinness-oauth-mission-signals:
+    title: "Mission Lifecycle Signals for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
 
 --- abstract
 
@@ -627,8 +636,10 @@ classes are:
   ({{introspection-projection}}) returns `active: false` for a token
   whose Mission state disallows use, even if the token itself has not
   expired.
-- **`event_driven`**: state changes propagate to Resource Servers over
-  a Shared Signals / CAEP or equivalent event channel.
+- **`event_driven`**: the Mission Issuer emits Mission lifecycle
+  Security Event Tokens that propagate state changes to consumers over
+  a Shared Signals stream, as defined in
+  {{I-D.draft-mcguinness-oauth-mission-signals}}.
 - **`per_request`**: high-assurance Resource Servers query the Mission
   Status operation ({{mission-status}}) or validate sufficiently fresh
   state for each consequential request.
