@@ -1569,21 +1569,20 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
   "exp": 1797840060,
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com"
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "state": "active",
+    "expires_at":     "2026-11-02T08:15:00Z",
+    "policy_version": "deploy-policy:v17",
+    "mission_expiry": "2026-12-31T23:59:59Z",
+    "version":        1
   },
-  "state": "active",
-  "authority_hash":
-    "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
   "authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["invoices.read", "journal-entries.write"] }
-  ],
-  "policy_version": "deploy-policy:v17",
-  "issued_at":      "2026-11-02T08:14:00Z",
-  "expires_at":     "2026-11-02T08:15:00Z",
-  "mission_expiry": "2026-12-31T23:59:59Z",
-  "version":        1
+  ]
 }
 </pre><a href="#section-3.4-8" class="pilcrow">¶</a>
 </div>
@@ -1592,42 +1591,53 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
 <li class="normal" id="section-3.4-10.1">
             <p id="section-3.4-10.1.1">The signed JWT envelope <code>iss</code>, <code>aud</code>, <code>sub</code>, <code>nonce</code>, <code>iat</code>, <code>exp</code>.
 The <code>aud</code> is the response's audience binding and the <code>nonce</code> its
-request binding.<a href="#section-3.4-10.1.1" class="pilcrow">¶</a></p>
+request binding. <code>exp</code> bounds the validity of the signed response
+itself; how long the consumer <span class="bcp14">MAY</span> rely on the reported <code>state</code> is
+given separately by <code>mission.expires_at</code> below.<a href="#section-3.4-10.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.4-10.2">
-            <p id="section-3.4-10.2.1"><code>mission</code>: the <code>id</code> and <code>origin</code> of the subject Mission, per the
-<code>mission</code> claim of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (Section
-"The mission Claim").<a href="#section-3.4-10.2.1" class="pilcrow">¶</a></p>
+            <p id="section-3.4-10.2.1"><code>mission</code>: the <code>mission</code> object, the same shape as the <code>mission</code>
+claim of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (Section "The
+mission Claim") with status members added. It carries:<a href="#section-3.4-10.2.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.4-10.2.2.1">
+                <p id="section-3.4-10.2.2.1.1"><code>id</code>, <code>origin</code>: the subject Mission's identifier and origin.<a href="#section-3.4-10.2.2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.4-10.3">
-            <p id="section-3.4-10.3.1"><code>state</code>: the current Mission lifecycle state. With this extension
+              <li class="normal" id="section-3.4-10.2.2.2">
+                <p id="section-3.4-10.2.2.2.1"><code>authority_hash</code>: the issuance profile's consent commitment over
+the Authority Set (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+"Integrity Anchors").<a href="#section-3.4-10.2.2.2.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-3.4-10.2.2.3">
+                <p id="section-3.4-10.2.2.3.1"><code>state</code>: the current Mission lifecycle state. With this extension
 the state space is <code>active</code>, <code>revoked</code>, <code>expired</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission Lifecycle
 and Gating"), extended with <code>suspended</code> and <code>completed</code> when the
 Mission Lifecycle endpoint (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>) is
-deployed.<a href="#section-3.4-10.3.1" class="pilcrow">¶</a></p>
+deployed.<a href="#section-3.4-10.2.2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.4-10.4">
-            <p id="section-3.4-10.4.1"><code>authority_hash</code>: the issuance profile's consent commitment over the
-Authority Set (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
-"Integrity Anchors").<a href="#section-3.4-10.4.1" class="pilcrow">¶</a></p>
+              <li class="normal" id="section-3.4-10.2.2.4">
+                <p id="section-3.4-10.2.2.4.1"><code>expires_at</code>: an <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> string giving the point until which
+the consumer <span class="bcp14">MAY</span> rely on the reported <code>state</code> without re-checking,
+governing caching (<a href="#mission-status-caching" class="auto internal xref">Section 3.5</a>). It is
+report-freshness metadata, carried in <code>mission</code> so it travels with
+<code>state</code> even on the introspection projection, which has no signed
+envelope to carry it (<a href="#introspection-projection" class="auto internal xref">Section 4</a>).<a href="#section-3.4-10.2.2.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.4-10.5">
-            <p id="section-3.4-10.5.1"><code>authorization_details</code>: the audience-scoped Authority Set entries
-relevant to the requesting audience, as the
-<code>mission_resource_access</code> shape of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (Section "Mission
-Authority"). Entries addressed to other audiences <span class="bcp14">MUST NOT</span> be
-disclosed.<a href="#section-3.4-10.5.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-3.4-10.6">
-            <p id="section-3.4-10.6.1"><code>policy_version</code>, <code>mission_expiry</code>, <code>version</code>: the derivation
+              <li class="normal" id="section-3.4-10.2.2.5">
+                <p id="section-3.4-10.2.2.5.1"><code>policy_version</code>, <code>mission_expiry</code>, <code>version</code>: the derivation
 policy version, the Mission expiry, and the Mission record version
-at the time of the response.<a href="#section-3.4-10.6.1" class="pilcrow">¶</a></p>
+at the time of the response.<a href="#section-3.4-10.2.2.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.4-10.7">
-            <p id="section-3.4-10.7.1"><code>issued_at</code>, <code>expires_at</code>: the validity window of this response,
-governing caching (<a href="#mission-status-caching" class="auto internal xref">Section 3.5</a>).<a href="#section-3.4-10.7.1" class="pilcrow">¶</a></p>
+            </ul>
+</li>
+          <li class="normal" id="section-3.4-10.3">
+            <p id="section-3.4-10.3.1"><code>authorization_details</code>: the audience-scoped Authority Set entries
+relevant to the requesting audience, as the <code>mission_resource_access</code>
+shape of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (Section "Mission
+Authority"), carried at the top level as a sibling of <code>mission</code> (as
+on the token and in the introspection response). Entries addressed
+to other audiences <span class="bcp14">MUST NOT</span> be disclosed.<a href="#section-3.4-10.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-3.4-11">A consumer <span class="bcp14">MUST</span> verify, before honoring a response:<a href="#section-3.4-11" class="pilcrow">¶</a></p>
@@ -1661,9 +1671,9 @@ governing caching (<a href="#mission-status-caching" class="auto internal xref">
 <a href="#section-3.5" class="section-number selfRef">3.5. </a><a href="#name-caching" class="section-name selfRef">Caching</a>
         </h3>
 <p id="section-3.5-1">Consumers <span class="bcp14">SHOULD</span> cache a response keyed on (<code>mission_id</code>, audience)
-until <code>expires_at</code>. Consumers <span class="bcp14">MUST NOT</span> use a cached response after
-<code>expires_at</code>, with up to 30 seconds skew tolerance for the <code>active</code>
-state only and no tolerance for terminal states.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
+until <code>mission.expires_at</code>. Consumers <span class="bcp14">MUST NOT</span> use a cached response
+after <code>mission.expires_at</code>, with up to 30 seconds skew tolerance for
+the <code>active</code> state only and no tolerance for terminal states.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
 <p id="section-3.5-2">Consumers <span class="bcp14">SHOULD</span> honor a stale-while-revalidate window of up to twice
 the response lifetime when the AS is unreachable, provided deployment
 policy permits degraded-mode operation within the AS's advertised
@@ -1817,15 +1827,15 @@ without re-checking, governed by the caching rule of
 <a href="#mission-status-caching" class="auto internal xref">Section 3.5</a>.<a href="#section-4-3.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-4-4">The projection nests <code>state</code>, <code>authority_hash</code>, and <code>expires_at</code> inside
-the <code>mission</code> object, whereas the dedicated Mission Status Response
-(<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>) carries them at the top level. The shapes
-differ deliberately: the projection extends the existing nested
-<code>mission</code> introspection member of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (Section "Mission State via
-Token Introspection") and <span class="bcp14">MUST NOT</span> reshape it, while the dedicated
-response is a standalone payload of this document. A consumer of both
-surfaces reads the same facts from the two locations accordingly.<a href="#section-4-4" class="pilcrow">¶</a></p>
+<p id="section-4-4">This projection and the dedicated Mission Status Response
+(<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>) carry Mission facts in a <code>mission</code> object
+of the same shape: the open <code>mission</code> claim object of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (Section "The mission Claim")
+with status members (<code>state</code>, <code>expires_at</code>, and, on the dedicated
+response, <code>policy_version</code>, <code>mission_expiry</code>, <code>version</code>) added. This
+projection populates the subset a token-holding consumer needs; the
+dedicated response populates more. Either way a consumer reads the
+same fact from the same place.<a href="#section-4-4" class="pilcrow">¶</a></p>
 <p id="section-4-5">Example <span>[<a href="#RFC9701" class="cite xref">RFC9701</a>]</span>-signed introspection response (decoded payload),
 for a token whose Mission is <code>active</code>:<a href="#section-4-5" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-4-6">
@@ -2003,16 +2013,15 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
   "exp": 1797843260,
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com"
-  },
-  "state": "revoked",
-  "authority_hash":
-    "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-  "policy_version": "deploy-policy:v17",
-  "issued_at":      "2026-11-02T09:06:40Z",
-  "expires_at":     "2026-11-02T09:11:40Z",
-  "mission_expiry": "2026-12-31T23:59:59Z",
-  "version":        2
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "state": "revoked",
+    "expires_at":     "2026-11-02T09:11:40Z",
+    "policy_version": "deploy-policy:v17",
+    "mission_expiry": "2026-12-31T23:59:59Z",
+    "version":        2
+  }
 }
 </pre><a href="#section-5.4-6" class="pilcrow">¶</a>
 </div>
@@ -2249,13 +2258,12 @@ the distinction exposes the Mission space to enumeration.<a href="#section-8.1-1
         </h3>
 <p id="section-8.2-1">A Mission Status Response is bound to (caller <code>sub</code>, audience,
 <code>nonce</code>, issuance time). Replay against a different caller or audience,
-or beyond <code>expires_at</code>, is detectable by signature verification and by
-verifying the bindings; a consumer <span class="bcp14">MUST</span> verify all six checks of
-<a href="#mission-status-response" class="auto internal xref">Section 3.4</a> before honoring a response. A response
-cached and replayed by the same caller within <code>expires_at</code> is
-equivalent to a fresh response; a consumer <span class="bcp14">MUST NOT</span> use a cached
-response after <code>expires_at</code>, with the skew tolerance of
-<a href="#mission-status-caching" class="auto internal xref">Section 3.5</a>.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+or beyond <code>mission.expires_at</code>, is detectable by signature
+verification and by verifying the bindings; a consumer <span class="bcp14">MUST</span> verify all
+six checks of <a href="#mission-status-response" class="auto internal xref">Section 3.4</a> before honoring a response. A
+response cached and replayed by the same caller within
+<code>mission.expires_at</code> is equivalent to a fresh response; a consumer <span class="bcp14">MUST NOT</span> use a cached response after <code>mission.expires_at</code>, with the skew
+tolerance of <a href="#mission-status-caching" class="auto internal xref">Section 3.5</a>.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-status-denial-of-service">
