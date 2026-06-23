@@ -1668,7 +1668,20 @@ deployment <span class="bcp14">SHOULD</span> adopt, and a floor it <span class="
             </tr>
           </tbody>
         </table>
-<p id="section-2.3-3"><strong>Classification floor.</strong> Actions in the <strong>irreversible</strong>, <strong>external
+<p id="section-2.3-3">The per-class requirements in the table -- the PDP gate and parameter
+binding -- are requirements for an action <strong>once it is assigned to that
+class</strong>. Assigning an action to a class is deployment policy, bounded
+by the floor below and by any Resource-policy minimum
+(<a href="#decision" class="auto internal xref">Section 5</a>): the profile does not require every read to reach a PDP.
+A read that is already fully constrained by the token's audience,
+resource, and the Resource Server's object-level authorization, and
+that does not materially affect the resource set or disclosure risk,
+need not be classified a consequential read, and is then not
+separately PDP-gated by this profile. A deployment <span class="bcp14">MUST NOT</span>, however,
+use classification to evade the floor or a Resource-policy minimum, and
+once an action is a consequential write or higher it <span class="bcp14">MUST</span> be gated and
+bound as the table requires.<a href="#section-2.3-3" class="pilcrow">¶</a></p>
+<p id="section-2.3-4"><strong>Classification floor.</strong> Actions in the <strong>irreversible</strong>, <strong>external
 commitment</strong>, and <strong>privileged administration</strong> classes <span class="bcp14">MUST</span> be
 treated as consequential and gated. A Mission's <code>purpose</code>, or
 deployment policy, <span class="bcp14">MAY</span> raise an action to a stricter class; it <span class="bcp14">MUST NOT</span> lower an action below any minimum classification the Resource
@@ -1676,17 +1689,17 @@ policy (<a href="#decision" class="auto internal xref">Section 5</a>) sets for i
 irreversible, external-commitment, or privileged-administration action
 as non-consequential. A deployment
 that leaves such an action ungated does not enforce this profile for
-that action's class (<a href="#pep-placement" class="auto internal xref">Section 2.4</a>).<a href="#section-2.3-3" class="pilcrow">¶</a></p>
-<p id="section-2.3-4">A deployment policy can require human confirmation, step-up
+that action's class (<a href="#pep-placement" class="auto internal xref">Section 2.4</a>).<a href="#section-2.3-4" class="pilcrow">¶</a></p>
+<p id="section-2.3-5">A deployment policy can require human confirmation, step-up
 authentication, or another local signal for privileged administration
-or external commitments. This profile does not define such a signal.<a href="#section-2.3-4" class="pilcrow">¶</a></p>
-<p id="section-2.3-5">Consequential reads do not require parameter binding by default.
+or external commitments. This profile does not define such a signal.<a href="#section-2.3-5" class="pilcrow">¶</a></p>
+<p id="section-2.3-6">Consequential reads do not require parameter binding by default.
 However, a deployment <span class="bcp14">MUST</span> bind or digest read parameters when those
 parameters materially change the effective resource set or disclosure
 risk. Examples include export-like reads, bulk reads, cross-tenant or
 cross-account queries, privacy-sensitive filters, field selection that
 controls sensitive attributes, destination or delivery parameters, and
-aggregation choices that affect re-identification risk.<a href="#section-2.3-5" class="pilcrow">¶</a></p>
+aggregation choices that affect re-identification risk.<a href="#section-2.3-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="pep-placement">
