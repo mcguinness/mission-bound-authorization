@@ -751,14 +751,7 @@ canonical byte representation, separate Decision Evidence and
 Execution Evidence object schemas, and portable cross-domain receipts
 are out of scope ({{deferred}}).
 
-For an irreversible action, an external commitment, or privileged
-administration, the executing PEP MUST also produce, after it acts, an
-execution-outcome record keyed to the permit's decision identifier,
-recording at least success or failure and the `parameter_digest`
-actually executed. This lets a decision and its execution be reconciled
-one to one, so a permit that was obtained but executed more than once,
-or executed for different parameters, is detectable after the fact. The
-detailed object schema is deferred ({{deferred}}).
+## Required decision evidence
 
 A record MUST contain:
 
@@ -797,7 +790,20 @@ originating AS's commitments, cited as anchors; the PDP does not
 recompute them and is not required to hold the full Authority Set to
 record them, consistent with {{I-D.draft-mcguinness-oauth-mission}}.
 
-Requirements on the record:
+## Execution-outcome evidence
+
+For an irreversible action, an external commitment, or privileged
+administration, the executing PEP MUST also produce, after it acts, an
+execution-outcome record keyed to the permit's decision identifier,
+recording at least success or failure and the `parameter_digest`
+actually executed. This lets a decision and its execution be reconciled
+one to one, so a permit that was obtained but executed more than once,
+or executed for different parameters, is detectable after the fact. The
+detailed object schema is deferred ({{deferred}}).
+
+## Record integrity and retention
+
+The following requirements apply to every record:
 
 - The Resource Server runtime profile MUST define the record's
   concrete serialization and canonicalization before storage and
