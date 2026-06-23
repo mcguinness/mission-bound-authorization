@@ -1607,7 +1607,8 @@ the session are still valid.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
       <h2 id="name-event-driven-state-cache">
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-event-driven-state-cache" class="section-name selfRef">Event-Driven State Cache</a>
       </h2>
-<p id="section-6-1">A harness <span class="bcp14">MAY</span> maintain an event-driven Mission state cache using
+<p id="section-6-1">This section is <span class="bcp14">OPTIONAL</span>. A harness <span class="bcp14">MAY</span> maintain an event-driven
+Mission state cache using
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>. The cache entry for a
 Mission <span class="bcp14">MUST</span> contain:<a href="#section-6-1" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -1937,41 +1938,45 @@ record <span class="bcp14">SHOULD</span> contain:<a href="#section-11-1" class="
           <p id="section-11-2.1.1"><code>event_id</code>;<a href="#section-11-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-2.2">
-          <p id="section-11-2.2.1"><code>mission_id</code>;<a href="#section-11-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.2.1">the <code>mission</code> object (<code>id</code>, <code>origin</code>, and, when known,
+<code>authority_hash</code>), the same shape as the <code>mission</code> claim of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>;<a href="#section-11-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-2.3">
-          <p id="section-11-2.3.1"><code>mission_origin</code>;<a href="#section-11-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.3.1"><code>session_id</code>;<a href="#section-11-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-2.4">
-          <p id="section-11-2.4.1"><code>session_id</code>;<a href="#section-11-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.4.1">task graph node or queue item identifier;<a href="#section-11-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-2.5">
-          <p id="section-11-2.5.1">task graph node or queue item identifier;<a href="#section-11-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.5.1">prior and resulting harness state;<a href="#section-11-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-2.6">
-          <p id="section-11-2.6.1">prior and resulting harness state;<a href="#section-11-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.6.1">Mission state observed;<a href="#section-11-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-2.7">
-          <p id="section-11-2.7.1">Mission state observed;<a href="#section-11-2.7.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.7.1">status source and freshness;<a href="#section-11-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-2.8">
-          <p id="section-11-2.8.1">status source and freshness;<a href="#section-11-2.8.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.8.1">timestamp; and<a href="#section-11-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-2.9">
-          <p id="section-11-2.9.1">timestamp; and<a href="#section-11-2.9.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-2.10">
-          <p id="section-11-2.10.1">actor or sub-agent identifier when applicable.<a href="#section-11-2.10.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.9.1">actor or sub-agent identifier when applicable.<a href="#section-11-2.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-11-3">Harness Evidence complements runtime Decision Evidence. It records
-execution-continuity decisions, not Resource Server authorization.<a href="#section-11-3" class="pilcrow">¶</a></p>
+<p id="section-11-3">A Harness Evidence record carries the Mission as the nested <code>mission</code>
+object, mirroring the <code>mission</code> claim; the flat <code>mission_id</code> and
+<code>mission_origin</code> of Mission Binding (<a href="#mission-binding" class="auto internal xref">Section 4</a>) are a binding
+key, whereas the evidence record mirrors the claim shape.<a href="#section-11-3" class="pilcrow">¶</a></p>
+<p id="section-11-4">Harness Evidence complements runtime enforcement evidence
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>). It records
+execution-continuity decisions, not Resource Server authorization.<a href="#section-11-4" class="pilcrow">¶</a></p>
 <div id="harness-evidence-object">
 <section id="section-11.1">
         <h3 id="name-harness-evidence-object">
 <a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-harness-evidence-object" class="section-name selfRef">Harness Evidence Object</a>
         </h3>
-<p id="section-11.1-1">A Harness Evidence object has:<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+<p id="section-11.1-1">A Harness Evidence object is a JSON object <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> with:<a href="#section-11.1-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-11.1-2">
           <dt id="section-11.1-2.1">
 <code>event_id</code>:</dt>
@@ -1984,7 +1989,9 @@ execution-continuity decisions, not Resource Server authorization.<a href="#sect
           <dd style="margin-left: 1.5em" id="section-11.1-2.4">
             <p id="section-11.1-2.4.1"><span class="bcp14">REQUIRED</span>. One of <code>resume_allowed</code>, <code>resume_suppressed</code>,
 <code>queue_suppressed</code>, <code>cache_disabled</code>, <code>subagent_stopped</code>,
-<code>subagent_continued</code>, or <code>mission_state_stale</code>.<a href="#section-11.1-2.4.1" class="pilcrow">¶</a></p>
+<code>subagent_continued</code>, or <code>mission_state_stale</code>. <code>event_type</code>
+categorizes the work item the record is about; the <code>decision</code> member
+records the outcome, so the two are orthogonal.<a href="#section-11.1-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-11.1-2.5">
@@ -2008,40 +2015,56 @@ handle identifier.<a href="#section-11.1-2.10.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-11.1-2.11">
-<code>state</code>:</dt>
+<code>actor</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-11.1-2.12">
-            <p id="section-11.1-2.12.1"><span class="bcp14">REQUIRED</span>. The Mission state observed or <code>unknown</code>.<a href="#section-11.1-2.12.1" class="pilcrow">¶</a></p>
+            <p id="section-11.1-2.12.1"><span class="bcp14">OPTIONAL</span>. The actor or sub-agent identifier the record concerns, when
+applicable (for example, the child whose work was stopped or
+continued under a <code>subagent_stopped</code> or <code>subagent_continued</code> event).<a href="#section-11.1-2.12.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-11.1-2.13">
-<code>state_source</code>:</dt>
+<code>state</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-11.1-2.14">
-            <p id="section-11.1-2.14.1"><span class="bcp14">REQUIRED</span>. The status, signal, runtime decision, or local source used.<a href="#section-11.1-2.14.1" class="pilcrow">¶</a></p>
+            <p id="section-11.1-2.14.1"><span class="bcp14">REQUIRED</span>. The Mission state observed or <code>unknown</code>.<a href="#section-11.1-2.14.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-11.1-2.15">
-<code>freshness</code>:</dt>
+<code>prior_harness_state</code>, <code>resulting_harness_state</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-11.1-2.16">
-            <p id="section-11.1-2.16.1"><span class="bcp14">OPTIONAL</span>. Object containing <code>checked_at</code> and <code>expires_at</code>.<a href="#section-11.1-2.16.1" class="pilcrow">¶</a></p>
+            <p id="section-11.1-2.16.1"><span class="bcp14">OPTIONAL</span>. The harness execution state before and after the recorded
+decision (for example, <code>running</code> to <code>suppressed</code>).<a href="#section-11.1-2.16.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-11.1-2.17">
-<code>decision</code>:</dt>
+<code>state_source</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-11.1-2.18">
-            <p id="section-11.1-2.18.1"><span class="bcp14">REQUIRED</span>. One of <code>continue</code>, <code>suppress</code>, <code>pause</code>, <code>terminate</code>, or
-<code>handoff</code>.<a href="#section-11.1-2.18.1" class="pilcrow">¶</a></p>
+            <p id="section-11.1-2.18.1"><span class="bcp14">REQUIRED</span>. One of <code>status</code>, <code>signal</code>, <code>runtime_decision</code>, or a
+deployment-defined source, as in <a href="#mission-binding" class="auto internal xref">Section 4</a>.<a href="#section-11.1-2.18.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-11.1-2.19">
-<code>reason</code>:</dt>
+<code>freshness</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-11.1-2.20">
-            <p id="section-11.1-2.20.1"><span class="bcp14">REQUIRED</span>. String reason.<a href="#section-11.1-2.20.1" class="pilcrow">¶</a></p>
+            <p id="section-11.1-2.20.1"><span class="bcp14">OPTIONAL</span>. Object containing <code>checked_at</code> and <code>expires_at</code>.<a href="#section-11.1-2.20.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-11.1-2.21">
-<code>occurred_at</code>:</dt>
+<code>decision</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-11.1-2.22">
-            <p id="section-11.1-2.22.1"><span class="bcp14">REQUIRED</span>. RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-11.1-2.22.1" class="pilcrow">¶</a></p>
+            <p id="section-11.1-2.22.1"><span class="bcp14">REQUIRED</span>. One of <code>continue</code>, <code>suppress</code>, <code>pause</code>, <code>terminate</code>, or
+<code>handoff</code>.<a href="#section-11.1-2.22.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-2.23">
+<code>reason</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-2.24">
+            <p id="section-11.1-2.24.1"><span class="bcp14">REQUIRED</span>. String reason.<a href="#section-11.1-2.24.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-2.25">
+<code>occurred_at</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-2.26">
+            <p id="section-11.1-2.26.1"><span class="bcp14">REQUIRED</span>. RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-11.1-2.26.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2052,10 +2075,10 @@ handle identifier.<a href="#section-11.1-2.10.1" class="pilcrow">¶</a></p>
   "event_id": "hrn_7pQ4mN9s",
   "event_type": "resume_suppressed",
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEd",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE"
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },
   "session_id": "sess_agent_42",
   "work_item": "queue_invoice_retry_9",

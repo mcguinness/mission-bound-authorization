@@ -1615,14 +1615,21 @@ the identity-chaining and ID-JAG drafts
 cross-domain projection. Both are confined to <span class="bcp14">OPTIONAL</span> capabilities
 (Delegation and Cross-Domain), so the mandatory single-domain core does
 not depend on them.<a href="#section-1.5-2" class="pilcrow">¶</a></p>
-<p id="section-1.5-3">Deferred to future work, and not required to implement this document,
-are: a substrate-neutral generalization of the Mission model (across
-non-OAuth authorization substrates), additional integrity anchors (such
-as a <code>consent_rendering_hash</code> over a structured consent disclosure
-object, <a href="#consent-binding" class="auto internal xref">Section 15.1</a>), mission expansion, the normative carriage
-of Mission context in Transaction Tokens (shown only illustratively in
-the end-to-end example appendix), and a cross-domain status or
-event-distribution mechanism for tighter revocation.<a href="#section-1.5-3" class="pilcrow">¶</a></p>
+<p id="section-1.5-3">Separate from this document, and not required to implement it, are
+several capabilities now specified as <span class="bcp14">OPTIONAL</span> companion profiles: an
+additional integrity anchor over a structured consent disclosure
+(<code>consent_rendering_hash</code>, <a href="#consent-binding" class="auto internal xref">Section 15.1</a>) is defined by Mission
+Consent Evidence <span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>;
+mission expansion is defined by Mission Expansion
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>; and a cross-domain
+status or event-distribution mechanism for tighter revocation is defined
+by Mission Status <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> and
+Mission Lifecycle Signals <span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>.
+A deployment implements this document without any of them. Remaining
+future work, not yet specified, includes a substrate-neutral
+generalization of the Mission model across non-OAuth authorization
+substrates and the normative carriage of Mission context in Transaction
+Tokens (shown only illustratively in the end-to-end example appendix).<a href="#section-1.5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="non-goals">
@@ -1647,7 +1654,9 @@ attestation problem outside both layers.<a href="#section-1.6-2.1.1" class="pilc
             <p id="section-1.6-2.2.1"><strong>Just-in-time Mission expansion.</strong> The Authority Set is committed at
 approval; this profile defines no mid-stream, incremental
 authorization upgrade. Widening requires a new approval (a successor
-Mission); a JIT expansion protocol is future work.<a href="#section-1.6-2.2.1" class="pilcrow">¶</a></p>
+Mission), as specified by Mission Expansion
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>; a JIT, approval-free
+expansion protocol remains future work.<a href="#section-1.6-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.6-2.3">
             <p id="section-1.6-2.3.1"><strong>Lifecycle event distribution.</strong> A Resource Server learns Mission
@@ -3328,8 +3337,11 @@ self-contained authorization and verification is stateless. A
 deployment <span class="bcp14">MAY</span> additionally offer token introspection
 (<a href="#introspection" class="auto internal xref">Section 10</a>) so a Resource Server can observe Mission state
 per request and cut off a revoked Mission without waiting out the
-token lifetime. The canonical Mission Status surface (keyed by <code>mission_id</code>)
-and signed status responses remain deferred to future work.<a href="#section-9.2-4" class="pilcrow">¶</a></p>
+token lifetime. A canonical Mission Status surface (keyed by
+<code>mission_id</code>) and signed status responses are specified separately as
+an <span class="bcp14">OPTIONAL</span> companion profile by Mission Status
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>; this document does not
+require them.<a href="#section-9.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -4086,12 +4098,16 @@ malicious rendering layer could mislead the Approver, showing a
 narrower or different task than the Authority Set actually committed,
 without leaving any committed trace. A deployment whose Missions carry
 high-risk authority <span class="bcp14">SHOULD</span> therefore record presentation-level audit
-evidence out of band: for example, a hash over the exact consent
-disclosure rendered to the Approver, retained so the disclosure shown
-can be reconstructed and audited after the fact. Binding this on the
-wire (a <code>consent_rendering_hash</code> over a structured consent-disclosure
-object) requires defining that object and anchor and is deferred to
-future work; an AS <span class="bcp14">MAY</span> record the evidence out of band in the meantime.<a href="#section-15.1-5" class="pilcrow">¶</a></p>
+evidence: for example, a hash over the exact consent disclosure
+rendered to the Approver, retained so the disclosure shown can be
+reconstructed and audited after the fact. Binding this on the wire (a
+<code>consent_rendering_hash</code> over a structured consent-disclosure object)
+is specified as an <span class="bcp14">OPTIONAL</span> companion profile by Mission Consent
+Evidence <span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>; an AS
+that does not implement it <span class="bcp14">MAY</span> record equivalent evidence out of band.
+As that profile makes explicit, such a commitment binds the structured
+disclosure the AS records, not the pixels actually presented; it
+narrows this gap for audit but does not close it.<a href="#section-15.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-drift">
@@ -4204,8 +4220,11 @@ The introspection of <a href="#introspection" class="auto internal xref">Section
 single-domain: it requires the introspecting AS to hold the Mission,
 and a Resource AS has no query to the origin keyed by <code>mission_id</code>, so short
 downstream lifetimes remain the only cross-domain control. Deployments
-needing tighter cross-domain revocation must add a status or
-event-distribution mechanism, which this document defers.<a href="#section-15.6-1" class="pilcrow">¶</a></p>
+needing tighter cross-domain revocation can add the status or
+event-distribution mechanisms specified separately by Mission Status
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> and Mission Lifecycle
+Signals <span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>, which this
+document does not require.<a href="#section-15.6-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="signing-and-key-rotation">
@@ -4573,6 +4592,14 @@ this document:<a href="#section-17.6-3" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-klrc-aiagent-auth">[I-D.draft-klrc-aiagent-auth]</dt>
         <dd>
 <span class="refAuthor">Kasselman, P.</span>, <span class="refAuthor">Lombardo, J.</span>, <span class="refAuthor">Rosomakho, Y.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Steele, N.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"AI Agent Authentication and Authorization"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-klrc-aiagent-auth-02</span>, <time datetime="2026-06-01" class="refDate">1 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-klrc-aiagent-auth-02">https://datatracker.ietf.org/doc/html/draft-klrc-aiagent-auth-02</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-consent-evidence</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-consent-evidence">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-consent-evidence</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-expansion</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
         <dd>
