@@ -179,7 +179,9 @@ The request is an HTTPS POST with an
 : REQUIRED. A string. A client-generated nonce binding the
   response to this request. It MUST be unique per request within the
   response lifetime; a consumer MUST reject a response whose `nonce`
-  does not equal the one it sent.
+  does not equal the one it sent. This is a standard client challenge:
+  echoing it in the signed response anti-replay-binds that response to
+  this specific request.
 
 ## Authentication {#mission-status-authentication}
 
