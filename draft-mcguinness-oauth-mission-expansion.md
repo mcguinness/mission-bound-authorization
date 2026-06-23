@@ -275,9 +275,9 @@ Set from this Intent and bounds it by policy exactly as for any
 Mission; this document adds no authority-derivation rule.
 
 To mark the request as an expansion, the client additionally supplies
-the `mission_predecessor` request parameter:
+the `predecessor` request parameter:
 
-`mission_predecessor`:
+`predecessor`:
 : REQUIRED for an expansion request. A string. The `mission_id` of the
   predecessor Mission the successor expands. Its presence signals that
   this Mission creation is an expansion and names the predecessor whose
@@ -286,24 +286,24 @@ the `mission_predecessor` request parameter:
   and audit; it does not by itself select or authorize one (the grant
   does, {{request-binding}}). The parameter is carried through PAR with
   `mission_intent`; like `mission_intent`, an AS MUST reject a
-  `mission_predecessor` value presented directly on a front-channel
+  `predecessor` value presented directly on a front-channel
   authorization request rather than through a PAR-issued `request_uri`
   with `invalid_request`.
 
-`mission_predecessor_token`:
+`predecessor_token`:
 : REQUIRED for an expansion request. A string. The predecessor
   Mission's refresh token, presented as proof that the client controls
   the predecessor's grant. The Mission Issuer resolves the predecessor
   from this token and binds the expansion to it ({{request-binding}});
-  this value, not `mission_predecessor`, selects the predecessor
+  this value, not `predecessor`, selects the predecessor
   authoritatively. It is carried through PAR with `mission_intent`; an
-  AS MUST reject a `mission_predecessor_token` presented directly on a
+  AS MUST reject a `predecessor_token` presented directly on a
   front-channel authorization request rather than through a PAR-issued
   `request_uri` with `invalid_request`. Because it carries a refresh
   token, it MUST be sent only on the client-authenticated PAR back
   channel and MUST NOT appear on any front channel.
 
-The `mission_predecessor` parameter names the predecessor but does not
+The `predecessor` parameter names the predecessor but does not
 by itself authorize expanding it. Authorization comes from the grant
 binding of {{request-binding}}: a client MUST NOT be able to expand a
 Mission merely by naming its `mission_id`.
@@ -320,13 +320,13 @@ Because expansion runs as an interactive approval event, a PAR
 submission followed by an authorization-code flow ({{adjudication}}),
 the binding is established at the PAR submission, which is a
 client-authenticated back-channel request. In the same PAR request that
-carries `mission_intent` and `mission_predecessor`, the client MUST
+carries `mission_intent` and `predecessor`, the client MUST
 present the predecessor Mission's refresh token in the
-`mission_predecessor_token` parameter ({{submission}}). The Mission
+`predecessor_token` parameter ({{submission}}). The Mission
 Issuer MUST resolve the predecessor from that refresh token, applying
 the same grant-to-Mission resolution the issuance profile uses for a
 presented refresh token, and MUST verify that the resolved Mission is
-the Mission named in `mission_predecessor`.
+the Mission named in `predecessor`.
 
 Establishing the binding at PAR, before the approval event, is
 deliberate: the Mission Issuer resolves the predecessor from a real
@@ -337,7 +337,7 @@ cannot be used to drive approval prompts against another party's
 Mission.
 
 The grant, not the identifier, determines the predecessor. The Mission
-Issuer MUST refuse an expansion request whose `mission_predecessor`
+Issuer MUST refuse an expansion request whose `predecessor`
 value does not match the Mission resolved from the presented grant,
 with `invalid_grant`. A client that does not hold a grant for the named
 predecessor cannot present its refresh token and so cannot expand it.
@@ -375,7 +375,7 @@ Issuer runs the approval event as it does for any Mission, with the
 expansion-specific steps noted:
 
 1. Resolve the predecessor from the presented grant and verify it is
-   the Mission named in `mission_predecessor` and is `active`
+   the Mission named in `predecessor` and is `active`
    ({{request-binding}}, {{predecessor-active}}).
 2. Derive the successor's Authority Set from the submitted Mission
    Intent and bound it by policy, exactly as for any Mission. The
@@ -639,7 +639,7 @@ wire location of a reason code is a deployment matter.
 
 Two failure classes are not denial reasons and use the issuance
 profile's error vocabulary directly: an expansion request whose
-`mission_predecessor` does not match the grant-resolved Mission, or
+`predecessor` does not match the grant-resolved Mission, or
 whose predecessor is not `active`, fails with `invalid_grant`
 ({{request-binding}}, {{predecessor-active}}); an expansion Mission
 Intent the Mission Issuer cannot parse or cannot derive a valid
@@ -653,11 +653,11 @@ An implementation claims conformance to this document only in the
 Mission Issuer role and only when it adjudicates expansion. A
 conforming **expansion-capable Mission Issuer** MUST:
 
-- accept the `mission_predecessor` and `mission_predecessor_token`
+- accept the `predecessor` and `predecessor_token`
   request parameters on a Mission creation via PAR and treat the
   request as an expansion ({{submission}});
 - bind the expansion request to the predecessor's grant and refuse a
-  request whose `mission_predecessor` does not match the grant-resolved
+  request whose `predecessor` does not match the grant-resolved
   Mission, or whose predecessor is not `active`, with `invalid_grant`
   ({{request-binding}}, {{predecessor-active}});
 - adjudicate the expansion as a fresh approval event that obtains new
@@ -691,12 +691,12 @@ lineage link.
 
 A client could attempt to expand a Mission it does not control, for
 example by naming another tenant's or subject's `mission_id` in the
-`mission_predecessor` parameter.
+`predecessor` parameter.
 
 Mitigations:
 
 - The predecessor is resolved from the grant the client presents, not
-  from the `mission_predecessor` value; the Mission Issuer MUST verify
+  from the `predecessor` value; the Mission Issuer MUST verify
   the resolved Mission matches the named one and MUST refuse a mismatch
   with `invalid_grant` ({{request-binding}}). A client that holds no
   grant for the named predecessor cannot expand it.
@@ -835,12 +835,12 @@ does not create them.
 This document registers two parameters in the "OAuth Parameters"
 registry:
 
-- Name: `mission_predecessor`
+- Name: `predecessor`
 - Parameter Usage Location: authorization request
 - Change Controller: IETF
 - Reference: this document, {{submission}}
 
-- Name: `mission_predecessor_token`
+- Name: `predecessor_token`
 - Parameter Usage Location: authorization request
 - Change Controller: IETF
 - Reference: this document, {{submission}}
@@ -848,7 +848,7 @@ registry:
 As with `mission_intent` in the issuance profile, PAR {{RFC9126}}
 carries authorization-request parameters without a distinct usage
 location, so the pushed submission of these parameters needs no
-separate registration. `mission_predecessor_token` carries a refresh
+separate registration. `predecessor_token` carries a refresh
 token and MUST be submitted only through PAR, never on a front-channel
 authorization request ({{submission}}).
 
