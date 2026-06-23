@@ -414,8 +414,8 @@ This extension adds the following to that projection:
   protected by TLS, as for token introspection generally
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission State via
   Token Introspection"). Where the projection's integrity and origin
-  need to be verifiable independently of the transport -- for example
-  when the response transits intermediaries or is retained for audit --
+  need to be verifiable independently of the transport (for example
+  when the response transits intermediaries or is retained for audit),
   the AS SHOULD return it as a {{RFC9701}}-signed response, advertised
   through the standard `introspection_signing_alg_values_supported`
   metadata {{RFC8414}}.
@@ -617,7 +617,7 @@ The mechanisms are each discovered from their own metadata, not from a
 separate posture list:
 
 - consulting Mission state at each derivation event (the token
-  endpoint, refresh, Token Exchange) -- the issuance profile's
+  endpoint, refresh, Token Exchange), the issuance profile's
   always-present baseline, which does not invalidate already-issued
   self-contained tokens;
 - token introspection ({{introspection-projection}}), which returns
