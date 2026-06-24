@@ -434,8 +434,11 @@ evidence service authorized by the Mission Issuer. A verifier:
 3. verifies the JWS payload against those bytes;
 4. verifies the signing key against the Mission Issuer's published key
    material or configured trust anchors; and
-5. verifies that the Mission anchors in `mission` match the Mission
-   record being audited.
+5. when `decision` is `approved`, verifies that the Mission anchors in
+   `mission` match the Mission record being audited. When `decision` is
+   `declined` there is no Mission record ({{declined-events}}); the
+   verifier instead confirms the `mission` descriptor carries `origin`
+   and the two `source_hashes` anchors and no `id`.
 
 Steps 1 through 5 establish the integrity of the evidence record itself
 and rely only on the record, since `consent_rendering_hash` is carried
