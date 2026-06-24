@@ -107,7 +107,8 @@ adopt it is unaffected.
 
 # Introduction
 
-The issuance profile {{I-D.draft-mcguinness-oauth-mission}} gates
+Mission-Bound Authorization for OAuth 2.0
+{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") gates
 derivation on Mission state and bounds outstanding self-contained
 tokens by their lifetime. The Mission Status and Lifecycle profile
 {{I-D.draft-mcguinness-oauth-mission-status}} adds surfaces for

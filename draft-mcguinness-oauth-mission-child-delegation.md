@@ -96,7 +96,8 @@ created by session ancestry alone.
 
 # Introduction
 
-The issuance profile {{I-D.draft-mcguinness-oauth-mission}} supports
+Mission-Bound Authorization for OAuth 2.0
+{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") supports
 delegated Mission-bound tokens. It requires authority to narrow down
 the chain and records actor context. That is sufficient for many
 service-to-service and token-exchange cases. Agent harnesses introduce

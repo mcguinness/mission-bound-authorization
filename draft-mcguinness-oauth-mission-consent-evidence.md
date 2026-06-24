@@ -79,7 +79,8 @@ without making the disclosure itself an authority grant.
 
 # Introduction {#introduction}
 
-The issuance profile {{I-D.draft-mcguinness-oauth-mission}} binds a
+Mission-Bound Authorization for OAuth 2.0
+{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") binds a
 Mission to an approval event and commits two objects: the approved
 Mission Intent and the approved Authority Set. It deliberately notes a
 remaining gap: the exact consent disclosure rendered to the Approver is
