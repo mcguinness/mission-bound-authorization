@@ -4814,9 +4814,10 @@ from the partner's Resource Server through its internal services.<a href="#appen
 <code>mission.origin</code>, and <code>authority_hash</code> ride unchanged through every
 hop. OAuth authority is audience-scoped by the Mission Issuer and
 Resource AS; deployment-local transaction context then narrows the
-operation for internal services. No hop calls back to
-<code>mission.origin</code> for state; each enforces from the credential it
-holds.<a href="#appendix-A-4" class="pilcrow">¶</a></p>
+operation for internal services. In this baseline walkthrough no hop
+calls back to <code>mission.origin</code> for state; each enforces from the
+credential it holds. (The optional Status and Signals layers add
+origin-fed state where a deployment wants it, as noted below.)<a href="#appendix-A-4" class="pilcrow">¶</a></p>
 <p id="appendix-A-5">This walkthrough is the baseline issuance path: stateless enforcement
 bounded only by token lifetime. The <span class="bcp14">OPTIONAL</span> companion profiles layer on
 it, and the stages note where: Stage 4 gains a runtime point-of-use
@@ -5001,15 +5002,20 @@ subject-resolution rules of the ID-JAG and identity chaining profiles,
 not by this document.<a href="#appendix-A.4-3" class="pilcrow">¶</a></p>
 <p id="appendix-A.4-4">Revoking the Mission now stops new ID-JAGs, but the local token the
 Resource AS minted stays usable until its <code>exp</code> (260 seconds), bounded
-by the 300-second ID-JAG cap (<a href="#cross-domain-revocation" class="auto internal xref">Section 15.6</a>). Prompt
-cross-domain revocation is opt-in: where the partner domain consumes a
-Mission Status freshness lease or a lifecycle-change Signal, it
-re-checks on a Mission transition instead of waiting out the lifetime.<a href="#appendix-A.4-4" class="pilcrow">¶</a></p>
+by the 300-second ID-JAG cap (<a href="#cross-domain-revocation" class="auto internal xref">Section 15.6</a>). Tighter
+cross-domain revocation is opt-in, and the two companions do different
+things: a Mission Status freshness lease shortens how long the partner
+relies on stale state by forcing a pull or per-request re-check, while a
+Mission Lifecycle Signal notifies the partner on a Mission transition so
+it can react without polling.<a href="#appendix-A.4-4" class="pilcrow">¶</a></p>
 <p id="appendix-A.4-5">The Resource AS holds only this audience's subset and cannot recompute
 <code>authority_hash</code>. To show its local token did not widen beyond the
-ID-JAG, it <span class="bcp14">SHOULD</span> record, per minted token, the consumed ID-JAG's <code>jti</code>
-and conveyed <code>authorization_details</code>, so an auditor can check the local
-authority is a subset of the grant.<a href="#appendix-A.4-5" class="pilcrow">¶</a></p>
+ID-JAG, it <span class="bcp14">SHOULD</span> record, per minted token, both sides of the
+derivation: the consumed ID-JAG's <code>jti</code> and conveyed
+<code>authorization_details</code>, and the local token's own identifier or digest
+(<code>jti</code>), <code>iss</code>, <code>aud</code>, <code>iat</code>, <code>exp</code>, and issued <code>authorization_details</code>.
+An auditor can then identify the exact local token, tie it to the grant
+it was minted from, and check its authority is a subset of that grant.<a href="#appendix-A.4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="stage-4-the-resource-server-enforces">

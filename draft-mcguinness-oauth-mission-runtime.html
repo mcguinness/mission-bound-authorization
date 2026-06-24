@@ -1727,7 +1727,7 @@ policy authority, never self-issued by the agent or asserted from the
 agent's own context, and its rendered disclosure <span class="bcp14">MAY</span> be committed as
 Consent Evidence (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>)
 bound to the action parameters. It composes with, and does not replace,
-RFC 9470 step-up authentication, which strengthens the actor's
+<span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span> step-up authentication, which strengthens the actor's
 authentication context rather than approving a specific action.<a href="#section-3.4-2" class="pilcrow">¶</a></p>
 <p id="section-3.4-3">A PEP <span class="bcp14">MUST</span> refuse an action for which deployment policy or Resource
 policy requires an action-bound approval and a valid fresh approval
@@ -2110,8 +2110,10 @@ origin Mission freshness.<a href="#section-6.1-2.3.1" class="pilcrow">¶</a></p>
           <li class="normal" id="section-6.1-2.4">
             <p id="section-6.1-2.4.1">This document defines no cross-issuer by-Mission status query.
 Deployments that need tighter freshness than the token or
-cross-domain grant lifetime provides need an out-of-band trusted
-status feed or a future standardized Mission Status surface.<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
+cross-domain grant lifetime provides use the Mission Status profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) or Mission Lifecycle
+Signals (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), or an
+out-of-band trusted status feed.<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.1-2.5">
             <p id="section-6.1-2.5.1">Each enforcement scope <span class="bcp14">MUST</span> publish its maximum staleness bound per
@@ -2876,6 +2878,14 @@ consumes are registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" 
 <dt id="I-D.draft-mcguinness-oauth-mission-harness">[I-D.draft-mcguinness-oauth-mission-harness]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-harness</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-harness">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-harness</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-signals</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-signals">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-signals</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-status</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-status">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-status</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-niyikiza-oauth-attenuating-agent-tokens">[I-D.draft-niyikiza-oauth-attenuating-agent-tokens]</dt>
         <dd>

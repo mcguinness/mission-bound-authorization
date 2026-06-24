@@ -426,7 +426,7 @@ Table of Contents
    asserted from the agent's own context, and its rendered disclosure
    MAY be committed as Consent Evidence
    ([I-D.draft-mcguinness-oauth-mission-consent-evidence]) bound to the
-   action parameters.  It composes with, and does not replace, RFC 9470
+   action parameters.  It composes with, and does not replace, [RFC9470]
    step-up authentication, which strengthens the actor's authentication
    context rather than approving a specific action.
 
@@ -778,8 +778,10 @@ Table of Contents
 
    *  This document defines no cross-issuer by-Mission status query.
       Deployments that need tighter freshness than the token or cross-
-      domain grant lifetime provides need an out-of-band trusted status
-      feed or a future standardized Mission Status surface.
+      domain grant lifetime provides use the Mission Status profile
+      ([I-D.draft-mcguinness-oauth-mission-status]) or Mission Lifecycle
+      Signals ([I-D.draft-mcguinness-oauth-mission-signals]), or an out-
+      of-band trusted status feed.
 
    *  Each enforcement scope MUST publish its maximum staleness bound
       per action class and state source.  This document does not impose
@@ -1398,6 +1400,20 @@ Table of Contents
               oauth-mission-harness, 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-mission-harness>.
+
+   [I-D.draft-mcguinness-oauth-mission-signals]
+              McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              mission-signals, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-signals>.
+
+   [I-D.draft-mcguinness-oauth-mission-status]
+              McGuinness, K., "Mission Status and Lifecycle for OAuth
+              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
+              oauth-mission-status, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-status>.
 
    [I-D.draft-niyikiza-oauth-attenuating-agent-tokens]
               Aimable, N., "Attenuating Authorization Tokens for Agentic
