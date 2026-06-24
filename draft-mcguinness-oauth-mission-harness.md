@@ -68,6 +68,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
+  I-D.draft-mcguinness-oauth-mission-orchestration:
+    title: "Mission Orchestration and Unwinding for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-orchestration-latest
 
 --- abstract
 
@@ -192,7 +201,14 @@ task graph node to a Mission reference:
 
 `state_source`:
 : REQUIRED when `state` is present. One of `status`, `signal`,
-  `runtime_decision`, or a deployment-defined source.
+  `runtime_decision`, `harness`, `operator`, or a deployment-defined
+  source: `status` and `signal` name the Mission Status and Lifecycle
+  Signals surfaces, `runtime_decision` a runtime enforcement decision,
+  `harness` a harness stop decision, and `operator` a human operator
+  action. This enumeration is the shared `state_source` value space for
+  Mission-aware execution evidence; the orchestration profile
+  ({{I-D.draft-mcguinness-oauth-mission-orchestration}}) reuses it
+  rather than defining its own.
 
 `enforcement_scope`:
 : OPTIONAL. A string or object identifying the runtime enforcement

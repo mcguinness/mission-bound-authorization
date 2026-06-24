@@ -460,9 +460,13 @@ An Orchestration Evidence record has these members:
 : REQUIRED. The state observed.
 
 `state_source`:
-: REQUIRED. One of `status`, `signal`, `runtime_decision`, or a
-  deployment-defined source, the same value space as the harness
-  `state_source` ({{I-D.draft-mcguinness-oauth-mission-harness}}).
+: REQUIRED. A value from the shared `state_source` value space defined
+  by the Harness profile ({{I-D.draft-mcguinness-oauth-mission-harness}}):
+  `status`, `signal`, `runtime_decision`, `harness`, `operator`, or a
+  deployment-defined source. This profile does not define its own; a
+  trigger source from {{trigger-sources}} maps to the corresponding
+  value (a harness stop decision to `harness`, an operator action to
+  `operator`).
 
 `orchestration_decision`:
 : REQUIRED. One of `suppress`, `pause`, `cancel`, `compensate`,
@@ -532,6 +536,16 @@ governs how workflow state is unwound once continuation is stopped.
 The runtime profile {{I-D.draft-mcguinness-oauth-mission-runtime}}
 still governs each consequential action at the last controllable
 boundary. These checks compose; none replaces the others.
+
+The two execution profiles share, rather than duplicate, their common
+machinery: the `state_source` value space is defined once by the
+Harness profile and reused here ({{orchestration-evidence}}), and the
+Orchestration Evidence `mission` descriptor is the same shape as the
+Harness Evidence descriptor. The boundary is by question asked: a
+Harness Evidence record answers "may this unit of work continue," while
+an Orchestration Evidence record answers "how was in-flight workflow
+state unwound." A deployment that needs both records emits each at its
+own decision point; neither subsumes the other.
 
 # Conformance {#conformance}
 
