@@ -7,19 +7,17 @@
 <title>Mission Lifecycle Signals for OAuth 2.0</title>
 <meta content="Karl McGuinness" name="author">
 <meta content="
-       The Mission Status and Lifecycle profile
-  names event-driven
-propagation (Mission state changes reaching consumers over a Shared
-Signals or equivalent channel) as one way to bound revocation
-latency, but leaves the channel itself unspecified. This document
+       The Mission Status and Lifecycle profile names event-driven propagation
+(Mission state changes reaching consumers over a Shared Signals or
+equivalent channel) as one way to bound revocation latency, but leaves
+the channel itself unspecified. This document
 specifies it: a profile
 of the OpenID Shared Signals Framework in which a Mission Issuer emits
 a Mission lifecycle-change Security Event Token when it commits a state
 transition, delivered push or poll, so a consumer learns of a
 revocation, expiry, or other transition without polling. It is
- OPTIONAL  and builds on the issuance profile
- ; a deployment that does not
-adopt it is unaffected. 
+ OPTIONAL  and builds on Mission-Bound Authorization for OAuth 2.0, the
+issuance profile; a deployment that does not adopt it is unaffected. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="oauth" name="keyword">
@@ -1097,19 +1095,17 @@ svg {
 <h1 id="title">Mission Lifecycle Signals for OAuth 2.0</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
-<p id="section-abstract-1">The Mission Status and Lifecycle profile
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> names event-driven
-propagation (Mission state changes reaching consumers over a Shared
-Signals or equivalent channel) as one way to bound revocation
-latency, but leaves the channel itself unspecified. This document
+<p id="section-abstract-1">The Mission Status and Lifecycle profile names event-driven propagation
+(Mission state changes reaching consumers over a Shared Signals or
+equivalent channel) as one way to bound revocation latency, but leaves
+the channel itself unspecified. This document
 specifies it: a profile
 of the OpenID Shared Signals Framework in which a Mission Issuer emits
 a Mission lifecycle-change Security Event Token when it commits a state
 transition, delivered push or poll, so a consumer learns of a
 revocation, expiry, or other transition without polling. It is
-<span class="bcp14">OPTIONAL</span> and builds on the issuance profile
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; a deployment that does not
-adopt it is unaffected.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<span class="bcp14">OPTIONAL</span> and builds on Mission-Bound Authorization for OAuth 2.0, the
+issuance profile; a deployment that does not adopt it is unaffected.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1353,8 +1349,8 @@ back to a less-timely method.<a href="#section-3-5" class="pilcrow">¶</a></p>
 the Security Event Token shape of the Shared Signals Framework
 <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span> and informed by the Continuous Access Evaluation Profile
 <span>[<a href="#OIDC-CAEP" class="cite xref">OIDC-CAEP</a>]</span>, when it commits any Mission lifecycle transition or the
-approval event that activates a Mission. The event type URI, registered
-in <a href="#iana" class="auto internal xref">Section 12</a>, is:<a href="#section-4-1" class="pilcrow">¶</a></p>
+approval event that activates a Mission. The event type URI, defined in
+this document and described in <a href="#iana" class="auto internal xref">Section 12</a>, is:<a href="#section-4-1" class="pilcrow">¶</a></p>
 <p id="section-4-2"><code>https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change</code><a href="#section-4-2" class="pilcrow">¶</a></p>
 <p id="section-4-3">This URI is the registered event-type identifier; <code>mission.lifecycle-change</code>
 is the short name this document uses for it in prose.<a href="#section-4-3" class="pilcrow">¶</a></p>

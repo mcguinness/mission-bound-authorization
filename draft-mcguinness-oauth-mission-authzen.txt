@@ -13,22 +13,22 @@ Expires: 26 December 2026
 
 Abstract
 
-   Mission-Bound Runtime Enforcement for OAuth 2.0
-   ([I-D.draft-mcguinness-oauth-mission-runtime]) specifies a substrate-
-   independent decision contract: before each consequential action runs,
-   a Policy Enforcement Point (PEP) obtains a permit from a Policy
-   Decision Point (PDP) that evaluates the action against the Mission
-   the acting token is bound to.  That contract is independent of the
-   decision wire format.  This document is the concrete OpenID AuthZEN
-   binding of that contract.  It defines how a Mission is materialized
-   into an evaluable policy view, how the abstract decision inputs map
-   onto the AuthZEN Authorization API request and response, the Decision
-   Evidence and Execution Evidence objects a deployment emits and their
-   integrity, how runtime denials map onto AuthZEN decision context and
-   optional error details, how requestable denials can compose with the
-   AuthZEN Access Request and Approval Profile, and the AuthZEN
-   representation of the runtime metering the base profile meters.  It
-   does not restate the enforcement semantics the base profile owns.
+   Mission-Bound Runtime Enforcement for OAuth 2.0 specifies a
+   substrate-independent decision contract: before each consequential
+   action runs, a Policy Enforcement Point (PEP) obtains a permit from a
+   Policy Decision Point (PDP) that evaluates the action against the
+   Mission the acting token is bound to.  That contract is independent
+   of the decision wire format.  This document is the concrete OpenID
+   AuthZEN binding of that contract.  It defines how a Mission is
+   materialized into an evaluable policy view, how the abstract decision
+   inputs map onto the AuthZEN Authorization API request and response,
+   the Decision Evidence and Execution Evidence objects a deployment
+   emits and their integrity, how runtime denials map onto AuthZEN
+   decision context and optional error details, how requestable denials
+   can compose with the AuthZEN Access Request and Approval Profile, and
+   the AuthZEN representation of the runtime metering the base profile
+   meters.  It does not restate the enforcement semantics the base
+   profile owns.
 
 About This Document
 

@@ -6,12 +6,11 @@
 <meta content="initial-scale=1.0" name="viewport">
 <title>Mission Status and Lifecycle for OAuth 2.0</title>
 <meta content="Karl McGuinness" name="author">
-<meta content='
-       The Mission-Bound Authorization for OAuth 2.0 profile
-  (the "issuance profile") binds
-issued authority to a durable, human-approved Mission and gates
-issuance on Mission state, but it observes Mission state only through
-token lifetime and optional token introspection. This document
+<meta content="
+       The Mission-Bound Authorization for OAuth 2.0 profile binds issued
+authority to a durable, human-approved Mission and gates issuance on
+Mission state, but it observes Mission state only through token lifetime
+and optional token introspection. This document
 defines the Mission state-management surfaces it defers: a canonical
 Mission Status operation (keyed by  mission_id ), a management
 endpoint for explicit lifecycle transitions ( revoke ,  suspend ,  resume ,
@@ -20,7 +19,7 @@ status evidence. Each capability is independently optional; an
 implementation  MAY  adopt any subset, and one that adopts none remains
 a conforming issuance profile. This document does not restate the base
 profile. 
-    ' name="description">
+    " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="oauth" name="keyword">
 <meta content="mission" name="keyword">
@@ -1097,11 +1096,10 @@ svg {
 <h1 id="title">Mission Status and Lifecycle for OAuth 2.0</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
-<p id="section-abstract-1">The Mission-Bound Authorization for OAuth 2.0 profile
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile") binds
-issued authority to a durable, human-approved Mission and gates
-issuance on Mission state, but it observes Mission state only through
-token lifetime and optional token introspection. This document
+<p id="section-abstract-1">The Mission-Bound Authorization for OAuth 2.0 profile binds issued
+authority to a durable, human-approved Mission and gates issuance on
+Mission state, but it observes Mission state only through token lifetime
+and optional token introspection. This document
 defines the Mission state-management surfaces it defers: a canonical
 Mission Status operation (keyed by <code>mission_id</code>), a management
 endpoint for explicit lifecycle transitions (<code>revoke</code>, <code>suspend</code>, <code>resume</code>,
@@ -1621,8 +1619,10 @@ and Gating"): the core states <code>active</code>, <code>revoked</code>, <code>e
 profile's <code>suspended</code> and <code>completed</code> when the Mission Lifecycle
 endpoint (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>) is deployed, and any
 further state a companion profile defines and the deployment runs
-(<code>superseded</code> for an expanded predecessor; <code>cascaded</code> for a
-cascade-terminated Child Mission). A consumer applies the issuance
+(<code>superseded</code> for an expanded predecessor
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>); <code>cascaded</code> for a
+cascade-terminated Child Mission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>)). A consumer applies the issuance
 profile's forward-compatibility rule: only <code>active</code> permits reliance,
 and every other value, recognized or not, is non-active.<a href="#section-3.4-10.2.2.3.1" class="pilcrow">¶</a></p>
 </li>
@@ -1749,7 +1749,7 @@ symbols are hard errors. The body of a hard error is a JSON object
                 <code>terminated</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">200</td>
-              <td class="text-left" rowspan="1" colspan="1">Mission is in a terminal state: <code>revoked</code>, <code>completed</code>, <code>expired</code>, <code>superseded</code>, or <code>cascaded</code>.</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission is in a terminal state: <code>revoked</code>, <code>completed</code>, <code>expired</code>, <code>superseded</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), or <code>cascaded</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
