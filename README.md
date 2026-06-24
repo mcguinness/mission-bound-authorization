@@ -89,16 +89,21 @@ predates it.
 
 ## Recommended deployment bundles
 
-The drafts are independently optional, so a conforming issuance
-deployment can omit properties many readers assume from "Mission-bound
-agents": action-time checks, prompt stop, unwinding, and consent
-evidence. These bundles name what to deploy together for a given goal.
+Each draft is optional on its own, but the properties many readers
+assume from "Mission-bound agents" (action-time checks, prompt stop,
+unwinding, consent evidence) only arrive when several are deployed
+together. Most agent deployments therefore want a bundle, not the core
+alone. These bundles name what to deploy for a given goal.
 
 | Bundle | Drafts | What you get |
 |---|---|---|
 | **Baseline issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch. Audit, not action-time defense. |
-| **Enforced agent** | mission + runtime + authzen + status + signals | Per-action enforcement at the point of use, and prompt revocation. The minimum for an agent that takes consequential actions. |
+| **Enforced agent** | mission + runtime + authzen + status and/or signals | Per-action enforcement at the point of use, and prompt revocation (pull via status, push via signals, or both). The minimum for an agent that takes consequential actions. |
 | **Governed agent (recommended for AI agents)** | Enforced agent + consent-evidence + harness + orchestration | Consent-rendering evidence, session-continuity stop, and safe unwinding. Add child-delegation for sub-agents and expansion for mid-task growth. |
+
+Mission Intent Shaping is an approval-time, client-side option that
+layers onto any bundle; it produces the Mission Intent and is not itself
+deployed at the Authorization Server.
 
 Each draft also states its own scoped conformance; the bundles are
 guidance, not a new conformance class.

@@ -409,7 +409,10 @@ expansion-specific steps noted:
    Authority Set, satisfying any `context.acr`, and render the Subject
    when the Approver is not the Subject, per the issuance profile's
    approval event. The consent disclosure MUST reflect the successor's
-   authority being adjudicated.
+   authority being adjudicated. For an in-ceiling expansion under
+   progressive authorization, this consent MAY be satisfied by policy
+   rather than a fresh human approval, within the limits of
+   {{in-ceiling-expansion}}.
 4. Compute the successor's integrity anchors (`intent_hash`,
    `authority_hash`) and create the successor Mission record in the
    `active` state, with its `predecessor` member set
@@ -455,12 +458,15 @@ the Approver MAY additionally consent to:
   MAY adjudicate an in-ceiling expansion by policy rather than by a
   fresh human approval.
 
-Where present, the ceiling and drawdown policy are part of the Mission's
-approved authority record and are covered by its `authority_hash`; the
-consent disclosure MUST render the ceiling and the fact that in-ceiling
-expansion is policy-adjudicated. A Mission that carries no ceiling has
-no progressive authorization: every expansion of it is an ordinary,
-freshly approved expansion.
+Where present, the ceiling and drawdown policy are recorded on the
+Mission and committed under their own integrity anchor, not under
+`authority_hash`: `authority_hash` commits only the consented Authority
+Set ({{I-D.draft-mcguinness-oauth-mission}}), and the ceiling is a bound
+on future expansions, not present authority. The consent disclosure MUST
+render the ceiling and the fact that in-ceiling expansion is
+policy-adjudicated. A Mission that carries no ceiling has no progressive
+authorization: every expansion of it is an ordinary, freshly approved
+expansion.
 
 ## In-ceiling expansion {#in-ceiling-expansion}
 
@@ -485,6 +491,17 @@ requested authority that is not a subset of the consented ceiling;
 exceeding the ceiling requires a fresh human approval that raises it,
 which is an ordinary expansion.
 
+Policy adjudication is bounded, so a pre-consented ceiling cannot become
+a standing grant a compromised agent walks up to unattended. A drawdown
+that would grant an irreversible action, an external commitment,
+privileged administration, or cross-domain authority MUST be adjudicated
+by a fresh human approval even when it is within the ceiling; the
+drawdown policy MUST NOT permit policy-only adjudication of those
+classes. A drawdown policy SHOULD bound the rate of policy-adjudicated
+drawdowns. An in-ceiling request the drawdown policy does not authorize
+is not refused with `out_of_ceiling`; it falls back to an ordinary,
+freshly human-approved expansion.
+
 ## What it bounds, and what it does not {#progressive-limits}
 
 The ceiling is broad by construction, since it must cover the
@@ -498,7 +515,10 @@ rate-limitable, and enforced per action by the runtime layer
 ({{I-D.draft-mcguinness-oauth-mission-runtime}}). Progressive
 authorization bounds, and does not eliminate, standing-authority
 exposure; a deployment SHOULD pair it with short successor lifetimes,
-constraint-bounded ceilings, and runtime enforcement.
+constraint-bounded ceilings, and runtime enforcement. The drawdown
+policy is enforced by the Mission Issuer and is part of its trusted
+governance: a misconfigured policy can over-grant within the ceiling, so
+it is reviewed and versioned like other approval policy.
 
 ## Realizing an approved access request {#arap-feedback}
 

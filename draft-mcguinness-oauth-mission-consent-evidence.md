@@ -351,7 +351,10 @@ profile does not close it with a server-side commitment, which is
 impossible, but defines a ladder a deployment climbs as far as its
 threat model requires. Each rung shrinks the trusted rendering base; to
 claim a rung a deployment satisfies it and records the corresponding
-evidence.
+evidence. The rungs are cumulative: claiming a rung requires satisfying
+the rungs below it, so a Rung 3 confirmation is over a disclosure that
+is also deterministically renderable (Rung 1) and an auditor can
+re-render exactly what the confirmation signed.
 
 Rung 0, Recorded disclosure:
 : The baseline of {{consent-rendering-hash}}: the structured disclosure
@@ -458,16 +461,19 @@ A Consent Evidence object has these members:
 
 `rendering_confirmation`:
 : OPTIONAL. An object. A confirmation produced by the Approver's
-  authenticator over the `consent_rendering_hash` at approval (Rung 3,
-  {{rendering-assurance}}), binding the approval credential to the exact
-  committed disclosure. It carries the signature and the material a
-  verifier needs to check it against the Approver's authenticator and
-  the `consent_rendering_hash`; this profile fixes that it signs the
-  commitment, not the authenticator protocol. A deployment SHOULD
-  include it for a high-risk material-notice class
-  ({{material-notices}}). When present, a verifier MUST check it as part
-  of {{integrity}} and MUST treat a confirmation that does not verify
-  against the `consent_rendering_hash` as an integrity failure.
+  authenticator at approval (Rung 3, {{rendering-assurance}}). To bind
+  the trust to the Approver rather than the Authorization Server, it
+  MUST sign the `consent_rendering_hash` together with a per-approval
+  value (the `evidence_id`, or a nonce echoed in
+  `authentication_context`), so a captured confirmation cannot be
+  replayed into another record, and it MUST carry or reference an
+  authenticator credential that the verifier can confirm is bound to the
+  recorded `approver`. This profile fixes what is signed and bound, not
+  the authenticator protocol. A deployment SHOULD include it for a
+  high-risk material-notice class ({{material-notices}}). When present,
+  a verifier MUST check it as part of {{integrity}} and MUST treat a
+  confirmation that does not verify, or whose authenticator is not bound
+  to the recorded `approver`, as an integrity failure.
 
 `approved_at`:
 : REQUIRED when `decision` is `approved`. An RFC 3339 {{RFC3339}}
@@ -553,11 +559,21 @@ evidence service authorized by the Mission Issuer. A verifier:
    verifier instead confirms the `mission` descriptor carries `origin`
    and the two `source_hashes` anchors and no `id`; and
 6. when `rendering_confirmation` is present
-   ({{rendering-assurance}}), verifies it against the Approver's
-   authenticator and the `consent_rendering_hash`, and treats a
-   confirmation that does not verify as an integrity failure. Its
-   absence is not a failure; it means the evidence asserts no rung above
-   the rendering the AS recorded.
+   ({{rendering-assurance}}), verifies it against the recorded
+   `approver`'s authenticator and over the `consent_rendering_hash`
+   bound to the per-approval value, and treats a confirmation that does
+   not verify, or whose authenticator is not bound to the recorded
+   `approver`, as an integrity failure; and
+7. when `rendering_attestation` is present ({{rendering-assurance}}),
+   validates the attested component identity and its attestation against
+   the verifier's configured trust anchors, and treats an attestation it
+   cannot validate as unverified (the evidence then asserts no rung above
+   the one the verifier can check, not an integrity failure of the
+   record).
+
+The absence of `rendering_confirmation` or `rendering_attestation` is
+not a failure; it means the evidence asserts no rung above the rendering
+the AS recorded.
 
 Steps 1 through 5 establish the integrity of the evidence record itself
 and rely only on the record, since `consent_rendering_hash` is carried

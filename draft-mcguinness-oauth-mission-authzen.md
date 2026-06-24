@@ -101,8 +101,8 @@ Evidence and Execution Evidence objects a deployment emits and their
 integrity, how runtime denials map onto AuthZEN decision context and
 optional error details, how requestable denials can compose with the
 AuthZEN Access Request and Approval Profile, and the AuthZEN
-representation of the runtime metering the base profile meters. It
-does not restate the enforcement semantics the base profile owns.
+representation of the runtime metering the runtime profile meters. It
+does not restate the enforcement semantics the runtime profile owns.
 
 --- middle
 
@@ -895,6 +895,14 @@ progressive authorization
 narrow and requests the authority it discovers it needs, instead of
 holding it up front.
 
+Auto-approval is bounded the same way in-ceiling drawdown is
+({{I-D.draft-mcguinness-oauth-mission-expansion}}): a deployment SHOULD
+rate-limit and anomaly-check synchronous auto-approval, and MUST NOT
+auto-approve a request for an `action_approval_required` denial in the
+irreversible, external-commitment, or privileged-administration classes
+without an independent approver, so a compromised agent cannot drive the
+request loop to escalate itself unattended.
+
 Two ARAP properties carry weight here and match this profile's stance.
 First, an ARAP approval is input context, not a bearer grant: the PDP
 remains authoritative at enforcement, so the PEP MUST obtain a fresh
@@ -1142,6 +1150,15 @@ placement and bypass, classification integrity, freshness and
 consumption honesty, Resource policy authority, TOCTOU and replay, and
 the limits of a compromised PEP or PDP. This section addresses only
 threats specific to the AuthZEN binding and the evidence objects.
+
+## Access Request Service in the trusted base
+
+A deployment that composes with ARAP adds the Access Request Service to
+its trusted base: it adjudicates requestable denials and issues the
+approvals the PDP consumes as input. A compromised or misconfigured
+Access Request Service can auto-approve escalations, so it MUST be
+trusted, authenticated, and access-controlled like the PDP, and its
+auto-approval is bounded as above.
 
 ## Decision Evidence versus Execution Evidence
 
