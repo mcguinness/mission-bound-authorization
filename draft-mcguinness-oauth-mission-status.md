@@ -52,6 +52,24 @@ normative:
 informative:
   RFC9110:
   RFC9700:
+  I-D.draft-mcguinness-oauth-mission-expansion:
+    title: "Mission Expansion for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
+  I-D.draft-mcguinness-oauth-mission-child-delegation:
+    title: "Child Mission Delegation for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
     author:
@@ -308,12 +326,17 @@ The members are:
   - `authority_hash`: the issuance profile's consent commitment over
     the Authority Set ({{I-D.draft-mcguinness-oauth-mission}}, Section
     "Integrity Anchors").
-  - `state`: the current Mission lifecycle state. With this extension
-    the state space is `active`, `revoked`, `expired`
+  - `state`: the current Mission lifecycle state. The authoritative
+    state space is the issuance profile's
     ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Lifecycle
-    and Gating"), extended with `suspended` and `completed` when the
-    Mission Lifecycle endpoint ({{mission-lifecycle-endpoint}}) is
-    deployed.
+    and Gating"): the core states `active`, `revoked`, `expired`, this
+    profile's `suspended` and `completed` when the Mission Lifecycle
+    endpoint ({{mission-lifecycle-endpoint}}) is deployed, and any
+    further state a companion profile defines and the deployment runs
+    (`superseded` for an expanded predecessor; `cascaded` for a
+    cascade-terminated Child Mission). A consumer applies the issuance
+    profile's forward-compatibility rule: only `active` permits reliance,
+    and every other value, recognized or not, is non-active.
   - `expires_at`: an {{RFC8259}} string giving the point until which
     the consumer MAY rely on the reported `state` without re-checking,
     governing caching ({{mission-status-caching}}). It is
@@ -345,7 +368,10 @@ A consumer MUST verify, before honoring a response:
 Consumers SHOULD cache a response keyed on (`mission_id`, audience)
 until `mission.expires_at`. Consumers MUST NOT use a cached response
 after `mission.expires_at`, with up to 30 seconds skew tolerance for
-the `active` state only and no tolerance for terminal states.
+the `active` state only and no tolerance for any other state. The
+non-terminal `suspended` state takes no tolerance because it is
+reversible: a parent may be resumed to `active`, so a consumer MUST NOT
+extend reliance on a cached `suspended` (or any non-`active`) response.
 
 ## Anti-Oracle Property {#mission-status-anti-oracle}
 
@@ -372,8 +398,8 @@ symbols are hard errors. The body of a hard error is a JSON object
 | `ok` | 200 | Mission found and visible. |
 | `unauthorized` | 401 | Request not authenticated. |
 | `not_found` | 404 | Reference does not exist OR is not visible. |
-| `terminated` | 200 | Mission is `revoked`, `completed`, or `expired`. |
-| `suspended` | 200 | Mission is suspended. |
+| `terminated` | 200 | Mission is in a terminal state: `revoked`, `completed`, `expired`, `superseded`, or `cascaded`. |
+| `suspended` | 200 | Mission is suspended (non-terminal). |
 | `rate_limited` | 429 | Consumer is rate-limited. |
 | `unavailable` | 503 | AS temporarily cannot serve status. |
 
@@ -528,6 +554,27 @@ The operations are:
 - `resume`: return a suspended Mission to `active`.
 - `complete`: mark the Mission completed; transition to `completed`.
 
+## Legal Transitions {#legal-transitions}
+
+An operation is legal only from the source states below. The terminal
+states (`revoked`, `expired`, `completed`, and the companion-defined
+terminal states `superseded` and `cascaded`) accept no operation.
+
+| Operation | Legal from | Resulting state |
+|---|---|---|
+| `revoke` | `active`, `suspended` | `revoked` |
+| `suspend` | `active` | `suspended` |
+| `resume` | `suspended` | `active` |
+| `complete` | `active` | `completed` |
+
+A request for an operation against a state it is not legal from MUST be
+refused as a conflict ({{idempotency}}); the AS MUST NOT treat it as a
+no-op. Re-requesting an operation that has already reached its resulting
+state (for example, `revoke` on an already-`revoked` Mission) is
+idempotent and succeeds without a state change. A Mission that reaches
+`mission_expiry` transitions to `expired` independently of this
+endpoint, from `active` or `suspended`.
+
 ## Authentication
 
 The lifecycle endpoint uses the same authentication mechanisms as the
@@ -607,12 +654,20 @@ The AS records the operation, actor, time, and any `reason` in its
 audit log; the response confirms the outcome through the updated
 `state`.
 
-## Idempotency
+## Idempotency and Conflicts {#idempotency}
 
 Lifecycle operations MUST be idempotent on the pair (`mission`,
 `operation`). A repeated request that does not change state returns
 success without side effect, returning the current Mission Status
-Response.
+Response. This applies only when the operation is legal from the current
+state and has already reached its resulting state
+({{legal-transitions}}).
+
+An operation that is not legal from the current state (for example,
+`resume` on a Mission that was never suspended, or any operation on a
+terminal state) is a conflict, not an idempotent no-op. The AS MUST
+refuse it with HTTP 409 and a JSON body whose error symbol is
+`conflict`, leaving the Mission state unchanged.
 
 ## Relationship to RFC 7009
 
