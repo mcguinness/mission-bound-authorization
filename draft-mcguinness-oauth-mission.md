@@ -238,6 +238,15 @@ single-request user flows, machine-to-machine service credentials, or
 short-lived authorizations where the credential's lifetime is the
 task's lifetime; those use OAuth unchanged.
 
+A Mission SHOULD be scoped to a concrete task, not to an agent's whole
+lifetime. A deployment SHOULD prefer narrow, per-task Missions, each
+separately approved and revocable, over a single broad standing Mission
+that accumulates authority across unrelated tasks. The durable object is
+the approved task: keeping it task-scoped is what makes its authority
+and audit meaningful and bounds the blast radius on compromise to one
+task. An agent pursuing many tasks holds many Missions, not one broad
+one.
+
 ## Scope and Future Work
 
 This document is a self-contained, minimum-viable profile: it binds
@@ -285,12 +294,16 @@ considered and where it belongs, not that it was overlooked.
   evaluation is the runtime layer's role ({{runtime-boundary}}).
   Verifying an agent's declared reasoning against the task is a further
   attestation problem outside both layers.
-- **Just-in-time Mission expansion.** The Authority Set is committed at
-  approval; this profile defines no mid-stream, incremental
-  authorization upgrade. Widening requires a new approval (a successor
-  Mission), as specified by Mission Expansion
-  {{I-D.draft-mcguinness-oauth-mission-expansion}}; a JIT, approval-free
-  expansion protocol remains future work.
+- **Approval-free authorization upgrade.** The Authority Set is
+  committed at approval; this profile defines no mid-stream widening
+  that bypasses consent. Widening requires a new approval, a successor
+  Mission, as specified by Mission Expansion
+  {{I-D.draft-mcguinness-oauth-mission-expansion}}. That approval MAY be
+  given by policy rather than by a human when the original approval
+  pre-consented to an authority ceiling and a drawdown policy
+  (progressive authorization,
+  {{I-D.draft-mcguinness-oauth-mission-expansion}}); a widening that no
+  consent, human or pre-given, authorizes remains out of scope.
 - **Lifecycle event distribution.** A Resource Server learns Mission
   state from the token lifetime or optional introspection
   ({{introspection}}); this profile defines no push-based notification
@@ -701,6 +714,19 @@ MAY derive different Authority Sets from the same Mission Intent. This
 profile fixes how the derived authority is committed, carried, and
 gated, not a portable derivation algorithm; the Mission's
 `policy_version` records which policy produced a given Authority Set.
+
+For an open-ended task whose concrete objects cannot be enumerated at
+approval (for example, "reconcile this customer's ledger," where the
+individual invoices are not yet known), the AS SHOULD bound the derived
+authority primarily by `constraints` that hold as invariants over those
+objects (the owning customer, the tenant, an amount ceiling, read-only
+except named write actions, a validity window) rather than by an
+exhaustive `resource` enumeration. The runtime layer
+({{runtime-boundary}}) checks each concrete object against the
+constraint at the point of use. Constraint-bounding lets a Mission cover
+an open-ended task with tight authority even though the specific objects
+are unknown at approval, and avoids the over-broad enumeration a
+deployment would otherwise need to anticipate them.
 
 A `mission_resource_access` entry is a {{RFC9396}}
 `authorization_details` object with these members:
