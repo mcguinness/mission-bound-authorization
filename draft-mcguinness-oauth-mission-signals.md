@@ -56,6 +56,24 @@ normative:
 
 informative:
   RFC9700:
+  I-D.draft-mcguinness-oauth-mission-expansion:
+    title: "Mission Expansion for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
+  I-D.draft-mcguinness-oauth-mission-child-delegation:
+    title: "Child Mission Delegation for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
   OIDC-SSF:
     title: "OpenID Shared Signals Framework Specification 1.0"
     author:
@@ -194,15 +212,25 @@ claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
   ({{I-D.draft-mcguinness-oauth-mission}}).
 - `mission_origin` (string, required): the Mission Issuer (`origin`)
   issuer URL.
-- `state` (string, required): the new lifecycle state, one of
-  `active`, `revoked`, `expired`, `suspended`, or `completed`. This
-  enum is the lifecycle state space of
-  {{I-D.draft-mcguinness-oauth-mission-status}}; an event consumer
-  treats every value other than `active` as non-deriving.
+- `state` (string, required): the new lifecycle state. The value space
+  is the Mission lifecycle state space defined by the issuance profile
+  {{I-D.draft-mcguinness-oauth-mission}} (`active`, `revoked`,
+  `expired`), as extended by whichever lifecycle profiles a deployment
+  also runs: `suspended` and `completed`
+  ({{I-D.draft-mcguinness-oauth-mission-status}}), `superseded`
+  ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and `cascaded`
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Following
+  the issuance profile's forward-compatibility rule, an event consumer
+  MUST treat every value other than `active` as non-deriving, including
+  a value it does not recognize. A Mission Issuer that runs a profile
+  defining an additional state emits that state here on the
+  corresponding transition (for example, `superseded` when a
+  predecessor is superseded by an expansion successor).
 - `prior_state` (string, conditional): the state immediately before the
-  transition, drawn from the same enum. REQUIRED on a transition
+  transition, drawn from the same value space. REQUIRED on a transition
   emission; absent only on the approval-event emission, where there is
-  no prior state.
+  no prior state. A supersede transition emits `prior_state` of `active`
+  and `state` of `superseded`.
 - `version` (integer, required): a strictly monotonic per-Mission
   counter the Mission Issuer maintains and increments on each committed
   lifecycle transition (the approval-event emission is version 1),
@@ -399,13 +427,17 @@ This event type uses the OpenID Shared Signals Framework {{OIDC-SSF}}
 SET shape. The same event type URI is also referenced by the
 substrate-neutral Mission Authority Server work, which makes `tenant` a
 required claim; this profile makes `tenant` OPTIONAL because the OAuth
-profile has no tenant model. Two rules keep the shared URI safe
-regardless of how the registrations reconcile: a consumer MUST ignore
+profile has no tenant model. Because the URI is author-controlled and
+has no IANA registry or change controller to arbitrate a shared
+definition, this profile does not rely on any cross-specification
+guarantee about its required-claim set. It relies only on consumer
+robustness, which is sufficient on its own: a consumer MUST ignore
 members it does not understand and MUST NOT reject an event solely for
-a missing OPTIONAL member (notably `tenant`); and the required-claim
-set of the shared URI is the intersection of the registrations, so a
-shared definition cannot make `tenant` required without breaking this
-profile's emitters.
+a missing OPTIONAL member (notably `tenant`). A consumer built to this
+profile therefore interoperates with an emitter of either specification
+regardless of how the two reconcile, and a deployment that needs a
+binding shared definition should pursue a registered event type rather
+than depend on the author-controlled URI.
 
 ## OAuth Authorization Server Metadata Registration
 

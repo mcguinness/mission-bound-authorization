@@ -26,8 +26,6 @@ author:
     email: public@karlmcguinness.com
 
 normative:
-  RFC2119:
-  RFC8174:
   RFC3339:
   RFC7515:
   RFC8259:
@@ -332,11 +330,15 @@ it MUST:
 The states `revoked` and `expired` ({{I-D.draft-mcguinness-oauth-mission}}),
 `suspended` and `completed` ({{I-D.draft-mcguinness-oauth-mission-status}}),
 and `superseded` ({{I-D.draft-mcguinness-oauth-mission-expansion}}) are
-non-active for this profile. A deployment MAY define different operator
-handling for each state, but none allows new governed execution without
-a fresh authority path. In particular, a `superseded` Mission's work
-SHOULD re-bind to the successor Mission rather than be treated as a
-hard stop.
+all non-active. The orchestrator needs none of those companion profiles
+to be conformant: per the issuance profile's forward-compatibility rule
+it treats any state other than `active` as non-active. A deployment MAY
+define different operator handling for each state, but none allows new
+governed execution without a fresh authority path. In particular, a
+`superseded` Mission's continued work SHOULD proceed under the successor
+Mission through a fresh derivation from the successor's grant, not by
+rebinding the predecessor's authority; the successor carries its own
+Authority Set ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
 ## Trigger Sources {#trigger-sources}
 
@@ -438,7 +440,8 @@ handoff to human review.
 
 # Orchestration Evidence {#orchestration-evidence}
 
-An Orchestration Evidence record has these members:
+An Orchestration Evidence record is a JSON object {{RFC8259}} with these
+members:
 
 `event_id`:
 : REQUIRED. A unique identifier.
@@ -460,9 +463,13 @@ An Orchestration Evidence record has these members:
 : REQUIRED. The state observed.
 
 `state_source`:
-: REQUIRED. One of `status`, `signal`, `runtime_decision`, or a
-  deployment-defined source, the same value space as the harness
-  `state_source` ({{I-D.draft-mcguinness-oauth-mission-harness}}).
+: REQUIRED. A value from the shared `state_source` value space defined
+  by the Harness profile ({{I-D.draft-mcguinness-oauth-mission-harness}}):
+  `status`, `signal`, `runtime_decision`, `harness`, `operator`, or a
+  deployment-defined source. This profile does not define its own; a
+  trigger source from {{trigger-sources}} maps to the corresponding
+  value (a harness stop decision to `harness`, an operator action to
+  `operator`).
 
 `orchestration_decision`:
 : REQUIRED. One of `suppress`, `pause`, `cancel`, `compensate`,
@@ -491,8 +498,10 @@ An Orchestration Evidence record has these members:
 
 `evidence_envelope`:
 : OPTIONAL. Integrity protection over the Orchestration Evidence
-  object. When present with `format` `jws-compact`, its payload is the
-  JCS canonical bytes of the object with `evidence_envelope` removed.
+  object. When present with `format` `jws-compact`, it is a JWS
+  {{RFC7515}} Compact Serialization whose payload is the JCS
+  {{RFC8785}} canonical bytes of the object with `evidence_envelope`
+  removed.
 
 Example:
 
@@ -532,6 +541,16 @@ governs how workflow state is unwound once continuation is stopped.
 The runtime profile {{I-D.draft-mcguinness-oauth-mission-runtime}}
 still governs each consequential action at the last controllable
 boundary. These checks compose; none replaces the others.
+
+The two execution profiles share, rather than duplicate, their common
+machinery: the `state_source` value space is defined once by the
+Harness profile and reused here ({{orchestration-evidence}}), and the
+Orchestration Evidence `mission` descriptor is the same shape as the
+Harness Evidence descriptor. The boundary is by question asked: a
+Harness Evidence record answers "may this unit of work continue," while
+an Orchestration Evidence record answers "how was in-flight workflow
+state unwound." A deployment that needs both records emits each at its
+own decision point; neither subsumes the other.
 
 # Conformance {#conformance}
 

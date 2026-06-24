@@ -26,8 +26,6 @@ author:
     email: public@karlmcguinness.com
 
 normative:
-  RFC2119:
-  RFC8174:
   RFC3339:
   RFC6234:
   RFC7515:
@@ -321,9 +319,23 @@ A Consent Evidence object has these members:
 : REQUIRED. A string. Unique evidence identifier.
 
 `mission`:
-: REQUIRED. An object containing `id`, `origin`, `intent_hash`,
-  `authority_hash`, and, when this profile records it on the Mission,
-  `consent_rendering_hash`.
+: REQUIRED. An object binding the evidence to what was approved. Its
+  shape depends on `decision`, because a Mission exists only after an
+  approval ({{I-D.draft-mcguinness-oauth-mission}}):
+  - When `decision` is `approved`, it contains `id`, `origin`,
+    `intent_hash`, `authority_hash`, and, when this profile records it
+    on the Mission, `consent_rendering_hash`.
+  - When `decision` is `declined`, no Mission was created
+    ({{declined-events}}), so there is no `id`. It instead contains
+    `origin` and the `intent_hash` and `authority_hash` the disclosure
+    corresponded to, matching the disclosure object's `source_hashes`
+    ({{consent-disclosure}}). It MUST NOT contain `id`.
+
+  This descriptor follows the evidence-descriptor convention of the
+  issuance profile ({{I-D.draft-mcguinness-oauth-mission}}): it is the
+  `mission` claim shape extended with the collision-resistantly named
+  audit members `intent_hash` and `consent_rendering_hash`, and it is
+  not authority-bearing on its own.
 
 `approver`:
 : REQUIRED. An object identifying the authenticated Approver.
@@ -379,12 +391,12 @@ Example:
 {
   "evidence_id": "cns_7rP2kL9mQ4",
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEd",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com",
-    "intent_hash": "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6s",
-    "authority_hash": "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE",
+    "intent_hash": "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+    "authority_hash": "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "consent_rendering_hash":
-      "sha-256:CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4"
+      "sha-256:CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz"
   },
   "approver": {
     "iss": "https://idp.example.com",
@@ -402,7 +414,7 @@ Example:
   "disclosure": {
     "disclosure_id": "disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4"
+      "sha-256:CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz"
   },
   "evidence_envelope": {
     "format": "jws-compact",
@@ -421,14 +433,27 @@ evidence service authorized by the Mission Issuer. A verifier:
 2. canonicalizes the remaining Consent Evidence object with JCS;
 3. verifies the JWS payload against those bytes;
 4. verifies the signing key against the Mission Issuer's published key
-   material or configured trust anchors;
-5. recomputes `consent_rendering_hash` over the Consent Disclosure
-   object or verifies the referenced disclosure against that hash; and
-6. verifies that the Mission anchors in `mission` match the Mission
-   record being audited.
+   material or configured trust anchors; and
+5. when `decision` is `approved`, verifies that the Mission anchors in
+   `mission` match the Mission record being audited. When `decision` is
+   `declined` there is no Mission record ({{declined-events}}); the
+   verifier instead confirms the `mission` descriptor carries `origin`
+   and the two `source_hashes` anchors and no `id`.
 
-Evidence whose format is unsupported MUST be rejected rather than
-accepted without verification.
+Steps 1 through 5 establish the integrity of the evidence record itself
+and rely only on the record, since `consent_rendering_hash` is carried
+inside the signed `mission`. Reconstructing the disclosure is a separate
+step that depends on retrieval: when the disclosure object is inlined, a
+verifier recomputes `consent_rendering_hash` over it and compares; when
+it is carried by reference ({{minimization}}), the verifier retrieves it
+and verifies it against `consent_rendering_hash`. A verifier MUST NOT
+treat a disclosure that is merely unretrievable as an integrity failure
+of the evidence record; failure to retrieve a referenced disclosure
+within the retention window is an audit failure ({{audit}}), not a
+signature or anchor failure.
+
+Evidence whose envelope format is unsupported MUST be rejected rather
+than accepted without verification.
 
 # Binding to Mission Approval {#binding-to-mission}
 

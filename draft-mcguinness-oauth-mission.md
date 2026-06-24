@@ -566,9 +566,15 @@ following members:
     consequential call events. Each object has the members:
 
     `call_class`:
-    : REQUIRED. A string. The named call class. (Named `call_class`
-      rather than `scope` to avoid collision with the OAuth `scope`
-      parameter and claim.)
+    : REQUIRED. A string. The named call class to meter. A `call_class`
+      value SHOULD be drawn from the `actions` identifiers of the
+      entry's `mission_resource_access` ({{authorization-derivation}}),
+      so the metered class maps to evaluated actions; a deployment that
+      meters a coarser or cross-entry class defines that class's
+      membership, and such a class is deployment-defined and not
+      interoperable, like a deployment-defined constraint. (Named
+      `call_class` rather than `scope` to avoid collision with the OAuth
+      `scope` parameter and claim.)
 
     `count`:
     : REQUIRED. An integer. 1 or greater.
@@ -791,6 +797,13 @@ when:
 
 The AS MUST refuse to derive an entry that is not a subset of some
 Mission Authority Set entry.
+
+The `delegation` member is policy, not authority, and is not part of
+this comparison ({{delegation-constraints}}). A derived entry's
+`delegation`, when present, MUST NOT be broader than the parent entry's:
+its `max_depth` MUST be no greater and its `allowed_delegates` MUST be
+no wider. A derived entry MUST NOT introduce `delegation` where the
+parent entry has none.
 
 ## Common Constraints {#common-constraints}
 
@@ -1103,7 +1116,13 @@ The `typ` value space is an extension point ({{extensibility}}):
 additional committed objects use this same envelope with a new `typ`
 and the canonicalization below. This document defines no registry of
 `typ` values; each committing specification defines its own and relies
-on the `typ` domain separation.
+on the `typ` domain separation. To keep that domain separation safe
+without a registry, a new `typ` value MUST be a collision-resistant name
+(for example, a short name prefixed within a namespace the defining
+profile controls, following the Collision-Resistant Name guidance of
+{{RFC7519}} Section 4.2). The `mission-` prefixed values defined across
+this Mission-Bound Authorization profile set share an author-coordinated
+namespace for this reason.
 
 SHA-256 is the only digest algorithm this document defines; the
 `sha-256:` prefix identifies it. Algorithm agility is future work.
@@ -1136,11 +1155,16 @@ to computing an anchor and to comparing committed values:
 
 # Mission Record {#mission-record}
 
-A Mission is the durable record created at the approval event. It is
-immutable except for its `state` and is identified by a `mission_id`.
-Operational issuance bookkeeping, such as the derivation count gated
-under {{lifecycle}}, is AS-side state about the Mission, not a member
-of the immutable record. The Mission record has the following members:
+A Mission is the durable record created at the approval event. Its
+members are immutable after creation except for its `state`, and it is
+identified by a `mission_id`. Operational issuance bookkeeping, such as
+the derivation count gated under {{lifecycle}}, is AS-side state about
+the Mission, not a member of the immutable record. Like the `mission`
+claim ({{mission-claim}}), the record is open ({{extensibility}}): a
+companion profile MAY record additional, collision-resistantly named
+members set at creation (for example, a lineage member linking the
+Mission to a predecessor or parent). The members below are the ones this
+profile defines:
 
 `mission_id`:
 : REQUIRED. A string. The canonical Mission identifier
@@ -1153,8 +1177,10 @@ of the immutable record. The Mission record has the following members:
   though the issuing `iss` differs ({{cross-domain}}).
 
 `state`:
-: REQUIRED. A string. One of `active`, `revoked`, `expired`
-  ({{lifecycle}}).
+: REQUIRED. A string. The current lifecycle state: `active`, `revoked`,
+  or `expired` in this profile, or an additional state defined by a
+  companion profile, subject to the forward-compatibility rule of
+  {{lifecycle}}.
 
 `mission_intent`:
 : REQUIRED. An object. The approved Mission Intent.
@@ -1489,6 +1515,20 @@ The transitions are:
 | `active` | revoke | `revoked` |
 | `active` | `mission_expiry` reached | `expired` |
 
+These three states are the mandatory core of the Mission lifecycle
+state space. This profile owns that state space; an OPTIONAL companion
+profile MAY define an additional state for a lifecycle it introduces
+(for example, a paused or a superseded state), but only `active` ever
+permits issuance. To keep the state space extensible without a registry,
+a consumer MUST apply this forward-compatibility rule wherever a Mission
+state is reported, including the Mission record, the `mission` claim,
+and the introspection response: only the exact value `active` permits
+derivation or continued reliance, and every other value, including a
+value the consumer does not recognize, MUST be treated as non-active and
+non-deriving. A consumer MUST NOT fail open on an unrecognized state.
+This makes a state added by a companion profile fail safe for a consumer
+that predates it.
+
 ## Issuance Gating
 
 The AS MUST refuse to derive a token, at the token endpoint, on
@@ -1581,8 +1621,11 @@ Mission:
 
 - From the Mission `origin`: `id`, `origin`, and `authority_hash` (as
   in the `mission` claim, {{mission-claim}}) plus the current lifecycle
-  `state` (string), one of `active`, `revoked`, or `expired`
-  ({{lifecycle}}).
+  `state` (string). The core states are `active`, `revoked`, and
+  `expired` ({{lifecycle}}); a deployment that runs a companion profile
+  defining an additional state reports that state here, and a consumer
+  applies the forward-compatibility rule of {{lifecycle}} (only `active`
+  permits reliance; any other value, recognized or not, is non-active).
 - From a non-origin Resource AS (which holds a local token it minted
   from a cross-domain grant, not the Mission): the claim-shape members
   only. Such an AS MUST omit `state`, since it cannot report current
@@ -2107,16 +2150,31 @@ than new machinery:
   domain-separated, issuer-bound envelope with a new `typ`
   ({{integrity-anchors}}). A consent-disclosure commitment, an
   instruction-text attestation, or a delegation receipt can be
-  committed this way without changing this profile.
+  committed this way without changing this profile. A profile that
+  commits an evidence or disclosure object MUST commit it with this
+  envelope and a collision-resistant `typ`, not by hashing the bare
+  object, so the domain separation and issuer binding hold uniformly. A
+  `mission` descriptor embedded in such an object uses the `mission`
+  claim shape ({{mission-claim}}), optionally extended with
+  collision-resistantly named members (for example, an `intent_hash`
+  for audit), and is never authority-bearing on its own.
 - **The `mission` claim.** It is an open object ({{mission-claim}}):
   additional, collision-resistantly named members ride the mission
   binding (for example, a runtime decision reference, a delegation
   receipt, or an attestation reference), and consumers ignore unknown
   members and never derive authority from them.
+- **Lifecycle state.** The lifecycle state space ({{lifecycle}}) is open
+  to additional states defined by companion profiles for lifecycles they
+  introduce. The forward-compatibility rule in {{lifecycle}} keeps this
+  safe without a registry: only `active` permits issuance, and a consumer
+  treats every other state, recognized or not, as non-active.
 
 This document defines no extension registry, capability-negotiation
 mechanism, or profile-version field; an extension declares its own
-identifiers and, where it needs discovery, its own metadata.
+identifiers and, where it needs discovery, its own metadata. The
+extensibility of the `typ` value space, the `mission` claim, and the
+lifecycle state space rests on collision-resistant naming and the
+fail-safe rules above rather than on central registration.
 
 # Authorization Server Metadata {#discovery}
 

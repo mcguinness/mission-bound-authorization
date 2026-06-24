@@ -26,8 +26,6 @@ author:
     email: public@karlmcguinness.com
 
 normative:
-  RFC2119:
-  RFC8174:
   RFC3339:
   RFC8259:
   I-D.draft-mcguinness-oauth-mission:
@@ -68,6 +66,33 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
+  I-D.draft-mcguinness-oauth-mission-expansion:
+    title: "Mission Expansion for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
+  I-D.draft-mcguinness-oauth-mission-child-delegation:
+    title: "Child Mission Delegation for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
+  I-D.draft-mcguinness-oauth-mission-orchestration:
+    title: "Mission Orchestration and Unwinding for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-orchestration-latest
 
 --- abstract
 
@@ -192,7 +217,14 @@ task graph node to a Mission reference:
 
 `state_source`:
 : REQUIRED when `state` is present. One of `status`, `signal`,
-  `runtime_decision`, or a deployment-defined source.
+  `runtime_decision`, `harness`, `operator`, or a deployment-defined
+  source: `status` and `signal` name the Mission Status and Lifecycle
+  Signals surfaces, `runtime_decision` a runtime enforcement decision,
+  `harness` a harness stop decision, and `operator` a human operator
+  action. This enumeration is the shared `state_source` value space for
+  Mission-aware execution evidence; the orchestration profile
+  ({{I-D.draft-mcguinness-oauth-mission-orchestration}}) reuses it
+  rather than defining its own.
 
 `enforcement_scope`:
 : OPTIONAL. A string or object identifying the runtime enforcement
@@ -435,6 +467,18 @@ class to stop behavior. At minimum:
 | `completed` | suppress or terminate |
 | `superseded` | suppress and require successor Mission binding |
 | unknown or stale | suppress or pause |
+
+The non-core states in this matrix are defined by companion profiles a
+deployment may run: `suspended` and `completed` by Mission Status
+({{I-D.draft-mcguinness-oauth-mission-status}}), `superseded` by Mission
+Expansion ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and
+`cascaded` by Child Mission Delegation
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). The harness
+needs none of those profiles to be conformant: per the issuance
+profile's forward-compatibility rule, it treats any state other than
+`active`, including one it does not recognize, as non-active and stops
+governed continuation accordingly. The named rows are the minimum
+behavior where a deployment does run the defining profile.
 
 For irreversible actions, external commitments, and privileged
 administration, `handoff` or orchestration handling under a deployment
