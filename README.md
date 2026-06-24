@@ -87,6 +87,22 @@ non-active. A state a companion profile adds (such as `suspended`,
 `superseded`, or `cascaded`) therefore fails safe for a consumer that
 predates it.
 
+## Recommended deployment bundles
+
+The drafts are independently optional, so a conforming issuance
+deployment can omit properties many readers assume from "Mission-bound
+agents": action-time checks, prompt stop, unwinding, and consent
+evidence. These bundles name what to deploy together for a given goal.
+
+| Bundle | Drafts | What you get |
+|---|---|---|
+| **Baseline issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch. Audit, not action-time defense. |
+| **Enforced agent** | mission + runtime + authzen + status + signals | Per-action enforcement at the point of use, and prompt revocation. The minimum for an agent that takes consequential actions. |
+| **Governed agent (recommended for AI agents)** | Enforced agent + consent-evidence + harness + orchestration | Consent-rendering evidence, session-continuity stop, and safe unwinding. Add child-delegation for sub-agents and expansion for mid-task growth. |
+
+Each draft also states its own scoped conformance; the bundles are
+guidance, not a new conformance class.
+
 ## The documents
 
 Together these drafts form the **Mission-Bound Authorization suite**.
