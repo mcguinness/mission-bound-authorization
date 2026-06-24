@@ -268,6 +268,22 @@ no longer active. A child is never created by session ancestry alone.
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation)
 * [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-child-delegation.diff)
 
+#### Mission Offline Attenuation for OAuth 2.0
+
+Removes the Authorization Server from the sub-agent fan-out hot path.
+Profiles Attenuating Agent Tokens so a Mission-bound token holder mints a
+narrower child token offline, carrying the same `mission` claim; the
+narrowing is verifiable from the carried token chain. The kill switch is
+preserved because consumption is gated by the runtime layer re-checking
+Mission state, so a revoked Mission stops the whole chain. An
+enforced-tier capability, offered alongside Authorization-Server-mediated
+delegation.
+
+* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-attenuation.html)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-attenuation)
+* [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-attenuation)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-attenuation.diff)
+
 ### Agent runtime
 
 #### Mission-Aware Agent Harnesses for OAuth 2.0
