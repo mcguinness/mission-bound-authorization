@@ -1,0 +1,2458 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Child Mission Delegation for OAuth 2.0</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       Mission-Bound Authorization for OAuth 2.0 defines delegated tokens and
+the rule that authority narrows down a delegation chain. Agent
+harnesses, however, can spawn sub-agents whose work outlives a call
+frame or crosses a different execution boundary. This document defines
+an  OPTIONAL  Child Mission Delegation profile. A parent Mission can
+authorize a child Mission for a sub-agent, with explicit parent
+lineage, strict-subset authority, expiry no later than the parent,
+separate child actor identity, fan-out controls, and cascade revocation
+when the parent Mission is no longer active. A child Mission is never
+created by session ancestry alone. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="oauth" name="keyword">
+<meta content="mission" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="delegation" name="keyword">
+<meta content="sub-agent" name="keyword">
+<meta content="draft-mcguinness-oauth-mission-child-delegation-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.10.0
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.1
+-->
+<link href="draft-mcguinness-oauth-mission-child-delegation.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">OAuth Child Missions</td>
+<td class="right">June 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 26 December 2026</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-oauth-mission-child-delegation-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-06-24" class="published">24 June 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2026-12-26">26 December 2026</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Child Mission Delegation for OAuth 2.0</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">Mission-Bound Authorization for OAuth 2.0 defines delegated tokens and
+the rule that authority narrows down a delegation chain. Agent
+harnesses, however, can spawn sub-agents whose work outlives a call
+frame or crosses a different execution boundary. This document defines
+an <span class="bcp14">OPTIONAL</span> Child Mission Delegation profile. A parent Mission can
+authorize a child Mission for a sub-agent, with explicit parent
+lineage, strict-subset authority, expiry no later than the parent,
+separate child actor identity, fan-out controls, and cascade revocation
+when the parent Mission is no longer active. A child Mission is never
+created by session ancestry alone.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-child-delegation.html">https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-child-delegation.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-child-delegation/">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-child-delegation/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/draft-mcguinness-oauth-mission">https://github.com/mcguinness/draft-mcguinness-oauth-mission</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 26 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-status-an-optional-extensio" class="internal xref">Status: An OPTIONAL Extension</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-relationship-to-the-issuanc" class="internal xref">Relationship to the Issuance Profile</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-scope" class="internal xref">Scope</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-child-mission-versus-delega" class="internal xref">Child Mission Versus Delegated Token</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-child-delegation-versus-act" class="internal xref">Child Delegation Versus Act-Chain Delegation</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-child-mission-creation" class="internal xref">Child Mission Creation</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-protocol-flow" class="internal xref">Protocol Flow</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-request-processing" class="internal xref">Request Processing</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
+                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-child-creation-denial-reaso" class="internal xref">Child Creation Denial Reasons</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-the-parent-member" class="internal xref">The <code>parent</code> Member</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-mission-record-requirements" class="internal xref">Mission Record Requirements</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-attenuation-rules" class="internal xref">Attenuation Rules</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-subset-evaluation" class="internal xref">Subset Evaluation</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-fan-out-controls" class="internal xref">Fan-Out Controls</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-fan-out-accounting" class="internal xref">Fan-Out Accounting</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-cascade-revocation" class="internal xref">Cascade Revocation</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-child-mission-state" class="internal xref">Child Mission State</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-child-evidence" class="internal xref">Child Evidence</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-child-evidence-object" class="internal xref">Child Evidence Object</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-relationship-to-expansion" class="internal xref">Relationship to Expansion</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-relationship-to-harnesses" class="internal xref">Relationship to Harnesses</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-authorization-server-metada" class="internal xref">Authorization Server Metadata</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref">16</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.1">
+                <p id="section-toc.1-1.16.2.1.1"><a href="#section-16.1" class="auto internal xref">16.1</a>.  <a href="#name-authority-by-ancestry" class="internal xref">Authority by Ancestry</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.2">
+                <p id="section-toc.1-1.16.2.2.1"><a href="#section-16.2" class="auto internal xref">16.2</a>.  <a href="#name-fan-out-amplification" class="internal xref">Fan-Out Amplification</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.3">
+                <p id="section-toc.1-1.16.2.3.1"><a href="#section-16.3" class="auto internal xref">16.3</a>.  <a href="#name-cascade-failure" class="internal xref">Cascade Failure</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.4">
+                <p id="section-toc.1-1.16.2.4.1"><a href="#section-16.4" class="auto internal xref">16.4</a>.  <a href="#name-parent-confusion" class="internal xref">Parent Confusion</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.5">
+                <p id="section-toc.1-1.16.2.5.1"><a href="#section-16.5" class="auto internal xref">16.5</a>.  <a href="#name-subset-bugs" class="internal xref">Subset Bugs</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#section-17" class="auto internal xref">17</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
+            <p id="section-toc.1-1.18.1"><a href="#section-18" class="auto internal xref">18</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19">
+            <p id="section-toc.1-1.19.1"><a href="#section-19" class="auto internal xref">19</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19.2.1">
+                <p id="section-toc.1-1.19.2.1.1"><a href="#section-19.1" class="auto internal xref">19.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19.2.2">
+                <p id="section-toc.1-1.19.2.2.1"><a href="#section-19.2" class="auto internal xref">19.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.20">
+            <p id="section-toc.1-1.20.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.21">
+            <p id="section-toc.1-1.21.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">Mission-Bound Authorization for OAuth 2.0
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile") supports
+delegated Mission-bound tokens. It requires authority to narrow down
+the chain and records actor context. That is sufficient for many
+service-to-service and token-exchange cases. Agent harnesses introduce
+a related but distinct case: a parent agent starts a sub-agent or child
+worker with a durable task of its own. The child may have its own
+session, queue, tool handles, and runtime identity.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">This document defines Child Missions for that case. A Child Mission is
+a Mission whose authority is a strict subset of a Parent Mission and
+whose lifecycle depends on the parent. It has its own Mission
+identifier and actor identity, but it cannot outlive, out-broaden, or
+escape the parent. The child is created through an explicit
+authorization step, not by inheriting a parent harness session.<a href="#section-1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="optional-status">
+<section id="section-2">
+      <h2 id="name-status-an-optional-extensio">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-status-an-optional-extensio" class="section-name selfRef">Status: An OPTIONAL Extension</a>
+      </h2>
+<p id="section-2-1">This document is <span class="bcp14">OPTIONAL</span>. It is a layered extension to the issuance
+profile, not a change to it. A deployment that implements
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and never creates a Child
+Mission is fully conformant to that profile and is unaffected by this
+document: it accepts no <code>parent</code> or <code>parent_token</code> parameter, records
+no <code>parent</code> member, and applies no cascade revocation. The issuance
+profile's delegated-token mechanism is complete without Child Missions;
+the child machinery defined here is relevant only when a deployment
+creates Missions for sub-agents.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">A Mission Issuer claims conformance to this document only when it
+creates Child Missions (<a href="#conformance" class="auto internal xref">Section 15</a>); otherwise it remains a plain
+issuance-profile Mission Issuer. Nothing here places a new requirement
+back on the issuance profile.<a href="#section-2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="issuance-relationship">
+<section id="section-3">
+      <h2 id="name-relationship-to-the-issuanc">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-relationship-to-the-issuanc" class="section-name selfRef">Relationship to the Issuance Profile</a>
+      </h2>
+<p id="section-3-1">This document depends normatively on the issuance profile and is not
+implementable alone. It reuses, without restating, that profile's
+Mission Intent, submission via PAR, authority derivation, approval
+event with its integrity anchors, Mission record, the <code>mission</code> claim,
+the strict-subset rule, and the lifecycle and issuance gating. It uses
+the terms Agent (Client), Subject, Approver, Mission Issuer, Mission
+Intent, Authority Set, Mission, and derived token as defined there.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">Cascade revocation (<a href="#cascade" class="auto internal xref">Section 10</a>) additionally depends on the Mission
+Status and Lifecycle profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) and the Mission
+Expansion profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>)
+where a deployment runs them, because those profiles define the
+<code>suspended</code>, <code>completed</code>, and <code>superseded</code> parent states the cascade
+rules react to. A deployment that runs neither still implements this
+profile: under the issuance profile's forward-compatibility rule, the
+cascade treats any non-active parent state as a terminal trigger.<a href="#section-3-2" class="pilcrow">¶</a></p>
+<p id="section-3-3">A Child Mission is an ordinary Mission under the issuance profile with
+two additions: it is created under a parent grant rather than a
+first-party approval, and its record and tokens carry the <code>parent</code>
+member (<a href="#parent-member" class="auto internal xref">Section 7</a>). The child's own <code>authority_hash</code> remains
+the authority commitment for its tokens; the <code>parent</code> member is lineage
+and audit data only.<a href="#section-3-3" class="pilcrow">¶</a></p>
+<p id="section-3-4">Where this document refers to "the issuance profile" without a section,
+it means <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> as a whole.<a href="#section-3-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="scope">
+<section id="section-4">
+      <h2 id="name-scope">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-scope" class="section-name selfRef">Scope</a>
+      </h2>
+<p id="section-4-1">This document defines:<a href="#section-4-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4-2.1">
+          <p id="section-4-2.1.1">Child Mission creation (<a href="#child-creation" class="auto internal xref">Section 6</a>);<a href="#section-4-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.2">
+          <p id="section-4-2.2.1">the <code>parent</code> lineage member (<a href="#parent-member" class="auto internal xref">Section 7</a>);<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.3">
+          <p id="section-4-2.3.1">strict-subset and expiry rules (<a href="#attenuation" class="auto internal xref">Section 8</a>);<a href="#section-4-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.4">
+          <p id="section-4-2.4.1">fan-out controls (<a href="#fanout" class="auto internal xref">Section 9</a>);<a href="#section-4-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.5">
+          <p id="section-4-2.5.1">cascade revocation (<a href="#cascade" class="auto internal xref">Section 10</a>);<a href="#section-4-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.6">
+          <p id="section-4-2.6.1">child evidence and audit requirements (<a href="#child-evidence" class="auto internal xref">Section 11</a>); and<a href="#section-4-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.7">
+          <p id="section-4-2.7.1">conformance for a Child-Mission-capable Mission Issuer
+(<a href="#conformance" class="auto internal xref">Section 15</a>).<a href="#section-4-2.7.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-4-3">This document does not replace ordinary delegated tokens under
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. A deployment can use delegated
+tokens for short-lived delegation and Child Missions for durable
+sub-agent work that needs its own lifecycle handle.<a href="#section-4-3" class="pilcrow">¶</a></p>
+<div id="child-vs-token">
+<section id="section-4.1">
+        <h3 id="name-child-mission-versus-delega">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-child-mission-versus-delega" class="section-name selfRef">Child Mission Versus Delegated Token</a>
+        </h3>
+<p id="section-4.1-1">A delegated token is appropriate when the delegate performs work within
+the lifetime and operational control of the delegating flow. A Child
+Mission is appropriate when the child actor needs a durable Mission
+handle of its own: for example, a sub-agent with a queue, background
+job, independent harness session, or separate audit lifecycle.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-2">A Child Mission is not a way to widen authority. It is a way to create
+a narrower, separately accountable authority record for a child actor.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="child-vs-act">
+<section id="section-4.2">
+        <h3 id="name-child-delegation-versus-act">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-child-delegation-versus-act" class="section-name selfRef">Child Delegation Versus Act-Chain Delegation</a>
+        </h3>
+<p id="section-4.2-1">This profile's child delegation is distinct from the in-Mission
+delegation the issuance profile already defines. In-Mission delegation
+extends a single Mission's <code>act</code> chain to additional actors, bounded by
+the per-entry <code>delegation</code> policy (<code>allowed_delegates</code>, <code>max_depth</code>) of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; no new Mission is created and
+authority is exercised under the original Mission. Child delegation, by
+contrast, creates a separate Child Mission with its own <code>mission_id</code>,
+actor, lifecycle, and <code>act</code> chain.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.2-2">Where this profile reuses the parent entry's <code>delegation</code> policy, it
+does so only to decide whether child creation is permitted and which
+<code>child_actor</code> is eligible: the parent entry's <code>delegation</code> member <span class="bcp14">MUST</span>
+explicitly permit child delegation, and <code>allowed_delegates</code> constrains
+the <code>child_actor</code> the parent may name. The issuance profile's <code>act</code>
+          <code>max_depth</code> bounds act-chain nesting within a Mission and is not a
+child-generation counter; a Child Mission's own <code>act</code> chain restarts at
+depth 0. Child-generation depth and breadth are governed instead by the
+fan-out controls of <a href="#fanout" class="auto internal xref">Section 9</a>.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="conventions">
+<section id="section-5">
+      <h2 id="name-conventions-and-terminology">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+      </h2>
+<p id="section-5-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">This document uses the terms Mission, Mission Intent, Authority Set,
+Mission Issuer, Mission-bound token, and delegation from
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-5-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5-3">
+        <dt id="section-5-3.1">Parent Mission:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-3.2">
+          <p id="section-5-3.2.1">The active Mission from which a Child Mission derives its upper bound
+of authority.<a href="#section-5-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-3.3">Child Mission:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-3.4">
+          <p id="section-5-3.4.1">A Mission created for a child actor or sub-agent, with authority that
+is a strict subset of its Parent Mission and lifecycle that cascades
+from the parent.<a href="#section-5-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-3.5">Child actor:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-3.6">
+          <p id="section-5-3.6.1">The agent, workload, sub-agent, or component that receives authority
+under the Child Mission.<a href="#section-5-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-3.7">Delegation event:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-3.8">
+          <p id="section-5-3.8.1">The Mission Issuer event that creates the Child Mission and records
+the attenuation checks from parent to child.<a href="#section-5-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="child-creation">
+<section id="section-6">
+      <h2 id="name-child-mission-creation">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-child-mission-creation" class="section-name selfRef">Child Mission Creation</a>
+      </h2>
+<p id="section-6-1">A Child Mission is created by submitting a Mission Intent through
+Pushed Authorization Requests <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> under the issuance profile,
+with child-specific binding to the parent. The request contains:<a href="#section-6-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6-2">
+        <dt id="section-6-2.1">
+<code>mission_intent</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.2">
+          <p id="section-6-2.2.1"><span class="bcp14">REQUIRED</span>. The proposed Child Mission Intent.<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.3">
+<code>parent</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.4">
+          <p id="section-6-2.4.1"><span class="bcp14">REQUIRED</span>. The <code>mission_id</code> of the Parent Mission.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.5">
+<code>parent_token</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.6">
+          <p id="section-6-2.6.1"><span class="bcp14">REQUIRED</span>. A refresh token or other Mission-Issuer-accepted grant
+bound to the Parent Mission. The Mission Issuer resolves the Parent
+Mission from this grant. The <code>parent</code> parameter is a cross-check and
+audit value; it does not by itself authorize child creation.<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.7">
+<code>child_actor</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.8">
+          <p id="section-6-2.8.1"><span class="bcp14">REQUIRED</span>. An object identifying the child actor that will hold or
+execute under the Child Mission.<a href="#section-6-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-6-3">The Mission Issuer <span class="bcp14">MUST</span> resolve the parent from <code>parent_token</code>, verify
+that it matches <code>parent</code>, verify that the parent is <code>active</code>, and verify
+that the parent Authority Set permits child delegation for the requested
+authority.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-4">The Mission Issuer <span class="bcp14">MUST</span> reject a child creation request presented on a
+front channel with <code>parent_token</code>. The parent grant is presented only
+on the authenticated back channel.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<div id="protocol-flow">
+<section id="section-6.1">
+        <h3 id="name-protocol-flow">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-protocol-flow" class="section-name selfRef">Protocol Flow</a>
+        </h3>
+<div class="alignLeft art-text artwork" id="section-6.1-1">
+<pre>
+ Parent agent / harness        Mission Issuer (AS)
+        |                             |
+        | 1. PAR: child Mission       | resolve parent
+        |    Intent + parent grant --&gt;| verify active;
+        |                             | verify delegation
+        |&lt;------- request_uri --------|
+        |                             |
+        | 2. approval or policy -----&gt;| create child Mission
+        |    adjudication             | record parent member
+        |&lt;---------- code ------------|
+        |                             |
+        | 3. token request ----------&gt;| derive child token
+        |&lt;------ access token --------|
+</pre><a href="#section-6.1-1" class="pilcrow">¶</a>
+</div>
+<p id="section-6.1-2">The approval or policy adjudication in step 2 is deployment-specific.
+A deployment <span class="bcp14">MAY</span> require a human approval event for Child Mission
+creation or <span class="bcp14">MAY</span> allow policy to approve child creation when the parent
+Mission's Authority Set explicitly permits it.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="request-processing">
+<section id="section-6.2">
+        <h3 id="name-request-processing">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-request-processing" class="section-name selfRef">Request Processing</a>
+        </h3>
+<p id="section-6.2-1">The Mission Issuer processes child creation in this order:<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6.2-2">
+<li id="section-6.2-2.1">
+            <p id="section-6.2-2.1.1">Authenticate the client submitting the PAR request.<a href="#section-6.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.2">
+            <p id="section-6.2-2.2.1">Resolve the Parent Mission from <code>parent_token</code>.<a href="#section-6.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.3">
+            <p id="section-6.2-2.3.1">Verify the resolved Mission matches <code>parent</code>.<a href="#section-6.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.4">
+            <p id="section-6.2-2.4.1">Verify the Parent Mission is <code>active</code>.<a href="#section-6.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.5">
+            <p id="section-6.2-2.5.1">Verify the parent grant permits the requester to create a child.<a href="#section-6.2-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.6">
+            <p id="section-6.2-2.6.1">Verify <code>child_actor</code> satisfies the parent entry's delegation
+constraints.<a href="#section-6.2-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.7">
+            <p id="section-6.2-2.7.1">Derive the child Authority Set and verify strict subset.<a href="#section-6.2-2.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.8">
+            <p id="section-6.2-2.8.1">Apply fan-out controls.<a href="#section-6.2-2.8.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.9">
+            <p id="section-6.2-2.9.1">Adjudicate approval or policy.<a href="#section-6.2-2.9.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.10">
+            <p id="section-6.2-2.10.1">Create the Child Mission record with <code>parent</code>.<a href="#section-6.2-2.10.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.2-2.11">
+            <p id="section-6.2-2.11.1">Record Child Evidence.<a href="#section-6.2-2.11.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-6.2-3">Failure at any step <span class="bcp14">MUST</span> prevent child creation.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="denial-reasons">
+<section id="section-6.3">
+        <h3 id="name-child-creation-denial-reaso">
+<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-child-creation-denial-reaso" class="section-name selfRef">Child Creation Denial Reasons</a>
+        </h3>
+<p id="section-6.3-1">This profile defines these symbolic denial reasons:<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6.3-2">
+          <dt id="section-6.3-2.1">
+<code>parent_not_active</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.3-2.2">
+            <p id="section-6.3-2.2.1">The Parent Mission is not active.<a href="#section-6.3-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.3-2.3">
+<code>parent_mismatch</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.3-2.4">
+            <p id="section-6.3-2.4.1">The caller-supplied <code>parent</code> does not match the Mission resolved from
+<code>parent_token</code>.<a href="#section-6.3-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.3-2.5">
+<code>delegation_not_permitted</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.3-2.6">
+            <p id="section-6.3-2.6.1">The Parent Mission or applicable Authority Set entry does not permit
+child delegation.<a href="#section-6.3-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.3-2.7">
+<code>child_actor_not_allowed</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.3-2.8">
+            <p id="section-6.3-2.8.1">The child actor does not satisfy <code>allowed_delegates</code> or equivalent
+policy.<a href="#section-6.3-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.3-2.9">
+<code>not_strict_subset</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.3-2.10">
+            <p id="section-6.3-2.10.1">The proposed child authority is not a strict subset of parent
+authority.<a href="#section-6.3-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.3-2.11">
+<code>fanout_exceeded</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.3-2.12">
+            <p id="section-6.3-2.12.1">Creating the child would exceed a fan-out control.<a href="#section-6.3-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.3-2.13">
+<code>policy_denied</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.3-2.14">
+            <p id="section-6.3-2.14.1">Deployment policy denied child creation.<a href="#section-6.3-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-6.3-3">These symbolic strings appear in error bodies, evidence, and audit,
+layered on the OAuth error codes the issuance profile uses:
+<code>parent_not_active</code> and <code>parent_mismatch</code> accompany <code>invalid_grant</code>;
+<code>delegation_not_permitted</code>, <code>child_actor_not_allowed</code>,
+<code>not_strict_subset</code>, and <code>fanout_exceeded</code> accompany <code>invalid_request</code>;
+and <code>policy_denied</code> accompanies <code>access_denied</code>. A child creation
+request presented on the front channel with <code>parent_token</code> <span class="bcp14">MUST</span> be
+rejected with <code>invalid_request</code> (<a href="#child-creation" class="auto internal xref">Section 6</a>).<a href="#section-6.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="parent-member">
+<section id="section-7">
+      <h2 id="name-the-parent-member">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-the-parent-member" class="section-name selfRef">The <code>parent</code> Member</a>
+      </h2>
+<p id="section-7-1">A Child Mission carries a <code>parent</code> member in its Mission record and in
+the <code>mission</code> claim of tokens derived under the child:<a href="#section-7-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-7-2">
+        <dt id="section-7-2.1">
+<code>parent</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.2">
+          <p id="section-7-2.2.1"><span class="bcp14">REQUIRED</span> for a Child Mission. An object containing:<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-7-2.2.2">
+            <dt id="section-7-2.2.2.1">
+<code>id</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-7-2.2.2.2">
+              <p id="section-7-2.2.2.2.1"><span class="bcp14">REQUIRED</span>. The Parent Mission identifier.<a href="#section-7-2.2.2.2.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-7-2.2.2.3">
+<code>origin</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-7-2.2.2.4">
+              <p id="section-7-2.2.2.4.1"><span class="bcp14">REQUIRED</span>. The Parent Mission Issuer.<a href="#section-7-2.2.2.4.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-7-2.2.2.5">
+<code>authority_hash</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-7-2.2.2.6">
+              <p id="section-7-2.2.2.6.1"><span class="bcp14">REQUIRED</span>. The Parent Mission authority commitment the child was
+derived under.<a href="#section-7-2.2.2.6.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-7-2.2.2.7">
+<code>delegation_id</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-7-2.2.2.8">
+              <p id="section-7-2.2.2.8.1"><span class="bcp14">OPTIONAL</span>. A Mission-Issuer-defined identifier for the child
+delegation event.<a href="#section-7-2.2.2.8.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-7-2.2.2.9">
+<code>cascade_mode</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-7-2.2.2.10">
+              <p id="section-7-2.2.2.10.1"><span class="bcp14">REQUIRED</span>. The cascade mode from <a href="#cascade" class="auto internal xref">Section 10</a>.<a href="#section-7-2.2.2.10.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-7-2.2.2.11">
+<code>created_at</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-7-2.2.2.12">
+              <p id="section-7-2.2.2.12.1"><span class="bcp14">OPTIONAL</span>. The creation time of the Child Mission.<a href="#section-7-2.2.2.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+</dl>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-7-3">The <code>parent</code> member is lineage and audit data. It does not grant
+authority. The Child Mission's own <code>authority_hash</code> is the authority
+commitment for child tokens.<a href="#section-7-3" class="pilcrow">¶</a></p>
+<p id="section-7-4">Example:<a href="#section-7-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-7-5">
+<pre>
+{
+  "mission": {
+    "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
+    "parent": {
+      "id": "msn_parent_8RfX2Lqv9TqMv4z7sA2bN1k0",
+      "origin": "https://as.example.com",
+      "authority_hash":
+        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "delegation_id": "dlg_7pQ4m",
+      "cascade_mode": "immediate",
+      "created_at": "2026-11-02T08:14:00Z"
+    }
+  }
+}
+</pre><a href="#section-7-5" class="pilcrow">¶</a>
+</div>
+<div id="record-requirements">
+<section id="section-7.1">
+        <h3 id="name-mission-record-requirements">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-mission-record-requirements" class="section-name selfRef">Mission Record Requirements</a>
+        </h3>
+<p id="section-7.1-1">The Child Mission record <span class="bcp14">MUST</span> contain the <code>parent</code> object, the child
+actor, the child Authority Set, the child <code>authority_hash</code>, the
+delegation event identifier, the cascade mode, and the fan-out policy
+result. The <code>parent</code> value is immutable after creation.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="attenuation">
+<section id="section-8">
+      <h2 id="name-attenuation-rules">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-attenuation-rules" class="section-name selfRef">Attenuation Rules</a>
+      </h2>
+<p id="section-8-1">A Child Mission <span class="bcp14">MUST</span> be bounded by the Parent Mission:<a href="#section-8-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8-2.1">
+          <p id="section-8-2.1.1">every child Authority Set entry <span class="bcp14">MUST</span> be a subset of a parent entry
+under the subset rule of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>;<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.2">
+          <p id="section-8-2.2.1">the child <span class="bcp14">MUST NOT</span> include a resource, action, constraint relaxation,
+or delegation right not present in the parent;<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.3">
+          <p id="section-8-2.3.1">the child's <code>mission_expiry</code> <span class="bcp14">MUST NOT</span> be later than the parent's
+<code>mission_expiry</code> (so it transitively caps every child-derived token's
+<code>exp</code>, per <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>);<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.4">
+          <p id="section-8-2.4.1">the child <span class="bcp14">MUST</span> be created only where the applicable parent entry's
+<code>delegation</code> policy permits child delegation (<a href="#child-vs-act" class="auto internal xref">Section 4.2</a>), and
+any delegation policy on a child entry <span class="bcp14">MUST</span> be strictly narrower than
+the parent entry's;<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.5">
+          <p id="section-8-2.5.1">non-delegable parent entries <span class="bcp14">MUST NOT</span> appear in child authority; and<a href="#section-8-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.6">
+          <p id="section-8-2.6.1">child authority <span class="bcp14">MUST</span> be bound to the child actor identified in the
+request.<a href="#section-8-2.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-8-3">The Mission Issuer <span class="bcp14">MUST</span> compute the Child Mission's <code>authority_hash</code>
+over the child Authority Set, not over the parent Authority Set. A
+Resource Server enforces child tokens exactly as Mission-bound tokens:
+the child <code>authority_hash</code> is the immediate authority commitment.<a href="#section-8-3" class="pilcrow">¶</a></p>
+<div id="strict-subset">
+<section id="section-8.1">
+        <h3 id="name-subset-evaluation">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-subset-evaluation" class="section-name selfRef">Subset Evaluation</a>
+        </h3>
+<p id="section-8.1-1">The child Authority Set subset test is the subset rule of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, applied between each child entry
+and a parent entry: every child resource equal to or narrower than a
+parent resource; every child action a subset of (or deployment-defined
+as narrower than) a parent action; every child constraint equal to or
+stricter than the corresponding parent constraint; and no parent
+constraint removed unless the constrained authority is also removed.
+This profile adds one strict requirement specific to child delegation:
+a child entry's delegation policy <span class="bcp14">MUST</span> be strictly narrower than the
+parent entry's (lower <code>max_depth</code>, no broader <code>allowed_delegates</code>).<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-2">If the Mission Issuer cannot prove the child Authority Set is a subset
+of the parent, it <span class="bcp14">MUST</span> refuse child creation with <code>not_strict_subset</code>.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="fanout">
+<section id="section-9">
+      <h2 id="name-fan-out-controls">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-fan-out-controls" class="section-name selfRef">Fan-Out Controls</a>
+      </h2>
+<p id="section-9-1">Depth limits alone do not control breadth. A Parent Mission <span class="bcp14">MAY</span> permit
+many Child Missions at the same depth unless policy limits fan-out.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">A Child-Mission-capable Mission Issuer <span class="bcp14">MUST</span> support at least one
+fan-out control:<a href="#section-9-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9-3">
+        <dt id="section-9-3.1">
+<code>max_child_missions</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.2">
+          <p id="section-9-3.2.1">Maximum number of Child Missions that can be active under a Parent
+Mission or Authority Set entry.<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.3">
+<code>allowed_child_actors</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.4">
+          <p id="section-9-3.4.1">A constraint on which actors or actor classes may receive Child
+Missions.<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.5">
+<code>child_creation_policy</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.6">
+          <p id="section-9-3.6.1">A policy reference evaluated before each child creation.<a href="#section-9-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-9-4">If a parent entry carries a fan-out control the Mission Issuer cannot
+enforce, it <span class="bcp14">MUST</span> refuse child creation for that entry.<a href="#section-9-4" class="pilcrow">¶</a></p>
+<div id="fanout-accounting">
+<section id="section-9.1">
+        <h3 id="name-fan-out-accounting">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-fan-out-accounting" class="section-name selfRef">Fan-Out Accounting</a>
+        </h3>
+<p id="section-9.1-1">The Mission Issuer <span class="bcp14">MUST</span> count active Child Missions against fan-out
+limits until the child is non-active. If cascade is
+<code>bounded_staleness</code>, the child counts until the cascade window has
+closed or the child is otherwise confirmed non-active.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<p id="section-9.1-2">The Mission Issuer <span class="bcp14">MUST</span> serialize child creation against the same
+parent and fan-out bucket so concurrent requests cannot exceed the
+limit.<a href="#section-9.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="cascade">
+<section id="section-10">
+      <h2 id="name-cascade-revocation">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-cascade-revocation" class="section-name selfRef">Cascade Revocation</a>
+      </h2>
+<p id="section-10-1">A Child Mission depends on the Parent Mission. The cascade trigger is
+any Parent Mission transition to a non-active state. This profile
+distinguishes terminal triggers from the one reversible trigger:<a href="#section-10-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10-2.1">
+          <p id="section-10-2.1.1">Terminal triggers: parent <code>revoked</code> or <code>expired</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), <code>completed</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), or <code>superseded</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>). On a terminal
+trigger the Mission Issuer <span class="bcp14">MUST</span> stop new derivation under dependent
+Child Missions and, under <code>immediate</code> cascade, transition each
+dependent child to the terminal <code>cascaded</code> state (<a href="#child-state" class="auto internal xref">Section 10.1</a>).<a href="#section-10-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.2">
+          <p id="section-10-2.2.1">Reversible trigger: parent <code>suspended</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). The Mission Issuer
+<span class="bcp14">MUST</span> stop new derivation under dependent Child Missions while the
+parent is suspended, but <span class="bcp14">MUST NOT</span> drive them to a terminal state. When
+the parent is resumed to <code>active</code>, dependent children return to their
+pre-suspension state and may derive again. While the parent is
+suspended, a dependent child is reported as non-active with a parent
+projection (<a href="#child-state" class="auto internal xref">Section 10.1</a>).<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-10-3">A <code>superseded</code> parent does not transfer its Child Missions to the
+successor. The successor Mission carries a freshly derived Authority Set
+that does not inherit the predecessor's authority by reference
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), so a Child Mission
+that was a strict subset of the predecessor is not guaranteed to be a
+subset of the successor. The Mission Issuer therefore <span class="bcp14">MUST</span> treat
+<code>superseded</code> as a terminal cascade trigger and <span class="bcp14">MUST NOT</span> silently re-bind
+children to the successor. Continuing child work under the successor
+requires an explicit new Child Mission creation (<a href="#child-creation" class="auto internal xref">Section 6</a>)
+under a successor grant, which re-runs strict-subset validation
+(<a href="#strict-subset" class="auto internal xref">Section 8.1</a>) against the successor's Authority Set.<a href="#section-10-3" class="pilcrow">¶</a></p>
+<p id="section-10-4">The Mission Issuer <span class="bcp14">MUST</span> implement one of these cascade modes and record
+it on the Child Mission:<a href="#section-10-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10-5">
+        <dt id="section-10-5.1">
+<code>immediate</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-5.2">
+          <p id="section-10-5.2.1">On a terminal trigger the Child Mission transitions to the <code>cascaded</code>
+state when the parent transition commits. On the reversible trigger
+the child is held non-active while the parent is suspended and
+restored to its prior state on parent resume.<a href="#section-10-5.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-5.3">
+<code>bounded_staleness</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-5.4">
+          <p id="section-10-5.4.1">The Child Mission is treated as non-active no later than the cascade
+staleness bound. That bound is the deployment's
+<code>mission_max_stale_seconds</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) unless the deployment
+publishes a different bound for child cascade.<a href="#section-10-5.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-5.5">
+<code>status_required</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-5.6">
+          <p id="section-10-5.6.1">Consumers <span class="bcp14">MUST</span> check parent state through Mission Status before
+accepting child Mission authority.<a href="#section-10-5.6.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-10-6">The cascade mode <span class="bcp14">MUST NOT</span> allow a Child Mission to continue deriving
+new credentials after the parent is known to be non-active.<a href="#section-10-6" class="pilcrow">¶</a></p>
+<div id="child-state">
+<section id="section-10.1">
+        <h3 id="name-child-mission-state">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-child-mission-state" class="section-name selfRef">Child Mission State</a>
+        </h3>
+<p id="section-10.1-1">A Child Mission has its own state, drawn from the issuance profile's
+lifecycle state space (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). This
+profile defines one child-specific terminal state:<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10.1-2">
+          <dt id="section-10.1-2.1">
+<code>cascaded</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-10.1-2.2">
+            <p id="section-10.1-2.2.1">A terminal state a Child Mission enters when a terminal cascade
+trigger on its Parent Mission terminates it under <code>immediate</code> cascade
+(<a href="#cascade" class="auto internal xref">Section 10</a>). It is distinct from <code>revoked</code> (the child itself was not
+revoked) and <code>expired</code> (the child's own expiry was not reached), so
+audit can tell a cascade-terminated child from a directly terminated
+one. Following the issuance profile's forward-compatibility rule, a
+consumer treats <code>cascaded</code> as non-active, as it treats any state other
+than <code>active</code>. Mission Status
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) reports it among the
+terminal states, and a Mission lifecycle-change event
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>) carries it on the
+cascade transition.<a href="#section-10.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-10.1-3">A Child Mission also depends on parent state. For derivation under a
+Child Mission, both conditions <span class="bcp14">MUST</span> hold:<a href="#section-10.1-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1-4.1">
+            <p id="section-10.1-4.1.1">the Child Mission state is <code>active</code>; and<a href="#section-10.1-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.1-4.2">
+            <p id="section-10.1-4.2.1">the Parent Mission is active or the cascade mode and freshness rules
+still permit reliance on the prior active state.<a href="#section-10.1-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-10.1-5">If either condition fails, the Mission Issuer <span class="bcp14">MUST</span> refuse derivation.<a href="#section-10.1-5" class="pilcrow">¶</a></p>
+<p id="section-10.1-6">Mission Status for a Child Mission <span class="bcp14">SHOULD</span> include a parent projection
+for authorized callers:<a href="#section-10.1-6" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10.1-7">
+          <dt id="section-10.1-7.1">
+<code>parent</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-10.1-7.2">
+            <p id="section-10.1-7.2.1">Object containing parent <code>id</code>, <code>origin</code>, current parent <code>state</code> when
+known, <code>cascade_mode</code>, and freshness information.<a href="#section-10.1-7.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-10.1-8">Consumers that cannot obtain parent state <span class="bcp14">MUST</span> obey the cascade mode:
+for <code>status_required</code>, they <span class="bcp14">MUST</span> refuse; for <code>bounded_staleness</code>, they
+<span class="bcp14">MUST</span> refuse after the bound; for <code>immediate</code>, they rely on the Mission
+Issuer's child state transition.<a href="#section-10.1-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="child-evidence">
+<section id="section-11">
+      <h2 id="name-child-evidence">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-child-evidence" class="section-name selfRef">Child Evidence</a>
+      </h2>
+<p id="section-11-1">The Mission Issuer <span class="bcp14">MUST</span> record a child delegation evidence record with:<a href="#section-11-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-2.1">
+          <p id="section-11-2.1.1">parent Mission identifier, origin, and authority hash;<a href="#section-11-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.2">
+          <p id="section-11-2.2.1">child Mission identifier, origin, and authority hash;<a href="#section-11-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.3">
+          <p id="section-11-2.3.1">child actor;<a href="#section-11-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.4">
+          <p id="section-11-2.4.1">requested and approved child authority;<a href="#section-11-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.5">
+          <p id="section-11-2.5.1">attenuation checks performed;<a href="#section-11-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.6">
+          <p id="section-11-2.6.1">fan-out counters or policy result;<a href="#section-11-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.7">
+          <p id="section-11-2.7.1">cascade mode;<a href="#section-11-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.8">
+          <p id="section-11-2.8.1">approval or policy basis; and<a href="#section-11-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.9">
+          <p id="section-11-2.9.1">creation time.<a href="#section-11-2.9.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-11-3">This evidence is audit material and does not grant authority.<a href="#section-11-3" class="pilcrow">¶</a></p>
+<div id="child-evidence-object">
+<section id="section-11.1">
+        <h3 id="name-child-evidence-object">
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-child-evidence-object" class="section-name selfRef">Child Evidence Object</a>
+        </h3>
+<p id="section-11.1-1">A Child Evidence object is a JSON object <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> with:<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-11.1-2">
+          <dt id="section-11.1-2.1">
+<code>evidence_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-2.2">
+            <p id="section-11.1-2.2.1"><span class="bcp14">REQUIRED</span>. Unique identifier.<a href="#section-11.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-2.3">
+<code>parent</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-2.4">
+            <p id="section-11.1-2.4.1"><span class="bcp14">REQUIRED</span>. Parent Mission reference.<a href="#section-11.1-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-2.5">
+<code>child</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-2.6">
+            <p id="section-11.1-2.6.1"><span class="bcp14">REQUIRED</span>. Child Mission reference.<a href="#section-11.1-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-2.7">
+<code>child_actor</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-2.8">
+            <p id="section-11.1-2.8.1"><span class="bcp14">REQUIRED</span>. Child actor identity.<a href="#section-11.1-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-2.9">
+<code>attenuation</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-2.10">
+            <p id="section-11.1-2.10.1"><span class="bcp14">REQUIRED</span>. Object recording subset checks and result.<a href="#section-11.1-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-2.11">
+<code>fanout</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-2.12">
+            <p id="section-11.1-2.12.1"><span class="bcp14">REQUIRED</span> when fan-out controls apply. Object recording counters and
+policy.<a href="#section-11.1-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-2.13">
+<code>cascade_mode</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-2.14">
+            <p id="section-11.1-2.14.1"><span class="bcp14">REQUIRED</span>. Cascade mode.<a href="#section-11.1-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-2.15">
+<code>decision</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-2.16">
+            <p id="section-11.1-2.16.1"><span class="bcp14">REQUIRED</span>. One of <code>created</code> or <code>denied</code>.<a href="#section-11.1-2.16.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-2.17">
+<code>denial_reason</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-2.18">
+            <p id="section-11.1-2.18.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>denied</code>.<a href="#section-11.1-2.18.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-2.19">
+<code>created_at</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-2.20">
+            <p id="section-11.1-2.20.1"><span class="bcp14">REQUIRED</span>. RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-11.1-2.20.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-11.1-3">Example:<a href="#section-11.1-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-11.1-4">
+<pre>
+{
+  "evidence_id": "chd_8K2nP4qV",
+  "parent": {
+    "id": "msn_parent_8RfX2Lqv9TqMv4z7sA2bN1k0",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
+  "child": {
+    "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2"
+  },
+  "child_actor": {
+    "sub": "subagent-contract-reviewer",
+    "type": "ai_agent"
+  },
+  "attenuation": {
+    "result": "strict_subset"
+  },
+  "fanout": {
+    "active_children": 2,
+    "max_child_missions": 5
+  },
+  "cascade_mode": "immediate",
+  "decision": "created",
+  "created_at": "2026-11-02T08:14:00Z"
+}
+</pre><a href="#section-11.1-4" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="relationship-to-expansion">
+<section id="section-12">
+      <h2 id="name-relationship-to-expansion">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-relationship-to-expansion" class="section-name selfRef">Relationship to Expansion</a>
+      </h2>
+<p id="section-12-1">Mission Expansion
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span> creates a successor
+Mission that replaces a predecessor for a broader task. Child Mission
+Delegation creates a dependent Mission for a child actor with narrower
+authority. Expansion widens by fresh approval; Child Missions attenuate
+within parent authority. The two <span class="bcp14">MUST NOT</span> be conflated.<a href="#section-12-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="relationship-to-harnesses">
+<section id="section-13">
+      <h2 id="name-relationship-to-harnesses">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-relationship-to-harnesses" class="section-name selfRef">Relationship to Harnesses</a>
+      </h2>
+<p id="section-13-1">A Mission-aware harness
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-harness" class="cite xref">I-D.draft-mcguinness-oauth-mission-harness</a>]</span> <span class="bcp14">MUST NOT</span> treat a
+sub-agent handle as authority. When durable sub-agent work requires a
+separate authority handle, the harness can request a Child Mission
+under this profile.<a href="#section-13-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="discovery">
+<section id="section-14">
+      <h2 id="name-authorization-server-metada">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-authorization-server-metada" class="section-name selfRef">Authorization Server Metadata</a>
+      </h2>
+<p id="section-14-1">A Mission Issuer that supports this profile <span class="bcp14">SHOULD</span> advertise it in its
+authorization server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span> so a parent agent can
+discover child-delegation support before attempting child creation:<a href="#section-14-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-14-2">
+        <dt id="section-14-2.1">
+<code>mission_child_delegation_supported</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-14-2.2">
+          <p id="section-14-2.2.1"><span class="bcp14">OPTIONAL</span> boolean. When <code>true</code>, the Mission Issuer accepts the child
+creation request of <a href="#child-creation" class="auto internal xref">Section 6</a> and enforces the controls of
+this profile. A client <span class="bcp14">MUST NOT</span> infer the fan-out controls
+(<a href="#fanout" class="auto internal xref">Section 9</a>) a deployment enforces from this member alone; an
+unenforceable requested control is refused at creation
+(<a href="#denial-reasons" class="auto internal xref">Section 6.3</a>).<a href="#section-14-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="conformance">
+<section id="section-15">
+      <h2 id="name-conformance">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+      </h2>
+<p id="section-15-1">A conforming Child-Mission-capable Mission Issuer <span class="bcp14">MUST</span>:<a href="#section-15-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-15-2.1">
+          <p id="section-15-2.1.1">create Child Missions only through explicit authenticated requests;<a href="#section-15-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-2.2">
+          <p id="section-15-2.2.1">resolve the Parent Mission from a parent grant, not from the
+caller-supplied <code>parent</code> identifier alone;<a href="#section-15-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-2.3">
+          <p id="section-15-2.3.1">enforce strict-subset authority and expiry;<a href="#section-15-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-2.4">
+          <p id="section-15-2.4.1">enforce delegation and fan-out controls;<a href="#section-15-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-2.5">
+          <p id="section-15-2.5.1">record the <code>parent</code> member on child Mission records and tokens;<a href="#section-15-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-2.6">
+          <p id="section-15-2.6.1">implement cascade revocation; and<a href="#section-15-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-2.7">
+          <p id="section-15-2.7.1">record child delegation evidence.<a href="#section-15-2.7.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-15-3">A Resource Server does not need to understand this profile to enforce
+child tokens as Mission-bound tokens. A Resource Server that performs
+lineage-sensitive policy, however, <span class="bcp14">MUST</span> understand the <code>parent</code> member
+before relying on it.<a href="#section-15-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-16">
+      <h2 id="name-security-considerations">
+<a href="#section-16" class="section-number selfRef">16. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<div id="authority-by-ancestry">
+<section id="section-16.1">
+        <h3 id="name-authority-by-ancestry">
+<a href="#section-16.1" class="section-number selfRef">16.1. </a><a href="#name-authority-by-ancestry" class="section-name selfRef">Authority by Ancestry</a>
+        </h3>
+<p id="section-16.1-1">The primary threat is implicit authority inheritance: a child actor
+acts because it descends from a parent session. This profile requires
+explicit child Mission creation and rejects session ancestry as an
+authorization basis.<a href="#section-16.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="fan-out-amplification">
+<section id="section-16.2">
+        <h3 id="name-fan-out-amplification">
+<a href="#section-16.2" class="section-number selfRef">16.2. </a><a href="#name-fan-out-amplification" class="section-name selfRef">Fan-Out Amplification</a>
+        </h3>
+<p id="section-16.2-1">Many child actors at the same depth can amplify authority even when
+each child is a subset. Fan-out controls are required so deployments
+can bound breadth as well as depth.<a href="#section-16.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="cascade-failure">
+<section id="section-16.3">
+        <h3 id="name-cascade-failure">
+<a href="#section-16.3" class="section-number selfRef">16.3. </a><a href="#name-cascade-failure" class="section-name selfRef">Cascade Failure</a>
+        </h3>
+<p id="section-16.3-1">If parent revocation does not reach children, child authority can
+outlive its source. Cascade modes define how termination propagates and
+how consumers bound stale parent state.<a href="#section-16.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="parent-confusion">
+<section id="section-16.4">
+        <h3 id="name-parent-confusion">
+<a href="#section-16.4" class="section-number selfRef">16.4. </a><a href="#name-parent-confusion" class="section-name selfRef">Parent Confusion</a>
+        </h3>
+<p id="section-16.4-1">An attacker could try to create a child under a parent it does not
+control by naming a <code>parent</code> identifier. The Mission Issuer resolves
+the parent from <code>parent_token</code>, not from the identifier, and verifies
+the two match.<a href="#section-16.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="subset-bugs">
+<section id="section-16.5">
+        <h3 id="name-subset-bugs">
+<a href="#section-16.5" class="section-number selfRef">16.5. </a><a href="#name-subset-bugs" class="section-name selfRef">Subset Bugs</a>
+        </h3>
+<p id="section-16.5-1">Subset evaluation is the security core of this profile. Deployments
+<span class="bcp14">SHOULD</span> keep subset rules deterministic and auditable, and <span class="bcp14">SHOULD</span> record
+the exact parent entries used to justify each child entry.<a href="#section-16.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-17">
+      <h2 id="name-privacy-considerations">
+<a href="#section-17" class="section-number selfRef">17. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-17-1">The <code>parent</code> member exposes Mission lineage and can correlate child and
+parent activity. Deployments <span class="bcp14">SHOULD</span> minimize cross-audience disclosure
+of parent lineage when it is not needed for enforcement, and <span class="bcp14">SHOULD</span>
+restrict child delegation evidence to authorized audit consumers.<a href="#section-17-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana">
+<section id="section-18">
+      <h2 id="name-iana-considerations">
+<a href="#section-18" class="section-number selfRef">18. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-18-1">This document registers three parameters in the "OAuth Parameters"
+registry. For each: Parameter Usage Location authorization request;
+Change Controller IETF; Reference this document, <a href="#child-creation" class="auto internal xref">Section 6</a>.<a href="#section-18-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-18-2.1">
+          <p id="section-18-2.1.1"><code>parent</code><a href="#section-18-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-18-2.2">
+          <p id="section-18-2.2.1"><code>parent_token</code><a href="#section-18-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-18-2.3">
+          <p id="section-18-2.3.1"><code>child_actor</code><a href="#section-18-2.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-18-3">As with <code>mission_intent</code> in the issuance profile, PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>
+carries authorization-request parameters without a distinct usage
+location, so the pushed submission of these parameters needs no
+separate registration. <code>parent_token</code> carries a refresh token or other
+parent grant and <span class="bcp14">MUST</span> be submitted only through PAR on the
+authenticated back channel, never on a front-channel authorization
+request (<a href="#child-creation" class="auto internal xref">Section 6</a>).<a href="#section-18-3" class="pilcrow">¶</a></p>
+<p id="section-18-4">This document registers one member in the existing "OAuth Authorization
+Server Metadata" registry <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>: Change Controller IETF; Reference
+this document, <a href="#discovery" class="auto internal xref">Section 14</a>.<a href="#section-18-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-18-5.1">
+          <p id="section-18-5.1.1"><code>mission_child_delegation_supported</code><a href="#section-18-5.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-18-6">Consistent with the issuance profile, which registers the <code>mission</code>
+claim as an open object with no registry of its members, this document
+defines the <code>parent</code> member of the <code>mission</code> claim
+(<a href="#parent-member" class="auto internal xref">Section 7</a>) without a separate claim registration: it is a
+member defined by this profile, carried inside the already-registered
+<code>mission</code> claim.<a href="#section-18-6" class="pilcrow">¶</a></p>
+<p id="section-18-7">This document defines one closed set of symbolic codes: the child
+creation denial reasons (<a href="#denial-reasons" class="auto internal xref">Section 6.3</a>). Like the issuance
+profile's restraint with <code>mission</code> members, these are documented in
+this specification rather than placed in a new IANA registry: they are
+conveyed inside existing OAuth error responses and evidence at
+deployment-defined locations, not on a new wire surface, and the closed
+set is small and fully specified here. Should interoperable extension
+prove necessary, a future revision can create a "Mission Child
+Delegation Denial Reason" registry with a Specification Required
+<span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span> policy; this document does not create it.<a href="#section-18-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-19">
+      <h2 id="name-references">
+<a href="#section-19" class="section-number selfRef">19. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-19.1">
+        <h3 id="name-normative-references">
+<a href="#section-19.1" class="section-number selfRef">19.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-expansion</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-status</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-status">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-status</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC3339">[RFC3339]</dt>
+        <dd>
+<span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8259">[RFC8259]</dt>
+        <dd>
+<span class="refAuthor">Bray, T., Ed.</span>, <span class="refTitle">"The JavaScript Object Notation (JSON) Data Interchange Format"</span>, <span class="seriesInfo">STD 90</span>, <span class="seriesInfo">RFC 8259</span>, <span class="seriesInfo">DOI 10.17487/RFC8259</span>, <time datetime="2017-12" class="refDate">December 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8259">https://www.rfc-editor.org/rfc/rfc8259</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8414">[RFC8414]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8414">https://www.rfc-editor.org/rfc/rfc8414</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9126">[RFC9126]</dt>
+      <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Sakimura, N.</span>, <span class="refAuthor">Tonge, D.</span>, and <span class="refAuthor">F. Skokan</span>, <span class="refTitle">"OAuth 2.0 Pushed Authorization Requests"</span>, <span class="seriesInfo">RFC 9126</span>, <span class="seriesInfo">DOI 10.17487/RFC9126</span>, <time datetime="2021-09" class="refDate">September 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9126">https://www.rfc-editor.org/rfc/rfc9126</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-19.2">
+        <h3 id="name-informative-references">
+<a href="#section-19.2" class="section-number selfRef">19.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-oauth-mission-harness">[I-D.draft-mcguinness-oauth-mission-harness]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-harness</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-harness">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-harness</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-signals</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-signals">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-signals</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8126">[RFC8126]</dt>
+      <dd>
+<span class="refAuthor">Cotton, M.</span>, <span class="refAuthor">Leiba, B.</span>, and <span class="refAuthor">T. Narten</span>, <span class="refTitle">"Guidelines for Writing an IANA Considerations Section in RFCs"</span>, <span class="seriesInfo">BCP 26</span>, <span class="seriesInfo">RFC 8126</span>, <span class="seriesInfo">DOI 10.17487/RFC8126</span>, <time datetime="2017-06" class="refDate">June 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8126">https://www.rfc-editor.org/rfc/rfc8126</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-A">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-A-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
+set and defines explicit child authority for sub-agent work.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
