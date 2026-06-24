@@ -2603,9 +2603,10 @@ The Mission is the durable anchor across both: `mission.id`,
 `mission.origin`, and `authority_hash` ride unchanged through every
 hop. OAuth authority is audience-scoped by the Mission Issuer and
 Resource AS; deployment-local transaction context then narrows the
-operation for internal services. No hop calls back to
-`mission.origin` for state; each enforces from the credential it
-holds.
+operation for internal services. In this baseline walkthrough no hop
+calls back to `mission.origin` for state; each enforces from the
+credential it holds. (The optional Status and Signals layers add
+origin-fed state where a deployment wants it, as noted below.)
 
 This walkthrough is the baseline issuance path: stateless enforcement
 bounded only by token lifetime. The OPTIONAL companion profiles layer on
@@ -2779,16 +2780,21 @@ not by this document.
 
 Revoking the Mission now stops new ID-JAGs, but the local token the
 Resource AS minted stays usable until its `exp` (260 seconds), bounded
-by the 300-second ID-JAG cap ({{cross-domain-revocation}}). Prompt
-cross-domain revocation is opt-in: where the partner domain consumes a
-Mission Status freshness lease or a lifecycle-change Signal, it
-re-checks on a Mission transition instead of waiting out the lifetime.
+by the 300-second ID-JAG cap ({{cross-domain-revocation}}). Tighter
+cross-domain revocation is opt-in, and the two companions do different
+things: a Mission Status freshness lease shortens how long the partner
+relies on stale state by forcing a pull or per-request re-check, while a
+Mission Lifecycle Signal notifies the partner on a Mission transition so
+it can react without polling.
 
 The Resource AS holds only this audience's subset and cannot recompute
 `authority_hash`. To show its local token did not widen beyond the
-ID-JAG, it SHOULD record, per minted token, the consumed ID-JAG's `jti`
-and conveyed `authorization_details`, so an auditor can check the local
-authority is a subset of the grant.
+ID-JAG, it SHOULD record, per minted token, both sides of the
+derivation: the consumed ID-JAG's `jti` and conveyed
+`authorization_details`, and the local token's own identifier or digest
+(`jti`), `iss`, `aud`, `iat`, `exp`, and issued `authorization_details`.
+An auditor can then identify the exact local token, tie it to the grant
+it was minted from, and check its authority is a subset of that grant.
 
 ## Stage 4: The Resource Server Enforces
 
