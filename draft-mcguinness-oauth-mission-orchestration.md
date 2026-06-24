@@ -58,6 +58,16 @@ normative:
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-status-latest
 
+  I-D.draft-mcguinness-oauth-mission-authzen:
+    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-authzen-latest
+
 informative:
   I-D.draft-mcguinness-oauth-mission-harness:
     title: "Mission-Aware Agent Harnesses for OAuth 2.0"
@@ -68,15 +78,6 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-harness-latest
-  I-D.draft-mcguinness-oauth-mission-authzen:
-    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-authzen-latest
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     author:

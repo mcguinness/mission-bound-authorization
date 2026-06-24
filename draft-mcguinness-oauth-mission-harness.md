@@ -190,7 +190,9 @@ the runtime profile.
 This document uses the terms Mission, Mission Issuer, Mission-bound
 token, and Mission state from
 {{I-D.draft-mcguinness-oauth-mission}} and
-{{I-D.draft-mcguinness-oauth-mission-status}}.
+{{I-D.draft-mcguinness-oauth-mission-status}}, and Policy Enforcement
+Point (PEP) and mediated execution from the runtime profile
+{{I-D.draft-mcguinness-oauth-mission-runtime}}.
 
 Harness:
 : The runtime system that preserves and resumes agent execution state,

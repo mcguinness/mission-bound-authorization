@@ -382,9 +382,9 @@ authentication context rather than approving a specific action.
 A PEP MUST refuse an action for which deployment policy or Resource
 policy requires an action-bound approval and a valid fresh approval
 bound to the action's parameters is not present. A deployment SHOULD
-require an action-bound approval for the external-commitment and
-privileged-administration classes, where a token-lifetime-wide standing
-authority is least appropriate. Because the approval is bound to the
+require an action-bound approval for the irreversible,
+external-commitment, and privileged-administration classes, where a
+token-lifetime-wide standing authority is least appropriate. Because the approval is bound to the
 concrete parameters, it MUST be reverified under the time-of-check to
 time-of-use rules of {{parameter-binding}}; a parameter change after
 approval invalidates it.
@@ -456,7 +456,10 @@ cannot present the Mission-bound credential directly; to act, it asks
 the mediating PEP, which runs the decision of {{decision}} and only then
 uses the key. No new token type, credential handle, or wire protocol is
 introduced: this is a custody and placement property of the existing
-sender-constraint key.
+sender-constraint key. The mediating PEP is a co-trusted process in the
+agent's own trust domain, not a delegate: the token is unchanged, the
+agent remains the principal of record (`client_id` still attributes the
+action to the agent), and no `act`-chain entry is added.
 
 For an action class it mediates, a deployment SHOULD hold the
 sender-constraint private key for the Mission-bound credential in the
@@ -477,6 +480,13 @@ still request mediated actions, which are gated, and can still misuse
 any low-consequence authority it legitimately holds directly. The aim is
 that the agent is structurally unable to take a high-consequence action
 unilaterally, not that the agent is trusted.
+
+The set of action classes a deployment mediates is the load-bearing
+parameter here: a deployment that mediates nothing gains nothing from
+this section, however it labels itself. A deployment that relies on this
+profile to protect against agent compromise therefore MUST include the
+irreversible, external-commitment, and privileged-administration classes
+in its mediated set; the protection is only as broad as that set.
 
 # Resource Server runtime profile {#rs-runtime-profile}
 
