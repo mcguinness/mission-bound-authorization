@@ -79,6 +79,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
+  I-D.draft-mcguinness-oauth-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-runtime-latest
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     author:
@@ -2104,7 +2113,12 @@ and carrying its own narrowed authority into another domain is out of
 scope for this document and deferred to future work. Cross-domain
 issuance here always projects the agent's Mission authority; delegation
 within the target domain is performed by the Resource AS
-({{validation-at-resource-as}}).
+({{validation-at-resource-as}}). A sub-agent that must act in a
+different trust domain under its own narrowed authority is therefore not
+covered by a single hop; distributed multi-agent work across domains
+composes only through the agent's projected authority or through
+separate Missions per domain. A delegate-carries-its-own-authority mode
+is future work.
 
 Two roles must not be conflated. The grant the client presents to
 *obtain* the cross-domain grant (the Mission's refresh token) is the
@@ -2592,6 +2606,12 @@ operation for internal services. No hop calls back to
 `mission.origin` for state; each enforces from the credential it
 holds.
 
+This walkthrough is the baseline issuance path: stateless enforcement
+bounded only by token lifetime. The OPTIONAL companion profiles layer on
+it, and the stages note where: Stage 4 gains a runtime point-of-use
+check, and Stage 3 gains prompt cross-domain revocation from Status or
+Signals.
+
 Scenario: agent `s6BhdRkqt3`, acting for `alice`
 (`user_3p2q8mN1a0kV7tR`), reconciles Q3 invoices in a partner ERP
 under Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`.
@@ -2756,6 +2776,19 @@ the home AS. The token's `exp` (1797840290) is below the ID-JAG's
 subject-resolution rules of the ID-JAG and identity chaining profiles,
 not by this document.
 
+Revoking the Mission now stops new ID-JAGs, but the local token the
+Resource AS minted stays usable until its `exp` (260 seconds), bounded
+by the 300-second ID-JAG cap ({{cross-domain-revocation}}). Prompt
+cross-domain revocation is opt-in: where the partner domain consumes a
+Mission Status freshness lease or a lifecycle-change Signal, it
+re-checks on a Mission transition instead of waiting out the lifetime.
+
+The Resource AS holds only this audience's subset and cannot recompute
+`authority_hash`. To show its local token did not widen beyond the
+ID-JAG, it SHOULD record, per minted token, the consumed ID-JAG's `jti`
+and conveyed `authorization_details`, so an auditor can check the local
+authority is a subset of the grant.
+
 ## Stage 4: The Resource Server Enforces
 
 The agent calls the ERP Resource Server (`erp.partner.example.com`)
@@ -2765,6 +2798,14 @@ serves, permitting `invoices.read` and `journal-entries.write` up to
 `max_amount_usd: 500` ({{mission-bound-tokens}}). It treats the
 `mission` claim as an audit anchor; holding only this audience's
 subset of the Authority Set, it does not recompute `authority_hash`.
+
+This is stateless enforcement from the token alone.
+`journal-entries.write` is a consequential write, so where the partner
+deploys the runtime profile
+({{I-D.draft-mcguinness-oauth-mission-runtime}}) it also obtains a
+point-of-use PDP permit against current Mission state before executing.
+The baseline bounds the write only by token lifetime and
+`max_amount_usd`.
 
 ## Stage 5: Internal Call Context via Transaction Tokens
 
