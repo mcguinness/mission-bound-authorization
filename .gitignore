@@ -19,6 +19,7 @@
 Gemfile.lock
 archive.json
 draft-mcguinness-oauth-mission.xml
+draft-mcguinness-oauth-mission-approval.xml
 draft-mcguinness-oauth-mission-runtime.xml
 draft-mcguinness-oauth-mission-status.xml
 draft-mcguinness-oauth-mission-signals.xml
