@@ -502,8 +502,16 @@ decision. Runtime enforcement MUST evaluate:
   `actions`. For any other `authorization_details` type, the PDP MUST
   evaluate the action under that type's documented runtime semantics
   and MUST refuse if it does not understand or cannot enforce those
-  semantics. Richer capability-source binding (source digests,
-  cross-format identity) is out of scope ({{deferred}}).
+  semantics. For a capability sourced from a discovered catalog (an MCP
+  tool catalog, an OpenAPI document, or an equivalent source), where the
+  validating server recorded a source-content digest for the capability
+  at derivation, the PDP MUST also refuse the action when the current
+  source digest differs from the digest recorded at derivation
+  (capability drift); the recorded digest is part of the derived
+  authority and is covered by `authority_hash`
+  ({{I-D.draft-mcguinness-oauth-mission}}). Cross-format
+  canonicalization, signed capability manifests, and cross-catalog
+  identity remain out of scope ({{deferred}}).
 - **Resource policy.** The runtime decision MUST include any
   applicable Resource policy. A Mission-bound token and runtime permit
   are an upper bound on authority, not a command for the Resource
@@ -907,8 +915,8 @@ work and are not required to enforce it:
   workflow (a deny here is terminal for the attempted action);
 - a standardized enforcement-scope manifest format and discovery
   mechanism;
-- cross-format capability-source binding (signed capability
-  manifests, source-digest drift handling, cross-catalog identity);
+- cross-format capability-source binding beyond same-source digest
+  drift (signed capability manifests, cross-catalog identity);
 - portable, third-party-verifiable decision receipts (this profile
   fixes only the local runtime enforcement evidence record);
 - separate Decision Evidence and Execution Evidence object schemas and

@@ -267,9 +267,21 @@ as that profile requires.
 | AuthZEN member | Mission-bound binding |
 |---|---|
 | `subject` | The principal the decision is requested for. |
-| `resource` | The target resource, with the canonical resource identifier the PEP supplies. |
+| `resource` | The fine-grained target object the action names (for example, a specific journal entry), for Resource-policy evaluation. It is NOT the field matched against the approved entry's `resource`; see below. |
 | `action` | The requested action identifier (for example, `journal-entries.write`), which the PDP evaluates against the approved `actions` per {{I-D.draft-mcguinness-oauth-mission}}. |
 | `context` | Carries the Mission-bound context object defined below. |
+
+The runtime profile requires the PDP to confirm that the action falls
+within an approved Authority Set entry by matching the action's
+resource and action identity against that entry's `resource` and
+`actions` ({{I-D.draft-mcguinness-oauth-mission-runtime}}). In this
+binding, the approved entry's `resource` (the protected-resource or
+audience URI, for example `https://erp.example.com`) is matched against
+`context.audience`, not against the AuthZEN `resource` member. The
+AuthZEN `resource` carries the finer-grained object identity used only
+for Resource-policy evaluation. A PDP MUST perform the entry match
+against `context.audience`; matching it against the AuthZEN `resource`
+member is non-conforming and will diverge across deployments.
 
 ## `context.mission`
 
@@ -293,12 +305,19 @@ materialized view:
   ({{I-D.draft-mcguinness-oauth-mission-runtime}}).
 
 `policy_version`:
-: REQUIRED. A string. the `policy_version` recorded at
-  the approval event.
+: REQUIRED when known. A string. the `policy_version` recorded at the
+  approval event. It is a Mission-record field
+  ({{I-D.draft-mcguinness-oauth-mission}}) and is not carried on the
+  `mission` claim or the introspection projection, so a PEP that is not
+  co-located with the Mission record may not have it; such a PEP omits
+  it and relies on `policy_view_id` for view correlation. A PEP that can
+  obtain it (for example, co-located with the origin) includes it.
 
 `policy_view_id`:
 : REQUIRED. A string. the materialized view
-  identifier ({{mission-to-policy-materialization}}).
+  identifier ({{mission-to-policy-materialization}}). It is content-
+  addressed and self-sourcing ({{mission-to-policy-materialization}}),
+  so it is the authoritative view correlator the PDP relies on.
 
 ## `context.actor`
 
@@ -482,13 +501,17 @@ In addition to evaluating the decision inputs the runtime profile
 requires, the PDP MUST verify that the AuthZEN-carried envelope is
 self-consistent:
 
-1. The Mission state conveyed in `context.mission.state` is `active`;
-   otherwise the PDP returns `mission_inactive`
-   ({{runtime-denial-classification}}).
-2. `authority_hash`, `policy_version`, and `policy_view_id` carried in
-   `context.mission` are consistent with the materialized policy view
-   the PDP has loaded for this Mission; otherwise the PDP returns
-   `stale_state`.
+1. The Mission state conveyed in `context.mission.state` is exactly
+   `active`; every other value, recognized or not, is non-active per the
+   issuance profile's forward-compatibility rule
+   ({{I-D.draft-mcguinness-oauth-mission}}) and the PDP returns
+   `mission_inactive` ({{runtime-denial-classification}}).
+2. `authority_hash` and `policy_view_id` carried in `context.mission`,
+   and `policy_version` when present, are consistent with the
+   materialized policy view the PDP has loaded for this Mission;
+   otherwise the PDP returns `stale_state`. `policy_view_id` is the
+   authoritative correlator; a PDP MUST NOT fail a decision solely
+   because the optional `policy_version` was omitted.
 3. When `context.credential.expires_at` is present, it has not passed;
    otherwise the PDP returns `credential_invalid`.
 4. The `context.freshness` the PEP supplied is within the deployment's
@@ -798,11 +821,15 @@ conditions to AuthZEN responses and gives the denial-reason identifiers
 carried in Decision Evidence:
 
 - `out_of_authority`: the action is not within the Authority Set.
-- `acr_insufficient`: the actor's `acr` does not satisfy the Mission's
-  `acr` constraint. MAY be satisfied by {{RFC9470}} step-up
-  authentication.
-- `amr_insufficient`: the actor's `amr` does not satisfy the Mission's
-  `amr` constraint. MAY be satisfied by step-up authentication.
+- `step_up_required`: Resource policy requires a stronger authentication
+  context for this action than the actor presents, and MAY be satisfied
+  by {{RFC9470}} step-up authentication. This is a Resource-policy
+  condition, not a Mission constraint: the issuance profile's `acr` is
+  an approval-time requirement on the Approver, recorded on the Mission
+  and neither carried on derived tokens nor evaluated per action
+  ({{I-D.draft-mcguinness-oauth-mission}}), and the issuance profile
+  defines no per-action `amr` constraint. It is a specialization of
+  `resource_policy` that names the step-up affordance.
 - `stale_state`: the PEP-supplied freshness is stale or inconsistent
   with the materialized policy view.
 - `mission_inactive`: the Mission state is not `active`.
@@ -861,10 +888,9 @@ AuthZEN decisions use a boolean `decision` member and an optional
   as a single-use decision identifier.
 
 `insufficient_claims`:
-: OPTIONAL. An object. Present only for `acr_insufficient` or
-  `amr_insufficient` denials. It MAY contain `acr_values` and
-  `amr_values` members that identify authenticated claims that would
-  lift the denial.
+: OPTIONAL. An object. Present only for a `step_up_required` denial. It
+  MAY contain `acr_values` and `amr_values` members that identify the
+  authentication context Resource policy requires to lift the denial.
 
 `access_request`:
 : OPTIONAL. An object. Present only when the deployment exposes the
@@ -896,11 +922,13 @@ lifetime controls required by the runtime profile.
 }
 ~~~
 
-For an `acr_insufficient` or `amr_insufficient` denial, the PDP MAY
-include `context.insufficient_claims`, so the caller can satisfy the
-Mission's `acr` or `amr` constraint through OAuth step-up
+For a `step_up_required` denial, the PDP MAY include
+`context.insufficient_claims`, so the caller can satisfy the
+Resource-policy authentication requirement through an OAuth step-up
 authentication challenge {{RFC9470}} at the protected resource and
-re-authenticate without a Mission expansion.
+re-authenticate, without a Mission expansion. Because the requirement is
+Resource policy and not a Mission constraint, satisfying it changes the
+actor's authentication context, not the Mission or its Authority Set.
 
 ## Error response shape
 
@@ -988,12 +1016,14 @@ Rules:
   approved Mission's derived authority and are therefore covered by
   `authority_hash` ({{I-D.draft-mcguinness-oauth-mission}}).
 - The PEP presents `tool_id` on consequential requests for
-  catalog-sourced actions. The PDP MUST return `capability_drift`
-  ({{runtime-denial-classification}}) when the presented `tool_id` is
-  outside the approved set.
-- When the current source digest differs from the digest recorded at
-  derivation, the PDP MUST treat the change as drift: return
-  `capability_drift` and refuse, per declared policy.
+  catalog-sourced actions. The runtime profile owns the drift semantics:
+  it requires the PDP to refuse an invoked identity outside the approved
+  `actions` and, where a source digest was recorded at derivation, to
+  refuse when the current source digest differs from it
+  ({{I-D.draft-mcguinness-oauth-mission-runtime}}). This binding adds
+  only the wire representation: such a refusal is carried as
+  `capability_drift` ({{runtime-denial-classification}}). It defines no
+  drift rule of its own.
 - Actions not sourced from a discovered catalog (deployment-registered
   `authorization_details` types, first-party operations with stable
   identity) do not require this binding.
