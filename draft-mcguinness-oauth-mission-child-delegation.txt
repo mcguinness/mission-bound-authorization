@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            23 June 2026
-Expires: 25 December 2026
+Intended status: Standards Track                            24 June 2026
+Expires: 26 December 2026
 
 
                  Child Mission Delegation for OAuth 2.0
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 December 2026.
+   This Internet-Draft will expire on 26 December 2026.
 
 Copyright Notice
 
@@ -93,18 +93,19 @@ Table of Contents
      11.1.  Child Evidence Object
    12. Relationship to Expansion
    13. Relationship to Harnesses
-   14. Conformance
-   15. Security Considerations
-     15.1.  Authority by Ancestry
-     15.2.  Fan-Out Amplification
-     15.3.  Cascade Failure
-     15.4.  Parent Confusion
-     15.5.  Subset Bugs
-   16. Privacy Considerations
-   17. IANA Considerations
-   18. References
-     18.1.  Normative References
-     18.2.  Informative References
+   14. Authorization Server Metadata
+   15. Conformance
+   16. Security Considerations
+     16.1.  Authority by Ancestry
+     16.2.  Fan-Out Amplification
+     16.3.  Cascade Failure
+     16.4.  Parent Confusion
+     16.5.  Subset Bugs
+   17. Privacy Considerations
+   18. IANA Considerations
+   19. References
+     19.1.  Normative References
+     19.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -138,7 +139,7 @@ Table of Contents
    deployment creates Missions for sub-agents.
 
    A Mission Issuer claims conformance to this document only when it
-   creates Child Missions (Section 14); otherwise it remains a plain
+   creates Child Missions (Section 15); otherwise it remains a plain
    issuance-profile Mission Issuer.  Nothing here places a new
    requirement back on the issuance profile.
 
@@ -152,6 +153,16 @@ Table of Contents
    uses the terms Agent (Client), Subject, Approver, Mission Issuer,
    Mission Intent, Authority Set, Mission, and derived token as defined
    there.
+
+   Cascade revocation (Section 10) additionally depends on the Mission
+   Status and Lifecycle profile
+   ([I-D.draft-mcguinness-oauth-mission-status]) and the Mission
+   Expansion profile ([I-D.draft-mcguinness-oauth-mission-expansion])
+   where a deployment runs them, because those profiles define the
+   suspended, completed, and superseded parent states the cascade rules
+   react to.  A deployment that runs neither still implements this
+   profile: under the issuance profile's forward-compatibility rule, the
+   cascade treats any non-active parent state as a terminal trigger.
 
    A Child Mission is an ordinary Mission under the issuance profile
    with two additions: it is created under a parent grant rather than a
@@ -180,7 +191,7 @@ Table of Contents
    *  child evidence and audit requirements (Section 11); and
 
    *  conformance for a Child-Mission-capable Mission Issuer
-      (Section 14).
+      (Section 15).
 
    This document does not replace ordinary delegated tokens under
    [I-D.draft-mcguinness-oauth-mission].  A deployment can use delegated
@@ -387,12 +398,12 @@ Table of Contents
        "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
        "origin": "https://as.example.com",
        "authority_hash":
-         "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2n",
+         "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
        "parent": {
          "id": "msn_parent_8RfX2Lqv9TqMv4z7sA2bN1k0",
          "origin": "https://as.example.com",
          "authority_hash":
-           "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE",
+           "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
          "delegation_id": "dlg_7pQ4m",
          "cascade_mode": "immediate",
          "created_at": "2026-11-02T08:14:00Z"
@@ -490,25 +501,53 @@ Table of Contents
 
 10.  Cascade Revocation
 
-   A Child Mission depends on the Parent Mission.  When the Parent
-   Mission becomes non-active (revoked or expired
-   ([I-D.draft-mcguinness-oauth-mission]); suspended or completed
-   ([I-D.draft-mcguinness-oauth-mission-status])), the Mission Issuer
-   MUST prevent new derivation under dependent Child Missions.  The
-   superseded state ([I-D.draft-mcguinness-oauth-mission-expansion]) is
-   treated specially: rather than cascade-revoking the children, the
-   Mission Issuer SHOULD re-bind dependent Child Missions to the
-   successor Mission, or apply deployment policy, since under expansion
-   the task continues under the successor.
+   A Child Mission depends on the Parent Mission.  The cascade trigger
+   is any Parent Mission transition to a non-active state.  This profile
+   distinguishes terminal triggers from the one reversible trigger:
+
+   *  Terminal triggers: parent revoked or expired
+      ([I-D.draft-mcguinness-oauth-mission]), completed
+      ([I-D.draft-mcguinness-oauth-mission-status]), or superseded
+      ([I-D.draft-mcguinness-oauth-mission-expansion]).  On a terminal
+      trigger the Mission Issuer MUST stop new derivation under
+      dependent Child Missions and, under immediate cascade, transition
+      each dependent child to the terminal cascaded state
+      (Section 10.1).
+
+   *  Reversible trigger: parent suspended
+      ([I-D.draft-mcguinness-oauth-mission-status]).  The Mission Issuer
+      MUST stop new derivation under dependent Child Missions while the
+      parent is suspended, but MUST NOT drive them to a terminal state.
+      When the parent is resumed to active, dependent children return to
+      their pre-suspension state and may derive again.  While the parent
+      is suspended, a dependent child is reported as non-active with a
+      parent projection (Section 10.1).
+
+   A superseded parent does not transfer its Child Missions to the
+   successor.  The successor Mission carries a freshly derived Authority
+   Set that does not inherit the predecessor's authority by reference
+   ([I-D.draft-mcguinness-oauth-mission-expansion]), so a Child Mission
+   that was a strict subset of the predecessor is not guaranteed to be a
+   subset of the successor.  The Mission Issuer therefore MUST treat
+   superseded as a terminal cascade trigger and MUST NOT silently re-
+   bind children to the successor.  Continuing child work under the
+   successor requires an explicit new Child Mission creation (Section 6)
+   under a successor grant, which re-runs strict-subset validation
+   (Section 8.1) against the successor's Authority Set.
 
    The Mission Issuer MUST implement one of these cascade modes and
    record it on the Child Mission:
 
-   immediate:  The Child Mission transitions to a non-active state when
-      the parent transition commits.
+   immediate:  On a terminal trigger the Child Mission transitions to
+      the cascaded state when the parent transition commits.  On the
+      reversible trigger the child is held non-active while the parent
+      is suspended and restored to its prior state on parent resume.
 
    bounded_staleness:  The Child Mission is treated as non-active no
-      later than the deployment's published cascade staleness bound.
+      later than the cascade staleness bound.  That bound is the
+      deployment's mission_max_stale_seconds
+      ([I-D.draft-mcguinness-oauth-mission-status]) unless the
+      deployment publishes a different bound for child cascade.
 
    status_required:  Consumers MUST check parent state through Mission
       Status before accepting child Mission authority.
@@ -518,8 +557,25 @@ Table of Contents
 
 10.1.  Child Mission State
 
-   A Child Mission has its own state and also depends on parent state.
-   For derivation under a Child Mission, both conditions MUST hold:
+   A Child Mission has its own state, drawn from the issuance profile's
+   lifecycle state space ([I-D.draft-mcguinness-oauth-mission]).  This
+   profile defines one child-specific terminal state:
+
+   cascaded:  A terminal state a Child Mission enters when a terminal
+      cascade trigger on its Parent Mission terminates it under
+      immediate cascade (Section 10).  It is distinct from revoked (the
+      child itself was not revoked) and expired (the child's own expiry
+      was not reached), so audit can tell a cascade-terminated child
+      from a directly terminated one.  Following the issuance profile's
+      forward-compatibility rule, a consumer treats cascaded as non-
+      active, as it treats any state other than active.  Mission Status
+      ([I-D.draft-mcguinness-oauth-mission-status]) reports it among the
+      terminal states, and a Mission lifecycle-change event
+      ([I-D.draft-mcguinness-oauth-mission-signals]) carries it on the
+      cascade transition.
+
+   A Child Mission also depends on parent state.  For derivation under a
+   Child Mission, both conditions MUST hold:
 
    *  the Child Mission state is active; and
 
@@ -597,13 +653,13 @@ Table of Contents
        "id": "msn_parent_8RfX2Lqv9TqMv4z7sA2bN1k0",
        "origin": "https://as.example.com",
        "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE"
+         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
      },
      "child": {
        "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
        "origin": "https://as.example.com",
        "authority_hash":
-         "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2n"
+         "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2"
      },
      "child_actor": {
        "sub": "subagent-contract-reviewer",
@@ -637,7 +693,20 @@ Table of Contents
    agent work requires a separate authority handle, the harness can
    request a Child Mission under this profile.
 
-14.  Conformance
+14.  Authorization Server Metadata
+
+   A Mission Issuer that supports this profile SHOULD advertise it in
+   its authorization server metadata [RFC8414] so a parent agent can
+   discover child-delegation support before attempting child creation:
+
+   mission_child_delegation_supported:  OPTIONAL boolean.  When true,
+      the Mission Issuer accepts the child creation request of Section 6
+      and enforces the controls of this profile.  A client MUST NOT
+      infer the fan-out controls (Section 9) a deployment enforces from
+      this member alone; an unenforceable requested control is refused
+      at creation (Section 6.3).
+
+15.  Conformance
 
    A conforming Child-Mission-capable Mission Issuer MUST:
 
@@ -662,41 +731,41 @@ Table of Contents
    performs lineage-sensitive policy, however, MUST understand the
    parent member before relying on it.
 
-15.  Security Considerations
+16.  Security Considerations
 
-15.1.  Authority by Ancestry
+16.1.  Authority by Ancestry
 
    The primary threat is implicit authority inheritance: a child actor
    acts because it descends from a parent session.  This profile
    requires explicit child Mission creation and rejects session ancestry
    as an authorization basis.
 
-15.2.  Fan-Out Amplification
+16.2.  Fan-Out Amplification
 
    Many child actors at the same depth can amplify authority even when
    each child is a subset.  Fan-out controls are required so deployments
    can bound breadth as well as depth.
 
-15.3.  Cascade Failure
+16.3.  Cascade Failure
 
    If parent revocation does not reach children, child authority can
    outlive its source.  Cascade modes define how termination propagates
    and how consumers bound stale parent state.
 
-15.4.  Parent Confusion
+16.4.  Parent Confusion
 
    An attacker could try to create a child under a parent it does not
    control by naming a parent identifier.  The Mission Issuer resolves
    the parent from parent_token, not from the identifier, and verifies
    the two match.
 
-15.5.  Subset Bugs
+16.5.  Subset Bugs
 
    Subset evaluation is the security core of this profile.  Deployments
    SHOULD keep subset rules deterministic and auditable, and SHOULD
    record the exact parent entries used to justify each child entry.
 
-16.  Privacy Considerations
+17.  Privacy Considerations
 
    The parent member exposes Mission lineage and can correlate child and
    parent activity.  Deployments SHOULD minimize cross-audience
@@ -704,7 +773,7 @@ Table of Contents
    and SHOULD restrict child delegation evidence to authorized audit
    consumers.
 
-17.  IANA Considerations
+18.  IANA Considerations
 
    This document registers three parameters in the "OAuth Parameters"
    registry.  For each: Parameter Usage Location authorization request;
@@ -724,6 +793,12 @@ Table of Contents
    back channel, never on a front-channel authorization request
    (Section 6).
 
+   This document registers one member in the existing "OAuth
+   Authorization Server Metadata" registry [RFC8414]: Change Controller
+   IETF; Reference this document, Section 14.
+
+   *  mission_child_delegation_supported
+
    Consistent with the issuance profile, which registers the mission
    claim as an open object with no registry of its members, this
    document defines the parent member of the mission claim (Section 7)
@@ -741,9 +816,9 @@ Table of Contents
    Child Delegation Denial Reason" registry with a Specification
    Required [RFC8126] policy; this document does not create it.
 
-18.  References
+19.  References
 
-18.1.  Normative References
+19.1.  Normative References
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
@@ -783,12 +858,17 @@ Table of Contents
               DOI 10.17487/RFC8259, December 2017,
               <https://www.rfc-editor.org/rfc/rfc8259>.
 
+   [RFC8414]  Jones, M., Sakimura, N., and J. Bradley, "OAuth 2.0
+              Authorization Server Metadata", RFC 8414,
+              DOI 10.17487/RFC8414, June 2018,
+              <https://www.rfc-editor.org/rfc/rfc8414>.
+
    [RFC9126]  Lodderstedt, T., Campbell, B., Sakimura, N., Tonge, D.,
               and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",
               RFC 9126, DOI 10.17487/RFC9126, September 2021,
               <https://www.rfc-editor.org/rfc/rfc9126>.
 
-18.2.  Informative References
+19.2.  Informative References
 
    [I-D.draft-mcguinness-oauth-mission-harness]
               McGuinness, K., "Mission-Aware Agent Harnesses for OAuth
@@ -796,6 +876,13 @@ Table of Contents
               oauth-mission-harness, 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-mission-harness>.
+
+   [I-D.draft-mcguinness-oauth-mission-signals]
+              McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              mission-signals, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-signals>.
 
    [RFC8126]  Cotton, M., Leiba, B., and T. Narten, "Guidelines for
               Writing an IANA Considerations Section in RFCs", BCP 26,

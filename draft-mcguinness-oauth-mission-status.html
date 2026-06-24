@@ -1066,7 +1066,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 25 December 2026</td>
+<td class="center">Expires 26 December 2026</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1079,12 +1079,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-status-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-06-23" class="published">23 June 2026</time>
+<time datetime="2026-06-24" class="published">24 June 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2026-12-25">25 December 2026</time></dd>
+<dd class="expires"><time datetime="2026-12-26">26 December 2026</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1141,7 +1141,7 @@ profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 25 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 26 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1212,19 +1212,22 @@ profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
                 <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-operations" class="internal xref">Operations</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
-                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-authentication-2" class="internal xref">Authentication</a></p>
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-legal-transitions" class="internal xref">Legal Transitions</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
-                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-authorization" class="internal xref">Authorization</a></p>
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-authentication-2" class="internal xref">Authentication</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
-                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-worked-example" class="internal xref">Worked Example</a></p>
+                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-authorization" class="internal xref">Authorization</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5">
-                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-idempotency" class="internal xref">Idempotency</a></p>
+                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-worked-example" class="internal xref">Worked Example</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.6">
-                <p id="section-toc.1-1.5.2.6.1"><a href="#section-5.6" class="auto internal xref">5.6</a>.  <a href="#name-relationship-to-rfc-7009" class="internal xref">Relationship to RFC 7009</a></p>
+                <p id="section-toc.1-1.5.2.6.1"><a href="#section-5.6" class="auto internal xref">5.6</a>.  <a href="#name-idempotency-and-conflicts" class="internal xref">Idempotency and Conflicts</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.7">
+                <p id="section-toc.1-1.5.2.7.1"><a href="#section-5.7" class="auto internal xref">5.7</a>.  <a href="#name-relationship-to-rfc-7009" class="internal xref">Relationship to RFC 7009</a></p>
 </li>
             </ul>
 </li>
@@ -1611,12 +1614,17 @@ the Authority Set (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="c
 "Integrity Anchors").<a href="#section-3.4-10.2.2.2.1" class="pilcrow">¶</a></p>
 </li>
               <li class="normal" id="section-3.4-10.2.2.3">
-                <p id="section-3.4-10.2.2.3.1"><code>state</code>: the current Mission lifecycle state. With this extension
-the state space is <code>active</code>, <code>revoked</code>, <code>expired</code>
+                <p id="section-3.4-10.2.2.3.1"><code>state</code>: the current Mission lifecycle state. The authoritative
+state space is the issuance profile's
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission Lifecycle
-and Gating"), extended with <code>suspended</code> and <code>completed</code> when the
-Mission Lifecycle endpoint (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>) is
-deployed.<a href="#section-3.4-10.2.2.3.1" class="pilcrow">¶</a></p>
+and Gating"): the core states <code>active</code>, <code>revoked</code>, <code>expired</code>, this
+profile's <code>suspended</code> and <code>completed</code> when the Mission Lifecycle
+endpoint (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>) is deployed, and any
+further state a companion profile defines and the deployment runs
+(<code>superseded</code> for an expanded predecessor; <code>cascaded</code> for a
+cascade-terminated Child Mission). A consumer applies the issuance
+profile's forward-compatibility rule: only <code>active</code> permits reliance,
+and every other value, recognized or not, is non-active.<a href="#section-3.4-10.2.2.3.1" class="pilcrow">¶</a></p>
 </li>
               <li class="normal" id="section-3.4-10.2.2.4">
                 <p id="section-3.4-10.2.2.4.1"><code>expires_at</code>: an <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> string giving the point until which
@@ -1674,7 +1682,10 @@ to other audiences <span class="bcp14">MUST NOT</span> be disclosed.<a href="#se
 <p id="section-3.5-1">Consumers <span class="bcp14">SHOULD</span> cache a response keyed on (<code>mission_id</code>, audience)
 until <code>mission.expires_at</code>. Consumers <span class="bcp14">MUST NOT</span> use a cached response
 after <code>mission.expires_at</code>, with up to 30 seconds skew tolerance for
-the <code>active</code> state only and no tolerance for terminal states.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
+the <code>active</code> state only and no tolerance for any other state. The
+non-terminal <code>suspended</code> state takes no tolerance because it is
+reversible: a parent may be resumed to <code>active</code>, so a consumer <span class="bcp14">MUST NOT</span>
+extend reliance on a cached <code>suspended</code> (or any non-<code>active</code>) response.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-status-anti-oracle">
@@ -1738,14 +1749,14 @@ symbols are hard errors. The body of a hard error is a JSON object
                 <code>terminated</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">200</td>
-              <td class="text-left" rowspan="1" colspan="1">Mission is <code>revoked</code>, <code>completed</code>, or <code>expired</code>.</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission is in a terminal state: <code>revoked</code>, <code>completed</code>, <code>expired</code>, <code>superseded</code>, or <code>cascaded</code>.</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>suspended</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">200</td>
-              <td class="text-left" rowspan="1" colspan="1">Mission is suspended.</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission is suspended (non-terminal).</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
@@ -1949,39 +1960,112 @@ audit, maximum 1024 characters.<a href="#section-5.1-2.6.1" class="pilcrow">¶</
         </ul>
 </section>
 </div>
-<div id="authentication">
+<div id="legal-transitions">
 <section id="section-5.2">
-        <h3 id="name-authentication-2">
-<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-authentication-2" class="section-name selfRef">Authentication</a>
+        <h3 id="name-legal-transitions">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-legal-transitions" class="section-name selfRef">Legal Transitions</a>
         </h3>
-<p id="section-5.2-1">The lifecycle endpoint uses the same authentication mechanisms as the
+<p id="section-5.2-1">An operation is legal only from the source states below. The terminal
+states (<code>revoked</code>, <code>expired</code>, <code>completed</code>, and the companion-defined
+terminal states <code>superseded</code> and <code>cascaded</code>) accept no operation.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-2">
+          <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Operation</th>
+              <th class="text-left" rowspan="1" colspan="1">Legal from</th>
+              <th class="text-left" rowspan="1" colspan="1">Resulting state</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>revoke</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>active</code>, <code>suspended</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>revoked</code>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>suspend</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>active</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>suspended</code>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>resume</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>suspended</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>active</code>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>complete</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>active</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>completed</code>
+</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-5.2-3">A request for an operation against a state it is not legal from <span class="bcp14">MUST</span> be
+refused as a conflict (<a href="#idempotency" class="auto internal xref">Section 5.6</a>); the AS <span class="bcp14">MUST NOT</span> treat it as a
+no-op. Re-requesting an operation that has already reached its resulting
+state (for example, <code>revoke</code> on an already-<code>revoked</code> Mission) is
+idempotent and succeeds without a state change. A Mission that reaches
+<code>mission_expiry</code> transitions to <code>expired</code> independently of this
+endpoint, from <code>active</code> or <code>suspended</code>.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authentication">
+<section id="section-5.3">
+        <h3 id="name-authentication-2">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-authentication-2" class="section-name selfRef">Authentication</a>
+        </h3>
+<p id="section-5.3-1">The lifecycle endpoint uses the same authentication mechanisms as the
 Mission Status endpoint (<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>): mTLS,
 DPoP-bound bearer, or private-key JWT, discovered through the AS's
-existing OAuth client-authentication metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+existing OAuth client-authentication metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authorization">
-<section id="section-5.3">
+<section id="section-5.4">
         <h3 id="name-authorization">
-<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-authorization" class="section-name selfRef">Authorization</a>
+<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-authorization" class="section-name selfRef">Authorization</a>
         </h3>
-<p id="section-5.3-1">The AS authorizes lifecycle operations against deployment policy; this
+<p id="section-5.4-1">The AS authorizes lifecycle operations against deployment policy; this
 document does not standardize the policy. Typical deployments
 authorize <code>revoke</code> to the Mission's Subject or Approver and to
 administrators; <code>suspend</code> and <code>resume</code> to administrators; and
-<code>complete</code> to the requesting client or an administrator.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
-<p id="section-5.3-2">The AS <span class="bcp14">MUST</span> refuse an unauthorized lifecycle request with the
+<code>complete</code> to the requesting client or an administrator.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
+<p id="section-5.4-2">The AS <span class="bcp14">MUST</span> refuse an unauthorized lifecycle request with the
 not-found response shape of <a href="#mission-status-errors" class="auto internal xref">Section 3.7</a>, so the endpoint
-does not act as a Mission enumeration oracle.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+does not act as a Mission enumeration oracle.<a href="#section-5.4-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="worked-example">
-<section id="section-5.4">
+<section id="section-5.5">
         <h3 id="name-worked-example">
-<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-worked-example" class="section-name selfRef">Worked Example</a>
+<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-worked-example" class="section-name selfRef">Worked Example</a>
         </h3>
-<p id="section-5.4-1">Revoke request:<a href="#section-5.4-1" class="pilcrow">¶</a></p>
-<div class="lang-http-message sourcecode" id="section-5.4-2">
+<p id="section-5.5-1">Revoke request:<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+<div class="lang-http-message sourcecode" id="section-5.5-2">
 <pre>
 POST /as/mission/lifecycle HTTP/1.1
 Host: as.example.com
@@ -1993,27 +2077,27 @@ mission=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 &amp;operation=revoke
 &amp;reason=Quarterly+reconcile+completed+early
 &amp;nonce=nonce_8Y3vN0sM6tP1xR9bQ5
-</pre><a href="#section-5.4-2" class="pilcrow">¶</a>
+</pre><a href="#section-5.5-2" class="pilcrow">¶</a>
 </div>
-<p id="section-5.4-3">Revoke success response: the AS returns the updated status as a signed
+<p id="section-5.5-3">Revoke success response: the AS returns the updated status as a signed
 Mission Status Response (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>). Because the
 Lifecycle request carries no <code>audience</code>, the AS sets <code>aud</code> to the
 authenticated requester and <span class="bcp14">MAY</span> omit <code>authorization_details</code> (a
 lifecycle confirmation reports <code>state</code>, not audience-scoped authority);
 <code>sub</code> is the authenticated requesting client, as for any Mission Status
 Response, while the human actor behind the operation is recorded only
-in the audit log.<a href="#section-5.4-3" class="pilcrow">¶</a></p>
-<div class="lang-http-message sourcecode" id="section-5.4-4">
+in the audit log.<a href="#section-5.5-3" class="pilcrow">¶</a></p>
+<div class="lang-http-message sourcecode" id="section-5.5-4">
 <pre>
 HTTP/1.1 200 OK
 Content-Type: application/mission-status-response+jwt
 Cache-Control: no-store
 
 eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
-</pre><a href="#section-5.4-4" class="pilcrow">¶</a>
+</pre><a href="#section-5.5-4" class="pilcrow">¶</a>
 </div>
-<p id="section-5.4-5">Decoded JWS payload:<a href="#section-5.4-5" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-5.4-6">
+<p id="section-5.5-5">Decoded JWS payload:<a href="#section-5.5-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-5.5-6">
 <pre>
 {
   "iss": "https://as.example.com",
@@ -2032,35 +2116,42 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
     "mission_expiry": "2026-12-31T23:59:59Z"
   }
 }
-</pre><a href="#section-5.4-6" class="pilcrow">¶</a>
+</pre><a href="#section-5.5-6" class="pilcrow">¶</a>
 </div>
-<p id="section-5.4-7">The AS records the operation, actor, time, and any <code>reason</code> in its
+<p id="section-5.5-7">The AS records the operation, actor, time, and any <code>reason</code> in its
 audit log; the response confirms the outcome through the updated
-<code>state</code>.<a href="#section-5.4-7" class="pilcrow">¶</a></p>
+<code>state</code>.<a href="#section-5.5-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="idempotency">
-<section id="section-5.5">
-        <h3 id="name-idempotency">
-<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-idempotency" class="section-name selfRef">Idempotency</a>
+<section id="section-5.6">
+        <h3 id="name-idempotency-and-conflicts">
+<a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-idempotency-and-conflicts" class="section-name selfRef">Idempotency and Conflicts</a>
         </h3>
-<p id="section-5.5-1">Lifecycle operations <span class="bcp14">MUST</span> be idempotent on the pair (<code>mission</code>,
+<p id="section-5.6-1">Lifecycle operations <span class="bcp14">MUST</span> be idempotent on the pair (<code>mission</code>,
 <code>operation</code>). A repeated request that does not change state returns
 success without side effect, returning the current Mission Status
-Response.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+Response. This applies only when the operation is legal from the current
+state and has already reached its resulting state
+(<a href="#legal-transitions" class="auto internal xref">Section 5.2</a>).<a href="#section-5.6-1" class="pilcrow">¶</a></p>
+<p id="section-5.6-2">An operation that is not legal from the current state (for example,
+<code>resume</code> on a Mission that was never suspended, or any operation on a
+terminal state) is a conflict, not an idempotent no-op. The AS <span class="bcp14">MUST</span>
+refuse it with HTTP 409 and a JSON body whose error symbol is
+<code>conflict</code>, leaving the Mission state unchanged.<a href="#section-5.6-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="relationship-to-rfc-7009">
-<section id="section-5.6">
+<section id="section-5.7">
         <h3 id="name-relationship-to-rfc-7009">
-<a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-relationship-to-rfc-7009" class="section-name selfRef">Relationship to RFC 7009</a>
+<a href="#section-5.7" class="section-number selfRef">5.7. </a><a href="#name-relationship-to-rfc-7009" class="section-name selfRef">Relationship to RFC 7009</a>
         </h3>
-<p id="section-5.6-1">A Mission revocation through this endpoint cascades to credentials
+<p id="section-5.7-1">A Mission revocation through this endpoint cascades to credentials
 derived from the Mission per the AS's advertised revocation
 propagation (<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>). The AS <span class="bcp14">MAY</span> additionally invoke
 <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> token revocation for specific outstanding tokens when it
 knows their <code>jti</code>. <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> alone does NOT revoke a Mission; the
-lifecycle endpoint is the authoritative Mission state change.<a href="#section-5.6-1" class="pilcrow">¶</a></p>
+lifecycle endpoint is the authoritative Mission state change.<a href="#section-5.7-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2576,6 +2667,14 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
 <a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Child Mission Delegation for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-child-delegation</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-expansion</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-signals</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-signals">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-signals</a>&gt;</span>. </dd>

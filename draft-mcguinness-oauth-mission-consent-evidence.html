@@ -1062,7 +1062,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 25 December 2026</td>
+<td class="center">Expires 26 December 2026</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1075,12 +1075,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-consent-evidence-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-06-23" class="published">23 June 2026</time>
+<time datetime="2026-06-24" class="published">24 June 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2026-12-25">25 December 2026</time></dd>
+<dd class="expires"><time datetime="2026-12-26">26 December 2026</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1135,7 +1135,7 @@ without making the disclosure itself an authority grant.<a href="#section-abstra
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 25 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 26 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1635,9 +1635,22 @@ disclosure and construct a new one; it <span class="bcp14">MUST NOT</span> reuse
 <dt id="section-6-2.3">
 <code>mission</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.4">
-          <p id="section-6-2.4.1"><span class="bcp14">REQUIRED</span>. An object containing <code>id</code>, <code>origin</code>, <code>intent_hash</code>,
-<code>authority_hash</code>, and, when this profile records it on the Mission,
-<code>consent_rendering_hash</code>.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-6-2.4.1"><span class="bcp14">REQUIRED</span>. An object binding the evidence to what was approved. Its
+shape depends on <code>decision</code>, because a Mission exists only after an
+approval (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>):
+- When <code>decision</code> is <code>approved</code>, it contains <code>id</code>, <code>origin</code>,
+  <code>intent_hash</code>, <code>authority_hash</code>, and, when this profile records it
+  on the Mission, <code>consent_rendering_hash</code>.
+- When <code>decision</code> is <code>declined</code>, no Mission was created
+  (<a href="#declined-events" class="auto internal xref">Section 7.1</a>), so there is no <code>id</code>. It instead contains
+  <code>origin</code> and the <code>intent_hash</code> and <code>authority_hash</code> the disclosure
+  corresponded to, matching the disclosure object's <code>source_hashes</code>
+  (<a href="#consent-disclosure" class="auto internal xref">Section 4</a>). It <span class="bcp14">MUST NOT</span> contain <code>id</code>.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+<p id="section-6-2.4.2">This descriptor follows the evidence-descriptor convention of the
+issuance profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): it is the
+<code>mission</code> claim shape extended with the collision-resistantly named
+audit members <code>intent_hash</code> and <code>consent_rendering_hash</code>, and it is
+not authority-bearing on its own.<a href="#section-6-2.4.2" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.5">
@@ -1731,12 +1744,12 @@ Consent Evidence object with <code>evidence_envelope</code> removed.<a href="#se
 {
   "evidence_id": "cns_7rP2kL9mQ4",
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEd",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com",
-    "intent_hash": "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6s",
-    "authority_hash": "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE",
+    "intent_hash": "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+    "authority_hash": "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "consent_rendering_hash":
-      "sha-256:CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4"
+      "sha-256:CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz"
   },
   "approver": {
     "iss": "https://idp.example.com",
@@ -1754,7 +1767,7 @@ Consent Evidence object with <code>evidence_envelope</code> removed.<a href="#se
   "disclosure": {
     "disclosure_id": "disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4"
+      "sha-256:CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz"
   },
   "evidence_envelope": {
     "format": "jws-compact",
@@ -1783,19 +1796,29 @@ evidence service authorized by the Mission Issuer. A verifier:<a href="#section-
 </li>
           <li id="section-6.1-2.4">
             <p id="section-6.1-2.4.1">verifies the signing key against the Mission Issuer's published key
-material or configured trust anchors;<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
+material or configured trust anchors; and<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.1-2.5">
-            <p id="section-6.1-2.5.1">recomputes <code>consent_rendering_hash</code> over the Consent Disclosure
-object or verifies the referenced disclosure against that hash; and<a href="#section-6.1-2.5.1" class="pilcrow">¶</a></p>
-</li>
-          <li id="section-6.1-2.6">
-            <p id="section-6.1-2.6.1">verifies that the Mission anchors in <code>mission</code> match the Mission
-record being audited.<a href="#section-6.1-2.6.1" class="pilcrow">¶</a></p>
+            <p id="section-6.1-2.5.1">when <code>decision</code> is <code>approved</code>, verifies that the Mission anchors in
+<code>mission</code> match the Mission record being audited. When <code>decision</code> is
+<code>declined</code> there is no Mission record (<a href="#declined-events" class="auto internal xref">Section 7.1</a>); the
+verifier instead confirms the <code>mission</code> descriptor carries <code>origin</code>
+and the two <code>source_hashes</code> anchors and no <code>id</code>.<a href="#section-6.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-6.1-3">Evidence whose format is unsupported <span class="bcp14">MUST</span> be rejected rather than
-accepted without verification.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+<p id="section-6.1-3">Steps 1 through 5 establish the integrity of the evidence record itself
+and rely only on the record, since <code>consent_rendering_hash</code> is carried
+inside the signed <code>mission</code>. Reconstructing the disclosure is a separate
+step that depends on retrieval: when the disclosure object is inlined, a
+verifier recomputes <code>consent_rendering_hash</code> over it and compares; when
+it is carried by reference (<a href="#minimization" class="auto internal xref">Section 8.1</a>), the verifier retrieves it
+and verifies it against <code>consent_rendering_hash</code>. A verifier <span class="bcp14">MUST NOT</span>
+treat a disclosure that is merely unretrievable as an integrity failure
+of the evidence record; failure to retrieve a referenced disclosure
+within the retention window is an audit failure (<a href="#audit" class="auto internal xref">Section 8</a>), not a
+signature or anchor failure.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+<p id="section-6.1-4">Evidence whose envelope format is unsupported <span class="bcp14">MUST</span> be rejected rather
+than accepted without verification.<a href="#section-6.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                              23 June 2026
-Expires: 25 December 2026
+Intended status: Informational                              24 June 2026
+Expires: 26 December 2026
 
 
                   Mission Intent Shaping for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 December 2026.
+   This Internet-Draft will expire on 26 December 2026.
 
 Copyright Notice
 
@@ -197,7 +197,10 @@ Table of Contents
    Issuer, Approver, and Authorization Server as defined by
    [I-D.draft-mcguinness-oauth-mission].  Where this document refers to
    "the issuance profile" without a section, it means that document as a
-   whole.
+   whole.  "Client" and "client-side" in this document mean the OAuth
+   client, the Agent (Client) of the issuance profile that submits the
+   Mission Intent; the shaper runs on that Agent's side of the trust
+   boundary.
 
 3.  Conventions and Terminology
 
@@ -515,9 +518,16 @@ Table of Contents
 
    3.  refuse with a reason.
 
-   The shaper MUST NOT silently choose the broader interpretation.  If a
-   deployment permits policy-based default narrowing, Shaping Evidence
-   MUST record the policy rule that authorized that narrowing.
+   Because a shaper is a client-side component whose internal reasoning
+   the Mission Issuer cannot observe, this profile expresses the
+   requirement through the observable artifact rather than the internal
+   choice: when a shaper resolves an ambiguity in the broadening
+   direction, Shaping Evidence MUST record the resolution and, where a
+   deployment permits policy-based default narrowing, the policy rule
+   that authorized it.  A proposal that broadens authority on an
+   ambiguity without a corresponding Shaping Evidence record is non-
+   conforming.  The Mission Issuer enforces its own ceiling and consent
+   regardless of what the shaper recorded.
 
    Requesting clarification is not approval.  The user's response is
    incorporated into the Mission Intent; the Mission Issuer still
@@ -611,8 +621,16 @@ Table of Contents
    shaper_version:  A string identifying the shaper implementation,
       model, policy bundle, or workflow version.
 
-   input_digest:  A digest over the shaping request, excluding fields
-      deployment policy marks as non-retained.
+   input_digest:  A digest over the shaping request, in the integrity-
+      anchor encoded form of [I-D.draft-mcguinness-oauth-mission],
+      computed over the JCS [RFC8785] canonical bytes of the request
+      after removing the fields the named exclusion ruleset marks as
+      non-retained.  To make the digest recomputable by a later auditor,
+      the evidence MUST also record input_exclusion_ruleset, an
+      identifier (and version) of the exclusion ruleset applied, and the
+      auditor recomputes the digest over the retained canonical input
+      under that ruleset.  A digest whose exclusion set is not recorded
+      cannot be reproduced and so is not a conforming input_digest.
 
    user_supplied_facts:  Facts copied from the request.
 
@@ -639,9 +657,15 @@ Table of Contents
    record can cite how the proposal was produced.  When it does:
 
    *  shaping_evidence_hash is a string in the integrity-anchor form of
-      [I-D.draft-mcguinness-oauth-mission], computed over the JCS
-      [RFC8785] canonical bytes of the Shaping Evidence object.  It is
-      an audit commitment only.
+      [I-D.draft-mcguinness-oauth-mission].  Like every other committed
+      object in this suite, the Shaping Evidence object is committed
+      inside that profile's domain-separated {typ, iss, value} envelope,
+      with typ of mission-shaping-evidence, iss the Mission Issuer
+      origin, and value the Shaping Evidence object; the anchor is the
+      prefixed digest of the JCS [RFC8785] canonical bytes of that
+      envelope.  Hashing the bare object would omit the typ domain
+      separation and iss binding the integrity-anchor construction
+      exists to provide.  It is an audit commitment only.
 
    *  A deployment MAY instead, or in addition, carry an integrity
       envelope over the Shaping Evidence, for example a JWS [RFC7515]
@@ -916,6 +940,10 @@ Table of Contents
               DOI 10.17487/RFC2119, March 1997,
               <https://www.rfc-editor.org/rfc/rfc2119>.
 
+   [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
+              Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
+              2015, <https://www.rfc-editor.org/rfc/rfc7515>.
+
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
@@ -942,10 +970,6 @@ Table of Contents
    [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
               RFC 6749, DOI 10.17487/RFC6749, October 2012,
               <https://www.rfc-editor.org/rfc/rfc6749>.
-
-   [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
-              Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
-              2015, <https://www.rfc-editor.org/rfc/rfc7515>.
 
    [RFC9126]  Lodderstedt, T., Campbell, B., Sakimura, N., Tonge, D.,
               and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",

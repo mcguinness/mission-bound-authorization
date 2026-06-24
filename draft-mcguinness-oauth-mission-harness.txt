@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            23 June 2026
-Expires: 25 December 2026
+Intended status: Standards Track                            24 June 2026
+Expires: 26 December 2026
 
 
               Mission-Aware Agent Harnesses for OAuth 2.0
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 December 2026.
+   This Internet-Draft will expire on 26 December 2026.
 
 Copyright Notice
 
@@ -220,7 +220,15 @@ Table of Contents
       the harness.
 
    state_source:  REQUIRED when state is present.  One of status,
-      signal, runtime_decision, or a deployment-defined source.
+      signal, runtime_decision, harness, operator, or a deployment-
+      defined source: status and signal name the Mission Status and
+      Lifecycle Signals surfaces, runtime_decision a runtime enforcement
+      decision, harness a harness stop decision, and operator a human
+      operator action.  This enumeration is the shared state_source
+      value space for Mission-aware execution evidence; the
+      orchestration profile
+      ([I-D.draft-mcguinness-oauth-mission-orchestration]) reuses it
+      rather than defining its own.
 
    enforcement_scope:  OPTIONAL.  A string or object identifying the
       runtime enforcement scope that applies to this session or node.
@@ -504,6 +512,18 @@ Table of Contents
 
                                   Table 1
 
+   The non-core states in this matrix are defined by companion profiles
+   a deployment may run: suspended and completed by Mission Status
+   ([I-D.draft-mcguinness-oauth-mission-status]), superseded by Mission
+   Expansion ([I-D.draft-mcguinness-oauth-mission-expansion]), and
+   cascaded by Child Mission Delegation
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]).  The harness
+   needs none of those profiles to be conformant: per the issuance
+   profile's forward-compatibility rule, it treats any state other than
+   active, including one it does not recognize, as non-active and stops
+   governed continuation accordingly.  The named rows are the minimum
+   behavior where a deployment does run the defining profile.
+
    For irreversible actions, external commitments, and privileged
    administration, handoff or orchestration handling under a deployment
    unwind plan SHOULD be used when work may already be in flight.
@@ -720,6 +740,26 @@ Table of Contents
               <https://www.rfc-editor.org/rfc/rfc8259>.
 
 16.2.  Informative References
+
+   [I-D.draft-mcguinness-oauth-mission-child-delegation]
+              McGuinness, K., "Child Mission Delegation for OAuth 2.0",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              mission-child-delegation, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-child-delegation>.
+
+   [I-D.draft-mcguinness-oauth-mission-expansion]
+              McGuinness, K., "Mission Expansion for OAuth 2.0", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-mission-
+              expansion, 2026, <https://datatracker.ietf.org/doc/html/
+              draft-mcguinness-oauth-mission-expansion>.
+
+   [I-D.draft-mcguinness-oauth-mission-orchestration]
+              McGuinness, K., "Mission Orchestration and Unwinding for
+              OAuth 2.0", Work in Progress, Internet-Draft, draft-
+              mcguinness-oauth-mission-orchestration, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-orchestration>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",

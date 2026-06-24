@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            23 June 2026
-Expires: 25 December 2026
+Intended status: Standards Track                            24 June 2026
+Expires: 26 December 2026
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 December 2026.
+   This Internet-Draft will expire on 26 December 2026.
 
 Copyright Notice
 
@@ -86,11 +86,12 @@ Table of Contents
    4.  Token Introspection Mission Projection
    5.  Mission Lifecycle Endpoint
      5.1.  Operations
-     5.2.  Authentication
-     5.3.  Authorization
-     5.4.  Worked Example
-     5.5.  Idempotency
-     5.6.  Relationship to RFC 7009
+     5.2.  Legal Transitions
+     5.3.  Authentication
+     5.4.  Authorization
+     5.5.  Worked Example
+     5.6.  Idempotency and Conflicts
+     5.7.  Relationship to RFC 7009
    6.  Revocation Propagation
      6.1.  Recommended Access-Token TTL
    7.  Authorization Server Metadata
@@ -343,11 +344,18 @@ Table of Contents
          the Authority Set ([I-D.draft-mcguinness-oauth-mission],
          Section "Integrity Anchors").
 
-      -  state: the current Mission lifecycle state.  With this
-         extension the state space is active, revoked, expired
+      -  state: the current Mission lifecycle state.  The authoritative
+         state space is the issuance profile's
          ([I-D.draft-mcguinness-oauth-mission], Section "Mission
-         Lifecycle and Gating"), extended with suspended and completed
-         when the Mission Lifecycle endpoint (Section 5) is deployed.
+         Lifecycle and Gating"): the core states active, revoked,
+         expired, this profile's suspended and completed when the
+         Mission Lifecycle endpoint (Section 5) is deployed, and any
+         further state a companion profile defines and the deployment
+         runs (superseded for an expanded predecessor; cascaded for a
+         cascade-terminated Child Mission).  A consumer applies the
+         issuance profile's forward-compatibility rule: only active
+         permits reliance, and every other value, recognized or not, is
+         non-active.
 
       -  expires_at: an [RFC8259] string giving the point until which
          the consumer MAY rely on the reported state without re-
@@ -388,7 +396,10 @@ Table of Contents
    Consumers SHOULD cache a response keyed on (mission_id, audience)
    until mission.expires_at.  Consumers MUST NOT use a cached response
    after mission.expires_at, with up to 30 seconds skew tolerance for
-   the active state only and no tolerance for terminal states.
+   the active state only and no tolerance for any other state.  The non-
+   terminal suspended state takes no tolerance because it is reversible:
+   a parent may be resumed to active, so a consumer MUST NOT extend
+   reliance on a cached suspended (or any non-active) response.
 
 3.6.  Anti-Oracle Property
 
@@ -409,26 +420,28 @@ Table of Contents
    are hard errors.  The body of a hard error is a JSON object
    [RFC8259].
 
-   +==============+======+=============================================+
-   | Symbol       | HTTP | Description                                 |
-   +==============+======+=============================================+
-   | ok           | 200  | Mission found and visible.                  |
-   +--------------+------+---------------------------------------------+
-   | unauthorized | 401  | Request not authenticated.                  |
-   +--------------+------+---------------------------------------------+
-   | not_found    | 404  | Reference does not exist                    |
-   |              |      | OR is not visible.                          |
-   +--------------+------+---------------------------------------------+
-   | terminated   | 200  | Mission is revoked,                         |
-   |              |      | completed, or expired.                      |
-   +--------------+------+---------------------------------------------+
-   | suspended    | 200  | Mission is suspended.                       |
-   +--------------+------+---------------------------------------------+
-   | rate_limited | 429  | Consumer is rate-limited.                   |
-   +--------------+------+---------------------------------------------+
-   | unavailable  | 503  | AS temporarily cannot                       |
-   |              |      | serve status.                               |
-   +--------------+------+---------------------------------------------+
+         +==============+======+=================================+
+         | Symbol       | HTTP | Description                     |
+         +==============+======+=================================+
+         | ok           | 200  | Mission found and visible.      |
+         +--------------+------+---------------------------------+
+         | unauthorized | 401  | Request not authenticated.      |
+         +--------------+------+---------------------------------+
+         | not_found    | 404  | Reference does not exist OR is  |
+         |              |      | not visible.                    |
+         +--------------+------+---------------------------------+
+         | terminated   | 200  | Mission is in a terminal state: |
+         |              |      | revoked, completed, expired,    |
+         |              |      | superseded, or cascaded.        |
+         +--------------+------+---------------------------------+
+         | suspended    | 200  | Mission is suspended (non-      |
+         |              |      | terminal).                      |
+         +--------------+------+---------------------------------+
+         | rate_limited | 429  | Consumer is rate-limited.       |
+         +--------------+------+---------------------------------+
+         | unavailable  | 503  | AS temporarily cannot serve     |
+         |              |      | status.                         |
+         +--------------+------+---------------------------------+
 
                                   Table 1
 
@@ -577,14 +590,42 @@ Table of Contents
 
    *  complete: mark the Mission completed; transition to completed.
 
-5.2.  Authentication
+5.2.  Legal Transitions
+
+   An operation is legal only from the source states below.  The
+   terminal states (revoked, expired, completed, and the companion-
+   defined terminal states superseded and cascaded) accept no operation.
+
+            +===========+===================+=================+
+            | Operation | Legal from        | Resulting state |
+            +===========+===================+=================+
+            | revoke    | active, suspended | revoked         |
+            +-----------+-------------------+-----------------+
+            | suspend   | active            | suspended       |
+            +-----------+-------------------+-----------------+
+            | resume    | suspended         | active          |
+            +-----------+-------------------+-----------------+
+            | complete  | active            | completed       |
+            +-----------+-------------------+-----------------+
+
+                                  Table 2
+
+   A request for an operation against a state it is not legal from MUST
+   be refused as a conflict (Section 5.6); the AS MUST NOT treat it as a
+   no-op.  Re-requesting an operation that has already reached its
+   resulting state (for example, revoke on an already-revoked Mission)
+   is idempotent and succeeds without a state change.  A Mission that
+   reaches mission_expiry transitions to expired independently of this
+   endpoint, from active or suspended.
+
+5.3.  Authentication
 
    The lifecycle endpoint uses the same authentication mechanisms as the
    Mission Status endpoint (Section 3.2): mTLS, DPoP-bound bearer, or
    private-key JWT, discovered through the AS's existing OAuth client-
    authentication metadata [RFC8414].
 
-5.3.  Authorization
+5.4.  Authorization
 
    The AS authorizes lifecycle operations against deployment policy;
    this document does not standardize the policy.  Typical deployments
@@ -596,7 +637,7 @@ Table of Contents
    found response shape of Section 3.7, so the endpoint does not act as
    a Mission enumeration oracle.
 
-5.4.  Worked Example
+5.5.  Worked Example
 
    Revoke request:
 
@@ -650,14 +691,22 @@ Table of Contents
    audit log; the response confirms the outcome through the updated
    state.
 
-5.5.  Idempotency
+5.6.  Idempotency and Conflicts
 
    Lifecycle operations MUST be idempotent on the pair (mission,
    operation).  A repeated request that does not change state returns
    success without side effect, returning the current Mission Status
-   Response.
+   Response.  This applies only when the operation is legal from the
+   current state and has already reached its resulting state
+   (Section 5.2).
 
-5.6.  Relationship to RFC 7009
+   An operation that is not legal from the current state (for example,
+   resume on a Mission that was never suspended, or any operation on a
+   terminal state) is a conflict, not an idempotent no-op.  The AS MUST
+   refuse it with HTTP 409 and a JSON body whose error symbol is
+   conflict, leaving the Mission state unchanged.
+
+5.7.  Relationship to RFC 7009
 
    A Mission revocation through this endpoint cascades to credentials
    derived from the Mission per the AS's advertised revocation
@@ -1034,6 +1083,19 @@ Normative References
               <https://www.rfc-editor.org/rfc/rfc9701>.
 
 Informative References
+
+   [I-D.draft-mcguinness-oauth-mission-child-delegation]
+              McGuinness, K., "Child Mission Delegation for OAuth 2.0",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              mission-child-delegation, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-child-delegation>.
+
+   [I-D.draft-mcguinness-oauth-mission-expansion]
+              McGuinness, K., "Mission Expansion for OAuth 2.0", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-mission-
+              expansion, 2026, <https://datatracker.ietf.org/doc/html/
+              draft-mcguinness-oauth-mission-expansion>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",

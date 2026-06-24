@@ -1066,7 +1066,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 25 December 2026</td>
+<td class="center">Expires 26 December 2026</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1079,12 +1079,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-signals-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-06-23" class="published">23 June 2026</time>
+<time datetime="2026-06-24" class="published">24 June 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2026-12-25">25 December 2026</time></dd>
+<dd class="expires"><time datetime="2026-12-26">26 December 2026</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1141,7 +1141,7 @@ adopt it is unaffected.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 25 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 26 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1370,17 +1370,27 @@ claim of a SET <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>, 
 issuer URL.<a href="#section-4-5.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-4-5.3">
-          <p id="section-4-5.3.1"><code>state</code> (string, required): the new lifecycle state, one of
-<code>active</code>, <code>revoked</code>, <code>expired</code>, <code>suspended</code>, or <code>completed</code>. This
-enum is the lifecycle state space of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>; an event consumer
-treats every value other than <code>active</code> as non-deriving.<a href="#section-4-5.3.1" class="pilcrow">¶</a></p>
+          <p id="section-4-5.3.1"><code>state</code> (string, required): the new lifecycle state. The value space
+is the Mission lifecycle state space defined by the issuance profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (<code>active</code>, <code>revoked</code>,
+<code>expired</code>), as extended by whichever lifecycle profiles a deployment
+also runs: <code>suspended</code> and <code>completed</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), <code>superseded</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), and <code>cascaded</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). Following
+the issuance profile's forward-compatibility rule, an event consumer
+<span class="bcp14">MUST</span> treat every value other than <code>active</code> as non-deriving, including
+a value it does not recognize. A Mission Issuer that runs a profile
+defining an additional state emits that state here on the
+corresponding transition (for example, <code>superseded</code> when a
+predecessor is superseded by an expansion successor).<a href="#section-4-5.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-4-5.4">
           <p id="section-4-5.4.1"><code>prior_state</code> (string, conditional): the state immediately before the
-transition, drawn from the same enum. <span class="bcp14">REQUIRED</span> on a transition
+transition, drawn from the same value space. <span class="bcp14">REQUIRED</span> on a transition
 emission; absent only on the approval-event emission, where there is
-no prior state.<a href="#section-4-5.4.1" class="pilcrow">¶</a></p>
+no prior state. A supersede transition emits <code>prior_state</code> of <code>active</code>
+and <code>state</code> of <code>superseded</code>.<a href="#section-4-5.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-4-5.5">
           <p id="section-4-5.5.1"><code>version</code> (integer, required): a strictly monotonic per-Mission
@@ -1650,13 +1660,17 @@ approval-event emission). Optional claims: <code>tenant</code>, <code>reason</co
 SET shape. The same event type URI is also referenced by the
 substrate-neutral Mission Authority Server work, which makes <code>tenant</code> a
 required claim; this profile makes <code>tenant</code> <span class="bcp14">OPTIONAL</span> because the OAuth
-profile has no tenant model. Two rules keep the shared URI safe
-regardless of how the registrations reconcile: a consumer <span class="bcp14">MUST</span> ignore
+profile has no tenant model. Because the URI is author-controlled and
+has no IANA registry or change controller to arbitrate a shared
+definition, this profile does not rely on any cross-specification
+guarantee about its required-claim set. It relies only on consumer
+robustness, which is sufficient on its own: a consumer <span class="bcp14">MUST</span> ignore
 members it does not understand and <span class="bcp14">MUST NOT</span> reject an event solely for
-a missing <span class="bcp14">OPTIONAL</span> member (notably <code>tenant</code>); and the required-claim
-set of the shared URI is the intersection of the registrations, so a
-shared definition cannot make <code>tenant</code> required without breaking this
-profile's emitters.<a href="#section-12.1-3" class="pilcrow">¶</a></p>
+a missing <span class="bcp14">OPTIONAL</span> member (notably <code>tenant</code>). A consumer built to this
+profile therefore interoperates with an emitter of either specification
+regardless of how the two reconcile, and a deployment that needs a
+binding shared definition should pursue a registered event type rather
+than depend on the author-controlled URI.<a href="#section-12.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="oauth-authorization-server-metadata-registration">
@@ -1740,6 +1754,14 @@ IETF; Reference this document, <a href="#as-metadata" class="auto internal xref"
 <a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Child Mission Delegation for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-child-delegation</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-expansion</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="OIDC-CAEP">[OIDC-CAEP]</dt>
         <dd>
 <span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"OpenID Continuous Access Evaluation Profile 1.0"</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://openid.net/specs/openid-caep-1_0.html">https://openid.net/specs/openid-caep-1_0.html</a>&gt;</span>. </dd>
