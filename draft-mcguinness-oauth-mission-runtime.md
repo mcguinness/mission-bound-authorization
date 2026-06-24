@@ -73,6 +73,24 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-consent-evidence-latest
+  I-D.draft-mcguinness-oauth-mission-status:
+    title: "Mission Status and Lifecycle for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-status-latest
+  I-D.draft-mcguinness-oauth-mission-signals:
+    title: "Mission Lifecycle Signals for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
 
 --- abstract
 
@@ -376,7 +394,7 @@ policy authority, never self-issued by the agent or asserted from the
 agent's own context, and its rendered disclosure MAY be committed as
 Consent Evidence ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}})
 bound to the action parameters. It composes with, and does not replace,
-RFC 9470 step-up authentication, which strengthens the actor's
+{{RFC9470}} step-up authentication, which strengthens the actor's
 authentication context rather than approving a specific action.
 
 A PEP MUST refuse an action for which deployment policy or Resource
@@ -698,8 +716,10 @@ whose lifetime is the deployment's accepted state lease.
   origin Mission freshness.
 - This document defines no cross-issuer by-Mission status query.
   Deployments that need tighter freshness than the token or
-  cross-domain grant lifetime provides need an out-of-band trusted
-  status feed or a future standardized Mission Status surface.
+  cross-domain grant lifetime provides use the Mission Status profile
+  ({{I-D.draft-mcguinness-oauth-mission-status}}) or Mission Lifecycle
+  Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}), or an
+  out-of-band trusted status feed.
 - Each enforcement scope MUST publish its maximum staleness bound per
   action class and state source. This document does not impose one
   universal value.
