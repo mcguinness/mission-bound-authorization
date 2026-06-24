@@ -2239,14 +2239,20 @@ integrity anchors (<a href="#integrity-anchors" class="auto internal xref">Secti
 domain interprets, enforces, and audits identically. A consumer enforces
 the derived Authority Set, never the Intent.<a href="#section-5-4" class="pilcrow">¶</a></p>
 <p id="section-5-5">Two rules keep local derivation accountable rather than opaque. First,
-derivation <span class="bcp14">MUST</span> be reproducible: the same Mission Intent and the same
-<code>policy_version</code> <span class="bcp14">MUST</span> yield the same Authority Set at a given AS, so a
-derivation can be re-checked and a divergence detected. Second, an AS
-<span class="bcp14">SHOULD</span> make the policy a <code>policy_version</code> identifies inspectable to
-relying parties and auditors that must evaluate how it derives authority.
-Local policy is thus versioned and reviewable, which is what a
-cross-domain trust decision actually needs, even though the policy
-itself does not travel.<a href="#section-5-5" class="pilcrow">¶</a></p>
+reproducibility, scoped to how the AS derives. When the AS derives by
+narrowing a client-proposed set of <code>authorization_details</code> (below), the
+same Mission Intent and the same <code>policy_version</code> <span class="bcp14">MUST</span> yield the same
+Authority Set at a given AS, so a derivation can be re-checked and a
+divergence detected. When the AS derives generatively, from free text or
+with model assistance, that determinism is not achievable; such an AS
+<span class="bcp14">SHOULD</span> instead make the derivation reproducible on a best-effort basis,
+disclose that it is non-deterministic, and record the <code>policy_version</code>
+and the inputs so a derivation can still be reviewed after the fact.
+Second, an AS <span class="bcp14">SHOULD</span> make the policy a <code>policy_version</code> identifies
+inspectable to relying parties and auditors that must evaluate how it
+derives authority. Local policy is thus versioned and reviewable, which
+is what a cross-domain trust decision actually needs, even though the
+policy itself does not travel.<a href="#section-5-5" class="pilcrow">¶</a></p>
 <p id="section-5-6">Where cross-vendor interoperability matters, an AS <span class="bcp14">SHOULD</span> derive the
 Authority Set by narrowing a client-proposed set of
 <code>authorization_details</code> to policy, rather than generating one from free
@@ -2668,12 +2674,18 @@ wire parameter for the Subject; how the AS establishes it
 is a deployment matter.<a href="#section-6-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-6-3.3">
-          <p id="section-6-3.3.1">Render for consent the derived Authority Set, the <code>goal</code> and
-<code>constraints</code>, the <code>mission_expiry</code>, and any <code>context</code> bounds
-(notably <code>max_derivations</code>), so the Approver sees the temporal and
-issuance limits, not only the authority. When the Approver is not
-the Subject, the rendering <span class="bcp14">MUST</span> identify the Subject the authority
-is granted for.<a href="#section-6-3.3.1" class="pilcrow">¶</a></p>
+          <p id="section-6-3.3.1">Render for consent the derived Authority Set in human-meaningful
+terms, with the <code>goal</code>, <code>constraints</code>, <code>mission_expiry</code>, and any
+<code>context</code> bounds (notably <code>max_derivations</code>) as context. The object
+the Approver consents to is the <strong>derived Authority Set</strong>, what the
+agent may actually do, not the <code>goal</code> or Mission Intent: derivation
+is local policy, and nothing commits that the derived authority
+faithfully reflects the goal the Approver read, so the authority
+itself <span class="bcp14">MUST</span> be what is rendered and consented. An approval surface
+that renders only the <code>goal</code>, <code>success_criteria</code>, or Mission Intent
+and not the derived Authority Set does not conform. When the Approver
+is not the Subject, the rendering <span class="bcp14">MUST</span> identify the Subject the
+authority is granted for.<a href="#section-6-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-6-3.4">
           <p id="section-6-3.4.1">Compute the integrity anchors (<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>):

@@ -1207,6 +1207,9 @@ action <span class="bcp14">MUST</span> produce.<a href="#section-abstract-1" cla
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.6">
                 <p id="section-toc.1-1.3.2.6.1"><a href="#section-3.6" class="auto internal xref">3.6</a>.  <a href="#name-credential-custody-and-medi" class="internal xref">Credential custody and mediated execution</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.7">
+                <p id="section-toc.1-1.3.2.7.1"><a href="#section-3.7" class="auto internal xref">3.7</a>.  <a href="#name-agent-compromise-resistant-" class="internal xref">Agent-compromise-resistant enforcement</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
@@ -1856,6 +1859,40 @@ irreversible, external-commitment, and privileged-administration classes
 in its mediated set; the protection is only as broad as that set.<a href="#section-3.6-5" class="pilcrow">¶</a></p>
 </section>
 </div>
+<div id="compromise-resistant">
+<section id="section-3.7">
+        <h3 id="name-agent-compromise-resistant-">
+<a href="#section-3.7" class="section-number selfRef">3.7. </a><a href="#name-agent-compromise-resistant-" class="section-name selfRef">Agent-compromise-resistant enforcement</a>
+        </h3>
+<p id="section-3.7-1">"Protects against agent compromise" is a verifiable claim, not a label.
+A deployment claims <strong>agent-compromise-resistant enforcement</strong> only when,
+for the irreversible, external-commitment, and privileged-administration
+classes, all of the following hold (each is <span class="bcp14">SHOULD</span> in the base profile
+and <span class="bcp14">MUST</span> under this claim):<a href="#section-3.7-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.7-2.1">
+            <p id="section-3.7-2.1.1">the sender-constraint private key is held by the mediating PEP, not by
+the agent component (<a href="#custody" class="auto internal xref">Section 3.6</a>);<a href="#section-3.7-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.7-2.2">
+            <p id="section-3.7-2.2.1">governed work runs with no unmediated path to those actions, as a
+Mission-aware harness establishes
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-harness" class="cite xref">I-D.draft-mcguinness-oauth-mission-harness</a>]</span>);<a href="#section-3.7-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.7-2.3">
+            <p id="section-3.7-2.3.1">each such action requires an action-bound approval
+(<a href="#action-approval" class="auto internal xref">Section 3.4</a>); and<a href="#section-3.7-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.7-2.4">
+            <p id="section-3.7-2.4.1">the Mission state source for those classes is an active freshness
+mechanism, not token-lifetime expiry (<a href="#state-freshness" class="auto internal xref">Section 6.1</a>).<a href="#section-3.7-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.7-3">A deployment that leaves any of these as <span class="bcp14">SHOULD</span> <span class="bcp14">MUST NOT</span> claim
+agent-compromise-resistant enforcement; it may still claim base runtime
+conformance. The claim names exactly the set of classes it covers.<a href="#section-3.7-3" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="rs-runtime-profile">
@@ -2124,6 +2161,18 @@ out-of-band trusted status feed.<a href="#section-6.1-2.4.1" class="pilcrow">¶<
             <p id="section-6.1-2.5.1">Each enforcement scope <span class="bcp14">MUST</span> publish its maximum staleness bound per
 action class and state source. This document does not impose one
 universal value.<a href="#section-6.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-2.6">
+            <p id="section-6.1-2.6.1">For the irreversible, external-commitment, and
+privileged-administration classes, the state source <span class="bcp14">MUST</span> be an active
+freshness mechanism that can reflect a revocation within the staleness
+bound: origin token introspection (<span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>), the Mission Status
+profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), or Mission
+Lifecycle Signals (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>).
+Token-lifetime expiry alone is not an acceptable state source for
+these classes: it bounds staleness only by the lifetime, so a revoked
+Mission keeps deriving consequence until tokens age out, which is the
+ambient-authority gap this profile exists to close.<a href="#section-6.1-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-6.1-3">The following non-normative guidance illustrates freshness bounds that

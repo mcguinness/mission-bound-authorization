@@ -1443,7 +1443,12 @@ the Approver.<a href="#section-4-2.10.1" class="pilcrow">¶</a></p>
 <code>authority_summary</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-4-2.12">
           <p id="section-4-2.12.1"><span class="bcp14">REQUIRED</span>. An object. The rendered summary of resources, actions,
-constraints, delegation, expiry, and material consumption bounds.<a href="#section-4-2.12.1" class="pilcrow">¶</a></p>
+constraints, delegation, expiry, and material consumption bounds. This
+is the consent object: per the issuance profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the Approver consents to the
+derived authority, with <code>mission_summary</code> as context. A disclosure
+that renders <code>mission_summary</code> without a faithful <code>authority_summary</code>
+does not conform.<a href="#section-4-2.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-2.13">

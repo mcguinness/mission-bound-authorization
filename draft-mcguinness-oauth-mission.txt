@@ -772,14 +772,21 @@ Table of Contents
    Authority Set, never the Intent.
 
    Two rules keep local derivation accountable rather than opaque.
-   First, derivation MUST be reproducible: the same Mission Intent and
-   the same policy_version MUST yield the same Authority Set at a given
-   AS, so a derivation can be re-checked and a divergence detected.
-   Second, an AS SHOULD make the policy a policy_version identifies
-   inspectable to relying parties and auditors that must evaluate how it
-   derives authority.  Local policy is thus versioned and reviewable,
-   which is what a cross-domain trust decision actually needs, even
-   though the policy itself does not travel.
+   First, reproducibility, scoped to how the AS derives.  When the AS
+   derives by narrowing a client-proposed set of authorization_details
+   (below), the same Mission Intent and the same policy_version MUST
+   yield the same Authority Set at a given AS, so a derivation can be
+   re-checked and a divergence detected.  When the AS derives
+   generatively, from free text or with model assistance, that
+   determinism is not achievable; such an AS SHOULD instead make the
+   derivation reproducible on a best-effort basis, disclose that it is
+   non-deterministic, and record the policy_version and the inputs so a
+   derivation can still be reviewed after the fact.  Second, an AS
+   SHOULD make the policy a policy_version identifies inspectable to
+   relying parties and auditors that must evaluate how it derives
+   authority.  Local policy is thus versioned and reviewable, which is
+   what a cross-domain trust decision actually needs, even though the
+   policy itself does not travel.
 
    Where cross-vendor interoperability matters, an AS SHOULD derive the
    Authority Set by narrowing a client-proposed set of
@@ -1120,12 +1127,18 @@ Table of Contents
        (administrative selection, a directory, an authenticated
        reference) is a deployment matter.
 
-   3.  Render for consent the derived Authority Set, the goal and
-       constraints, the mission_expiry, and any context bounds (notably
-       max_derivations), so the Approver sees the temporal and issuance
-       limits, not only the authority.  When the Approver is not the
-       Subject, the rendering MUST identify the Subject the authority is
-       granted for.
+   3.  Render for consent the derived Authority Set in human-meaningful
+       terms, with the goal, constraints, mission_expiry, and any
+       context bounds (notably max_derivations) as context.  The object
+       the Approver consents to is the *derived Authority Set*, what the
+       agent may actually do, not the goal or Mission Intent: derivation
+       is local policy, and nothing commits that the derived authority
+       faithfully reflects the goal the Approver read, so the authority
+       itself MUST be what is rendered and consented.  An approval
+       surface that renders only the goal, success_criteria, or Mission
+       Intent and not the derived Authority Set does not conform.  When
+       the Approver is not the Subject, the rendering MUST identify the
+       Subject the authority is granted for.
 
    4.  Compute the integrity anchors (Section 6.3): authority_hash over
        the consented Authority Set and intent_hash over the approved
