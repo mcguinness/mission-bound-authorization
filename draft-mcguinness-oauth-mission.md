@@ -180,8 +180,11 @@ authorization artifact. The contribution is a single chain:
 
 The result is that a user approves a task once, and that approval,
 not a per-request scope grant, bounds and outlives every token the
-agent derives, with a verifiable link (`authority_hash`) from each
-token back to the consented authority.
+agent derives. Each token carries an `authority_hash` audit anchor back
+to the consented authority; a holder of the full Authority Set can
+verify it, and a holder of only a narrowed subset (a downstream or
+cross-domain party) treats it as an audit anchor it cannot recompute
+({{consent-binding}}).
 
 ## Why a New Object
 
@@ -784,9 +787,12 @@ A `mission_resource_access` entry is a {{RFC9396}}
 : REQUIRED. A string. The single protected resource the
   entry applies to, an absolute URI identifying an OAuth protected
   resource ({{RFC8707}}) or a Protected Resource ({{RFC9728}}). It is
-  the same kind of identifier as the {{RFC8707}} `resource` value, and
-  the AS derives the token `aud` from the `resource` of each carried
-  entry. It is carried here as a type-specific member of each
+  the same kind of identifier as the {{RFC8707}} `resource` value. The
+  AS derives the token `aud` from the `resource` values of the carried
+  entries as described in {{mission-bound-tokens}}; the `aud` identifies
+  the Resource Server(s) and need not be byte-equal to a `resource` (it
+  is typically coarser). It is carried here as a type-specific member of
+  each
   `mission_resource_access` entry, which {{RFC9396}} permits; carrying
   it per entry (rather than once for the request, as the {{RFC8707}}
   `resource` request parameter does) lets one token scope distinct
@@ -876,6 +882,15 @@ when:
 
 The AS MUST refuse to derive an entry that is not a subset of some
 Mission Authority Set entry.
+
+This comparison is deliberately flat: `resource` matches by exact
+equality and `actions` by array membership. It does not yet define
+resource containment (a path-prefix or hierarchical resource) or action
+families (an `invoices.*` hierarchy). Real hierarchical resources are
+expected to need both, so an extension defining hierarchical resource
+and action subset semantics is known near-term work; until then a
+deployment expresses hierarchy through explicit entries or constraints,
+and the runtime layer enforces it ({{runtime-boundary}}).
 
 The `delegation` member is policy, not authority, and is not part of
 this comparison ({{delegation-constraints}}). A derived entry's
@@ -1092,6 +1107,21 @@ At the approval event the AS MUST, in order:
    `intent_hash` over the approved Mission Intent.
 5. Create the Mission record ({{mission-record}}) in the `active`
    state, atomically with issuance of the authorization code.
+
+Rendering a bound is not the same as enforcing it, and a deployment MUST
+NOT let the rendering imply otherwise. The approved resources and
+actions are enforced by any Resource Server that honors the token. A
+per-entry `constraint`, however, binds only where a Resource Server
+understands and enforces its key ({{rs-enforcement}}); the consumption
+bounds `max_budget`, `max_calls`, and `max_duration` bind only under the
+runtime layer ({{runtime-boundary}}); and `max_derivations` is an
+origin-AS cap that does not bound a Resource AS's local-token minting in
+another domain ({{cross-domain}}). In a deployment without runtime
+enforcement, and for any constraint no Resource Server enforces, these
+bounds are advisory: rendered, consented, and committed, but enforced
+nowhere. An AS SHOULD make clear to the Approver which rendered bounds
+its deployment actually enforces, so consent is not given to a limit
+that binds nowhere.
 
 The `authority_hash` is the **authority commitment**: it binds, by
 cryptographic digest, exactly the authority the Approver approved. It

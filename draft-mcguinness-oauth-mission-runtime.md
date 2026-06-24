@@ -156,6 +156,12 @@ defines what a deployment MUST satisfy when it claims runtime Mission
 enforcement; the surfaces it deliberately leaves to deployments or
 future work are collected in {{deferred}}.
 
+Because the invariants are not a wire format, two conforming deployments
+do not thereby interoperate at the PEP-PDP boundary; the interoperable
+wire surface is supplied by a binding, of which the AuthZEN binding
+({{authzen}}) is the one defined here. This document is the architecture
+and invariant layer; the binding is the interoperability layer.
+
 ## Relationship to the issuance profile {#relationship}
 
 This document depends normatively on the issuance profile and is not
