@@ -103,7 +103,9 @@ alone. These bundles name what to deploy for a given goal.
 
 Mission Intent Shaping is an approval-time, client-side option that
 layers onto any bundle; it produces the Mission Intent and is not itself
-deployed at the Authorization Server.
+deployed at the Authorization Server. Mission Deferred Approval is an
+approval-time option for deployments whose approvals are asynchronous or
+whose reviewers narrow a proposed Mission; it layers onto any bundle.
 
 Each draft also states its own scoped conformance; the bundles are
 guidance, not a new conformance class.
@@ -209,7 +211,7 @@ step-up.
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion)
 * [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-expansion.diff)
 
-### Approval-time evidence
+### Approval time
 
 #### Mission Intent Shaping for OAuth 2.0
 
@@ -236,6 +238,21 @@ pixels presented or the Approver's comprehension.
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-consent-evidence)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-consent-evidence)
 * [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-consent-evidence.diff)
+
+#### Mission Deferred Approval for OAuth 2.0
+
+Makes the approval event asynchronous and negotiable. Profiles OAuth
+Deferred Token Response so a Mission approval can be deferred and
+polled, and adds a `revisable` mode: when the Authorization Server can
+grant only a narrowed version of the proposed Mission, it signals which
+dimensions it refused and invites the client to push a narrowing
+revision, continuing the same approval instead of starting over.
+Narrowing only.
+
+* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-approval.html)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-approval)
+* [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-approval)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-approval.diff)
 
 ### Sub-agents
 
