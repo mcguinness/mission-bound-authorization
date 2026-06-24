@@ -345,6 +345,24 @@ request, context, capability source, and shaping policy, and free-text
 can defend. The shaper should not include a broad resource class as a
 convenience fallback for unresolved detail.
 
+For an open-ended task whose concrete objects are not known when the
+proposal is built, the shaper should express the bound as `constraints`
+that hold as invariants over those objects (the owning customer, the
+tenant, an amount ceiling, read-only except named writes, a time
+window), rather than reaching for a broad resource class to anticipate
+them. The Authorization Server derives authority bounded by those
+constraints, and the runtime layer enforces them per object at the point
+of use; this keeps the proposal tight without enumerating objects the
+shaper cannot know yet (Mission Authority,
+{{I-D.draft-mcguinness-oauth-mission}}).
+
+A shaper should also propose a Mission Intent scoped to one concrete
+task, not to an agent's whole session or standing role. Where a request
+spans several distinct tasks, the shaper should propose several
+task-scoped Mission Intents rather than one broad proposal, so each
+resulting Mission stays narrow, separately approved, and separately
+revocable.
+
 When a deployment or caller supplies an authority ceiling, the proposal
 MUST be a subset of it. If the task cannot be completed within that
 ceiling, the shaper MUST request clarification or refuse; it MUST NOT

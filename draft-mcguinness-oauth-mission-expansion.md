@@ -59,6 +59,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-runtime-latest
+  I-D.draft-mcguinness-oauth-mission-child-delegation:
+    title: "Child Mission Delegation for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
 
 --- abstract
 
@@ -169,7 +178,10 @@ This document defines:
 - replacement expansion as the mode, with branch expansion deferred
   ({{replacement}});
 - concurrent-expansion reconciliation, with a closed set of
-  reconciliation status codes ({{reconciliation}}); and
+  reconciliation status codes ({{reconciliation}});
+- progressive authorization: a pre-consented authority ceiling and
+  drawdown policy under which in-ceiling expansions are policy-adjudicated
+  rather than freshly human-approved ({{progressive-authorization}}); and
 - the expansion denial reasons ({{denial-reasons}}).
 
 This document does NOT define:
@@ -420,6 +432,74 @@ derived credential's `exp` at `mission_expiry`; a successor that
 silently outlived its predecessor would let expansion launder a
 longer-lived Mission past the originally approved horizon.
 
+# Progressive Authorization {#progressive-authorization}
+
+An open-ended agentic task often cannot have its full authority
+enumerated at the initial approval, which leaves a deployment choosing
+between over-provisioning a broad standing Mission and interrupting the
+user for a fresh approval at every step. Progressive authorization is a
+third option: the Approver consents once to a bounded envelope and a
+rule for drawing authority from it, so authority can grow within the
+envelope at runtime without a fresh human approval each time, while the
+active authority any single Mission yields stays narrow.
+
+At the initial approval event ({{I-D.draft-mcguinness-oauth-mission}}),
+the Approver MAY additionally consent to:
+
+- an **authority ceiling**: the maximum authority any expansion of this
+  Mission may reach without a further human approval, expressed as an
+  Authority Set, or as the `constraints` that bound one
+  ({{I-D.draft-mcguinness-oauth-mission}}), that every in-ceiling
+  successor MUST be a subset of; and
+- a **drawdown policy**: the conditions under which the Mission Issuer
+  MAY adjudicate an in-ceiling expansion by policy rather than by a
+  fresh human approval.
+
+Where present, the ceiling and drawdown policy are part of the Mission's
+approved authority record and are covered by its `authority_hash`; the
+consent disclosure MUST render the ceiling and the fact that in-ceiling
+expansion is policy-adjudicated. A Mission that carries no ceiling has
+no progressive authorization: every expansion of it is an ordinary,
+freshly approved expansion.
+
+## In-ceiling expansion {#in-ceiling-expansion}
+
+An **in-ceiling expansion** is an expansion ({{adjudication}}) whose
+successor Authority Set is a subset of the predecessor's consented
+ceiling. When the predecessor consented to a drawdown policy that
+authorizes the requested widening, the Mission Issuer MAY satisfy the
+adjudication's approval event by policy rather than by a fresh human
+approval, exactly as a parent Mission's Authority Set may permit
+policy-approved child creation
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). The successor
+is created as in {{adjudication}}: its Authority Set freshly derived and
+bound by the ceiling, its `predecessor` member set, the predecessor
+superseded.
+
+This does not widen authority without consent ({{new-consent}}). The
+consent is the human consent given at the initial approval to the
+ceiling and the drawdown policy; policy adjudication only draws within
+that pre-given consent and can never exceed the ceiling. The Mission
+Issuer MUST refuse, with `out_of_ceiling` ({{denial-reasons}}), a
+requested authority that is not a subset of the consented ceiling;
+exceeding the ceiling requires a fresh human approval that raises it,
+which is an ordinary expansion.
+
+## What it bounds, and what it does not {#progressive-limits}
+
+The ceiling is broad by construction, since it must cover the
+open-ended task. What stays narrow is the active authority any single
+Mission in the chain yields: each in-ceiling successor is derived for
+the authority actually needed at that step and is independently gated
+and revocable. A compromised agent cannot instantly wield the ceiling;
+it can exercise only the current active authority and request in-ceiling
+drawdown, which is policy-gated, recorded for audit ({{audit-linkage}}),
+rate-limitable, and enforced per action by the runtime layer
+({{I-D.draft-mcguinness-oauth-mission-runtime}}). Progressive
+authorization bounds, and does not eliminate, standing-authority
+exposure; a deployment SHOULD pair it with short successor lifetimes,
+constraint-bounded ceilings, and runtime enforcement.
+
 # The `predecessor` Member {#predecessor-member}
 
 The successor records a lineage link to the predecessor as a
@@ -645,6 +725,12 @@ machine-readable reason code from the closed set below:
 : The requested authority is incompatible with the Mission's recorded
   `purpose`; a different Mission, not an expansion of this one, is the
   appropriate vehicle.
+
+`out_of_ceiling`:
+: The requested authority is not a subset of the Mission's consented
+  authority ceiling ({{progressive-authorization}}), so it cannot be
+  granted by policy drawdown; raising the ceiling requires a fresh human
+  approval.
 
 A Mission Issuer MUST NOT use a reason code to disclose policy
 boundaries beyond the adjudicated request ({{policy-probing}}); omitting
