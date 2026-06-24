@@ -26,8 +26,6 @@ author:
     email: public@karlmcguinness.com
 
 normative:
-  RFC2119:
-  RFC8174:
   RFC3339:
   RFC6234:
   RFC6838:
@@ -146,7 +144,7 @@ not duplicated, here.
 
 {::boilerplate bcp14-tagged}
 
-# Conventions and Definitions {#conventions-and-definitions}
+# Conventions and Terminology {#conventions-and-definitions}
 
 This document uses JSON {{RFC8259}} as the data model for all PDP
 requests, responses, and evidence objects. JCS canonicalization
@@ -174,6 +172,20 @@ Materialized policy view:
 : The reproducible, evaluable form of a Mission's approved authority
   produced by the issuing Authorization Server or a trusted compiler
   and consumed by the PDP ({{mission-to-policy-materialization}}).
+
+Trusted compiler:
+: A component the deployment trusts to materialize a Mission's approved
+  authority into a policy view faithfully and reproducibly, other than
+  the issuing Authorization Server itself. It is in the deployment's
+  trust domain and its output is bound by the content-addressed
+  `policy_view_id` ({{mission-to-policy-materialization}}).
+
+Validating server:
+: The component that, at derivation, validates the Mission's authority
+  and records the derivation-time facts the PDP later checks (such as a
+  capability `source_digest`, {{capability-source-binding}}). In the
+  issuance profile this is the Mission Issuer; this profile uses the
+  term where the recording role is what matters.
 
 Decision Evidence:
 : The runtime enforcement evidence record emitted by the PDP, in the
@@ -267,9 +279,21 @@ as that profile requires.
 | AuthZEN member | Mission-bound binding |
 |---|---|
 | `subject` | The principal the decision is requested for. |
-| `resource` | The target resource, with the canonical resource identifier the PEP supplies. |
+| `resource` | The fine-grained target object the action names (for example, a specific journal entry), for Resource-policy evaluation. It is NOT the field matched against the approved entry's `resource`; see below. |
 | `action` | The requested action identifier (for example, `journal-entries.write`), which the PDP evaluates against the approved `actions` per {{I-D.draft-mcguinness-oauth-mission}}. |
 | `context` | Carries the Mission-bound context object defined below. |
+
+The runtime profile requires the PDP to confirm that the action falls
+within an approved Authority Set entry by matching the action's
+resource and action identity against that entry's `resource` and
+`actions` ({{I-D.draft-mcguinness-oauth-mission-runtime}}). In this
+binding, the approved entry's `resource` (the protected-resource or
+audience URI, for example `https://erp.example.com`) is matched against
+`context.audience`, not against the AuthZEN `resource` member. The
+AuthZEN `resource` carries the finer-grained object identity used only
+for Resource-policy evaluation. A PDP MUST perform the entry match
+against `context.audience`; matching it against the AuthZEN `resource`
+member is non-conforming and will diverge across deployments.
 
 ## `context.mission`
 
@@ -293,12 +317,19 @@ materialized view:
   ({{I-D.draft-mcguinness-oauth-mission-runtime}}).
 
 `policy_version`:
-: REQUIRED. A string. the `policy_version` recorded at
-  the approval event.
+: REQUIRED when known. A string. the `policy_version` recorded at the
+  approval event. It is a Mission-record field
+  ({{I-D.draft-mcguinness-oauth-mission}}) and is not carried on the
+  `mission` claim or the introspection projection, so a PEP that is not
+  co-located with the Mission record may not have it; such a PEP omits
+  it and relies on `policy_view_id` for view correlation. A PEP that can
+  obtain it (for example, co-located with the origin) includes it.
 
 `policy_view_id`:
 : REQUIRED. A string. the materialized view
-  identifier ({{mission-to-policy-materialization}}).
+  identifier ({{mission-to-policy-materialization}}). It is content-
+  addressed and self-sourcing ({{mission-to-policy-materialization}}),
+  so it is the authoritative view correlator the PDP relies on.
 
 ## `context.actor`
 
@@ -319,8 +350,8 @@ claim and the token's authenticated client identity per
   ordered root to leaf. For a single actor, the array has one member.
 
 The `actor` member carries the delegation chain only. Provenance beyond
-the delegation chain -- the tool a request invoked, a named workflow
-step, a human approver -- MUST NOT be encoded inside the `act` chain;
+the delegation chain (the tool a request invoked, a named workflow
+step, a human approver) MUST NOT be encoded inside the `act` chain;
 the PDP evaluates the `act` chain as defined by the runtime profile,
 and provenance is recorded in dedicated evidence fields where the
 deployment captures it.
@@ -436,14 +467,14 @@ Authorization: ...
   },
   "context": {
     "mission": {
-      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEd",
+      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "origin": "https://as.example.com",
       "authority_hash":
-        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE",
+        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
       "state": "active",
       "policy_version": "deploy-policy:v17",
       "policy_view_id":
-        "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4"
+        "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
     },
     "actor": {
       "client_id": "client_erp-recon-agent",
@@ -464,7 +495,7 @@ Authorization: ...
       "source_invoice_id": "inv_2026Q3_842"
     },
     "parameter_digest":
-      "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA",
+      "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA8dRn",
     "audience": "https://erp.example.com",
     "freshness": {
       "mission_status_issued_at": "2026-11-02T08:14:00Z",
@@ -482,13 +513,17 @@ In addition to evaluating the decision inputs the runtime profile
 requires, the PDP MUST verify that the AuthZEN-carried envelope is
 self-consistent:
 
-1. The Mission state conveyed in `context.mission.state` is `active`;
-   otherwise the PDP returns `mission_inactive`
-   ({{runtime-denial-classification}}).
-2. `authority_hash`, `policy_version`, and `policy_view_id` carried in
-   `context.mission` are consistent with the materialized policy view
-   the PDP has loaded for this Mission; otherwise the PDP returns
-   `stale_state`.
+1. The Mission state conveyed in `context.mission.state` is exactly
+   `active`; every other value, recognized or not, is non-active per the
+   issuance profile's forward-compatibility rule
+   ({{I-D.draft-mcguinness-oauth-mission}}) and the PDP returns
+   `mission_inactive` ({{runtime-denial-classification}}).
+2. `authority_hash` and `policy_view_id` carried in `context.mission`,
+   and `policy_version` when present, are consistent with the
+   materialized policy view the PDP has loaded for this Mission;
+   otherwise the PDP returns `stale_state`. `policy_view_id` is the
+   authoritative correlator; a PDP MUST NOT fail a decision solely
+   because the optional `policy_version` was omitted.
 3. When `context.credential.expires_at` is present, it has not passed;
    otherwise the PDP returns `credential_invalid`.
 4. The `context.freshness` the PEP supplied is within the deployment's
@@ -562,10 +597,13 @@ canonicalization, and integrity envelope an AuthZEN deployment emits.
 
 `contributing_constraints`:
 : REQUIRED when the decision turned on one or more authority or
-  constraint entries. An array of strings. the
-  identifiers of the constraints the PDP evaluated (`constraints`
-  keys, `authorization_details` entry types). For a permit this
-  records what was checked; for a deny, what failed.
+  constraint entries. An array of strings: the identifiers of the
+  constraints and entries the PDP evaluated (`constraints` keys,
+  `authorization_details` entry types). For a permit it records every
+  constraint key and entry type the decision relied on; for a deny it
+  MUST list every entry that failed. Omitting an entry the decision
+  turned on is non-conforming, so the array can be relied on to
+  reconstruct the decision basis.
 
 `sequence`:
 : REQUIRED. An integer. the per-Mission sequence indicator
@@ -573,9 +611,12 @@ canonicalization, and integrity envelope an AuthZEN deployment emits.
   verifiable order and gaps are detectable. MUST be zero or greater.
 
 `denial_reason`:
-: CONDITIONAL. A string. present when `decision` is
-  `deny`. A value from {{runtime-denial-classification}} or a
-  `constraints` key.
+: CONDITIONAL. A string. Present when `decision` is `deny`. A value from
+  the closed set in {{runtime-denial-classification}}. When the denial
+  is a constraint violation, the value is `parameter_violation` and the
+  specific failing `constraints` keys are carried in
+  `contributing_constraints`, not in `denial_reason`, so the reason
+  enum and the open constraint-key space never mix in one field.
 
 `evaluated_at`:
 : REQUIRED. An RFC 3339 {{RFC3339}} timestamp.
@@ -622,15 +663,15 @@ envelopes with unsupported formats.
 {
   "decision_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEd",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE",
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "intent_hash":
-      "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6s",
+      "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
     "policy_version": "deploy-policy:v17",
     "policy_view_id":
-      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4"
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
   },
   "subject": {
     "type": "user",
@@ -656,7 +697,7 @@ envelopes with unsupported formats.
   },
   "action": { "name": "journal-entries.write" },
   "parameter_digest":
-    "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA",
+    "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA8dRn",
   "audience": "https://erp.example.com",
   "decision": "permit",
   "contributing_constraints": [
@@ -739,9 +780,9 @@ members other than those defined above.
 {
   "execution_id": "exe_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
   "decision_id":  "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
-  "mission_id":   "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEd",
+  "mission_id":   "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "parameter_digest":
-    "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA",
+    "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA8dRn",
   "outcome":      "completed",
   "attempted_at": "2026-11-02T08:14:04Z",
   "completed_at": "2026-11-02T08:14:05Z",
@@ -798,11 +839,15 @@ conditions to AuthZEN responses and gives the denial-reason identifiers
 carried in Decision Evidence:
 
 - `out_of_authority`: the action is not within the Authority Set.
-- `acr_insufficient`: the actor's `acr` does not satisfy the Mission's
-  `acr` constraint. MAY be satisfied by {{RFC9470}} step-up
-  authentication.
-- `amr_insufficient`: the actor's `amr` does not satisfy the Mission's
-  `amr` constraint. MAY be satisfied by step-up authentication.
+- `step_up_required`: Resource policy requires a stronger authentication
+  context for this action than the actor presents, and MAY be satisfied
+  by {{RFC9470}} step-up authentication. This is a Resource-policy
+  condition, not a Mission constraint: the issuance profile's `acr` is
+  an approval-time requirement on the Approver, recorded on the Mission
+  and neither carried on derived tokens nor evaluated per action
+  ({{I-D.draft-mcguinness-oauth-mission}}), and the issuance profile
+  defines no per-action `amr` constraint. It is a specialization of
+  `resource_policy` that names the step-up affordance.
 - `stale_state`: the PEP-supplied freshness is stale or inconsistent
   with the materialized policy view.
 - `mission_inactive`: the Mission state is not `active`.
@@ -841,8 +886,10 @@ AuthZEN decisions use a boolean `decision` member and an optional
   decision.
 
 `denial_reason`:
-: REQUIRED when `decision` is `false`. A string from
-  {{runtime-denial-classification}} or a `constraints` key.
+: REQUIRED when `decision` is `false`. A string from the closed set in
+  {{runtime-denial-classification}}. A constraint violation uses
+  `parameter_violation`; the specific failing `constraints` keys are
+  carried in the Decision Evidence `contributing_constraints`, not here.
 
 `parameter_digest`:
 : REQUIRED when the request was parameter-bound. A string. The digest
@@ -861,10 +908,9 @@ AuthZEN decisions use a boolean `decision` member and an optional
   as a single-use decision identifier.
 
 `insufficient_claims`:
-: OPTIONAL. An object. Present only for `acr_insufficient` or
-  `amr_insufficient` denials. It MAY contain `acr_values` and
-  `amr_values` members that identify authenticated claims that would
-  lift the denial.
+: OPTIONAL. An object. Present only for a `step_up_required` denial. It
+  MAY contain `acr_values` and `amr_values` members that identify the
+  authentication context Resource policy requires to lift the denial.
 
 `access_request`:
 : OPTIONAL. An object. Present only when the deployment exposes the
@@ -887,20 +933,22 @@ lifetime controls required by the runtime profile.
   "context": {
     "decision_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
     "parameter_digest":
-      "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA",
+      "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA8dRn",
     "policy_view_id":
-      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4",
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
     "permit_expires_at": "2026-11-02T08:15:00Z",
     "single_use": true
   }
 }
 ~~~
 
-For an `acr_insufficient` or `amr_insufficient` denial, the PDP MAY
-include `context.insufficient_claims`, so the caller can satisfy the
-Mission's `acr` or `amr` constraint through OAuth step-up
+For a `step_up_required` denial, the PDP MAY include
+`context.insufficient_claims`, so the caller can satisfy the
+Resource-policy authentication requirement through an OAuth step-up
 authentication challenge {{RFC9470}} at the protected resource and
-re-authenticate without a Mission expansion.
+re-authenticate, without a Mission expansion. Because the requirement is
+Resource policy and not a Mission constraint, satisfying it changes the
+actor's authentication context, not the Mission or its Authority Set.
 
 ## Error response shape
 
@@ -916,7 +964,7 @@ not as transport errors.
     "decision_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
     "denial_reason": "stale_state",
     "policy_view_id":
-      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4"
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
   }
 }
 ~~~
@@ -929,9 +977,9 @@ HTTP outside the AuthZEN envelope.
 
 # Capability Source Binding {#capability-source-binding}
 
-Consequential actions an agent discovers at runtime -- through a Model
+Consequential actions an agent discovers at runtime, through a Model
 Context Protocol tool catalog, an OpenAPI document, a Protected
-Resource Metadata-linked catalog, or an equivalent capability source --
+Resource Metadata-linked catalog, or an equivalent capability source,
 identify the source they came from, so a Mission's approved authority
 stays bound to concrete tools rather than to bare action names a later
 catalog revision could redefine. The runtime profile assigns capability
@@ -988,12 +1036,14 @@ Rules:
   approved Mission's derived authority and are therefore covered by
   `authority_hash` ({{I-D.draft-mcguinness-oauth-mission}}).
 - The PEP presents `tool_id` on consequential requests for
-  catalog-sourced actions. The PDP MUST return `capability_drift`
-  ({{runtime-denial-classification}}) when the presented `tool_id` is
-  outside the approved set.
-- When the current source digest differs from the digest recorded at
-  derivation, the PDP MUST treat the change as drift: return
-  `capability_drift` and refuse, per declared policy.
+  catalog-sourced actions. The runtime profile owns the drift semantics:
+  it requires the PDP to refuse an invoked identity outside the approved
+  `actions` and, where a source digest was recorded at derivation, to
+  refuse when the current source digest differs from it
+  ({{I-D.draft-mcguinness-oauth-mission-runtime}}). This binding adds
+  only the wire representation: such a refusal is carried as
+  `capability_drift` ({{runtime-denial-classification}}). It defines no
+  drift rule of its own.
 - Actions not sourced from a discovered catalog (deployment-registered
   `authorization_details` types, first-party operations with stable
   identity) do not require this binding.

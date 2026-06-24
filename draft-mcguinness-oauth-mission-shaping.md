@@ -26,6 +26,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  RFC7515:
   RFC8259:
   RFC8785:
   I-D.draft-mcguinness-oauth-mission:
@@ -40,7 +41,6 @@ normative:
 
 informative:
   RFC6749:
-  RFC7515:
   RFC9126:
   I-D.draft-mcguinness-oauth-mission-runtime:
     title: "Mission-Bound Runtime Enforcement for OAuth 2.0"
@@ -147,7 +147,10 @@ It uses the terms Mission, Mission Intent, Authority Set, Mission
 Issuer, Approver, and Authorization Server as defined by
 {{I-D.draft-mcguinness-oauth-mission}}. Where this document refers to
 "the issuance profile" without a section, it means that document as a
-whole.
+whole. "Client" and "client-side" in this document mean the OAuth
+client, the Agent (Client) of the issuance profile that submits the
+Mission Intent; the shaper runs on that Agent's side of the trust
+boundary.
 
 # Conventions and Terminology
 
@@ -398,9 +401,15 @@ For material ambiguity, a sound shaper does one of:
    records the exclusion in Shaping Evidence; or
 3. refuse with a reason.
 
-The shaper MUST NOT silently choose the broader interpretation. If a
-deployment permits policy-based default narrowing, Shaping Evidence MUST
-record the policy rule that authorized that narrowing.
+Because a shaper is a client-side component whose internal reasoning the
+Mission Issuer cannot observe, this profile expresses the requirement
+through the observable artifact rather than the internal choice: when a
+shaper resolves an ambiguity in the broadening direction, Shaping
+Evidence MUST record the resolution and, where a deployment permits
+policy-based default narrowing, the policy rule that authorized it. A
+proposal that broadens authority on an ambiguity without a corresponding
+Shaping Evidence record is non-conforming. The Mission Issuer enforces
+its own ceiling and consent regardless of what the shaper recorded.
 
 Requesting clarification is not approval. The user's response is
 incorporated into the Mission Intent; the Mission Issuer still
@@ -495,8 +504,16 @@ following members are RECOMMENDED content.
   or workflow version.
 
 `input_digest`:
-: A digest over the shaping request, excluding fields deployment policy
-  marks as non-retained.
+: A digest over the shaping request, in the integrity-anchor encoded
+  form of {{I-D.draft-mcguinness-oauth-mission}}, computed over the JCS
+  {{RFC8785}} canonical bytes of the request after removing the fields
+  the named exclusion ruleset marks as non-retained. To make the digest
+  recomputable by a later auditor, the evidence MUST also record
+  `input_exclusion_ruleset`, an identifier (and version) of the
+  exclusion ruleset applied, and the auditor recomputes the digest over
+  the retained canonical input under that ruleset. A digest whose
+  exclusion set is not recorded cannot be reproduced and so is not a
+  conforming `input_digest`.
 
 `user_supplied_facts`:
 : Facts copied from the request.
@@ -529,9 +546,15 @@ A deployment MAY bind a proposal to its evidence so the Mission record
 can cite how the proposal was produced. When it does:
 
 - `shaping_evidence_hash` is a string in the integrity-anchor form of
-  {{I-D.draft-mcguinness-oauth-mission}}, computed over the JCS
-  {{RFC8785}} canonical bytes of the Shaping Evidence object. It is an
-  audit commitment only.
+  {{I-D.draft-mcguinness-oauth-mission}}. Like every other committed
+  object in this suite, the Shaping Evidence object is committed inside
+  that profile's domain-separated `{typ, iss, value}` envelope, with
+  `typ` of `mission-shaping-evidence`, `iss` the Mission Issuer
+  `origin`, and `value` the Shaping Evidence object; the anchor is the
+  prefixed digest of the JCS {{RFC8785}} canonical bytes of that
+  envelope. Hashing the bare object would omit the `typ` domain
+  separation and `iss` binding the integrity-anchor construction exists
+  to provide. It is an audit commitment only.
 - A deployment MAY instead, or in addition, carry an integrity envelope
   over the Shaping Evidence, for example a JWS {{RFC7515}} Compact
   Serialization over the JCS canonical bytes of the evidence with the

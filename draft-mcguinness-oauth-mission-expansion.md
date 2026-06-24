@@ -41,6 +41,15 @@ normative:
 informative:
   RFC8126:
   RFC9470:
+  I-D.draft-mcguinness-oauth-mission-status:
+    title: "Mission Status and Lifecycle for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-status-latest
   I-D.draft-mcguinness-oauth-mission-runtime:
     title: "Mission-Bound Runtime Enforcement for OAuth 2.0"
     author:
@@ -175,7 +184,7 @@ This document does NOT define:
 - multi-hop or cross-domain expansion; an expansion is adjudicated by
   the predecessor's Mission Issuer (its `origin`).
 
-# Conventions and Definitions
+# Conventions and Terminology
 
 {::boilerplate bcp14-tagged}
 
@@ -461,7 +470,7 @@ other token claims omitted):
     "id": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX",
     "origin": "https://as.example.com",
     "authority_hash":
-      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2n",
+      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
     "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
   }
 }
@@ -510,13 +519,18 @@ The transition has these requirements:
   rebound to the successor; authority under the successor is obtained
   only by deriving from the successor's grant, which is a new
   derivation governed by the successor's Authority Set.
-- **Reported as non-active.** Where the issuance profile's optional
-  token introspection is offered, a `superseded` predecessor is
-  reported through the same mechanism that reports a `revoked` or
-  `expired` Mission: the composite `active` is `false` and, from the
-  origin, the `mission.state` member gives `superseded`. A deployment
-  that uses introspection and this document MUST include `superseded`
-  among the lifecycle states its origin may report.
+- **Reported as non-active.** A `superseded` predecessor is reported
+  through the same mechanisms that report a `revoked` or `expired`
+  Mission. Where the issuance profile's optional token introspection is
+  offered, the composite `active` is `false` and, from the origin, the
+  `mission.state` member gives `superseded`. Where the Mission Status
+  profile {{I-D.draft-mcguinness-oauth-mission-status}} is deployed, the
+  dedicated Status operation reports `superseded` among the terminal
+  states and the Status Response `mission.state` gives `superseded`. A
+  deployment that offers either surface and this document MUST include
+  `superseded` among the lifecycle states its origin may report.
+  Consumers rely on the issuance profile's forward-compatibility rule:
+  `superseded`, like any non-`active` state, is non-deriving.
 
 ## No implicit rollback {#no-rollback}
 
