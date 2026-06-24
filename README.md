@@ -120,7 +120,11 @@ action a Policy Enforcement Point obtains a permit from a Policy
 Decision Point that evaluates the action against the Mission. Covers
 action classification, where the enforcement point sits, the binding of
 a permit to concrete request parameters to close the time-of-check to
-time-of-use gap, consumption metering, and fail-closed behavior. The
+time-of-use gap, consumption metering, and fail-closed behavior. For the
+high-assurance tier it adds credential custody and mediated execution
+(the enforcement point, not the agent, holds the token's
+sender-constraint key, so a compromised agent cannot act off-path) and
+an action-bound approval for the highest-consequence classes. The
 decision-API wire format is a deployment choice, so the contract does
 not mandate one.
 
@@ -233,8 +237,10 @@ no longer active. A child is never created by session ancestry alone.
 How an agent harness binds sessions, task graphs, queues, cached tool
 connections, and sub-agent handles to Mission state, when it must
 re-check status, and how it must pause, suppress, or terminate work when
-the Mission is no longer active. The core principle: session continuity
-is not authority.
+the Mission is no longer active. It also establishes the mediated
+execution environment the runtime profile relies on: for mediated action
+classes, governed work runs with no unmediated path to the resource. The
+core principle: session continuity is not authority.
 
 * [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-harness.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-harness)
