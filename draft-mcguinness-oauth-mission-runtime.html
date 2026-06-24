@@ -1265,25 +1265,28 @@ action <span class="bcp14">MUST</span> produce.<a href="#section-abstract-1" cla
                 <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-placement-and-bypass" class="internal xref">Placement and bypass</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.3">
-                <p id="section-toc.1-1.13.2.3.1"><a href="#section-13.3" class="auto internal xref">13.3</a>.  <a href="#name-classification-integrity" class="internal xref">Classification integrity</a></p>
+                <p id="section-toc.1-1.13.2.3.1"><a href="#section-13.3" class="auto internal xref">13.3</a>.  <a href="#name-prompt-injection-and-exfilt" class="internal xref">Prompt injection and exfiltration</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.4">
-                <p id="section-toc.1-1.13.2.4.1"><a href="#section-13.4" class="auto internal xref">13.4</a>.  <a href="#name-freshness-and-consumption-h" class="internal xref">Freshness and consumption honesty</a></p>
+                <p id="section-toc.1-1.13.2.4.1"><a href="#section-13.4" class="auto internal xref">13.4</a>.  <a href="#name-classification-integrity" class="internal xref">Classification integrity</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.5">
-                <p id="section-toc.1-1.13.2.5.1"><a href="#section-13.5" class="auto internal xref">13.5</a>.  <a href="#name-resource-policy-remains-aut" class="internal xref">Resource policy remains authoritative</a></p>
+                <p id="section-toc.1-1.13.2.5.1"><a href="#section-13.5" class="auto internal xref">13.5</a>.  <a href="#name-freshness-and-consumption-h" class="internal xref">Freshness and consumption honesty</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.6">
-                <p id="section-toc.1-1.13.2.6.1"><a href="#section-13.6" class="auto internal xref">13.6</a>.  <a href="#name-toctou-and-replay" class="internal xref">TOCTOU and replay</a></p>
+                <p id="section-toc.1-1.13.2.6.1"><a href="#section-13.6" class="auto internal xref">13.6</a>.  <a href="#name-resource-policy-remains-aut" class="internal xref">Resource policy remains authoritative</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.7">
-                <p id="section-toc.1-1.13.2.7.1"><a href="#section-13.7" class="auto internal xref">13.7</a>.  <a href="#name-confused-deputy-across-reso" class="internal xref">Confused deputy across resources</a></p>
+                <p id="section-toc.1-1.13.2.7.1"><a href="#section-13.7" class="auto internal xref">13.7</a>.  <a href="#name-toctou-and-replay" class="internal xref">TOCTOU and replay</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.8">
-                <p id="section-toc.1-1.13.2.8.1"><a href="#section-13.8" class="auto internal xref">13.8</a>.  <a href="#name-decision-channel-and-token-" class="internal xref">Decision channel and token disclosure</a></p>
+                <p id="section-toc.1-1.13.2.8.1"><a href="#section-13.8" class="auto internal xref">13.8</a>.  <a href="#name-confused-deputy-across-reso" class="internal xref">Confused deputy across resources</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.9">
-                <p id="section-toc.1-1.13.2.9.1"><a href="#section-13.9" class="auto internal xref">13.9</a>.  <a href="#name-evidence-privacy-and-correl" class="internal xref">Evidence privacy and correlation</a></p>
+                <p id="section-toc.1-1.13.2.9.1"><a href="#section-13.9" class="auto internal xref">13.9</a>.  <a href="#name-decision-channel-and-token-" class="internal xref">Decision channel and token disclosure</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.10">
+                <p id="section-toc.1-1.13.2.10.1"><a href="#section-13.10" class="auto internal xref">13.10</a>. <a href="#name-evidence-privacy-and-correl" class="internal xref">Evidence privacy and correlation</a></p>
 </li>
             </ul>
 </li>
@@ -2742,63 +2745,95 @@ controllable boundary, or if an unmediated path can reach the action
 of execution paths it actually mediates; it <span class="bcp14">MUST</span> name that set.<a href="#section-13.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="classification-integrity">
+<div id="prompt-injection-and-exfiltration">
 <section id="section-13.3">
-        <h3 id="name-classification-integrity">
-<a href="#section-13.3" class="section-number selfRef">13.3. </a><a href="#name-classification-integrity" class="section-name selfRef">Classification integrity</a>
+        <h3 id="name-prompt-injection-and-exfilt">
+<a href="#section-13.3" class="section-number selfRef">13.3. </a><a href="#name-prompt-injection-and-exfilt" class="section-name selfRef">Prompt injection and exfiltration</a>
         </h3>
-<p id="section-13.3-1">Because "consequential" is partly deployment-defined, the
+<p id="section-13.3-1">This profile assumes the agent can be prompt-injected and does not try
+to prevent that. It constrains what an injected agent can do by gating
+the external-communication leg: external communication is a consequential
+action, so every attempt is checked against the Authority Set, bound to
+parameters, metered, and (with mediated execution, <a href="#custody" class="auto internal xref">Section 3.6</a>) made
+unreachable to an agent that does not hold the egress credential. This
+is the architectural defense, gate the exfiltration against an authority
+the injection cannot widen, rather than make the agent injection-proof.<a href="#section-13.3-1" class="pilcrow">¶</a></p>
+<p id="section-13.3-2">Two limits are inherent and a deployment <span class="bcp14">MUST NOT</span> overstate the
+guarantee. First, it is exactly as strong as PEP-placement completeness:
+every exfiltration channel an agent runtime offers (DNS, logs, error
+strings, a write to a store another process reads) is a channel that
+must be mediated, and this profile gates the channels routed through a
+PEP but cannot prove a deployment enumerated them all (the Achilles'
+heel of <a href="#pep-placement" class="auto internal xref">Section 3.5</a>). Second, this profile provides no
+information-flow control: it evaluates each action in isolation against
+authority over resources and actions, so a sequence of
+individually-authorized steps can compose into an exfiltration no single
+check catches (within-scope data laundering), and <code>max_calls</code> /
+<code>max_budget</code> bound volume, not flow. Closing that needs a separate taint
+or information-flow layer. A coarse session-level mitigation, downgrading
+egress authority once untrusted content has entered a session, is
+available at the harness layer
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-harness" class="cite xref">I-D.draft-mcguinness-oauth-mission-harness</a>]</span>); it raises the bar but
+is not information-flow control.<a href="#section-13.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="classification-integrity">
+<section id="section-13.4">
+        <h3 id="name-classification-integrity">
+<a href="#section-13.4" class="section-number selfRef">13.4. </a><a href="#name-classification-integrity" class="section-name selfRef">Classification integrity</a>
+        </h3>
+<p id="section-13.4-1">Because "consequential" is partly deployment-defined, the
 classification floor of <a href="#classification" class="auto internal xref">Section 3.3</a> is load-bearing: a
 deployment cannot evade enforcement by classifying an irreversible,
 external-commitment, or privileged-administration action as
 non-consequential. A <code>purpose</code> may raise a class but never lower it
-below the resource owner's floor.<a href="#section-13.3-1" class="pilcrow">¶</a></p>
+below the resource owner's floor.<a href="#section-13.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="freshness-and-consumption-honesty">
-<section id="section-13.4">
+<section id="section-13.5">
         <h3 id="name-freshness-and-consumption-h">
-<a href="#section-13.4" class="section-number selfRef">13.4. </a><a href="#name-freshness-and-consumption-h" class="section-name selfRef">Freshness and consumption honesty</a>
+<a href="#section-13.5" class="section-number selfRef">13.5. </a><a href="#name-freshness-and-consumption-h" class="section-name selfRef">Freshness and consumption honesty</a>
         </h3>
-<p id="section-13.4-1">A permit is a lease, not a standing grant: stale Mission state <span class="bcp14">MUST</span>
+<p id="section-13.5-1">A permit is a lease, not a standing grant: stale Mission state <span class="bcp14">MUST</span>
 fail closed for consequential actions within the published bound
 (<a href="#state-freshness" class="auto internal xref">Section 6.1</a>). Consumption bounds are exact only under a
 single serializing PDP; a deployment <span class="bcp14">MUST NOT</span> advertise exactness it
-cannot meet across distributed decision points (<a href="#metering" class="auto internal xref">Section 8</a>).<a href="#section-13.4-1" class="pilcrow">¶</a></p>
+cannot meet across distributed decision points (<a href="#metering" class="auto internal xref">Section 8</a>).<a href="#section-13.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="resource-policy-remains-authoritative">
-<section id="section-13.5">
+<section id="section-13.6">
         <h3 id="name-resource-policy-remains-aut">
-<a href="#section-13.5" class="section-number selfRef">13.5. </a><a href="#name-resource-policy-remains-aut" class="section-name selfRef">Resource policy remains authoritative</a>
+<a href="#section-13.6" class="section-number selfRef">13.6. </a><a href="#name-resource-policy-remains-aut" class="section-name selfRef">Resource policy remains authoritative</a>
         </h3>
-<p id="section-13.5-1">Mission authority is a maximum authority envelope. It does not force a
+<p id="section-13.6-1">Mission authority is a maximum authority envelope. It does not force a
 Resource Server to perform an action, bypass local authorization, or
 override object ACLs, tenant configuration, legal holds, service
 invariants, or risk policy. A runtime deployment that treats a
 Mission-bound permit as sufficient without Resource policy evaluation
 can perform actions that the resource owner or service would otherwise
-forbid.<a href="#section-13.5-1" class="pilcrow">¶</a></p>
+forbid.<a href="#section-13.6-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="toctou-and-replay">
-<section id="section-13.6">
+<section id="section-13.7">
         <h3 id="name-toctou-and-replay">
-<a href="#section-13.6" class="section-number selfRef">13.6. </a><a href="#name-toctou-and-replay" class="section-name selfRef">TOCTOU and replay</a>
+<a href="#section-13.7" class="section-number selfRef">13.7. </a><a href="#name-toctou-and-replay" class="section-name selfRef">TOCTOU and replay</a>
         </h3>
-<p id="section-13.6-1">Parameter binding (<a href="#parameter-binding" class="auto internal xref">Section 7</a>) ties a permit to specific
+<p id="section-13.7-1">Parameter binding (<a href="#parameter-binding" class="auto internal xref">Section 7</a>) ties a permit to specific
 normalized parameters and a short window or single use, so a permit
 cannot be replayed for a different request or survive a parameter
 change between check and use. The executing PEP, not an upstream
-component, <span class="bcp14">MUST</span> perform the reverification.<a href="#section-13.6-1" class="pilcrow">¶</a></p>
+component, <span class="bcp14">MUST</span> perform the reverification.<a href="#section-13.7-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="confused-deputy-across-resources">
-<section id="section-13.7">
+<section id="section-13.8">
         <h3 id="name-confused-deputy-across-reso">
-<a href="#section-13.7" class="section-number selfRef">13.7. </a><a href="#name-confused-deputy-across-reso" class="section-name selfRef">Confused deputy across resources</a>
+<a href="#section-13.8" class="section-number selfRef">13.8. </a><a href="#name-confused-deputy-across-reso" class="section-name selfRef">Confused deputy across resources</a>
         </h3>
-<p id="section-13.7-1">The permit binding of <a href="#parameter-binding" class="auto internal xref">Section 7</a> ties a decision to the
+<p id="section-13.8-1">The permit binding of <a href="#parameter-binding" class="auto internal xref">Section 7</a> ties a decision to the
 Mission, the token audience or protected resource, <code>sub</code>, <code>client_id</code>,
 actor context, action, and resource it evaluated. It follows that a PDP
 decision for one protected resource, audience, tenant, or operation is
@@ -2807,30 +2842,30 @@ bindings before acting (<a href="#parameter-binding" class="auto internal xref">
 bindings do not match the boundary at which it is presented. A
 deployment <span class="bcp14">MUST NOT</span> relax those bindings in a way that would let a
 permit cross a resource, audience, tenant, or operation boundary it
-was not issued for.<a href="#section-13.7-1" class="pilcrow">¶</a></p>
+was not issued for.<a href="#section-13.8-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="decision-channel-and-token-disclosure">
-<section id="section-13.8">
+<section id="section-13.9">
         <h3 id="name-decision-channel-and-token-">
-<a href="#section-13.8" class="section-number selfRef">13.8. </a><a href="#name-decision-channel-and-token-" class="section-name selfRef">Decision channel and token disclosure</a>
+<a href="#section-13.9" class="section-number selfRef">13.9. </a><a href="#name-decision-channel-and-token-" class="section-name selfRef">Decision channel and token disclosure</a>
         </h3>
-<p id="section-13.8-1">A separate PDP becomes part of the Resource Server's trusted
+<p id="section-13.9-1">A separate PDP becomes part of the Resource Server's trusted
 authorization path for the operations in its enforcement scope. The
 PEP/PDP channel therefore needs mutual authentication, integrity
 protection, and authorization for the declared scope
 (<a href="#token-validation" class="auto internal xref">Section 5</a>). Passing full access tokens to a PDP also
 extends credential exposure beyond the Resource Server boundary; a
 deployment that does so needs the same credential handling, retention,
-and disclosure controls it applies at the Resource Server.<a href="#section-13.8-1" class="pilcrow">¶</a></p>
+and disclosure controls it applies at the Resource Server.<a href="#section-13.9-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="evidence-privacy-and-correlation">
-<section id="section-13.9">
+<section id="section-13.10">
         <h3 id="name-evidence-privacy-and-correl">
-<a href="#section-13.9" class="section-number selfRef">13.9. </a><a href="#name-evidence-privacy-and-correl" class="section-name selfRef">Evidence privacy and correlation</a>
+<a href="#section-13.10" class="section-number selfRef">13.10. </a><a href="#name-evidence-privacy-and-correl" class="section-name selfRef">Evidence privacy and correlation</a>
         </h3>
-<p id="section-13.9-1">Runtime enforcement evidence is intentionally durable and therefore
+<p id="section-13.10-1">Runtime enforcement evidence is intentionally durable and therefore
 sensitive. It can reveal a subject's resources, action timing,
 delegated actors, and Mission correlation identifier even when raw
 action parameters are not stored. Deployments <span class="bcp14">SHOULD</span> minimize recorded
@@ -2839,9 +2874,9 @@ are not needed for audit, restrict access to evidence by role, and
 document the retention window declared under <a href="#evidence" class="auto internal xref">Section 10</a>. Evidence
 shared across resource boundaries can also correlate activity by
 <code>mission.id</code> and <code>authority_hash</code>; deployments that require
-unlinkability need an additional privacy design outside this profile.<a href="#section-13.9-1" class="pilcrow">¶</a></p>
-<p id="section-13.9-2">General OAuth security guidance <span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span> applies to the underlying
-credentials.<a href="#section-13.9-2" class="pilcrow">¶</a></p>
+unlinkability need an additional privacy design outside this profile.<a href="#section-13.10-1" class="pilcrow">¶</a></p>
+<p id="section-13.10-2">General OAuth security guidance <span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span> applies to the underlying
+credentials.<a href="#section-13.10-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

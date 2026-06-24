@@ -88,20 +88,21 @@ Table of Contents
      9.1.  Sub-Agent Stop Propagation
    10. Stop Behavior
      10.1.  Stop-Behavior Matrix
-   11. Harness Evidence
-     11.1.  Harness Evidence Object
-   12. Conformance
-   13. Security Considerations
-     13.1.  Session Continuity Is Not Authority Continuity
-     13.2.  Cached Access as Ambient Authority
-     13.3.  Sub-Agent Fan-Out
-     13.4.  Split-Brain Session State
-     13.5.  Tool Cache Confusion
-   14. Privacy Considerations
-   15. IANA Considerations
-   16. References
-     16.1.  Normative References
-     16.2.  Informative References
+   11. Untrusted Content and Egress
+   12. Harness Evidence
+     12.1.  Harness Evidence Object
+   13. Conformance
+   14. Security Considerations
+     14.1.  Session Continuity Is Not Authority Continuity
+     14.2.  Cached Access as Ambient Authority
+     14.3.  Sub-Agent Fan-Out
+     14.4.  Split-Brain Session State
+     14.5.  Tool Cache Confusion
+   15. Privacy Considerations
+   16. IANA Considerations
+   17. References
+     17.1.  Normative References
+     17.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -137,9 +138,9 @@ Table of Contents
 
    *  sub-agent handle requirements (Section 9);
 
-   *  harness evidence (Section 11); and
+   *  harness evidence (Section 12); and
 
-   *  conformance for a Mission-aware harness (Section 12).
+   *  conformance for a Mission-aware harness (Section 13).
 
    This document does not define a new OAuth token, a new agent
    protocol, or a replacement for Resource Server enforcement.  A
@@ -552,7 +553,43 @@ Table of Contents
    administration, handoff or orchestration handling under a deployment
    unwind plan SHOULD be used when work may already be in flight.
 
-11.  Harness Evidence
+11.  Untrusted Content and Egress
+
+   A prompt-injected agent is constrained at the point of use by the
+   runtime layer, which gates each action against the Mission
+   ([I-D.draft-mcguinness-oauth-mission-runtime]).  The runtime layer
+   evaluates each action in isolation; it does not see the session as a
+   whole.  The harness does: it already tracks session and task-graph
+   history against Mission state.  That makes the harness the one layer
+   that can apply a session-level rule against the case where untrusted
+   content drives an agent to exfiltrate within its authority.
+
+   A governed session is *tainted* once content the harness did not
+   obtain from the Subject, the Approver, or a source the deployment
+   trusts enters it: a fetched document, a tool result, an inbound
+   message, or similar attacker-influenceable input.  A Mission-aware
+   harness SHOULD track taint per governed session.
+
+   Once a session is tainted, before a consequential external-
+   communication or external-commitment action, a Mission-aware harness
+   SHOULD either require a fresh action-bound approval
+   ([I-D.draft-mcguinness-oauth-mission-runtime]) or downgrade that
+   authority for the session (suppress the action), rather than let the
+   agent egress on the strength of injected content.  This is the plan-
+   then-execute pattern: untrusted content may inform the agent's
+   planning, but it MUST NOT, on its own, drive an egress the Subject
+   did not direct.
+
+   This is a coarse session-level control, not information-flow control.
+   It does not track which specific datum reached which action, so it
+   cannot close within-scope data laundering
+   ([I-D.draft-mcguinness-oauth-mission],
+   [I-D.draft-mcguinness-oauth-mission-runtime]); it raises the bar by
+   forcing a human or a fresh approval between untrusted input and
+   egress.  A harness that applies it records the taint and the
+   resulting downgrade or approval in Harness Evidence (Section 12).
+
+12.  Harness Evidence
 
    A Mission-aware harness MUST emit evidence when it suppresses,
    pauses, terminates, or resumes governed work due to Mission state.
@@ -587,7 +624,7 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-runtime]).  It records
    execution-continuity decisions, not Resource Server authorization.
 
-11.1.  Harness Evidence Object
+12.1.  Harness Evidence Object
 
    A Harness Evidence object is a JSON object [RFC8259] with:
 
@@ -650,7 +687,7 @@ Table of Contents
      "occurred_at": "2026-11-02T08:16:00Z"
    }
 
-12.  Conformance
+13.  Conformance
 
    A conforming Mission-aware harness MUST:
 
@@ -673,42 +710,42 @@ Table of Contents
    MAY claim conformance for a documented subset of execution paths if
    it identifies paths outside the claim.
 
-13.  Security Considerations
+14.  Security Considerations
 
-13.1.  Session Continuity Is Not Authority Continuity
+14.1.  Session Continuity Is Not Authority Continuity
 
    The primary threat is treating recoverable runtime state as proof of
    continuing authority.  This profile requires a fresh Mission-state
    decision at continuation points where harnesses would otherwise
    resume automatically.
 
-13.2.  Cached Access as Ambient Authority
+14.2.  Cached Access as Ambient Authority
 
    Cached credentials and tool connections can bypass visible issuance
    or authorization steps.  A harness MUST tie cache use to Mission
    state and runtime enforcement, or cached access becomes ambient
    authority.
 
-13.3.  Sub-Agent Fan-Out
+14.3.  Sub-Agent Fan-Out
 
    Implicit sub-agent inheritance can amplify authority.  This profile
    requires explicit Mission or delegation binding for child handles and
    cascade stop behavior when parent authority ends.
 
-13.4.  Split-Brain Session State
+14.4.  Split-Brain Session State
 
    Multiple workers may resume the same session or queue item.  A
    harness SHOULD use compare-and-set or equivalent concurrency control
    so a stop decision cannot race with a resume decision.  When the
    state is ambiguous, fail closed and suppress governed work.
 
-13.5.  Tool Cache Confusion
+14.5.  Tool Cache Confusion
 
    Tool connection caches often hide which Mission first authorized a
    connection.  Cache keys under Section 8.1 prevent a connection opened
    for one Mission from becoming ambient authority for another.
 
-14.  Privacy Considerations
+15.  Privacy Considerations
 
    Harness Evidence and Mission bindings can reveal task graphs,
    workspace identifiers, tool usage, agent topology, and Mission
@@ -716,13 +753,13 @@ Table of Contents
    control access to evidence, and avoid storing raw workspace content
    in Harness Evidence unless required for audit.
 
-15.  IANA Considerations
+16.  IANA Considerations
 
    This document makes no IANA request.
 
-16.  References
+17.  References
 
-16.1.  Normative References
+17.1.  Normative References
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
@@ -763,7 +800,7 @@ Table of Contents
               DOI 10.17487/RFC8259, December 2017,
               <https://www.rfc-editor.org/rfc/rfc8259>.
 
-16.2.  Informative References
+17.2.  Informative References
 
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Child Mission Delegation for OAuth 2.0",

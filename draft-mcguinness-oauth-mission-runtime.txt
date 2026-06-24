@@ -103,13 +103,14 @@ Table of Contents
    13. Security Considerations
      13.1.  What this layer adds, and its limits
      13.2.  Placement and bypass
-     13.3.  Classification integrity
-     13.4.  Freshness and consumption honesty
-     13.5.  Resource policy remains authoritative
-     13.6.  TOCTOU and replay
-     13.7.  Confused deputy across resources
-     13.8.  Decision channel and token disclosure
-     13.9.  Evidence privacy and correlation
+     13.3.  Prompt injection and exfiltration
+     13.4.  Classification integrity
+     13.5.  Freshness and consumption honesty
+     13.6.  Resource policy remains authoritative
+     13.7.  TOCTOU and replay
+     13.8.  Confused deputy across resources
+     13.9.  Decision channel and token disclosure
+     13.10. Evidence privacy and correlation
    14. IANA Considerations
    15. References
      15.1.  Normative References
@@ -1288,7 +1289,37 @@ Table of Contents
    (Section 3.5).  A deployment's claim is only as strong as the set of
    execution paths it actually mediates; it MUST name that set.
 
-13.3.  Classification integrity
+13.3.  Prompt injection and exfiltration
+
+   This profile assumes the agent can be prompt-injected and does not
+   try to prevent that.  It constrains what an injected agent can do by
+   gating the external-communication leg: external communication is a
+   consequential action, so every attempt is checked against the
+   Authority Set, bound to parameters, metered, and (with mediated
+   execution, Section 3.6) made unreachable to an agent that does not
+   hold the egress credential.  This is the architectural defense, gate
+   the exfiltration against an authority the injection cannot widen,
+   rather than make the agent injection-proof.
+
+   Two limits are inherent and a deployment MUST NOT overstate the
+   guarantee.  First, it is exactly as strong as PEP-placement
+   completeness: every exfiltration channel an agent runtime offers
+   (DNS, logs, error strings, a write to a store another process reads)
+   is a channel that must be mediated, and this profile gates the
+   channels routed through a PEP but cannot prove a deployment
+   enumerated them all (the Achilles' heel of Section 3.5).  Second,
+   this profile provides no information-flow control: it evaluates each
+   action in isolation against authority over resources and actions, so
+   a sequence of individually-authorized steps can compose into an
+   exfiltration no single check catches (within-scope data laundering),
+   and max_calls / max_budget bound volume, not flow.  Closing that
+   needs a separate taint or information-flow layer.  A coarse session-
+   level mitigation, downgrading egress authority once untrusted content
+   has entered a session, is available at the harness layer
+   ([I-D.draft-mcguinness-oauth-mission-harness]); it raises the bar but
+   is not information-flow control.
+
+13.4.  Classification integrity
 
    Because "consequential" is partly deployment-defined, the
    classification floor of Section 3.3 is load-bearing: a deployment
@@ -1297,7 +1328,7 @@ Table of Contents
    A purpose may raise a class but never lower it below the resource
    owner's floor.
 
-13.4.  Freshness and consumption honesty
+13.5.  Freshness and consumption honesty
 
    A permit is a lease, not a standing grant: stale Mission state MUST
    fail closed for consequential actions within the published bound
@@ -1305,7 +1336,7 @@ Table of Contents
    serializing PDP; a deployment MUST NOT advertise exactness it cannot
    meet across distributed decision points (Section 8).
 
-13.5.  Resource policy remains authoritative
+13.6.  Resource policy remains authoritative
 
    Mission authority is a maximum authority envelope.  It does not force
    a Resource Server to perform an action, bypass local authorization,
@@ -1315,7 +1346,7 @@ Table of Contents
    can perform actions that the resource owner or service would
    otherwise forbid.
 
-13.6.  TOCTOU and replay
+13.7.  TOCTOU and replay
 
    Parameter binding (Section 7) ties a permit to specific normalized
    parameters and a short window or single use, so a permit cannot be
@@ -1323,7 +1354,7 @@ Table of Contents
    between check and use.  The executing PEP, not an upstream component,
    MUST perform the reverification.
 
-13.7.  Confused deputy across resources
+13.8.  Confused deputy across resources
 
    The permit binding of Section 7 ties a decision to the Mission, the
    token audience or protected resource, sub, client_id, actor context,
@@ -1336,7 +1367,7 @@ Table of Contents
    a resource, audience, tenant, or operation boundary it was not issued
    for.
 
-13.8.  Decision channel and token disclosure
+13.9.  Decision channel and token disclosure
 
    A separate PDP becomes part of the Resource Server's trusted
    authorization path for the operations in its enforcement scope.  The
@@ -1347,7 +1378,7 @@ Table of Contents
    the same credential handling, retention, and disclosure controls it
    applies at the Resource Server.
 
-13.9.  Evidence privacy and correlation
+13.10.  Evidence privacy and correlation
 
    Runtime enforcement evidence is intentionally durable and therefore
    sensitive.  It can reveal a subject's resources, action timing,

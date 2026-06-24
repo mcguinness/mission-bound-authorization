@@ -134,13 +134,14 @@ Table of Contents
    15. Security Considerations
      15.1.  Consent Binding
      15.2.  Mission Drift
-     15.3.  Issuance Scope, Not Runtime Enforcement
-     15.4.  Token Theft
-     15.5.  Delegation and Chain Compromise
-     15.6.  Cross-Domain Revocation Latency
-     15.7.  Signing and Key Rotation
-     15.8.  Compromised or Over-Broad Derivation
-     15.9.  Authority Hash Is Not a Mission Identifier
+     15.3.  Prompt Injection and the Exfiltration Leg
+     15.4.  Issuance Scope, Not Runtime Enforcement
+     15.5.  Token Theft
+     15.6.  Delegation and Chain Compromise
+     15.7.  Cross-Domain Revocation Latency
+     15.8.  Signing and Key Rotation
+     15.9.  Compromised or Over-Broad Derivation
+     15.10. Authority Hash Is Not a Mission Identifier
    16. Privacy Considerations
      16.1.  Mission Identifier Correlation
    17. IANA Considerations
@@ -260,7 +261,7 @@ Table of Contents
    expand it.  Revoking the Mission stops further derivation
    (Section 9); it does not undo actions already completed.  Evaluating
    each action against the Mission at the point of use is the runtime
-   layer's concern (Section 15.3), not this document's.
+   layer's concern (Section 15.4), not this document's.
 
    The invariant across all three: the plan and the execution draw on
    the Mission's authority; neither enlarges it.
@@ -347,7 +348,7 @@ Table of Contents
       approved authority and task; it does not evaluate whether a given
       runtime action serves the Mission's purpose beyond matching the
       approved authorization_details and constraints.  Per-action
-      evaluation is the runtime layer's role (Section 15.3).  Verifying
+      evaluation is the runtime layer's role (Section 15.4).  Verifying
       an agent's declared reasoning against the task is a further
       attestation problem outside both layers.
 
@@ -652,7 +653,7 @@ Table of Contents
       share one vocabulary.  They are carried on the Mission and
       committed by intent_hash, but, unlike max_derivations, they are
       not enforced by the AS at issuance.  They are enforced at the
-      point of use by the runtime layer (Section 15.3); absent that
+      point of use by the runtime layer (Section 15.4); absent that
       layer they are not enforced.
 
    Example Mission Intent:
@@ -807,7 +808,7 @@ Table of Contents
    over those objects (the owning customer, the tenant, an amount
    ceiling, read-only except named write actions, a validity window)
    rather than by an exhaustive resource enumeration.  The runtime layer
-   (Section 15.3) checks each concrete object against the constraint at
+   (Section 15.4) checks each concrete object against the constraint at
    the point of use.  Constraint-bounding lets a Mission cover an open-
    ended task with tight authority even though the specific objects are
    unknown at approval, and avoids the over-broad enumeration a
@@ -920,7 +921,7 @@ Table of Contents
    hierarchical resource and action subset semantics is known near-term
    work; until then a deployment expresses hierarchy through explicit
    entries or constraints, and the runtime layer enforces it
-   (Section 15.3).
+   (Section 15.4).
 
    The delegation member is policy, not authority, and is not part of
    this comparison (Section 11.1).  A derived entry's delegation, when
@@ -992,7 +993,7 @@ Table of Contents
       delegated or cross-domain (ID-JAG) token;
 
    *  evaluating the entry against a concrete request is the runtime
-      layer's responsibility (Section 15.3), not the AS's.
+      layer's responsibility (Section 15.4), not the AS's.
 
    This lets policy-language profiles compose without this document
    defining them: for example, an entry carrying a Cedar policy set
@@ -1054,7 +1055,7 @@ Table of Contents
       constraints, they are committed by authority_hash and carried to
       the point of use, but they are evaluated against the concrete call
       arguments by a runtime enforcement layer, not at issuance
-      (Section 15.3).
+      (Section 15.4).
 
    For example, a Mission authorized to read invoices and post small
    adjustments through a finance MCP server, and to send messages
@@ -1153,7 +1154,7 @@ Table of Contents
    token.  A per-entry constraint, however, binds only where a Resource
    Server understands and enforces its key (Section 8.2); the
    consumption bounds max_budget, max_calls, and max_duration bind only
-   under the runtime layer (Section 15.3); and max_derivations is an
+   under the runtime layer (Section 15.4); and max_derivations is an
    origin-AS cap that does not bound a Resource AS's local-token minting
    in another domain (Section 12).  In a deployment without runtime
    enforcement, and for any constraint no Resource Server enforces,
@@ -2121,7 +2122,7 @@ Table of Contents
 
    *  MUST be audienced to the target Resource AS, and MUST NOT have a
       lifetime exceeding 300 seconds (a short lifetime bounds cross-
-      domain revocation latency; see Section 15.6);
+      domain revocation latency; see Section 15.7);
 
    *  MUST be sender-constrained ([RFC7800]) to the presenting client by
       the proof-of-possession mechanism the cross-domain grant profile
@@ -2458,7 +2459,38 @@ Table of Contents
    the Mission is revoked or expired.  Deployments SHOULD keep derived
    token lifetimes short so state transitions take effect promptly.
 
-15.3.  Issuance Scope, Not Runtime Enforcement
+15.3.  Prompt Injection and the Exfiltration Leg
+
+   An agent that reads attacker-influenceable content can be prompt-
+   injected; this profile assumes that and does not try to make the
+   agent immune.  Injection is dangerous when one agent combines access
+   to private data, exposure to untrusted content, and the ability to
+   communicate externally; the robust defense is architectural,
+   constraining one of those, not making the model resistant.
+
+   This profile constrains the data-access leg: a Mission narrows
+   authority from everything the agent's standing credentials allow to
+   the resources the approved task needs, and per-task Missions
+   (Section 1.4) shrink the blast radius further.  It contributes one
+   thing against the untrusted-content leg: goal, purpose, and
+   success_criteria are inert, they grant, widen, and gate no authority
+   (Section 4, Section 5), so injected text cannot talk a Mission into
+   expanding itself; authority is fixed at the approval event.
+
+   This profile does not constrain the external-communication leg and
+   provides no information-flow control.  It models authority over
+   resources and actions, not how an agent uses authority it holds:
+   within an approved Authority Set, an injected agent can read what the
+   Mission permits and write to a sink the Mission permits, and the flat
+   subset and constraint model cannot express "may read secrets, may
+   write documents, but not write secrets into documents."  Constraining
+   exfiltration by a compromised agent is the runtime enforcement
+   layer's role (Section 15.4), and even there it is bounded, not closed
+   (see that profile's security considerations).  Closing within-scope
+   data laundering needs a separate taint or information-flow layer this
+   profile does not define.
+
+15.4.  Issuance Scope, Not Runtime Enforcement
 
    This profile governs the issuance and derivation of authority: it
    bounds what authority a Mission yields, binds it to the Approver's
@@ -2486,7 +2518,7 @@ Table of Contents
    token lifetimes and narrow authority bound, but do not eliminate,
    this exposure.
 
-15.4.  Token Theft
+15.5.  Token Theft
 
    Derived tokens are sender-constrained (DPoP [RFC9449] or mTLS
    [RFC8705]) at the levels set in Section 8, Section 12.2, and
@@ -2496,7 +2528,7 @@ Table of Contents
    regardless, but sender-constraint prevents replay by a different
    party.
 
-15.5.  Delegation and Chain Compromise
+15.6.  Delegation and Chain Compromise
 
    Delegation (Section 11) widens the set of parties holding Mission-
    derived authority.  Because authority only narrows down the chain, a
@@ -2519,7 +2551,7 @@ Table of Contents
    token lifetimes short and SHOULD make only the entries that need
    delegation delegable.
 
-15.6.  Cross-Domain Revocation Latency
+15.7.  Cross-Domain Revocation Latency
 
    Single-domain revocation is prompt: the AS that issued a token also
    honors its revocation (Section 9.2).  The cross-domain case
@@ -2543,7 +2575,7 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission-signals], which this document
    does not require.
 
-15.7.  Signing and Key Rotation
+15.8.  Signing and Key Rotation
 
    The mission claim and authorization_details are carried inside the
    [RFC9068] JWT and are covered by the AS's token signature; their
@@ -2552,7 +2584,7 @@ Table of Contents
    retain the verification key for each key identifier it has signed
    under long enough to verify tokens issued before a rotation.
 
-15.8.  Compromised or Over-Broad Derivation
+15.9.  Compromised or Over-Broad Derivation
 
    The AS is trusted to derive authority no broader than the Mission
    Intent.  Deployments SHOULD constrain derivation with explicit
@@ -2560,7 +2592,7 @@ Table of Contents
    SHOULD record policy_version so a derivation can be audited and
    reproduced.  General OAuth security guidance [RFC9700] applies.
 
-15.9.  Authority Hash Is Not a Mission Identifier
+15.10.  Authority Hash Is Not a Mission Identifier
 
    authority_hash commits the approved Authority Set, not the Mission.
    Two distinct Missions that approve byte-identical authority carry the
@@ -3105,7 +3137,7 @@ A.4.  Stage 3: The Resource AS Issues a Local Access Token
 
    Revoking the Mission now stops new ID-JAGs, but the local token the
    Resource AS minted stays usable until its exp (260 seconds), bounded
-   by the 300-second ID-JAG cap (Section 15.6).  Tighter cross-domain
+   by the 300-second ID-JAG cap (Section 15.7).  Tighter cross-domain
    revocation is opt-in, and the two companions do different things: a
    Mission Status freshness lease shortens how long the partner relies
    on stale state by forcing a pull or per-request re-check, while a
