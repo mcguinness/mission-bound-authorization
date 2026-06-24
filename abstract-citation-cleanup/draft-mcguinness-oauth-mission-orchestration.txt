@@ -1,0 +1,719 @@
+
+
+
+
+Network Working Group                                      K. McGuinness
+Internet-Draft                                               Independent
+Intended status: Standards Track                            24 June 2026
+Expires: 26 December 2026
+
+
+           Mission Orchestration and Unwinding for OAuth 2.0
+          draft-mcguinness-oauth-mission-orchestration-latest
+
+Abstract
+
+   Mission runtime enforcement can refuse the next consequential action,
+   but Mission termination can occur while an agent workflow is already
+   in flight.  This document defines an OPTIONAL orchestration profile
+   for Mission-governed workflows.  It classifies actions by
+   reversibility, requires an unwind plan before execution, defines
+   behavior when a Mission is revoked, expired, suspended, completed, or
+   superseded, and specifies Orchestration Evidence for pause, cancel,
+   compensation, and human-review decisions.  The profile turns Mission
+   termination from a simple access-control denial into governed
+   handling of execution state.
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-
+   mcguinness-oauth-mission-orchestration.html.  Status information for
+   this document may be found at https://datatracker.ietf.org/doc/draft-
+   mcguinness-oauth-mission-orchestration/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/mcguinness/draft-mcguinness-oauth-mission.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 26 December 2026.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+   2.  Scope
+     2.1.  Orchestration Profile
+   3.  Conventions and Terminology
+   4.  Reversibility Classes
+     4.1.  Action-Class Source
+   5.  Unwind Plan
+     5.1.  Worked Unwind Plan
+   6.  State-Change Behavior
+     6.1.  Trigger Sources
+   7.  In-Flight Requests
+     7.1.  Cancellation Attempt
+   8.  Compensation
+     8.1.  Compensation Authority Basis
+   9.  Orchestration Evidence
+     9.1.  Evidence Ordering
+   10. Relationship to Harness and Runtime Profiles
+   11. Conformance
+   12. Security Considerations
+     12.1.  Compensation Is Authority-Bearing
+     12.2.  Unknown Outcomes
+     12.3.  Reversibility Misclassification
+     12.4.  Compensation Loops
+     12.5.  Race With Runtime Permits
+   13. Privacy Considerations
+   14. IANA Considerations
+   15. References
+     15.1.  Normative References
+     15.2.  Informative References
+   Acknowledgments
+   Author's Address
+
+1.  Introduction
+
+   Mission-Bound Authorization for OAuth 2.0
+   [I-D.draft-mcguinness-oauth-mission] (the "issuance profile") gives a
+   task an approved authority and lifecycle.  The runtime profile
+   [I-D.draft-mcguinness-oauth-mission-runtime] checks each
+   consequential action before it executes.  These are necessary but not
+   complete for long-running workflows.  A Mission can terminate after
+   some steps have completed and before others run.  Some completed
+   steps can be compensated.  Some cannot.  Some in-flight requests can
+   be canceled.  Some must be escalated to a human.
+
+   This document defines the orchestration layer that handles those
+   cases.  Before governed execution begins, the orchestrator records an
+   unwind plan for each consequential step.  When Mission state becomes
+   non-active or cannot be established, the orchestrator stops new
+   governed work and executes the plan: cancel, compensate, suppress,
+   pause, or hand off to human review.
+
+2.  Scope
+
+   This document defines:
+
+   *  action reversibility classes (Section 4);
+
+   *  unwind plans (Section 5);
+
+   *  behavior on Mission state changes (Section 6);
+
+   *  in-flight request handling (Section 7);
+
+   *  compensation and human review evidence (Section 9); and
+
+   *  conformance for a Mission-aware orchestrator (Section 11).
+
+   This document does not define a workflow language, a compensation
+   API, or a replacement for runtime PEP enforcement.
+
+2.1.  Orchestration Profile
+
+   A deployment claiming this profile MUST publish or otherwise make
+   available an orchestration profile for governed workflows.  The
+   profile MUST define:
+
+   *  workflow classes in scope;
+
+   *  action-class mapping for workflow steps;
+
+   *  the source of Mission state used by the orchestrator;
+
+   *  staleness bounds;
+
+   *  minimum reversibility class per operation;
+
+   *  permitted compensation authorities;
+
+   *  review queues or escalation targets; and
+
+   *  evidence retention.
+
+   The orchestration profile is deployment documentation.  It is not an
+   OAuth Authorization Server metadata extension and does not alter
+   token format.
+
+3.  Conventions and Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   This document uses the terms Mission, Mission state, and
+   consequential action from [I-D.draft-mcguinness-oauth-mission]; PEP,
+   PDP, and runtime enforcement evidence from
+   [I-D.draft-mcguinness-oauth-mission-runtime]; and the Decision
+   Evidence and Execution Evidence objects from
+   [I-D.draft-mcguinness-oauth-mission-authzen] (the runtime profile
+   defers those object schemas; the AuthZEN profile defines them).
+
+   Orchestrator:  The component that schedules, sequences, retries, or
+      coordinates governed actions in a Mission.
+
+   Unwind plan:  The per-step plan describing what the orchestrator does
+      if Mission authority ends or cannot be established before or
+      during that step.
+
+   Compensation:  A deployment-defined action intended to offset or
+      reverse a prior action's effect.  Compensation is not guaranteed
+      reversal.
+
+   Safe point:  A workflow point at which the orchestrator can stop
+      without starting another consequential action and with all prior
+      outcomes recorded.
+
+4.  Reversibility Classes
+
+   Each consequential step in a governed workflow MUST be assigned one
+   of these reversibility classes before execution:
+
+   read_only:  The step observes data and has no external side effect.
+      Suppression prevents future exposure, but prior disclosure cannot
+      be undone.
+
+   reversible_write:  The step changes state and has a known
+      compensation action that can restore or materially offset the
+      change.
+
+   irreversible_action:  The step cannot be reliably undone once
+      completed.
+
+   external_commitment:  The step commits to an external party, sends
+      communication, starts a payment, signs, files, orders, or
+      otherwise creates an external reliance interest.
+
+   privileged_administration:  The step changes policy, access,
+      configuration, or security posture.
+
+   irreversible_action, external_commitment, and
+   privileged_administration are the identically-named action classes of
+   [I-D.draft-mcguinness-oauth-mission-runtime] (Section "Action
+   classification"); a step's reversibility class MUST be consistent
+   with, and no lower than, the runtime action class that profile
+   assigns the same operation. read_only and reversible_write are a
+   reversibility refinement this profile adds that the runtime
+   classification does not separately track.
+
+   The class MAY be raised by Resource policy or operation profile.  As
+   with the runtime classification floor
+   ([I-D.draft-mcguinness-oauth-mission-runtime]), it MUST NOT be
+   lowered by the orchestrator at runtime to avoid review or
+   compensation requirements.
+
+4.1.  Action-Class Source
+
+   The orchestrator MUST derive reversibility class from a trusted
+   source:
+
+   *  Resource Server runtime profile;
+
+   *  operation profile;
+
+   *  workflow definition reviewed under deployment policy; or
+
+   *  Resource policy response.
+
+   An agent plan, model output, or tool description MAY suggest a class
+   but MUST NOT be the sole authority for lowering class.  If sources
+   conflict, the orchestrator MUST use the stricter class.
+
+5.  Unwind Plan
+
+   Before dispatching a consequential step, the orchestrator MUST have
+   an unwind plan.  The plan has these members:
+
+   step_id:  REQUIRED.  A string identifying the workflow step.
+
+   mission_id:  REQUIRED.  The Mission governing the step.
+
+   reversibility:  REQUIRED.  One of the classes in Section 4.
+
+   pre_start_behavior:  REQUIRED.  Behavior when Mission state is non-
+      active before the step starts.  One of suppress, pause,
+      cancel_workflow, or human_review.
+
+   in_flight_behavior:  REQUIRED.  Behavior when Mission state changes
+      while the step is in flight.  One of cancel_if_possible,
+      wait_then_review, continue_to_safe_point, or human_review.
+
+   post_completion_behavior:  REQUIRED for reversible_write,
+      irreversible_action, external_commitment, and
+      privileged_administration.  One of compensate, record_only, or
+      human_review.
+
+   compensation_action:  REQUIRED when post_completion_behavior is
+      compensate.  A deployment-defined action reference.
+
+   review_queue:  REQUIRED when any behavior is human_review.  A
+      deployment-defined queue or escalation target.
+
+   safe_point:  OPTIONAL.  A deployment-defined workflow point to which
+      continue_to_safe_point may proceed.
+
+   evidence_policy:  OPTIONAL.  Deployment-defined instructions for
+      linking Decision Evidence, Execution Evidence, Harness Evidence,
+      and Orchestration Evidence.  Its members, including any retention
+      token such as the example's mission_audit_horizon, are deployment-
+      defined; the retention horizon aligns with the runtime profile's
+      record-retention guidance
+      ([I-D.draft-mcguinness-oauth-mission-runtime]).
+
+   The unwind plan does not authorize compensation by itself.  A
+   compensation action that is consequential MUST itself pass Mission or
+   deployment emergency authorization as defined by policy.
+
+5.1.  Worked Unwind Plan
+
+   {
+     "step_id": "post_journal_entry",
+     "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+     "reversibility": "external_commitment",
+     "pre_start_behavior": "human_review",
+     "in_flight_behavior": "wait_then_review",
+     "post_completion_behavior": "human_review",
+     "review_queue": "finance-control-review",
+     "evidence_policy": {
+       "link_runtime_evidence": true,
+       "retain_for": "mission_audit_horizon"
+     }
+   }
+
+6.  State-Change Behavior
+
+   When an orchestrator learns that a Mission is no longer active, or
+   cannot establish active state within the deployment's staleness
+   bound, it MUST:
+
+   1.  stop dispatching new governed steps for that Mission;
+
+   2.  suppress or pause queued work;
+
+   3.  evaluate every in-flight step under Section 7;
+
+   4.  execute or schedule post-completion behavior for completed steps
+       whose unwind plan requires it; and
+
+   5.  emit Orchestration Evidence under Section 9.
+
+   The states revoked and expired
+   ([I-D.draft-mcguinness-oauth-mission]), suspended and completed
+   ([I-D.draft-mcguinness-oauth-mission-status]), and superseded
+   ([I-D.draft-mcguinness-oauth-mission-expansion]) are all non-active.
+   The orchestrator needs none of those companion profiles to be
+   conformant: per the issuance profile's forward-compatibility rule it
+   treats any state other than active as non-active.  A deployment MAY
+   define different operator handling for each state, but none allows
+   new governed execution without a fresh authority path.  In
+   particular, a superseded Mission's continued work SHOULD proceed
+   under the successor Mission through a fresh derivation from the
+   successor's grant, not by rebinding the predecessor's authority; the
+   successor carries its own Authority Set
+   ([I-D.draft-mcguinness-oauth-mission-expansion]).
+
+6.1.  Trigger Sources
+
+   An orchestrator can learn of Mission state change from:
+
+   *  Mission Status polling
+      ([I-D.draft-mcguinness-oauth-mission-status]);
+
+   *  Mission lifecycle signals
+      ([I-D.draft-mcguinness-oauth-mission-signals]);
+
+   *  a runtime PDP denial
+      ([I-D.draft-mcguinness-oauth-mission-runtime]);
+
+   *  a harness stop decision
+      ([I-D.draft-mcguinness-oauth-mission-harness]);
+
+   *  operator action; or
+
+   *  a deployment-specific governance event.
+
+   The orchestrator MUST record the trigger source in Orchestration
+   Evidence.  If two trigger sources disagree, the orchestrator MUST use
+   the safer state until it can reconcile.  For example, a signed
+   revoked signal overrides a stale local active cache.
+
+7.  In-Flight Requests
+
+   For in-flight requests, the orchestrator MUST distinguish:
+
+   not_dispatched:  The step has not reached the PEP or external system.
+      The orchestrator MUST suppress or pause it.
+
+   dispatched_not_committed:  The request was sent, but the deployment
+      can still cancel or prevent commit.  The orchestrator MUST attempt
+      cancellation when the unwind plan says cancel_if_possible.
+
+   committed:  The action's effect occurred or the deployment cannot
+      prove it did not occur.  The orchestrator MUST apply post-
+      completion behavior.
+
+   unknown:  The orchestrator cannot determine whether the action
+      committed.  The orchestrator MUST treat the outcome as requiring
+      human review unless deployment policy defines a stricter default.
+
+   For irreversible actions, external commitments, and privileged
+   administration, an unknown outcome MUST NOT be treated as success or
+   as harmless suppression.
+
+7.1.  Cancellation Attempt
+
+   When the unwind plan requires cancellation, the orchestrator MUST:
+
+   1.  invoke the deployment-defined cancellation mechanism, if any;
+
+   2.  record whether cancellation was accepted, rejected, unavailable,
+       or unknown;
+
+   3.  continue to classify the outcome as unknown until it has evidence
+       that the action did not commit; and
+
+   4.  emit Orchestration Evidence.
+
+   Cancellation acceptance by an upstream queue is not proof that an
+   external action did not occur.
+
+8.  Compensation
+
+   Compensation is governed work.  If a compensation action is performed
+   under the original Mission after that Mission became non-active, the
+   deployment MUST have a policy basis for emergency or remedial
+   authority that is separate from ordinary Mission authority.
+   Otherwise the orchestrator MUST escalate to human review.
+
+   The compensation record MUST link:
+
+   *  the original Mission;
+
+   *  the original decision and execution evidence when available;
+
+   *  the state transition that triggered compensation;
+
+   *  the compensation action;
+
+   *  the authority basis for compensation; and
+
+   *  the outcome.
+
+8.1.  Compensation Authority Basis
+
+   The authority basis for compensation is one of:
+
+   same_mission_remedial:  Deployment policy permits limited remedial
+      action under the same Mission after non-active state.  This MUST
+      be explicitly documented and SHOULD be limited to reversible
+      writes.
+
+   operator_approved:  A human operator approved the compensation.
+
+   separate_mission:  A separate active Mission authorizes the
+      compensation.
+
+   resource_policy:  Resource policy authorizes a local rollback
+      independent of Mission authority.
+
+   If no basis applies, the orchestrator MUST NOT compensate and MUST
+   handoff to human review.
+
+9.  Orchestration Evidence
+
+   An Orchestration Evidence record is a JSON object [RFC8259] with
+   these members:
+
+   event_id:  REQUIRED.  A unique identifier.
+
+   mission:  REQUIRED.  The Mission whose orchestration state changed,
+      as the nested mission object (id, origin, and, when known,
+      authority_hash), the same shape as the mission claim of
+      [I-D.draft-mcguinness-oauth-mission] and the Harness Evidence
+      object ([I-D.draft-mcguinness-oauth-mission-harness]).
+
+   workflow_id:  REQUIRED.  The workflow or task graph identifier.
+
+   step_id:  OPTIONAL.  The step affected.
+
+   mission_state:  REQUIRED.  The state observed.
+
+   state_source:  REQUIRED.  A value from the shared state_source value
+      space defined by the Harness profile
+      ([I-D.draft-mcguinness-oauth-mission-harness]): status, signal,
+      runtime_decision, harness, operator, or a deployment-defined
+      source.  This profile does not define its own; a trigger source
+      from Section 6.1 maps to the corresponding value (a harness stop
+      decision to harness, an operator action to operator).
+
+   orchestration_decision:  REQUIRED.  One of suppress, pause, cancel,
+      compensate, human_review, or record_only.  An unwind plan's
+      pre_start_behavior/in_flight_behavior values map to these: both
+      cancel_workflow and cancel_if_possible record as cancel,
+      wait_then_review and a review queue record as human_review, and
+      suppress/pause carry through unchanged.
+
+   reason:  REQUIRED.  A string naming the condition.
+
+   occurred_at:  REQUIRED.  An RFC 3339 [RFC3339] timestamp.
+
+   linked_evidence:  OPTIONAL.  An array of Decision Evidence, Execution
+      Evidence, Harness Evidence, or prior Orchestration Evidence
+      identifiers.
+
+   outcome_state:  OPTIONAL.  One of not_dispatched,
+      dispatched_not_committed, committed, or unknown.
+
+   authority_basis:  OPTIONAL.  Present when orchestration_decision is
+      compensate.
+
+   evidence_envelope:  OPTIONAL.  Integrity protection over the
+      Orchestration Evidence object.  When present with format jws-
+      compact, it is a JWS [RFC7515] Compact Serialization whose payload
+      is the JCS [RFC8785] canonical bytes of the object with
+      evidence_envelope removed.
+
+   Example:
+
+   {
+     "event_id": "orch_4r9SqLm8tY2p",
+     "mission": {
+       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+       "origin": "https://as.example.com",
+       "authority_hash":
+         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+     },
+     "workflow_id": "wf_invoice_recon_2026q3",
+     "step_id": "post_journal_entry",
+     "mission_state": "suspended",
+     "state_source": "status",
+     "orchestration_decision": "human_review",
+     "reason": "external_commitment_dispatched_unknown",
+     "outcome_state": "unknown",
+     "occurred_at": "2026-11-02T08:16:00Z"
+   }
+
+9.1.  Evidence Ordering
+
+   An orchestrator SHOULD include a deployment-defined sequence number
+   or otherwise order evidence records when multiple steps are affected
+   by the same state transition.  Ordering lets an auditor reconstruct
+   whether the orchestrator stopped before or after a given step
+   committed.
+
+10.  Relationship to Harness and Runtime Profiles
+
+   The harness profile [I-D.draft-mcguinness-oauth-mission-harness]
+   governs whether a session, queue item, or sub-agent handle may
+   continue.  This document governs how workflow state is unwound once
+   continuation is stopped.  The runtime profile
+   [I-D.draft-mcguinness-oauth-mission-runtime] still governs each
+   consequential action at the last controllable boundary.  These checks
+   compose; none replaces the others.
+
+   The two execution profiles share, rather than duplicate, their common
+   machinery: the state_source value space is defined once by the
+   Harness profile and reused here (Section 9), and the Orchestration
+   Evidence mission descriptor is the same shape as the Harness Evidence
+   descriptor.  The boundary is by question asked: a Harness Evidence
+   record answers "may this unit of work continue," while an
+   Orchestration Evidence record answers "how was in-flight workflow
+   state unwound."  A deployment that needs both records emits each at
+   its own decision point; neither subsumes the other.
+
+11.  Conformance
+
+   A conforming Mission-aware orchestrator MUST:
+
+   *  assign a reversibility class to each consequential step;
+
+   *  record an unwind plan before dispatch;
+
+   *  stop new governed work when Mission state is non-active or stale;
+
+   *  classify in-flight steps under Section 7;
+
+   *  apply post-completion behavior for committed or unknown outcomes;
+
+   *  emit Orchestration Evidence; and
+
+   *  document the policy basis for compensation after Mission
+      termination.
+
+   A deployment MAY claim this profile for only some workflows, but it
+   MUST identify workflows and paths outside the claim.
+
+12.  Security Considerations
+
+12.1.  Compensation Is Authority-Bearing
+
+   Compensation can itself be consequential.  A deployment MUST NOT
+   perform compensation under a terminated Mission unless it has a
+   separate policy basis.  Otherwise termination could become a path to
+   unauthorized remedial actions.
+
+12.2.  Unknown Outcomes
+
+   Distributed systems often cannot prove whether an in-flight action
+   committed.  Treating unknown as harmless creates audit gaps.  This
+   profile requires unknown outcomes for high-risk classes to be
+   reviewed or handled under stricter policy.
+
+12.3.  Reversibility Misclassification
+
+   An orchestrator can evade review by classifying a step as reversible
+   when it is not.  Resource policy and operation profiles SHOULD define
+   minimum reversibility classes for protected operations, and
+   orchestrators MUST NOT lower them.
+
+12.4.  Compensation Loops
+
+   Compensation actions can fail and trigger further compensation.  A
+   deployment SHOULD cap compensation chains and escalate to human
+   review when repeated compensation would create additional external
+   effects.
+
+12.5.  Race With Runtime Permits
+
+   A runtime permit obtained before revocation might still be presented
+   after the orchestrator learns the Mission is non-active.  The
+   orchestrator MUST stop dispatching such work, and the runtime PEP
+   MUST still enforce its own permit freshness and Mission-state checks.
+
+13.  Privacy Considerations
+
+   Orchestration Evidence can expose workflow structure, business
+   milestones, resource names, and failure conditions.  Deployments
+   SHOULD limit evidence access to audit and operations roles with a
+   need to know and avoid recording raw user content when identifiers
+   are sufficient.
+
+14.  IANA Considerations
+
+   This document makes no IANA request.
+
+15.  References
+
+15.1.  Normative References
+
+   [I-D.draft-mcguinness-oauth-mission]
+              McGuinness, K., "Mission-Bound Authorization for OAuth
+              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
+              oauth-mission, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission>.
+
+   [I-D.draft-mcguinness-oauth-mission-runtime]
+              McGuinness, K., "Mission-Bound Runtime Enforcement for
+              OAuth 2.0", Work in Progress, Internet-Draft, draft-
+              mcguinness-oauth-mission-runtime, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-runtime>.
+
+   [I-D.draft-mcguinness-oauth-mission-status]
+              McGuinness, K., "Mission Status and Lifecycle for OAuth
+              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
+              oauth-mission-status, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-status>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC3339]  Klyne, G. and C. Newman, "Date and Time on the Internet:
+              Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
+              <https://www.rfc-editor.org/rfc/rfc3339>.
+
+   [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
+              Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
+              2015, <https://www.rfc-editor.org/rfc/rfc7515>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC8259]  Bray, T., Ed., "The JavaScript Object Notation (JSON) Data
+              Interchange Format", STD 90, RFC 8259,
+              DOI 10.17487/RFC8259, December 2017,
+              <https://www.rfc-editor.org/rfc/rfc8259>.
+
+   [RFC8785]  Rundgren, A., Jordan, B., and S. Erdtman, "JSON
+              Canonicalization Scheme (JCS)", RFC 8785,
+              DOI 10.17487/RFC8785, June 2020,
+              <https://www.rfc-editor.org/rfc/rfc8785>.
+
+15.2.  Informative References
+
+   [I-D.draft-mcguinness-oauth-mission-authzen]
+              McGuinness, K., "Mission-Bound Runtime Enforcement:
+              AuthZEN Profile", Work in Progress, Internet-Draft, draft-
+              mcguinness-oauth-mission-authzen, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-authzen>.
+
+   [I-D.draft-mcguinness-oauth-mission-expansion]
+              McGuinness, K., "Mission Expansion for OAuth 2.0", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-mission-
+              expansion, 2026, <https://datatracker.ietf.org/doc/html/
+              draft-mcguinness-oauth-mission-expansion>.
+
+   [I-D.draft-mcguinness-oauth-mission-harness]
+              McGuinness, K., "Mission-Aware Agent Harnesses for OAuth
+              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
+              oauth-mission-harness, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-harness>.
+
+   [I-D.draft-mcguinness-oauth-mission-signals]
+              McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              mission-signals, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-signals>.
+
+Acknowledgments
+
+   This document is part of the Mission-Bound Authorization for OAuth
+   2.0 set and defines how Mission termination affects in-flight
+   workflows.
+
+Author's Address
+
+   Karl McGuinness
+   Independent
+   Email: public@karlmcguinness.com
