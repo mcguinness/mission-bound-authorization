@@ -363,6 +363,19 @@ task-scoped Mission Intents rather than one broad proposal, so each
 resulting Mission stays narrow, separately approved, and separately
 revocable.
 
+Where cross-vendor interoperability matters, the shaper should record in
+Shaping Evidence the concrete candidate authority it proposes (the
+resources, actions, and constraints), so the Mission Issuer can derive
+the Authority Set by narrowing that proposal under its subset rule
+rather than generating authority from free text
+({{I-D.draft-mcguinness-oauth-mission}}). Narrowing is the portable
+derivation path: the proposal format and the narrowing rule are
+interoperable, so the resulting Authority Set is enforceable and
+auditable across domains even though the Mission Issuer's policy
+decision of what to narrow to stays local. The shaper still proposes
+only; the Mission Issuer validates, narrows, and binds authority at
+approval ({{proposes-only}}).
+
 When a deployment or caller supplies an authority ceiling, the proposal
 MUST be a subset of it. If the task cannot be completed within that
 ceiling, the shaper MUST request clarification or refuse; it MUST NOT

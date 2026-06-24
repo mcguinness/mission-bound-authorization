@@ -278,8 +278,15 @@ Mission Lifecycle Signals {{I-D.draft-mcguinness-oauth-mission-signals}}.
 A deployment implements this document without any of them. Remaining
 future work, not yet specified, includes a substrate-neutral
 generalization of the Mission model across non-OAuth authorization
-substrates and the normative carriage of Mission context in Transaction
-Tokens (shown only illustratively in the end-to-end example appendix).
+substrates, the normative carriage of Mission context in Transaction
+Tokens (shown only illustratively in the end-to-end example appendix),
+and, for a community that wants cross-vendor agreement on what a task
+authorizes within a vertical, an OPTIONAL derivation profile: a registry
+of standard task types mapped to authority templates, so that two
+vendors in that profile derive comparable Authority Sets. This document
+deliberately does not standardize the derivation algorithm itself
+({{authorization-derivation}}); a vertical profile is the appropriate
+vehicle where portable derivation is genuinely needed.
 
 ## Non-Goals
 
@@ -709,11 +716,40 @@ commits it as `authority_hash` ({{approval-event}}). The Intent's
 but grant no authority by themselves ({{mission-intent}}); they
 constrain what the AS MAY derive, never widen it.
 
-Derivation is governed by local policy. Different Authorization Servers
-MAY derive different Authority Sets from the same Mission Intent. This
-profile fixes how the derived authority is committed, carried, and
-gated, not a portable derivation algorithm; the Mission's
-`policy_version` records which policy produced a given Authority Set.
+Derivation is governed by local policy and is not a portable algorithm:
+different Authorization Servers MAY derive different Authority Sets from
+the same Mission Intent, exactly as different deployments grant
+different authority for the same {{RFC9396}} request or the same scope.
+That locality is intended, not a gap. It is the resource-owning AS's
+policy, and it is not a value a foreign party should reproduce. What
+this profile makes interoperable is therefore not the derivation step
+but its result: the derived Authority Set's structure and vocabulary
+({{authorization-derivation}}, {{common-constraints}}) and its
+integrity anchors ({{integrity-anchors}}), which a consumer in any
+domain interprets, enforces, and audits identically. A consumer enforces
+the derived Authority Set, never the Intent.
+
+Two rules keep local derivation accountable rather than opaque. First,
+derivation MUST be reproducible: the same Mission Intent and the same
+`policy_version` MUST yield the same Authority Set at a given AS, so a
+derivation can be re-checked and a divergence detected. Second, an AS
+SHOULD make the policy a `policy_version` identifies inspectable to
+relying parties and auditors that must evaluate how it derives authority.
+Local policy is thus versioned and reviewable, which is what a
+cross-domain trust decision actually needs, even though the policy
+itself does not travel.
+
+Where cross-vendor interoperability matters, an AS SHOULD derive the
+Authority Set by narrowing a client-proposed set of
+`authorization_details` to policy, rather than generating one from free
+text. Narrowing is governed by the subset rule ({{subset}}), which is
+interoperable, so the result is verifiable and enforceable in any domain
+even though the policy decision of what to narrow to stays local; the
+Intent's `goal` and `constraints` then serve as the human-readable
+consent-rendering layer over that proposed authority. Generating
+authority from free text alone is permitted but is the least portable
+and most semantically fraught option, and SHOULD be reserved for
+deployments that do not need cross-vendor agreement.
 
 For an open-ended task whose concrete objects cannot be enumerated at
 approval (for example, "reconcile this customer's ledger," where the
@@ -751,7 +787,14 @@ A `mission_resource_access` entry is a {{RFC9396}}
 
 `actions`:
 : REQUIRED. An array of strings. Permitted action
-  identifiers, each matching `[A-Za-z0-9_.:-]+`.
+  identifiers, each matching `[A-Za-z0-9_.:-]+`. Like an OAuth scope, an
+  action identifier carries meaning only at the `resource` that defines
+  it; a consumer enforces only the actions it recognizes for that
+  resource and honors no others, so an action a consumer does not
+  understand is fail-closed by construction (the action is simply not
+  within the authority it can enforce). An AS SHOULD draw action
+  identifiers from a namespace the serving resource documents, so the
+  set is interpretable cross-vendor rather than ad hoc.
 
 `constraints`:
 : OPTIONAL. An object. Machine-actionable per-resource
@@ -2124,7 +2167,14 @@ A Resource AS consuming a Mission-bound cross-domain grant:
 - MUST bound the issued `authorization_details` by what the
   cross-domain grant conveyed, and MUST apply its own local
   authorization policy in addition: honoring a Mission does not
-  obligate it to authorize any particular request.
+  obligate it to authorize any particular request. Because the
+  conveyed entries were derived under the originating AS's local policy,
+  the Resource AS does not re-derive them; it interprets and enforces
+  them by their structure and vocabulary. It MUST fail closed on a
+  conveyed `actions` identifier or `constraints` key it does not
+  recognize for the resource in question, exactly as a Resource Server
+  does ({{rs-enforcement}}), so authority it cannot interpret is never
+  honored across the trust boundary rather than enforced by guess.
 - MUST, when it issues delegated tokens of its own, enforce each
   entry's `delegation` policy as in {{delegation-constraints}}; the
   policy travels on the conveyed entries. The cross-domain grant
