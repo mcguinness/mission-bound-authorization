@@ -3948,7 +3948,12 @@ and carrying its own narrowed authority into another domain is out of
 scope for this document and deferred to future work. Cross-domain
 issuance here always projects the agent's Mission authority; delegation
 within the target domain is performed by the Resource AS
-(<a href="#validation-at-resource-as" class="auto internal xref">Section 12.3</a>).<a href="#section-12.2-9" class="pilcrow">¶</a></p>
+(<a href="#validation-at-resource-as" class="auto internal xref">Section 12.3</a>). A sub-agent that must act in a
+different trust domain under its own narrowed authority is therefore not
+covered by a single hop; distributed multi-agent work across domains
+composes only through the agent's projected authority or through
+separate Missions per domain. A delegate-carries-its-own-authority mode
+is future work.<a href="#section-12.2-9" class="pilcrow">¶</a></p>
 <p id="section-12.2-10">Two roles must not be conflated. The grant the client presents to
 <em>obtain</em> the cross-domain grant (the Mission's refresh token) is the
 input to the exchange and selects the Mission; the Mission-bound
@@ -4731,6 +4736,10 @@ this document:<a href="#section-17.6-3" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-expansion</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-runtime">[I-D.draft-mcguinness-oauth-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-runtime</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-runtime">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-runtime</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-signals</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-signals">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-signals</a>&gt;</span>. </dd>
@@ -4806,9 +4815,14 @@ Resource AS; deployment-local transaction context then narrows the
 operation for internal services. No hop calls back to
 <code>mission.origin</code> for state; each enforces from the credential it
 holds.<a href="#appendix-A-4" class="pilcrow">¶</a></p>
-<p id="appendix-A-5">Scenario: agent <code>s6BhdRkqt3</code>, acting for <code>alice</code>
+<p id="appendix-A-5">This walkthrough is the baseline issuance path: stateless enforcement
+bounded only by token lifetime. The <span class="bcp14">OPTIONAL</span> companion profiles layer on
+it, and the stages note where: Stage 4 gains a runtime point-of-use
+check, and Stage 3 gains prompt cross-domain revocation from Status or
+Signals.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
+<p id="appendix-A-6">Scenario: agent <code>s6BhdRkqt3</code>, acting for <code>alice</code>
 (<code>user_3p2q8mN1a0kV7tR</code>), reconciles Q3 invoices in a partner ERP
-under Mission <code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code>.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
+under Mission <code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code>.<a href="#appendix-A-6" class="pilcrow">¶</a></p>
 <div id="stage-0-agent-identity-by-reference">
 <section id="appendix-A.1">
         <h3 id="name-stage-0-agent-identity-by-r">
@@ -4983,6 +4997,17 @@ the home AS. The token's <code>exp</code> (1797840290) is below the ID-JAG's
 <code>sub</code> is illustrative; its value is determined by the
 subject-resolution rules of the ID-JAG and identity chaining profiles,
 not by this document.<a href="#appendix-A.4-3" class="pilcrow">¶</a></p>
+<p id="appendix-A.4-4">Revoking the Mission now stops new ID-JAGs, but the local token the
+Resource AS minted stays usable until its <code>exp</code> (260 seconds), bounded
+by the 300-second ID-JAG cap (<a href="#cross-domain-revocation" class="auto internal xref">Section 15.6</a>). Prompt
+cross-domain revocation is opt-in: where the partner domain consumes a
+Mission Status freshness lease or a lifecycle-change Signal, it
+re-checks on a Mission transition instead of waiting out the lifetime.<a href="#appendix-A.4-4" class="pilcrow">¶</a></p>
+<p id="appendix-A.4-5">The Resource AS holds only this audience's subset and cannot recompute
+<code>authority_hash</code>. To show its local token did not widen beyond the
+ID-JAG, it <span class="bcp14">SHOULD</span> record, per minted token, the consumed ID-JAG's <code>jti</code>
+and conveyed <code>authorization_details</code>, so an auditor can check the local
+authority is a subset of the grant.<a href="#appendix-A.4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="stage-4-the-resource-server-enforces">
@@ -4997,6 +5022,13 @@ serves, permitting <code>invoices.read</code> and <code>journal-entries.write</c
 <code>max_amount_usd: 500</code> (<a href="#mission-bound-tokens" class="auto internal xref">Section 8</a>). It treats the
 <code>mission</code> claim as an audit anchor; holding only this audience's
 subset of the Authority Set, it does not recompute <code>authority_hash</code>.<a href="#appendix-A.5-1" class="pilcrow">¶</a></p>
+<p id="appendix-A.5-2">This is stateless enforcement from the token alone.
+<code>journal-entries.write</code> is a consequential write, so where the partner
+deploys the runtime profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>) it also obtains a
+point-of-use PDP permit against current Mission state before executing.
+The baseline bounds the write only by token lifetime and
+<code>max_amount_usd</code>.<a href="#appendix-A.5-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="stage-5-internal-call-context-via-transaction-tokens">
