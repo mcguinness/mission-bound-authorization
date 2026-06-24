@@ -512,6 +512,28 @@ profile to protect against agent compromise therefore MUST include the
 irreversible, external-commitment, and privileged-administration classes
 in its mediated set; the protection is only as broad as that set.
 
+## Agent-compromise-resistant enforcement {#compromise-resistant}
+
+"Protects against agent compromise" is a verifiable claim, not a label.
+A deployment claims **agent-compromise-resistant enforcement** only when,
+for the irreversible, external-commitment, and privileged-administration
+classes, all of the following hold (each is SHOULD in the base profile
+and MUST under this claim):
+
+- the sender-constraint private key is held by the mediating PEP, not by
+  the agent component ({{custody}});
+- governed work runs with no unmediated path to those actions, as a
+  Mission-aware harness establishes
+  ({{I-D.draft-mcguinness-oauth-mission-harness}});
+- each such action requires an action-bound approval
+  ({{action-approval}}); and
+- the Mission state source for those classes is an active freshness
+  mechanism, not token-lifetime expiry ({{state-freshness}}).
+
+A deployment that leaves any of these as SHOULD MUST NOT claim
+agent-compromise-resistant enforcement; it may still claim base runtime
+conformance. The claim names exactly the set of classes it covers.
+
 # Resource Server runtime profile {#rs-runtime-profile}
 
 An OAuth Resource Server that claims conformance to this runtime
@@ -729,6 +751,16 @@ whose lifetime is the deployment's accepted state lease.
 - Each enforcement scope MUST publish its maximum staleness bound per
   action class and state source. This document does not impose one
   universal value.
+- For the irreversible, external-commitment, and
+  privileged-administration classes, the state source MUST be an active
+  freshness mechanism that can reflect a revocation within the staleness
+  bound: origin token introspection ({{RFC7662}}), the Mission Status
+  profile ({{I-D.draft-mcguinness-oauth-mission-status}}), or Mission
+  Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}).
+  Token-lifetime expiry alone is not an acceptable state source for
+  these classes: it bounds staleness only by the lifetime, so a revoked
+  Mission keeps deriving consequence until tokens age out, which is the
+  ambient-authority gap this profile exists to close.
 
 The following non-normative guidance illustrates freshness bounds that
 are likely to match the risk of common action classes:
