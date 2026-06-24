@@ -2456,34 +2456,42 @@ defines no per-action <code>amr</code> constraint. It is a specialization of
 <code>resource_policy</code> that names the step-up affordance.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.3">
-          <p id="section-7-2.3.1"><code>stale_state</code>: the PEP-supplied freshness is stale or inconsistent
-with the materialized policy view.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.3.1"><code>action_approval_required</code>: deployment or Resource policy requires an
+action-bound approval for this action
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>) and a valid fresh
+approval bound to the action's parameters is not present. The PEP
+carries any such approval in the decision context; this profile does
+not define the approval artifact, which the runtime profile owns.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.4">
-          <p id="section-7-2.4.1"><code>mission_inactive</code>: the Mission state is not <code>active</code>.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.4.1"><code>stale_state</code>: the PEP-supplied freshness is stale or inconsistent
+with the materialized policy view.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.5">
-          <p id="section-7-2.5.1"><code>credential_invalid</code>: token-derived credential facts supplied by the
-PEP are expired, inconsistent, or otherwise not usable for a runtime
-decision.<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.5.1"><code>mission_inactive</code>: the Mission state is not <code>active</code>.<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.6">
-          <p id="section-7-2.6.1"><code>parameter_violation</code>: parameters violate a constraint or the digest
-check fails.<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.6.1"><code>credential_invalid</code>: token-derived credential facts supplied by the
+PEP are expired, inconsistent, or otherwise not usable for a runtime
+decision.<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.7">
-          <p id="section-7-2.7.1"><code>resource_policy</code>: Resource policy refuses the action independently
-of Mission authority.<a href="#section-7-2.7.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.7.1"><code>parameter_violation</code>: parameters violate a constraint or the digest
+check fails.<a href="#section-7-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.8">
-          <p id="section-7-2.8.1"><code>quota_exceeded</code>: a metered runtime bound is exhausted
-(<a href="#max-invocations-constraint" class="auto internal xref">Section 9</a>).<a href="#section-7-2.8.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.8.1"><code>resource_policy</code>: Resource policy refuses the action independently
+of Mission authority.<a href="#section-7-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.9">
-          <p id="section-7-2.9.1"><code>capability_drift</code>: a catalog-sourced action's current
+          <p id="section-7-2.9.1"><code>quota_exceeded</code>: a metered runtime bound is exhausted
+(<a href="#max-invocations-constraint" class="auto internal xref">Section 9</a>).<a href="#section-7-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.10">
+          <p id="section-7-2.10.1"><code>capability_drift</code>: a catalog-sourced action's current
 capability-source digest differs from the digest committed at
 derivation, or the presented <code>tool_id</code> is outside the approved set
-(<a href="#capability-source-binding" class="auto internal xref">Section 8</a>).<a href="#section-7-2.9.1" class="pilcrow">¶</a></p>
+(<a href="#capability-source-binding" class="auto internal xref">Section 8</a>).<a href="#section-7-2.10.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-7-3">A deny is terminal for the attempted action. This profile does not

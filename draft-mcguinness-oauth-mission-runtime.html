@@ -1199,7 +1199,13 @@ action <span class="bcp14">MUST</span> produce.<a href="#section-abstract-1" cla
                 <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-action-classification" class="internal xref">Action classification</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.4">
-                <p id="section-toc.1-1.3.2.4.1"><a href="#section-3.4" class="auto internal xref">3.4</a>.  <a href="#name-pep-placement" class="internal xref">PEP placement</a></p>
+                <p id="section-toc.1-1.3.2.4.1"><a href="#section-3.4" class="auto internal xref">3.4</a>.  <a href="#name-action-bound-approval" class="internal xref">Action-bound approval</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.5">
+                <p id="section-toc.1-1.3.2.5.1"><a href="#section-3.5" class="auto internal xref">3.5</a>.  <a href="#name-pep-placement" class="internal xref">PEP placement</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.6">
+                <p id="section-toc.1-1.3.2.6.1"><a href="#section-3.6" class="auto internal xref">3.6</a>.  <a href="#name-credential-custody-and-medi" class="internal xref">Credential custody and mediated execution</a></p>
 </li>
             </ul>
 </li>
@@ -1700,61 +1706,131 @@ policy (<a href="#decision" class="auto internal xref">Section 6</a>) sets for i
 irreversible, external-commitment, or privileged-administration action
 as non-consequential. A deployment
 that leaves such an action ungated does not enforce this profile for
-that action's class (<a href="#pep-placement" class="auto internal xref">Section 3.4</a>).<a href="#section-3.3-4" class="pilcrow">¶</a></p>
-<p id="section-3.3-5">A deployment policy can require human confirmation, step-up
-authentication, or another local signal for privileged administration
-or external commitments. This profile does not define such a signal.<a href="#section-3.3-5" class="pilcrow">¶</a></p>
-<p id="section-3.3-6">Consequential reads do not require parameter binding by default.
+that action's class (<a href="#pep-placement" class="auto internal xref">Section 3.5</a>).<a href="#section-3.3-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="action-approval">
+<section id="section-3.4">
+        <h3 id="name-action-bound-approval">
+<a href="#section-3.4" class="section-number selfRef">3.4. </a><a href="#name-action-bound-approval" class="section-name selfRef">Action-bound approval</a>
+        </h3>
+<p id="section-3.4-1">The Mission's approval event (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>)
+consents to the task and its authority bound; it does not consent to a
+specific action's concrete parameters at the point of use. For the
+highest-consequence classes, a deployment can require a second,
+<strong>action-bound approval</strong>: a fresh approval bound to the concrete
+action and the parameters the PEP is about to permit, distinct from the
+Mission's initial approval.<a href="#section-3.4-1" class="pilcrow">¶</a></p>
+<p id="section-3.4-2">An action-bound approval is an approval event under the issuance profile
+bound to the action: it is obtained from an independent Approver or
+policy authority, never self-issued by the agent or asserted from the
+agent's own context, and its rendered disclosure <span class="bcp14">MAY</span> be committed as
+Consent Evidence (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>)
+bound to the action parameters. It composes with, and does not replace,
+RFC 9470 step-up authentication, which strengthens the actor's
+authentication context rather than approving a specific action.<a href="#section-3.4-2" class="pilcrow">¶</a></p>
+<p id="section-3.4-3">A PEP <span class="bcp14">MUST</span> refuse an action for which deployment policy or Resource
+policy requires an action-bound approval and a valid fresh approval
+bound to the action's parameters is not present. A deployment <span class="bcp14">SHOULD</span>
+require an action-bound approval for the external-commitment and
+privileged-administration classes, where a token-lifetime-wide standing
+authority is least appropriate. Because the approval is bound to the
+concrete parameters, it <span class="bcp14">MUST</span> be reverified under the time-of-check to
+time-of-use rules of <a href="#parameter-binding" class="auto internal xref">Section 7</a>; a parameter change after
+approval invalidates it.<a href="#section-3.4-3" class="pilcrow">¶</a></p>
+<p id="section-3.4-4">Consequential reads do not require parameter binding by default.
 However, a deployment <span class="bcp14">MUST</span> bind or digest read parameters when those
 parameters materially change the effective resource set or disclosure
 risk. Examples include export-like reads, bulk reads, cross-tenant or
 cross-account queries, privacy-sensitive filters, field selection that
 controls sensitive attributes, destination or delivery parameters, and
-aggregation choices that affect re-identification risk.<a href="#section-3.3-6" class="pilcrow">¶</a></p>
+aggregation choices that affect re-identification risk.<a href="#section-3.4-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="pep-placement">
-<section id="section-3.4">
+<section id="section-3.5">
         <h3 id="name-pep-placement">
-<a href="#section-3.4" class="section-number selfRef">3.4. </a><a href="#name-pep-placement" class="section-name selfRef">PEP placement</a>
+<a href="#section-3.5" class="section-number selfRef">3.5. </a><a href="#name-pep-placement" class="section-name selfRef">PEP placement</a>
         </h3>
-<p id="section-3.4-1">Enforcement only works at the component that can actually stop the
-action. A deployment claiming this profile <span class="bcp14">MUST</span> observe these rules:<a href="#section-3.4-1" class="pilcrow">¶</a></p>
+<p id="section-3.5-1">Enforcement only works at the component that can actually stop the
+action. A deployment claiming this profile <span class="bcp14">MUST</span> observe these rules:<a href="#section-3.5-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-3.4-2.1">
-            <p id="section-3.4-2.1.1">The PEP <span class="bcp14">MUST</span> sit at the last controllable boundary before the
+<li class="normal" id="section-3.5-2.1">
+            <p id="section-3.5-2.1.1">The PEP <span class="bcp14">MUST</span> sit at the last controllable boundary before the
 action. A permit checked further upstream does not survive
-parameter changes, retries, or routing that happen after the check.<a href="#section-3.4-2.1.1" class="pilcrow">¶</a></p>
+parameter changes, retries, or routing that happen after the check.<a href="#section-3.5-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.4-2.2">
-            <p id="section-3.4-2.2.1">A token-issuance decision does not replace execution-time
+          <li class="normal" id="section-3.5-2.2">
+            <p id="section-3.5-2.2.1">A token-issuance decision does not replace execution-time
 authorization. A token-only Resource Server cannot claim runtime
 enforcement; the issuance gate is governance, the runtime gate is
-enforcement.<a href="#section-3.4-2.2.1" class="pilcrow">¶</a></p>
+enforcement.<a href="#section-3.5-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.4-2.3">
-            <p id="section-3.4-2.3.1">A tool-catalog filter does not replace per-call authorization.
+          <li class="normal" id="section-3.5-2.3">
+            <p id="section-3.5-2.3.1">A tool-catalog filter does not replace per-call authorization.
 Filtering a tool list by the caller's authority is exposure
 control; every consequential tool call <span class="bcp14">MUST</span> still pass the runtime
-gate.<a href="#section-3.4-2.3.1" class="pilcrow">¶</a></p>
+gate.<a href="#section-3.5-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.4-2.4">
-            <p id="section-3.4-2.4.1">An orchestrator's internal check does not replace a Resource
-Server's PEP. Defense in depth is permitted; substitution is not.<a href="#section-3.4-2.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-3.5-2.4">
+            <p id="section-3.5-2.4.1">An orchestrator's internal check does not replace a Resource
+Server's PEP. Defense in depth is permitted; substitution is not.<a href="#section-3.5-2.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.4-2.5">
-            <p id="section-3.4-2.5.1">If no PEP can prevent the action for a given class, the deployment
+          <li class="normal" id="section-3.5-2.5">
+            <p id="section-3.5-2.5.1">If no PEP can prevent the action for a given class, the deployment
 <span class="bcp14">MUST NOT</span> claim runtime enforcement for that class, and <span class="bcp14">MUST</span> name the
-action classes and execution paths it does mediate.<a href="#section-3.4-2.5.1" class="pilcrow">¶</a></p>
+action classes and execution paths it does mediate.<a href="#section-3.5-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-3.4-3">The boundary varies by action: an OAuth-protected API call is gated at
+<p id="section-3.5-3">The boundary varies by action: an OAuth-protected API call is gated at
 the Resource Server; a consequential MCP <code>tools/call</code> at the MCP
 server; a local tool invocation, file write, or payment at the
 orchestrator or whatever component drives the call; external egress at
 an egress proxy. Where an action can be reached by an unmediated path
 (a debug shell, an unsanctioned egress route, a direct connector), the
-profile is not enforced for the classes that path reaches.<a href="#section-3.4-3" class="pilcrow">¶</a></p>
+profile is not enforced for the classes that path reaches.<a href="#section-3.5-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="custody">
+<section id="section-3.6">
+        <h3 id="name-credential-custody-and-medi">
+<a href="#section-3.6" class="section-number selfRef">3.6. </a><a href="#name-credential-custody-and-medi" class="section-name selfRef">Credential custody and mediated execution</a>
+        </h3>
+<p id="section-3.6-1">In an agentic deployment the agent component is itself part of the
+attack surface: it may be prompt-injected or compromised. The issuance
+and runtime gates do not make the agent trustworthy; they bound what it
+can do. A deployment lowers that bound further by not letting the agent
+hold the authority whose misuse is unacceptable.<a href="#section-3.6-1" class="pilcrow">¶</a></p>
+<p id="section-3.6-2">Mission-bound tokens are sender-constrained
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): whoever holds the
+sender-constraint private key the token's <code>cnf</code> binds can present the
+token. <strong>Mediated execution</strong> is a PEP placement that uses this: for the
+action classes a deployment mediates, the sender-constraint private key
+is held by the PEP that sits at the last controllable boundary
+(<a href="#pep-placement" class="auto internal xref">Section 3.5</a>), not by the agent component. The agent therefore
+cannot present the Mission-bound credential directly; to act, it asks
+the mediating PEP, which runs the decision of <a href="#decision" class="auto internal xref">Section 6</a> and only then
+uses the key. No new token type, credential handle, or wire protocol is
+introduced: this is a custody and placement property of the existing
+sender-constraint key.<a href="#section-3.6-2" class="pilcrow">¶</a></p>
+<p id="section-3.6-3">For an action class it mediates, a deployment <span class="bcp14">SHOULD</span> hold the
+sender-constraint private key for the Mission-bound credential in the
+mediating PEP rather than in the agent component, and <span class="bcp14">SHOULD</span> do so for
+the external-commitment and privileged-administration classes. Two
+properties follow: a credential exfiltrated from a compromised agent is
+unusable without the key; and a compromised agent cannot reach a
+mediated action without passing the per-action check, because it never
+holds a usable credential for that class. Mediated execution depends on
+the agent having no unmediated path to the resource; a Mission-aware
+harness establishes that execution environment
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-harness" class="cite xref">I-D.draft-mcguinness-oauth-mission-harness</a>]</span>).<a href="#section-3.6-3" class="pilcrow">¶</a></p>
+<p id="section-3.6-4">This narrows, and does not eliminate, the compromised-agent exposure.
+The mediating PEP becomes a trusted component whose compromise is
+out of scope here (<a href="#security-considerations" class="auto internal xref">Section 13</a>); a compromised agent can
+still request mediated actions, which are gated, and can still misuse
+any low-consequence authority it legitimately holds directly. The aim is
+that the agent is structurally unable to take a high-consequence action
+unilaterally, not that the agent is trusted.<a href="#section-3.6-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2497,7 +2573,7 @@ classes, and a short validity window, for example:<a href="#section-11-6" class=
 </div>
 <p id="section-11-8">This profile's substance is the
 enforcement contract, action classification (<a href="#classification" class="auto internal xref">Section 3.3</a>), PEP
-placement (<a href="#pep-placement" class="auto internal xref">Section 3.4</a>), parameter binding (<a href="#parameter-binding" class="auto internal xref">Section 7</a>),
+placement (<a href="#pep-placement" class="auto internal xref">Section 3.5</a>), parameter binding (<a href="#parameter-binding" class="auto internal xref">Section 7</a>),
 consumption metering (<a href="#metering" class="auto internal xref">Section 8</a>), and runtime enforcement evidence
 (<a href="#evidence" class="auto internal xref">Section 10</a>), which is independent of the decision wire. The
 <code>context.mission</code> and <code>context.actor</code> example members above could be
@@ -2587,7 +2663,7 @@ decisions are future work (<a href="#deferred" class="auto internal xref">Sectio
         </h3>
 <p id="section-13.2-1">The strongest decision logic is void if the PEP is not at the last
 controllable boundary, or if an unmediated path can reach the action
-(<a href="#pep-placement" class="auto internal xref">Section 3.4</a>). A deployment's claim is only as strong as the set
+(<a href="#pep-placement" class="auto internal xref">Section 3.5</a>). A deployment's claim is only as strong as the set
 of execution paths it actually mediates; it <span class="bcp14">MUST</span> name that set.<a href="#section-13.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2774,9 +2850,21 @@ consumes are registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" 
         <dd>
 <span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"OpenID AuthZEN Authorization API 1.0"</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://openid.net/specs/authorization-api-1_0-final.html">https://openid.net/specs/authorization-api-1_0-final.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-consent-evidence</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-consent-evidence">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-consent-evidence</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-harness">[I-D.draft-mcguinness-oauth-mission-harness]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-harness</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-harness">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-harness</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-niyikiza-oauth-attenuating-agent-tokens">[I-D.draft-niyikiza-oauth-attenuating-agent-tokens]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">Aimable, N.</span>, <span class="refTitle">"Attenuating Authorization Tokens for Agentic Delegation Chains"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-niyikiza-oauth-attenuating-agent-tokens-01</span>, <time datetime="2026-06-15" class="refDate">15 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-01">https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-01</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9470">[RFC9470]</dt>
+      <dd>
+<span class="refAuthor">Bertocci, V.</span> and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Step Up Authentication Challenge Protocol"</span>, <span class="seriesInfo">RFC 9470</span>, <span class="seriesInfo">DOI 10.17487/RFC9470</span>, <time datetime="2023-09" class="refDate">September 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9470">https://www.rfc-editor.org/rfc/rfc9470</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>

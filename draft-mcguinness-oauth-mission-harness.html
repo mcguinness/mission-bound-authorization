@@ -1166,10 +1166,13 @@ that Mission authority continues.<a href="#section-abstract-1" class="pilcrow">�
             <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
-            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-scope" class="internal xref">Scope</a></p>
+            <p id="section-toc.1-1.2.1"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-scope" class="internal xref">Scope</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.1">
                 <p id="section-toc.1-1.2.2.1.1" class="keepWithNext"><a href="#section-2.1" class="auto internal xref">2.1</a>.  <a href="#name-harness-boundary" class="internal xref">Harness Boundary</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.2">
+                <p id="section-toc.1-1.2.2.2.1" class="keepWithNext"><a href="#section-2.2" class="auto internal xref">2.2</a>.  <a href="#name-mediated-execution-environm" class="internal xref">Mediated Execution Environment</a></p>
 </li>
             </ul>
 </li>
@@ -1375,6 +1378,29 @@ not replace a PEP at the last controllable boundary under
 governed execution. It does require the harness to know when a piece of
 continuity state is governed by a Mission and to stop using that state
 as an execution basis when the Mission is no longer active.<a href="#section-2.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mediated-egress">
+<section id="section-2.2">
+        <h3 id="name-mediated-execution-environm">
+<a href="#section-2.2" class="section-number selfRef">2.2. </a><a href="#name-mediated-execution-environm" class="section-name selfRef">Mediated Execution Environment</a>
+        </h3>
+<p id="section-2.2-1">The runtime profile's credential custody and mediated execution
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>) hold only if the agent
+has no path to a consequential resource that bypasses the Policy
+Enforcement Point. Establishing that environment is the harness's
+responsibility, and it is the complement to the runtime layer holding
+the sender-constraint key: custody is moot if the agent can reach the
+resource off-path.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
+<p id="section-2.2-2">For the action classes a deployment mediates
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>), a Mission-aware
+harness <span class="bcp14">MUST</span> run governed consequential work in an execution environment
+whose only path to those actions is through the mediating PEP. It <span class="bcp14">MUST NOT</span> leave an unmediated route to a mediated class, such as a debug
+shell, a direct network socket, an unsanctioned egress route, or a
+direct connector that does not pass the runtime gate. A harness that
+cannot guarantee this for an action class <span class="bcp14">MUST NOT</span> represent work in
+that class as runtime-enforced, matching the enforcement-scope rule of
+the runtime profile.<a href="#section-2.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
