@@ -1636,8 +1636,15 @@ Mission Lifecycle Signals <span>[<a href="#I-D.draft-mcguinness-oauth-mission-si
 A deployment implements this document without any of them. Remaining
 future work, not yet specified, includes a substrate-neutral
 generalization of the Mission model across non-OAuth authorization
-substrates and the normative carriage of Mission context in Transaction
-Tokens (shown only illustratively in the end-to-end example appendix).<a href="#section-1.5-3" class="pilcrow">¶</a></p>
+substrates, the normative carriage of Mission context in Transaction
+Tokens (shown only illustratively in the end-to-end example appendix),
+and, for a community that wants cross-vendor agreement on what a task
+authorizes within a vertical, an <span class="bcp14">OPTIONAL</span> derivation profile: a registry
+of standard task types mapped to authority templates, so that two
+vendors in that profile derive comparable Authority Sets. This document
+deliberately does not standardize the derivation algorithm itself
+(<a href="#authorization-derivation" class="auto internal xref">Section 5</a>); a vertical profile is the appropriate
+vehicle where portable derivation is genuinely needed.<a href="#section-1.5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="non-goals">
@@ -2214,12 +2221,39 @@ commits it as <code>authority_hash</code> (<a href="#approval-event" class="auto
 <code>goal</code>, <code>constraints</code>, and other members describe and bound the task
 but grant no authority by themselves (<a href="#mission-intent" class="auto internal xref">Section 4</a>); they
 constrain what the AS <span class="bcp14">MAY</span> derive, never widen it.<a href="#section-5-3" class="pilcrow">¶</a></p>
-<p id="section-5-4">Derivation is governed by local policy. Different Authorization Servers
-<span class="bcp14">MAY</span> derive different Authority Sets from the same Mission Intent. This
-profile fixes how the derived authority is committed, carried, and
-gated, not a portable derivation algorithm; the Mission's
-<code>policy_version</code> records which policy produced a given Authority Set.<a href="#section-5-4" class="pilcrow">¶</a></p>
-<p id="section-5-5">For an open-ended task whose concrete objects cannot be enumerated at
+<p id="section-5-4">Derivation is governed by local policy and is not a portable algorithm:
+different Authorization Servers <span class="bcp14">MAY</span> derive different Authority Sets from
+the same Mission Intent, exactly as different deployments grant
+different authority for the same <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> request or the same scope.
+That locality is intended, not a gap. It is the resource-owning AS's
+policy, and it is not a value a foreign party should reproduce. What
+this profile makes interoperable is therefore not the derivation step
+but its result: the derived Authority Set's structure and vocabulary
+(<a href="#authorization-derivation" class="auto internal xref">Section 5</a>, <a href="#common-constraints" class="auto internal xref">Section 5.2</a>) and its
+integrity anchors (<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>), which a consumer in any
+domain interprets, enforces, and audits identically. A consumer enforces
+the derived Authority Set, never the Intent.<a href="#section-5-4" class="pilcrow">¶</a></p>
+<p id="section-5-5">Two rules keep local derivation accountable rather than opaque. First,
+derivation <span class="bcp14">MUST</span> be reproducible: the same Mission Intent and the same
+<code>policy_version</code> <span class="bcp14">MUST</span> yield the same Authority Set at a given AS, so a
+derivation can be re-checked and a divergence detected. Second, an AS
+<span class="bcp14">SHOULD</span> make the policy a <code>policy_version</code> identifies inspectable to
+relying parties and auditors that must evaluate how it derives authority.
+Local policy is thus versioned and reviewable, which is what a
+cross-domain trust decision actually needs, even though the policy
+itself does not travel.<a href="#section-5-5" class="pilcrow">¶</a></p>
+<p id="section-5-6">Where cross-vendor interoperability matters, an AS <span class="bcp14">SHOULD</span> derive the
+Authority Set by narrowing a client-proposed set of
+<code>authorization_details</code> to policy, rather than generating one from free
+text. Narrowing is governed by the subset rule (<a href="#subset" class="auto internal xref">Section 5.1</a>), which is
+interoperable, so the result is verifiable and enforceable in any domain
+even though the policy decision of what to narrow to stays local; the
+Intent's <code>goal</code> and <code>constraints</code> then serve as the human-readable
+consent-rendering layer over that proposed authority. Generating
+authority from free text alone is permitted but is the least portable
+and most semantically fraught option, and <span class="bcp14">SHOULD</span> be reserved for
+deployments that do not need cross-vendor agreement.<a href="#section-5-6" class="pilcrow">¶</a></p>
+<p id="section-5-7">For an open-ended task whose concrete objects cannot be enumerated at
 approval (for example, "reconcile this customer's ledger," where the
 individual invoices are not yet known), the AS <span class="bcp14">SHOULD</span> bound the derived
 authority primarily by <code>constraints</code> that hold as invariants over those
@@ -2230,20 +2264,20 @@ exhaustive <code>resource</code> enumeration. The runtime layer
 constraint at the point of use. Constraint-bounding lets a Mission cover
 an open-ended task with tight authority even though the specific objects
 are unknown at approval, and avoids the over-broad enumeration a
-deployment would otherwise need to anticipate them.<a href="#section-5-5" class="pilcrow">¶</a></p>
-<p id="section-5-6">A <code>mission_resource_access</code> entry is a <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>
-        <code>authorization_details</code> object with these members:<a href="#section-5-6" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-5-7">
-        <dt id="section-5-7.1">
+deployment would otherwise need to anticipate them.<a href="#section-5-7" class="pilcrow">¶</a></p>
+<p id="section-5-8">A <code>mission_resource_access</code> entry is a <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>
+        <code>authorization_details</code> object with these members:<a href="#section-5-8" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5-9">
+        <dt id="section-5-9.1">
 <code>type</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-5-7.2">
-          <p id="section-5-7.2.1"><span class="bcp14">REQUIRED</span>. A string. <code>mission_resource_access</code>.<a href="#section-5-7.2.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-5-9.2">
+          <p id="section-5-9.2.1"><span class="bcp14">REQUIRED</span>. A string. <code>mission_resource_access</code>.<a href="#section-5-9.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-5-7.3">
+<dt id="section-5-9.3">
 <code>resource</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-5-7.4">
-          <p id="section-5-7.4.1"><span class="bcp14">REQUIRED</span>. A string. The single protected resource the
+        <dd style="margin-left: 1.5em" id="section-5-9.4">
+          <p id="section-5-9.4.1"><span class="bcp14">REQUIRED</span>. A string. The single protected resource the
 entry applies to, an absolute URI identifying an OAuth protected
 resource (<span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>) or a Protected Resource (<span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>). It is
 the same kind of identifier as the <span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span> <code>resource</code> value, and
@@ -2255,72 +2289,79 @@ it per entry (rather than once for the request, as the <span>[<a href="#RFC8707"
 authority to distinct resources. Per <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>, the <code>resource</code>
 request parameter does not affect how the AS processes
 <code>authorization_details</code>, and this member is distinct from the
-<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> common <code>locations</code> field.<a href="#section-5-7.4.1" class="pilcrow">¶</a></p>
+<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> common <code>locations</code> field.<a href="#section-5-9.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-5-7.5">
+<dt id="section-5-9.5">
 <code>actions</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-5-7.6">
-          <p id="section-5-7.6.1"><span class="bcp14">REQUIRED</span>. An array of strings. Permitted action
-identifiers, each matching <code>[A-Za-z0-9_.:-]+</code>.<a href="#section-5-7.6.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-5-9.6">
+          <p id="section-5-9.6.1"><span class="bcp14">REQUIRED</span>. An array of strings. Permitted action
+identifiers, each matching <code>[A-Za-z0-9_.:-]+</code>. Like an OAuth scope, an
+action identifier carries meaning only at the <code>resource</code> that defines
+it; a consumer enforces only the actions it recognizes for that
+resource and honors no others, so an action a consumer does not
+understand is fail-closed by construction (the action is simply not
+within the authority it can enforce). An AS <span class="bcp14">SHOULD</span> draw action
+identifiers from a namespace the serving resource documents, so the
+set is interpretable cross-vendor rather than ad hoc.<a href="#section-5-9.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-5-7.7">
+<dt id="section-5-9.7">
 <code>constraints</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-5-7.8">
-          <p id="section-5-7.8.1"><span class="bcp14">OPTIONAL</span>. An object. Machine-actionable per-resource
+        <dd style="margin-left: 1.5em" id="section-5-9.8">
+          <p id="section-5-9.8.1"><span class="bcp14">OPTIONAL</span>. An object. Machine-actionable per-resource
 bounds (for example, <code>max_amount_usd</code>). A member name registered as a
 Common Constraint (<a href="#common-constraints" class="auto internal xref">Section 5.2</a>) has shared semantics
-across deployments; any other name is deployment-defined.<a href="#section-5-7.8.1" class="pilcrow">¶</a></p>
+across deployments; any other name is deployment-defined.<a href="#section-5-9.8.1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5-7.8.2.1">
-              <p id="section-5-7.8.2.1.1">Because a <code>constraints</code> member narrows authority, a Resource Server
-that cannot enforce one <span class="bcp14">MUST</span> fail closed (<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>).<a href="#section-5-7.8.2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-5-9.8.2.1">
+              <p id="section-5-9.8.2.1.1">Because a <code>constraints</code> member narrows authority, a Resource Server
+that cannot enforce one <span class="bcp14">MUST</span> fail closed (<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>).<a href="#section-5-9.8.2.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-5-7.8.2.2">
-              <p id="section-5-7.8.2.2.1">To avoid that failure mode, the AS <span class="bcp14">SHOULD</span> emit for a given
+            <li class="normal" id="section-5-9.8.2.2">
+              <p id="section-5-9.8.2.2.1">To avoid that failure mode, the AS <span class="bcp14">SHOULD</span> emit for a given
 <code>resource</code> only <code>constraints</code> keys that the Resource Server serving
 it is known (by registration or deployment policy) to understand
-and enforce.<a href="#section-5-7.8.2.2.1" class="pilcrow">¶</a></p>
+and enforce.<a href="#section-5-9.8.2.2.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </dd>
         <dd class="break"></dd>
-<dt id="section-5-7.9">
+<dt id="section-5-9.9">
 <code>delegation</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-5-7.10">
-          <p id="section-5-7.10.1"><span class="bcp14">OPTIONAL</span>. An object. The delegation policy for this
+        <dd style="margin-left: 1.5em" id="section-5-9.10">
+          <p id="section-5-9.10.1"><span class="bcp14">OPTIONAL</span>. An object. The delegation policy for this
 entry (<a href="#delegation-constraints" class="auto internal xref">Section 11.1</a>). When absent, this entry's
 authority is non-delegable: it <span class="bcp14">MUST NOT</span> appear in a delegated
-token. When present, it has these members:<a href="#section-5-7.10.1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-5-7.10.2">
-            <dt id="section-5-7.10.2.1">
+token. When present, it has these members:<a href="#section-5-9.10.1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5-9.10.2">
+            <dt id="section-5-9.10.2.1">
 <code>max_depth</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-5-7.10.2.2">
-              <p id="section-5-7.10.2.2.1"><span class="bcp14">REQUIRED</span>. An integer. The maximum delegation depth at
+            <dd style="margin-left: 1.5em" id="section-5-9.10.2.2">
+              <p id="section-5-9.10.2.2.1"><span class="bcp14">REQUIRED</span>. An integer. The maximum delegation depth at
 which this entry's authority may be exercised
-(<a href="#delegation-constraints" class="auto internal xref">Section 11.1</a>).<a href="#section-5-7.10.2.2.1" class="pilcrow">¶</a></p>
+(<a href="#delegation-constraints" class="auto internal xref">Section 11.1</a>).<a href="#section-5-9.10.2.2.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
-<dt id="section-5-7.10.2.3">
+<dt id="section-5-9.10.2.3">
 <code>allowed_delegates</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-5-7.10.2.4">
-              <p id="section-5-7.10.2.4.1"><span class="bcp14">OPTIONAL</span>. An array of objects. The permitted
+            <dd style="margin-left: 1.5em" id="section-5-9.10.2.4">
+              <p id="section-5-9.10.2.4.1"><span class="bcp14">OPTIONAL</span>. An array of objects. The permitted
 delegates, each a <code>may_act</code>-style matcher
 (<a href="#delegation-constraints" class="auto internal xref">Section 11.1</a>): <code>{ "sub": "&lt;client_id&gt;" }</code> for a
 specific delegate, or <code>{ "sub_profile": "&lt;actor-type&gt;" }</code> for an
 actor-type class. When absent, any actor is permitted (subject to
-<code>max_depth</code>).<a href="#section-5-7.10.2.4.1" class="pilcrow">¶</a></p>
+<code>max_depth</code>).<a href="#section-5-9.10.2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 </dl>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-5-8">Example Authority Set (the read entry is delegable to depth 2; the
+<p id="section-5-10">Example Authority Set (the read entry is delegable to depth 2; the
 write entry carries no <code>delegation</code> and so is non-delegable, because
-<code>delegation</code> is per entry):<a href="#section-5-8" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-5-9">
+<code>delegation</code> is per entry):<a href="#section-5-10" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-5-11">
 <pre>
 [
   { "type": "mission_resource_access",
@@ -2335,7 +2376,7 @@ write entry carries no <code>delegation</code> and so is non-delegable, because
     "actions": ["journal-entries.write"],
     "constraints": { "max_amount_usd": 500 } }
 ]
-</pre><a href="#section-5-9" class="pilcrow">¶</a>
+</pre><a href="#section-5-11" class="pilcrow">¶</a>
 </div>
 <div id="subset">
 <section id="section-5.1">
@@ -3993,7 +4034,14 @@ that applies to a <code>sub</code> matcher in <code>allowed_delegates</code>
             <p id="section-12.3-2.6.1"><span class="bcp14">MUST</span> bound the issued <code>authorization_details</code> by what the
 cross-domain grant conveyed, and <span class="bcp14">MUST</span> apply its own local
 authorization policy in addition: honoring a Mission does not
-obligate it to authorize any particular request.<a href="#section-12.3-2.6.1" class="pilcrow">¶</a></p>
+obligate it to authorize any particular request. Because the
+conveyed entries were derived under the originating AS's local policy,
+the Resource AS does not re-derive them; it interprets and enforces
+them by their structure and vocabulary. It <span class="bcp14">MUST</span> fail closed on a
+conveyed <code>actions</code> identifier or <code>constraints</code> key it does not
+recognize for the resource in question, exactly as a Resource Server
+does (<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>), so authority it cannot interpret is never
+honored across the trust boundary rather than enforced by guess.<a href="#section-12.3-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.3-2.7">
             <p id="section-12.3-2.7.1"><span class="bcp14">MUST</span>, when it issues delegated tokens of its own, enforce each

@@ -1686,14 +1686,26 @@ spans several distinct tasks, the shaper should propose several
 task-scoped Mission Intents rather than one broad proposal, so each
 resulting Mission stays narrow, separately approved, and separately
 revocable.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
-<p id="section-6.1-4">When a deployment or caller supplies an authority ceiling, the proposal
+<p id="section-6.1-4">Where cross-vendor interoperability matters, the shaper should record in
+Shaping Evidence the concrete candidate authority it proposes (the
+resources, actions, and constraints), so the Mission Issuer can derive
+the Authority Set by narrowing that proposal under its subset rule
+rather than generating authority from free text
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Narrowing is the portable
+derivation path: the proposal format and the narrowing rule are
+interoperable, so the resulting Authority Set is enforceable and
+auditable across domains even though the Mission Issuer's policy
+decision of what to narrow to stays local. The shaper still proposes
+only; the Mission Issuer validates, narrows, and binds authority at
+approval (<a href="#proposes-only" class="auto internal xref">Section 4.2</a>).<a href="#section-6.1-4" class="pilcrow">¶</a></p>
+<p id="section-6.1-5">When a deployment or caller supplies an authority ceiling, the proposal
 <span class="bcp14">MUST</span> be a subset of it. If the task cannot be completed within that
 ceiling, the shaper <span class="bcp14">MUST</span> request clarification or refuse; it <span class="bcp14">MUST NOT</span>
 silently drop necessary authority while emitting a proposal that appears
 complete, unless Shaping Evidence records the excluded authority and the
 outcome clearly indicates the proposal may not satisfy the task. The
 Mission Issuer remains responsible for enforcing its own ceiling even
-when no caller ceiling is present.<a href="#section-6.1-4" class="pilcrow">¶</a></p>
+when no caller ceiling is present.<a href="#section-6.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="delegation">
