@@ -1358,6 +1358,11 @@ format, a Mission Status endpoint, or a portable audit receipt. It
 defines what a deployment <span class="bcp14">MUST</span> satisfy when it claims runtime Mission
 enforcement; the surfaces it deliberately leaves to deployments or
 future work are collected in <a href="#deferred" class="auto internal xref">Section 12</a>.<a href="#section-1-6" class="pilcrow">¶</a></p>
+<p id="section-1-7">Because the invariants are not a wire format, two conforming deployments
+do not thereby interoperate at the PEP-PDP boundary; the interoperable
+wire surface is supplied by a binding, of which the AuthZEN binding
+(<a href="#authzen" class="auto internal xref">Section 11</a>) is the one defined here. This document is the architecture
+and invariant layer; the binding is the interoperability layer.<a href="#section-1-7" class="pilcrow">¶</a></p>
 <div id="relationship">
 <section id="section-1.1">
         <h3 id="name-relationship-to-the-issuanc">

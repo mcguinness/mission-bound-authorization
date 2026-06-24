@@ -1519,8 +1519,11 @@ further authority.<a href="#section-1-4.5.1" class="pilcrow">¶</a></p>
       </ol>
 <p id="section-1-5">The result is that a user approves a task once, and that approval,
 not a per-request scope grant, bounds and outlives every token the
-agent derives, with a verifiable link (<code>authority_hash</code>) from each
-token back to the consented authority.<a href="#section-1-5" class="pilcrow">¶</a></p>
+agent derives. Each token carries an <code>authority_hash</code> audit anchor back
+to the consented authority; a holder of the full Authority Set can
+verify it, and a holder of only a narrowed subset (a downstream or
+cross-domain party) treats it as an audit anchor it cannot recompute
+(<a href="#consent-binding" class="auto internal xref">Section 15.1</a>).<a href="#section-1-5" class="pilcrow">¶</a></p>
 <div id="why-a-new-object">
 <section id="section-1.1">
         <h3 id="name-why-a-new-object">
@@ -2282,9 +2285,12 @@ deployment would otherwise need to anticipate them.<a href="#section-5-7" class=
           <p id="section-5-9.4.1"><span class="bcp14">REQUIRED</span>. A string. The single protected resource the
 entry applies to, an absolute URI identifying an OAuth protected
 resource (<span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>) or a Protected Resource (<span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>). It is
-the same kind of identifier as the <span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span> <code>resource</code> value, and
-the AS derives the token <code>aud</code> from the <code>resource</code> of each carried
-entry. It is carried here as a type-specific member of each
+the same kind of identifier as the <span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span> <code>resource</code> value. The
+AS derives the token <code>aud</code> from the <code>resource</code> values of the carried
+entries as described in <a href="#mission-bound-tokens" class="auto internal xref">Section 8</a>; the <code>aud</code> identifies
+the Resource Server(s) and need not be byte-equal to a <code>resource</code> (it
+is typically coarser). It is carried here as a type-specific member of
+each
 <code>mission_resource_access</code> entry, which <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> permits; carrying
 it per entry (rather than once for the request, as the <span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>
             <code>resource</code> request parameter does) lets one token scope distinct
@@ -2407,12 +2413,20 @@ constraints <span class="bcp14">MUST NOT</span> be dropped, only added or tighte
         </ol>
 <p id="section-5.1-3">The AS <span class="bcp14">MUST</span> refuse to derive an entry that is not a subset of some
 Mission Authority Set entry.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
-<p id="section-5.1-4">The <code>delegation</code> member is policy, not authority, and is not part of
+<p id="section-5.1-4">This comparison is deliberately flat: <code>resource</code> matches by exact
+equality and <code>actions</code> by array membership. It does not yet define
+resource containment (a path-prefix or hierarchical resource) or action
+families (an <code>invoices.*</code> hierarchy). Real hierarchical resources are
+expected to need both, so an extension defining hierarchical resource
+and action subset semantics is known near-term work; until then a
+deployment expresses hierarchy through explicit entries or constraints,
+and the runtime layer enforces it (<a href="#runtime-boundary" class="auto internal xref">Section 15.3</a>).<a href="#section-5.1-4" class="pilcrow">¶</a></p>
+<p id="section-5.1-5">The <code>delegation</code> member is policy, not authority, and is not part of
 this comparison (<a href="#delegation-constraints" class="auto internal xref">Section 11.1</a>). A derived entry's
 <code>delegation</code>, when present, <span class="bcp14">MUST NOT</span> be broader than the parent entry's:
 its <code>max_depth</code> <span class="bcp14">MUST</span> be no greater and its <code>allowed_delegates</code> <span class="bcp14">MUST</span> be
 no wider. A derived entry <span class="bcp14">MUST NOT</span> introduce <code>delegation</code> where the
-parent entry has none.<a href="#section-5.1-4" class="pilcrow">¶</a></p>
+parent entry has none.<a href="#section-5.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="common-constraints">
@@ -2671,7 +2685,20 @@ is granted for.<a href="#section-6-3.3.1" class="pilcrow">¶</a></p>
 state, atomically with issuance of the authorization code.<a href="#section-6-3.5.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-6-4">The <code>authority_hash</code> is the <strong>authority commitment</strong>: it binds, by
+<p id="section-6-4">Rendering a bound is not the same as enforcing it, and a deployment <span class="bcp14">MUST NOT</span> let the rendering imply otherwise. The approved resources and
+actions are enforced by any Resource Server that honors the token. A
+per-entry <code>constraint</code>, however, binds only where a Resource Server
+understands and enforces its key (<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>); the consumption
+bounds <code>max_budget</code>, <code>max_calls</code>, and <code>max_duration</code> bind only under the
+runtime layer (<a href="#runtime-boundary" class="auto internal xref">Section 15.3</a>); and <code>max_derivations</code> is an
+origin-AS cap that does not bound a Resource AS's local-token minting in
+another domain (<a href="#cross-domain" class="auto internal xref">Section 12</a>). In a deployment without runtime
+enforcement, and for any constraint no Resource Server enforces, these
+bounds are advisory: rendered, consented, and committed, but enforced
+nowhere. An AS <span class="bcp14">SHOULD</span> make clear to the Approver which rendered bounds
+its deployment actually enforces, so consent is not given to a limit
+that binds nowhere.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-5">The <code>authority_hash</code> is the <strong>authority commitment</strong>: it binds, by
 cryptographic digest, exactly the authority the Approver approved. It
 commits the approved authority, not the way that authority was
 rendered to the Approver; this profile commits no separate consent
@@ -2683,13 +2710,13 @@ Mission carries this value (<a href="#mission-bound-tokens" class="auto internal
 holding the full Authority Set can verify a token's authority against
 what was approved. A party holding only a narrowed subset cannot
 recompute it and treats it as an audit anchor (see <a href="#consent-binding" class="auto internal xref">Section 15.1</a>
-and <a href="#cross-domain" class="auto internal xref">Section 12</a>).<a href="#section-6-4" class="pilcrow">¶</a></p>
-<p id="section-6-5">The <code>intent_hash</code> commits the <strong>approved Mission Intent</strong>: the
+and <a href="#cross-domain" class="auto internal xref">Section 12</a>).<a href="#section-6-5" class="pilcrow">¶</a></p>
+<p id="section-6-6">The <code>intent_hash</code> commits the <strong>approved Mission Intent</strong>: the
 task the Approver consented to, as recorded on the Mission. It makes
 the recorded task tamper-evident: an auditor can verify the Mission's
 <code>mission_intent</code> against <code>intent_hash</code> and detect any later
 alteration. <code>intent_hash</code> commits the task; <code>authority_hash</code>
-commits the authority derived from it.<a href="#section-6-5" class="pilcrow">¶</a></p>
+commits the authority derived from it.<a href="#section-6-6" class="pilcrow">¶</a></p>
 <div id="grant-binding">
 <section id="section-6.1">
         <h3 id="name-binding-the-mission-to-the-">
