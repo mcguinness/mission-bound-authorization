@@ -1131,6 +1131,35 @@ controllable boundary, or if an unmediated path can reach the action
 ({{pep-placement}}). A deployment's claim is only as strong as the set
 of execution paths it actually mediates; it MUST name that set.
 
+## Prompt injection and exfiltration
+
+This profile assumes the agent can be prompt-injected and does not try
+to prevent that. It constrains what an injected agent can do by gating
+the external-communication leg: external communication is a consequential
+action, so every attempt is checked against the Authority Set, bound to
+parameters, metered, and (with mediated execution, {{custody}}) made
+unreachable to an agent that does not hold the egress credential. This
+is the architectural defense, gate the exfiltration against an authority
+the injection cannot widen, rather than make the agent injection-proof.
+
+Two limits are inherent and a deployment MUST NOT overstate the
+guarantee. First, it is exactly as strong as PEP-placement completeness:
+every exfiltration channel an agent runtime offers (DNS, logs, error
+strings, a write to a store another process reads) is a channel that
+must be mediated, and this profile gates the channels routed through a
+PEP but cannot prove a deployment enumerated them all (the Achilles'
+heel of {{pep-placement}}). Second, this profile provides no
+information-flow control: it evaluates each action in isolation against
+authority over resources and actions, so a sequence of
+individually-authorized steps can compose into an exfiltration no single
+check catches (within-scope data laundering), and `max_calls` /
+`max_budget` bound volume, not flow. Closing that needs a separate taint
+or information-flow layer. A coarse session-level mitigation, downgrading
+egress authority once untrusted content has entered a session, is
+available at the harness layer
+({{I-D.draft-mcguinness-oauth-mission-harness}}); it raises the bar but
+is not information-flow control.
+
 ## Classification integrity
 
 Because "consequential" is partly deployment-defined, the
