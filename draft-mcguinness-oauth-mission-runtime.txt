@@ -440,6 +440,16 @@ Table of Contents
    time-of-check to time-of-use rules of Section 7; a parameter change
    after approval invalidates it.
 
+   This profile does not define the wire workflow that obtains the
+   approval.  A decision-API binding MAY route the requiring denial
+   through a standardized access-request and approval workflow and carry
+   the resulting approval back as decision input; the AuthZEN binding
+   composes with the AuthZEN Access Request and Approval Profile for
+   exactly this (Section 11).  However obtained, the approval is
+   decision input, not a bearer grant: the runtime decision of Section 6
+   remains authoritative, and a persisted grant beyond the single action
+   is a Mission expansion, not a property of the approval itself.
+
    Consequential reads do not require parameter binding by default.
    However, a deployment MUST bind or digest read parameters when those
    parameters materially change the effective resource set or disclosure
@@ -712,10 +722,15 @@ Table of Contents
    *  *State.* The PDP MUST refuse unless the Mission is active
       (Section 6.1).
 
-   On a deny, the PEP MUST refuse the action.  Authority-expandable
-   denials and the escalation workflow that turns a deny into a Mission
-   expansion are out of scope and deferred (Section 12); in this profile
-   a deny is terminal for the attempted action.
+   On a deny, the PEP MUST refuse the action; a deny is terminal for the
+   attempted action.  A deny need not end the task, however: a decision-
+   API binding MAY mark a denial requestable and route it through an
+   access-request and approval workflow, and an approved request MAY be
+   realized as a durable Mission expansion (Section 3.4, Section 11).
+   This profile defines the runtime decision; it leaves that request-
+   approval loop, and the expansion that persists an approved request,
+   to the decision-API binding and the issuance profile's expansion
+   mechanism.
 
    The PDP's placement is a deployment choice (co-located with the
    Mission's origin, embedded in the Resource Server, a tenant-scoped
@@ -1159,9 +1174,6 @@ Table of Contents
 
    The following compose with this profile but are deferred to future
    work and are not required to enforce it:
-
-   *  mission expansion and the authority-expandable-denial escalation
-      workflow (a deny here is terminal for the attempted action);
 
    *  a standardized enforcement-scope manifest format and discovery
       mechanism;

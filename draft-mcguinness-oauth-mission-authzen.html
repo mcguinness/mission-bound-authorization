@@ -2494,15 +2494,34 @@ derivation, or the presented <code>tool_id</code> is outside the approved set
 (<a href="#capability-source-binding" class="auto internal xref">Section 8</a>).<a href="#section-7-2.10.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-7-3">A deny is terminal for the attempted action. This profile does not
-define Mission expansion or an authority-expandable-denial workflow
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>). When a deployment
-wants to route a denial through an approval workflow without treating
-the denial itself as access, it <span class="bcp14">MAY</span> compose this binding with the
-AuthZEN Access Request and Approval Profile <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>. Approval through
-that workflow does not by itself authorize the action; the PEP <span class="bcp14">MUST</span>
-obtain a fresh AuthZEN decision, and any resulting permit and evidence
-remain subject to this profile.<a href="#section-7-3" class="pilcrow">¶</a></p>
+<p id="section-7-3">A deny is terminal for the attempted action: the agent does not proceed
+on a denial. A deny need not end the task, however. For an
+<code>out_of_authority</code> or <code>action_approval_required</code> denial, the PDP <span class="bcp14">MAY</span>
+mark the denial <strong>requestable</strong> by including a <code>context.access_request</code>
+object, composing this binding with the AuthZEN Access Request and
+Approval Profile <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>. The PEP then submits an ARAP access request
+bound to the denied evaluation, an independent approver or policy
+adjudicates it (synchronously when policy auto-approves, otherwise
+asynchronously through the portable ARAP task handle), and on approval
+the PEP re-evaluates against the PDP. This is the demand-driven,
+runtime-initiated counterpart to the pre-consented drawdown of
+progressive authorization
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>): the agent starts
+narrow and requests the authority it discovers it needs, instead of
+holding it up front.<a href="#section-7-3" class="pilcrow">¶</a></p>
+<p id="section-7-4">Two ARAP properties carry weight here and match this profile's stance.
+First, an ARAP approval is input context, not a bearer grant: the PDP
+remains authoritative at enforcement, so the PEP <span class="bcp14">MUST</span> obtain a fresh
+decision, and any resulting permit and evidence remain subject to this
+profile. The action-bound approval an <code>action_approval_required</code> denial
+calls for (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>) is exactly
+such an approval, and ARAP's <code>approval.id</code> or signed <code>approval.state</code> is
+its carrier. Second, to persist authority beyond the single
+re-evaluated action rather than re-requesting it per call, an approved
+request <span class="bcp14">MAY</span> be realized as a Mission expansion
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>): an in-ceiling
+request as a policy-adjudicated in-ceiling expansion, a beyond-ceiling
+request as the fresh human approval that creates the successor Mission.<a href="#section-7-4" class="pilcrow">¶</a></p>
 <div id="authzen-decision-context">
 <section id="section-7.1">
         <h3 id="name-authzen-decision-context">
@@ -2567,10 +2586,12 @@ authentication context Resource policy requires to lift the denial.<a href="#sec
 <dt id="section-7.1-2.15">
 <code>access_request</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-7.1-2.16">
-            <p id="section-7.1-2.16.1"><span class="bcp14">OPTIONAL</span>. An object. Present only when the deployment exposes the
-denial as requestable under <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>. The object is the ARAP
-requestable-denial context. Its presence does not change the
-<code>decision: false</code> result and does not grant access.<a href="#section-7.1-2.16.1" class="pilcrow">¶</a></p>
+            <p id="section-7.1-2.16.1"><span class="bcp14">OPTIONAL</span>. An object. Present on an <code>out_of_authority</code> or
+<code>action_approval_required</code> denial when the deployment exposes it as
+requestable under <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>. It is the ARAP requestable-denial context,
+carrying the submission endpoint and the denial binding that ties a
+later access request to this evaluation. Its presence does not change
+the <code>decision: false</code> result and does not grant access.<a href="#section-7.1-2.16.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -3170,6 +3191,10 @@ registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite x
 <dt id="COAZ">[COAZ]</dt>
         <dd>
 <span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"AuthZen Profile for Model Context Protocol Tool Authorization - Draft 1"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://openid.github.io/authzen/authzen-mcp-profile-1_0.html">https://openid.github.io/authzen/authzen-mcp-profile-1_0.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-expansion</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC9457">[RFC9457]</dt>
         <dd>

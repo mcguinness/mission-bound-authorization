@@ -1738,13 +1738,22 @@ authority is least appropriate. Because the approval is bound to the
 concrete parameters, it <span class="bcp14">MUST</span> be reverified under the time-of-check to
 time-of-use rules of <a href="#parameter-binding" class="auto internal xref">Section 7</a>; a parameter change after
 approval invalidates it.<a href="#section-3.4-3" class="pilcrow">¶</a></p>
-<p id="section-3.4-4">Consequential reads do not require parameter binding by default.
+<p id="section-3.4-4">This profile does not define the wire workflow that obtains the
+approval. A decision-API binding <span class="bcp14">MAY</span> route the requiring denial through
+a standardized access-request and approval workflow and carry the
+resulting approval back as decision input; the AuthZEN binding composes
+with the AuthZEN Access Request and Approval Profile for exactly this
+(<a href="#authzen" class="auto internal xref">Section 11</a>). However obtained, the approval is decision input, not a
+bearer grant: the runtime decision of <a href="#decision" class="auto internal xref">Section 6</a> remains
+authoritative, and a persisted grant beyond the single action is a
+Mission expansion, not a property of the approval itself.<a href="#section-3.4-4" class="pilcrow">¶</a></p>
+<p id="section-3.4-5">Consequential reads do not require parameter binding by default.
 However, a deployment <span class="bcp14">MUST</span> bind or digest read parameters when those
 parameters materially change the effective resource set or disclosure
 risk. Examples include export-like reads, bulk reads, cross-tenant or
 cross-account queries, privacy-sensitive filters, field selection that
 controls sensitive attributes, destination or delivery parameters, and
-aggregation choices that affect re-identification risk.<a href="#section-3.4-4" class="pilcrow">¶</a></p>
+aggregation choices that affect re-identification risk.<a href="#section-3.4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="pep-placement">
@@ -2042,10 +2051,15 @@ decision input (<a href="#parameter-binding" class="auto internal xref">Section 
 (<a href="#state-freshness" class="auto internal xref">Section 6.1</a>).<a href="#section-6-3.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-6-4">On a deny, the PEP <span class="bcp14">MUST</span> refuse the action. Authority-expandable
-denials and the escalation workflow that turns a deny into a Mission
-expansion are out of scope and deferred (<a href="#deferred" class="auto internal xref">Section 12</a>); in this
-profile a deny is terminal for the attempted action.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-4">On a deny, the PEP <span class="bcp14">MUST</span> refuse the action; a deny is terminal for the
+attempted action. A deny need not end the task, however: a decision-API
+binding <span class="bcp14">MAY</span> mark a denial requestable and route it through an
+access-request and approval workflow, and an approved request <span class="bcp14">MAY</span> be
+realized as a durable Mission expansion (<a href="#action-approval" class="auto internal xref">Section 3.4</a>,
+<a href="#authzen" class="auto internal xref">Section 11</a>). This profile defines the runtime decision; it leaves that
+request-approval loop, and the expansion that persists an approved
+request, to the decision-API binding and the issuance profile's
+expansion mechanism.<a href="#section-6-4" class="pilcrow">¶</a></p>
 <p id="section-6-5">The PDP's placement is a deployment choice (co-located with the
 Mission's <code>origin</code>, embedded in the Resource Server, a tenant-scoped
 service, or a shared service); this document does not mandate one. The
@@ -2590,41 +2604,37 @@ changing this contract.<a href="#section-11-8" class="pilcrow">¶</a></p>
 work and are not required to enforce it:<a href="#section-12-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-12-2.1">
-          <p id="section-12-2.1.1">mission expansion and the authority-expandable-denial escalation
-workflow (a deny here is terminal for the attempted action);<a href="#section-12-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-12-2.1.1">a standardized enforcement-scope manifest format and discovery
+mechanism;<a href="#section-12-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-2.2">
-          <p id="section-12-2.2.1">a standardized enforcement-scope manifest format and discovery
-mechanism;<a href="#section-12-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-12-2.2.1">cross-format capability-source binding beyond same-source digest
+drift (signed capability manifests, cross-catalog identity);<a href="#section-12-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-2.3">
-          <p id="section-12-2.3.1">cross-format capability-source binding beyond same-source digest
-drift (signed capability manifests, cross-catalog identity);<a href="#section-12-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-12-2.3.1">portable, third-party-verifiable decision receipts (this profile
+fixes only the local runtime enforcement evidence record);<a href="#section-12-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-2.4">
-          <p id="section-12-2.4.1">portable, third-party-verifiable decision receipts (this profile
-fixes only the local runtime enforcement evidence record);<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-12-2.4.1">separate Decision Evidence and Execution Evidence object schemas and
+media types;<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-2.5">
-          <p id="section-12-2.5.1">separate Decision Evidence and Execution Evidence object schemas and
-media types;<a href="#section-12-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-12-2.5.1">actor provenance beyond the <code>act</code> chain, attestation of the
+execution environment, and a purpose registry;<a href="#section-12-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-2.6">
-          <p id="section-12-2.6.1">actor provenance beyond the <code>act</code> chain, attestation of the
-execution environment, and a purpose registry;<a href="#section-12-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-12-2.6.1">compilation of the Mission into an engine-native policy artifact
+(Cedar, OpenFGA, or equivalent) and standardization of PDP
+deployment modes;<a href="#section-12-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-2.7">
-          <p id="section-12-2.7.1">compilation of the Mission into an engine-native policy artifact
-(Cedar, OpenFGA, or equivalent) and standardization of PDP
-deployment modes;<a href="#section-12-2.7.1" class="pilcrow">¶</a></p>
+          <p id="section-12-2.7.1">action-hierarchy and resource-containment subset extensions (this
+profile uses the flat subset rule of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); and<a href="#section-12-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-2.8">
-          <p id="section-12-2.8.1">action-hierarchy and resource-containment subset extensions (this
-profile uses the flat subset rule of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); and<a href="#section-12-2.8.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-12-2.9">
-          <p id="section-12-2.9.1">risk-signal inputs to the decision (deployment-defined).<a href="#section-12-2.9.1" class="pilcrow">¶</a></p>
+          <p id="section-12-2.8.1">risk-signal inputs to the decision (deployment-defined).<a href="#section-12-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-12-3">Structured per-argument attenuation of tool grants

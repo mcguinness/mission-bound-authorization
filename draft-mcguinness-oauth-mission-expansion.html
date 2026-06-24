@@ -1234,6 +1234,9 @@ Mission is unaffected by this document.<a href="#section-abstract-1" class="pilc
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
                 <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-what-it-bounds-and-what-it-" class="internal xref">What it bounds, and what it does not</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
+                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-realizing-an-approved-acces" class="internal xref">Realizing an approved access request</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
@@ -1836,6 +1839,41 @@ rate-limitable, and enforced per action by the runtime layer
 authorization bounds, and does not eliminate, standing-authority
 exposure; a deployment <span class="bcp14">SHOULD</span> pair it with short successor lifetimes,
 constraint-bounded ceilings, and runtime enforcement.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="arap-feedback">
+<section id="section-6.3">
+        <h3 id="name-realizing-an-approved-acces">
+<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-realizing-an-approved-acces" class="section-name selfRef">Realizing an approved access request</a>
+        </h3>
+<p id="section-6.3-1">Progressive authorization grows authority that a deployment anticipated
+well enough to express as a ceiling. The runtime enforcement layer
+handles the unanticipated case: it can let an agent request authority it
+discovers it needs at the point of use, through an access-request and
+approval workflow (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>). That
+workflow yields a permit for the single re-evaluated action. To persist
+the newly approved authority for the rest of the task, rather than have
+the agent re-request it on every call, the Mission Issuer <span class="bcp14">MAY</span> realize an
+approved access request as an expansion:<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.3-2.1">
+            <p id="section-6.3-2.1.1">a request whose authority is within the Mission's consented ceiling is
+realized as a policy-adjudicated in-ceiling expansion
+(<a href="#in-ceiling-expansion" class="auto internal xref">Section 6.1</a>); and<a href="#section-6.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.3-2.2">
+            <p id="section-6.3-2.2.1">a request whose authority exceeds the ceiling is realized only on the
+fresh human approval the request carries, as an ordinary expansion
+that creates the successor and, where the Approver consents, raises
+the ceiling.<a href="#section-6.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-6.3-3">Realizing a request as an expansion is subject to every rule of this
+document: the successor's authority is freshly derived and bound, the
+predecessor is superseded, and authority is never widened without the
+consent the request carries (<a href="#new-consent" class="auto internal xref">Section 13.2</a>). An access request not
+realized as an expansion grants only the single runtime permit and no
+durable Mission authority.<a href="#section-6.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

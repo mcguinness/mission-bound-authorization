@@ -887,15 +887,37 @@ Table of Contents
       source digest differs from the digest committed at derivation, or
       the presented tool_id is outside the approved set (Section 8).
 
-   A deny is terminal for the attempted action.  This profile does not
-   define Mission expansion or an authority-expandable-denial workflow
-   ([I-D.draft-mcguinness-oauth-mission-runtime]).  When a deployment
-   wants to route a denial through an approval workflow without treating
-   the denial itself as access, it MAY compose this binding with the
-   AuthZEN Access Request and Approval Profile [ARAP].  Approval through
-   that workflow does not by itself authorize the action; the PEP MUST
-   obtain a fresh AuthZEN decision, and any resulting permit and
-   evidence remain subject to this profile.
+   A deny is terminal for the attempted action: the agent does not
+   proceed on a denial.  A deny need not end the task, however.  For an
+   out_of_authority or action_approval_required denial, the PDP MAY mark
+   the denial *requestable* by including a context.access_request
+   object, composing this binding with the AuthZEN Access Request and
+   Approval Profile [ARAP].  The PEP then submits an ARAP access request
+   bound to the denied evaluation, an independent approver or policy
+   adjudicates it (synchronously when policy auto-approves, otherwise
+   asynchronously through the portable ARAP task handle), and on
+   approval the PEP re-evaluates against the PDP.  This is the demand-
+   driven, runtime-initiated counterpart to the pre-consented drawdown
+   of progressive authorization
+   ([I-D.draft-mcguinness-oauth-mission-expansion]): the agent starts
+   narrow and requests the authority it discovers it needs, instead of
+   holding it up front.
+
+   Two ARAP properties carry weight here and match this profile's
+   stance.  First, an ARAP approval is input context, not a bearer
+   grant: the PDP remains authoritative at enforcement, so the PEP MUST
+   obtain a fresh decision, and any resulting permit and evidence remain
+   subject to this profile.  The action-bound approval an
+   action_approval_required denial calls for
+   ([I-D.draft-mcguinness-oauth-mission-runtime]) is exactly such an
+   approval, and ARAP's approval.id or signed approval.state is its
+   carrier.  Second, to persist authority beyond the single re-evaluated
+   action rather than re-requesting it per call, an approved request MAY
+   be realized as a Mission expansion
+   ([I-D.draft-mcguinness-oauth-mission-expansion]): an in-ceiling
+   request as a policy-adjudicated in-ceiling expansion, a beyond-
+   ceiling request as the fresh human approval that creates the
+   successor Mission.
 
 7.1.  AuthZEN decision context
 
@@ -929,10 +951,13 @@ Table of Contents
       members that identify the authentication context Resource policy
       requires to lift the denial.
 
-   access_request:  OPTIONAL.  An object.  Present only when the
-      deployment exposes the denial as requestable under [ARAP].  The
-      object is the ARAP requestable-denial context.  Its presence does
-      not change the decision: false result and does not grant access.
+   access_request:  OPTIONAL.  An object.  Present on an
+      out_of_authority or action_approval_required denial when the
+      deployment exposes it as requestable under [ARAP].  It is the ARAP
+      requestable-denial context, carrying the submission endpoint and
+      the denial binding that ties a later access request to this
+      evaluation.  Its presence does not change the decision: false
+      result and does not grant access.
 
 7.2.  Permit response shape
 
@@ -1376,6 +1401,12 @@ Table of Contents
               Protocol Tool Authorization - Draft 1", 2026,
               <https://openid.github.io/authzen/authzen-mcp-profile-
               1_0.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-expansion]
+              McGuinness, K., "Mission Expansion for OAuth 2.0", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-mission-
+              expansion, 2026, <https://datatracker.ietf.org/doc/html/
+              draft-mcguinness-oauth-mission-expansion>.
 
    [RFC9457]  Nottingham, M., Wilde, E., and S. Dalal, "Problem Details
               for HTTP APIs", RFC 9457, DOI 10.17487/RFC9457, July 2023,
