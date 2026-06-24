@@ -26,8 +26,6 @@ author:
     email: public@karlmcguinness.com
 
 normative:
-  RFC2119:
-  RFC8174:
   RFC3339:
   RFC6234:
   RFC6838:
@@ -146,7 +144,7 @@ not duplicated, here.
 
 {::boilerplate bcp14-tagged}
 
-# Conventions and Definitions {#conventions-and-definitions}
+# Conventions and Terminology {#conventions-and-definitions}
 
 This document uses JSON {{RFC8259}} as the data model for all PDP
 requests, responses, and evidence objects. JCS canonicalization
@@ -174,6 +172,20 @@ Materialized policy view:
 : The reproducible, evaluable form of a Mission's approved authority
   produced by the issuing Authorization Server or a trusted compiler
   and consumed by the PDP ({{mission-to-policy-materialization}}).
+
+Trusted compiler:
+: A component the deployment trusts to materialize a Mission's approved
+  authority into a policy view faithfully and reproducibly, other than
+  the issuing Authorization Server itself. It is in the deployment's
+  trust domain and its output is bound by the content-addressed
+  `policy_view_id` ({{mission-to-policy-materialization}}).
+
+Validating server:
+: The component that, at derivation, validates the Mission's authority
+  and records the derivation-time facts the PDP later checks (such as a
+  capability `source_digest`, {{capability-source-binding}}). In the
+  issuance profile this is the Mission Issuer; this profile uses the
+  term where the recording role is what matters.
 
 Decision Evidence:
 : The runtime enforcement evidence record emitted by the PDP, in the
@@ -338,8 +350,8 @@ claim and the token's authenticated client identity per
   ordered root to leaf. For a single actor, the array has one member.
 
 The `actor` member carries the delegation chain only. Provenance beyond
-the delegation chain -- the tool a request invoked, a named workflow
-step, a human approver -- MUST NOT be encoded inside the `act` chain;
+the delegation chain (the tool a request invoked, a named workflow
+step, a human approver) MUST NOT be encoded inside the `act` chain;
 the PDP evaluates the `act` chain as defined by the runtime profile,
 and provenance is recorded in dedicated evidence fields where the
 deployment captures it.
@@ -455,7 +467,7 @@ Authorization: ...
   },
   "context": {
     "mission": {
-      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEd",
+      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "origin": "https://as.example.com",
       "authority_hash":
         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
@@ -585,10 +597,13 @@ canonicalization, and integrity envelope an AuthZEN deployment emits.
 
 `contributing_constraints`:
 : REQUIRED when the decision turned on one or more authority or
-  constraint entries. An array of strings. the
-  identifiers of the constraints the PDP evaluated (`constraints`
-  keys, `authorization_details` entry types). For a permit this
-  records what was checked; for a deny, what failed.
+  constraint entries. An array of strings: the identifiers of the
+  constraints and entries the PDP evaluated (`constraints` keys,
+  `authorization_details` entry types). For a permit it records every
+  constraint key and entry type the decision relied on; for a deny it
+  MUST list every entry that failed. Omitting an entry the decision
+  turned on is non-conforming, so the array can be relied on to
+  reconstruct the decision basis.
 
 `sequence`:
 : REQUIRED. An integer. the per-Mission sequence indicator
@@ -596,9 +611,12 @@ canonicalization, and integrity envelope an AuthZEN deployment emits.
   verifiable order and gaps are detectable. MUST be zero or greater.
 
 `denial_reason`:
-: CONDITIONAL. A string. present when `decision` is
-  `deny`. A value from {{runtime-denial-classification}} or a
-  `constraints` key.
+: CONDITIONAL. A string. Present when `decision` is `deny`. A value from
+  the closed set in {{runtime-denial-classification}}. When the denial
+  is a constraint violation, the value is `parameter_violation` and the
+  specific failing `constraints` keys are carried in
+  `contributing_constraints`, not in `denial_reason`, so the reason
+  enum and the open constraint-key space never mix in one field.
 
 `evaluated_at`:
 : REQUIRED. An RFC 3339 {{RFC3339}} timestamp.
@@ -645,7 +663,7 @@ envelopes with unsupported formats.
 {
   "decision_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEd",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
@@ -762,7 +780,7 @@ members other than those defined above.
 {
   "execution_id": "exe_4r9SqLm8tY2pXkV3nR0eF7jB1zN6cQ5w",
   "decision_id":  "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
-  "mission_id":   "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEd",
+  "mission_id":   "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "parameter_digest":
     "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA8dRn",
   "outcome":      "completed",
@@ -868,8 +886,10 @@ AuthZEN decisions use a boolean `decision` member and an optional
   decision.
 
 `denial_reason`:
-: REQUIRED when `decision` is `false`. A string from
-  {{runtime-denial-classification}} or a `constraints` key.
+: REQUIRED when `decision` is `false`. A string from the closed set in
+  {{runtime-denial-classification}}. A constraint violation uses
+  `parameter_violation`; the specific failing `constraints` keys are
+  carried in the Decision Evidence `contributing_constraints`, not here.
 
 `parameter_digest`:
 : REQUIRED when the request was parameter-bound. A string. The digest
@@ -957,9 +977,9 @@ HTTP outside the AuthZEN envelope.
 
 # Capability Source Binding {#capability-source-binding}
 
-Consequential actions an agent discovers at runtime -- through a Model
+Consequential actions an agent discovers at runtime, through a Model
 Context Protocol tool catalog, an OpenAPI document, a Protected
-Resource Metadata-linked catalog, or an equivalent capability source --
+Resource Metadata-linked catalog, or an equivalent capability source,
 identify the source they came from, so a Mission's approved authority
 stays bound to concrete tools rather than to bare action names a later
 catalog revision could redefine. The runtime profile assigns capability

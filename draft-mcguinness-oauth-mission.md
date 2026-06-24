@@ -566,9 +566,15 @@ following members:
     consequential call events. Each object has the members:
 
     `call_class`:
-    : REQUIRED. A string. The named call class. (Named `call_class`
-      rather than `scope` to avoid collision with the OAuth `scope`
-      parameter and claim.)
+    : REQUIRED. A string. The named call class to meter. A `call_class`
+      value SHOULD be drawn from the `actions` identifiers of the
+      entry's `mission_resource_access` ({{authorization-derivation}}),
+      so the metered class maps to evaluated actions; a deployment that
+      meters a coarser or cross-entry class defines that class's
+      membership, and such a class is deployment-defined and not
+      interoperable, like a deployment-defined constraint. (Named
+      `call_class` rather than `scope` to avoid collision with the OAuth
+      `scope` parameter and claim.)
 
     `count`:
     : REQUIRED. An integer. 1 or greater.
@@ -791,6 +797,13 @@ when:
 
 The AS MUST refuse to derive an entry that is not a subset of some
 Mission Authority Set entry.
+
+The `delegation` member is policy, not authority, and is not part of
+this comparison ({{delegation-constraints}}). A derived entry's
+`delegation`, when present, MUST NOT be broader than the parent entry's:
+its `max_depth` MUST be no greater and its `allowed_delegates` MUST be
+no wider. A derived entry MUST NOT introduce `delegation` where the
+parent entry has none.
 
 ## Common Constraints {#common-constraints}
 

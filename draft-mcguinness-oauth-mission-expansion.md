@@ -184,7 +184,7 @@ This document does NOT define:
 - multi-hop or cross-domain expansion; an expansion is adjudicated by
   the predecessor's Mission Issuer (its `origin`).
 
-# Conventions and Definitions
+# Conventions and Terminology
 
 {::boilerplate bcp14-tagged}
 

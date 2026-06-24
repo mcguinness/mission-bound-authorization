@@ -148,7 +148,7 @@ execution-time Mission enforcement; it does not weaken the issuance
 profile's stateless token-validation, subset, delegation, or
 constraint-enforcement requirements.
 
-## Conventions and Terminology {#conventions-and-terminology}
+# Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
 
@@ -657,10 +657,15 @@ where the parameters are sensitive ({{evidence}}).
 
 Deployments MUST require parameter binding for consequential reads when
 read parameters materially change the effective resource set or
-disclosure risk. Examples include export-like or bulk reads,
-cross-tenant queries, privacy-sensitive filters, selected fields,
-destinations, and aggregation level. Ordinary reads that do not change
-the resource set or disclosure risk can remain unbound.
+disclosure risk. Independent of that risk judgment, a binding floor
+applies: a consequential read whose parameters select a cross-tenant or
+cross-audience scope, request a bulk or export-like result, or choose
+the returned fields or destination MUST bind those parameters; a
+deployment MUST NOT classify such a read as not materially affecting the
+resource set. Other examples that materially change the resource set or
+disclosure risk include privacy-sensitive filters and aggregation
+level. Ordinary reads that do not change the resource set or disclosure
+risk can remain unbound.
 
 # Consumption metering {#metering}
 

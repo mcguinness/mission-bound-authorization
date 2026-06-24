@@ -26,8 +26,6 @@ author:
     email: public@karlmcguinness.com
 
 normative:
-  RFC2119:
-  RFC8174:
   RFC3339:
   RFC6234:
   RFC7515:
@@ -393,7 +391,7 @@ Example:
 {
   "evidence_id": "cns_7rP2kL9mQ4",
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEd",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com",
     "intent_hash": "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
     "authority_hash": "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
@@ -435,14 +433,24 @@ evidence service authorized by the Mission Issuer. A verifier:
 2. canonicalizes the remaining Consent Evidence object with JCS;
 3. verifies the JWS payload against those bytes;
 4. verifies the signing key against the Mission Issuer's published key
-   material or configured trust anchors;
-5. recomputes `consent_rendering_hash` over the Consent Disclosure
-   object or verifies the referenced disclosure against that hash; and
-6. verifies that the Mission anchors in `mission` match the Mission
+   material or configured trust anchors; and
+5. verifies that the Mission anchors in `mission` match the Mission
    record being audited.
 
-Evidence whose format is unsupported MUST be rejected rather than
-accepted without verification.
+Steps 1 through 5 establish the integrity of the evidence record itself
+and rely only on the record, since `consent_rendering_hash` is carried
+inside the signed `mission`. Reconstructing the disclosure is a separate
+step that depends on retrieval: when the disclosure object is inlined, a
+verifier recomputes `consent_rendering_hash` over it and compares; when
+it is carried by reference ({{minimization}}), the verifier retrieves it
+and verifies it against `consent_rendering_hash`. A verifier MUST NOT
+treat a disclosure that is merely unretrievable as an integrity failure
+of the evidence record; failure to retrieve a referenced disclosure
+within the retention window is an audit failure ({{audit}}), not a
+signature or anchor failure.
+
+Evidence whose envelope format is unsupported MUST be rejected rather
+than accepted without verification.
 
 # Binding to Mission Approval {#binding-to-mission}
 

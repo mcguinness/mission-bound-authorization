@@ -26,8 +26,6 @@ author:
     email: public@karlmcguinness.com
 
 normative:
-  RFC2119:
-  RFC8174:
   RFC3339:
   RFC7515:
   RFC8259:
@@ -442,7 +440,8 @@ handoff to human review.
 
 # Orchestration Evidence {#orchestration-evidence}
 
-An Orchestration Evidence record has these members:
+An Orchestration Evidence record is a JSON object {{RFC8259}} with these
+members:
 
 `event_id`:
 : REQUIRED. A unique identifier.
@@ -499,8 +498,10 @@ An Orchestration Evidence record has these members:
 
 `evidence_envelope`:
 : OPTIONAL. Integrity protection over the Orchestration Evidence
-  object. When present with `format` `jws-compact`, its payload is the
-  JCS canonical bytes of the object with `evidence_envelope` removed.
+  object. When present with `format` `jws-compact`, it is a JWS
+  {{RFC7515}} Compact Serialization whose payload is the JCS
+  {{RFC8785}} canonical bytes of the object with `evidence_envelope`
+  removed.
 
 Example:
 

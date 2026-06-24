@@ -26,6 +26,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  RFC7515:
   RFC8259:
   RFC8785:
   I-D.draft-mcguinness-oauth-mission:
@@ -40,7 +41,6 @@ normative:
 
 informative:
   RFC6749:
-  RFC7515:
   RFC9126:
   I-D.draft-mcguinness-oauth-mission-runtime:
     title: "Mission-Bound Runtime Enforcement for OAuth 2.0"
@@ -147,7 +147,10 @@ It uses the terms Mission, Mission Intent, Authority Set, Mission
 Issuer, Approver, and Authorization Server as defined by
 {{I-D.draft-mcguinness-oauth-mission}}. Where this document refers to
 "the issuance profile" without a section, it means that document as a
-whole.
+whole. "Client" and "client-side" in this document mean the OAuth
+client, the Agent (Client) of the issuance profile that submits the
+Mission Intent; the shaper runs on that Agent's side of the trust
+boundary.
 
 # Conventions and Terminology
 
