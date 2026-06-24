@@ -162,6 +162,27 @@ governed execution. It does require the harness to know when a piece of
 continuity state is governed by a Mission and to stop using that state
 as an execution basis when the Mission is no longer active.
 
+## Mediated Execution Environment {#mediated-egress}
+
+The runtime profile's credential custody and mediated execution
+({{I-D.draft-mcguinness-oauth-mission-runtime}}) hold only if the agent
+has no path to a consequential resource that bypasses the Policy
+Enforcement Point. Establishing that environment is the harness's
+responsibility, and it is the complement to the runtime layer holding
+the sender-constraint key: custody is moot if the agent can reach the
+resource off-path.
+
+For the action classes a deployment mediates
+({{I-D.draft-mcguinness-oauth-mission-runtime}}), a Mission-aware
+harness MUST run governed consequential work in an execution environment
+whose only path to those actions is through the mediating PEP. It MUST
+NOT leave an unmediated route to a mediated class, such as a debug
+shell, a direct network socket, an unsanctioned egress route, or a
+direct connector that does not pass the runtime gate. A harness that
+cannot guarantee this for an action class MUST NOT represent work in
+that class as runtime-enforced, matching the enforcement-scope rule of
+the runtime profile.
+
 # Conventions and Terminology {#conventions}
 
 {::boilerplate bcp14-tagged}

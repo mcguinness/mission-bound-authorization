@@ -847,6 +847,12 @@ carried in Decision Evidence:
   ({{I-D.draft-mcguinness-oauth-mission}}), and the issuance profile
   defines no per-action `amr` constraint. It is a specialization of
   `resource_policy` that names the step-up affordance.
+- `action_approval_required`: deployment or Resource policy requires an
+  action-bound approval for this action
+  ({{I-D.draft-mcguinness-oauth-mission-runtime}}) and a valid fresh
+  approval bound to the action's parameters is not present. The PEP
+  carries any such approval in the decision context; this profile does
+  not define the approval artifact, which the runtime profile owns.
 - `stale_state`: the PEP-supplied freshness is stale or inconsistent
   with the materialized policy view.
 - `mission_inactive`: the Mission state is not `active`.

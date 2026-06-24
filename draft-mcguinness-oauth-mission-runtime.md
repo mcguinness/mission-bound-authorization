@@ -46,6 +46,7 @@ normative:
       Internet-Draft: draft-mcguinness-oauth-mission-latest
 
 informative:
+  RFC9470:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   AUTHZEN:
     target: https://openid.net/specs/authorization-api-1_0-final.html
@@ -54,6 +55,24 @@ informative:
       -
         org: OpenID Foundation
     date: 2025
+  I-D.draft-mcguinness-oauth-mission-harness:
+    title: "Mission-Aware Agent Harnesses for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-harness-latest
+  I-D.draft-mcguinness-oauth-mission-consent-evidence:
+    title: "Mission Consent Evidence for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-consent-evidence-latest
 
 --- abstract
 
@@ -341,9 +360,34 @@ as non-consequential. A deployment
 that leaves such an action ungated does not enforce this profile for
 that action's class ({{pep-placement}}).
 
-A deployment policy can require human confirmation, step-up
-authentication, or another local signal for privileged administration
-or external commitments. This profile does not define such a signal.
+## Action-bound approval {#action-approval}
+
+The Mission's approval event ({{I-D.draft-mcguinness-oauth-mission}})
+consents to the task and its authority bound; it does not consent to a
+specific action's concrete parameters at the point of use. For the
+highest-consequence classes, a deployment can require a second,
+**action-bound approval**: a fresh approval bound to the concrete
+action and the parameters the PEP is about to permit, distinct from the
+Mission's initial approval.
+
+An action-bound approval is an approval event under the issuance profile
+bound to the action: it is obtained from an independent Approver or
+policy authority, never self-issued by the agent or asserted from the
+agent's own context, and its rendered disclosure MAY be committed as
+Consent Evidence ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}})
+bound to the action parameters. It composes with, and does not replace,
+RFC 9470 step-up authentication, which strengthens the actor's
+authentication context rather than approving a specific action.
+
+A PEP MUST refuse an action for which deployment policy or Resource
+policy requires an action-bound approval and a valid fresh approval
+bound to the action's parameters is not present. A deployment SHOULD
+require an action-bound approval for the external-commitment and
+privileged-administration classes, where a token-lifetime-wide standing
+authority is least appropriate. Because the approval is bound to the
+concrete parameters, it MUST be reverified under the time-of-check to
+time-of-use rules of {{parameter-binding}}; a parameter change after
+approval invalidates it.
 
 Consequential reads do not require parameter binding by default.
 However, a deployment MUST bind or digest read parameters when those
@@ -382,6 +426,47 @@ orchestrator or whatever component drives the call; external egress at
 an egress proxy. Where an action can be reached by an unmediated path
 (a debug shell, an unsanctioned egress route, a direct connector), the
 profile is not enforced for the classes that path reaches.
+
+## Credential custody and mediated execution {#custody}
+
+In an agentic deployment the agent component is itself part of the
+attack surface: it may be prompt-injected or compromised. The issuance
+and runtime gates do not make the agent trustworthy; they bound what it
+can do. A deployment lowers that bound further by not letting the agent
+hold the authority whose misuse is unacceptable.
+
+Mission-bound tokens are sender-constrained
+({{I-D.draft-mcguinness-oauth-mission}}): whoever holds the
+sender-constraint private key the token's `cnf` binds can present the
+token. **Mediated execution** is a PEP placement that uses this: for the
+action classes a deployment mediates, the sender-constraint private key
+is held by the PEP that sits at the last controllable boundary
+({{pep-placement}}), not by the agent component. The agent therefore
+cannot present the Mission-bound credential directly; to act, it asks
+the mediating PEP, which runs the decision of {{decision}} and only then
+uses the key. No new token type, credential handle, or wire protocol is
+introduced: this is a custody and placement property of the existing
+sender-constraint key.
+
+For an action class it mediates, a deployment SHOULD hold the
+sender-constraint private key for the Mission-bound credential in the
+mediating PEP rather than in the agent component, and SHOULD do so for
+the external-commitment and privileged-administration classes. Two
+properties follow: a credential exfiltrated from a compromised agent is
+unusable without the key; and a compromised agent cannot reach a
+mediated action without passing the per-action check, because it never
+holds a usable credential for that class. Mediated execution depends on
+the agent having no unmediated path to the resource; a Mission-aware
+harness establishes that execution environment
+({{I-D.draft-mcguinness-oauth-mission-harness}}).
+
+This narrows, and does not eliminate, the compromised-agent exposure.
+The mediating PEP becomes a trusted component whose compromise is
+out of scope here ({{security-considerations}}); a compromised agent can
+still request mediated actions, which are gated, and can still misuse
+any low-consequence authority it legitimately holds directly. The aim is
+that the agent is structurally unable to take a high-consequence action
+unilaterally, not that the agent is trusted.
 
 # Resource Server runtime profile {#rs-runtime-profile}
 
