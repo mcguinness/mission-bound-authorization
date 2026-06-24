@@ -203,7 +203,12 @@ A Consent Disclosure object has these members:
 
 `authority_summary`:
 : REQUIRED. An object. The rendered summary of resources, actions,
-  constraints, delegation, expiry, and material consumption bounds.
+  constraints, delegation, expiry, and material consumption bounds. This
+  is the consent object: per the issuance profile
+  ({{I-D.draft-mcguinness-oauth-mission}}), the Approver consents to the
+  derived authority, with `mission_summary` as context. A disclosure
+  that renders `mission_summary` without a faithful `authority_summary`
+  does not conform.
 
 `material_notices`:
 : REQUIRED. An array. Notices that materially affect the Approver's
