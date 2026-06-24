@@ -137,7 +137,7 @@ conformance language of {{conformance}}. An implementation that
 supports none of them is unaffected and remains a conforming issuance
 profile.
 
-This document does not restate the base profile. The Mission Intent,
+This document does not restate the issuance profile. The Mission Intent,
 authority derivation, the `mission_resource_access` authorization
 details type, the `mission` claim, the integrity anchors, Mission-bound
 token issuance, the subset rule, and lifecycle gating are all defined
@@ -527,7 +527,7 @@ Lifecycle and Gating") with two additional states: `suspended` (a
 non-terminal paused Mission that derives no tokens until resumed) and
 `completed` (a terminal state recording successful completion).
 Issuance gating treats any state other than `active` as
-non-deriving, exactly as the base profile gates on `active`.
+non-deriving, exactly as the issuance profile gates on `active`.
 
 ## Operations
 
@@ -901,7 +901,7 @@ An implementation claiming an extension MUST meet its requirements:
   required.
 - **Mission Lifecycle**: serve the management endpoint
   ({{mission-lifecycle-endpoint}}), gate the `suspended` and
-  `completed` states it introduces exactly as the base profile gates
+  `completed` states it introduces exactly as the issuance profile gates
   on non-`active` state, and advertise `mission_lifecycle_endpoint`.
 - **Revocation propagation**: advertise `mission_max_stale_seconds`
   and size Mission-bound access-token TTLs to it

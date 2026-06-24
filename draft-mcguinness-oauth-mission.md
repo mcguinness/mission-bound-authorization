@@ -129,8 +129,9 @@ Delegation among agents is carried with the OAuth Actor Profile, and
 an optional cross-domain grant of the OAuth identity chaining
 architecture lets a single Mission cross trust domains and be honored
 by more than one Authorization Server, preserving the Mission's
-consent commitment throughout. This is the "mission layer" left
-unspecified by agent-identity work for OAuth.
+consent commitment throughout. This is the issuance and governance
+"mission layer" left unspecified by agent-identity work for OAuth;
+runtime enforcement of each action is a separate, optional layer.
 
 --- middle
 
