@@ -76,6 +76,15 @@ informative:
       -
         org: OpenID Foundation
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-expansion:
+    title: "Mission Expansion for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
 
 --- abstract
 
@@ -870,15 +879,35 @@ carried in Decision Evidence:
   derivation, or the presented `tool_id` is outside the approved set
   ({{capability-source-binding}}).
 
-A deny is terminal for the attempted action. This profile does not
-define Mission expansion or an authority-expandable-denial workflow
-({{I-D.draft-mcguinness-oauth-mission-runtime}}). When a deployment
-wants to route a denial through an approval workflow without treating
-the denial itself as access, it MAY compose this binding with the
-AuthZEN Access Request and Approval Profile {{ARAP}}. Approval through
-that workflow does not by itself authorize the action; the PEP MUST
-obtain a fresh AuthZEN decision, and any resulting permit and evidence
-remain subject to this profile.
+A deny is terminal for the attempted action: the agent does not proceed
+on a denial. A deny need not end the task, however. For an
+`out_of_authority` or `action_approval_required` denial, the PDP MAY
+mark the denial **requestable** by including a `context.access_request`
+object, composing this binding with the AuthZEN Access Request and
+Approval Profile {{ARAP}}. The PEP then submits an ARAP access request
+bound to the denied evaluation, an independent approver or policy
+adjudicates it (synchronously when policy auto-approves, otherwise
+asynchronously through the portable ARAP task handle), and on approval
+the PEP re-evaluates against the PDP. This is the demand-driven,
+runtime-initiated counterpart to the pre-consented drawdown of
+progressive authorization
+({{I-D.draft-mcguinness-oauth-mission-expansion}}): the agent starts
+narrow and requests the authority it discovers it needs, instead of
+holding it up front.
+
+Two ARAP properties carry weight here and match this profile's stance.
+First, an ARAP approval is input context, not a bearer grant: the PDP
+remains authoritative at enforcement, so the PEP MUST obtain a fresh
+decision, and any resulting permit and evidence remain subject to this
+profile. The action-bound approval an `action_approval_required` denial
+calls for ({{I-D.draft-mcguinness-oauth-mission-runtime}}) is exactly
+such an approval, and ARAP's `approval.id` or signed `approval.state` is
+its carrier. Second, to persist authority beyond the single
+re-evaluated action rather than re-requesting it per call, an approved
+request MAY be realized as a Mission expansion
+({{I-D.draft-mcguinness-oauth-mission-expansion}}): an in-ceiling
+request as a policy-adjudicated in-ceiling expansion, a beyond-ceiling
+request as the fresh human approval that creates the successor Mission.
 
 ## AuthZEN decision context
 
@@ -918,10 +947,12 @@ AuthZEN decisions use a boolean `decision` member and an optional
   authentication context Resource policy requires to lift the denial.
 
 `access_request`:
-: OPTIONAL. An object. Present only when the deployment exposes the
-  denial as requestable under {{ARAP}}. The object is the ARAP
-  requestable-denial context. Its presence does not change the
-  `decision: false` result and does not grant access.
+: OPTIONAL. An object. Present on an `out_of_authority` or
+  `action_approval_required` denial when the deployment exposes it as
+  requestable under {{ARAP}}. It is the ARAP requestable-denial context,
+  carrying the submission endpoint and the denial binding that ties a
+  later access request to this evaluation. Its presence does not change
+  the `decision: false` result and does not grant access.
 
 ## Permit response shape
 

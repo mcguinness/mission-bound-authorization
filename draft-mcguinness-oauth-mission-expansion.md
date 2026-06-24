@@ -500,6 +500,33 @@ authorization bounds, and does not eliminate, standing-authority
 exposure; a deployment SHOULD pair it with short successor lifetimes,
 constraint-bounded ceilings, and runtime enforcement.
 
+## Realizing an approved access request {#arap-feedback}
+
+Progressive authorization grows authority that a deployment anticipated
+well enough to express as a ceiling. The runtime enforcement layer
+handles the unanticipated case: it can let an agent request authority it
+discovers it needs at the point of use, through an access-request and
+approval workflow ({{I-D.draft-mcguinness-oauth-mission-runtime}}). That
+workflow yields a permit for the single re-evaluated action. To persist
+the newly approved authority for the rest of the task, rather than have
+the agent re-request it on every call, the Mission Issuer MAY realize an
+approved access request as an expansion:
+
+- a request whose authority is within the Mission's consented ceiling is
+  realized as a policy-adjudicated in-ceiling expansion
+  ({{in-ceiling-expansion}}); and
+- a request whose authority exceeds the ceiling is realized only on the
+  fresh human approval the request carries, as an ordinary expansion
+  that creates the successor and, where the Approver consents, raises
+  the ceiling.
+
+Realizing a request as an expansion is subject to every rule of this
+document: the successor's authority is freshly derived and bound, the
+predecessor is superseded, and authority is never widened without the
+consent the request carries ({{new-consent}}). An access request not
+realized as an expansion grants only the single runtime permit and no
+durable Mission authority.
+
 # The `predecessor` Member {#predecessor-member}
 
 The successor records a lineage link to the predecessor as a
