@@ -60,6 +60,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
+  I-D.draft-mcguinness-oauth-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-runtime-latest
 
 --- abstract
 
@@ -104,6 +113,15 @@ profile provides is a durable, integrity-protected record that ties a
 specific structured disclosure to a specific approval decision and
 Authority Set, so that divergence between the recorded disclosure and
 the enforced authority becomes detectable in audit.
+
+How much a deployment can narrow the rendering gap is not all-or-nothing.
+This profile defines a ladder of rendering assurance
+({{rendering-assurance}}) whose rungs move the trust from an unbounded,
+unverifiable rendering layer toward the Approver's own authenticator
+signing the exact disclosure commitment. No rung proves what pixels a
+human perceived, but the higher rungs shrink the trusted rendering base
+to a small, attestable one and let the deployment pick the assurance its
+threat model needs.
 
 Consent Evidence does not grant authority. Authority remains the
 approved Mission and its Authority Set under
@@ -300,6 +318,18 @@ The hash commits the disclosure object, not pixels or browser state. A
 deployment MAY additionally retain screenshots or UI telemetry, but the
 interoperable commitment is the structured disclosure object.
 
+So that the committed object can be related to what a human would see,
+the rendering SHOULD be a deterministic function of the disclosure
+object and its `template_id`, `template_version`, and `locale`: the same
+inputs MUST produce the same rendered form, and the named template
+MUST be retrievable or reconstructable by an authorized auditor for the
+retention period ({{audit}}). An auditor can then re-render the recorded
+disclosure into the form the Approver should have been shown. This does
+not prove what was displayed, but it reduces the gap from "the rendering
+layer showed something unverifiable" to "did the rendering layer execute
+a published deterministic template," which the higher rungs of
+{{rendering-assurance}} then address.
+
 The Mission Issuer SHOULD record `consent_rendering_hash` on the
 Mission record. When the Mission claim is extended to carry the value,
 it MUST carry the same prefixed integrity-anchor form, and consumers
@@ -311,6 +341,68 @@ derivation and before approval. If the Authority Set changes after the
 disclosure is constructed, the Mission Issuer MUST discard the
 disclosure and construct a new one; it MUST NOT reuse the prior
 `consent_rendering_hash`.
+
+# Rendering Assurance {#rendering-assurance}
+
+The commitment of {{consent-rendering-hash}} records what disclosure the
+Authorization Server says it rendered; it cannot by itself prove what a
+human perceived. This is the what-you-see-is-what-you-sign problem. This
+profile does not close it with a server-side commitment, which is
+impossible, but defines a ladder a deployment climbs as far as its
+threat model requires. Each rung shrinks the trusted rendering base; to
+claim a rung a deployment satisfies it and records the corresponding
+evidence.
+
+Rung 0, Recorded disclosure:
+: The baseline of {{consent-rendering-hash}}: the structured disclosure
+  is committed and bound to the Mission anchors. Proves the AS recorded
+  this disclosure for this authority; proves nothing about what was
+  shown.
+
+Rung 1, Deterministic rendering:
+: The rendering is a deterministic function of the disclosure object and
+  its committed template ({{consent-rendering-hash}}), so an auditor can
+  re-render the intended form. The open question narrows to whether the
+  rendering layer faithfully executed a published template.
+
+Rung 2, Attested rendering:
+: The Consent Evidence carries a `rendering_attestation`
+  ({{consent-evidence}}): evidence that an attested, identified rendering
+  component (a first-party AS-hosted consent surface, or a renderer
+  attested by the platform or a trusted execution environment) produced
+  the rendering. The trusted base shrinks from any rendering layer to an
+  attested one.
+
+Rung 3, Approver confirmation:
+: The Consent Evidence carries a `rendering_confirmation`
+  ({{consent-evidence}}): a signature produced by the Approver's
+  authenticator over the `consent_rendering_hash` at approval, binding
+  the approval credential itself to the exact committed disclosure. The
+  claim that the Approver approved this disclosure then rests on the
+  Approver's authenticator, not on the Authorization Server. This is the
+  what-you-see-is-what-you-sign rung, as in authenticator
+  transaction-confirmation schemes. A deployment SHOULD reach this rung
+  for a Mission whose Authority Set carries a high-risk material-notice
+  class ({{material-notices}}): irreversible actions, external
+  commitments, privileged administration, or cross-domain disclosure.
+
+Rung 4, Out-of-band confirmation:
+: For the most material actions, confirmation is obtained at execution
+  time on a channel the rendering layer does not control, as the
+  action-bound approval of the runtime layer
+  ({{I-D.draft-mcguinness-oauth-mission-runtime}}); a rendering layer
+  would then have to compromise two independent paths. That is a
+  runtime-layer mechanism recorded as its own evidence; this profile
+  records the approval-time rungs above.
+
+No rung proves the Approver perceived or understood the disclosure; a
+compromised authenticator or trusted execution environment, or an
+Approver who confirms without reading, remains outside reach, as for any
+electronic-signature scheme. What the ladder provides is a verifiable,
+bounded reduction of the rendering trust base: at Rung 3 the claim that
+the Approver approved a specific disclosure is verifiable up to trust in
+the Approver's authenticator, rather than in an arbitrary rendering
+layer.
 
 # Consent Evidence Object {#consent-evidence}
 
@@ -356,6 +448,26 @@ A Consent Evidence object has these members:
 `disclosure`:
 : REQUIRED. The Consent Disclosure object, or an object containing a
   durable reference and the `consent_rendering_hash`.
+
+`rendering_attestation`:
+: OPTIONAL. An object. Evidence that an attested, identified rendering
+  component produced the rendering shown to the Approver (Rung 2,
+  {{rendering-assurance}}). Its members are deployment-defined and
+  identify the attested component and its attestation; this profile
+  fixes the role, not the attestation format.
+
+`rendering_confirmation`:
+: OPTIONAL. An object. A confirmation produced by the Approver's
+  authenticator over the `consent_rendering_hash` at approval (Rung 3,
+  {{rendering-assurance}}), binding the approval credential to the exact
+  committed disclosure. It carries the signature and the material a
+  verifier needs to check it against the Approver's authenticator and
+  the `consent_rendering_hash`; this profile fixes that it signs the
+  commitment, not the authenticator protocol. A deployment SHOULD
+  include it for a high-risk material-notice class
+  ({{material-notices}}). When present, a verifier MUST check it as part
+  of {{integrity}} and MUST treat a confirmation that does not verify
+  against the `consent_rendering_hash` as an integrity failure.
 
 `approved_at`:
 : REQUIRED when `decision` is `approved`. An RFC 3339 {{RFC3339}}
@@ -439,7 +551,13 @@ evidence service authorized by the Mission Issuer. A verifier:
    `mission` match the Mission record being audited. When `decision` is
    `declined` there is no Mission record ({{declined-events}}); the
    verifier instead confirms the `mission` descriptor carries `origin`
-   and the two `source_hashes` anchors and no `id`.
+   and the two `source_hashes` anchors and no `id`; and
+6. when `rendering_confirmation` is present
+   ({{rendering-assurance}}), verifies it against the Approver's
+   authenticator and the `consent_rendering_hash`, and treats a
+   confirmation that does not verify as an integrity failure. Its
+   absence is not a failure; it means the evidence asserts no rung above
+   the rendering the AS recorded.
 
 Steps 1 through 5 establish the integrity of the evidence record itself
 and rely only on the record, since `consent_rendering_hash` is carried
@@ -553,9 +671,15 @@ used for authority, so a disclosure that understates the Authority Set
 is detectable in audit. It does not eliminate the threat: a rendering
 layer that displays pixels inconsistent with the structured disclosure
 it commits remains outside any server-side commitment ({{introduction}}).
-Deployments that need assurance about the presented pixels MUST obtain
-it by other means, such as a trusted rendering path or client
-attestation.
+The assurance ladder of {{rendering-assurance}} is how a deployment
+reduces this threat by degree: deterministic rendering makes the
+intended form re-renderable (Rung 1), a rendering attestation binds an
+attested renderer (Rung 2), and an Approver confirmation signature over
+the `consent_rendering_hash` (Rung 3) moves the trust from the rendering
+layer to the Approver's authenticator. A deployment that needs assurance
+that the Approver approved a specific disclosure SHOULD reach Rung 3 for
+its high-risk classes; no rung proves perception, which remains outside
+reach for any electronic-signature scheme.
 
 ## Template Downgrade
 
