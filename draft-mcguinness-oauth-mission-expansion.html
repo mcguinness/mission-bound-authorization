@@ -1730,7 +1730,10 @@ expansion Mission Intent so the derivation reproduces it.<a href="#section-5-2.2
 Authority Set, satisfying any <code>context.acr</code>, and render the Subject
 when the Approver is not the Subject, per the issuance profile's
 approval event. The consent disclosure <span class="bcp14">MUST</span> reflect the successor's
-authority being adjudicated.<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
+authority being adjudicated. For an in-ceiling expansion under
+progressive authorization, this consent <span class="bcp14">MAY</span> be satisfied by policy
+rather than a fresh human approval, within the limits of
+<a href="#in-ceiling-expansion" class="auto internal xref">Section 6.1</a>.<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-5-2.4">
           <p id="section-5-2.4.1">Compute the successor's integrity anchors (<code>intent_hash</code>,
@@ -1790,12 +1793,15 @@ successor <span class="bcp14">MUST</span> be a subset of; and<a href="#section-6
 fresh human approval.<a href="#section-6-3.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-6-4">Where present, the ceiling and drawdown policy are part of the Mission's
-approved authority record and are covered by its <code>authority_hash</code>; the
-consent disclosure <span class="bcp14">MUST</span> render the ceiling and the fact that in-ceiling
-expansion is policy-adjudicated. A Mission that carries no ceiling has
-no progressive authorization: every expansion of it is an ordinary,
-freshly approved expansion.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-4">Where present, the ceiling and drawdown policy are recorded on the
+Mission and committed under their own integrity anchor, not under
+<code>authority_hash</code>: <code>authority_hash</code> commits only the consented Authority
+Set (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), and the ceiling is a bound
+on future expansions, not present authority. The consent disclosure <span class="bcp14">MUST</span>
+render the ceiling and the fact that in-ceiling expansion is
+policy-adjudicated. A Mission that carries no ceiling has no progressive
+authorization: every expansion of it is an ordinary, freshly approved
+expansion.<a href="#section-6-4" class="pilcrow">¶</a></p>
 <div id="in-ceiling-expansion">
 <section id="section-6.1">
         <h3 id="name-in-ceiling-expansion">
@@ -1820,6 +1826,16 @@ Issuer <span class="bcp14">MUST</span> refuse, with <code>out_of_ceiling</code> 
 requested authority that is not a subset of the consented ceiling;
 exceeding the ceiling requires a fresh human approval that raises it,
 which is an ordinary expansion.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+<p id="section-6.1-3">Policy adjudication is bounded, so a pre-consented ceiling cannot become
+a standing grant a compromised agent walks up to unattended. A drawdown
+that would grant an irreversible action, an external commitment,
+privileged administration, or cross-domain authority <span class="bcp14">MUST</span> be adjudicated
+by a fresh human approval even when it is within the ceiling; the
+drawdown policy <span class="bcp14">MUST NOT</span> permit policy-only adjudication of those
+classes. A drawdown policy <span class="bcp14">SHOULD</span> bound the rate of policy-adjudicated
+drawdowns. An in-ceiling request the drawdown policy does not authorize
+is not refused with <code>out_of_ceiling</code>; it falls back to an ordinary,
+freshly human-approved expansion.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="progressive-limits">
@@ -1838,7 +1854,10 @@ rate-limitable, and enforced per action by the runtime layer
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>). Progressive
 authorization bounds, and does not eliminate, standing-authority
 exposure; a deployment <span class="bcp14">SHOULD</span> pair it with short successor lifetimes,
-constraint-bounded ceilings, and runtime enforcement.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+constraint-bounded ceilings, and runtime enforcement. The drawdown
+policy is enforced by the Mission Issuer and is part of its trusted
+governance: a misconfigured policy can over-grant within the ceiling, so
+it is reviewed and versioned like other approval policy.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="arap-feedback">

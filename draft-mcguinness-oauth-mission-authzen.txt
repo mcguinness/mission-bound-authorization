@@ -26,9 +26,9 @@ Abstract
    emits and their integrity, how runtime denials map onto AuthZEN
    decision context and optional error details, how requestable denials
    can compose with the AuthZEN Access Request and Approval Profile, and
-   the AuthZEN representation of the runtime metering the base profile
-   meters.  It does not restate the enforcement semantics the base
-   profile owns.
+   the AuthZEN representation of the runtime metering the runtime
+   profile meters.  It does not restate the enforcement semantics the
+   runtime profile owns.
 
 About This Document
 
@@ -111,10 +111,11 @@ Table of Contents
    9.  AuthZEN binding of consumption metering
    10. Mission Status Composition
    11. Security Considerations
-     11.1.  Decision Evidence versus Execution Evidence
-     11.2.  Evidence integrity and signing keys
-     11.3.  Materialized view fidelity
-     11.4.  Transport
+     11.1.  Access Request Service in the trusted base
+     11.2.  Decision Evidence versus Execution Evidence
+     11.3.  Evidence integrity and signing keys
+     11.4.  Materialized view fidelity
+     11.5.  Transport
    12. Privacy Considerations
      12.1.  Evidence as PII sinks
      12.2.  Parameter exposure
@@ -903,6 +904,14 @@ Table of Contents
    narrow and requests the authority it discovers it needs, instead of
    holding it up front.
 
+   Auto-approval is bounded the same way in-ceiling drawdown is
+   ([I-D.draft-mcguinness-oauth-mission-expansion]): a deployment SHOULD
+   rate-limit and anomaly-check synchronous auto-approval, and MUST NOT
+   auto-approve a request for an action_approval_required denial in the
+   irreversible, external-commitment, or privileged-administration
+   classes without an independent approver, so a compromised agent
+   cannot drive the request loop to escalate itself unattended.
+
    Two ARAP properties carry weight here and match this profile's
    stance.  First, an ARAP approval is input context, not a bearer
    grant: the PDP remains authoritative at enforcement, so the PEP MUST
@@ -1143,7 +1152,16 @@ Table of Contents
    only threats specific to the AuthZEN binding and the evidence
    objects.
 
-11.1.  Decision Evidence versus Execution Evidence
+11.1.  Access Request Service in the trusted base
+
+   A deployment that composes with ARAP adds the Access Request Service
+   to its trusted base: it adjudicates requestable denials and issues
+   the approvals the PDP consumes as input.  A compromised or
+   misconfigured Access Request Service can auto-approve escalations, so
+   it MUST be trusted, authenticated, and access-controlled like the
+   PDP, and its auto-approval is bounded as above.
+
+11.2.  Decision Evidence versus Execution Evidence
 
    Decision Evidence is not proof an action occurred.  Implementations
    MUST emit Execution Evidence to record outcomes, and auditors MUST
@@ -1153,7 +1171,7 @@ Table of Contents
    undetermined-outcome or, per deployment policy, as action-attempted;
    it MUST NOT treat it as proof of action.
 
-11.2.  Evidence integrity and signing keys
+11.3.  Evidence integrity and signing keys
 
    The evidence_envelope binds each record to the emitting PDP or PEP.
    The PDP's jws-compact signing key MUST be resolvable in the PDP's
@@ -1163,7 +1181,7 @@ Table of Contents
    equivalent trust configuration.  Implementations MUST reject evidence
    whose format is unsupported rather than accepting it unverified.
 
-11.3.  Materialized view fidelity
+11.4.  Materialized view fidelity
 
    A PDP that evaluates against a materialized view enlarging the
    Authority Set's bounds violates the bounded property of Section 3.
@@ -1171,7 +1189,7 @@ Table of Contents
    that the view it loaded does not match the Mission the PEP referenced
    and deny with stale_state.
 
-11.4.  Transport
+11.5.  Transport
 
    The PDP endpoint and the audit channels carrying Decision Evidence
    and Execution Evidence MUST be served over TLS 1.2 or later (TLS 1.3

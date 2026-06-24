@@ -158,12 +158,12 @@ Table of Contents
    conformance language of Section 10.  An implementation that supports
    none of them is unaffected and remains a conforming issuance profile.
 
-   This document does not restate the base profile.  The Mission Intent,
-   authority derivation, the mission_resource_access authorization
-   details type, the mission claim, the integrity anchors, Mission-bound
-   token issuance, the subset rule, and lifecycle gating are all defined
-   in [I-D.draft-mcguinness-oauth-mission] and are referenced, not re-
-   specified, here.
+   This document does not restate the issuance profile.  The Mission
+   Intent, authority derivation, the mission_resource_access
+   authorization details type, the mission claim, the integrity anchors,
+   Mission-bound token issuance, the subset rule, and lifecycle gating
+   are all defined in [I-D.draft-mcguinness-oauth-mission] and are
+   referenced, not re-specified, here.
 
 2.  Conventions and Terminology
 
@@ -562,7 +562,7 @@ Table of Contents
    terminal paused Mission that derives no tokens until resumed) and
    completed (a terminal state recording successful completion).
    Issuance gating treats any state other than active as non-deriving,
-   exactly as the base profile gates on active.
+   exactly as the issuance profile gates on active.
 
 5.1.  Operations
 
@@ -928,7 +928,7 @@ Table of Contents
 
    *  *Mission Lifecycle*: serve the management endpoint (Section 5),
       gate the suspended and completed states it introduces exactly as
-      the base profile gates on non-active state, and advertise
+      the issuance profile gates on non-active state, and advertise
       mission_lifecycle_endpoint.
 
    *  *Revocation propagation*: advertise mission_max_stale_seconds and

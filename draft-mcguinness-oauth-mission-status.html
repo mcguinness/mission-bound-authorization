@@ -1373,7 +1373,7 @@ which it supports through the metadata of <a href="#as-metadata" class="auto int
 conformance language of <a href="#conformance" class="auto internal xref">Section 10</a>. An implementation that
 supports none of them is unaffected and remains a conforming issuance
 profile.<a href="#section-1-4" class="pilcrow">¶</a></p>
-<p id="section-1-5">This document does not restate the base profile. The Mission Intent,
+<p id="section-1-5">This document does not restate the issuance profile. The Mission Intent,
 authority derivation, the <code>mission_resource_access</code> authorization
 details type, the <code>mission</code> claim, the integrity anchors, Mission-bound
 token issuance, the subset rule, and lifecycle gating are all defined
@@ -1907,7 +1907,7 @@ Lifecycle and Gating") with two additional states: <code>suspended</code> (a
 non-terminal paused Mission that derives no tokens until resumed) and
 <code>completed</code> (a terminal state recording successful completion).
 Issuance gating treats any state other than <code>active</code> as
-non-deriving, exactly as the base profile gates on <code>active</code>.<a href="#section-5-3" class="pilcrow">¶</a></p>
+non-deriving, exactly as the issuance profile gates on <code>active</code>.<a href="#section-5-3" class="pilcrow">¶</a></p>
 <div id="operations">
 <section id="section-5.1">
         <h3 id="name-operations">
@@ -2458,7 +2458,7 @@ required.<a href="#section-10-3.2.1" class="pilcrow">¶</a></p>
         <li class="normal" id="section-10-3.3">
           <p id="section-10-3.3.1"><strong>Mission Lifecycle</strong>: serve the management endpoint
 (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>), gate the <code>suspended</code> and
-<code>completed</code> states it introduces exactly as the base profile gates
+<code>completed</code> states it introduces exactly as the issuance profile gates
 on non-<code>active</code> state, and advertise <code>mission_lifecycle_endpoint</code>.<a href="#section-10-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-3.4">

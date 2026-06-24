@@ -20,8 +20,8 @@ Evidence and Execution Evidence objects a deployment emits and their
 integrity, how runtime denials map onto AuthZEN decision context and
 optional error details, how requestable denials can compose with the
 AuthZEN Access Request and Approval Profile, and the AuthZEN
-representation of the runtime metering the base profile meters. It
-does not restate the enforcement semantics the base profile owns. 
+representation of the runtime metering the runtime profile meters. It
+does not restate the enforcement semantics the runtime profile owns. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="oauth" name="keyword">
@@ -1110,8 +1110,8 @@ Evidence and Execution Evidence objects a deployment emits and their
 integrity, how runtime denials map onto AuthZEN decision context and
 optional error details, how requestable denials can compose with the
 AuthZEN Access Request and Approval Profile, and the AuthZEN
-representation of the runtime metering the base profile meters. It
-does not restate the enforcement semantics the base profile owns.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+representation of the runtime metering the runtime profile meters. It
+does not restate the enforcement semantics the runtime profile owns.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1292,16 +1292,19 @@ does not restate the enforcement semantics the base profile owns.<a href="#secti
             <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
-                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-decision-evidence-versus-ex" class="internal xref">Decision Evidence versus Execution Evidence</a></p>
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-access-request-service-in-t" class="internal xref">Access Request Service in the trusted base</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
-                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-evidence-integrity-and-sign" class="internal xref">Evidence integrity and signing keys</a></p>
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-decision-evidence-versus-ex" class="internal xref">Decision Evidence versus Execution Evidence</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.3">
-                <p id="section-toc.1-1.11.2.3.1"><a href="#section-11.3" class="auto internal xref">11.3</a>.  <a href="#name-materialized-view-fidelity" class="internal xref">Materialized view fidelity</a></p>
+                <p id="section-toc.1-1.11.2.3.1"><a href="#section-11.3" class="auto internal xref">11.3</a>.  <a href="#name-evidence-integrity-and-sign" class="internal xref">Evidence integrity and signing keys</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.4">
-                <p id="section-toc.1-1.11.2.4.1"><a href="#section-11.4" class="auto internal xref">11.4</a>.  <a href="#name-transport" class="internal xref">Transport</a></p>
+                <p id="section-toc.1-1.11.2.4.1"><a href="#section-11.4" class="auto internal xref">11.4</a>.  <a href="#name-materialized-view-fidelity" class="internal xref">Materialized view fidelity</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.5">
+                <p id="section-toc.1-1.11.2.5.1"><a href="#section-11.5" class="auto internal xref">11.5</a>.  <a href="#name-transport" class="internal xref">Transport</a></p>
 </li>
             </ul>
 </li>
@@ -2509,7 +2512,14 @@ progressive authorization
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>): the agent starts
 narrow and requests the authority it discovers it needs, instead of
 holding it up front.<a href="#section-7-3" class="pilcrow">¶</a></p>
-<p id="section-7-4">Two ARAP properties carry weight here and match this profile's stance.
+<p id="section-7-4">Auto-approval is bounded the same way in-ceiling drawdown is
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>): a deployment <span class="bcp14">SHOULD</span>
+rate-limit and anomaly-check synchronous auto-approval, and <span class="bcp14">MUST NOT</span>
+auto-approve a request for an <code>action_approval_required</code> denial in the
+irreversible, external-commitment, or privileged-administration classes
+without an independent approver, so a compromised agent cannot drive the
+request loop to escalate itself unattended.<a href="#section-7-4" class="pilcrow">¶</a></p>
+<p id="section-7-5">Two ARAP properties carry weight here and match this profile's stance.
 First, an ARAP approval is input context, not a bearer grant: the PDP
 remains authoritative at enforcement, so the PEP <span class="bcp14">MUST</span> obtain a fresh
 decision, and any resulting permit and evidence remain subject to this
@@ -2521,7 +2531,7 @@ re-evaluated action rather than re-requesting it per call, an approved
 request <span class="bcp14">MAY</span> be realized as a Mission expansion
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>): an in-ceiling
 request as a policy-adjudicated in-ceiling expansion, a beyond-ceiling
-request as the fresh human approval that creates the successor Mission.<a href="#section-7-4" class="pilcrow">¶</a></p>
+request as the fresh human approval that creates the successor Mission.<a href="#section-7-5" class="pilcrow">¶</a></p>
 <div id="authzen-decision-context">
 <section id="section-7.1">
         <h3 id="name-authzen-decision-context">
@@ -2833,60 +2843,73 @@ placement and bypass, classification integrity, freshness and
 consumption honesty, Resource policy authority, TOCTOU and replay, and
 the limits of a compromised PEP or PDP. This section addresses only
 threats specific to the AuthZEN binding and the evidence objects.<a href="#section-11-1" class="pilcrow">¶</a></p>
-<div id="decision-evidence-versus-execution-evidence">
+<div id="access-request-service-in-the-trusted-base">
 <section id="section-11.1">
-        <h3 id="name-decision-evidence-versus-ex">
-<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-decision-evidence-versus-ex" class="section-name selfRef">Decision Evidence versus Execution Evidence</a>
+        <h3 id="name-access-request-service-in-t">
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-access-request-service-in-t" class="section-name selfRef">Access Request Service in the trusted base</a>
         </h3>
-<p id="section-11.1-1">Decision Evidence is not proof an action occurred. Implementations <span class="bcp14">MUST</span>
+<p id="section-11.1-1">A deployment that composes with ARAP adds the Access Request Service to
+its trusted base: it adjudicates requestable denials and issues the
+approvals the PDP consumes as input. A compromised or misconfigured
+Access Request Service can auto-approve escalations, so it <span class="bcp14">MUST</span> be
+trusted, authenticated, and access-controlled like the PDP, and its
+auto-approval is bounded as above.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="decision-evidence-versus-execution-evidence">
+<section id="section-11.2">
+        <h3 id="name-decision-evidence-versus-ex">
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-decision-evidence-versus-ex" class="section-name selfRef">Decision Evidence versus Execution Evidence</a>
+        </h3>
+<p id="section-11.2-1">Decision Evidence is not proof an action occurred. Implementations <span class="bcp14">MUST</span>
 emit Execution Evidence to record outcomes, and auditors <span class="bcp14">MUST NOT</span> treat
 Decision Evidence alone as evidence of action. An audit consumer <span class="bcp14">MUST</span>
 classify orphaned Decision Evidence (no matching Execution Evidence
 within the deployment's reconciliation window) as undetermined-outcome
 or, per deployment policy, as action-attempted; it <span class="bcp14">MUST NOT</span> treat it as
-proof of action.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+proof of action.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="evidence-integrity-and-signing-keys">
-<section id="section-11.2">
+<section id="section-11.3">
         <h3 id="name-evidence-integrity-and-sign">
-<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-evidence-integrity-and-sign" class="section-name selfRef">Evidence integrity and signing keys</a>
+<a href="#section-11.3" class="section-number selfRef">11.3. </a><a href="#name-evidence-integrity-and-sign" class="section-name selfRef">Evidence integrity and signing keys</a>
         </h3>
-<p id="section-11.2-1">The <code>evidence_envelope</code> binds each record to the emitting PDP or PEP.
+<p id="section-11.3-1">The <code>evidence_envelope</code> binds each record to the emitting PDP or PEP.
 The PDP's <code>jws-compact</code> signing key <span class="bcp14">MUST</span> be resolvable in the PDP's
 published JWKS so a verifier can check Decision Evidence independently.
 The PEP or executor signing key used for Execution Evidence <span class="bcp14">MUST</span> be
 resolvable through a deployment-published key set or equivalent trust
 configuration.
 Implementations <span class="bcp14">MUST</span> reject evidence whose <code>format</code> is unsupported
-rather than accepting it unverified.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
+rather than accepting it unverified.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="materialized-view-fidelity">
-<section id="section-11.3">
+<section id="section-11.4">
         <h3 id="name-materialized-view-fidelity">
-<a href="#section-11.3" class="section-number selfRef">11.3. </a><a href="#name-materialized-view-fidelity" class="section-name selfRef">Materialized view fidelity</a>
+<a href="#section-11.4" class="section-number selfRef">11.4. </a><a href="#name-materialized-view-fidelity" class="section-name selfRef">Materialized view fidelity</a>
         </h3>
-<p id="section-11.3-1">A PDP that evaluates against a materialized view enlarging the
+<p id="section-11.4-1">A PDP that evaluates against a materialized view enlarging the
 Authority Set's bounds violates the bounded property of
 <a href="#mission-to-policy-materialization" class="auto internal xref">Section 3</a>. <code>authority_hash</code> is the upper
 bound; <code>policy_view_id</code> lets the PDP detect that the view it loaded
 does not match the Mission the PEP referenced and deny with
-<code>stale_state</code>.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
+<code>stale_state</code>.<a href="#section-11.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="transport">
-<section id="section-11.4">
+<section id="section-11.5">
         <h3 id="name-transport">
-<a href="#section-11.4" class="section-number selfRef">11.4. </a><a href="#name-transport" class="section-name selfRef">Transport</a>
+<a href="#section-11.5" class="section-number selfRef">11.5. </a><a href="#name-transport" class="section-name selfRef">Transport</a>
         </h3>
-<p id="section-11.4-1">The PDP endpoint and the audit channels carrying Decision Evidence and
+<p id="section-11.5-1">The PDP endpoint and the audit channels carrying Decision Evidence and
 Execution Evidence <span class="bcp14">MUST</span> be served over TLS 1.2 or later (TLS 1.3
 <span class="bcp14">RECOMMENDED</span>). PEP-to-PDP authentication <span class="bcp14">MUST</span> be mutual, satisfying the
 integrity and mutual-authentication requirement the runtime profile
 places on the PEP-PDP channel
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>). Evidence at rest
-<span class="bcp14">MUST</span> be encrypted per the deployment's data-protection posture.<a href="#section-11.4-1" class="pilcrow">¶</a></p>
+<span class="bcp14">MUST</span> be encrypted per the deployment's data-protection posture.<a href="#section-11.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

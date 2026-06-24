@@ -636,6 +636,13 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-mission>.
 
+   [I-D.draft-mcguinness-oauth-mission-authzen]
+              McGuinness, K., "Mission-Bound Runtime Enforcement:
+              AuthZEN Profile", Work in Progress, Internet-Draft, draft-
+              mcguinness-oauth-mission-authzen, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-authzen>.
+
    [I-D.draft-mcguinness-oauth-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement for
               OAuth 2.0", Work in Progress, Internet-Draft, draft-
@@ -678,13 +685,6 @@ Table of Contents
               <https://www.rfc-editor.org/rfc/rfc8785>.
 
 15.2.  Informative References
-
-   [I-D.draft-mcguinness-oauth-mission-authzen]
-              McGuinness, K., "Mission-Bound Runtime Enforcement:
-              AuthZEN Profile", Work in Progress, Internet-Draft, draft-
-              mcguinness-oauth-mission-authzen, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-authzen>.
 
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", Work in

@@ -1732,9 +1732,9 @@ authentication context rather than approving a specific action.<a href="#section
 <p id="section-3.4-3">A PEP <span class="bcp14">MUST</span> refuse an action for which deployment policy or Resource
 policy requires an action-bound approval and a valid fresh approval
 bound to the action's parameters is not present. A deployment <span class="bcp14">SHOULD</span>
-require an action-bound approval for the external-commitment and
-privileged-administration classes, where a token-lifetime-wide standing
-authority is least appropriate. Because the approval is bound to the
+require an action-bound approval for the irreversible,
+external-commitment, and privileged-administration classes, where a
+token-lifetime-wide standing authority is least appropriate. Because the approval is bound to the
 concrete parameters, it <span class="bcp14">MUST</span> be reverified under the time-of-check to
 time-of-use rules of <a href="#parameter-binding" class="auto internal xref">Section 7</a>; a parameter change after
 approval invalidates it.<a href="#section-3.4-3" class="pilcrow">¶</a></p>
@@ -1821,7 +1821,10 @@ cannot present the Mission-bound credential directly; to act, it asks
 the mediating PEP, which runs the decision of <a href="#decision" class="auto internal xref">Section 6</a> and only then
 uses the key. No new token type, credential handle, or wire protocol is
 introduced: this is a custody and placement property of the existing
-sender-constraint key.<a href="#section-3.6-2" class="pilcrow">¶</a></p>
+sender-constraint key. The mediating PEP is a co-trusted process in the
+agent's own trust domain, not a delegate: the token is unchanged, the
+agent remains the principal of record (<code>client_id</code> still attributes the
+action to the agent), and no <code>act</code>-chain entry is added.<a href="#section-3.6-2" class="pilcrow">¶</a></p>
 <p id="section-3.6-3">For an action class it mediates, a deployment <span class="bcp14">SHOULD</span> hold the
 sender-constraint private key for the Mission-bound credential in the
 mediating PEP rather than in the agent component, and <span class="bcp14">SHOULD</span> do so for
@@ -1840,6 +1843,12 @@ still request mediated actions, which are gated, and can still misuse
 any low-consequence authority it legitimately holds directly. The aim is
 that the agent is structurally unable to take a high-consequence action
 unilaterally, not that the agent is trusted.<a href="#section-3.6-4" class="pilcrow">¶</a></p>
+<p id="section-3.6-5">The set of action classes a deployment mediates is the load-bearing
+parameter here: a deployment that mediates nothing gains nothing from
+this section, however it labels itself. A deployment that relies on this
+profile to protect against agent compromise therefore <span class="bcp14">MUST</span> include the
+irreversible, external-commitment, and privileged-administration classes
+in its mediated set; the protection is only as broad as that set.<a href="#section-3.6-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

@@ -1654,7 +1654,10 @@ profile does not close it with a server-side commitment, which is
 impossible, but defines a ladder a deployment climbs as far as its
 threat model requires. Each rung shrinks the trusted rendering base; to
 claim a rung a deployment satisfies it and records the corresponding
-evidence.<a href="#section-6-1" class="pilcrow">¶</a></p>
+evidence. The rungs are cumulative: claiming a rung requires satisfying
+the rungs below it, so a Rung 3 confirmation is over a disclosure that
+is also deterministically renderable (Rung 1) and an auditor can
+re-render exactly what the confirmation signed.<a href="#section-6-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-6-2">
         <dt id="section-6-2.1">Rung 0, Recorded disclosure:</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.2">
@@ -1801,16 +1804,19 @@ fixes the role, not the attestation format.<a href="#section-7-2.16.1" class="pi
 <code>rendering_confirmation</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.18">
           <p id="section-7-2.18.1"><span class="bcp14">OPTIONAL</span>. An object. A confirmation produced by the Approver's
-authenticator over the <code>consent_rendering_hash</code> at approval (Rung 3,
-<a href="#rendering-assurance" class="auto internal xref">Section 6</a>), binding the approval credential to the exact
-committed disclosure. It carries the signature and the material a
-verifier needs to check it against the Approver's authenticator and
-the <code>consent_rendering_hash</code>; this profile fixes that it signs the
-commitment, not the authenticator protocol. A deployment <span class="bcp14">SHOULD</span>
-include it for a high-risk material-notice class
-(<a href="#material-notices" class="auto internal xref">Section 4.1</a>). When present, a verifier <span class="bcp14">MUST</span> check it as part
-of <a href="#integrity" class="auto internal xref">Section 7.1</a> and <span class="bcp14">MUST</span> treat a confirmation that does not verify
-against the <code>consent_rendering_hash</code> as an integrity failure.<a href="#section-7-2.18.1" class="pilcrow">¶</a></p>
+authenticator at approval (Rung 3, <a href="#rendering-assurance" class="auto internal xref">Section 6</a>). To bind
+the trust to the Approver rather than the Authorization Server, it
+<span class="bcp14">MUST</span> sign the <code>consent_rendering_hash</code> together with a per-approval
+value (the <code>evidence_id</code>, or a nonce echoed in
+<code>authentication_context</code>), so a captured confirmation cannot be
+replayed into another record, and it <span class="bcp14">MUST</span> carry or reference an
+authenticator credential that the verifier can confirm is bound to the
+recorded <code>approver</code>. This profile fixes what is signed and bound, not
+the authenticator protocol. A deployment <span class="bcp14">SHOULD</span> include it for a
+high-risk material-notice class (<a href="#material-notices" class="auto internal xref">Section 4.1</a>). When present,
+a verifier <span class="bcp14">MUST</span> check it as part of <a href="#integrity" class="auto internal xref">Section 7.1</a> and <span class="bcp14">MUST</span> treat a
+confirmation that does not verify, or whose authenticator is not bound
+to the recorded <code>approver</code>, as an integrity failure.<a href="#section-7-2.18.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.19">
@@ -1933,14 +1939,25 @@ and the two <code>source_hashes</code> anchors and no <code>id</code>; and<a hre
 </li>
           <li id="section-7.1-2.6">
             <p id="section-7.1-2.6.1">when <code>rendering_confirmation</code> is present
-(<a href="#rendering-assurance" class="auto internal xref">Section 6</a>), verifies it against the Approver's
-authenticator and the <code>consent_rendering_hash</code>, and treats a
-confirmation that does not verify as an integrity failure. Its
-absence is not a failure; it means the evidence asserts no rung above
-the rendering the AS recorded.<a href="#section-7.1-2.6.1" class="pilcrow">¶</a></p>
+(<a href="#rendering-assurance" class="auto internal xref">Section 6</a>), verifies it against the recorded
+<code>approver</code>'s authenticator and over the <code>consent_rendering_hash</code>
+bound to the per-approval value, and treats a confirmation that does
+not verify, or whose authenticator is not bound to the recorded
+<code>approver</code>, as an integrity failure; and<a href="#section-7.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-7.1-2.7">
+            <p id="section-7.1-2.7.1">when <code>rendering_attestation</code> is present (<a href="#rendering-assurance" class="auto internal xref">Section 6</a>),
+validates the attested component identity and its attestation against
+the verifier's configured trust anchors, and treats an attestation it
+cannot validate as unverified (the evidence then asserts no rung above
+the one the verifier can check, not an integrity failure of the
+record).<a href="#section-7.1-2.7.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-7.1-3">Steps 1 through 5 establish the integrity of the evidence record itself
+<p id="section-7.1-3">The absence of <code>rendering_confirmation</code> or <code>rendering_attestation</code> is
+not a failure; it means the evidence asserts no rung above the rendering
+the AS recorded.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
+<p id="section-7.1-4">Steps 1 through 5 establish the integrity of the evidence record itself
 and rely only on the record, since <code>consent_rendering_hash</code> is carried
 inside the signed <code>mission</code>. Reconstructing the disclosure is a separate
 step that depends on retrieval: when the disclosure object is inlined, a
@@ -1950,9 +1967,9 @@ and verifies it against <code>consent_rendering_hash</code>. A verifier <span cl
 treat a disclosure that is merely unretrievable as an integrity failure
 of the evidence record; failure to retrieve a referenced disclosure
 within the retention window is an audit failure (<a href="#audit" class="auto internal xref">Section 9</a>), not a
-signature or anchor failure.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
-<p id="section-7.1-4">Evidence whose envelope format is unsupported <span class="bcp14">MUST</span> be rejected rather
-than accepted without verification.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
+signature or anchor failure.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
+<p id="section-7.1-5">Evidence whose envelope format is unsupported <span class="bcp14">MUST</span> be rejected rather
+than accepted without verification.<a href="#section-7.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
