@@ -89,15 +89,21 @@ predates it.
 
 ## The documents
 
+Together these drafts form the **Mission-Bound Authorization suite**.
+The first is the mandatory core; the rest are OPTIONAL companion
+profiles. The companions refer to the core as the **"issuance profile"**
+(it governs issuance and derivation), and "Mission-Bound Authorization
+for OAuth 2.0" is the title the core shares with the suite it anchors.
+
 ### Core
 
 #### Mission-Bound Authorization for OAuth 2.0
 
-The mandatory core. Defines the Mission, the Mission Intent and
-Authority Set, the approval event and its `intent_hash` /
-`authority_hash` integrity anchors, the `mission` token claim, the
-subset rule, and state-gated issuance. Every other document builds on
-this one.
+The mandatory core, the **issuance profile**. Defines the Mission, the
+Mission Intent and Authority Set, the approval event and its
+`intent_hash` / `authority_hash` integrity anchors, the `mission` token
+claim, the subset rule, and state-gated issuance. Every other document
+builds on this one.
 
 * [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission)

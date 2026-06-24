@@ -113,8 +113,8 @@ simple access-control denial into governed handling of execution state.
 # Introduction
 
 Mission-Bound Authorization for OAuth 2.0
-{{I-D.draft-mcguinness-oauth-mission}} gives a task an approved
-authority and lifecycle. The runtime profile
+{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") gives a
+task an approved authority and lifecycle. The runtime profile
 {{I-D.draft-mcguinness-oauth-mission-runtime}} checks each
 consequential action before it executes. These are necessary but not
 complete for long-running workflows. A Mission can terminate after some
