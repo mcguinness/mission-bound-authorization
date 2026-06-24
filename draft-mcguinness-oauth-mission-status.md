@@ -82,11 +82,10 @@ informative:
 
 --- abstract
 
-The Mission-Bound Authorization for OAuth 2.0 profile
-{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") binds
-issued authority to a durable, human-approved Mission and gates
-issuance on Mission state, but it observes Mission state only through
-token lifetime and optional token introspection. This document
+The Mission-Bound Authorization for OAuth 2.0 profile binds issued
+authority to a durable, human-approved Mission and gates issuance on
+Mission state, but it observes Mission state only through token lifetime
+and optional token introspection. This document
 defines the Mission state-management surfaces it defers: a canonical
 Mission Status operation (keyed by `mission_id`), a management
 endpoint for explicit lifecycle transitions (`revoke`, `suspend`, `resume`,
@@ -333,8 +332,10 @@ The members are:
     profile's `suspended` and `completed` when the Mission Lifecycle
     endpoint ({{mission-lifecycle-endpoint}}) is deployed, and any
     further state a companion profile defines and the deployment runs
-    (`superseded` for an expanded predecessor; `cascaded` for a
-    cascade-terminated Child Mission). A consumer applies the issuance
+    (`superseded` for an expanded predecessor
+    ({{I-D.draft-mcguinness-oauth-mission-expansion}}); `cascaded` for a
+    cascade-terminated Child Mission
+    ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})). A consumer applies the issuance
     profile's forward-compatibility rule: only `active` permits reliance,
     and every other value, recognized or not, is non-active.
   - `expires_at`: an {{RFC8259}} string giving the point until which
@@ -398,7 +399,7 @@ symbols are hard errors. The body of a hard error is a JSON object
 | `ok` | 200 | Mission found and visible. |
 | `unauthorized` | 401 | Request not authenticated. |
 | `not_found` | 404 | Reference does not exist OR is not visible. |
-| `terminated` | 200 | Mission is in a terminal state: `revoked`, `completed`, `expired`, `superseded`, or `cascaded`. |
+| `terminated` | 200 | Mission is in a terminal state: `revoked`, `completed`, `expired`, `superseded` ({{I-D.draft-mcguinness-oauth-mission-expansion}}), or `cascaded` ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). |
 | `suspended` | 200 | Mission is suspended (non-terminal). |
 | `rate_limited` | 429 | Consumer is rate-limited. |
 | `unavailable` | 503 | AS temporarily cannot serve status. |

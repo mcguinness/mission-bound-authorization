@@ -89,19 +89,17 @@ informative:
 
 --- abstract
 
-The Mission Status and Lifecycle profile
-{{I-D.draft-mcguinness-oauth-mission-status}} names event-driven
-propagation (Mission state changes reaching consumers over a Shared
-Signals or equivalent channel) as one way to bound revocation
-latency, but leaves the channel itself unspecified. This document
+The Mission Status and Lifecycle profile names event-driven propagation
+(Mission state changes reaching consumers over a Shared Signals or
+equivalent channel) as one way to bound revocation latency, but leaves
+the channel itself unspecified. This document
 specifies it: a profile
 of the OpenID Shared Signals Framework in which a Mission Issuer emits
 a Mission lifecycle-change Security Event Token when it commits a state
 transition, delivered push or poll, so a consumer learns of a
 revocation, expiry, or other transition without polling. It is
-OPTIONAL and builds on the issuance profile
-{{I-D.draft-mcguinness-oauth-mission}}; a deployment that does not
-adopt it is unaffected.
+OPTIONAL and builds on Mission-Bound Authorization for OAuth 2.0, the
+issuance profile; a deployment that does not adopt it is unaffected.
 
 --- middle
 
@@ -197,8 +195,8 @@ A Mission Issuer emits a `mission.lifecycle-change` event, carried in
 the Security Event Token shape of the Shared Signals Framework
 {{OIDC-SSF}} and informed by the Continuous Access Evaluation Profile
 {{OIDC-CAEP}}, when it commits any Mission lifecycle transition or the
-approval event that activates a Mission. The event type URI, registered
-in {{iana}}, is:
+approval event that activates a Mission. The event type URI, defined in
+this document and described in {{iana}}, is:
 
 `https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change`
 
