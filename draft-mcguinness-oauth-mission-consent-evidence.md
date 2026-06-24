@@ -333,6 +333,12 @@ A Consent Evidence object has these members:
     corresponded to, matching the disclosure object's `source_hashes`
     ({{consent-disclosure}}). It MUST NOT contain `id`.
 
+  This descriptor follows the evidence-descriptor convention of the
+  issuance profile ({{I-D.draft-mcguinness-oauth-mission}}): it is the
+  `mission` claim shape extended with the collision-resistantly named
+  audit members `intent_hash` and `consent_rendering_hash`, and it is
+  not authority-bearing on its own.
+
 `approver`:
 : REQUIRED. An object identifying the authenticated Approver.
 

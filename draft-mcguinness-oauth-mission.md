@@ -2137,7 +2137,14 @@ than new machinery:
   domain-separated, issuer-bound envelope with a new `typ`
   ({{integrity-anchors}}). A consent-disclosure commitment, an
   instruction-text attestation, or a delegation receipt can be
-  committed this way without changing this profile.
+  committed this way without changing this profile. A profile that
+  commits an evidence or disclosure object MUST commit it with this
+  envelope and a collision-resistant `typ`, not by hashing the bare
+  object, so the domain separation and issuer binding hold uniformly. A
+  `mission` descriptor embedded in such an object uses the `mission`
+  claim shape ({{mission-claim}}), optionally extended with
+  collision-resistantly named members (for example, an `intent_hash`
+  for audit), and is never authority-bearing on its own.
 - **The `mission` claim.** It is an open object ({{mission-claim}}):
   additional, collision-resistantly named members ride the mission
   binding (for example, a runtime decision reference, a delegation

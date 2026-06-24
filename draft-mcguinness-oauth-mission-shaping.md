@@ -529,9 +529,15 @@ A deployment MAY bind a proposal to its evidence so the Mission record
 can cite how the proposal was produced. When it does:
 
 - `shaping_evidence_hash` is a string in the integrity-anchor form of
-  {{I-D.draft-mcguinness-oauth-mission}}, computed over the JCS
-  {{RFC8785}} canonical bytes of the Shaping Evidence object. It is an
-  audit commitment only.
+  {{I-D.draft-mcguinness-oauth-mission}}. Like every other committed
+  object in this suite, the Shaping Evidence object is committed inside
+  that profile's domain-separated `{typ, iss, value}` envelope, with
+  `typ` of `mission-shaping-evidence`, `iss` the Mission Issuer
+  `origin`, and `value` the Shaping Evidence object; the anchor is the
+  prefixed digest of the JCS {{RFC8785}} canonical bytes of that
+  envelope. Hashing the bare object would omit the `typ` domain
+  separation and `iss` binding the integrity-anchor construction exists
+  to provide. It is an audit commitment only.
 - A deployment MAY instead, or in addition, carry an integrity envelope
   over the Shaping Evidence, for example a JWS {{RFC7515}} Compact
   Serialization over the JCS canonical bytes of the evidence with the
