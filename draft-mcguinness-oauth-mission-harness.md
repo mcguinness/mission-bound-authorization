@@ -507,6 +507,42 @@ For irreversible actions, external commitments, and privileged
 administration, `handoff` or orchestration handling under a deployment
 unwind plan SHOULD be used when work may already be in flight.
 
+# Untrusted Content and Egress {#session-taint}
+
+A prompt-injected agent is constrained at the point of use by the
+runtime layer, which gates each action against the Mission
+({{I-D.draft-mcguinness-oauth-mission-runtime}}). The runtime layer
+evaluates each action in isolation; it does not see the session as a
+whole. The harness does: it already tracks session and task-graph
+history against Mission state. That makes the harness the one layer that
+can apply a session-level rule against the case where untrusted content
+drives an agent to exfiltrate within its authority.
+
+A governed session is **tainted** once content the harness did not
+obtain from the Subject, the Approver, or a source the deployment trusts
+enters it: a fetched document, a tool result, an inbound message, or
+similar attacker-influenceable input. A Mission-aware harness SHOULD
+track taint per governed session.
+
+Once a session is tainted, before a consequential external-communication
+or external-commitment action, a Mission-aware harness SHOULD either
+require a fresh action-bound approval
+({{I-D.draft-mcguinness-oauth-mission-runtime}}) or downgrade that
+authority for the session (suppress the action), rather than let the
+agent egress on the strength of injected content. This is the
+plan-then-execute pattern: untrusted content may inform the agent's
+planning, but it MUST NOT, on its own, drive an egress the Subject did
+not direct.
+
+This is a coarse session-level control, not information-flow control. It
+does not track which specific datum reached which action, so it cannot
+close within-scope data laundering
+({{I-D.draft-mcguinness-oauth-mission}},
+{{I-D.draft-mcguinness-oauth-mission-runtime}}); it raises the bar by
+forcing a human or a fresh approval between untrusted input and egress.
+A harness that applies it records the taint and the resulting downgrade
+or approval in Harness Evidence ({{harness-evidence}}).
+
 # Harness Evidence {#harness-evidence}
 
 A Mission-aware harness MUST emit evidence when it suppresses, pauses,

@@ -2406,6 +2406,37 @@ approved authority ({{subset}}), and no token can be derived once the
 Mission is `revoked` or `expired`. Deployments SHOULD keep derived
 token lifetimes short so state transitions take effect promptly.
 
+## Prompt Injection and the Exfiltration Leg {#prompt-injection}
+
+An agent that reads attacker-influenceable content can be prompt-injected;
+this profile assumes that and does not try to make the agent immune.
+Injection is dangerous when one agent combines access to private data,
+exposure to untrusted content, and the ability to communicate
+externally; the robust defense is architectural, constraining one of
+those, not making the model resistant.
+
+This profile constrains the data-access leg: a Mission narrows authority
+from everything the agent's standing credentials allow to the resources
+the approved task needs, and per-task Missions ({{applicability}}) shrink
+the blast radius further. It contributes one thing against the
+untrusted-content leg: `goal`, `purpose`, and `success_criteria` are
+inert, they grant, widen, and gate no authority ({{mission-intent}},
+{{authorization-derivation}}), so injected text cannot talk a Mission
+into expanding itself; authority is fixed at the approval event.
+
+This profile does not constrain the external-communication leg and
+provides no information-flow control. It models authority over resources
+and actions, not how an agent uses authority it holds: within an
+approved Authority Set, an injected agent can read what the Mission
+permits and write to a sink the Mission permits, and the flat subset and
+constraint model cannot express "may read secrets, may write documents,
+but not write secrets into documents." Constraining exfiltration by a
+compromised agent is the runtime enforcement layer's role
+({{runtime-boundary}}), and even there it is bounded, not closed
+(see that profile's security considerations). Closing within-scope data
+laundering needs a separate taint or information-flow layer this profile
+does not define.
+
 ## Issuance Scope, Not Runtime Enforcement {#runtime-boundary}
 
 This profile governs the issuance and derivation of authority: it
