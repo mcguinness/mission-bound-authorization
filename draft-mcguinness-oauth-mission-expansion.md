@@ -470,7 +470,7 @@ other token claims omitted):
     "id": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX",
     "origin": "https://as.example.com",
     "authority_hash":
-      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2n",
+      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
     "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
   }
 }

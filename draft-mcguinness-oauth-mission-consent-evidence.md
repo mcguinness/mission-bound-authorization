@@ -395,10 +395,10 @@ Example:
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEd",
     "origin": "https://as.example.com",
-    "intent_hash": "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6s",
-    "authority_hash": "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE",
+    "intent_hash": "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+    "authority_hash": "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "consent_rendering_hash":
-      "sha-256:CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4"
+      "sha-256:CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz"
   },
   "approver": {
     "iss": "https://idp.example.com",
@@ -416,7 +416,7 @@ Example:
   "disclosure": {
     "disclosure_id": "disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4"
+      "sha-256:CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz"
   },
   "evidence_envelope": {
     "format": "jws-compact",

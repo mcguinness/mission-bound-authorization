@@ -68,6 +68,24 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
+  I-D.draft-mcguinness-oauth-mission-expansion:
+    title: "Mission Expansion for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
+  I-D.draft-mcguinness-oauth-mission-child-delegation:
+    title: "Child Mission Delegation for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
   I-D.draft-mcguinness-oauth-mission-orchestration:
     title: "Mission Orchestration and Unwinding for OAuth 2.0"
     author:
@@ -451,6 +469,18 @@ class to stop behavior. At minimum:
 | `completed` | suppress or terminate |
 | `superseded` | suppress and require successor Mission binding |
 | unknown or stale | suppress or pause |
+
+The non-core states in this matrix are defined by companion profiles a
+deployment may run: `suspended` and `completed` by Mission Status
+({{I-D.draft-mcguinness-oauth-mission-status}}), `superseded` by Mission
+Expansion ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and
+`cascaded` by Child Mission Delegation
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). The harness
+needs none of those profiles to be conformant: per the issuance
+profile's forward-compatibility rule, it treats any state other than
+`active`, including one it does not recognize, as non-active and stops
+governed continuation accordingly. The named rows are the minimum
+behavior where a deployment does run the defining profile.
 
 For irreversible actions, external commitments, and privileged
 administration, `handoff` or orchestration handling under a deployment

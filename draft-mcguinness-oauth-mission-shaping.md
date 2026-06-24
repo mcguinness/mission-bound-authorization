@@ -398,9 +398,15 @@ For material ambiguity, a sound shaper does one of:
    records the exclusion in Shaping Evidence; or
 3. refuse with a reason.
 
-The shaper MUST NOT silently choose the broader interpretation. If a
-deployment permits policy-based default narrowing, Shaping Evidence MUST
-record the policy rule that authorized that narrowing.
+Because a shaper is a client-side component whose internal reasoning the
+Mission Issuer cannot observe, this profile expresses the requirement
+through the observable artifact rather than the internal choice: when a
+shaper resolves an ambiguity in the broadening direction, Shaping
+Evidence MUST record the resolution and, where a deployment permits
+policy-based default narrowing, the policy rule that authorized it. A
+proposal that broadens authority on an ambiguity without a corresponding
+Shaping Evidence record is non-conforming. The Mission Issuer enforces
+its own ceiling and consent regardless of what the shaper recorded.
 
 Requesting clarification is not approval. The user's response is
 incorporated into the Mission Intent; the Mission Issuer still
@@ -495,8 +501,16 @@ following members are RECOMMENDED content.
   or workflow version.
 
 `input_digest`:
-: A digest over the shaping request, excluding fields deployment policy
-  marks as non-retained.
+: A digest over the shaping request, in the integrity-anchor encoded
+  form of {{I-D.draft-mcguinness-oauth-mission}}, computed over the JCS
+  {{RFC8785}} canonical bytes of the request after removing the fields
+  the named exclusion ruleset marks as non-retained. To make the digest
+  recomputable by a later auditor, the evidence MUST also record
+  `input_exclusion_ruleset`, an identifier (and version) of the
+  exclusion ruleset applied, and the auditor recomputes the digest over
+  the retained canonical input under that ruleset. A digest whose
+  exclusion set is not recorded cannot be reproduced and so is not a
+  conforming `input_digest`.
 
 `user_supplied_facts`:
 : Facts copied from the request.

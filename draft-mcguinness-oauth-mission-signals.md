@@ -427,13 +427,17 @@ This event type uses the OpenID Shared Signals Framework {{OIDC-SSF}}
 SET shape. The same event type URI is also referenced by the
 substrate-neutral Mission Authority Server work, which makes `tenant` a
 required claim; this profile makes `tenant` OPTIONAL because the OAuth
-profile has no tenant model. Two rules keep the shared URI safe
-regardless of how the registrations reconcile: a consumer MUST ignore
+profile has no tenant model. Because the URI is author-controlled and
+has no IANA registry or change controller to arbitrate a shared
+definition, this profile does not rely on any cross-specification
+guarantee about its required-claim set. It relies only on consumer
+robustness, which is sufficient on its own: a consumer MUST ignore
 members it does not understand and MUST NOT reject an event solely for
-a missing OPTIONAL member (notably `tenant`); and the required-claim
-set of the shared URI is the intersection of the registrations, so a
-shared definition cannot make `tenant` required without breaking this
-profile's emitters.
+a missing OPTIONAL member (notably `tenant`). A consumer built to this
+profile therefore interoperates with an emitter of either specification
+regardless of how the two reconcile, and a deployment that needs a
+binding shared definition should pursue a registered event type rather
+than depend on the author-controlled URI.
 
 ## OAuth Authorization Server Metadata Registration
 

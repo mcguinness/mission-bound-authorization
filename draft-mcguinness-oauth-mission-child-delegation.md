@@ -30,6 +30,7 @@ normative:
   RFC8174:
   RFC3339:
   RFC8259:
+  RFC8414:
   RFC9126:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
@@ -138,6 +139,16 @@ event with its integrity anchors, Mission record, the `mission` claim,
 the strict-subset rule, and the lifecycle and issuance gating. It uses
 the terms Agent (Client), Subject, Approver, Mission Issuer, Mission
 Intent, Authority Set, Mission, and derived token as defined there.
+
+Cascade revocation ({{cascade}}) additionally depends on the Mission
+Status and Lifecycle profile
+({{I-D.draft-mcguinness-oauth-mission-status}}) and the Mission
+Expansion profile ({{I-D.draft-mcguinness-oauth-mission-expansion}})
+where a deployment runs them, because those profiles define the
+`suspended`, `completed`, and `superseded` parent states the cascade
+rules react to. A deployment that runs neither still implements this
+profile: under the issuance profile's forward-compatibility rule, the
+cascade treats any non-active parent state as a terminal trigger.
 
 A Child Mission is an ordinary Mission under the issuance profile with
 two additions: it is created under a parent grant rather than a
@@ -375,12 +386,12 @@ Example:
     "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
     "origin": "https://as.example.com",
     "authority_hash":
-      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2n",
+      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
     "parent": {
       "id": "msn_parent_8RfX2Lqv9TqMv4z7sA2bN1k0",
       "origin": "https://as.example.com",
       "authority_hash":
-        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE",
+        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
       "delegation_id": "dlg_7pQ4m",
       "cascade_mode": "immediate",
       "created_at": "2026-11-02T08:14:00Z"
@@ -627,13 +638,13 @@ Example:
     "id": "msn_parent_8RfX2Lqv9TqMv4z7sA2bN1k0",
     "origin": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE"
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },
   "child": {
     "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
     "origin": "https://as.example.com",
     "authority_hash":
-      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2n"
+      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2"
   },
   "child_actor": {
     "sub": "subagent-contract-reviewer",
@@ -668,6 +679,20 @@ A Mission-aware harness
 sub-agent handle as authority. When durable sub-agent work requires a
 separate authority handle, the harness can request a Child Mission
 under this profile.
+
+# Authorization Server Metadata {#discovery}
+
+A Mission Issuer that supports this profile SHOULD advertise it in its
+authorization server metadata {{RFC8414}} so a parent agent can
+discover child-delegation support before attempting child creation:
+
+`mission_child_delegation_supported`:
+: OPTIONAL boolean. When `true`, the Mission Issuer accepts the child
+  creation request of {{child-creation}} and enforces the controls of
+  this profile. A client MUST NOT infer the fan-out controls
+  ({{fanout}}) a deployment enforces from this member alone; an
+  unenforceable requested control is refused at creation
+  ({{denial-reasons}}).
 
 # Conformance {#conformance}
 
@@ -745,6 +770,12 @@ separate registration. `parent_token` carries a refresh token or other
 parent grant and MUST be submitted only through PAR on the
 authenticated back channel, never on a front-channel authorization
 request ({{child-creation}}).
+
+This document registers one member in the existing "OAuth Authorization
+Server Metadata" registry {{RFC8414}}: Change Controller IETF; Reference
+this document, {{discovery}}.
+
+- `mission_child_delegation_supported`
 
 Consistent with the issuance profile, which registers the `mission`
 claim as an open object with no registry of its members, this document

@@ -458,11 +458,11 @@ Authorization: ...
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEd",
       "origin": "https://as.example.com",
       "authority_hash":
-        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE",
+        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
       "state": "active",
       "policy_version": "deploy-policy:v17",
       "policy_view_id":
-        "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4"
+        "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
     },
     "actor": {
       "client_id": "client_erp-recon-agent",
@@ -483,7 +483,7 @@ Authorization: ...
       "source_invoice_id": "inv_2026Q3_842"
     },
     "parameter_digest":
-      "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA",
+      "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA8dRn",
     "audience": "https://erp.example.com",
     "freshness": {
       "mission_status_issued_at": "2026-11-02T08:14:00Z",
@@ -648,12 +648,12 @@ envelopes with unsupported formats.
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEd",
     "origin": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE",
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "intent_hash":
-      "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6s",
+      "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
     "policy_version": "deploy-policy:v17",
     "policy_view_id":
-      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4"
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
   },
   "subject": {
     "type": "user",
@@ -679,7 +679,7 @@ envelopes with unsupported formats.
   },
   "action": { "name": "journal-entries.write" },
   "parameter_digest":
-    "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA",
+    "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA8dRn",
   "audience": "https://erp.example.com",
   "decision": "permit",
   "contributing_constraints": [
@@ -764,7 +764,7 @@ members other than those defined above.
   "decision_id":  "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
   "mission_id":   "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEd",
   "parameter_digest":
-    "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA",
+    "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA8dRn",
   "outcome":      "completed",
   "attempted_at": "2026-11-02T08:14:04Z",
   "completed_at": "2026-11-02T08:14:05Z",
@@ -913,9 +913,9 @@ lifetime controls required by the runtime profile.
   "context": {
     "decision_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
     "parameter_digest":
-      "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA",
+      "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA8dRn",
     "policy_view_id":
-      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4",
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
     "permit_expires_at": "2026-11-02T08:15:00Z",
     "single_use": true
   }
@@ -944,7 +944,7 @@ not as transport errors.
     "decision_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
     "denial_reason": "stale_state",
     "policy_view_id":
-      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4"
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
   }
 }
 ~~~

@@ -332,11 +332,15 @@ it MUST:
 The states `revoked` and `expired` ({{I-D.draft-mcguinness-oauth-mission}}),
 `suspended` and `completed` ({{I-D.draft-mcguinness-oauth-mission-status}}),
 and `superseded` ({{I-D.draft-mcguinness-oauth-mission-expansion}}) are
-non-active for this profile. A deployment MAY define different operator
-handling for each state, but none allows new governed execution without
-a fresh authority path. In particular, a `superseded` Mission's work
-SHOULD re-bind to the successor Mission rather than be treated as a
-hard stop.
+all non-active. The orchestrator needs none of those companion profiles
+to be conformant: per the issuance profile's forward-compatibility rule
+it treats any state other than `active` as non-active. A deployment MAY
+define different operator handling for each state, but none allows new
+governed execution without a fresh authority path. In particular, a
+`superseded` Mission's continued work SHOULD proceed under the successor
+Mission through a fresh derivation from the successor's grant, not by
+rebinding the predecessor's authority; the successor carries its own
+Authority Set ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
 ## Trigger Sources {#trigger-sources}
 
