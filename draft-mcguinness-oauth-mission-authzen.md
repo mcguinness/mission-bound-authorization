@@ -79,8 +79,7 @@ informative:
 
 --- abstract
 
-Mission-Bound Runtime Enforcement for OAuth 2.0
-({{I-D.draft-mcguinness-oauth-mission-runtime}}) specifies a
+Mission-Bound Runtime Enforcement for OAuth 2.0 specifies a
 substrate-independent decision contract: before each consequential
 action runs, a Policy Enforcement Point (PEP) obtains a permit from a
 Policy Decision Point (PDP) that evaluates the action against the
