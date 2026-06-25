@@ -618,6 +618,42 @@ or PDP MUST NOT treat a shaping evidence hash as proof of authority.
 }
 ~~~
 
+# Worked Example {#example}
+
+`alice` tells her agent, in free text: "reconcile our Q3 invoices and
+post any adjustments under $500." The shaper turns that open-ended goal
+into a bounded proposal. It scopes to the one task, bounds the work by
+invariants rather than enumerating invoices it cannot know yet, and
+proposes only authority it can defend from the request; it does not add
+a broad fallback. The candidate Mission Intent it submits:
+
+~~~ json
+{
+  "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+  "resources": ["https://erp.example.com"],
+  "constraints": [
+    "Read only invoices in fiscal period 2026-Q3.",
+    "Post journal entries no greater than $500.",
+    "Customer scope: acme-corp only."
+  ],
+  "success_criteria": ["All Q3 invoices for acme-corp reconciled."],
+  "purpose": "urn:example:purpose:reconcile",
+  "mission_expiry": "2026-11-05T00:00:00Z"
+}
+~~~
+
+This is only a proposal ({{proposes-only}}). The Mission Issuer, not the
+shaper, validates it, narrows it to policy, and derives the concrete
+Authority Set the agent will be bound to: a `mission_resource_access`
+entry for `https://erp.example.com` with `invoices.read` constrained to
+the 2026-Q3 period and the acme-corp tenant, and `journal-entries.write`
+constrained to `max_amount_usd: 500`. The shaper's free-text
+`constraints` informed that derivation but granted nothing; the
+invariants (period, amount, tenant) are what bound an open-ended task
+whose individual invoices were unknown when the goal was written. Had
+the request been ambiguous about which entity's invoices, the shaper
+would have asked `alice` rather than guess ({{clarifications}}).
+
 # Mission Issuer Handling {#issuer-handling}
 
 A Mission Issuer that receives a shaped Mission Intent MAY use a

@@ -334,6 +334,44 @@ This document neither requires nor presumes event-driven propagation;
 a Mission Issuer MAY emit lifecycle events for audit or operational
 purposes independent of any consumer's enforcement posture.
 
+# Worked Example {#example}
+
+A partner ERP (`erp.partner.example.com`) consumes Mission lifecycle
+signals so it can stop honoring a Mission promptly rather than wait out
+token lifetimes. `alice` cancels her Q3 reconciliation Mission. The
+Mission Issuer commits the `revoked` transition and pushes a SET to the
+consumer's receiver ({{RFC8935}}). Decoded SET:
+
+~~~ json
+{
+  "iss": "https://as.example.com",
+  "aud": "https://erp.partner.example.com",
+  "iat": 1797843600,
+  "jti": "set_5kQ8mP2vR9nT",
+  "events": {
+    "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
+      "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+      "mission_origin": "https://as.example.com",
+      "state": "revoked",
+      "prior_state": "active",
+      "version": 7,
+      "committed_at": "2026-11-02T09:00:00Z",
+      "reason": "user_cancelled"
+    }
+  }
+}
+~~~
+
+The consumer verifies the SET signature, `iss`, `aud`, and `jti`, sees
+`version` 7 is newer than any state it holds, and records the Mission as
+`revoked`. Because `revoked` is non-`active`, the consumer stops relying
+on the Mission: the next attempt to use a token bound to
+`msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` is refused, seconds after the
+cancellation, well inside the token's remaining lifetime. Had a stale
+`active` event for an earlier `version` arrived afterward, the
+`version` counter would cause the consumer to ignore it rather than
+revive the Mission.
+
 # Authorization Server Metadata {#as-metadata}
 
 A Mission Issuer that emits lifecycle events advertises the following in
