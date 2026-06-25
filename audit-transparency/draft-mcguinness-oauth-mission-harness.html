@@ -1,0 +1,2399 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission-Aware Agent Harnesses for OAuth 2.0</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       Agent harnesses preserve execution state across restarts, retries,
+background jobs, tool-connection reuse, and sub-agent orchestration.
+That continuity is not authority. This document defines an  OPTIONAL 
+Mission-aware harness profile for deployments using Mission-Bound
+Authorization for OAuth 2.0. It specifies how a harness binds sessions,
+task graphs, queues, cached tool connections, and sub-agent handles to
+Mission state; when it must re-check Mission status; and how it must
+pause, suppress, or terminate work when the Mission is no longer
+active. A conforming harness never treats session continuity as proof
+that Mission authority continues. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="oauth" name="keyword">
+<meta content="mission" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="harness" name="keyword">
+<meta content="session" name="keyword">
+<meta content="draft-mcguinness-oauth-mission-harness-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.10.0
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.1
+-->
+<link href="draft-mcguinness-oauth-mission-harness.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">OAuth Mission Harness</td>
+<td class="right">June 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 27 December 2026</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-oauth-mission-harness-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-06-25" class="published">25 June 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2026-12-27">27 December 2026</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission-Aware Agent Harnesses for OAuth 2.0</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">Agent harnesses preserve execution state across restarts, retries,
+background jobs, tool-connection reuse, and sub-agent orchestration.
+That continuity is not authority. This document defines an <span class="bcp14">OPTIONAL</span>
+Mission-aware harness profile for deployments using Mission-Bound
+Authorization for OAuth 2.0. It specifies how a harness binds sessions,
+task graphs, queues, cached tool connections, and sub-agent handles to
+Mission state; when it must re-check Mission status; and how it must
+pause, suppress, or terminate work when the Mission is no longer
+active. A conforming harness never treats session continuity as proof
+that Mission authority continues.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-harness.html">https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-harness.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-harness/">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-harness/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/draft-mcguinness-oauth-mission">https://github.com/mcguinness/draft-mcguinness-oauth-mission</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 27 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-scope" class="internal xref">Scope</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.1">
+                <p id="section-toc.1-1.2.2.1.1" class="keepWithNext"><a href="#section-2.1" class="auto internal xref">2.1</a>.  <a href="#name-harness-boundary" class="internal xref">Harness Boundary</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.2">
+                <p id="section-toc.1-1.2.2.2.1" class="keepWithNext"><a href="#section-2.2" class="auto internal xref">2.2</a>.  <a href="#name-mediated-execution-environm" class="internal xref">Mediated Execution Environment</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-mission-binding" class="internal xref">Mission Binding</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-binding-inheritance" class="internal xref">Binding Inheritance</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-resume-checks" class="internal xref">Resume Checks</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-resume-algorithm" class="internal xref">Resume Algorithm</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-event-driven-state-cache" class="internal xref">Event-Driven State Cache</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-queues-and-retries" class="internal xref">Queues and Retries</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-queue-item-object" class="internal xref">Queue Item Object</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-cached-credentials-and-tool" class="internal xref">Cached Credentials and Tool Connections</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-cache-keys-and-cross-missio" class="internal xref">Cache Keys and Cross-Mission Reuse</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-sub-agent-handles" class="internal xref">Sub-Agent Handles</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-sub-agent-stop-propagation" class="internal xref">Sub-Agent Stop Propagation</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-stop-behavior" class="internal xref">Stop Behavior</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-stop-behavior-matrix" class="internal xref">Stop-Behavior Matrix</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-untrusted-content-and-egres" class="internal xref">Untrusted Content and Egress</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-harness-evidence" class="internal xref">Harness Evidence</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
+                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-harness-evidence-object" class="internal xref">Harness Evidence Object</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
+                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-session-continuity-is-not-a" class="internal xref">Session Continuity Is Not Authority Continuity</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2">
+                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-cached-access-as-ambient-au" class="internal xref">Cached Access as Ambient Authority</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.3">
+                <p id="section-toc.1-1.14.2.3.1"><a href="#section-14.3" class="auto internal xref">14.3</a>.  <a href="#name-sub-agent-fan-out" class="internal xref">Sub-Agent Fan-Out</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.4">
+                <p id="section-toc.1-1.14.2.4.1"><a href="#section-14.4" class="auto internal xref">14.4</a>.  <a href="#name-split-brain-session-state" class="internal xref">Split-Brain Session State</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.5">
+                <p id="section-toc.1-1.14.2.5.1"><a href="#section-14.5" class="auto internal xref">14.5</a>.  <a href="#name-tool-cache-confusion" class="internal xref">Tool Cache Confusion</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref">16</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#section-17" class="auto internal xref">17</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.1">
+                <p id="section-toc.1-1.17.2.1.1"><a href="#section-17.1" class="auto internal xref">17.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.2">
+                <p id="section-toc.1-1.17.2.2.1"><a href="#section-17.2" class="auto internal xref">17.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
+            <p id="section-toc.1-1.18.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19">
+            <p id="section-toc.1-1.19.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">Mission-Bound Authorization for OAuth 2.0
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> governs the authority under
+which an agent acts. The runtime profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span> governs per-action
+enforcement. Agent harnesses add a separate layer: they preserve
+execution state so work can resume after process restarts, device
+handoffs, background scheduling, retries, and sub-agent fan-out.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">Harness continuity is useful, but it is not authority. A task graph can
+survive after the Mission that justified it is revoked. A cached tool
+connection can remain usable after the business condition that
+authorized it ends. A child agent can keep running after its parent
+Mission is suspended. This profile defines what a harness must do to
+avoid treating recoverable runtime state as authorization.<a href="#section-1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="scope">
+<section id="section-2">
+      <h2 id="name-scope">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-scope" class="section-name selfRef">Scope</a>
+      </h2>
+<p id="section-2-1">This document defines:<a href="#section-2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-2-2.1">
+          <p id="section-2-2.1.1">the Mission binding a harness records on sessions and task graph
+nodes (<a href="#mission-binding" class="auto internal xref">Section 4</a>);<a href="#section-2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-2-2.2">
+          <p id="section-2-2.2.1">resume-time checks (<a href="#resume-checks" class="auto internal xref">Section 5</a>);<a href="#section-2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-2-2.3">
+          <p id="section-2-2.3.1">queued work and retry behavior (<a href="#queues" class="auto internal xref">Section 7</a>);<a href="#section-2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-2-2.4">
+          <p id="section-2-2.4.1">cached credential and tool-connection handling (<a href="#cached-access" class="auto internal xref">Section 8</a>);<a href="#section-2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-2-2.5">
+          <p id="section-2-2.5.1">sub-agent handle requirements (<a href="#subagents" class="auto internal xref">Section 9</a>);<a href="#section-2-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-2-2.6">
+          <p id="section-2-2.6.1">harness evidence (<a href="#harness-evidence" class="auto internal xref">Section 12</a>); and<a href="#section-2-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-2-2.7">
+          <p id="section-2-2.7.1">conformance for a Mission-aware harness (<a href="#conformance" class="auto internal xref">Section 13</a>).<a href="#section-2-2.7.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-2-3">This document does not define a new OAuth token, a new agent protocol,
+or a replacement for Resource Server enforcement. A harness check does
+not replace a PEP at the last controllable boundary under
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>.<a href="#section-2-3" class="pilcrow">¶</a></p>
+<div id="harness-boundary">
+<section id="section-2.1">
+        <h3 id="name-harness-boundary">
+<a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-harness-boundary" class="section-name selfRef">Harness Boundary</a>
+        </h3>
+<p id="section-2.1-1">This profile applies to harness-managed continuity state, including:<a href="#section-2.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-2.1-2.1">
+            <p id="section-2.1-2.1.1">saved conversation or planning state;<a href="#section-2.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.1-2.2">
+            <p id="section-2.1-2.2.1">task graph nodes;<a href="#section-2.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.1-2.3">
+            <p id="section-2.1-2.3.1">background jobs;<a href="#section-2.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.1-2.4">
+            <p id="section-2.1-2.4.1">retry queues;<a href="#section-2.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.1-2.5">
+            <p id="section-2.1-2.5.1">child agent handles;<a href="#section-2.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.1-2.6">
+            <p id="section-2.1-2.6.1">tool-connection caches;<a href="#section-2.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.1-2.7">
+            <p id="section-2.1-2.7.1">workspace or artifact handles; and<a href="#section-2.1-2.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.1-2.8">
+            <p id="section-2.1-2.8.1">credential references managed by the harness.<a href="#section-2.1-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-2.1-3">It does not require a harness to inspect application data unrelated to
+governed execution. It does require the harness to know when a piece of
+continuity state is governed by a Mission and to stop using that state
+as an execution basis when the Mission is no longer active.<a href="#section-2.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mediated-egress">
+<section id="section-2.2">
+        <h3 id="name-mediated-execution-environm">
+<a href="#section-2.2" class="section-number selfRef">2.2. </a><a href="#name-mediated-execution-environm" class="section-name selfRef">Mediated Execution Environment</a>
+        </h3>
+<p id="section-2.2-1">The runtime profile's credential custody and mediated execution
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>) hold only if the agent
+has no path to a consequential resource that bypasses the Policy
+Enforcement Point. Establishing that environment is the harness's
+responsibility, and it is the complement to the runtime layer holding
+the sender-constraint key: custody is moot if the agent can reach the
+resource off-path.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
+<p id="section-2.2-2">For the action classes a deployment mediates
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>), a Mission-aware
+harness <span class="bcp14">MUST</span> run governed consequential work in an execution environment
+whose only path to those actions is through the mediating PEP. It <span class="bcp14">MUST NOT</span> leave an unmediated route to a mediated class, such as a debug
+shell, a direct network socket, an unsanctioned egress route, or a
+direct connector that does not pass the runtime gate. A harness that
+cannot guarantee this for an action class <span class="bcp14">MUST NOT</span> represent work in
+that class as runtime-enforced, matching the enforcement-scope rule of
+the runtime profile.<a href="#section-2.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="conventions">
+<section id="section-3">
+      <h2 id="name-conventions-and-terminology">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+      </h2>
+<p id="section-3-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">This document uses the terms Mission, Mission Issuer, Mission-bound
+token, and Mission state from
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, and Policy Enforcement
+Point (PEP) and mediated execution from the runtime profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>.<a href="#section-3-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-3-3">
+        <dt id="section-3-3.1">Harness:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.2">
+          <p id="section-3-3.2.1">The runtime system that preserves and resumes agent execution state,
+including sessions, task graphs, queues, tool handles, and sub-agent
+handles.<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-3.3">Harness session:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.4">
+          <p id="section-3-3.4.1">A harness-local continuity record. It is distinct from an IdP
+session, browser session, OAuth authorization session, or access
+token.<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-3.5">Mission binding:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.6">
+          <p id="section-3-3.6.1">The Mission reference and status freshness information the harness
+records on a session or task graph node.<a href="#section-3-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-3.7">Governed work:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.8">
+          <p id="section-3-3.8.1">Harness-managed work that can lead to a consequential action under a
+Mission.<a href="#section-3-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="mission-binding">
+<section id="section-4">
+      <h2 id="name-mission-binding">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-mission-binding" class="section-name selfRef">Mission Binding</a>
+      </h2>
+<p id="section-4-1">A Mission-aware harness <span class="bcp14">MUST</span> bind every governed session and governed
+task graph node to a Mission reference:<a href="#section-4-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4-2">
+        <dt id="section-4-2.1">
+<code>mission_id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.2">
+          <p id="section-4-2.2.1"><span class="bcp14">REQUIRED</span>. The Mission identifier.<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-2.3">
+<code>mission_origin</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.4">
+          <p id="section-4-2.4.1"><span class="bcp14">REQUIRED</span>. The Mission Issuer.<a href="#section-4-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-2.5">
+<code>authority_hash</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.6">
+          <p id="section-4-2.6.1"><span class="bcp14">REQUIRED</span> when known. The Authority Set commitment from the Mission
+claim.<a href="#section-4-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-2.7">
+<code>status_checked_at</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.8">
+          <p id="section-4-2.8.1"><span class="bcp14">REQUIRED</span> when the harness has checked status. An RFC 3339 timestamp.<a href="#section-4-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-2.9">
+<code>status_expires_at</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.10">
+          <p id="section-4-2.10.1"><span class="bcp14">REQUIRED</span> when the harness relies on a status lease. An RFC 3339
+timestamp after which the status <span class="bcp14">MUST NOT</span> be used for continuation.<a href="#section-4-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-2.11">
+<code>state</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.12">
+          <p id="section-4-2.12.1"><span class="bcp14">REQUIRED</span> when known. The last Mission state established by the
+harness.<a href="#section-4-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-2.13">
+<code>state_source</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.14">
+          <p id="section-4-2.14.1"><span class="bcp14">REQUIRED</span> when <code>state</code> is present. One of <code>status</code>, <code>signal</code>,
+<code>runtime_decision</code>, <code>harness</code>, <code>operator</code>, or a deployment-defined
+source: <code>status</code> and <code>signal</code> name the Mission Status and Lifecycle
+Signals surfaces, <code>runtime_decision</code> a runtime enforcement decision,
+<code>harness</code> a harness stop decision, and <code>operator</code> a human operator
+action. This enumeration is the shared <code>state_source</code> value space for
+Mission-aware execution evidence; the orchestration profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-orchestration" class="cite xref">I-D.draft-mcguinness-oauth-mission-orchestration</a>]</span>) reuses it
+rather than defining its own.<a href="#section-4-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-2.15">
+<code>enforcement_scope</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.16">
+          <p id="section-4-2.16.1"><span class="bcp14">OPTIONAL</span>. A string or object identifying the runtime enforcement
+scope that applies to this session or node.<a href="#section-4-2.16.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-2.17">
+<code>stop_policy</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.18">
+          <p id="section-4-2.18.1"><span class="bcp14">REQUIRED</span> for governed work. The policy the harness applies when the
+Mission is non-active or stale.<a href="#section-4-2.18.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-4-3">The Mission binding grants no authority. It is the pointer that tells
+the harness which Mission state it must check before continuing work.<a href="#section-4-3" class="pilcrow">¶</a></p>
+<div id="binding-inheritance">
+<section id="section-4.1">
+        <h3 id="name-binding-inheritance">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-binding-inheritance" class="section-name selfRef">Binding Inheritance</a>
+        </h3>
+<p id="section-4.1-1">When a harness creates a child task graph node, queue item, background
+job, or sub-agent handle from governed work, it <span class="bcp14">MUST</span> copy or narrow the
+Mission binding. It <span class="bcp14">MUST NOT</span> create an unbound child item that can later
+perform governed work without a Mission check.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-2">If a child item is governed by a different Mission, the harness <span class="bcp14">MUST</span>
+record the distinct Mission binding and the relationship to the parent
+item.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="resume-checks">
+<section id="section-5">
+      <h2 id="name-resume-checks">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-resume-checks" class="section-name selfRef">Resume Checks</a>
+      </h2>
+<p id="section-5-1">Before resuming governed work, a Mission-aware harness <span class="bcp14">MUST</span> establish
+that the Mission is <code>active</code> within the deployment's staleness bound.
+Resume includes:<a href="#section-5-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5-2.1">
+          <p id="section-5-2.1.1">process restart;<a href="#section-5-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.2">
+          <p id="section-5-2.2.1">device or worker handoff;<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.3">
+          <p id="section-5-2.3.1">background job wake-up;<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.4">
+          <p id="section-5-2.4.1">retry after failure;<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.5">
+          <p id="section-5-2.5.1">tool-call continuation after an asynchronous response;<a href="#section-5-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.6">
+          <p id="section-5-2.6.1">loading a saved workspace for further action;<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.7">
+          <p id="section-5-2.7.1">refreshing or reacquiring credentials; and<a href="#section-5-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.8">
+          <p id="section-5-2.8.1">dispatching a queued task graph node.<a href="#section-5-2.8.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-5-3">The harness establishes state through one of:<a href="#section-5-3" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5-4">
+<li id="section-5-4.1">
+          <p id="section-5-4.1.1">a Mission Status operation under
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>;<a href="#section-5-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-4.2">
+          <p id="section-5-4.2.1">a valid event-driven state cache maintained from
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>;<a href="#section-5-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-4.3">
+          <p id="section-5-4.3.1">a runtime PDP decision under
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span> that includes a
+current Mission state check for the action about to run; or<a href="#section-5-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-4.4">
+          <p id="section-5-4.4.1">another deployment-defined state source with equivalent freshness
+semantics.<a href="#section-5-4.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-5-5">If the harness cannot establish active state within the bound, it <span class="bcp14">MUST</span>
+not resume governed work.<a href="#section-5-5" class="pilcrow">¶</a></p>
+<div id="resume-algorithm">
+<section id="section-5.1">
+        <h3 id="name-resume-algorithm">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-resume-algorithm" class="section-name selfRef">Resume Algorithm</a>
+        </h3>
+<p id="section-5.1-1">Before resuming a governed item, the harness performs:<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5.1-2">
+<li id="section-5.1-2.1">
+            <p id="section-5.1-2.1.1">Load the Mission binding.<a href="#section-5.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.1-2.2">
+            <p id="section-5.1-2.2.1">If no Mission binding is present, refuse to resume as governed work
+and emit Harness Evidence with reason <code>missing_mission_binding</code>.<a href="#section-5.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.1-2.3">
+            <p id="section-5.1-2.3.1">Establish Mission state through <a href="#resume-checks" class="auto internal xref">Section 5</a>.<a href="#section-5.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.1-2.4">
+            <p id="section-5.1-2.4.1">If state is not <code>active</code>, apply stop behavior under <a href="#stop-behavior" class="auto internal xref">Section 10</a>.<a href="#section-5.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.1-2.5">
+            <p id="section-5.1-2.5.1">If state is active but freshness expires before the next
+consequential action can be reached, refresh status or require a
+runtime decision at that action.<a href="#section-5.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.1-2.6">
+            <p id="section-5.1-2.6.1">Resume only the item whose binding was checked. Sibling or child
+items require their own check unless the deployment's status lease
+explicitly covers them.<a href="#section-5.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-5.1-3">The harness <span class="bcp14">MUST</span> perform this algorithm even when OAuth credentials in
+the session are still valid.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="event-cache">
+<section id="section-6">
+      <h2 id="name-event-driven-state-cache">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-event-driven-state-cache" class="section-name selfRef">Event-Driven State Cache</a>
+      </h2>
+<p id="section-6-1">This section is <span class="bcp14">OPTIONAL</span>. A harness <span class="bcp14">MAY</span> maintain an event-driven
+Mission state cache using
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>. The cache entry for a
+Mission <span class="bcp14">MUST</span> contain:<a href="#section-6-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6-2.1">
+          <p id="section-6-2.1.1">Mission identifier and origin;<a href="#section-6-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.2">
+          <p id="section-6-2.2.1">last observed state;<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.3">
+          <p id="section-6-2.3.1">event identifier or sequence when available;<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.4">
+          <p id="section-6-2.4.1">event issuance time;<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.5">
+          <p id="section-6-2.5.1">cache freshness expiry; and<a href="#section-6-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.6">
+          <p id="section-6-2.6.1">stream or issuer identity.<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-6-3">The harness <span class="bcp14">MUST</span> ignore events whose issuer, audience, signature, or
+ordering cannot be verified under the Signals profile. If expected
+events are not received within the deployment's freshness bound, the
+harness <span class="bcp14">MUST</span> treat the cache as stale and fall back to status polling
+or stop governed continuation.<a href="#section-6-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="queues">
+<section id="section-7">
+      <h2 id="name-queues-and-retries">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-queues-and-retries" class="section-name selfRef">Queues and Retries</a>
+      </h2>
+<p id="section-7-1">A queued work item under a Mission <span class="bcp14">MUST</span> carry the Mission binding of
+<a href="#mission-binding" class="auto internal xref">Section 4</a>. Before dispatching it, the harness <span class="bcp14">MUST</span> run the
+resume check of <a href="#resume-checks" class="auto internal xref">Section 5</a>.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2">Retries do not inherit authority from the prior attempt. A retry <span class="bcp14">MUST</span>
+be treated as a new continuation point and <span class="bcp14">MUST</span> re-check Mission state
+unless the retry occurs within an unexpired status lease whose use is
+allowed for that action class.<a href="#section-7-2" class="pilcrow">¶</a></p>
+<p id="section-7-3">When Mission state is not <code>active</code>, the harness <span class="bcp14">MUST</span> suppress queued
+items for that Mission. It <span class="bcp14">MAY</span> preserve them for audit or operator
+review, but <span class="bcp14">MUST NOT</span> dispatch them until a conforming authority path
+permits continuation.<a href="#section-7-3" class="pilcrow">¶</a></p>
+<div id="queue-item">
+<section id="section-7.1">
+        <h3 id="name-queue-item-object">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-queue-item-object" class="section-name selfRef">Queue Item Object</a>
+        </h3>
+<p id="section-7.1-1">A governed queue item has:<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-7.1-2">
+          <dt id="section-7.1-2.1">
+<code>queue_item_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-2.2">
+            <p id="section-7.1-2.2.1"><span class="bcp14">REQUIRED</span>. A string.<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-2.3">
+<code>mission_binding</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-2.4">
+            <p id="section-7.1-2.4.1"><span class="bcp14">REQUIRED</span>. The Mission binding from <a href="#mission-binding" class="auto internal xref">Section 4</a>.<a href="#section-7.1-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-2.5">
+<code>action_class</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-2.6">
+            <p id="section-7.1-2.6.1"><span class="bcp14">REQUIRED</span> when known. The runtime action class.<a href="#section-7.1-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-2.7">
+<code>not_before</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-2.8">
+            <p id="section-7.1-2.8.1"><span class="bcp14">OPTIONAL</span>. An RFC 3339 timestamp.<a href="#section-7.1-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-2.9">
+<code>expires_at</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-2.10">
+            <p id="section-7.1-2.10.1"><span class="bcp14">OPTIONAL</span>. An RFC 3339 timestamp after which the item <span class="bcp14">MUST NOT</span> run.<a href="#section-7.1-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-2.11">
+<code>retry_of</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-2.12">
+            <p id="section-7.1-2.12.1"><span class="bcp14">OPTIONAL</span>. Identifier of the prior attempt.<a href="#section-7.1-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-2.13">
+<code>idempotency_key</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-2.14">
+            <p id="section-7.1-2.14.1"><span class="bcp14">REQUIRED</span> when retrying an action whose runtime profile requires one.<a href="#section-7.1-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-7.1-3">When <code>expires_at</code> has passed, the harness <span class="bcp14">MUST</span> suppress the queue item
+even if Mission state remains active.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="cached-access">
+<section id="section-8">
+      <h2 id="name-cached-credentials-and-tool">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-cached-credentials-and-tool" class="section-name selfRef">Cached Credentials and Tool Connections</a>
+      </h2>
+<p id="section-8-1">A harness often caches OAuth tokens, MCP sessions, API clients, browser
+contexts, or connector handles. A Mission-aware harness <span class="bcp14">MUST NOT</span> treat
+cached access as evidence that a Mission remains active.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-2">Before using a cached credential or tool connection for governed work,
+the harness <span class="bcp14">MUST</span>:<a href="#section-8-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-8-3">
+<li id="section-8-3.1">
+          <p id="section-8-3.1.1">verify the cached item is still cryptographically and protocol-valid;<a href="#section-8-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-8-3.2">
+          <p id="section-8-3.2.1">verify the Mission is active under <a href="#resume-checks" class="auto internal xref">Section 5</a>; and<a href="#section-8-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-8-3.3">
+          <p id="section-8-3.3.1">verify the action still passes runtime enforcement when the action is
+consequential.<a href="#section-8-3.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-8-4">When a Mission becomes non-active, the harness <span class="bcp14">MUST</span> mark cached
+connections associated with that Mission unusable for new governed
+work. If the cache can safely close or revoke them, it <span class="bcp14">SHOULD</span> do so.<a href="#section-8-4" class="pilcrow">¶</a></p>
+<div id="cache-keys">
+<section id="section-8.1">
+        <h3 id="name-cache-keys-and-cross-missio">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-cache-keys-and-cross-missio" class="section-name selfRef">Cache Keys and Cross-Mission Reuse</a>
+        </h3>
+<p id="section-8.1-1">A cached credential, tool connection, or connector handle used for
+governed work <span class="bcp14">MUST</span> be keyed by at least:<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.1-2.1">
+            <p id="section-8.1-2.1.1">Mission identifier and origin;<a href="#section-8.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.2">
+            <p id="section-8.1-2.2.1">audience or protected resource;<a href="#section-8.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.3">
+            <p id="section-8.1-2.3.1">client or actor identity;<a href="#section-8.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.4">
+            <p id="section-8.1-2.4.1">sender-constraint key when applicable; and<a href="#section-8.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.5">
+            <p id="section-8.1-2.5.1">authority hash when known.<a href="#section-8.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-8.1-3">The harness <span class="bcp14">MUST NOT</span> reuse a cached connection across Missions unless
+the connection carries no authority and every consequential use is
+separately authorized under the target Mission. A warm connection to a
+tool server is not a permit to call a tool.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="subagents">
+<section id="section-9">
+      <h2 id="name-sub-agent-handles">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-sub-agent-handles" class="section-name selfRef">Sub-Agent Handles</a>
+      </h2>
+<p id="section-9-1">Sub-agents and child workers <span class="bcp14">MUST NOT</span> inherit Mission authority merely
+because they descend from a parent session. A harness that starts a
+sub-agent for governed work <span class="bcp14">MUST</span> bind the sub-agent handle to:<a href="#section-9-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9-2.1">
+          <p id="section-9-2.1.1">the parent Mission reference;<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.2">
+          <p id="section-9-2.2.1">the actor or client identity of the sub-agent;<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.3">
+          <p id="section-9-2.3.1">the authority or child Mission under which it may act; and<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.4">
+          <p id="section-9-2.4.1">any delegation or child-Mission constraints that apply.<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-9-3">If the parent Mission becomes non-active, the harness <span class="bcp14">MUST</span> suppress or
+terminate child work that depends on it, unless the child has a
+separate active Mission whose authority does not depend on the parent.<a href="#section-9-3" class="pilcrow">¶</a></p>
+<p id="section-9-4">When a sub-agent needs authority not already delegated to it, the
+harness <span class="bcp14">MUST</span> obtain a governed delegation or child Mission. Session
+ancestry alone <span class="bcp14">MUST NOT</span> be used as authorization.<a href="#section-9-4" class="pilcrow">¶</a></p>
+<div id="subagent-stop">
+<section id="section-9.1">
+        <h3 id="name-sub-agent-stop-propagation">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-sub-agent-stop-propagation" class="section-name selfRef">Sub-Agent Stop Propagation</a>
+        </h3>
+<p id="section-9.1-1">When the harness stops a parent item because its Mission is non-active,
+it <span class="bcp14">MUST</span> identify child handles whose authority depends on that Mission.
+For each dependent child, it <span class="bcp14">MUST</span> apply one of:<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9.1-2.1">
+            <p id="section-9.1-2.1.1">suppress queued child work;<a href="#section-9.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.2">
+            <p id="section-9.1-2.2.1">request child termination;<a href="#section-9.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.3">
+            <p id="section-9.1-2.3.1">revoke or close child-specific cached connections where supported;<a href="#section-9.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.4">
+            <p id="section-9.1-2.4.1">mark child state as requiring human review; or<a href="#section-9.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.5">
+            <p id="section-9.1-2.5.1">record that the child is governed by an independent active Mission.<a href="#section-9.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-9.1-3">The harness <span class="bcp14">MUST</span> emit evidence for each dependent child it leaves
+running under an independent Mission.<a href="#section-9.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="stop-behavior">
+<section id="section-10">
+      <h2 id="name-stop-behavior">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-stop-behavior" class="section-name selfRef">Stop Behavior</a>
+      </h2>
+<p id="section-10-1">When a Mission is <code>revoked</code>, <code>expired</code>, <code>suspended</code>, <code>completed</code>, or
+otherwise non-active under the deployment's lifecycle profile, the
+harness <span class="bcp14">MUST</span> stop governed continuation. The stop behavior is one of:<a href="#section-10-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10-2">
+        <dt id="section-10-2.1">
+<code>suppress</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.2">
+          <p id="section-10-2.2.1">Do not dispatch queued or resumable work. Preserve state for audit or
+future review.<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.3">
+<code>pause</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.4">
+          <p id="section-10-2.4.1">Suspend work pending an authorized lifecycle transition, such as
+<code>resume</code>.<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.5">
+<code>terminate</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.6">
+          <p id="section-10-2.6.1">End the task graph and release associated runtime resources.<a href="#section-10-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.7">
+<code>handoff</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.8">
+          <p id="section-10-2.8.1">Escalate to a human or governance workflow without performing further
+governed actions.<a href="#section-10-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-10-3">The harness <span class="bcp14">MAY</span> choose among these based on deployment policy and
+action class, but it <span class="bcp14">MUST NOT</span> continue governed execution while Mission
+state is non-active.<a href="#section-10-3" class="pilcrow">¶</a></p>
+<div id="stop-matrix">
+<section id="section-10.1">
+        <h3 id="name-stop-behavior-matrix">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-stop-behavior-matrix" class="section-name selfRef">Stop-Behavior Matrix</a>
+        </h3>
+<p id="section-10.1-1">The harness <span class="bcp14">MUST</span> document a matrix mapping Mission state and action
+class to stop behavior. At minimum:<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-1">
+          <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Mission state</th>
+              <th class="text-left" rowspan="1" colspan="1">Minimum behavior</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>revoked</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">suppress or terminate</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>expired</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">suppress or terminate</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>suspended</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">pause or suppress</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>completed</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">suppress or terminate</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>superseded</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">suppress and require successor Mission binding</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">unknown or stale</td>
+              <td class="text-left" rowspan="1" colspan="1">suppress or pause</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-10.1-3">The non-core states in this matrix are defined by companion profiles a
+deployment may run: <code>suspended</code> and <code>completed</code> by Mission Status
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), <code>superseded</code> by Mission
+Expansion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), and
+<code>cascaded</code> by Child Mission Delegation
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). The harness
+needs none of those profiles to be conformant: per the issuance
+profile's forward-compatibility rule, it treats any state other than
+<code>active</code>, including one it does not recognize, as non-active and stops
+governed continuation accordingly. The named rows are the minimum
+behavior where a deployment does run the defining profile.<a href="#section-10.1-3" class="pilcrow">¶</a></p>
+<p id="section-10.1-4">For irreversible actions, external commitments, and privileged
+administration, <code>handoff</code> or orchestration handling under a deployment
+unwind plan <span class="bcp14">SHOULD</span> be used when work may already be in flight.<a href="#section-10.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="session-taint">
+<section id="section-11">
+      <h2 id="name-untrusted-content-and-egres">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-untrusted-content-and-egres" class="section-name selfRef">Untrusted Content and Egress</a>
+      </h2>
+<p id="section-11-1">A prompt-injected agent is constrained at the point of use by the
+runtime layer, which gates each action against the Mission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>). The runtime layer
+evaluates each action in isolation; it does not see the session as a
+whole. The harness does: it already tracks session and task-graph
+history against Mission state. That makes the harness the one layer that
+can apply a session-level rule against the case where untrusted content
+drives an agent to exfiltrate within its authority.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-11-2">A governed session is <strong>tainted</strong> once content the harness did not
+obtain from the Subject, the Approver, or a source the deployment trusts
+enters it: a fetched document, a tool result, an inbound message, or
+similar attacker-influenceable input. A Mission-aware harness <span class="bcp14">SHOULD</span>
+track taint per governed session.<a href="#section-11-2" class="pilcrow">¶</a></p>
+<p id="section-11-3">Once a session is tainted, before a consequential external-communication
+or external-commitment action, a Mission-aware harness <span class="bcp14">SHOULD</span> either
+require a fresh action-bound approval
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>) or downgrade that
+authority for the session (suppress the action), rather than let the
+agent egress on the strength of injected content. This is the
+plan-then-execute pattern: untrusted content may inform the agent's
+planning, but it <span class="bcp14">MUST NOT</span>, on its own, drive an egress the Subject did
+not direct.<a href="#section-11-3" class="pilcrow">¶</a></p>
+<p id="section-11-4">This is a coarse session-level control, not information-flow control. It
+does not track which specific datum reached which action, so it cannot
+close within-scope data laundering
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>); it raises the bar by
+forcing a human or a fresh approval between untrusted input and egress.
+A harness that applies it records the taint and the resulting downgrade
+or approval in Harness Evidence (<a href="#harness-evidence" class="auto internal xref">Section 12</a>).<a href="#section-11-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="harness-evidence">
+<section id="section-12">
+      <h2 id="name-harness-evidence">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-harness-evidence" class="section-name selfRef">Harness Evidence</a>
+      </h2>
+<p id="section-12-1">A Mission-aware harness <span class="bcp14">MUST</span> emit evidence when it suppresses, pauses,
+terminates, or resumes governed work due to Mission state. The evidence
+record <span class="bcp14">SHOULD</span> contain:<a href="#section-12-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12-2.1">
+          <p id="section-12-2.1.1"><code>event_id</code>;<a href="#section-12-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.2">
+          <p id="section-12-2.2.1">the <code>mission</code> object (<code>id</code>, <code>origin</code>, and, when known,
+<code>authority_hash</code>), the same shape as the <code>mission</code> claim of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>;<a href="#section-12-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.3">
+          <p id="section-12-2.3.1"><code>session_id</code>;<a href="#section-12-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.4">
+          <p id="section-12-2.4.1">task graph node or queue item identifier;<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.5">
+          <p id="section-12-2.5.1">prior and resulting harness state;<a href="#section-12-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.6">
+          <p id="section-12-2.6.1">Mission state observed;<a href="#section-12-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.7">
+          <p id="section-12-2.7.1">status source and freshness;<a href="#section-12-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.8">
+          <p id="section-12-2.8.1">timestamp; and<a href="#section-12-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.9">
+          <p id="section-12-2.9.1">actor or sub-agent identifier when applicable.<a href="#section-12-2.9.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-12-3">A Harness Evidence record carries the Mission as the nested <code>mission</code>
+object, mirroring the <code>mission</code> claim; the flat <code>mission_id</code> and
+<code>mission_origin</code> of Mission Binding (<a href="#mission-binding" class="auto internal xref">Section 4</a>) are a binding
+key, whereas the evidence record mirrors the claim shape.<a href="#section-12-3" class="pilcrow">¶</a></p>
+<p id="section-12-4">Harness Evidence complements runtime enforcement evidence
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>). It records
+execution-continuity decisions, not Resource Server authorization.<a href="#section-12-4" class="pilcrow">¶</a></p>
+<div id="harness-evidence-object">
+<section id="section-12.1">
+        <h3 id="name-harness-evidence-object">
+<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-harness-evidence-object" class="section-name selfRef">Harness Evidence Object</a>
+        </h3>
+<p id="section-12.1-1">A Harness Evidence object is a JSON object <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> with:<a href="#section-12.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-12.1-2">
+          <dt id="section-12.1-2.1">
+<code>event_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-12.1-2.2">
+            <p id="section-12.1-2.2.1"><span class="bcp14">REQUIRED</span>. A unique identifier.<a href="#section-12.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-12.1-2.3">
+<code>event_type</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-12.1-2.4">
+            <p id="section-12.1-2.4.1"><span class="bcp14">REQUIRED</span>. One of <code>resume_allowed</code>, <code>resume_suppressed</code>,
+<code>queue_suppressed</code>, <code>cache_disabled</code>, <code>subagent_stopped</code>,
+<code>subagent_continued</code>, or <code>mission_state_stale</code>. <code>event_type</code>
+categorizes the work item the record is about; the <code>decision</code> member
+records the outcome, so the two are orthogonal.<a href="#section-12.1-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-12.1-2.5">
+<code>mission</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-12.1-2.6">
+            <p id="section-12.1-2.6.1"><span class="bcp14">REQUIRED</span>. Object containing <code>id</code>, <code>origin</code>, and, when known,
+<code>authority_hash</code>.<a href="#section-12.1-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-12.1-2.7">
+<code>session_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-12.1-2.8">
+            <p id="section-12.1-2.8.1"><span class="bcp14">OPTIONAL</span>. Harness session identifier.<a href="#section-12.1-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-12.1-2.9">
+<code>work_item</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-12.1-2.10">
+            <p id="section-12.1-2.10.1"><span class="bcp14">OPTIONAL</span>. Task graph node, queue item, background job, or child
+handle identifier.<a href="#section-12.1-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-12.1-2.11">
+<code>actor</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-12.1-2.12">
+            <p id="section-12.1-2.12.1"><span class="bcp14">OPTIONAL</span>. The actor or sub-agent identifier the record concerns, when
+applicable (for example, the child whose work was stopped or
+continued under a <code>subagent_stopped</code> or <code>subagent_continued</code> event).<a href="#section-12.1-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-12.1-2.13">
+<code>state</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-12.1-2.14">
+            <p id="section-12.1-2.14.1"><span class="bcp14">REQUIRED</span>. The Mission state observed or <code>unknown</code>.<a href="#section-12.1-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-12.1-2.15">
+<code>prior_harness_state</code>, <code>resulting_harness_state</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-12.1-2.16">
+            <p id="section-12.1-2.16.1"><span class="bcp14">OPTIONAL</span>. The harness execution state before and after the recorded
+decision (for example, <code>running</code> to <code>suppressed</code>).<a href="#section-12.1-2.16.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-12.1-2.17">
+<code>state_source</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-12.1-2.18">
+            <p id="section-12.1-2.18.1"><span class="bcp14">REQUIRED</span>. One of <code>status</code>, <code>signal</code>, <code>runtime_decision</code>, or a
+deployment-defined source, as in <a href="#mission-binding" class="auto internal xref">Section 4</a>.<a href="#section-12.1-2.18.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-12.1-2.19">
+<code>freshness</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-12.1-2.20">
+            <p id="section-12.1-2.20.1"><span class="bcp14">OPTIONAL</span>. Object containing <code>checked_at</code> and <code>expires_at</code>.<a href="#section-12.1-2.20.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-12.1-2.21">
+<code>decision</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-12.1-2.22">
+            <p id="section-12.1-2.22.1"><span class="bcp14">REQUIRED</span>. One of <code>continue</code>, <code>suppress</code>, <code>pause</code>, <code>terminate</code>, or
+<code>handoff</code>.<a href="#section-12.1-2.22.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-12.1-2.23">
+<code>reason</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-12.1-2.24">
+            <p id="section-12.1-2.24.1"><span class="bcp14">REQUIRED</span>. String reason.<a href="#section-12.1-2.24.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-12.1-2.25">
+<code>occurred_at</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-12.1-2.26">
+            <p id="section-12.1-2.26.1"><span class="bcp14">REQUIRED</span>. RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-12.1-2.26.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-12.1-3">Example:<a href="#section-12.1-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-12.1-4">
+<pre>
+{
+  "event_id": "hrn_7pQ4mN9s",
+  "event_type": "resume_suppressed",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
+  "session_id": "sess_agent_42",
+  "work_item": "queue_invoice_retry_9",
+  "state": "revoked",
+  "state_source": "signal",
+  "decision": "suppress",
+  "reason": "mission_not_active",
+  "occurred_at": "2026-11-02T08:16:00Z"
+}
+</pre><a href="#section-12.1-4" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="conformance">
+<section id="section-13">
+      <h2 id="name-conformance">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+      </h2>
+<p id="section-13-1">A conforming Mission-aware harness <span class="bcp14">MUST</span>:<a href="#section-13-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13-2.1">
+          <p id="section-13-2.1.1">bind governed sessions, queued work, and task graph nodes to Mission
+references;<a href="#section-13-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.2">
+          <p id="section-13-2.2.1">check active Mission state before resume, retry dispatch, background
+wake-up, and cached access use;<a href="#section-13-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.3">
+          <p id="section-13-2.3.1">suppress governed work when Mission state cannot be established or is
+non-active;<a href="#section-13-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.4">
+          <p id="section-13-2.4.1">prevent sub-agent authority by session ancestry;<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.5">
+          <p id="section-13-2.5.1">emit Harness Evidence for stop and resume decisions; and<a href="#section-13-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.6">
+          <p id="section-13-2.6.1">document its staleness bounds and stop behavior.<a href="#section-13-2.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-13-3">A harness <span class="bcp14">MUST NOT</span> claim conformance for work it cannot suppress. It
+<span class="bcp14">MAY</span> claim conformance for a documented subset of execution paths if it
+identifies paths outside the claim.<a href="#section-13-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-14">
+      <h2 id="name-security-considerations">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<div id="session-continuity-is-not-authority-continuity">
+<section id="section-14.1">
+        <h3 id="name-session-continuity-is-not-a">
+<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-session-continuity-is-not-a" class="section-name selfRef">Session Continuity Is Not Authority Continuity</a>
+        </h3>
+<p id="section-14.1-1">The primary threat is treating recoverable runtime state as proof of
+continuing authority. This profile requires a fresh Mission-state
+decision at continuation points where harnesses would otherwise resume
+automatically.<a href="#section-14.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-cached-access">
+<section id="section-14.2">
+        <h3 id="name-cached-access-as-ambient-au">
+<a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-cached-access-as-ambient-au" class="section-name selfRef">Cached Access as Ambient Authority</a>
+        </h3>
+<p id="section-14.2-1">Cached credentials and tool connections can bypass visible issuance or
+authorization steps. A harness <span class="bcp14">MUST</span> tie cache use to Mission state and
+runtime enforcement, or cached access becomes ambient authority.<a href="#section-14.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sub-agent-fan-out">
+<section id="section-14.3">
+        <h3 id="name-sub-agent-fan-out">
+<a href="#section-14.3" class="section-number selfRef">14.3. </a><a href="#name-sub-agent-fan-out" class="section-name selfRef">Sub-Agent Fan-Out</a>
+        </h3>
+<p id="section-14.3-1">Implicit sub-agent inheritance can amplify authority. This profile
+requires explicit Mission or delegation binding for child handles and
+cascade stop behavior when parent authority ends.<a href="#section-14.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="split-brain-session-state">
+<section id="section-14.4">
+        <h3 id="name-split-brain-session-state">
+<a href="#section-14.4" class="section-number selfRef">14.4. </a><a href="#name-split-brain-session-state" class="section-name selfRef">Split-Brain Session State</a>
+        </h3>
+<p id="section-14.4-1">Multiple workers may resume the same session or queue item. A harness
+<span class="bcp14">SHOULD</span> use compare-and-set or equivalent concurrency control so a stop
+decision cannot race with a resume decision. When the state is
+ambiguous, fail closed and suppress governed work.<a href="#section-14.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="tool-cache-confusion">
+<section id="section-14.5">
+        <h3 id="name-tool-cache-confusion">
+<a href="#section-14.5" class="section-number selfRef">14.5. </a><a href="#name-tool-cache-confusion" class="section-name selfRef">Tool Cache Confusion</a>
+        </h3>
+<p id="section-14.5-1">Tool connection caches often hide which Mission first authorized a
+connection. Cache keys under <a href="#cache-keys" class="auto internal xref">Section 8.1</a> prevent a connection opened
+for one Mission from becoming ambient authority for another.<a href="#section-14.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-15">
+      <h2 id="name-privacy-considerations">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-15-1">Harness Evidence and Mission bindings can reveal task graphs,
+workspace identifiers, tool usage, agent topology, and Mission
+relationships. Deployments <span class="bcp14">SHOULD</span> minimize retained harness state,
+control access to evidence, and avoid storing raw workspace content in
+Harness Evidence unless required for audit.<a href="#section-15-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana">
+<section id="section-16">
+      <h2 id="name-iana-considerations">
+<a href="#section-16" class="section-number selfRef">16. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-16-1">This document makes no IANA request.<a href="#section-16-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-17">
+      <h2 id="name-references">
+<a href="#section-17" class="section-number selfRef">17. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-17.1">
+        <h3 id="name-normative-references">
+<a href="#section-17.1" class="section-number selfRef">17.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-runtime">[I-D.draft-mcguinness-oauth-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-runtime</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-runtime">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-runtime</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-status</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-status">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-status</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC3339">[RFC3339]</dt>
+        <dd>
+<span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8259">[RFC8259]</dt>
+      <dd>
+<span class="refAuthor">Bray, T., Ed.</span>, <span class="refTitle">"The JavaScript Object Notation (JSON) Data Interchange Format"</span>, <span class="seriesInfo">STD 90</span>, <span class="seriesInfo">RFC 8259</span>, <span class="seriesInfo">DOI 10.17487/RFC8259</span>, <time datetime="2017-12" class="refDate">December 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8259">https://www.rfc-editor.org/rfc/rfc8259</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-17.2">
+        <h3 id="name-informative-references">
+<a href="#section-17.2" class="section-number selfRef">17.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Child Mission Delegation for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-child-delegation</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-expansion</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-orchestration">[I-D.draft-mcguinness-oauth-mission-orchestration]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Orchestration and Unwinding for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-orchestration</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-orchestration">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-orchestration</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-signals</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-signals">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-signals</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-A">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-A-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
+set and defines how agent harnesses keep runtime continuity separate
+from Mission authority.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
