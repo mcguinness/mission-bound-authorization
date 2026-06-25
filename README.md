@@ -314,6 +314,24 @@ is stopped.
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-orchestration)
 * [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-orchestration.diff)
 
+### Audit
+
+#### Mission Audit Transparency for OAuth 2.0
+
+Makes the suite's evidence tamper-evident and independently verifiable.
+Registers Mission evidence (the approval event, lifecycle transitions,
+runtime and consent evidence) into a SCITT Transparency Service as
+Signed Statements, with the Mission as the statement subject so a
+Mission's records form one append-only feed, and binds the Receipt back
+so any party, in any domain, can verify inclusion offline. Statements
+commit to evidence by hash, so sensitive task data stays out of the log.
+Layers onto any bundle.
+
+* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-audit.html)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-audit)
+* [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-audit)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-audit.diff)
+
 ## Contributing
 
 See the
