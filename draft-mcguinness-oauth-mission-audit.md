@@ -206,6 +206,61 @@ Transparency Service and retain multiple Receipts; a relying party that
 distrusts one service can then rely on another, and equivocation by one
 service is detectable against the others.
 
+# Worked Example {#example}
+
+At the approval event for Mission
+`msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`, the Mission Issuer records
+Consent Evidence and registers it. It does not put the disclosure in the
+log; it signs a Signed Statement whose payload is detached and whose
+`content_type` names the evidence, committing to the evidence by its
+`consent_rendering_hash`. The `sub` is the Mission feed, derived from the
+Mission `origin` and `id`; the `iss` is the Mission Issuer. Protected
+header, in COSE EDN ({{RFC9052}}):
+
+~~~ cbor-diag
+{
+  / alg /          1: -7,             / ES256 /
+  / content_type / 3: "application/mission-consent-evidence+json",
+  / kid /          4: h'61732d6b65792d323032362d7133',
+  / CWT Claims /  15: {
+    / iss / 1: "https://as.example.com",
+    / sub / 2: "https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  }
+}
+~~~
+
+The signed payload is detached; the committed value is the evidence's
+`consent_rendering_hash`,
+`sha-256:CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz`. The Transparency
+Service appends the statement and returns a Receipt, a COSE_Sign1 with an
+inclusion proof in its unprotected header, which the Mission Issuer keeps
+with the evidence as a Transparent Statement.
+
+As the Mission proceeds, its other producers write to the same `sub`: the
+PDP registers a decision-evidence commitment when it permits the
+`journal-entries.write`, and the Mission Issuer registers a
+lifecycle-change commitment when `alice` later completes the Mission.
+Querying the Transparency Service for that one `sub` returns the Mission's
+whole history, in order, append-only:
+
+~~~ text
+sub = https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
+
+  #1  approval-event        iss=as.example.com    t0
+  #2  consent-evidence      iss=as.example.com    t0
+  #3  decision-evidence     iss=pdp.example.com   t0+6h
+  #4  lifecycle: completed  iss=as.example.com    t0+6h
+~~~
+
+A compliance auditor in another domain, holding none of these
+deployments' logs, takes the Transparent Statement for #2, verifies the
+Receipt against the Transparency Service's published key and the
+inclusion proof, retrieves the Consent Evidence under access control,
+and checks it against the committed `consent_rendering_hash`. The auditor
+now knows that exact disclosure was registered at `t0` and has not since
+been altered, dropped, or reordered, without trusting the Mission
+Issuer's own records.
+
 # What Transparency Adds, and Does Not {#limits}
 
 Transparency makes the evidence set tamper-evident and independently
