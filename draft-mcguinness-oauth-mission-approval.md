@@ -295,6 +295,99 @@ drawing authority from a pre-consented ceiling without a per-step human
 (progressive authorization,
 {{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
+# Worked Example {#example}
+
+Agent `s6BhdRkqt3`, acting for `alice`, proposes a Mission to reconcile
+Q3 invoices that asks for both read and write on the ERP. It submits the
+Mission Intent through PAR and opts in to both deferral and revision on
+the token request:
+
+~~~ http
+POST /token HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code&code=SplxlOBeZQQYbYS6WxSbIA&
+client_id=s6BhdRkqt3&
+completion_mode=deferred%20revisable
+~~~
+
+The Mission Issuer routes the proposed Mission to `alice` for review and
+defers:
+
+~~~ http
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+Cache-Control: no-store
+
+{ "error": "authorization_pending",
+  "deferral_code": "dfc_7M2R4kP9sT1x",
+  "expires_in": 600, "interval": 5 }
+~~~
+
+The agent polls with the deferred grant type. On review `alice` approves
+read but not write. Rather than deny, the Mission Issuer narrows and
+invites a revision, extending the pending response:
+
+~~~ http
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+Cache-Control: no-store
+
+{ "error": "authorization_pending",
+  "deferral_code": "dfc_7M2R4kP9sT1x",
+  "revision_required": true,
+  "clarification_handle": "clh_4QFJ3P9wZ2",
+  "rejected_authorization_details": [
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["journal-entries.write"] } ],
+  "expires_in": 540, "interval": 5 }
+~~~
+
+The agent pushes a narrowed Mission Intent, dropping the write, to PAR
+with the clarification handle:
+
+~~~ http
+POST /par HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+
+mission_intent=%7B...read-only%20Q3%20invoices...%7D&
+client_id=s6BhdRkqt3&
+clarification_handle=clh_4QFJ3P9wZ2
+~~~
+
+The Mission Issuer verifies the handle, confirms the revised Authority
+Set is a subset of the proposed one, updates the deferred approval, and
+re-reviews (here, policy auto-approves the now-narrower read-only
+Mission). The agent keeps polling the same `deferral_code`, which now
+resolves to a Mission-bound token over the final, narrowed authority:
+
+~~~ http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: no-store
+
+{ "access_token": "eyJ...",
+  "token_type": "DPoP",
+  "expires_in": 300,
+  "authorization_details": [
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read"],
+      "constraints": { "period": "2026-Q3" } } ],
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ" } }
+~~~
+
+The agent never abandoned its request; the approval resolved over the
+narrowed proposal, and the committed `authority_hash` is over the
+read-only Authority Set actually approved.
+
 # Conformance {#conformance}
 
 A Mission Issuer conforming to this profile MUST:

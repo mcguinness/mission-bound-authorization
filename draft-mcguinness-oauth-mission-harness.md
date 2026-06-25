@@ -646,6 +646,31 @@ Example:
 }
 ~~~
 
+# Worked Example {#example}
+
+An agent reconciling Q3 invoices under Mission
+`msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` runs as an overnight background
+job, so its session outlives `alice`'s attention. Two harness moments
+matter.
+
+At 02:00 the job resumes a queued task graph. Before dispatching any
+governed work the harness re-reads Mission state ({{resume-checks}}).
+`alice` cancelled the Mission at 23:00, so the harness finds it
+`revoked`: it does not dispatch, marks cached ERP connections unusable
+({{cached-access}}), and emits the suppress evidence shown above. The
+session was fully recoverable; the authority that justified it was gone,
+and the harness let the Mission, not the session, decide.
+
+Earlier, while still active, the agent fetched a vendor email into its
+working context to extract an invoice number. That email is untrusted
+content, so the session is now tainted ({{session-taint}}). When the
+agent, steered by text in that email, tries to send an external message,
+the harness does not let the egress proceed on the strength of the
+fetched content: it requires a fresh action-bound approval first. The
+runtime layer would gate the call against the Mission regardless; the
+harness adds the session-level rule that untrusted input cannot, by
+itself, drive an egress `alice` never directed.
+
 # Conformance {#conformance}
 
 A conforming Mission-aware harness MUST:

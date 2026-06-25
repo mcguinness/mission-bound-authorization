@@ -794,6 +794,52 @@ Authority Set from fails with `invalid_request` or, where the issuance
 profile uses it, `invalid_authorization_details` ({{RFC9396}}), exactly
 as for any Mission creation.
 
+# Worked Example {#example}
+
+The Q3 reconciliation Mission
+`msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` authorizes reading invoices and
+posting journal entries under $500. Mid-task the agent finds an
+adjustment of $1,200, outside the active Mission's authority. It cannot
+widen in place; it requests an expansion, submitting a new Mission
+Intent through PAR bound to the predecessor's grant:
+
+~~~ http
+POST /par HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+
+mission_intent=%7B...raise%20journal-entries%20cap%20to%20%242000...%7D&
+predecessor=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-&
+predecessor_token=<refresh%20token%20bound%20to%20the%20predecessor>&
+client_id=s6BhdRkqt3
+~~~
+
+The Mission Issuer resolves the predecessor from the grant, confirms it
+matches `predecessor` and is `active`, derives the successor's Authority
+Set, and obtains fresh consent from `alice` for the widened cap. On
+approval it creates the successor `active` and supersedes the
+predecessor atomically. The successor's token carries a `predecessor`
+member:
+
+~~~ json
+{
+  "mission": {
+    "id": "msn_3vK9pLqT2mX7wR4nB1sZ8YfC",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
+    "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  }
+}
+~~~
+
+The predecessor is now `superseded`: it derives no new tokens, its
+already-issued tokens run out their short lifetimes, and the task
+continues under the successor. The widening came only from `alice`'s
+fresh consent; the successor's `authority_hash` commits the widened
+Authority Set it was actually approved for, not the predecessor's plus a
+delta.
+
 # Conformance {#conformance}
 
 An implementation claims conformance to this document only in the
