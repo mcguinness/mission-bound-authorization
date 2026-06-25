@@ -176,18 +176,32 @@ trail is transparent and not only the governance trail.
 
 The `sub` of every Signed Statement about a Mission is a stable
 identifier of that Mission, derived from the `mission` claim's `origin`
-and `id` (for example, the `origin` URL with the `mission_id` as a path
-or fragment). All evidence about one Mission therefore shares one `sub`
-and forms one Transparency Service feed. An auditor retrieves a Mission's
-complete, ordered, append-only evidence by that `sub`, and the
-substrate's non-equivocation guarantee means the auditor and the
-deployment see the same feed.
+and `id`. All evidence about one Mission shares one `sub` and forms one
+Transparency Service feed. An auditor retrieves a Mission's complete,
+ordered, append-only evidence by that `sub`, and the substrate's
+non-equivocation guarantee means the auditor and the deployment see the
+same feed.
 
-The `sub` MUST be derived deterministically from `origin` and `id` so
-that independent producers writing evidence about the same Mission (the
-Mission Issuer, a PDP, a harness) write to the same feed. The `sub` is a
-correlator, not a credential; presenting it authorizes nothing
-({{I-D.draft-mcguinness-oauth-mission}}).
+For that to hold, every producer MUST compute the identical `sub`. This
+profile fixes a single construction; a producer MUST use it and MUST NOT
+use any other. The `sub` is the URI formed by appending the literal path
+segment `missions` and the Mission `id` to the `origin`:
+
+~~~ text
+<origin>/missions/<id>
+~~~
+
+The `origin` is used exactly as it appears in the `mission` claim, with
+any single trailing slash removed, and the `id` is appended without
+transformation; the issuance profile constrains `mission_id` to the
+URL-safe characters `[A-Za-z0-9_-]` ({{I-D.draft-mcguinness-oauth-mission}}),
+so no percent-encoding is required. Because the construction is fixed,
+independent producers writing evidence about the same Mission (the
+Mission Issuer, a PDP, a harness) compute the same `sub` and write to one
+feed.
+
+The `sub` is a correlator, not a credential; presenting it authorizes
+nothing ({{I-D.draft-mcguinness-oauth-mission}}).
 
 # Receipts and Transparent Statements {#receipts}
 
@@ -195,11 +209,47 @@ On registration the Transparency Service returns a Receipt, a signed
 inclusion proof ({{I-D.draft-ietf-scitt-architecture}}). The producer
 SHOULD retain the Receipt with the evidence, or on the Mission record,
 as a Transparent Statement (the Signed Statement augmented with its
-Receipt). A relying party then verifies offline, without contacting the
-producer or the service: it verifies the Signed Statement signature
-against the producer's trust anchor, the Receipt signature against the
-Transparency Service's, and the inclusion proof, and then retrieves the
-evidence and checks it against the committed hash.
+Receipt).
+
+A relying party verifies a Transparent Statement offline, without
+contacting the producer or the service:
+
+1. verify the Signed Statement signature against the producing
+   component's (`iss`) trust anchor;
+2. verify the Receipt signature against the Transparency Service's
+   published key or configured trust anchor;
+3. verify the inclusion proof binds the Signed Statement to the log;
+4. when auditing a specific Mission, confirm `sub` is that Mission's
+   feed ({{feed}}); and
+5. retrieve the referenced evidence under access control and verify it
+   against the committed detached hash.
+
+A relying party MUST complete steps 1 through 5 before relying on a
+record as transparent.
+
+## Verification Failures {#verification-failures}
+
+This profile distinguishes an integrity failure, where the transparency
+claim is false, from an audit failure, where the claim cannot be fully
+checked but is not refuted, as the consent evidence profile does
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}):
+
+- A failed Signed Statement signature, Receipt signature, or inclusion
+  proof (steps 1 through 3), or a committed hash that does not match the
+  retrieved evidence (step 5), is an integrity failure. The relying
+  party MUST reject the Transparent Statement and MUST NOT treat the
+  record as transparent.
+- Evidence that cannot be retrieved within the access window (step 5
+  incomplete) is an audit failure, not an integrity failure. Steps 1
+  through 3 still establish that the record was registered, at a
+  committed time, in a non-equivocating log; only the content check is
+  incomplete. The relying party MUST NOT treat the record as
+  content-verified, and MUST NOT treat unretrievable evidence as
+  evidence of tampering.
+- A producer or Transparency Service key that is not among the relying
+  party's trust anchors leaves the corresponding step unverified rather
+  than failed: the statement then asserts no more than the relying party
+  can check.
 
 A deployment MAY register the same evidence with more than one
 Transparency Service and retain multiple Receipts; a relying party that
@@ -261,6 +311,14 @@ now knows that exact disclosure was registered at `t0` and has not since
 been altered, dropped, or reordered, without trusting the Mission
 Issuer's own records.
 
+Two failures are distinct ({{verification-failures}}). If the retrieved
+Consent Evidence hashes to a value other than the committed
+`consent_rendering_hash`, the retained record was altered after
+registration: an integrity failure, and the auditor rejects it. If the
+record cannot be retrieved at all, the auditor still knows from the
+Receipt that record #2 was registered at `t0` and not reordered, but
+cannot confirm its content: an audit failure, not proof of tampering.
+
 # What Transparency Adds, and Does Not {#limits}
 
 Transparency makes the evidence set tamper-evident and independently
@@ -282,13 +340,23 @@ proves only that some record was logged, not what it said.
 
 # Conformance {#conformance}
 
-A producer conforming to this profile MUST register Mission evidence as
-Signed Statements with a detached hash commitment, set `sub` to the
-Mission per {{feed}}, and register at least the approval event and
-lifecycle transitions. A relying party conforming to this profile MUST
-verify a Transparent Statement per {{receipts}}, including checking the
-retrieved evidence against the committed hash, before relying on it as
-transparent.
+A producer conforming to this profile MUST:
+
+- register Mission evidence as Signed Statements with a detached hash
+  commitment, never the evidence in the clear ({{registration}});
+- set `sub` to the Mission feed by the fixed construction of {{feed}};
+- set `iss` to its own issuer identifier, bound to the signing key; and
+- register at least the approval event and every Mission lifecycle
+  transition ({{registration}}).
+
+A relying party conforming to this profile MUST:
+
+- perform verification steps 1 through 5 of {{receipts}} before relying
+  on a record as transparent;
+- treat a signature, Receipt, inclusion-proof, or committed-hash
+  mismatch as an integrity failure and reject the record; and
+- treat unretrievable evidence as an audit failure, not as evidence of
+  tampering ({{verification-failures}}).
 
 # Security Considerations {#security-considerations}
 

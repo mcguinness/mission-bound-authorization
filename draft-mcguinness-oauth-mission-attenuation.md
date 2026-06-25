@@ -186,6 +186,29 @@ Mission for audit and remains an audit anchor a consumer cannot recompute
 from the narrowed leaf, exactly as for any narrowed Mission-bound token
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
+# Verifying the Mission Binding {#mission-binding-check}
+
+A consumer verifies the chain linkage, capability monotonicity, depth,
+and proof-of-possession under the attenuation substrate
+({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}). This profile
+adds checks on the `mission` claim, which the substrate does not define
+because it has no concept of the Mission binding. In addition to the
+substrate's chain verification, a consumer MUST:
+
+- reject the chain unless every token in it carries a `mission` claim
+  and every claim carries the same `id`, `origin`, and `authority_hash`
+  as the root. A child cannot re-bind to a different Mission or change
+  the lineage anchor; a link whose `mission` claim differs from the
+  root's, or that omits it, MUST cause the whole chain to be refused,
+  not treated as a narrower grant; and
+- treat a chain whose root carries no `mission` claim as outside this
+  profile: it is an ordinary attenuation chain with no Mission binding,
+  and a consumer MUST NOT apply the Mission-state kill switch
+  ({{kill-switch}}) to it or report it as Mission-bound.
+
+These checks fail safe: a chain that does not present a single, unchanged
+Mission binding is refused, not evaluated against a guessed Mission.
+
 # The Kill Switch Requires Runtime Enforcement {#kill-switch}
 
 The attenuation substrate defines no revocation: a child, once minted,

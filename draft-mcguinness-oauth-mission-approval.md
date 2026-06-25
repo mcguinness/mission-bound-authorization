@@ -185,6 +185,9 @@ completion_mode=deferred revisable
 substrate's OAuth Completion Mode Values registry ({{iana}}). It
 authorizes only the revision handshake defined here. A Mission Issuer
 MUST NOT invite a revision unless the client offered `revisable`.
+`revisable` has effect only together with `deferred`; a Mission Issuer
+that receives `revisable` without `deferred` MUST ignore it, because
+there is no deferred approval to revise.
 
 ## The Revision Required signal {#revision-required}
 
