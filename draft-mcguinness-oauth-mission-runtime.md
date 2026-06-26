@@ -1099,8 +1099,13 @@ work and are not required to enforce it:
   deployment modes;
 - action-hierarchy and resource-containment subset extensions (this
   profile uses the flat subset rule of
-  {{I-D.draft-mcguinness-oauth-mission}}); and
-- risk-signal inputs to the decision (deployment-defined).
+  {{I-D.draft-mcguinness-oauth-mission}});
+- risk-signal and semantic intent-alignment inputs to the decision,
+  which are advisory and deployment-defined ({{inspection-controls}});
+  and
+- integrity of the result a tool returns as the application relays it to
+  the agent's model, and binding an executed action to the model's own
+  decision ({{inspection-controls}}).
 
 Structured per-argument attenuation of tool grants
 ({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}) is a related
@@ -1159,6 +1164,48 @@ egress authority once untrusted content has entered a session, is
 available at the harness layer
 ({{I-D.draft-mcguinness-oauth-mission-harness}}); it raises the bar but
 is not information-flow control.
+
+## Relationship to inspection-based controls {#inspection-controls}
+
+Inspection-based runtime defenses for agentic systems share this
+profile's premise that the agent application is part of the attack
+surface ({{custody}}), and combine deterministic checks over the message
+flow with semantic checks over the agent's intent. This profile is the
+authority half of that picture; it composes with, but does not replace,
+an inspection layer.
+
+Two of this profile's mechanisms are deterministic checks of that kind.
+Parameter binding ({{parameter-binding}}) ties a permit to the concrete
+parameters the action executes with, so an application cannot alter a
+tool call's arguments after the decision. Capability-source binding, in
+the AuthZEN binding ({{authzen}}), ties an approved action to the digest
+of the capability definition it was derived from, so a swapped or
+poisoned tool definition fails the decision. Both refuse the action;
+neither inspects the agent's reasoning.
+
+Two adjacent checks are out of scope ({{deferred}}). This profile
+evaluates the request path: it does not verify the integrity of the
+result a tool returns as the application relays it back to the agent's
+model, so an application can still falsify what the model sees; and it
+does not by itself establish that an executed action reflects the
+model's own decision rather than an application substitution. Mediated
+execution ({{custody}}) bounds the second case, since an action outside
+the Authority Set is refused however it arose, but it does not bind the
+executed action to the model's decision; a deployment that can establish
+that correspondence SHOULD. Both sit at the semantic and grounding
+boundary the issuance profile names a non-goal
+({{I-D.draft-mcguinness-oauth-mission}}).
+
+A semantic intent-alignment signal, for example a judgment that a
+requested tool fits the task extracted from the conversation, MAY be
+supplied to the PDP as advisory decision input. Such a signal MAY
+contribute to a denial; it MUST NOT widen, grant, or refresh authority,
+consistent with the inert treatment of `goal` and `purpose` in the
+issuance profile ({{I-D.draft-mcguinness-oauth-mission}}). Gating
+authority on intent inference is out of scope: verifying an agent's
+declared reasoning against the task is an attestation problem outside
+both layers, and intent inference is not reliable enough to be
+load-bearing for high-consequence authority.
 
 ## Classification integrity
 
