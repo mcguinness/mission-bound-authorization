@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            25 June 2026
-Expires: 27 December 2026
+Intended status: Standards Track                            26 June 2026
+Expires: 28 December 2026
 
 
             Mission-Bound Runtime Enforcement for OAuth 2.0
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 27 December 2026.
+   This Internet-Draft will expire on 28 December 2026.
 
 Copyright Notice
 
@@ -104,13 +104,14 @@ Table of Contents
      13.1.  What this layer adds, and its limits
      13.2.  Placement and bypass
      13.3.  Prompt injection and exfiltration
-     13.4.  Classification integrity
-     13.5.  Freshness and consumption honesty
-     13.6.  Resource policy remains authoritative
-     13.7.  TOCTOU and replay
-     13.8.  Confused deputy across resources
-     13.9.  Decision channel and token disclosure
-     13.10. Evidence privacy and correlation
+     13.4.  Relationship to inspection-based controls
+     13.5.  Classification integrity
+     13.6.  Freshness and consumption honesty
+     13.7.  Resource policy remains authoritative
+     13.8.  TOCTOU and replay
+     13.9.  Confused deputy across resources
+     13.10. Decision channel and token disclosure
+     13.11. Evidence privacy and correlation
    14. IANA Considerations
    15. References
      15.1.  Normative References
@@ -1255,9 +1256,14 @@ Table of Contents
 
    *  action-hierarchy and resource-containment subset extensions (this
       profile uses the flat subset rule of
-      [I-D.draft-mcguinness-oauth-mission]); and
+      [I-D.draft-mcguinness-oauth-mission]);
 
-   *  risk-signal inputs to the decision (deployment-defined).
+   *  risk-signal and semantic intent-alignment inputs to the decision,
+      which are advisory and deployment-defined (Section 13.4); and
+
+   *  integrity of the result a tool returns as the application relays
+      it to the agent's model, and binding an executed action to the
+      model's own decision (Section 13.4).
 
    Structured per-argument attenuation of tool grants
    ([I-D.draft-niyikiza-oauth-attenuating-agent-tokens]) is a related
@@ -1319,7 +1325,49 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-harness]); it raises the bar but
    is not information-flow control.
 
-13.4.  Classification integrity
+13.4.  Relationship to inspection-based controls
+
+   Inspection-based runtime defenses for agentic systems share this
+   profile's premise that the agent application is part of the attack
+   surface (Section 3.6), and combine deterministic checks over the
+   message flow with semantic checks over the agent's intent.  This
+   profile is the authority half of that picture; it composes with, but
+   does not replace, an inspection layer.
+
+   Two of this profile's mechanisms are deterministic checks of that
+   kind.  Parameter binding (Section 7) ties a permit to the concrete
+   parameters the action executes with, so an application cannot alter a
+   tool call's arguments after the decision.  Capability-source binding,
+   in the AuthZEN binding (Section 11), ties an approved action to the
+   digest of the capability definition it was derived from, so a swapped
+   or poisoned tool definition fails the decision.  Both refuse the
+   action; neither inspects the agent's reasoning.
+
+   Two adjacent checks are out of scope (Section 12).  This profile
+   evaluates the request path: it does not verify the integrity of the
+   result a tool returns as the application relays it back to the
+   agent's model, so an application can still falsify what the model
+   sees; and it does not by itself establish that an executed action
+   reflects the model's own decision rather than an application
+   substitution.  Mediated execution (Section 3.6) bounds the second
+   case, since an action outside the Authority Set is refused however it
+   arose, but it does not bind the executed action to the model's
+   decision; a deployment that can establish that correspondence SHOULD.
+   Both sit at the semantic and grounding boundary the issuance profile
+   names a non-goal ([I-D.draft-mcguinness-oauth-mission]).
+
+   A semantic intent-alignment signal, for example a judgment that a
+   requested tool fits the task extracted from the conversation, MAY be
+   supplied to the PDP as advisory decision input.  Such a signal MAY
+   contribute to a denial; it MUST NOT widen, grant, or refresh
+   authority, consistent with the inert treatment of goal and purpose in
+   the issuance profile ([I-D.draft-mcguinness-oauth-mission]).  Gating
+   authority on intent inference is out of scope: verifying an agent's
+   declared reasoning against the task is an attestation problem outside
+   both layers, and intent inference is not reliable enough to be load-
+   bearing for high-consequence authority.
+
+13.5.  Classification integrity
 
    Because "consequential" is partly deployment-defined, the
    classification floor of Section 3.3 is load-bearing: a deployment
@@ -1328,7 +1376,7 @@ Table of Contents
    A purpose may raise a class but never lower it below the resource
    owner's floor.
 
-13.5.  Freshness and consumption honesty
+13.6.  Freshness and consumption honesty
 
    A permit is a lease, not a standing grant: stale Mission state MUST
    fail closed for consequential actions within the published bound
@@ -1336,7 +1384,7 @@ Table of Contents
    serializing PDP; a deployment MUST NOT advertise exactness it cannot
    meet across distributed decision points (Section 8).
 
-13.6.  Resource policy remains authoritative
+13.7.  Resource policy remains authoritative
 
    Mission authority is a maximum authority envelope.  It does not force
    a Resource Server to perform an action, bypass local authorization,
@@ -1346,7 +1394,7 @@ Table of Contents
    can perform actions that the resource owner or service would
    otherwise forbid.
 
-13.7.  TOCTOU and replay
+13.8.  TOCTOU and replay
 
    Parameter binding (Section 7) ties a permit to specific normalized
    parameters and a short window or single use, so a permit cannot be
@@ -1354,7 +1402,7 @@ Table of Contents
    between check and use.  The executing PEP, not an upstream component,
    MUST perform the reverification.
 
-13.8.  Confused deputy across resources
+13.9.  Confused deputy across resources
 
    The permit binding of Section 7 ties a decision to the Mission, the
    token audience or protected resource, sub, client_id, actor context,
@@ -1367,7 +1415,7 @@ Table of Contents
    a resource, audience, tenant, or operation boundary it was not issued
    for.
 
-13.9.  Decision channel and token disclosure
+13.10.  Decision channel and token disclosure
 
    A separate PDP becomes part of the Resource Server's trusted
    authorization path for the operations in its enforcement scope.  The
@@ -1378,7 +1426,7 @@ Table of Contents
    the same credential handling, retention, and disclosure controls it
    applies at the Resource Server.
 
-13.10.  Evidence privacy and correlation
+13.11.  Evidence privacy and correlation
 
    Runtime enforcement evidence is intentionally durable and therefore
    sensitive.  It can reveal a subject's resources, action timing,
