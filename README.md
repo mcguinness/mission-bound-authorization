@@ -211,6 +211,21 @@ step-up.
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion)
 * [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-expansion.diff)
 
+#### Mission Completion for OAuth 2.0
+
+The narrowing counterpart of Expansion. Adds `terminal_when`, an
+entry-level completion condition that discharges a `mission_resource_access`
+entry when it fires, so the Authorization Server stops deriving that
+entry once the task it was granted for is done. Discharge is monotonic
+(only retires authority), so it is safe against an injected agent; it
+lets a multi-resource Mission complete one entry at a time; and it is the
+enforceable counterpart of the inert `success_criteria`.
+
+* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-completion.html)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-completion)
+* [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-completion)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-completion.diff)
+
 ### Approval time
 
 #### Mission Intent Shaping for OAuth 2.0
