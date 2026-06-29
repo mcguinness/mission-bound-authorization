@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                              26 June 2026
-Expires: 28 December 2026
+Intended status: Informational                              29 June 2026
+Expires: 31 December 2026
 
 
                   Mission Intent Shaping for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 December 2026.
+   This Internet-Draft will expire on 31 December 2026.
 
 Copyright Notice
 
