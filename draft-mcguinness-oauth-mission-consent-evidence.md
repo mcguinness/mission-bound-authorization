@@ -223,6 +223,47 @@ A Consent Disclosure object has these members:
   bulk reads, cross-domain disclosure, delegation, and consumption
   bounds when present.
 
+`constraint_provenance`:
+: OPTIONAL. An array attributing bounds in the Authority Set to the
+  authority that imposed them, so the Approver and a later auditor see
+  not just a bound but whose rule it is: a delegator ceiling and a court
+  order read differently when one fails. Each entry has:
+
+  `applies_to`:
+  : REQUIRED. An object identifying the bound, by the Authority Set
+    entry's `resource` and the `constraint` key or `action` it concerns.
+
+  `source`:
+  : REQUIRED. A string naming the imposing authority. Recommended,
+    non-exhaustive values are `subject`, `delegator`, `platform`,
+    `regulatory`, and `judicial`; the value is descriptive and a
+    deployment MAY use another.
+
+  `source_uri`:
+  : OPTIONAL. A string. A URI identifying the imposing instrument or
+    policy, including a URN for a non-dereferenceable instrument such as
+    `urn:court:order:2026-55`.
+
+  `constraint_provenance` is disclosure and audit material: it is
+  rendered for consent and committed by `consent_rendering_hash`
+  ({{consent-rendering-hash}}), but it grants no authority, is not
+  carried on any token, and is not enforced. It is the consent-layer home
+  for constraint authorship; the Authority Set itself
+  ({{I-D.draft-mcguinness-oauth-mission}}) carries only the bound, not
+  its author.
+
+  ~~~ json
+  [
+    { "applies_to": { "resource": "https://erp.example.com",
+        "constraint": "max_amount_usd" },
+      "source": "delegator",
+      "source_uri": "https://corp.example/policy/spend" },
+    { "applies_to": { "resource": "https://erp.example.com",
+        "action": "journal-entries.write" },
+      "source": "judicial", "source_uri": "urn:court:order:2026-55" }
+  ]
+  ~~~
+
 `delegation_summary`:
 : REQUIRED when the Authority Set permits delegation. An object
   describing who may receive delegated authority, maximum depth, and
