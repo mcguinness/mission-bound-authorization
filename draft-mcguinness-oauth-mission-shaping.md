@@ -211,53 +211,47 @@ so does not make the shaper a principal to the Authorization Server and
 does not move it across the trust boundary: it remains client-side
 machinery that produces an untrusted proposal.
 
-## The Shaper Does Not Issue Authority {#proposes-only}
+## The Shaper Proposes; It Does Not Issue {#proposes-only}
 
 The Mission Shaper MUST NOT issue, derive, or certify authority of any
-kind. It produces a Mission Intent proposal. That proposal is, by the
-issuance profile's definition, untrusted client input until the Mission
-Issuer validates and narrows it and binds authority at the approval
-event. The shaper's output therefore has no authority implications until
-the Mission Issuer approves a Mission from it and derives an Authority
-Set.
+kind. It produces a Mission Intent proposal, which is untrusted client
+input under the issuance profile until the Mission Issuer validates and
+narrows it and binds authority at the approval event. A Mission Issuer
+that receives a Mission Intent MUST treat it as untrusted input under
+its validation rules; nothing in this profile changes that, and a shaper
+SHOULD NOT structure its output to imply otherwise. The shaper's output
+has no authority implications until the Mission Issuer approves a Mission
+from it and derives an Authority Set.
 
-A shaper that signs its output, attaches an authority assertion, emits a
-credential, or otherwise behaves as a credential issuer is acting
-outside the role this profile describes and is NOT RECOMMENDED. A
-deployment MAY integrity-protect shaper output for client-internal
-reasons (for example, to detect tampering between the shaper and the
-submission step in a multi-process client, {{multi-process}}), but that
-protection has no authority semantics at the Mission Issuer and MUST NOT
-be relied upon by anything beyond the client.
+Three consequences follow, and a conformant shaper observes all three:
 
-## Untrusted Output Principle {#untrusted-output}
+- It does not act as a credential issuer. A shaper that signs its
+  output, attaches an authority assertion, emits a credential, or
+  otherwise behaves as a credential issuer is acting outside this role
+  and is NOT RECOMMENDED. A deployment MAY integrity-protect shaper
+  output for client-internal reasons (for example, to detect tampering
+  between the shaper and the submission step in a multi-process client,
+  {{multi-process}}), but that protection has no authority semantics at
+  the Mission Issuer and MUST NOT be relied upon beyond the client.
 
-A Mission Issuer that receives a Mission Intent MUST treat it as
-untrusted input under the issuance profile's validation rules. Nothing
-in this profile changes that, and a shaper SHOULD NOT structure its
-output to imply otherwise.
+- It does not mimic Mission Issuer output. The proposal MUST NOT carry
+  `mission.id`, `intent_hash`, `authority_hash`, an Authority Set, a
+  lifecycle state, or approving-principal evidence. The Mission Issuer
+  produces those values on the Mission record at and after the approval
+  event, never the client ({{I-D.draft-mcguinness-oauth-mission}}). A
+  shaper that emits them is either confused about its role or attempting
+  to mislead an auditor, and a Mission Issuer MUST ignore any such member
+  presented in a Mission Intent.
 
-In particular, a shaper MUST NOT emit, in the Mission Intent proposal,
-members that mimic Mission Issuer outputs. The proposal MUST NOT carry
-`mission.id`, `intent_hash`, `authority_hash`, an Authority Set, a
-lifecycle state, or approving-principal evidence. Those values are
-produced by the Mission Issuer on the Mission record at and after the
-approval event, never by the client ({{I-D.draft-mcguinness-oauth-mission}}).
-A shaper that emits them is either confused about its role or attempting
-to mislead an auditor, and a Mission Issuer MUST ignore any such member
-presented in a Mission Intent.
-
-## The Shaper Never Crosses the Trust Boundary {#never-crosses}
-
-The trust boundary separates the client, where the shaper lives, from
-the Mission Issuer, where the Mission Intent is validated and the
-Authority Set is created. Crossing that boundary is a Mission Issuer
-action. The shaper produces an input; the client transmits the input;
-the Mission Issuer decides what to do with it. The shaper does not
-initiate the submission, does not invoke the OAuth Pushed Authorization
-Request or Authorization Endpoint, does not select the recipient Mission
-Issuer on its own authority, and does not attest to the submission's
-correctness on the Mission Issuer's behalf.
+- It does not cross the trust boundary. The trust boundary separates the
+  client, where the shaper lives, from the Mission Issuer, where the
+  Mission Intent is validated and the Authority Set is created; crossing
+  it is a Mission Issuer action. The shaper does not initiate the
+  submission, invoke the Pushed Authorization Request or Authorization
+  Endpoint, select the recipient Mission Issuer on its own authority, or
+  attest to the submission on the Mission Issuer's behalf. It produces an
+  input; the client transmits it; the Mission Issuer decides what to do
+  with it.
 
 ## Deployment Roles {#roles}
 
@@ -688,7 +682,7 @@ the approval event, and derives an Authority Set
 
 The shaper does not invoke the PAR endpoint or the Authorization
 Endpoint and does not handle the authorization response. Those are
-requesting-client responsibilities ({{never-crosses}}). The shaper hands
+requesting-client responsibilities ({{proposes-only}}). The shaper hands
 its output to the requesting client, which performs the OAuth flow and
 MAY also convey a `shaping_evidence_hash` as deployment extension data
 so the Mission record can cite the evidence. Conveying it does not
