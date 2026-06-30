@@ -124,6 +124,27 @@ compromise is out of scope. A deployment that leaves any of the four
 conditions unmet, or that cannot place a PEP on every path to a mediated
 action, must not represent itself as resistant to agent compromise.
 
+### Maturity
+
+The drafts are not all at the same stage; this is the quickest way to
+decide what to build on now.
+
+- **Stable** (depend only on ratified OAuth and finalized OpenID
+  specifications): the issuance **core**, **runtime**, **authzen**,
+  **status**, and **signals**. Build on these.
+- **Stable but situational** (adopt when your use case needs them):
+  **expansion**, **child-delegation**, **consent-evidence**,
+  **harness**, **shaping**.
+- **Experimental** (adopt for evaluation, not as a stable interface):
+  **attenuation**, **audit**, and **approval** depend normatively on
+  Internet-Drafts that are not yet ratified (Attenuating Agent Tokens,
+  SCITT, and OAuth Deferred Token Response, respectively);
+  **orchestration** and **completion** define newer models that are less
+  exercised. Each names a stable path to prefer where one exists.
+
+In short: the Enforced bundle is built entirely from stable drafts; the
+experimental profiles are additive and can wait.
+
 ## The documents
 
 Together these drafts form the **Mission-Bound Authorization suite**.

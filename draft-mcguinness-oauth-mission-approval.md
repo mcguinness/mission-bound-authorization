@@ -128,6 +128,14 @@ approval event, the Authority Set, the subset rule, and the integrity
 anchors are unchanged; this document governs only how the approval is
 reached over time.
 
+This profile is **experimental**. It depends normatively on OAuth
+Deferred Token Response
+({{I-D.draft-gerber-oauth-deferred-token-response}}), an early
+Internet-Draft that is not ratified and whose details may change.
+Synchronous Mission approval, which needs only the issuance profile, is
+the stable path; deploy deferred and revisable approval for evaluation
+rather than as a stable interface.
+
 # Relationship to the Issuance Profile {#issuance-relationship}
 
 This document depends normatively on the issuance profile and on the
