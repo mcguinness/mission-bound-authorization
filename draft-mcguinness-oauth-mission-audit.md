@@ -414,10 +414,14 @@ detached payload ({{registration}}), and the evidence, which can carry
 task descriptions, principals, and high-risk authority, is retained
 separately under access control. Even the committed metadata leaks
 information: the `sub` is a durable per-Mission correlator and the
-registration times reveal a Mission's activity pattern. A deployment
-SHOULD derive `sub` so it does not expose the Subject or task in the
-clear, and SHOULD weigh whether a Mission's mere existence and cadence
-are sensitive before registering its evidence in a shared log.
+registration times reveal a Mission's activity pattern. The `sub`
+construction is fixed ({{feed}}) and does not expose the Subject
+directly, so the concern is not Subject leakage but that the Mission's
+durable identifier, its existence, and its registration cadence are
+visible in the log. A deployment SHOULD weigh whether those are
+sensitive, and whether the `origin` and `id` that compose the `sub`
+reveal more than intended, before registering a Mission's evidence in a
+shared or widely readable log.
 
 # IANA Considerations {#iana}
 
