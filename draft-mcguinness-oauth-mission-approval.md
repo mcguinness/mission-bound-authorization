@@ -245,12 +245,19 @@ Issuer:
 1. verifies the `clarification_handle` is bound to a deferred approval
    in the revision-required condition, is unexpired and single-use, and
    matches the client and sender-constraint of the deferred approval;
-2. derives the Authority Set for the revised Intent and verifies it is a
-   subset of the proposed Mission's Authority Set under the issuance
+2. derives the Authority Set for the revised Intent, under the same
+   `policy_version` that governed the proposed Mission, and verifies it
+   is a subset of the proposed Mission's Authority Set under the issuance
    profile's subset rule ({{I-D.draft-mcguinness-oauth-mission}}), with
    `authorization_details` narrowing per the inclusion semantics of
-   {{RFC9396}}; the revision MUST narrow at least the refused dimensions
-   and MUST NOT broaden any dimension;
+   {{RFC9396}}. The revision MUST narrow every dimension named in
+   `rejected_scope` or `rejected_authorization_details`
+   ({{revision-required}}) and MUST NOT broaden any dimension. Deriving
+   under the proposed Mission's `policy_version` keeps the subset
+   comparison reproducible; if policy has changed since the proposal, the
+   Mission Issuer re-derives the proposed Authority Set under the current
+   policy to re-establish the baseline before comparing, or refuses the
+   revision;
 3. invalidates the `clarification_handle`;
 4. replaces the proposed Mission's Authority Set with the revised one
    and re-reviews it.
@@ -265,8 +272,9 @@ endpoint returns an error and the deferred approval stays in the
 revision-required condition. Because the handle is single-use, the
 client obtains a new `clarification_handle` from a subsequent
 `authorization_pending` response before retrying. A Mission Issuer
-SHOULD bound the number of revision cycles per deferred approval and
-SHOULD resolve to `access_denied` when no acceptable narrowing remains.
+MUST bound the number of revision cycles per deferred approval and MUST
+resolve to `access_denied` once the bound is reached or no acceptable
+narrowing remains, so a client cannot drive an unbounded revision loop.
 
 # Integration with the Mission Suite {#integration}
 
@@ -433,8 +441,11 @@ revision handshake introduces.
 - Policy disclosure. `rejected_scope` and `rejected_authorization_details`
   can reveal policy boundaries; a Mission Issuer SHOULD disclose only the
   minimum needed to narrow and MAY omit them.
-- Revision bounding. A Mission Issuer SHOULD bound revision cycles per
-  deferred approval and log excessive cycles as a security event.
+- Revision bounding. A Mission Issuer MUST bound revision cycles per
+  deferred approval and resolve to `access_denied` at the bound
+  ({{revision-submission}}), and SHOULD log excessive cycles as a
+  security event, so a client cannot drive an unbounded reshape-and-retry
+  loop to wear down a reviewer.
 
 # Privacy Considerations {#privacy-considerations}
 
