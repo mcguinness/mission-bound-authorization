@@ -1253,6 +1253,51 @@ any decision-API wire members are defined by the binding
 
 --- back
 
+# Parameter Digest Worked Example {#parameter-digest-example}
+
+This non-normative example shows an operation profile and the
+`parameter_digest` it produces ({{parameter-binding}}), so two
+implementations can confirm they normalize and digest the same way.
+
+Consider a `payments.send` operation. Its operation profile fixes the
+parameter set and normalization: the members are `payee`, `amount`,
+`currency`, and `account`; `amount` is a decimal string with exactly two
+fractional digits; `currency` is an uppercase ISO 4217 code; no defaults
+are inserted and no optional members are omitted; there are no set-like
+arrays to order. For a 9,000 USD payment, the normalized parameter
+object is:
+
+~~~ json
+{
+  "payee": "Acme Supply Co",
+  "amount": "9000.00",
+  "currency": "USD",
+  "account": "****4417"
+}
+~~~
+
+The `parameter_digest` is `sha-256:` followed by the base64url,
+no-padding SHA-256 of the JCS {{RFC8785}} serialization of that object,
+under the issuance profile's canonicalization rules (no envelope; the
+normalized parameter object is digested directly). The JCS canonical
+bytes are a single line with sorted member names and no whitespace,
+shown here wrapped for layout only; remove the layout line break, adding
+no characters, to recover the canonical form:
+
+~~~ text
+{"account":"****4417","amount":"9000.00","currency":"USD","payee":"Acme
+ Supply Co"}
+~~~
+
+~~~ text
+parameter_digest = sha-256:e7GXd0GWwOK2ezlb0CfUeYhjYOF1DE68_Gg0ofbr7do
+~~~
+
+The PDP binds its permit to this value, and the executing PEP recomputes
+it over the parameters it is about to use immediately before acting
+({{parameter-binding}}); any change to a normalized parameter yields a
+different digest and the permit is refused.
+
 # Acknowledgments
 {:numbered="false"}
 

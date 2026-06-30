@@ -110,6 +110,20 @@ whose reviewers narrow a proposed Mission; it layers onto any bundle.
 Each draft also states its own scoped conformance; the bundles are
 guidance, not a new conformance class.
 
+In particular, adopting the Governed bundle does not by itself make a
+deployment resistant to a compromised agent. That is the runtime
+profile's named *agent-compromise-resistant enforcement* claim, which
+holds only when all four of its conditions are met for the
+high-consequence classes: mediated credential custody, no unmediated
+path to those actions, an action-bound approval, and an active-freshness
+state source. Mediated custody moves the high-consequence
+sender-constraint key out of the agent and into the mediating Policy
+Enforcement Point; this *relocates* the credential rather than removing
+it, so the mediating PEP becomes a critical trusted component whose own
+compromise is out of scope. A deployment that leaves any of the four
+conditions unmet, or that cannot place a PEP on every path to a mediated
+action, must not represent itself as resistant to agent compromise.
+
 ## The documents
 
 Together these drafts form the **Mission-Bound Authorization suite**.
