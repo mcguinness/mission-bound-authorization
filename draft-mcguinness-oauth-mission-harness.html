@@ -1637,8 +1637,16 @@ items require their own check unless the deployment's status lease
 explicitly covers them.<a href="#section-5.1-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-5.1-3">The harness <span class="bcp14">MUST</span> perform this algorithm even when OAuth credentials in
-the session are still valid.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+<p id="section-5.1-3">Where the orchestration profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-orchestration" class="cite xref">I-D.draft-mcguinness-oauth-mission-orchestration</a>]</span>) is also deployed,
+the harness <span class="bcp14">MUST NOT</span> resume a governed item that the orchestrator has
+cancelled, or is holding for review, under its in-flight handling, even
+when the Mission is <code>active</code>. An orchestration unwind decision is not a
+Mission-state change, so the resume check above does not catch it; for
+items under an active unwind plan the harness defers to the
+orchestrator's in-flight decision.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+<p id="section-5.1-4">The harness <span class="bcp14">MUST</span> perform this algorithm even when OAuth credentials in
+the session are still valid.<a href="#section-5.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

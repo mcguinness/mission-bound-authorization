@@ -223,6 +223,25 @@ Table of Contents
    The sub is a correlator, not a credential; presenting it authorizes
    nothing ([I-D.draft-mcguinness-oauth-mission]).
 
+   A Child Mission
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]) is its own
+   Mission with its own id and origin, so its evidence forms its own
+   feed; its lifecycle events, including a cascaded transition, appear
+   in that feed.  The event that triggered the cascade is in the
+   parent's feed, and the child's lineage to the parent is the parent
+   member of its mission claim, which an auditor follows to the parent's
+   sub to see that trigger.
+
+   Across trust domains a Mission's origin and id are unchanged
+   ([I-D.draft-mcguinness-oauth-mission]), so every producer in every
+   domain computes the same sub.  They share one feed only when they
+   register with the same Transparency Service.  Where domains register
+   with different services, each service holds a partial feed and its
+   non-equivocation guarantee is per-service (Section 7); an auditor
+   that needs the Mission's whole history reconciles it across those
+   services, and a deployment that wants a single coherent feed SHOULD
+   have its cross-domain producers register with one shared service.
+
 7.  Receipts and Transparent Statements
 
    On registration the Transparency Service returns a Receipt, a signed
@@ -469,6 +488,13 @@ Table of Contents
               <https://www.rfc-editor.org/rfc/rfc9052>.
 
 14.2.  Informative References
+
+   [I-D.draft-mcguinness-oauth-mission-child-delegation]
+              McGuinness, K., "Child Mission Delegation for OAuth 2.0",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              mission-child-delegation, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-child-delegation>.
 
    [I-D.draft-mcguinness-oauth-mission-consent-evidence]
               McGuinness, K., "Mission Consent Evidence for OAuth 2.0",

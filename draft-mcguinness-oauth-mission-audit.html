@@ -1388,6 +1388,22 @@ Mission Issuer, a PDP, a harness) compute the same <code>sub</code> and write to
 feed.<a href="#section-6-4" class="pilcrow">¶</a></p>
 <p id="section-6-5">The <code>sub</code> is a correlator, not a credential; presenting it authorizes
 nothing (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6-5" class="pilcrow">¶</a></p>
+<p id="section-6-6">A Child Mission (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>)
+is its own Mission with its own <code>id</code> and <code>origin</code>, so its evidence forms
+its own feed; its lifecycle events, including a <code>cascaded</code> transition,
+appear in that feed. The event that triggered the cascade is in the
+parent's feed, and the child's lineage to the parent is the <code>parent</code>
+member of its <code>mission</code> claim, which an auditor follows to the parent's
+<code>sub</code> to see that trigger.<a href="#section-6-6" class="pilcrow">¶</a></p>
+<p id="section-6-7">Across trust domains a Mission's <code>origin</code> and <code>id</code> are unchanged
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), so every producer in every
+domain computes the same <code>sub</code>. They share one feed only when they
+register with the same Transparency Service. Where domains register with
+different services, each service holds a partial feed and its
+non-equivocation guarantee is per-service (<a href="#receipts" class="auto internal xref">Section 7</a>); an auditor
+that needs the Mission's whole history reconciles it across those
+services, and a deployment that wants a single coherent feed <span class="bcp14">SHOULD</span> have
+its cross-domain producers register with one shared service.<a href="#section-6-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="receipts">
@@ -1695,6 +1711,10 @@ new identifier.<a href="#section-13-1" class="pilcrow">¶</a></p>
 <a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Child Mission Delegation for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-child-delegation</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-consent-evidence</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-consent-evidence">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-consent-evidence</a>&gt;</span>. </dd>

@@ -2489,6 +2489,15 @@ Subset: no broader when less than or equal to the reference.
 Intersection: the earlier instant.<a href="#section-5.2-6.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
+<p id="section-5.2-7">These comparisons are in value space, not lexical: <code>max_amount_usd</code>
+values are compared as decimal numbers, so <code>500</code>, <code>500.0</code>, and <code>5e2</code> are
+equal; <code>issued_after</code> and <code>issued_before</code> values are compared as the
+instants they denote after normalization to UTC, so two RFC 3339
+representations of the same instant that differ only in timezone offset
+or trailing subsecond zeros are equal. A registered Common Constraint
+<span class="bcp14">MUST</span> define its subset and intersection in value-space terms, so that
+independent deployments compute the same result for the same values and
+the subset rule of <a href="#subset" class="auto internal xref">Section 5.1</a> is reproducible.<a href="#section-5.2-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="other-types">
