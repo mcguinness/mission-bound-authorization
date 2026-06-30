@@ -347,6 +347,24 @@ Layers onto any bundle.
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-audit)
 * [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-audit.diff)
 
+### Security model
+
+#### Mission Security Model for OAuth 2.0
+
+A cross-cutting, Informational consolidation of the suite's trusted base.
+Enforcement is spread across components (Authorization Server, PEP, PDP,
+harness, consent rendering, and optional state, access-request,
+transparency, and event-source services); each profile states its own
+security considerations, but this document gives the single view: what
+each component must achieve, what it assumes of the others, and how its
+compromise degrades the guarantees. It defines no new mechanism and
+points to the profiles' normative security considerations.
+
+* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-security-model.html)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-security-model)
+* [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-security-model)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-security-model.diff)
+
 ## Contributing
 
 See the
