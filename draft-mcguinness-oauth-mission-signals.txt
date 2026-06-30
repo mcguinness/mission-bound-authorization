@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            29 June 2026
-Expires: 31 December 2026
+Intended status: Standards Track                            30 June 2026
+Expires: 1 January 2027
 
 
                 Mission Lifecycle Signals for OAuth 2.0
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 31 December 2026.
+   This Internet-Draft will expire on 1 January 2027.
 
 Copyright Notice
 
@@ -432,6 +432,16 @@ Table of Contents
    time; deployments MUST treat them as Mission information-disclosure
    surfaces with the privacy posture of
    [I-D.draft-mcguinness-oauth-mission-status].
+
+   The OPTIONAL reason (Section 4) is useful operational context, but
+   the reason for a transition can be more sensitive than the fact of
+   it.  Because each SET is audience-scoped to a single authorized
+   consumer (Section 5), reason is disclosed only to a party already
+   authorized for the Mission, not broadcast.  Even so, a Mission Issuer
+   SHOULD include in reason only what that consumer needs, keep
+   sensitive specifics in its own audit log rather than in the event,
+   and MAY omit reason entirely when even a minimal reason would
+   disclose more than the consumer requires.
 
 12.  Conformance
 

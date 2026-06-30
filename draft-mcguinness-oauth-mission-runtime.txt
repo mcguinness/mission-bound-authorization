@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            29 June 2026
-Expires: 31 December 2026
+Intended status: Standards Track                            30 June 2026
+Expires: 1 January 2027
 
 
             Mission-Bound Runtime Enforcement for OAuth 2.0
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 31 December 2026.
+   This Internet-Draft will expire on 1 January 2027.
 
 Copyright Notice
 
@@ -98,7 +98,7 @@ Table of Contents
      10.1.  Required decision evidence
      10.2.  Execution-outcome evidence
      10.3.  Record integrity and retention
-   11. Example decision API binding: AuthZEN
+   11. Decision API binding
    12. Out of scope
    13. Security Considerations
      13.1.  What this layer adds, and its limits
@@ -167,10 +167,11 @@ Table of Contents
 
    Because the invariants are not a wire format, two conforming
    deployments do not thereby interoperate at the PEP-PDP boundary; the
-   interoperable wire surface is supplied by a binding, of which the
-   AuthZEN binding (Section 11) is the one defined here.  This document
-   is the architecture and invariant layer; the binding is the
-   interoperability layer.
+   interoperable wire surface is supplied by a decision API binding
+   (Section 11), specified separately; the AuthZEN binding is
+   [I-D.draft-mcguinness-oauth-mission-authzen].  This document is the
+   architecture and invariant layer; the binding is the interoperability
+   layer.
 
 1.1.  Relationship to the issuance profile
 
@@ -382,6 +383,7 @@ Table of Contents
    | Irreversible      | sending mail,    | MUST     | MUST, with     |
    | action            | payment,         |          | TOCTOU         |
    |                   | deletion         |          | reverification |
+   |                   |                  |          | and evidence   |
    +-------------------+------------------+----------+----------------+
    | External          | signing,         | MUST     | MUST, with     |
    | commitment        | accepting terms  |          | TOCTOU         |
@@ -411,14 +413,18 @@ Table of Contents
 
    *Classification floor.* Actions in the *irreversible*, *external
    commitment*, and *privileged administration* classes MUST be treated
-   as consequential and gated.  A Mission's purpose, or deployment
-   policy, MAY raise an action to a stricter class; it MUST NOT lower an
-   action below any minimum classification the Resource policy
-   (Section 6) sets for it, and in any case MUST NOT classify an
-   irreversible, external-commitment, or privileged-administration
-   action as non-consequential.  A deployment that leaves such an action
-   ungated does not enforce this profile for that action's class
-   (Section 3.5).
+   as consequential and gated.  These three are the *high-consequence
+   classes*, to which this profile's strictest requirements attach
+   (action-bound approval (Section 3.4), mediated custody (Section 3.6),
+   active-state freshness (Section 6.1), and execution-outcome evidence
+   (Section 10), each as specified in its own section).  A Mission's
+   purpose, or deployment policy, MAY raise an action to a stricter
+   class; it MUST NOT lower an action below any minimum classification
+   the Resource policy (Section 6) sets for it, and in any case MUST NOT
+   classify an irreversible, external-commitment, or privileged-
+   administration action as non-consequential.  A deployment that leaves
+   such an action ungated does not enforce this profile for that
+   action's class (Section 3.5).
 
 3.4.  Action-bound approval
 
@@ -443,12 +449,11 @@ Table of Contents
    A PEP MUST refuse an action for which deployment policy or Resource
    policy requires an action-bound approval and a valid fresh approval
    bound to the action's parameters is not present.  A deployment SHOULD
-   require an action-bound approval for the irreversible, external-
-   commitment, and privileged-administration classes, where a token-
-   lifetime-wide standing authority is least appropriate.  Because the
-   approval is bound to the concrete parameters, it MUST be reverified
-   under the time-of-check to time-of-use rules of Section 7; a
-   parameter change after approval invalidates it.
+   require an action-bound approval for the high-consequence classes,
+   where a token-lifetime-wide standing authority is least appropriate.
+   Because the approval is bound to the concrete parameters, it MUST be
+   reverified under the time-of-check to time-of-use rules of Section 7;
+   a parameter change after approval invalidates it.
 
    This profile does not define the wire workflow that obtains the
    approval.  A decision-API binding MAY route the requiring denial
@@ -553,17 +558,15 @@ Table of Contents
    parameter here: a deployment that mediates nothing gains nothing from
    this section, however it labels itself.  A deployment that relies on
    this profile to protect against agent compromise therefore MUST
-   include the irreversible, external-commitment, and privileged-
-   administration classes in its mediated set; the protection is only as
-   broad as that set.
+   include the high-consequence classes in its mediated set; the
+   protection is only as broad as that set.
 
 3.7.  Agent-compromise-resistant enforcement
 
    "Protects against agent compromise" is a verifiable claim, not a
    label.  A deployment claims *agent-compromise-resistant enforcement*
-   only when, for the irreversible, external-commitment, and privileged-
-   administration classes, all of the following hold (each is SHOULD in
-   the base profile and MUST under this claim):
+   only when, for the high-consequence classes, all of the following
+   hold (each is SHOULD in the base profile and MUST under this claim):
 
    *  the sender-constraint private key is held by the mediating PEP,
       not by the agent component (Section 3.6);
@@ -591,48 +594,43 @@ Table of Contents
    statement, not an OAuth Authorization Server metadata extension and
    not a new access token format.
 
-   The Resource Server runtime profile MUST define:
+   The Resource Server runtime profile records the enforcement-scope
+   items of Section 3.2 (protected resources, action classes, execution
+   paths, PEP and PDP identities, supported authorization_details types
+   and vocabularies, Mission state source and staleness bound, evidence
+   mechanism and retention, and metering consistency bound) at the
+   granularity of its protected operations, and additionally MUST
+   define:
 
-   *  the protected resources, endpoint families, methods, tools, or
-      operation identifiers for which Mission runtime enforcement
-      applies;
+   *  the endpoint families, methods, tools, or operation identifiers in
+      scope, and the minimum action class for each, including any
+      Resource policy floor above the default classification
+      (Section 3.3);
 
-   *  the minimum action class for each protected operation, including
-      any Resource policy floor that raises the class above the default
-      classification in Section 3.3;
+   *  the PEP location that can prevent each operation and any known
+      execution path outside the claim, and, when the PEP and PDP are
+      separate components, how they authenticate and integrity-protect
+      decision requests and responses;
 
-   *  the PEP location that can prevent each protected operation and any
-      known execution path that is outside the claim;
+   *  the operation profile for each protected operation or family:
+      parameter normalization, default insertion, omitted optional
+      fields, set-like array handling, idempotency-key handling, and
+      duration measurement when duration can be metered;
 
-   *  the PDP or PDPs used for Mission-bound runtime decisions,
-      including how the PEP and PDP authenticate and integrity-protect
-      decision requests and responses when they are separate components;
-
-   *  the supported authorization_details types, action identifiers, and
-      constraint vocabularies for those operations;
-
-   *  the operation profile for each protected operation or operation
-      family, including parameter normalization, default insertion,
-      omitted optional fields, set-like array handling, idempotency-key
-      handling, and duration measurement when duration can be metered;
-
-   *  the Mission state source, maximum staleness bound, and permit
-      validity window used for each action class;
+   *  the permit validity window for each action class, and replay
+      controls for permit use, including where single-use decision
+      identifiers and idempotency keys are recorded and how long
+      consumed identifiers are retained;
 
    *  how Resource policy is evaluated and composed with Mission
       authority, including local object authorization, tenant
       configuration, legal holds, service invariants, and risk policy;
 
-   *  replay controls for permit use, including where single-use
-      decision identifiers and idempotency keys are recorded and how
-      long consumed identifiers are retained;
+   *  the consumption-metering topology, including reserve, commit,
+      settlement, retry, and reconciliation behavior; and
 
-   *  any consumption-metering topology and consistency bound, including
-      reserve, commit, settlement, retry, and reconciliation behavior;
-      and
-
-   *  the runtime enforcement evidence fields, retention window, and
-      privacy treatment for decision and refusal records.
+   *  the runtime enforcement evidence fields and privacy treatment for
+      decision and refusal records.
 
    A Resource Server MUST NOT claim this runtime profile for an
    operation unless the operation's consequential effects pass through a
@@ -695,8 +693,8 @@ Table of Contents
    Before a consequential action runs, its PEP MUST obtain a permit from
    a PDP that evaluates the action against the Mission the acting token
    is bound to.  This is the normative contract.  The decision API wire
-   format is a deployment choice; Section 11 gives a non-normative
-   example binding.
+   format is a deployment choice; a binding maps this contract onto a
+   concrete API (Section 11).
 
    The PEP MUST supply the inputs the PDP needs for the Mission-bound
    decision.  Runtime enforcement MUST evaluate:
@@ -822,10 +820,9 @@ Table of Contents
       per action class and state source.  This document does not impose
       one universal value.
 
-   *  For the irreversible, external-commitment, and privileged-
-      administration classes, the state source MUST be an active
-      freshness mechanism that can reflect a revocation within the
-      staleness bound: origin token introspection ([RFC7662]), the
+   *  For the high-consequence classes, the state source MUST be an
+      active freshness mechanism that can reflect a revocation within
+      the staleness bound: origin token introspection ([RFC7662]), the
       Mission Status profile
       ([I-D.draft-mcguinness-oauth-mission-status]), or Mission
       Lifecycle Signals ([I-D.draft-mcguinness-oauth-mission-signals]).
@@ -1128,13 +1125,12 @@ Table of Contents
 
 10.2.  Execution-outcome evidence
 
-   For an irreversible action, an external commitment, or privileged
-   administration, the executing PEP MUST also produce, after it acts,
-   an execution-outcome record keyed to the permit's decision
-   identifier, recording at least success or failure and the
-   parameter_digest actually executed.  This lets a decision and its
-   execution be reconciled one to one, so a permit that was obtained but
-   executed more than once, or executed for different parameters, is
+   For an action in the high-consequence classes, the executing PEP MUST
+   also produce, after it acts, an execution-outcome record keyed to the
+   permit's decision identifier, recording at least success or failure
+   and the parameter_digest actually executed.  This lets a decision and
+   its execution be reconciled one to one, so a permit that was obtained
+   but executed more than once, or executed for different parameters, is
    detectable after the fact.  The detailed object schema is deferred
    (Section 12).
 
@@ -1163,72 +1159,25 @@ Table of Contents
    *  The enforcement scope MUST publish a retention window no shorter
       than the Mission's effective audit horizon.
 
-11.  Example decision API binding: AuthZEN
+11.  Decision API binding
 
-   The decision contract of Section 6 is abstract.  One possible binding
-   is the OpenID AuthZEN Authorization API [AUTHZEN]: the PEP issues an
-   Access Evaluation request and the PDP returns a decision.  This
-   section is non-normative and does not define an AuthZEN profile.
+   The decision contract of Section 6 is abstract: it fixes the inputs,
+   the permit, and the invariants, not a wire format.  A *decision API
+   binding* maps that contract onto a concrete PEP-PDP wire protocol.
+   For deployments using the OpenID AuthZEN Authorization API [AUTHZEN],
+   the normative binding is the Mission-Bound Runtime Enforcement:
+   AuthZEN Profile [I-D.draft-mcguinness-oauth-mission-authzen], which
+   specifies how the Mission and actor inputs, the decision and evidence
+   objects, and the denial classification map onto the AuthZEN request
+   and response.  Other decision APIs may be bound by other
+   specifications.
 
-   A deployment using AuthZEN can carry Mission and actor inputs in
-   AuthZEN's open-ended context object:
-
-   *  context.mission: id, origin, authority_hash, and the current
-      state.
-
-   *  context.actor: client_id, client-instance identifier when present,
-      and the act chain as an array ordered root to leaf.
-
-   The AuthZEN subject remains the principal the decision is requested
-   for; the invoked capability is the action and the target resource is
-   the resource.  Note that AuthZEN's resource.type is a resource-kind
-   identifier, not the issuance profile's authorization_details type
-   ([I-D.draft-mcguinness-oauth-mission]): the example uses a deployment
-   resource kind (mission_resource), and a deployment that needs to
-   convey the mission_resource_access type carries it in
-   resource.properties or context.  An evaluation request might look
-   like:
-
-   {
-     "subject":  { "type": "user", "id": "user_3p2q8mN1a0kV7tR" },
-     "action":   { "name": "journal-entries.write" },
-     "resource": { "type": "mission_resource",
-                   "id": "https://erp.example.com" },
-     "context": {
-       "mission": {
-         "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-         "origin": "https://as.example.com",
-         "authority_hash": "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-         "state": "active"
-       },
-       "actor": {
-         "client_id": "s6BhdRkqt3",
-         "act": [ { "sub": "tool-runner-7" } ]
-       }
-     }
-   }
-
-   On permit, the AuthZEN response carries the policy-view version, a
-   decision identifier, the parameter_digest for parameter-bound
-   classes, and a short validity window, for example:
-
-   {
-     "decision": true,
-     "context": {
-       "policy_view_version": "pv-2026-11-02-17",
-       "decision_id": "dec_K9pV4nT2sR7mB1xQ",
-       "parameter_digest": "sha-256:9XbVt2cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2nD9",
-       "expires_at": "2026-11-02T08:15:30Z"
-     }
-   }
-
-   This profile's substance is the enforcement contract, action
-   classification (Section 3.3), PEP placement (Section 3.5), parameter
-   binding (Section 7), consumption metering (Section 8), and runtime
-   enforcement evidence (Section 10), which is independent of the
-   decision wire.  The context.mission and context.actor example members
-   above could be standardized separately as a Mission-bound AuthZEN
-   binding without changing this contract.
+   This document defines no binding of its own.  Keeping the binding in
+   a separate specification preserves substrate-independence: the
+   enforcement contract, action classification (Section 3.3), PEP
+   placement (Section 3.5), parameter binding (Section 7), consumption
+   metering (Section 8), and runtime enforcement evidence (Section 10)
+   are the substance, and they do not depend on the decision wire.
 
 12.  Out of scope
 
@@ -1371,10 +1320,9 @@ Table of Contents
 
    Because "consequential" is partly deployment-defined, the
    classification floor of Section 3.3 is load-bearing: a deployment
-   cannot evade enforcement by classifying an irreversible, external-
-   commitment, or privileged-administration action as non-consequential.
-   A purpose may raise a class but never lower it below the resource
-   owner's floor.
+   cannot evade enforcement by classifying a high-consequence action as
+   non-consequential.  A purpose may raise a class but never lower it
+   below the resource owner's floor.
 
 13.6.  Freshness and consumption honesty
 
@@ -1444,10 +1392,11 @@ Table of Contents
 
 14.  IANA Considerations
 
-   This document has no IANA actions.  The non-normative context.mission
-   and context.actor example members of Section 11 are not registered in
-   an IETF registry.  The Mission-bound token claims this profile
-   consumes are registered by [I-D.draft-mcguinness-oauth-mission].
+   This document has no IANA actions.  The Mission-bound token claims
+   this profile consumes are registered by
+   [I-D.draft-mcguinness-oauth-mission]; any decision-API wire members
+   are defined by the binding (Section 11,
+   [I-D.draft-mcguinness-oauth-mission-authzen]).
 
 15.  References
 
@@ -1510,6 +1459,13 @@ Table of Contents
    [AUTHZEN]  OpenID Foundation, "OpenID AuthZEN Authorization API 1.0",
               2025, <https://openid.net/specs/authorization-api-
               1_0-final.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-authzen]
+              McGuinness, K., "Mission-Bound Runtime Enforcement:
+              AuthZEN Profile", Work in Progress, Internet-Draft, draft-
+              mcguinness-oauth-mission-authzen, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-authzen>.
 
    [I-D.draft-mcguinness-oauth-mission-consent-evidence]
               McGuinness, K., "Mission Consent Evidence for OAuth 2.0",
