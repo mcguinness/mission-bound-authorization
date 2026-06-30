@@ -212,16 +212,14 @@ A Consent Disclosure object has these members:
 
 `material_notices`:
 : REQUIRED. An array. Notices that materially affect the Approver's
-  decision, such as irreversible actions, external commitments,
-  privileged administration, cross-domain disclosure, broad reads, or
-  delegation.
+  decision. A notice is required for each material-notice condition
+  present, as listed in {{material-notices}}.
 
 `risk_summary`:
 : REQUIRED. An object summarizing action classes and risk dimensions
-  presented to the Approver. It MUST identify at least irreversible
-  actions, external commitments, privileged administration, broad or
-  bulk reads, cross-domain disclosure, delegation, and consumption
-  bounds when present.
+  presented to the Approver. It MUST identify, as risk dimensions, the
+  material-notice conditions ({{material-notices}}) present in the
+  Authority Set.
 
 `constraint_provenance`:
 : OPTIONAL. An array attributing bounds in the Authority Set to the
