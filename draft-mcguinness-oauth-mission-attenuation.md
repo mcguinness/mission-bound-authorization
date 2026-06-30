@@ -128,6 +128,15 @@ are the bottleneck.
 A deployment claims this profile only when it issues or accepts
 Mission-bound attenuation-substrate tokens.
 
+This profile is **experimental**. It depends normatively on the
+Attenuating Agent Tokens substrate
+({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}), an early
+Internet-Draft that is not ratified and whose details may change; an
+implementation tracks that work. Authorization-Server-mediated
+delegation, which depends only on ratified OAuth, is the stable path;
+deploy offline attenuation for evaluation rather than as a stable
+interface.
+
 # Relationship to the Issuance Profile {#issuance-relationship}
 
 This document depends normatively on the issuance profile and the
