@@ -634,7 +634,7 @@ Decoded JWS payload:
 ~~~ json
 {
   "iss": "https://as.example.com",
-  "aud": "https://erp.example.com",
+  "aud": "client_erp-recon-agent",
   "sub": "client_erp-recon-agent",
   "nonce": "nonce_8Y3vN0sM6tP1xR9bQ5",
   "iat": 1797843200,
