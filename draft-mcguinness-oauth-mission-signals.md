@@ -429,6 +429,16 @@ time; deployments MUST treat them as Mission information-disclosure
 surfaces with the privacy posture of
 {{I-D.draft-mcguinness-oauth-mission-status}}.
 
+The OPTIONAL `reason` ({{lifecycle-event}}) is useful operational
+context, but the reason for a transition can be more sensitive than the
+fact of it. Because each SET is audience-scoped to a single authorized
+consumer ({{set-protection}}), `reason` is disclosed only to a party
+already authorized for the Mission, not broadcast. Even so, a Mission
+Issuer SHOULD include in `reason` only what that consumer needs, keep
+sensitive specifics in its own audit log rather than in the event, and
+MAY omit `reason` entirely when even a minimal reason would disclose
+more than the consumer requires.
+
 # Conformance {#conformance}
 
 This document is OPTIONAL. An implementation that claims it:
