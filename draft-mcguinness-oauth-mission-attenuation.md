@@ -58,6 +58,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
+  I-D.draft-mcguinness-oauth-mission-harness:
+    title: "Mission-Aware Agent Harnesses for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-harness-latest
 
 --- abstract
 
@@ -222,8 +231,17 @@ the runtime enforcement profile
 consequential action it MUST establish that the chain's Mission is
 `active`, within the deployment's staleness bound, from a Mission state
 source, in addition to verifying the attenuation chain and the
-proof-of-possession. A revoked or expired Mission MUST cause refusal of
-every token in the chain, regardless of the children's own `exp`. A
+proof-of-possession. If the consumer cannot establish the Mission as
+`active` within the bound, including when the state source is
+unreachable, it MUST refuse the action, as the runtime profile fails
+closed on unestablished state
+({{I-D.draft-mcguinness-oauth-mission-runtime}}). A cached chain does
+not bypass this: a chain held in a harness cache is still re-checked
+against current Mission state before each consequential action, since
+the cache is never evidence of continuing authority
+({{I-D.draft-mcguinness-oauth-mission-harness}}). A revoked or expired
+Mission MUST cause refusal of every token in the chain, regardless of
+the children's own `exp`. A
 deployment MUST NOT accept Mission-bound attenuation tokens on a path
 that does not enforce current Mission state: without that check the
 offline chain is ungoverned bearer authority until it ages out, which
