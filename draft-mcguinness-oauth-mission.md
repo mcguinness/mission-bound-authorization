@@ -680,10 +680,12 @@ The Intent MUST arrive through PAR: an AS MUST reject a `mission_intent`
 presented directly on a front-channel authorization request, rather
 than through a PAR-issued `request_uri`, with `invalid_request`. PAR
 keeps the integrity-sensitive Intent off the untrusted front channel.
-Because `mission_intent` is untrusted client input that the AS records
-and hashes, a deployment SHOULD also bound its total size and the
-lengths of its arrays, refusing an Intent that exceeds those limits
-with `invalid_request`.
+Because `mission_intent` is untrusted client input that the AS records,
+derives from, and hashes, an AS MUST bound its total size and the
+lengths of its arrays, refusing an Intent that exceeds the deployment's
+limits with `invalid_request`, so an oversized Intent cannot exhaust the
+AS at rendering, derivation, or hashing. The limits are
+deployment-defined.
 
 A client MUST NOT submit `authorization_details` directly together
 with `mission_intent`; the AS derives authorization details from the
