@@ -189,7 +189,7 @@ member. The consumer's stream configuration declares the method it
 uses; the Mission Issuer MUST respect it and MUST NOT silently fall
 back to a less-timely method.
 
-# The `mission.lifecycle-change` Event {#lifecycle-event}
+# The Mission Lifecycle Change Event {#lifecycle-event}
 
 A Mission Issuer emits a `mission.lifecycle-change` event, carried in
 the Security Event Token shape of the Shared Signals Framework
