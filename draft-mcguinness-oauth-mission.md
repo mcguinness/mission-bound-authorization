@@ -347,6 +347,15 @@ considered and where it belongs, not that it was overlooked.
   identity efforts such as WIMSE); this profile governs the
   approved-task artifact those identities act within, not the
   identities themselves.
+- **Cross-audience unlinkability.** A single canonical `mission_id`, and
+  the `authority_hash` it shares, deliberately let any party correlate a
+  Mission's activity across audiences and resources. This is a design
+  choice, not an omission: a stable, correlatable anchor is what lets a
+  Resource Server, a cross-domain Resource AS, and an auditor bind
+  evidence to one approved Mission, which is a core goal of the suite.
+  Pairwise or unlinkable presentation of Mission-bound authority works
+  against that anchor and is therefore future work, not a v1 property
+  ({{mission-identifier-correlation}}).
 
 ## Conventions and Terminology
 
@@ -2563,19 +2572,25 @@ Missions that share an Authority Set.
 
 # Privacy Considerations
 
-## Mission Identifier Correlation
+## Mission Identifier Correlation {#mission-identifier-correlation}
 
 This document carries a single canonical `mission_id` on every
 derived token and ID-JAG. Any party that observes credentials for the
 same Mission, whether a Resource Server, a Resource AS, or an auditor
 spanning audiences, can correlate that activity by `mission_id`, and
-`mission.origin` further identifies the issuing AS. This profile does
-not provide cross-audience unlinkability. Audience-pairwise (or
-request-pairwise) Mission references, in which the origin projects a
-distinct opaque identifier per audience and resolves them
-server-side, are the fuller mechanism for that and are deferred to
-future work. A deployment that carries the canonical `mission_id` on
-the wire SHOULD document this correlation property.
+`mission.origin` further identifies the issuing AS. This is intentional:
+a stable, correlatable Mission anchor is what lets a Resource Server, a
+cross-domain Resource AS, and an auditor bind credentials and evidence
+to one approved Mission, which the suite's governance and audit
+properties depend on. The cost is that this profile does not provide
+cross-audience unlinkability, and that is a deliberate non-goal for this
+version ({{non-goals}}), not an unfinished feature. Audience-pairwise
+(or request-pairwise) Mission references, in which the origin projects a
+distinct opaque identifier per audience and resolves them server-side,
+are the fuller mechanism for unlinkability; because they work against
+the stable anchor, they are future work rather than a v1 property. A
+deployment that carries the canonical `mission_id` on the wire SHOULD
+document this correlation property.
 
 # IANA Considerations
 
