@@ -2968,6 +2968,76 @@ exceeds `mission_expiry`. The ID-JAG carried identity *between* trust
 domains; the Transaction Token carried context *within* one. The
 Mission bound both.
 
+# Integrity Anchor Test Vectors {#test-vectors}
+
+These non-normative vectors let an implementation verify its anchor
+computation ({{integrity-anchors}}, {{canonicalization}}) byte for byte.
+Both use the issuer `https://as.example.com`. Each canonical-bytes block
+is the exact JCS {{RFC8785}} output: a single line, UTF-8, no whitespace.
+It is shown here wrapped only for layout; remove the layout line breaks,
+adding no characters, to recover the canonical form. Note that JCS sorts
+object member names (so `iss` precedes `typ` precedes `value`, and within
+an entry `actions` precedes `constraints` precedes `resource` precedes
+`type`) and preserves array order.
+
+`intent_hash`, over this Mission Intent as the envelope `value` with
+`typ` `mission-intent`:
+
+~~~ json
+{
+  "goal": "Reconcile Q3 invoices",
+  "resources": ["https://erp.example.com"],
+  "mission_expiry": "2026-12-31T23:59:59Z"
+}
+~~~
+
+Canonical bytes of the envelope:
+
+~~~ text
+{"iss":"https://as.example.com","typ":"mission-intent","value":{"goal":
+"Reconcile Q3 invoices","mission_expiry":"2026-12-31T23:59:59Z","resourc
+es":["https://erp.example.com"]}}
+~~~
+
+~~~ text
+intent_hash = sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E
+~~~
+
+`authority_hash`, over this Authority Set as the envelope `value` with
+`typ` `mission-authority-set`:
+
+~~~ json
+[
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["invoices.read"] },
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["journal-entries.write"],
+    "constraints": { "max_amount_usd": 500 } }
+]
+~~~
+
+Canonical bytes of the envelope:
+
+~~~ text
+{"iss":"https://as.example.com","typ":"mission-authority-set","value":[{
+"actions":["invoices.read"],"resource":"https://erp.example.com","type":
+"mission_resource_access"},{"actions":["journal-entries.write"],"constra
+ints":{"max_amount_usd":500},"resource":"https://erp.example.com","type"
+:"mission_resource_access"}]}
+~~~
+
+~~~ text
+authority_hash = sha-256:-rBZZJ8tVIyGoR1tBg6BO6QG0kimVvef8vjigpoVuPw
+~~~
+
+An implementation that canonicalizes the same `value` under the same
+`typ` and `iss`, computes SHA-256, and encodes as `sha-256:` followed by
+base64url with no padding ({{integrity-anchors}}) reproduces these
+anchors exactly. A divergence indicates a JCS or encoding difference to
+resolve before interoperating.
+
 # Acknowledgments
 {:numbered="false"}
 
