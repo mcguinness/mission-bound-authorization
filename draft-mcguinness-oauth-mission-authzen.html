@@ -1241,10 +1241,13 @@ does not restate the enforcement semantics the runtime profile owns.<a href="#se
                 <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-members" class="internal xref">Members</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
-                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-integrity" class="internal xref">Integrity</a></p>
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-pre-decision-refusal-record" class="internal xref">Pre-decision refusal records</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
-                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-worked-example" class="internal xref">Worked example</a></p>
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-integrity" class="internal xref">Integrity</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
+                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-worked-example" class="internal xref">Worked example</a></p>
 </li>
             </ul>
 </li>
@@ -1656,6 +1659,15 @@ AuthZEN <code>resource</code> carries the finer-grained object identity used onl
 for Resource-policy evaluation. A PDP <span class="bcp14">MUST</span> perform the entry match
 against <code>context.audience</code>; matching it against the AuthZEN <code>resource</code>
 member is non-conforming and will diverge across deployments.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+<p id="section-4.1-3">The AuthZEN <code>subject</code> is the token's authenticated <code>sub</code>: the Subject
+the Mission's authority is exercised for
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). It does not change under
+delegation. The acting agent's <code>client_id</code> and any <code>act</code> delegation
+chain are carried in <code>context.actor</code>, never in <code>subject</code>. The PDP binds
+the permit to <code>subject</code> together with the actor context, and the
+confused-deputy check (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>)
+re-verifies that the action is for the same Subject it was authorized
+for.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="contextmission">
@@ -1791,7 +1803,7 @@ proof-of-possession check for the presented token.<a href="#section-4.4-2.6.1" c
 <p id="section-4.4-3">The PEP <span class="bcp14">MUST NOT</span> include unverified credential claims in this member.<a href="#section-4.4-3" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="contextparameters-and-contextparameterdigest">
+<div id="parameter-digest">
 <section id="section-4.5">
         <h3 id="name-contextparameters-and-conte">
 <a href="#section-4.5" class="section-number selfRef">4.5. </a><a href="#name-contextparameters-and-conte" class="section-name selfRef"><code>context.parameters</code> and <code>context.parameter_digest</code></a>
@@ -2003,14 +2015,28 @@ staleness bound; otherwise the PDP returns <code>stale_state</code>, with the
 freshness-window violation in the denial reason.<a href="#section-4.9-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-4.9-2.5">
-            <p id="section-4.9-2.5.1">When <code>context.parameters</code> is present, the PDP-recomputed digest
-matches <code>context.parameter_digest</code>; otherwise the PDP returns
-<code>parameter_violation</code>.<a href="#section-4.9-2.5.1" class="pilcrow">¶</a></p>
+            <p id="section-4.9-2.5.1">For an action whose class requires parameter binding
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>),
+<code>context.parameter_digest</code> <span class="bcp14">MUST</span> be present; if it is absent the PDP
+returns <code>parameter_violation</code>. When <code>context.parameters</code> is also
+present, the PDP-recomputed digest <span class="bcp14">MUST</span> match
+<code>context.parameter_digest</code>, otherwise <code>parameter_violation</code>. When
+<code>parameters</code> is omitted under the privacy carve-out
+(<a href="#parameter-digest" class="auto internal xref">Section 4.5</a>), the PDP <span class="bcp14">MUST</span> still be able to evaluate every
+applicable parameter constraint from the digest, supplied derived
+attributes, or local state, and returns <code>parameter_violation</code> if it
+cannot. A parameter-bound action <span class="bcp14">MUST NOT</span> be permitted without a
+verified <code>parameter_digest</code>.<a href="#section-4.9-2.5.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-4.9-2.6">
-            <p id="section-4.9-2.6.1">For catalog-sourced actions, <code>context.capability_source</code> is present
-and matches the approved source binding; otherwise the PDP returns
-<code>capability_drift</code>.<a href="#section-4.9-2.6.1" class="pilcrow">¶</a></p>
+            <p id="section-4.9-2.6.1">For a catalog-sourced action whose approved entry recorded a
+capability source digest at derivation
+(<a href="#capability-source-binding" class="auto internal xref">Section 8</a>), <code>context.capability_source</code> <span class="bcp14">MUST</span> be
+present and match the approved source binding; otherwise the PDP
+returns <code>capability_drift</code>. Whether an action is catalog-sourced, and
+whether a source digest was recorded, are determined from the
+materialized policy view, not from the PEP's request; where no source
+digest was recorded, this check does not apply.<a href="#section-4.9-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
 </section>
@@ -2157,7 +2183,7 @@ enum and the open constraint-key space never mix in one field.<a href="#section-
 <code>evidence_envelope</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.1-1.32">
             <p id="section-5.1-1.32.1"><span class="bcp14">REQUIRED</span>. An object. integrity protection
-(<a href="#decision-evidence-integrity" class="auto internal xref">Section 5.2</a>), carrying a <code>format</code> (string,
+(<a href="#decision-evidence-integrity" class="auto internal xref">Section 5.3</a>), carrying a <code>format</code> (string,
 required) and a <code>value</code> (string, required).<a href="#section-5.1-1.32.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -2166,12 +2192,34 @@ required) and a <code>value</code> (string, required).<a href="#section-5.1-1.32
 members other than those defined above.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="decision-evidence-integrity">
+<div id="pre-decision-refusal">
 <section id="section-5.2">
-        <h3 id="name-integrity">
-<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-integrity" class="section-name selfRef">Integrity</a>
+        <h3 id="name-pre-decision-refusal-record">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-pre-decision-refusal-record" class="section-name selfRef">Pre-decision refusal records</a>
         </h3>
-<p id="section-5.2-1">The <code>evidence_envelope</code> carries the integrity protection over the
+<p id="section-5.2-1">The Decision Evidence Object records a PDP decision, which is why its
+PDP-derived members are <span class="bcp14">REQUIRED</span>. The runtime profile also requires an
+evidence record for a PEP refusal that occurs before any PDP decision:
+token validation failure, a missing <code>mission</code> claim, PEP-PDP channel
+failure, or PDP unreachability
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>). Such a refusal has no
+PDP decision and cannot populate the PDP-derived members above. An
+AuthZEN deployment records it not as a Decision Evidence Object but as a
+refusal record carrying only the fields the PEP verified, at least
+<code>audience</code>, an action descriptor, <code>evaluated_at</code>, <code>decision</code> of <code>deny</code>,
+and a <code>denial_reason</code> from this pre-decision set: <code>token_invalid</code>,
+<code>mission_claim_missing</code>, <code>channel_failure</code>, or <code>pdp_unreachable</code>. These
+name PEP-side conditions and are disjoint from the PDP denial reasons of
+<a href="#runtime-denial-classification" class="auto internal xref">Section 7</a>; a record that can populate the
+PDP-derived members is a Decision Evidence Object instead.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="decision-evidence-integrity">
+<section id="section-5.3">
+        <h3 id="name-integrity">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-integrity" class="section-name selfRef">Integrity</a>
+        </h3>
+<p id="section-5.3-1">The <code>evidence_envelope</code> carries the integrity protection over the
 Decision Evidence content. This AuthZEN profile defines the concrete
 serialization required by <span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>:
 the Decision Evidence object is serialized as JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical
@@ -2182,8 +2230,8 @@ the JCS canonical bytes of the Decision Evidence object with the
 re-removes <code>evidence_envelope</code> and verifies the JWS against the
 emitter's published signing key. For Decision Evidence emitted by a
 PDP, the emitter is the PDP. For Execution Evidence emitted by a PEP or
-executor, the emitter is that PEP or executor.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-5.2-2">
+executor, the emitter is that PEP or executor.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-5.3-2">
 <pre>
 {
   "evidence_envelope": {
@@ -2191,19 +2239,19 @@ executor, the emitter is that PEP or executor.<a href="#section-5.2-1" class="pi
     "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXkt..."
   }
 }
-</pre><a href="#section-5.2-2" class="pilcrow">¶</a>
+</pre><a href="#section-5.3-2" class="pilcrow">¶</a>
 </div>
-<p id="section-5.2-3">This profile defines only the <code>jws-compact</code> format. Additional formats
+<p id="section-5.3-3">This profile defines only the <code>jws-compact</code> format. Additional formats
 <span class="bcp14">MAY</span> be defined by future specifications; implementations <span class="bcp14">MUST</span> reject
-envelopes with unsupported formats.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+envelopes with unsupported formats.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="worked-example">
-<section id="section-5.3">
+<section id="section-5.4">
         <h3 id="name-worked-example">
-<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-worked-example" class="section-name selfRef">Worked example</a>
+<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-worked-example" class="section-name selfRef">Worked example</a>
         </h3>
-<div class="breakable lang-json sourcecode" id="section-5.3-1">
+<div class="breakable lang-json sourcecode" id="section-5.4-1">
 <pre>
 {
   "decision_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
@@ -2255,11 +2303,11 @@ envelopes with unsupported formats.<a href="#section-5.2-3" class="pilcrow">¶</
     "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXkt..."
   }
 }
-</pre><a href="#section-5.3-1" class="pilcrow">¶</a>
+</pre><a href="#section-5.4-1" class="pilcrow">¶</a>
 </div>
-<p id="section-5.3-2">Decision Evidence is durable and integrity-protected. It is the
+<p id="section-5.4-2">Decision Evidence is durable and integrity-protected. It is the
 authoritative record of what the PDP evaluated, not proof that the
-action occurred.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+action occurred.<a href="#section-5.4-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2353,7 +2401,7 @@ payloads.<a href="#section-6.1-1.20.1" class="pilcrow">¶</a></p>
 <code>evidence_envelope</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.1-1.22">
             <p id="section-6.1-1.22.1"><span class="bcp14">REQUIRED</span>. An object. integrity protection in the
-same form as Decision Evidence (<a href="#decision-evidence-integrity" class="auto internal xref">Section 5.2</a>),
+same form as Decision Evidence (<a href="#decision-evidence-integrity" class="auto internal xref">Section 5.3</a>),
 carrying a <code>format</code> (string, required) and a <code>value</code> (string,
 required).<a href="#section-6.1-1.22.1" class="pilcrow">¶</a></p>
 </dd>
@@ -2479,8 +2527,9 @@ PEP are expired, inconsistent, or otherwise not usable for a runtime
 decision.<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.7">
-          <p id="section-7-2.7.1"><code>parameter_violation</code>: parameters violate a constraint or the digest
-check fails.<a href="#section-7-2.7.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.7.1"><code>parameter_violation</code>: parameters violate a constraint the PDP
+evaluated, the recomputed digest does not match, or a required
+<code>parameter_digest</code> is absent for a parameter-bound action.<a href="#section-7-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.8">
           <p id="section-7-2.8.1"><code>resource_policy</code>: Resource policy refuses the action independently
@@ -2495,6 +2544,19 @@ of Mission authority.<a href="#section-7-2.8.1" class="pilcrow">¶</a></p>
 capability-source digest differs from the digest committed at
 derivation, or the presented <code>tool_id</code> is outside the approved set
 (<a href="#capability-source-binding" class="auto internal xref">Section 8</a>).<a href="#section-7-2.10.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.11">
+          <p id="section-7-2.11.1"><code>unsupported_authorization_type</code>: the action targets an
+<code>authorization_details</code> type the PDP does not understand or cannot
+enforce, so it refuses rather than guess the type's semantics
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>).<a href="#section-7-2.11.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.12">
+          <p id="section-7-2.12.1"><code>constraint_unsupported</code>: an applicable constraint or consumption
+bound on the entry is unrecognized or unmetered, so the PDP cannot
+enforce it and refuses (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-runtime" class="cite xref">I-D.draft-mcguinness-oauth-mission-runtime</a>]</span>).
+This is distinct from <code>parameter_violation</code>, which is a constraint the
+PDP evaluated and found violated.<a href="#section-7-2.12.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-7-3">A deny is terminal for the attempted action: the agent does not proceed

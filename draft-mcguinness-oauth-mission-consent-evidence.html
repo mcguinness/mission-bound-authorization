@@ -1455,19 +1455,17 @@ does not conform.<a href="#section-4-2.12.1" class="pilcrow">¶</a></p>
 <code>material_notices</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-4-2.14">
           <p id="section-4-2.14.1"><span class="bcp14">REQUIRED</span>. An array. Notices that materially affect the Approver's
-decision, such as irreversible actions, external commitments,
-privileged administration, cross-domain disclosure, broad reads, or
-delegation.<a href="#section-4-2.14.1" class="pilcrow">¶</a></p>
+decision. A notice is required for each material-notice condition
+present, as listed in <a href="#material-notices" class="auto internal xref">Section 4.1</a>.<a href="#section-4-2.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-2.15">
 <code>risk_summary</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-4-2.16">
           <p id="section-4-2.16.1"><span class="bcp14">REQUIRED</span>. An object summarizing action classes and risk dimensions
-presented to the Approver. It <span class="bcp14">MUST</span> identify at least irreversible
-actions, external commitments, privileged administration, broad or
-bulk reads, cross-domain disclosure, delegation, and consumption
-bounds when present.<a href="#section-4-2.16.1" class="pilcrow">¶</a></p>
+presented to the Approver. It <span class="bcp14">MUST</span> identify, as risk dimensions, the
+material-notice conditions (<a href="#material-notices" class="auto internal xref">Section 4.1</a>) present in the
+Authority Set.<a href="#section-4-2.16.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-2.17">

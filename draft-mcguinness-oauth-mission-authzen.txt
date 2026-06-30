@@ -96,8 +96,9 @@ Table of Contents
      4.9.  PDP-side consistency checks
    5.  Decision Evidence Object
      5.1.  Members
-     5.2.  Integrity
-     5.3.  Worked example
+     5.2.  Pre-decision refusal records
+     5.3.  Integrity
+     5.4.  Worked example
    6.  Execution Evidence Object
      6.1.  Members
      6.2.  Worked example
@@ -348,6 +349,16 @@ Table of Contents
    against context.audience; matching it against the AuthZEN resource
    member is non-conforming and will diverge across deployments.
 
+   The AuthZEN subject is the token's authenticated sub: the Subject the
+   Mission's authority is exercised for
+   ([I-D.draft-mcguinness-oauth-mission]).  It does not change under
+   delegation.  The acting agent's client_id and any act delegation
+   chain are carried in context.actor, never in subject.  The PDP binds
+   the permit to subject together with the actor context, and the
+   confused-deputy check ([I-D.draft-mcguinness-oauth-mission-runtime])
+   re-verifies that the action is for the same Subject it was authorized
+   for.
+
 4.2.  context.mission
 
    The mission member identifies the governance record and its current
@@ -567,13 +578,27 @@ Table of Contents
        staleness bound; otherwise the PDP returns stale_state, with the
        freshness-window violation in the denial reason.
 
-   5.  When context.parameters is present, the PDP-recomputed digest
-       matches context.parameter_digest; otherwise the PDP returns
-       parameter_violation.
+   5.  For an action whose class requires parameter binding
+       ([I-D.draft-mcguinness-oauth-mission-runtime]),
+       context.parameter_digest MUST be present; if it is absent the PDP
+       returns parameter_violation.  When context.parameters is also
+       present, the PDP-recomputed digest MUST match
+       context.parameter_digest, otherwise parameter_violation.  When
+       parameters is omitted under the privacy carve-out (Section 4.5),
+       the PDP MUST still be able to evaluate every applicable parameter
+       constraint from the digest, supplied derived attributes, or local
+       state, and returns parameter_violation if it cannot.  A
+       parameter-bound action MUST NOT be permitted without a verified
+       parameter_digest.
 
-   6.  For catalog-sourced actions, context.capability_source is present
-       and matches the approved source binding; otherwise the PDP
-       returns capability_drift.
+   6.  For a catalog-sourced action whose approved entry recorded a
+       capability source digest at derivation (Section 8),
+       context.capability_source MUST be present and match the approved
+       source binding; otherwise the PDP returns capability_drift.
+       Whether an action is catalog-sourced, and whether a source digest
+       was recorded, are determined from the materialized policy view,
+       not from the PEP's request; where no source digest was recorded,
+       this check does not apply.
 
 5.  Decision Evidence Object
 
@@ -648,13 +673,31 @@ Table of Contents
    evaluated_at:  REQUIRED.  An RFC 3339 [RFC3339] timestamp.
 
    evidence_envelope:  REQUIRED.  An object. integrity protection
-      (Section 5.2), carrying a format (string, required) and a value
+      (Section 5.3), carrying a format (string, required) and a value
       (string, required).
 
    A Decision Evidence Object is a closed object: it MUST NOT contain
    members other than those defined above.
 
-5.2.  Integrity
+5.2.  Pre-decision refusal records
+
+   The Decision Evidence Object records a PDP decision, which is why its
+   PDP-derived members are REQUIRED.  The runtime profile also requires
+   an evidence record for a PEP refusal that occurs before any PDP
+   decision: token validation failure, a missing mission claim, PEP-PDP
+   channel failure, or PDP unreachability
+   ([I-D.draft-mcguinness-oauth-mission-runtime]).  Such a refusal has
+   no PDP decision and cannot populate the PDP-derived members above.
+   An AuthZEN deployment records it not as a Decision Evidence Object
+   but as a refusal record carrying only the fields the PEP verified, at
+   least audience, an action descriptor, evaluated_at, decision of deny,
+   and a denial_reason from this pre-decision set: token_invalid,
+   mission_claim_missing, channel_failure, or pdp_unreachable.  These
+   name PEP-side conditions and are disjoint from the PDP denial reasons
+   of Section 7; a record that can populate the PDP-derived members is a
+   Decision Evidence Object instead.
+
+5.3.  Integrity
 
    The evidence_envelope carries the integrity protection over the
    Decision Evidence content.  This AuthZEN profile defines the concrete
@@ -681,7 +724,7 @@ Table of Contents
    MAY be defined by future specifications; implementations MUST reject
    envelopes with unsupported formats.
 
-5.3.  Worked example
+5.4.  Worked example
 
    {
      "decision_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
@@ -778,7 +821,7 @@ Table of Contents
       content payloads.
 
    evidence_envelope:  REQUIRED.  An object. integrity protection in the
-      same form as Decision Evidence (Section 5.2), carrying a format
+      same form as Decision Evidence (Section 5.3), carrying a format
       (string, required) and a value (string, required).
 
    An Execution Evidence Object is a closed object: it MUST NOT contain
@@ -876,8 +919,9 @@ Table of Contents
       PEP are expired, inconsistent, or otherwise not usable for a
       runtime decision.
 
-   *  parameter_violation: parameters violate a constraint or the digest
-      check fails.
+   *  parameter_violation: parameters violate a constraint the PDP
+      evaluated, the recomputed digest does not match, or a required
+      parameter_digest is absent for a parameter-bound action.
 
    *  resource_policy: Resource policy refuses the action independently
       of Mission authority.
@@ -887,6 +931,18 @@ Table of Contents
    *  capability_drift: a catalog-sourced action's current capability-
       source digest differs from the digest committed at derivation, or
       the presented tool_id is outside the approved set (Section 8).
+
+   *  unsupported_authorization_type: the action targets an
+      authorization_details type the PDP does not understand or cannot
+      enforce, so it refuses rather than guess the type's semantics
+      ([I-D.draft-mcguinness-oauth-mission-runtime]).
+
+   *  constraint_unsupported: an applicable constraint or consumption
+      bound on the entry is unrecognized or unmetered, so the PDP cannot
+      enforce it and refuses
+      ([I-D.draft-mcguinness-oauth-mission-runtime]).  This is distinct
+      from parameter_violation, which is a constraint the PDP evaluated
+      and found violated.
 
    A deny is terminal for the attempted action: the agent does not
    proceed on a denial.  A deny need not end the task, however.  For an
