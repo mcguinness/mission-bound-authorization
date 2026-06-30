@@ -54,7 +54,7 @@ informative:
     author:
       -
         org: OpenID Foundation
-    date: 2025
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     author:

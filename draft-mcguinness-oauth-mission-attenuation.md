@@ -388,6 +388,27 @@ profile, and the attenuation substrate apply. This profile adds:
   ({{I-D.draft-mcguinness-oauth-mission-runtime}}) is the audit record
   for offline-attenuated actions.
 
+# Privacy Considerations {#privacy-considerations}
+
+The `mission` claim (`id`, `origin`, `authority_hash`) rides every token
+in an attenuation chain unchanged ({{attenuation}}), so every consumer
+of any child sees the same durable Mission correlator and lineage
+anchor. The chain is therefore a correlation surface across the
+sub-agents and resources it reaches: two consumers that compare the
+Mission identifiers they were shown can tell the tokens belong to one
+Mission. This profile does not narrow that correlation; the
+single-canonical-`mission` cross-audience linkability the issuance
+profile acknowledges ({{I-D.draft-mcguinness-oauth-mission}}) applies to
+offline children as well, and unlinkable or per-audience presentation of
+Mission-bound authority is out of scope and deferred.
+
+Offline minting is unobserved by the Mission Issuer, so which children
+were minted and to whom is visible only at the consuming enforcement
+points, not in the issuer's records. A deployment SHOULD treat the
+runtime enforcement evidence those points produce
+({{I-D.draft-mcguinness-oauth-mission-runtime}}) as the privacy-relevant
+record of offline derivations and protect it accordingly.
+
 # IANA Considerations {#iana}
 
 This document makes no IANA request. A Mission-bound attenuation root
