@@ -81,7 +81,7 @@ Table of Contents
      6.1.  Protocol Flow
      6.2.  Request Processing
      6.3.  Child Creation Denial Reasons
-   7.  The parent Member
+   7.  The Parent Mission Reference
      7.1.  Mission Record Requirements
    8.  Attenuation Rules
      8.1.  Subset Evaluation
@@ -368,7 +368,7 @@ Table of Contents
    front channel with parent_token MUST be rejected with invalid_request
    (Section 6).
 
-7.  The parent Member
+7.  The Parent Mission Reference
 
    A Child Mission carries a parent member in its Mission record and in
    the mission claim of tokens derived under the child:

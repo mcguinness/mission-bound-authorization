@@ -109,17 +109,17 @@ Table of Contents
      6.3.  Integrity Anchors
      6.4.  Canonicalization Rules
    7.  Mission Record
-     7.1.  mission_id Format
+     7.1.  Mission Identifier Format
      7.2.  Worked Example
    8.  Mission-Bound Access Tokens
-     8.1.  The mission Claim
+     8.1.  The Mission Claim
      8.2.  Resource Server Enforcement
    9.  Mission Lifecycle and Gating
      9.1.  Issuance Gating
      9.2.  Revocation
    10. Mission State via Token Introspection
      10.1.  Caller Authorization and Minimization
-     10.2.  Composite active
+     10.2.  Composite Active State
      10.3.  Only the Origin Reports Mission State
      10.4.  Example
    11. Delegation Within a Mission
@@ -146,7 +146,7 @@ Table of Contents
      16.1.  Mission Identifier Correlation
    17. IANA Considerations
      17.1.  OAuth Parameters Registration
-     17.2.  Authorization Details Type mission_resource_access
+     17.2.  The Mission Resource Access Authorization Details Type
      17.3.  JSON Web Token Claims Registration
      17.4.  OAuth Token Introspection Response Registration
      17.5.  OAuth Authorization Server Metadata Registration
@@ -1385,7 +1385,7 @@ Table of Contents
    mission_expiry:  REQUIRED.  A string.  Mirrors
       mission_intent.mission_expiry.
 
-7.1.  mission_id Format
+7.1.  Mission Identifier Format
 
    mission_id is an opaque URL-safe ASCII string of [A-Za-z0-9_-]
    characters, at least 128 bits of entropy, carrying no semantic
@@ -1540,7 +1540,7 @@ Table of Contents
    grant is itself bounded by mission_expiry, the local token is bounded
    transitively.
 
-8.1.  The mission Claim
+8.1.  The Mission Claim
 
    The mission claim is a JSON object:
 
@@ -1839,7 +1839,7 @@ Table of Contents
    authorization and minimization to that data and MUST NOT reveal
    Mission detail to an unauthorized introspection caller.
 
-10.2.  Composite active
+10.2.  Composite Active State
 
    The introspection active member reflects the composite authorization,
    not the token in isolation.  The AS MUST return active: true only
@@ -2672,7 +2672,7 @@ Table of Contents
    distinct usage location, so the pushed submission of mission_intent
    needs no separate registration.
 
-17.2.  Authorization Details Type mission_resource_access
+17.2.  The Mission Resource Access Authorization Details Type
 
    mission_resource_access is an authorization_details type per
    [RFC9396] Section 2, defined by this document in Section 5.  RFC 9396

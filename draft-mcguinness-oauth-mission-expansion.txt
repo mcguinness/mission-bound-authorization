@@ -94,8 +94,8 @@ Table of Contents
      6.1.  In-ceiling expansion
      6.2.  What it bounds, and what it does not
      6.3.  Realizing an approved access request
-   7.  The predecessor Member
-   8.  The superseded Predecessor State
+   7.  The Predecessor Mission Reference
+   8.  The Superseded Predecessor State
      8.1.  No implicit rollback
    9.  Replacement Expansion
    10. Concurrent Expansion Reconciliation
@@ -590,7 +590,7 @@ Table of Contents
    realized as an expansion grants only the single runtime permit and no
    durable Mission authority.
 
-7.  The predecessor Member
+7.  The Predecessor Mission Reference
 
    The successor records a lineage link to the predecessor as a
    predecessor member, both on the successor's mission claim and on the
@@ -646,7 +646,7 @@ Table of Contents
      }
    }
 
-8.  The superseded Predecessor State
+8.  The Superseded Predecessor State
 
    This document adds one terminal state to the issuance profile's
    lifecycle, used only by expansion:

@@ -74,7 +74,7 @@ Table of Contents
    1.  Introduction
    2.  Conventions and Terminology
    3.  Mission Lifecycle Event Stream
-   4.  The mission.lifecycle-change Event
+   4.  The Mission Lifecycle Change Event
    5.  SET Protection
    6.  Consumer Behavior on Receipt
    7.  Relationship to Revocation Propagation
@@ -188,7 +188,7 @@ Table of Contents
    method it uses; the Mission Issuer MUST respect it and MUST NOT
    silently fall back to a less-timely method.
 
-4.  The mission.lifecycle-change Event
+4.  The Mission Lifecycle Change Event
 
    A Mission Issuer emits a mission.lifecycle-change event, carried in
    the Security Event Token shape of the Shared Signals Framework

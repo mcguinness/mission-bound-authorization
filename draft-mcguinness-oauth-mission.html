@@ -1273,7 +1273,7 @@ runtime enforcement of each action is a separate, optional layer.<a href="#secti
             <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-mission-record" class="internal xref">Mission Record</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
-                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-mission_id-format" class="internal xref"><code>mission_id</code> Format</a></p>
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-mission-identifier-format" class="internal xref">Mission Identifier Format</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
                 <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-worked-example" class="internal xref">Worked Example</a></p>
@@ -1284,7 +1284,7 @@ runtime enforcement of each action is a separate, optional layer.<a href="#secti
             <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-mission-bound-access-tokens" class="internal xref">Mission-Bound Access Tokens</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
-                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-the-mission-claim" class="internal xref">The <code>mission</code> Claim</a></p>
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-the-mission-claim" class="internal xref">The Mission Claim</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
                 <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-resource-server-enforcement" class="internal xref">Resource Server Enforcement</a></p>
@@ -1309,7 +1309,7 @@ runtime enforcement of each action is a separate, optional layer.<a href="#secti
                 <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-caller-authorization-and-mi" class="internal xref">Caller Authorization and Minimization</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
-                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-composite-active" class="internal xref">Composite <code>active</code></a></p>
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-composite-active-state" class="internal xref">Composite Active State</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
                 <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-only-the-origin-reports-mis" class="internal xref">Only the Origin Reports Mission State</a></p>
@@ -1400,7 +1400,7 @@ runtime enforcement of each action is a separate, optional layer.<a href="#secti
                 <p id="section-toc.1-1.17.2.1.1"><a href="#section-17.1" class="auto internal xref">17.1</a>.  <a href="#name-oauth-parameters-registrati" class="internal xref">OAuth Parameters Registration</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.2">
-                <p id="section-toc.1-1.17.2.2.1"><a href="#section-17.2" class="auto internal xref">17.2</a>.  <a href="#name-authorization-details-type-" class="internal xref">Authorization Details Type <code>mission_resource_access</code></a></p>
+                <p id="section-toc.1-1.17.2.2.1"><a href="#section-17.2" class="auto internal xref">17.2</a>.  <a href="#name-the-mission-resource-access" class="internal xref">The Mission Resource Access Authorization Details Type</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.3">
                 <p id="section-toc.1-1.17.2.3.1"><a href="#section-17.3" class="auto internal xref">17.3</a>.  <a href="#name-json-web-token-claims-regis" class="internal xref">JSON Web Token Claims Registration</a></p>
@@ -3030,8 +3030,8 @@ approval event, used as the approval idempotency key.<a href="#section-7-2.24.1"
 </dl>
 <div id="mission-id">
 <section id="section-7.1">
-        <h3 id="name-mission_id-format">
-<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-mission_id-format" class="section-name selfRef"><code>mission_id</code> Format</a>
+        <h3 id="name-mission-identifier-format">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-mission-identifier-format" class="section-name selfRef">Mission Identifier Format</a>
         </h3>
 <p id="section-7.1-1"><code>mission_id</code> is an opaque URL-safe ASCII string of <code>[A-Za-z0-9_-]</code>
 characters, at least 128 bits of entropy, carrying no semantic
@@ -3208,7 +3208,7 @@ at the <code>exp</code> of the cross-domain grant it was minted from
 <div id="mission-claim">
 <section id="section-8.1">
         <h3 id="name-the-mission-claim">
-<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-the-mission-claim" class="section-name selfRef">The <code>mission</code> Claim</a>
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-the-mission-claim" class="section-name selfRef">The Mission Claim</a>
         </h3>
 <p id="section-8.1-1">The <code>mission</code> claim is a JSON object:<a href="#section-8.1-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-8.1-2">
@@ -3595,8 +3595,8 @@ Mission detail to an unauthorized introspection caller.<a href="#section-10.1-3"
 </div>
 <div id="composite-active">
 <section id="section-10.2">
-        <h3 id="name-composite-active">
-<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-composite-active" class="section-name selfRef">Composite <code>active</code></a>
+        <h3 id="name-composite-active-state">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-composite-active-state" class="section-name selfRef">Composite Active State</a>
         </h3>
 <p id="section-10.2-1">The introspection <code>active</code> member reflects the composite
 authorization, not the token in isolation. The AS <span class="bcp14">MUST</span> return
@@ -4574,8 +4574,8 @@ needs no separate registration.<a href="#section-17.1-3" class="pilcrow">¶</a><
 </div>
 <div id="type-registration">
 <section id="section-17.2">
-        <h3 id="name-authorization-details-type-">
-<a href="#section-17.2" class="section-number selfRef">17.2. </a><a href="#name-authorization-details-type-" class="section-name selfRef">Authorization Details Type <code>mission_resource_access</code></a>
+        <h3 id="name-the-mission-resource-access">
+<a href="#section-17.2" class="section-number selfRef">17.2. </a><a href="#name-the-mission-resource-access" class="section-name selfRef">The Mission Resource Access Authorization Details Type</a>
         </h3>
 <p id="section-17.2-1"><code>mission_resource_access</code> is an <code>authorization_details</code> type per
 <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> Section 2, defined by this document in

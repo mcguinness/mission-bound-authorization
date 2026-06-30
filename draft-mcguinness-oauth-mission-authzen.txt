@@ -82,16 +82,16 @@ Table of Contents
    3.  Mission-to-Policy Materialization
      3.1.  Inputs
      3.2.  Properties
-       3.2.1.  policy_view_id
+       3.2.1.  Policy View Identifier
      3.3.  Wire form
    4.  PDP Request
      4.1.  AuthZEN envelope binding
-     4.2.  context.mission
-     4.3.  context.actor
-     4.4.  context.credential
-     4.5.  context.parameters and context.parameter_digest
-     4.6.  context.audience and context.freshness
-     4.7.  context.capability_source
+     4.2.  Mission Decision Context
+     4.3.  Actor Decision Context
+     4.4.  Credential Decision Context
+     4.5.  Action Parameters and Parameter Digest
+     4.6.  Audience and Freshness Context
+     4.7.  Capability Source Context
      4.8.  Worked PDP request
      4.9.  PDP-side consistency checks
    5.  Decision Evidence Object
@@ -124,8 +124,8 @@ Table of Contents
      13.3.  Actor chain and Mission correlation
    14. IANA Considerations
      14.1.  Media Type Registry
-       14.1.1.  application/mission-decision-evidence+json
-       14.1.2.  application/mission-execution-evidence+json
+       14.1.1.  Decision Evidence Media Type
+       14.1.2.  Execution Evidence Media Type
    15. References
      15.1.  Normative References
      15.2.  Informative References
@@ -270,7 +270,7 @@ Table of Contents
       Authority Set's semantic bounds.  A materialized view is an
       evaluation aid, never new authority.
 
-3.2.1.  policy_view_id
+3.2.1.  Policy View Identifier
 
    policy_view_id is the integrity-anchor encoded form
    ([I-D.draft-mcguinness-oauth-mission]) of the SHA-256 of the JCS-
@@ -360,7 +360,7 @@ Table of Contents
    re-verifies that the action is for the same Subject it was authorized
    for.
 
-4.2.  context.mission
+4.2.  Mission Decision Context
 
    The mission member identifies the governance record and its current
    materialized view:
@@ -391,7 +391,7 @@ Table of Contents
       sourcing (Section 3), so it is the authoritative view correlator
       the PDP relies on.
 
-4.3.  context.actor
+4.3.  Actor Decision Context
 
    The actor member carries the authenticated actor context when
    delegation is in effect, reconstructed from the access token's act
@@ -415,7 +415,7 @@ Table of Contents
    profile, and provenance is recorded in dedicated evidence fields
    where the deployment captures it.
 
-4.4.  context.credential
+4.4.  Credential Decision Context
 
    The credential member carries token-derived facts the PEP has already
    validated and that the PDP needs to enforce the runtime decision's
@@ -434,7 +434,7 @@ Table of Contents
 
    The PEP MUST NOT include unverified credential claims in this member.
 
-4.5.  context.parameters and context.parameter_digest
+4.5.  Action Parameters and Parameter Digest
 
    When parameter binding is required for the requested action's class
    under [I-D.draft-mcguinness-oauth-mission-runtime], the PEP supplies:
@@ -457,7 +457,7 @@ Table of Contents
       the digest immediately before acting, and the PDP recomputes it
       over any supplied parameters, both as that section requires.
 
-4.6.  context.audience and context.freshness
+4.6.  Audience and Freshness Context
 
    audience:  REQUIRED.  A string. the PEP's audience or protected-
       resource identifier.
@@ -482,7 +482,7 @@ Table of Contents
    profile ([I-D.draft-mcguinness-oauth-mission-runtime]); the freshness
    object is only their wire representation.
 
-4.7.  context.capability_source
+4.7.  Capability Source Context
 
    For catalog-sourced actions, the PEP supplies the capability-source
    binding in context.capability_source using the object defined in
@@ -1338,7 +1338,7 @@ Table of Contents
 
    This document registers two media types per [RFC6838].
 
-14.1.1.  application/mission-decision-evidence+json
+14.1.1.  Decision Evidence Media Type
 
    *  Type name: application
 
@@ -1383,7 +1383,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-14.1.2.  application/mission-execution-evidence+json
+14.1.2.  Execution Evidence Media Type
 
    *  Type name: application
 

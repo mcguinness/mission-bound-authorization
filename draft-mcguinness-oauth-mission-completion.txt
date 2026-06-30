@@ -79,7 +79,7 @@ Table of Contents
    2.  Status: An OPTIONAL Extension
    3.  Relationship to the Issuance Profile
    4.  Conventions and Terminology
-   5.  The terminal_when Member
+   5.  Entry Completion Conditions
    6.  Discharge and Issuance Gating
      6.1.  Determining Discharge
    7.  Subset Rule Extension
@@ -179,7 +179,7 @@ Table of Contents
       terminal_when has been met.  A discharged entry's authority is
       spent: it is no longer derivable.
 
-5.  The terminal_when Member
+5.  Entry Completion Conditions
 
    A mission_resource_access entry
    ([I-D.draft-mcguinness-oauth-mission]) MAY carry a terminal_when

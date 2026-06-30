@@ -78,7 +78,7 @@ Table of Contents
    3.  Conventions and Terminology
    4.  Consent Disclosure Object
      4.1.  Material Notice Requirements
-   5.  consent_rendering_hash
+   5.  The Consent Rendering Hash
    6.  Rendering Assurance
    7.  Consent Evidence Object
      7.1.  Integrity and Verification
@@ -367,7 +367,7 @@ Table of Contents
    describes.  A generic warning that "this may be risky" is not
    sufficient for this profile.
 
-5.  consent_rendering_hash
+5.  The Consent Rendering Hash
 
    consent_rendering_hash is the integrity-anchor encoded form of the
    SHA-256 [RFC6234] of the JCS [RFC8785] canonical bytes of this
