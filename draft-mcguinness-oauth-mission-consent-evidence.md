@@ -343,7 +343,7 @@ Each notice MUST identify the Authority Set entry or entries it
 describes. A generic warning that "this may be risky" is not sufficient
 for this profile.
 
-# `consent_rendering_hash` {#consent-rendering-hash}
+# The Consent Rendering Hash {#consent-rendering-hash}
 
 `consent_rendering_hash` is the integrity-anchor encoded form of the
 SHA-256 {{RFC6234}} of the JCS {{RFC8785}} canonical bytes of this

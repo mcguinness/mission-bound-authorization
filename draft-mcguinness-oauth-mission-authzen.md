@@ -236,7 +236,7 @@ The materialized policy view MUST satisfy:
   Authority Set's semantic bounds. A materialized view is an
   evaluation aid, never new authority.
 
-### `policy_view_id`
+### Policy View Identifier {#policy-view-id}
 
 `policy_view_id` is the integrity-anchor encoded form
 ({{I-D.draft-mcguinness-oauth-mission}}) of the SHA-256 of the
@@ -313,7 +313,7 @@ confused-deputy check ({{I-D.draft-mcguinness-oauth-mission-runtime}})
 re-verifies that the action is for the same Subject it was authorized
 for.
 
-## `context.mission`
+## Mission Decision Context {#context-mission}
 
 The `mission` member identifies the governance record and its current
 materialized view:
@@ -349,7 +349,7 @@ materialized view:
   addressed and self-sourcing ({{mission-to-policy-materialization}}),
   so it is the authoritative view correlator the PDP relies on.
 
-## `context.actor`
+## Actor Decision Context {#context-actor}
 
 The `actor` member carries the authenticated actor context when
 delegation is in effect, reconstructed from the access token's `act`
@@ -374,7 +374,7 @@ the PDP evaluates the `act` chain as defined by the runtime profile,
 and provenance is recorded in dedicated evidence fields where the
 deployment captures it.
 
-## `context.credential`
+## Credential Decision Context {#context-credential}
 
 The `credential` member carries token-derived facts the PEP has already
 validated and that the PDP needs to enforce the runtime decision's
@@ -394,7 +394,7 @@ time, issuer, and sender-constraint checks:
 
 The PEP MUST NOT include unverified credential claims in this member.
 
-## `context.parameters` and `context.parameter_digest` {#parameter-digest}
+## Action Parameters and Parameter Digest {#parameter-digest}
 
 When parameter binding is required for the requested action's class
 under {{I-D.draft-mcguinness-oauth-mission-runtime}}, the PEP supplies:
@@ -420,7 +420,7 @@ under {{I-D.draft-mcguinness-oauth-mission-runtime}}, the PEP supplies:
   recomputes it over any supplied `parameters`, both as that section
   requires.
 
-## `context.audience` and `context.freshness`
+## Audience and Freshness Context {#context-audience-freshness}
 
 `audience`:
 : REQUIRED. A string. the PEP's audience or
@@ -451,7 +451,7 @@ established as `active` within that bound, are defined by the runtime
 profile ({{I-D.draft-mcguinness-oauth-mission-runtime}}); the
 `freshness` object is only their wire representation.
 
-## `context.capability_source`
+## Capability Source Context {#context-capability-source}
 
 For catalog-sourced actions, the PEP supplies the capability-source
 binding in `context.capability_source` using the object defined in
@@ -1331,7 +1331,7 @@ This document requests the following IANA actions.
 
 This document registers two media types per {{RFC6838}}.
 
-### `application/mission-decision-evidence+json`
+### Decision Evidence Media Type
 
 - Type name: application
 - Subtype name: mission-decision-evidence+json
@@ -1356,7 +1356,7 @@ This document registers two media types per {{RFC6838}}.
 - Author: IETF
 - Change controller: IETF
 
-### `application/mission-execution-evidence+json`
+### Execution Evidence Media Type
 
 - Type name: application
 - Subtype name: mission-execution-evidence+json

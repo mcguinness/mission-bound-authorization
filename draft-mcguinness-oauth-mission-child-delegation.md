@@ -345,7 +345,7 @@ and `policy_denied` accompanies `access_denied`. A child creation
 request presented on the front channel with `parent_token` MUST be
 rejected with `invalid_request` ({{child-creation}}).
 
-# The `parent` Member {#parent-member}
+# The Parent Mission Reference {#parent-member}
 
 A Child Mission carries a `parent` member in its Mission record and in
 the `mission` claim of tokens derived under the child:

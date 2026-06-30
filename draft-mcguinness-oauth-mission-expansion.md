@@ -547,7 +547,7 @@ consent the request carries ({{new-consent}}). An access request not
 realized as an expansion grants only the single runtime permit and no
 durable Mission authority.
 
-# The `predecessor` Member {#predecessor-member}
+# The Predecessor Mission Reference {#predecessor-member}
 
 The successor records a lineage link to the predecessor as a
 `predecessor` member, both on the successor's `mission` claim and on
@@ -603,7 +603,7 @@ other token claims omitted):
 }
 ~~~
 
-# The `superseded` Predecessor State {#superseded-state}
+# The Superseded Predecessor State {#superseded-state}
 
 This document adds one terminal state to the issuance profile's
 lifecycle, used only by expansion:

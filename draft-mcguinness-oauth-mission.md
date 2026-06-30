@@ -1366,7 +1366,7 @@ profile defines:
 : REQUIRED. A string. Mirrors
   `mission_intent.mission_expiry`.
 
-## `mission_id` Format {#mission-id}
+## Mission Identifier Format {#mission-id}
 
 `mission_id` is an opaque URL-safe ASCII string of `[A-Za-z0-9_-]`
 characters, at least 128 bits of entropy, carrying no semantic
@@ -1518,7 +1518,7 @@ at the `exp` of the cross-domain grant it was minted from
 ({{cross-domain}}). Because that grant is itself bounded by
 `mission_expiry`, the local token is bounded transitively.
 
-## The `mission` Claim {#mission-claim}
+## The Mission Claim {#mission-claim}
 
 The `mission` claim is a JSON object:
 
@@ -1802,7 +1802,7 @@ of omitting members for inactive tokens), the AS MUST apply this same
 authorization and minimization to that data and MUST NOT reveal
 Mission detail to an unauthorized introspection caller.
 
-## Composite `active`
+## Composite Active State {#composite-active}
 
 The introspection `active` member reflects the composite
 authorization, not the token in isolation. The AS MUST return
@@ -2608,7 +2608,7 @@ PAR {{RFC9126}} carries authorization-request parameters without a
 distinct usage location, so the pushed submission of `mission_intent`
 needs no separate registration.
 
-## Authorization Details Type `mission_resource_access` {#type-registration}
+## The Mission Resource Access Authorization Details Type {#type-registration}
 
 `mission_resource_access` is an `authorization_details` type per
 {{RFC9396}} Section 2, defined by this document in

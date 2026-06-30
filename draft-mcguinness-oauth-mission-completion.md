@@ -152,7 +152,7 @@ Discharge:
   has been met. A discharged entry's authority is spent: it is no longer
   derivable.
 
-# The `terminal_when` Member {#terminal-when}
+# Entry Completion Conditions {#terminal-when}
 
 A `mission_resource_access` entry ({{I-D.draft-mcguinness-oauth-mission}})
 MAY carry a `terminal_when` member:
