@@ -1448,7 +1448,14 @@ is the consent object: per the issuance profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the Approver consents to the
 derived authority, with <code>mission_summary</code> as context. A disclosure
 that renders <code>mission_summary</code> without a faithful <code>authority_summary</code>
-does not conform.<a href="#section-4-2.12.1" class="pilcrow">¶</a></p>
+does not conform. This profile does not fix the object's layout, but it
+fixes what faithful means: the <code>authority_summary</code> <span class="bcp14">MUST</span> render every
+<code>mission_resource_access</code> entry of the approved Authority Set (each
+entry's <code>resource</code> and <code>actions</code>) and every constraint, delegation
+right, and consumption bound carried on those entries. A summary that
+omits an entry, a constraint, a delegation right, or a consumption
+bound is not faithful, and a verifier can check the rendered set
+against the committed Authority Set.<a href="#section-4-2.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-2.13">
