@@ -458,6 +458,12 @@ For each dependent child, it MUST apply one of:
 - mark child state as requiring human review; or
 - record that the child is governed by an independent active Mission.
 
+An independent Mission is one whose authority does not derive from the
+stopped Mission: it is not a Child Mission of the stopped Mission or of
+any of its ancestors. A harness MUST NOT classify a Mission whose
+authority cascades from the stopped one as independent, since that child
+is itself no longer active.
+
 The harness MUST emit evidence for each dependent child it leaves
 running under an independent Mission.
 
