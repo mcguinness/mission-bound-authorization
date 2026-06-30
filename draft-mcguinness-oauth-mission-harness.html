@@ -1869,8 +1869,13 @@ For each dependent child, it <span class="bcp14">MUST</span> apply one of:<a hre
             <p id="section-9.1-2.5.1">record that the child is governed by an independent active Mission.<a href="#section-9.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-9.1-3">The harness <span class="bcp14">MUST</span> emit evidence for each dependent child it leaves
-running under an independent Mission.<a href="#section-9.1-3" class="pilcrow">¶</a></p>
+<p id="section-9.1-3">An independent Mission is one whose authority does not derive from the
+stopped Mission: it is not a Child Mission of the stopped Mission or of
+any of its ancestors. A harness <span class="bcp14">MUST NOT</span> classify a Mission whose
+authority cascades from the stopped one as independent, since that child
+is itself no longer active.<a href="#section-9.1-3" class="pilcrow">¶</a></p>
+<p id="section-9.1-4">The harness <span class="bcp14">MUST</span> emit evidence for each dependent child it leaves
+running under an independent Mission.<a href="#section-9.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

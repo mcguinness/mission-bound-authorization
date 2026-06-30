@@ -1653,10 +1653,14 @@ detached payload (<a href="#registration" class="auto internal xref">Section 5</
 task descriptions, principals, and high-risk authority, is retained
 separately under access control. Even the committed metadata leaks
 information: the <code>sub</code> is a durable per-Mission correlator and the
-registration times reveal a Mission's activity pattern. A deployment
-<span class="bcp14">SHOULD</span> derive <code>sub</code> so it does not expose the Subject or task in the
-clear, and <span class="bcp14">SHOULD</span> weigh whether a Mission's mere existence and cadence
-are sensitive before registering its evidence in a shared log.<a href="#section-12-1" class="pilcrow">¶</a></p>
+registration times reveal a Mission's activity pattern. The <code>sub</code>
+construction is fixed (<a href="#feed" class="auto internal xref">Section 6</a>) and does not expose the Subject
+directly, so the concern is not Subject leakage but that the Mission's
+durable identifier, its existence, and its registration cadence are
+visible in the log. A deployment <span class="bcp14">SHOULD</span> weigh whether those are
+sensitive, and whether the <code>origin</code> and <code>id</code> that compose the <code>sub</code>
+reveal more than intended, before registering a Mission's evidence in a
+shared or widely readable log.<a href="#section-12-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana">
