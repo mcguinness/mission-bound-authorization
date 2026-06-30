@@ -208,7 +208,14 @@ A Consent Disclosure object has these members:
   ({{I-D.draft-mcguinness-oauth-mission}}), the Approver consents to the
   derived authority, with `mission_summary` as context. A disclosure
   that renders `mission_summary` without a faithful `authority_summary`
-  does not conform.
+  does not conform. This profile does not fix the object's layout, but it
+  fixes what faithful means: the `authority_summary` MUST render every
+  `mission_resource_access` entry of the approved Authority Set (each
+  entry's `resource` and `actions`) and every constraint, delegation
+  right, and consumption bound carried on those entries. A summary that
+  omits an entry, a constraint, a delegation right, or a consumption
+  bound is not faithful, and a verifier can check the rendered set
+  against the committed Authority Set.
 
 `material_notices`:
 : REQUIRED. An array. Notices that materially affect the Approver's
