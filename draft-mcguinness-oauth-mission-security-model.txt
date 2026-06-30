@@ -82,13 +82,14 @@ Table of Contents
    5.  The Trusted Base
    6.  Cross-Cutting Assumptions
    7.  What the Model Does and Does Not Guarantee
-   8.  Documenting the Trusted Base
-   9.  Security Considerations
-   10. Privacy Considerations
-   11. IANA Considerations
-   12. References
-     12.1.  Normative References
-     12.2.  Informative References
+   8.  Adversary Model and Coverage
+   9.  Documenting the Trusted Base
+   10. Security Considerations
+   11. Privacy Considerations
+   12. IANA Considerations
+   13. References
+     13.1.  Normative References
+     13.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -276,9 +277,135 @@ Table of Contents
    non-goal of the suite ([I-D.draft-mcguinness-oauth-mission]).  And it
    inherits the threat models of the substrates the companions profile
    (Token Exchange, Attenuating Agent Tokens, SCITT, Deferred Token
-   Response), which those substrates own.
+   Response), which those substrates own.  Section 8 gives the per-
+   adversary-move detail: what addresses each move, and the residual it
+   leaves.
 
-8.  Documenting the Trusted Base
+8.  Adversary Model and Coverage
+
+   The trusted base (Section 5) is the component view; this is the
+   adversary view.  The adversary is assumed to control the agent, to
+   reach the content and inputs the agent processes (so it can attempt
+   prompt injection), and to capture tokens in transit.  The adversary
+   is assumed not to break the cryptographic primitives, not to forge an
+   authenticated component's signing key, and not to compromise a
+   trusted-base component; those last two are the residuals of
+   Section 5, not adversary moves this table covers.
+
+   The following maps each adversary move to the mechanism that
+   addresses it and to what is explicitly not stopped.  The residual
+   column is the honest part: it is what a deploying party still owns.
+
+   +==============+==========================+========================+
+   | Adversary    | Addressed by             | Residual: not stopped  |
+   | move         |                          |                        |
+   +==============+==========================+========================+
+   | Compromised  | Authority fixed at the   | Misuse within the      |
+   | or injected  | approval event           | approved scope; low-   |
+   | agent acts   | (issuance); per-action   | consequence authority  |
+   | beyond its   | PDP check (runtime)      | the agent legitimately |
+   | task         |                          | holds                  |
+   +--------------+--------------------------+------------------------+
+   | Prompt       | Inert intent: goal,      | Injected text can      |
+   | injection    | purpose,                 | still drive actions    |
+   | tries to     | success_criteria never   | already in scope       |
+   | widen        | derive, widen, or gate   |                        |
+   | authority    | authority                |                        |
+   +--------------+--------------------------+------------------------+
+   | Stolen or    | Sender-constraint        | A token stolen         |
+   | exfiltrated  | (proof-of-possession);   | together with its key; |
+   | token        | the high-consequence key | soundness of the PoP   |
+   |              | is held by the PEP, not  | mechanism              |
+   |              | the agent (mediated      |                        |
+   |              | execution)               |                        |
+   +--------------+--------------------------+------------------------+
+   | Token        | Permit bound to          | Correct binding        |
+   | replayed at  | audience, resource, sub, | configuration is the   |
+   | another      | client_id, and action;   | deployment's           |
+   | resource     | cross-domain grant       |                        |
+   | (confused    | single-use and audienced |                        |
+   | deputy)      |                          |                        |
+   +--------------+--------------------------+------------------------+
+   | Parameters   | Parameter binding; the   | The PEP must sit at    |
+   | change       | digest is reverified at  | the last controllable  |
+   | between      | the executing PEP        | boundary               |
+   | decision and | immediately before       |                        |
+   | use (TOCTOU) | acting                   |                        |
+   +--------------+--------------------------+------------------------+
+   | Active       | Per-action runtime       | An issuance-only       |
+   | Mission used | enforcement, state re-   | deployment gets audit, |
+   | as ambient   | check, fail-closed on    | not action-time        |
+   | standing     | stale state              | defense                |
+   | authority    |                          |                        |
+   +--------------+--------------------------+------------------------+
+   | Revoked or   | Issuance gating; runtime | A window up to the     |
+   | expired      | state re-check within    | staleness bound or     |
+   | Mission      | the staleness bound;     | token TTL; a spoofed   |
+   | still acts   | short token lifetimes    | state source (a        |
+   | (kill        |                          | trusted component)     |
+   | switch)      |                          |                        |
+   +--------------+--------------------------+------------------------+
+   | Approver     | The rendered disclosure  | Comprehension: no      |
+   | approves     | is committed; rendering- | server-side commitment |
+   | more than    | assurance ladder up to   | proves what a human    |
+   | was shown    | an authenticator-signed  | perceived or           |
+   |              | commitment               | understood             |
+   +--------------+--------------------------+------------------------+
+   | Exfiltration | External communication   | PEP-placement          |
+   | of private   | is a gated consequential | completeness; no       |
+   | data (the    | action; harness leaves   | information-flow       |
+   | third leg of | no unmediated path;      | control, so a sequence |
+   | the lethal   | session taint downgrades | of in-scope steps can  |
+   | trifecta)    | egress after untrusted   | launder data           |
+   |              | input                    |                        |
+   +--------------+--------------------------+------------------------+
+   | Offline sub- | Capability monotonicity  | Fan-out breadth is     |
+   | agent fan-   | (narrow-only) and the    | unobserved by the      |
+   | out abuse    | runtime kill-switch re-  | issuer; bounded by     |
+   |              | check on the carried     | depth and policy, not  |
+   |              | chain                    | by the issuer          |
+   +--------------+--------------------------+------------------------+
+   | Audit        | Transparency: append-    | Single-service         |
+   | tampered,    | only log, inclusion      | equivocation (per-     |
+   | dropped, or  | receipts, non-           | service only; register |
+   | reordered    | equivocation             | with several); a       |
+   |              |                          | producer can still log |
+   |              |                          | a false record         |
+   |              |                          | (accountability, not   |
+   |              |                          | prevention)            |
+   +--------------+--------------------------+------------------------+
+   | Agent        | Not addressed            | Full: semantic and     |
+   | fabricates   |                          | grounding verification |
+   | results or   |                          | are a non-goal; pair   |
+   | acts on      |                          | with a grounding layer |
+   | false data   |                          | if needed              |
+   +--------------+--------------------------+------------------------+
+   | A trusted-   | Not addressed; evidence  | Not prevented;         |
+   | base         | detects it after the     | degrades the specific  |
+   | component is | fact                     | guarantee per          |
+   | compromised  |                          | Section 5              |
+   +--------------+--------------------------+------------------------+
+
+                                 Table 1
+
+   Three residuals are worth stating on their own, because they are the
+   limits most likely to matter and most often overstated away
+   elsewhere:
+
+   *  *Comprehension.* The suite can commit and bind what an Approver
+      was shown; it cannot prove what the Approver perceived or
+      understood.  No electronic-consent scheme can.
+
+   *  *Single-service equivocation.* Transparency is non-equivocating
+      only per service; a deployment that needs that property checked
+      registers with more than one independent service.
+
+   *  *Offline breadth.* Offline attenuation bounds each child to a
+      narrowing of its parent, but the issuer does not observe how many
+      children are minted; breadth is bounded by depth and policy, not
+      by the issuer.
+
+9.  Documenting the Trusted Base
 
    A deployment cannot be evaluated against this model without knowing
    which components it actually trusts.  The runtime profile already
@@ -294,7 +421,7 @@ Table of Contents
    about the deployment's actual security posture rather than the
    model's idealized one.
 
-9.  Security Considerations
+10.  Security Considerations
 
    This document is itself a security-considerations document.  It
    defines no mechanism and adds no attack surface.  Its content is the
@@ -304,7 +431,7 @@ Table of Contents
    Where this document and a profile appear to differ, the profile
    governs.
 
-10.  Privacy Considerations
+11.  Privacy Considerations
 
    The trusted components see Mission data: the Authorization Server and
    PDP see the Authority Set, the consent rendering layer and Approver
@@ -317,13 +444,13 @@ Table of Contents
    suite.  Each profile's Privacy Considerations govern the data its own
    component handles.
 
-11.  IANA Considerations
+12.  IANA Considerations
 
    This document makes no IANA request.
 
-12.  References
+13.  References
 
-12.1.  Normative References
+13.1.  Normative References
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
@@ -332,7 +459,7 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-mission>.
 
-12.2.  Informative References
+13.2.  Informative References
 
    [I-D.draft-mcguinness-oauth-mission-audit]
               McGuinness, K., "Mission Audit Transparency for OAuth

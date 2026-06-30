@@ -1195,33 +1195,36 @@ than restating them.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-what-the-model-does-and-doe" class="internal xref">What the Model Does and Does Not Guarantee</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
-            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-documenting-the-trusted-bas" class="internal xref">Documenting the Trusted Base</a></p>
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-adversary-model-and-coverag" class="internal xref">Adversary Model and Coverage</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
-            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-documenting-the-trusted-bas" class="internal xref">Documenting the Trusted Base</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
-            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
-            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
-            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-references" class="internal xref">References</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
-                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.2">
-                <p id="section-toc.1-1.12.2.2.1"><a href="#section-12.2" class="auto internal xref">12.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
+                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
 </li>
             </ul>
 </li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
-            <p id="section-toc.1-1.13.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
-</li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
-            <p id="section-toc.1-1.14.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.14.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1464,15 +1467,132 @@ truthfulness of its outputs; semantic and intent verification are a
 non-goal of the suite (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). And it
 inherits the threat models of the substrates the companions profile
 (Token Exchange, Attenuating Agent Tokens, SCITT, Deferred Token
-Response), which those substrates own.<a href="#section-7-2" class="pilcrow">¶</a></p>
+Response), which those substrates own. <a href="#adversary-model" class="auto internal xref">Section 8</a> gives the
+per-adversary-move detail: what addresses each move, and the residual it
+leaves.<a href="#section-7-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="adversary-model">
+<section id="section-8">
+      <h2 id="name-adversary-model-and-coverag">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-adversary-model-and-coverag" class="section-name selfRef">Adversary Model and Coverage</a>
+      </h2>
+<p id="section-8-1">The trusted base (<a href="#trusted-base" class="auto internal xref">Section 5</a>) is the component view; this is the
+adversary view. The adversary is assumed to control the agent, to reach
+the content and inputs the agent processes (so it can attempt prompt
+injection), and to capture tokens in transit. The adversary is assumed
+not to break the cryptographic primitives, not to forge an
+authenticated component's signing key, and not to compromise a
+trusted-base component; those last two are the residuals of
+<a href="#trusted-base" class="auto internal xref">Section 5</a>, not adversary moves this table covers.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-2">The following maps each adversary move to the mechanism that addresses
+it and to what is explicitly not stopped. The residual column is the
+honest part: it is what a deploying party still owns.<a href="#section-8-2" class="pilcrow">¶</a></p>
+<table class="center" id="table-1">
+        <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Adversary move</th>
+            <th class="text-left" rowspan="1" colspan="1">Addressed by</th>
+            <th class="text-left" rowspan="1" colspan="1">Residual: not stopped</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Compromised or injected agent acts beyond its task</td>
+            <td class="text-left" rowspan="1" colspan="1">Authority fixed at the approval event (issuance); per-action PDP check (runtime)</td>
+            <td class="text-left" rowspan="1" colspan="1">Misuse within the approved scope; low-consequence authority the agent legitimately holds</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Prompt injection tries to widen authority</td>
+            <td class="text-left" rowspan="1" colspan="1">Inert intent: <code>goal</code>, <code>purpose</code>, <code>success_criteria</code> never derive, widen, or gate authority</td>
+            <td class="text-left" rowspan="1" colspan="1">Injected text can still drive actions already in scope</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Stolen or exfiltrated token</td>
+            <td class="text-left" rowspan="1" colspan="1">Sender-constraint (proof-of-possession); the high-consequence key is held by the PEP, not the agent (mediated execution)</td>
+            <td class="text-left" rowspan="1" colspan="1">A token stolen together with its key; soundness of the PoP mechanism</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Token replayed at another resource (confused deputy)</td>
+            <td class="text-left" rowspan="1" colspan="1">Permit bound to audience, resource, <code>sub</code>, <code>client_id</code>, and action; cross-domain grant single-use and audienced</td>
+            <td class="text-left" rowspan="1" colspan="1">Correct binding configuration is the deployment's</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Parameters change between decision and use (TOCTOU)</td>
+            <td class="text-left" rowspan="1" colspan="1">Parameter binding; the digest is reverified at the executing PEP immediately before acting</td>
+            <td class="text-left" rowspan="1" colspan="1">The PEP must sit at the last controllable boundary</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Active Mission used as ambient standing authority</td>
+            <td class="text-left" rowspan="1" colspan="1">Per-action runtime enforcement, state re-check, fail-closed on stale state</td>
+            <td class="text-left" rowspan="1" colspan="1">An issuance-only deployment gets audit, not action-time defense</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Revoked or expired Mission still acts (kill switch)</td>
+            <td class="text-left" rowspan="1" colspan="1">Issuance gating; runtime state re-check within the staleness bound; short token lifetimes</td>
+            <td class="text-left" rowspan="1" colspan="1">A window up to the staleness bound or token TTL; a spoofed state source (a trusted component)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Approver approves more than was shown</td>
+            <td class="text-left" rowspan="1" colspan="1">The rendered disclosure is committed; rendering-assurance ladder up to an authenticator-signed commitment</td>
+            <td class="text-left" rowspan="1" colspan="1">Comprehension: no server-side commitment proves what a human perceived or understood</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Exfiltration of private data (the third leg of the lethal trifecta)</td>
+            <td class="text-left" rowspan="1" colspan="1">External communication is a gated consequential action; harness leaves no unmediated path; session taint downgrades egress after untrusted input</td>
+            <td class="text-left" rowspan="1" colspan="1">PEP-placement completeness; no information-flow control, so a sequence of in-scope steps can launder data</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Offline sub-agent fan-out abuse</td>
+            <td class="text-left" rowspan="1" colspan="1">Capability monotonicity (narrow-only) and the runtime kill-switch re-check on the carried chain</td>
+            <td class="text-left" rowspan="1" colspan="1">Fan-out breadth is unobserved by the issuer; bounded by depth and policy, not by the issuer</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Audit tampered, dropped, or reordered</td>
+            <td class="text-left" rowspan="1" colspan="1">Transparency: append-only log, inclusion receipts, non-equivocation</td>
+            <td class="text-left" rowspan="1" colspan="1">Single-service equivocation (per-service only; register with several); a producer can still log a false record (accountability, not prevention)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Agent fabricates results or acts on false data</td>
+            <td class="text-left" rowspan="1" colspan="1">Not addressed</td>
+            <td class="text-left" rowspan="1" colspan="1">Full: semantic and grounding verification are a non-goal; pair with a grounding layer if needed</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">A trusted-base component is compromised</td>
+            <td class="text-left" rowspan="1" colspan="1">Not addressed; evidence detects it after the fact</td>
+            <td class="text-left" rowspan="1" colspan="1">Not prevented; degrades the specific guarantee per <a href="#trusted-base" class="auto internal xref">Section 5</a>
+</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-8-4">Three residuals are worth stating on their own, because they are the
+limits most likely to matter and most often overstated away elsewhere:<a href="#section-8-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8-5.1">
+          <p id="section-8-5.1.1"><strong>Comprehension.</strong> The suite can commit and bind what an Approver was
+shown; it cannot prove what the Approver perceived or understood. No
+electronic-consent scheme can.<a href="#section-8-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-5.2">
+          <p id="section-8-5.2.1"><strong>Single-service equivocation.</strong> Transparency is non-equivocating only
+per service; a deployment that needs that property checked registers
+with more than one independent service.<a href="#section-8-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-5.3">
+          <p id="section-8-5.3.1"><strong>Offline breadth.</strong> Offline attenuation bounds each child to a narrowing
+of its parent, but the issuer does not observe how many children are
+minted; breadth is bounded by depth and policy, not by the issuer.<a href="#section-8-5.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
 </section>
 </div>
 <div id="documenting">
-<section id="section-8">
+<section id="section-9">
       <h2 id="name-documenting-the-trusted-bas">
-<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-documenting-the-trusted-bas" class="section-name selfRef">Documenting the Trusted Base</a>
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-documenting-the-trusted-bas" class="section-name selfRef">Documenting the Trusted Base</a>
       </h2>
-<p id="section-8-1">A deployment cannot be evaluated against this model without knowing which
+<p id="section-9-1">A deployment cannot be evaluated against this model without knowing which
 components it actually trusts. The runtime profile already requires a
 deployment to document its enforcement scope, including its PEP locations,
 PDP identities, Mission state source, and the execution paths it mediates
@@ -1482,28 +1602,28 @@ which of the components in <a href="#trusted-base" class="auto internal xref">Se
 not deploy, and, for each consequential action class, which components
 must be intact for the class's guarantee to hold. This documentation is
 what lets a relying party or auditor reason about the deployment's actual
-security posture rather than the model's idealized one.<a href="#section-8-1" class="pilcrow">¶</a></p>
+security posture rather than the model's idealized one.<a href="#section-9-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
-<section id="section-9">
+<section id="section-10">
       <h2 id="name-security-considerations">
-<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
       </h2>
-<p id="section-9-1">This document is itself a security-considerations document. It defines no
+<p id="section-10-1">This document is itself a security-considerations document. It defines no
 mechanism and adds no attack surface. Its content is the consolidation
 above; the authoritative, normative security considerations are those of
 the issuance profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and each
 companion it cites. Where this document and a profile appear to differ,
-the profile governs.<a href="#section-9-1" class="pilcrow">¶</a></p>
+the profile governs.<a href="#section-10-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="privacy-considerations">
-<section id="section-10">
+<section id="section-11">
       <h2 id="name-privacy-considerations">
-<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
-<p id="section-10-1">The trusted components see Mission data: the Authorization Server and PDP
+<p id="section-11-1">The trusted components see Mission data: the Authorization Server and PDP
 see the Authority Set, the consent rendering layer and Approver see the
 disclosed authority, and the Transparency Service and state sources see
 the Mission identifier and its activity over time. The single canonical
@@ -1512,26 +1632,26 @@ acknowledges and does not yet narrow
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); unlinkable or per-audience
 presentation of Mission-bound authority is out of scope across the suite.
 Each profile's Privacy Considerations govern the data its own component
-handles.<a href="#section-10-1" class="pilcrow">¶</a></p>
+handles.<a href="#section-11-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana">
-<section id="section-11">
+<section id="section-12">
       <h2 id="name-iana-considerations">
-<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-11-1">This document makes no IANA request.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-12-1">This document makes no IANA request.<a href="#section-12-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
-<section id="section-12">
+<section id="section-13">
       <h2 id="name-references">
-<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-references" class="section-name selfRef">References</a>
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-references" class="section-name selfRef">References</a>
       </h2>
 <div id="sec-normative-references">
-<section id="section-12.1">
+<section id="section-13.1">
         <h3 id="name-normative-references">
-<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
@@ -1542,9 +1662,9 @@ handles.<a href="#section-10-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-informative-references">
-<section id="section-12.2">
+<section id="section-13.2">
         <h3 id="name-informative-references">
-<a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
 <dt id="I-D.draft-mcguinness-oauth-mission-audit">[I-D.draft-mcguinness-oauth-mission-audit]</dt>
