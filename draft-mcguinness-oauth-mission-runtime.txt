@@ -1457,7 +1457,7 @@ Table of Contents
 15.2.  Informative References
 
    [AUTHZEN]  OpenID Foundation, "OpenID AuthZEN Authorization API 1.0",
-              2025, <https://openid.net/specs/authorization-api-
+              2026, <https://openid.net/specs/authorization-api-
               1_0-final.html>.
 
    [I-D.draft-mcguinness-oauth-mission-authzen]

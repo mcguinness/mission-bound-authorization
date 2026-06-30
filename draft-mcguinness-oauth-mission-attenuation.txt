@@ -87,10 +87,11 @@ Table of Contents
    10. Worked Example
    11. Conformance
    12. Security Considerations
-   13. IANA Considerations
-   14. References
-     14.1.  Normative References
-     14.2.  Informative References
+   13. Privacy Considerations
+   14. IANA Considerations
+   15. References
+     15.1.  Normative References
+     15.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -405,7 +406,28 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission-runtime]) is the audit record
       for offline-attenuated actions.
 
-13.  IANA Considerations
+13.  Privacy Considerations
+
+   The mission claim (id, origin, authority_hash) rides every token in
+   an attenuation chain unchanged (Section 6), so every consumer of any
+   child sees the same durable Mission correlator and lineage anchor.
+   The chain is therefore a correlation surface across the sub-agents
+   and resources it reaches: two consumers that compare the Mission
+   identifiers they were shown can tell the tokens belong to one
+   Mission.  This profile does not narrow that correlation; the single-
+   canonical-mission cross-audience linkability the issuance profile
+   acknowledges ([I-D.draft-mcguinness-oauth-mission]) applies to
+   offline children as well, and unlinkable or per-audience presentation
+   of Mission-bound authority is out of scope and deferred.
+
+   Offline minting is unobserved by the Mission Issuer, so which
+   children were minted and to whom is visible only at the consuming
+   enforcement points, not in the issuer's records.  A deployment SHOULD
+   treat the runtime enforcement evidence those points produce
+   ([I-D.draft-mcguinness-oauth-mission-runtime]) as the privacy-
+   relevant record of offline derivations and protect it accordingly.
+
+14.  IANA Considerations
 
    This document makes no IANA request.  A Mission-bound attenuation
    root carries the mission claim, which the issuance profile registers
@@ -414,9 +436,9 @@ Table of Contents
    combines them by reference and defines no new claim, parameter, or
    registry.
 
-14.  References
+15.  References
 
-14.1.  Normative References
+15.1.  Normative References
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
@@ -453,7 +475,7 @@ Table of Contents
               DOI 10.17487/RFC9396, May 2023,
               <https://www.rfc-editor.org/rfc/rfc9396>.
 
-14.2.  Informative References
+15.2.  Informative References
 
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Child Mission Delegation for OAuth 2.0",

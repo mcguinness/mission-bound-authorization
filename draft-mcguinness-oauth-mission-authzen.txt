@@ -111,23 +111,24 @@ Table of Contents
    8.  Capability Source Binding
    9.  AuthZEN binding of consumption metering
    10. Mission Status Composition
-   11. Security Considerations
-     11.1.  Access Request Service in the trusted base
-     11.2.  Decision Evidence versus Execution Evidence
-     11.3.  Evidence integrity and signing keys
-     11.4.  Materialized view fidelity
-     11.5.  Transport
-   12. Privacy Considerations
-     12.1.  Evidence as PII sinks
-     12.2.  Parameter exposure
-     12.3.  Actor chain and Mission correlation
-   13. IANA Considerations
-     13.1.  Media Type Registry
-       13.1.1.  application/mission-decision-evidence+json
-       13.1.2.  application/mission-execution-evidence+json
-   14. References
-     14.1.  Normative References
-     14.2.  Informative References
+   11. Conformance
+   12. Security Considerations
+     12.1.  Access Request Service in the trusted base
+     12.2.  Decision Evidence versus Execution Evidence
+     12.3.  Evidence integrity and signing keys
+     12.4.  Materialized view fidelity
+     12.5.  Transport
+   13. Privacy Considerations
+     13.1.  Evidence as PII sinks
+     13.2.  Parameter exposure
+     13.3.  Actor chain and Mission correlation
+   14. IANA Considerations
+     14.1.  Media Type Registry
+       14.1.1.  application/mission-decision-evidence+json
+       14.1.2.  application/mission-execution-evidence+json
+   15. References
+     15.1.  Normative References
+     15.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -441,7 +442,7 @@ Table of Contents
    parameters:  CONDITIONAL.  An object. the action's parameters as a
       JSON object.  The shape is action-specific.  The PEP MAY omit
       parameters and supply only parameter_digest where the raw values
-      are sensitive (Section 12), but only when the PDP can still
+      are sensitive (Section 13), but only when the PDP can still
       enforce the applicable parameter policy from the digest, supplied
       derived attributes, or local state.  If the PDP needs raw
       parameter values to evaluate an applicable constraint and they are
@@ -1198,7 +1199,42 @@ Table of Contents
    closed for consequential actions as the runtime profile requires; in
    this binding that surfaces as a stale_state denial (Section 7).
 
-11.  Security Considerations
+11.  Conformance
+
+   This binding adds AuthZEN-specific obligations on top of the runtime
+   profile's enforcement contract; an implementation conforms to this
+   binding only for the resources, action classes, and PDPs in the
+   runtime enforcement scope it documents
+   ([I-D.draft-mcguinness-oauth-mission-runtime]).
+
+   A PEP conforming to this binding MUST:
+
+   *  carry the Mission and actor decision inputs in the AuthZEN
+      envelope as defined (Section 4), and match the approved entry's
+      resource against context.audience, not the AuthZEN resource
+      member;
+
+   *  supply context.parameter_digest for a parameter-bound action class
+      (Section 4.5), and context.capability_source for a catalog-sourced
+      action whose approved entry recorded a source digest (Section 8);
+      and
+
+   *  emit a Decision Evidence Object for each PDP decision (Section 5),
+      an Execution Evidence Object for each high-consequence action
+      (Section 6), and a pre-decision refusal record for a refusal
+      before any PDP decision (Section 5.2).
+
+   A PDP conforming to this binding MUST:
+
+   *  perform the PDP-side consistency checks (Section 4);
+
+   *  return every denial with a denial-reason identifier from the
+      closed set of Section 7; and
+
+   *  produce Decision Evidence with the required members and a
+      verifiable integrity envelope (Section 5, Section 5.3).
+
+12.  Security Considerations
 
    The runtime profile's Security Considerations
    ([I-D.draft-mcguinness-oauth-mission-runtime]) apply in full:
@@ -1208,7 +1244,7 @@ Table of Contents
    only threats specific to the AuthZEN binding and the evidence
    objects.
 
-11.1.  Access Request Service in the trusted base
+12.1.  Access Request Service in the trusted base
 
    A deployment that composes with ARAP adds the Access Request Service
    to its trusted base: it adjudicates requestable denials and issues
@@ -1217,7 +1253,7 @@ Table of Contents
    it MUST be trusted, authenticated, and access-controlled like the
    PDP, and its auto-approval is bounded as above.
 
-11.2.  Decision Evidence versus Execution Evidence
+12.2.  Decision Evidence versus Execution Evidence
 
    Decision Evidence is not proof an action occurred.  Implementations
    MUST emit Execution Evidence to record outcomes, and auditors MUST
@@ -1227,7 +1263,7 @@ Table of Contents
    undetermined-outcome or, per deployment policy, as action-attempted;
    it MUST NOT treat it as proof of action.
 
-11.3.  Evidence integrity and signing keys
+12.3.  Evidence integrity and signing keys
 
    The evidence_envelope binds each record to the emitting PDP or PEP.
    The PDP's jws-compact signing key MUST be resolvable in the PDP's
@@ -1237,7 +1273,7 @@ Table of Contents
    equivalent trust configuration.  Implementations MUST reject evidence
    whose format is unsupported rather than accepting it unverified.
 
-11.4.  Materialized view fidelity
+12.4.  Materialized view fidelity
 
    A PDP that evaluates against a materialized view enlarging the
    Authority Set's bounds violates the bounded property of Section 3.
@@ -1245,7 +1281,7 @@ Table of Contents
    that the view it loaded does not match the Mission the PEP referenced
    and deny with stale_state.
 
-11.5.  Transport
+12.5.  Transport
 
    The PDP endpoint and the audit channels carrying Decision Evidence
    and Execution Evidence MUST be served over TLS 1.2 or later (TLS 1.3
@@ -1255,13 +1291,13 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-runtime]).  Evidence at rest
    MUST be encrypted per the deployment's data-protection posture.
 
-12.  Privacy Considerations
+13.  Privacy Considerations
 
    The runtime profile's evidence-privacy guidance
    ([I-D.draft-mcguinness-oauth-mission-runtime]) applies in full.  This
    section addresses the concrete evidence objects.
 
-12.1.  Evidence as PII sinks
+13.1.  Evidence as PII sinks
 
    Decision Evidence and Execution Evidence carry the authenticated
    subject, actor chain, resource and action identifiers, credential-
@@ -1270,7 +1306,7 @@ Table of Contents
    controlled to audit consumers with a legitimate need, encrypted at
    rest, and retained per the window of Section 6.
 
-12.2.  Parameter exposure
+13.2.  Parameter exposure
 
    The durable Decision Evidence record MUST NOT contain the raw
    parameters object; it carries only parameter_digest and, at most,
@@ -1284,7 +1320,7 @@ Table of Contents
    Execution Evidence result_summary MUST NOT carry user-content
    payloads.
 
-12.3.  Actor chain and Mission correlation
+13.3.  Actor chain and Mission correlation
 
    The actor member carries the delegation chain, which MAY reveal
    service accounts, client instances, and organizational structure.
@@ -1294,15 +1330,15 @@ Table of Contents
    that require unlinkability need an additional privacy design outside
    this profile.
 
-13.  IANA Considerations
+14.  IANA Considerations
 
    This document requests the following IANA actions.
 
-13.1.  Media Type Registry
+14.1.  Media Type Registry
 
    This document registers two media types per [RFC6838].
 
-13.1.1.  application/mission-decision-evidence+json
+14.1.1.  application/mission-decision-evidence+json
 
    *  Type name: application
 
@@ -1314,7 +1350,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JSON encoded in UTF-8
 
-   *  Security considerations: see Section 11
+   *  Security considerations: see Section 12
 
    *  Interoperability considerations: see this document
 
@@ -1347,7 +1383,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-13.1.2.  application/mission-execution-evidence+json
+14.1.2.  application/mission-execution-evidence+json
 
    *  Type name: application
 
@@ -1359,7 +1395,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JSON encoded in UTF-8
 
-   *  Security considerations: see Section 11
+   *  Security considerations: see Section 12
 
    *  Interoperability considerations: see this document
 
@@ -1405,9 +1441,9 @@ Table of Contents
    token claims this profile consumes are registered by
    [I-D.draft-mcguinness-oauth-mission].
 
-14.  References
+15.  References
 
-14.1.  Normative References
+15.1.  Normative References
 
    [AUTHZEN]  OpenID Foundation, "OpenID AuthZEN Authorization API 1.0",
               2026, <https://openid.net/specs/authorization-api-
@@ -1464,7 +1500,7 @@ Table of Contents
               DOI 10.17487/RFC8785, June 2020,
               <https://www.rfc-editor.org/rfc/rfc8785>.
 
-14.2.  Informative References
+15.2.  Informative References
 
    [ARAP]     McGuinness, K., "AuthZEN Access Request and Approval
               Profile - Draft 1", 2026,
