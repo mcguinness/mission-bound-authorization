@@ -943,6 +943,16 @@ This document registers the initial Common Constraints:
   Subset: no broader when less than or equal to the reference.
   Intersection: the earlier instant.
 
+These comparisons are in value space, not lexical: `max_amount_usd`
+values are compared as decimal numbers, so `500`, `500.0`, and `5e2` are
+equal; `issued_after` and `issued_before` values are compared as the
+instants they denote after normalization to UTC, so two RFC 3339
+representations of the same instant that differ only in timezone offset
+or trailing subsecond zeros are equal. A registered Common Constraint
+MUST define its subset and intersection in value-space terms, so that
+independent deployments compute the same result for the same values and
+the subset rule of {{subset}} is reproducible.
+
 ## Other Authorization Details Types {#other-types}
 
 `mission_resource_access` is the only type this document defines, but
