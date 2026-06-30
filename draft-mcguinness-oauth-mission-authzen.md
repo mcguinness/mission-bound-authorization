@@ -71,7 +71,7 @@ informative:
     date: 2026
   COAZ:
     target: https://openid.github.io/authzen/authzen-mcp-profile-1_0.html
-    title: "AuthZen Profile for Model Context Protocol Tool Authorization - Draft 1"
+    title: "AuthZEN Profile for Model Context Protocol Tool Authorization - Draft 1"
     author:
       -
         org: OpenID Foundation
