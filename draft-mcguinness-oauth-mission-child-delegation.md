@@ -434,11 +434,18 @@ the child `authority_hash` is the immediate authority commitment.
 
 The child Authority Set subset test is the subset rule of
 {{I-D.draft-mcguinness-oauth-mission}}, applied between each child entry
-and a parent entry: every child resource equal to or narrower than a
-parent resource; every child action a subset of (or deployment-defined
-as narrower than) a parent action; every child constraint equal to or
-stricter than the corresponding parent constraint; and no parent
-constraint removed unless the constrained authority is also removed.
+and a parent entry with no relaxation. As that rule defines it, the
+comparison is flat: a child entry's `resource` MUST equal a parent
+entry's `resource`; its `actions` MUST be a subset of the parent entry's
+`actions` by array membership; and its `constraints` MUST be present and
+no broader than the parent's, with no parent constraint dropped unless
+the constrained authority is also removed. Resource containment (a
+path-prefix or hierarchical resource) and action-family narrowing are
+not assumed here: they are available only through the hierarchical
+resource-and-action subset extension the issuance profile defers to
+future work, and absent that extension a Mission Issuer MUST NOT treat a
+child resource as a subset of a parent merely because it is "narrower"
+under a hierarchy this profile does not define.
 This profile adds one strict requirement specific to child delegation:
 a child entry's delegation policy MUST be strictly narrower than the
 parent entry's (lower `max_depth`, no broader `allowed_delegates`).

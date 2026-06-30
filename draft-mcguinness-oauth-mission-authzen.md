@@ -1186,8 +1186,13 @@ PEP obtained the state:
   before the action.
 - `cached`: the PEP used cached Mission state within the deployment's
   staleness bound.
-- `event_driven`: the PEP relies on event-channel invalidation; cached
-  state is valid until an event invalidates it.
+- `event_driven`: the PEP relies on event-channel invalidation, but the
+  cached state remains bounded by the deployment's staleness bound, or
+  the lease the state carries, exactly as for `cached`; it is not valid
+  indefinitely. A missed or delayed invalidation event does not extend
+  validity, and when the bound elapses without a confirming event the
+  PEP MUST refresh from a Mission state source rather than continue on
+  the cache.
 
 When freshness cannot be established within the bound, the PDP fails
 closed for consequential actions as the runtime profile requires; in
