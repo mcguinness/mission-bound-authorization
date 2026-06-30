@@ -294,7 +294,53 @@ truthfulness of its outputs; semantic and intent verification are a
 non-goal of the suite ({{I-D.draft-mcguinness-oauth-mission}}). And it
 inherits the threat models of the substrates the companions profile
 (Token Exchange, Attenuating Agent Tokens, SCITT, Deferred Token
-Response), which those substrates own.
+Response), which those substrates own. {{adversary-model}} gives the
+per-adversary-move detail: what addresses each move, and the residual it
+leaves.
+
+# Adversary Model and Coverage {#adversary-model}
+
+The trusted base ({{trusted-base}}) is the component view; this is the
+adversary view. The adversary is assumed to control the agent, to reach
+the content and inputs the agent processes (so it can attempt prompt
+injection), and to capture tokens in transit. The adversary is assumed
+not to break the cryptographic primitives, not to forge an
+authenticated component's signing key, and not to compromise a
+trusted-base component; those last two are the residuals of
+{{trusted-base}}, not adversary moves this table covers.
+
+The following maps each adversary move to the mechanism that addresses
+it and to what is explicitly not stopped. The residual column is the
+honest part: it is what a deploying party still owns.
+
+| Adversary move | Addressed by | Residual: not stopped |
+|---|---|---|
+| Compromised or injected agent acts beyond its task | Authority fixed at the approval event (issuance); per-action PDP check (runtime) | Misuse within the approved scope; low-consequence authority the agent legitimately holds |
+| Prompt injection tries to widen authority | Inert intent: `goal`, `purpose`, `success_criteria` never derive, widen, or gate authority | Injected text can still drive actions already in scope |
+| Stolen or exfiltrated token | Sender-constraint (proof-of-possession); the high-consequence key is held by the PEP, not the agent (mediated execution) | A token stolen together with its key; soundness of the PoP mechanism |
+| Token replayed at another resource (confused deputy) | Permit bound to audience, resource, `sub`, `client_id`, and action; cross-domain grant single-use and audienced | Correct binding configuration is the deployment's |
+| Parameters change between decision and use (TOCTOU) | Parameter binding; the digest is reverified at the executing PEP immediately before acting | The PEP must sit at the last controllable boundary |
+| Active Mission used as ambient standing authority | Per-action runtime enforcement, state re-check, fail-closed on stale state | An issuance-only deployment gets audit, not action-time defense |
+| Revoked or expired Mission still acts (kill switch) | Issuance gating; runtime state re-check within the staleness bound; short token lifetimes | A window up to the staleness bound or token TTL; a spoofed state source (a trusted component) |
+| Approver approves more than was shown | The rendered disclosure is committed; rendering-assurance ladder up to an authenticator-signed commitment | Comprehension: no server-side commitment proves what a human perceived or understood |
+| Exfiltration of private data (the third leg of the lethal trifecta) | External communication is a gated consequential action; harness leaves no unmediated path; session taint downgrades egress after untrusted input | PEP-placement completeness; no information-flow control, so a sequence of in-scope steps can launder data |
+| Offline sub-agent fan-out abuse | Capability monotonicity (narrow-only) and the runtime kill-switch re-check on the carried chain | Fan-out breadth is unobserved by the issuer; bounded by depth and policy, not by the issuer |
+| Audit tampered, dropped, or reordered | Transparency: append-only log, inclusion receipts, non-equivocation | Single-service equivocation (per-service only; register with several); a producer can still log a false record (accountability, not prevention) |
+| Agent fabricates results or acts on false data | Not addressed | Full: semantic and grounding verification are a non-goal; pair with a grounding layer if needed |
+| A trusted-base component is compromised | Not addressed; evidence detects it after the fact | Not prevented; degrades the specific guarantee per {{trusted-base}} |
+
+Three residuals are worth stating on their own, because they are the
+limits most likely to matter and most often overstated away elsewhere:
+
+- **Comprehension.** The suite can commit and bind what an Approver was
+  shown; it cannot prove what the Approver perceived or understood. No
+  electronic-consent scheme can.
+- **Single-service equivocation.** Transparency is non-equivocating only
+  per service; a deployment that needs that property checked registers
+  with more than one independent service.
+- **Offline breadth.** Offline attenuation bounds each child to a narrowing
+  of its parent, but the issuer does not observe how many children are
+  minted; breadth is bounded by depth and policy, not by the issuer.
 
 # Documenting the Trusted Base {#documenting}
 
