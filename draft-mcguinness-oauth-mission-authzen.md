@@ -1194,6 +1194,38 @@ closed for consequential actions as the runtime profile requires; in
 this binding that surfaces as a `stale_state` denial
 ({{runtime-denial-classification}}).
 
+# Conformance {#conformance}
+
+This binding adds AuthZEN-specific obligations on top of the runtime
+profile's enforcement contract; an implementation conforms to this
+binding only for the resources, action classes, and PDPs in the runtime
+enforcement scope it documents
+({{I-D.draft-mcguinness-oauth-mission-runtime}}).
+
+A PEP conforming to this binding MUST:
+
+- carry the Mission and actor decision inputs in the AuthZEN envelope as
+  defined ({{pdp-request}}), and match the approved entry's `resource`
+  against `context.audience`, not the AuthZEN `resource` member;
+- supply `context.parameter_digest` for a parameter-bound action class
+  ({{parameter-digest}}), and `context.capability_source` for a
+  catalog-sourced action whose approved entry recorded a source digest
+  ({{capability-source-binding}}); and
+- emit a Decision Evidence Object for each PDP decision
+  ({{decision-evidence-object}}), an Execution Evidence Object for each
+  high-consequence action ({{execution-evidence-object}}), and a
+  pre-decision refusal record for a refusal before any PDP decision
+  ({{pre-decision-refusal}}).
+
+A PDP conforming to this binding MUST:
+
+- perform the PDP-side consistency checks ({{pdp-request}});
+- return every denial with a denial-reason identifier from the closed
+  set of {{runtime-denial-classification}}; and
+- produce Decision Evidence with the required members and a verifiable
+  integrity envelope ({{decision-evidence-object}},
+  {{decision-evidence-integrity}}).
+
 # Security Considerations {#security-considerations}
 
 The runtime profile's Security Considerations
