@@ -317,6 +317,15 @@ Before resuming a governed item, the harness performs:
    items require their own check unless the deployment's status lease
    explicitly covers them.
 
+Where the orchestration profile
+({{I-D.draft-mcguinness-oauth-mission-orchestration}}) is also deployed,
+the harness MUST NOT resume a governed item that the orchestrator has
+cancelled, or is holding for review, under its in-flight handling, even
+when the Mission is `active`. An orchestration unwind decision is not a
+Mission-state change, so the resume check above does not catch it; for
+items under an active unwind plan the harness defers to the
+orchestrator's in-flight decision.
+
 The harness MUST perform this algorithm even when OAuth credentials in
 the session are still valid.
 

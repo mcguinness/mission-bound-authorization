@@ -58,6 +58,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-runtime-latest
+  I-D.draft-mcguinness-oauth-mission-child-delegation:
+    title: "Child Mission Delegation for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
 
 --- abstract
 
@@ -202,6 +211,24 @@ feed.
 
 The `sub` is a correlator, not a credential; presenting it authorizes
 nothing ({{I-D.draft-mcguinness-oauth-mission}}).
+
+A Child Mission ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
+is its own Mission with its own `id` and `origin`, so its evidence forms
+its own feed; its lifecycle events, including a `cascaded` transition,
+appear in that feed. The event that triggered the cascade is in the
+parent's feed, and the child's lineage to the parent is the `parent`
+member of its `mission` claim, which an auditor follows to the parent's
+`sub` to see that trigger.
+
+Across trust domains a Mission's `origin` and `id` are unchanged
+({{I-D.draft-mcguinness-oauth-mission}}), so every producer in every
+domain computes the same `sub`. They share one feed only when they
+register with the same Transparency Service. Where domains register with
+different services, each service holds a partial feed and its
+non-equivocation guarantee is per-service ({{receipts}}); an auditor
+that needs the Mission's whole history reconciles it across those
+services, and a deployment that wants a single coherent feed SHOULD have
+its cross-domain producers register with one shared service.
 
 # Receipts and Transparent Statements {#receipts}
 
