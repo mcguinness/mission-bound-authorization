@@ -127,6 +127,11 @@ rules for handling it.
 A deployment claims this profile only when it issues or consumes entries
 carrying `terminal_when`.
 
+This profile is **experimental** and is not part of the recommended v1
+deployment bundles. Its entry-discharge model is newer and less
+exercised than the issuance core and the runtime layer; treat it as a
+direction whose details may change, not yet as a stable interface.
+
 # Relationship to the Issuance Profile {#issuance-relationship}
 
 This document depends normatively on the issuance profile and is not

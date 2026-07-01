@@ -127,6 +127,14 @@ records they already produce.
 A deployment claims this profile only when it registers Mission evidence
 with a Transparency Service.
 
+This profile is **experimental**. It depends normatively on the SCITT
+architecture ({{I-D.draft-ietf-scitt-architecture}}), which is still in
+progress and whose details may change; an implementation tracks that
+work and deploys this profile for evaluation rather than as a stable
+interface. The signed evidence the suite produces without a Transparency
+Service ({{I-D.draft-mcguinness-oauth-mission}}) does not depend on this
+profile.
+
 # Relationship to the Issuance Profile {#issuance-relationship}
 
 This document depends normatively on the issuance profile and the

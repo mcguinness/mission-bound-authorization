@@ -130,6 +130,12 @@ or cannot be established, the orchestrator stops new governed work and
 executes the plan: cancel, compensate, suppress, pause, or hand off to
 human review.
 
+This profile is **experimental** and is not part of the recommended v1
+deployment bundles. The unwind, compensation, and reversibility model it
+defines is newer and less exercised than the issuance core and the
+runtime layer, and compensation is inherently domain-specific; treat it
+as a direction whose details may change, not yet as a stable interface.
+
 # Scope
 
 This document defines:
