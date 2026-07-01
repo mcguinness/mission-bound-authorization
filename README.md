@@ -99,7 +99,7 @@ alone. These bundles name what to deploy for a given goal.
 |---|---|---|
 | **Baseline issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch. Audit, not action-time defense. |
 | **Enforced agent** | mission + runtime + authzen + status and/or signals | Per-action enforcement at the point of use, and prompt revocation (pull via status, push via signals, or both). The minimum for an agent that takes consequential actions. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
-| **Governed agent (recommended for AI agents)** | Enforced agent + consent-evidence + harness + orchestration | Consent-rendering evidence, session-continuity stop, and safe unwinding. For protection against a compromised agent, claim runtime's named agent-compromise-resistant enforcement (mediated custody, no-unmediated-egress, action-bound approval, all MUST for the high-consequence classes). Add child-delegation for sub-agents and expansion for mid-task growth. |
+| **Governed agent (recommended for AI agents)** | Enforced agent + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. For protection against a compromised agent, claim runtime's named agent-compromise-resistant enforcement (mediated custody, no-unmediated-egress, action-bound approval, all MUST for the high-consequence classes). Add child-delegation for sub-agents and expansion for mid-task growth, and orchestration (experimental) for safe unwinding of in-flight work. |
 
 Mission Intent Shaping is an approval-time, client-side option that
 layers onto any bundle; it produces the Mission Intent and is not itself
@@ -131,7 +131,9 @@ decide what to build on now.
 
 - **Stable** (depend only on ratified OAuth and finalized OpenID
   specifications): the issuance **core**, **runtime**, **authzen**,
-  **status**, and **signals**. Build on these.
+  **status**, and **signals**. Build on these. For **authzen**, the
+  stable surface is its core AuthZEN decision binding; its ARAP and COAZ
+  integrations and MCP-composition notes are informative and optional.
 - **Stable but situational** (adopt when your use case needs them):
   **expansion**, **child-delegation**, **consent-evidence**,
   **harness**, **shaping**.
