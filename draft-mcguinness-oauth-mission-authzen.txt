@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             1 July 2026
-Expires: 2 January 2027
+Intended status: Standards Track                             2 July 2026
+Expires: 3 January 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 January 2027.
+   This Internet-Draft will expire on 3 January 2027.
 
 Copyright Notice
 
@@ -80,10 +80,6 @@ Table of Contents
      1.1.  Requirements Language
    2.  Conventions and Terminology
    3.  Mission-to-Policy Materialization
-     3.1.  Inputs
-     3.2.  Properties
-       3.2.1.  Policy View Identifier
-     3.3.  Wire form
    4.  PDP Request
      4.1.  AuthZEN envelope binding
      4.2.  Mission Decision Context
@@ -94,6 +90,7 @@ Table of Contents
      4.7.  Capability Source Context
      4.8.  Worked PDP request
      4.9.  PDP-side consistency checks
+     4.10. Batch evaluations
    5.  Decision Evidence Object
      5.1.  Members
      5.2.  Pre-decision refusal records
@@ -107,17 +104,20 @@ Table of Contents
    7.  Runtime Denial Classification
      7.1.  AuthZEN decision context
      7.2.  Permit response shape
-     7.3.  Error response shape
+     7.3.  Permit binding in split topologies
+     7.4.  Error response shape
    8.  Capability Source Binding
    9.  AuthZEN binding of consumption metering
+     9.1.  Settlement exchange
    10. Mission Status Composition
    11. Conformance
    12. Security Considerations
      12.1.  Access Request Service in the trusted base
-     12.2.  Decision Evidence versus Execution Evidence
-     12.3.  Evidence integrity and signing keys
-     12.4.  Materialized view fidelity
-     12.5.  Transport
+     12.2.  Denial oracle
+     12.3.  Decision Evidence versus Execution Evidence
+     12.4.  Evidence integrity and signing keys
+     12.5.  Materialized view fidelity
+     12.6.  Transport
    13. Privacy Considerations
      13.1.  Evidence as PII sinks
      13.2.  Parameter exposure
@@ -144,8 +144,7 @@ Table of Contents
    binding and the time-of-check to time-of-use gap, consumption
    metering, failure modes, runtime enforcement evidence, and the
    runtime conformance scope, but it states that the decision API wire
-   format is a deployment choice and that it is "not an AuthZEN
-   profile".
+   format is a deployment choice and defines no binding of its own.
 
    This document is that AuthZEN profile.  It binds the runtime
    profile's abstract decision contract to the OpenID AuthZEN
@@ -181,6 +180,26 @@ Table of Contents
    normatively defined in [I-D.draft-mcguinness-oauth-mission-runtime]
    and are referenced, not duplicated, here.
 
+   The end-to-end flow this binding realizes:
+
+    Agent        PEP              PDP           Access Request Service
+      |           |                |                     |
+      |- action ->|                |                     |
+      |           | validate token |                     |
+      |           |- evaluation -->|                     |
+      |           |  request       | decide vs Mission   |
+      |           |<- permit ------|                     |
+      |           |  (+ context)   |                     |
+      |           | execute        |                     |
+      |           |- Execution Evidence ->|  (commit/     |
+      |           |                |        release)      |
+      |<- result -|                |                     |
+      |           |                |                     |
+      |           |<- deny (+ access_request) -|          |
+      |           |- submit access request -->|--------->|
+      |           |<-------------- approval ------------- |
+      |           |- re-evaluate ->|                     |
+
 1.1.  Requirements Language
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
@@ -203,7 +222,10 @@ Table of Contents
 
    The terms Policy Enforcement Point (PEP), Policy Decision Point
    (PDP), consequential action, Resource policy, decision, Mission state
-   source, and enforcement scope are used as defined in
+   source, enforcement scope, high-consequence classes, parameter-bound,
+   and the action-class names (consequential read, consequential write,
+   irreversible action, external commitment, and privileged
+   administration) are used as defined in
    [I-D.draft-mcguinness-oauth-mission-runtime].  The Mission claim (id,
    origin, authority_hash), the integrity anchors (intent_hash,
    authority_hash), and authorization_details entries of type
@@ -212,15 +234,9 @@ Table of Contents
 
    Additional terms specific to this binding:
 
-   Materialized policy view:  The reproducible, evaluable form of a
-      Mission's approved authority produced by the issuing Authorization
-      Server or a trusted compiler and consumed by the PDP (Section 3).
-
-   Trusted compiler:  A component the deployment trusts to materialize a
-      Mission's approved authority into a policy view faithfully and
-      reproducibly, other than the issuing Authorization Server itself.
-      It is in the deployment's trust domain and its output is bound by
-      the content-addressed policy_view_id (Section 3).
+   Materialized policy view, trusted compiler:  Defined by the runtime
+      profile ([I-D.draft-mcguinness-oauth-mission-runtime]).  This
+      binding carries only the wire member policy_view_id (Section 3).
 
    Validating server:  The component that, at derivation, validates the
       Mission's authority and records the derivation-time facts the PDP
@@ -234,6 +250,15 @@ Table of Contents
    Execution Evidence:  The record emitted by the PEP or executor after
       the authorized action's outcome is determined (Section 6).
 
+   Executor:  The component that carries out a permitted action and
+      emits Execution Evidence.  It is the PEP in the common case, or a
+      distinct component where the requesting PEP and the executing
+      component differ (Section 6).
+
+   Audit consumer:  A component or role that reads Decision Evidence and
+      Execution Evidence to reconstruct or verify a decision after the
+      fact.
+
    HTTP message examples follow the AuthZEN specification [AUTHZEN] for
    the decision request and response, and [RFC9457] for problem-details
    error bodies where a deployment carries them outside the AuthZEN
@@ -241,62 +266,25 @@ Table of Contents
 
 3.  Mission-to-Policy Materialization
 
-   The PDP evaluates a Mission against an action.  The issuing
-   Authorization Server, or a trusted compiler, reproducibly
-   materializes the Mission's approved authority as an evaluable policy
-   view the PDP loads and addresses.
+   The PDP evaluates a Mission against an action through a materialized
+   policy view.  The materialized policy view, its trusted-compiler and
+   reproducibility rules, its bounded-fidelity property, and the
+   content-addressed policy_view_id with its mission-policy-view
+   integrity envelope are defined by the runtime profile
+   ([I-D.draft-mcguinness-oauth-mission-runtime]).  That envelope's
+   committed payload binds the Mission's mission_id and authority_hash,
+   so a consistency check between a decision request and the loaded view
+   is an equality test on those values (Section 4).
 
-3.1.  Inputs
-
-   *  The Mission's approved Authority Set (the authorization_details
-      entries, including mission_resource_access entries with their
-      resource, actions, and constraints), as committed by
-      authority_hash ([I-D.draft-mcguinness-oauth-mission]).
-
-   *  The derivation policy_version recorded at the approval event.
-
-3.2.  Properties
-
-   The materialized policy view MUST satisfy:
-
-   *  Reproducibility: the same inputs produce byte-identical
-      materialized output under the canonicalization of
-      [I-D.draft-mcguinness-oauth-mission].
-
-   *  Identifiable: the materialized view carries a policy_view_id so
-      PDP cache entries are addressable.
-
-   *  Bounded: materialization is faithful and does not enlarge the
-      Authority Set's semantic bounds.  A materialized view is an
-      evaluation aid, never new authority.
-
-3.2.1.  Policy View Identifier
-
-   policy_view_id is the integrity-anchor encoded form
-   ([I-D.draft-mcguinness-oauth-mission]) of the SHA-256 of the JCS-
-   canonical bytes of the materialized view envelope:
-
-   SHA-256(JCS({
-     "typ":   "mission-policy-view",
-     "iss":   <mission.origin>,
-     "value": <materialized view payload>
-   }))
-
-   The envelope reuses the domain-separated, issuer-bound integrity-
-   anchor envelope of [I-D.draft-mcguinness-oauth-mission] with a new
-   typ; this document defines no second canonicalization.  Because
-   policy_view_id is a content hash, it uniquely addresses the
-   materialized form: any change to the view yields a new
-   policy_view_id, so equality on policy_view_id is the cache identity
-   and freshness test.
-
-3.3.  Wire form
-
-   This profile does not pick a concrete policy-language wire form for
-   the materialized view.  Implementations MAY use canonical input
-   bundles the AuthZEN PDP consumes directly, or an engine-native
-   artifact.  Compiling a Mission into an engine-native policy artifact
-   and standardizing a policy-view carriage format are out of scope
+   This binding carries only the wire member. policy_view_id appears in
+   the PDP request and response context (Section 4.2, Section 7) as the
+   content-addressed correlator between a permit, its evidence, and the
+   view the PDP evaluated against.  This profile does not pick a
+   concrete policy-language wire form for the materialized view.
+   Implementations MAY use canonical input bundles the AuthZEN PDP
+   consumes directly, or an engine-native artifact.  Compiling a Mission
+   into an engine-native policy artifact and standardizing a policy-view
+   carriage format are out of scope
    ([I-D.draft-mcguinness-oauth-mission-runtime]).
 
 4.  PDP Request
@@ -360,6 +348,12 @@ Table of Contents
    re-verifies that the action is for the same Subject it was authorized
    for.
 
+   subject.type is user unless the deployment profiles another value.
+   subject.id is the token's authenticated sub. subject.properties.iss
+   is REQUIRED when the Subject's issuer is known, carrying the issuer
+   that authenticated the Subject, so a sub is disambiguated across
+   issuers; a PEP that cannot establish the Subject's issuer omits it.
+
 4.2.  Mission Decision Context
 
    The mission member identifies the governance record and its current
@@ -386,10 +380,11 @@ Table of Contents
       that can obtain it (for example, co-located with the origin)
       includes it.
 
-   policy_view_id:  REQUIRED.  A string. the materialized view
-      identifier (Section 3).  It is content- addressed and self-
-      sourcing (Section 3), so it is the authoritative view correlator
-      the PDP relies on.
+   policy_view_id:  OPTIONAL.  A string. the materialized view
+      identifier (Section 3).  The PDP is authoritative for the current
+      view, so a PEP need not supply it; a PEP that has the value
+      supplies it and the PDP uses it as a content-addressed correlator.
+      When present it is checked as in Section 4.
 
 4.3.  Actor Decision Context
 
@@ -439,8 +434,11 @@ Table of Contents
    When parameter binding is required for the requested action's class
    under [I-D.draft-mcguinness-oauth-mission-runtime], the PEP supplies:
 
-   parameters:  CONDITIONAL.  An object. the action's parameters as a
-      JSON object.  The shape is action-specific.  The PEP MAY omit
+   parameters:  CONDITIONAL.  An object.  When present, it MUST be the
+      operation-profile-normalized parameter object
+      ([I-D.draft-mcguinness-oauth-mission-runtime]): the same bytes the
+      parameter_digest is computed over, so the PDP's recomputation
+      matches.  The shape is action-specific.  The PEP MAY omit
       parameters and supply only parameter_digest where the raw values
       are sensitive (Section 13), but only when the PDP can still
       enforce the applicable parameter policy from the digest, supplied
@@ -466,15 +464,20 @@ Table of Contents
       the PEP relied on, conveying the runtime profile's freshness
       inputs on the wire.  Members:
 
-      mission_status_issued_at:  An RFC 3339 [RFC3339] timestamp.
-
-      mission_status_expires_at:  An RFC 3339 timestamp.
-
-      mode:  A string. one of fresh, cached, or event_driven
+      mode:  REQUIRED.  A string. one of fresh, cached, or event_driven
          (Section 10).
 
-      freshness_at:  An RFC 3339 timestamp. when the PEP's view of the
-         Mission state was current.
+      freshness_at:  REQUIRED in every mode.  An RFC 3339 [RFC3339]
+         timestamp. when the PEP's view of the Mission state was
+         current.
+
+      mission_status_issued_at:  REQUIRED for cached and event_driven,
+         OPTIONAL for fresh.  An RFC 3339 timestamp. when the relied-on
+         Mission state was issued.
+
+      mission_status_expires_at:  REQUIRED for cached and event_driven,
+         OPTIONAL for fresh.  An RFC 3339 timestamp. when the relied-on
+         Mission state (or its lease) expires.
 
    The deployment's maximum staleness bound, and the rule that a
    consequential action MUST fail closed when the Mission cannot be
@@ -538,7 +541,7 @@ Table of Contents
          "expires_at": "2026-11-02T09:14:00Z"
        },
        "parameters": {
-         "amount_usd": 423.50,
+         "amount_usd": "423.50",
          "source_invoice_id": "inv_2026Q3_842"
        },
        "parameter_digest":
@@ -563,14 +566,23 @@ Table of Contents
        active; every other value, recognized or not, is non-active per
        the issuance profile's forward-compatibility rule
        ([I-D.draft-mcguinness-oauth-mission]) and the PDP returns
-       mission_inactive (Section 7).
+       mission_inactive (Section 7).  A PDP with direct access to a
+       Mission state source MUST prefer its own fresher view over
+       context.mission.state, and MUST return mission_inactive when its
+       view disagrees with the PEP-supplied state.  PEP-supplied state
+       is a floor, never a substitute for a state source the PDP can
+       itself consult.
 
-   2.  authority_hash and policy_view_id carried in context.mission, and
-       policy_version when present, are consistent with the materialized
-       policy view the PDP has loaded for this Mission; otherwise the
-       PDP returns stale_state. policy_view_id is the authoritative
-       correlator; a PDP MUST NOT fail a decision solely because the
-       optional policy_version was omitted.
+   2.  The id and authority_hash in context.mission equal the mission_id
+       and authority_hash committed in the materialized policy view the
+       PDP has loaded for this Mission
+       ([I-D.draft-mcguinness-oauth-mission-runtime]); the PDP returns
+       stale_state on any inequality.  When
+       context.mission.policy_view_id is present, it MUST equal the
+       loaded view's policy_view_id, and the PDP returns stale_state on
+       inequality.  A PDP MUST NOT fail a decision solely because the
+       optional policy_view_id or policy_version was omitted; the view
+       the PDP loaded is authoritative.
 
    3.  When context.credential.expires_at is present, it has not passed;
        otherwise the PDP returns credential_invalid.
@@ -601,6 +613,18 @@ Table of Contents
        not from the PEP's request; where no source digest was recorded,
        this check does not apply.
 
+4.10.  Batch evaluations
+
+   The AuthZEN evaluations (boxcar) endpoint MAY be used to submit
+   several Mission-bound decisions in one request.  Each item is
+   evaluated independently and on the same terms as a single request:
+   each item yields its own Decision Evidence Object with its own
+   decision_id and sequence, assigned in request order; consumption
+   metering applies per item in request order (Section 9); and permits
+   are per item, so a boxcar MAY return a mix of permits and denials.
+   Batching is a transport optimization and changes none of the per-item
+   enforcement semantics.
+
 5.  Decision Evidence Object
 
    The runtime profile requires a decision evidence record for every PDP
@@ -619,9 +643,12 @@ Table of Contents
       policy_version and policy_view_id), extended with intent_hash and,
       when known, a consent-disclosure commitment, so the evidence
       chains back to the exact approved Mission.  Within mission, id,
-      origin, and authority_hash are required; the others are optional.
-      These hashes are the issuing AS's commitments cited as anchors;
-      the PDP does not recompute them.
+      origin, and authority_hash are REQUIRED; intent_hash is OPTIONAL
+      (it is carried in neither the mission claim nor introspection, so
+      only a PDP with direct Mission-record access can record it), and
+      the remaining members are OPTIONAL.  These hashes are the issuing
+      AS's commitments cited as anchors; the PDP does not recompute
+      them.
 
    subject:  REQUIRED.  An object.  PDP inputs as supplied, after PDP-
       side normalization.
@@ -645,8 +672,22 @@ Table of Contents
    parameter_digest:  OPTIONAL.  A string.  PDP inputs as supplied,
       after PDP-side normalization.
 
+   request_digest:  CONDITIONAL.  A string. a privacy-preserving digest
+      of the evaluation request, in the integrity-anchor encoded form
+      ([I-D.draft-mcguinness-oauth-mission]).  REQUIRED when
+      parameter_digest is absent for a consequential action, so the
+      closed object still carries the request digest the runtime profile
+      requires of every decision record
+      ([I-D.draft-mcguinness-oauth-mission-runtime]).
+
    capability_source:  OPTIONAL.  An object. the catalog-source binding
       the PDP evaluated for catalog-sourced actions.
+
+   compensates_decision_id:  OPTIONAL.  A string. the decision_id of the
+      action this decision compensates, carrying the runtime profile's
+      compensation link ([I-D.draft-mcguinness-oauth-mission-runtime])
+      so a compensating action reconciles against the action it
+      reverses.
 
    decision:  REQUIRED.  A string. one of permit or deny.
 
@@ -686,17 +727,19 @@ Table of Contents
    PDP-derived members are REQUIRED.  The runtime profile also requires
    an evidence record for a PEP refusal that occurs before any PDP
    decision: token validation failure, a missing mission claim, PEP-PDP
-   channel failure, or PDP unreachability
+   channel failure, PDP unreachability, or the PEP being unable to
+   establish Mission state
    ([I-D.draft-mcguinness-oauth-mission-runtime]).  Such a refusal has
    no PDP decision and cannot populate the PDP-derived members above.
    An AuthZEN deployment records it not as a Decision Evidence Object
    but as a refusal record carrying only the fields the PEP verified, at
    least audience, an action descriptor, evaluated_at, decision of deny,
    and a denial_reason from this pre-decision set: token_invalid,
-   mission_claim_missing, channel_failure, or pdp_unreachable.  These
-   name PEP-side conditions and are disjoint from the PDP denial reasons
-   of Section 7; a record that can populate the PDP-derived members is a
-   Decision Evidence Object instead.
+   mission_claim_missing, channel_failure, pdp_unreachable, or
+   state_unavailable (the PEP cannot establish Mission state to send to
+   the PDP).  These name PEP-side conditions and are disjoint from the
+   PDP denial reasons of Section 7; a record that can populate the PDP-
+   derived members is a Decision Evidence Object instead.
 
 5.3.  Integrity
 
@@ -713,6 +756,23 @@ Table of Contents
    For Decision Evidence emitted by a PDP, the emitter is the PDP.  For
    Execution Evidence emitted by a PEP or executor, the emitter is that
    PEP or executor.
+
+   The JWS protected header MUST carry:
+
+   *  kid: a key identifier resolvable in the emitter's published JWKS
+      (Section 12.4), so a verifier can select the emitter's signing key
+      independently.
+
+   *  alg: ES256 [RFC7518] is mandatory to implement; an implementation
+      MAY offer other JOSE algorithms but MUST implement ES256.
+
+   *  typ: the registered media type of the evidence object being signed
+      (application/mission-decision-evidence+json for Decision Evidence,
+      application/mission-execution-evidence+json for Execution
+      Evidence, Section 14).  A verifier MUST reject a JWS whose
+      protected typ is not the media type of the object it is verifying,
+      so Decision Evidence and Execution Evidence signatures cannot be
+      cross-used.
 
    {
      "evidence_envelope": {
@@ -742,7 +802,10 @@ Table of Contents
      },
      "subject": {
        "type": "user",
-       "id": "user_3p2q8mN1a0kV7tR"
+       "id": "user_3p2q8mN1a0kV7tR",
+       "properties": {
+         "iss": "https://idp.example.com"
+       }
      },
      "actor": {
        "client_id": "client_erp-recon-agent",
@@ -811,7 +874,28 @@ Table of Contents
    outcome_at:  REQUIRED.  An RFC 3339 [RFC3339] timestamp.
 
    error:  CONDITIONAL.  A string. error identifier when outcome is
-      failed or suppressed.
+      failed or suppressed, from this closed set: parameter_mismatch
+      (the executing PEP found the effective parameters differ from
+      those the permit bound), permit_expired (the permit's validity
+      window had passed at execution), permit_consumed (re-presentation
+      of an already-consumed single-use decision identifier), and
+      kill_switch (execution suppressed by an operator or safety
+      control).  A deployment MAY define additional values, which MUST
+      be collision-resistant names (a short name within a namespace the
+      deployment controls, following the Collision-Resistant Name
+      guidance of [RFC7519] Section 4.2) so they cannot collide with
+      this set or another deployment's.
+
+   sequence:  REQUIRED.  An integer. the per-Mission sequence indicator
+      the runtime profile requires of every record, so the execution
+      stream has a verifiable order and gaps are detectable.  MUST be
+      zero or greater.
+
+   measured_duration:  CONDITIONAL.  A string.  REQUIRED for a duration-
+      metered action, otherwise absent.  An ISO 8601 duration (the
+      duration rule in Appendix A of [RFC3339]): the PEP's measured
+      duration, the PDP's commit-or-release input for max_duration
+      (Section 9).
 
    attempted_at:  OPTIONAL.  An RFC 3339 timestamp. timing context.
 
@@ -837,6 +921,7 @@ Table of Contents
      "parameter_digest":
        "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA8dRn",
      "outcome":      "completed",
+     "sequence":     43,
      "attempted_at": "2026-11-02T08:14:04Z",
      "completed_at": "2026-11-02T08:14:05Z",
      "outcome_at":   "2026-11-02T08:14:05Z",
@@ -880,8 +965,10 @@ Table of Contents
 
    Decision Evidence and Execution Evidence MUST be retained for at
    least the deployment's audit retention window, which the runtime
-   profile requires to be no shorter than the Mission's effective audit
-   horizon.  Regulated deployments MAY require longer retention.
+   profile requires to be no shorter than the Mission's audit horizon,
+   the term defined in the Mission Record section of
+   [I-D.draft-mcguinness-oauth-mission].  Regulated deployments MAY
+   require longer retention.
 
 7.  Runtime Denial Classification
 
@@ -915,6 +1002,10 @@ Table of Contents
       with the materialized policy view.
 
    *  mission_inactive: the Mission state is not active.
+
+   *  actor_invalid: the required act chain is missing or malformed, so
+      the PDP cannot establish the runtime actor context
+      ([I-D.draft-mcguinness-oauth-mission-runtime]).
 
    *  credential_invalid: token-derived credential facts supplied by the
       PEP are expired, inconsistent, or otherwise not usable for a
@@ -1003,14 +1094,19 @@ Table of Contents
    parameter_digest:  REQUIRED when the request was parameter-bound.  A
       string.  The digest bound to the decision.
 
-   policy_view_id:  REQUIRED when known.  A string.  The materialized
-      policy view the PDP evaluated.
+   policy_view_id:  REQUIRED.  A string.  The materialized policy view
+      the PDP evaluated.  The PDP is authoritative for the view, so it
+      always knows and returns this value.
 
    permit_expires_at:  REQUIRED when decision is true.  An RFC 3339
       timestamp after which the permit MUST NOT be used.
 
-   single_use:  OPTIONAL.  A boolean.  When true, the PEP MUST treat
-      decision_id as a single-use decision identifier.
+   single_use:  CONDITIONAL.  A boolean.  When true, the PEP MUST treat
+      decision_id as a single-use decision identifier.  Absent, the
+      permit is not single-use.  For an action in the high-consequence
+      classes ([I-D.draft-mcguinness-oauth-mission-runtime]) the PDP
+      MUST include single_use: true, and the PEP MUST treat a high-
+      consequence permit lacking it as invalid.
 
    insufficient_claims:  OPTIONAL.  An object.  Present only for a
       step_up_required denial.  It MAY contain acr_values and amr_values
@@ -1056,7 +1152,20 @@ Table of Contents
    changes the actor's authentication context, not the Mission or its
    Authority Set.
 
-7.3.  Error response shape
+7.3.  Permit binding in split topologies
+
+   A permit is valid only on the mutually authenticated channel and PEP
+   identity that requested it, and MUST NOT be relayed to another
+   component as a bearer grant.  Where the requesting component and the
+   executing PEP differ, the executor MUST receive the signed Decision
+   Evidence (Section 5) and verify the runtime's binding fields (the
+   Mission reference, audience, subject, client_id, actor context,
+   action, resource, and parameter_digest) from it before acting, rather
+   than trusting a relayed decision: true.  A PEP permit cache MUST key
+   on the complete request envelope, so a cached permit cannot be reused
+   for a request whose envelope differs in any bound field.
+
+7.4.  Error response shape
 
    The PDP returns its permit or denial in the AuthZEN response
    [AUTHZEN].  Runtime denials are successful evaluations and therefore
@@ -1158,8 +1267,9 @@ Table of Contents
    The runtime profile owns consumption-metering semantics: it meters
    the Mission's max_budget, max_calls, and max_duration bounds, defines
    the atomic check-and-decrement, the single-versus-distributed-PDP
-   consistency posture, retry and idempotency behavior, and the rule
-   that an unmetered or unrecognized bound MUST cause refusal
+   consistency posture, retry and idempotency behavior, the deployment's
+   documented reserve/commit posture, and the rule that an unmetered or
+   unrecognized bound MUST cause refusal
    ([I-D.draft-mcguinness-oauth-mission-runtime]).  This section adds
    only the AuthZEN wire representation; it defines no new metering
    semantics and no new constraint.
@@ -1168,13 +1278,39 @@ Table of Contents
    cap as part of the decision.  When metering the cap would exceed it,
    the PDP MUST deny with quota_exceeded (Section 7) instead of
    returning a permit, and MUST record quota_exceeded as the
-   denial_reason in Decision Evidence.  Because the runtime profile
-   counts a metered permit at decision time, the AuthZEN response
-   surfaces the cap purely as the permit-or-quota_exceeded outcome; a
-   permitted-but-failed action still counted, consistent with the
-   runtime profile's metering rules.  The exactness of the cap is the
-   consistency bound the runtime profile's topology rules establish, not
-   a property of this wire binding.
+   denial_reason in Decision Evidence.  Whether a metered permit is
+   reserved at decision time and committed on settlement, or committed
+   at decision time, follows the deployment's documented reserve/commit
+   posture ([I-D.draft-mcguinness-oauth-mission-runtime]); this binding
+   fixes neither.  The exactness of the cap is the consistency bound the
+   runtime profile's topology rules establish, not a property of this
+   wire binding.
+
+9.1.  Settlement exchange
+
+   The runtime profile requires the PEP to signal actual use so the PDP
+   commits consumption and releases any reservation.  In this binding,
+   delivery of the Execution Evidence Object (Section 6) to the PDP is
+   that commit-or-release signal: on receipt the PDP commits the
+   consumption the linked action used and releases any reserved excess,
+   keyed to the Execution Evidence's decision_id.
+
+   For a duration-metered action the PEP reports the measured duration
+   in the Execution Evidence measured_duration member, and the PDP
+   commits that duration against max_duration.  A duration-lease renewal
+   is a new re-evaluation request that carries the prior permit's
+   decision_id in context.prior_decision_id, so the PDP continues the
+   same metered activity rather than opening a new reservation.  This
+   exchange requires one request member and one evidence member:
+
+   context.prior_decision_id:  OPTIONAL.  A string.  Present on a
+      duration-lease renewal request, carrying the decision_id of the
+      permit being renewed.  Absent on an initial request.
+
+   measured_duration (Execution Evidence):  REQUIRED for a duration-
+      metered action, otherwise absent.  A string containing an ISO 8601
+      duration (the duration rule in Appendix A of [RFC3339]): the PEP's
+      measured duration for the executed action (Section 6).
 
 10.  Mission Status Composition
 
@@ -1258,7 +1394,20 @@ Table of Contents
    it MUST be trusted, authenticated, and access-controlled like the
    PDP, and its auto-approval is bounded as above.
 
-12.2.  Decision Evidence versus Execution Evidence
+12.2.  Denial oracle
+
+   The denial-reason identifiers and any contributing_constraints are a
+   decision oracle: an agent can probe them to map authority it does not
+   hold.  The PEP SHOULD minimize the denial detail it relays to the
+   agent; a generic refusal suffices to stop the action, and the full
+   reason and contributing constraints belong in evidence, not in the
+   agent-facing response.  To bound probing through the request loop,
+   deployments SHOULD rate-limit access requests per Mission and surface
+   request provenance to Approvers, so a compromised agent driving
+   repeated requestable denials is visible to the humans adjudicating
+   them.
+
+12.3.  Decision Evidence versus Execution Evidence
 
    Decision Evidence is not proof an action occurred.  Implementations
    MUST emit Execution Evidence to record outcomes, and auditors MUST
@@ -1268,17 +1417,28 @@ Table of Contents
    undetermined-outcome or, per deployment policy, as action-attempted;
    it MUST NOT treat it as proof of action.
 
-12.3.  Evidence integrity and signing keys
+12.4.  Evidence integrity and signing keys
 
    The evidence_envelope binds each record to the emitting PDP or PEP.
-   The PDP's jws-compact signing key MUST be resolvable in the PDP's
-   published JWKS so a verifier can check Decision Evidence
-   independently.  The PEP or executor signing key used for Execution
-   Evidence MUST be resolvable through a deployment-published key set or
-   equivalent trust configuration.  Implementations MUST reject evidence
-   whose format is unsupported rather than accepting it unverified.
+   The PDP's jws-compact signing key MUST be resolvable, by the JWS
+   protected kid, in the PDP's published JWKS so a verifier can check
+   Decision Evidence independently.  The PEP or executor signing key
+   used for Execution Evidence MUST be resolvable the same way through a
+   deployment-published key set.
 
-12.4.  Materialized view fidelity
+   This profile fixes one concrete discovery convention: the PDP
+   publishes its JWKS at a deployment-published location named in the
+   enforcement scope statement
+   ([I-D.draft-mcguinness-oauth-mission-runtime]), and the PEP or
+   executor key set is published and named there likewise.  A retired
+   signing key MUST remain resolvable in the published key set for at
+   least the evidence retention window, so records signed before a
+   rotation stay verifiable after it.
+
+   Implementations MUST reject evidence whose format is unsupported
+   rather than accepting it unverified.
+
+12.5.  Materialized view fidelity
 
    A PDP that evaluates against a materialized view enlarging the
    Authority Set's bounds violates the bounded property of Section 3.
@@ -1286,7 +1446,7 @@ Table of Contents
    that the view it loaded does not match the Mission the PEP referenced
    and deny with stale_state.
 
-12.5.  Transport
+12.6.  Transport
 
    The PDP endpoint and the audit channels carrying Decision Evidence
    and Execution Evidence MUST be served over TLS 1.2 or later (TLS 1.3
@@ -1435,16 +1595,16 @@ Table of Contents
 
    The context.mission, context.actor, context.credential,
    context.parameters, context.parameter_digest, context.audience,
-   context.freshness, and context.capability_source members carried
-   inside the AuthZEN request context object (Section 4) are AuthZEN
-   extension data and are not registered in an IETF registry.  The
-   response context.decision_id, context.denial_reason,
-   context.parameter_digest, context.policy_view_id,
-   context.permit_expires_at, context.single_use,
-   context.insufficient_claims, and context.access_request members
-   (Section 7) are likewise AuthZEN extension data.  The Mission-bound
-   token claims this profile consumes are registered by
-   [I-D.draft-mcguinness-oauth-mission].
+   context.freshness, context.capability_source, and
+   context.prior_decision_id members carried inside the AuthZEN request
+   context object (Section 4, Section 9) are AuthZEN extension data and
+   are not registered in an IETF registry.  The response
+   context.decision_id, context.denial_reason, context.parameter_digest,
+   context.policy_view_id, context.permit_expires_at,
+   context.single_use, context.insufficient_claims, and
+   context.access_request members (Section 7) are likewise AuthZEN
+   extension data.  The Mission-bound token claims this profile consumes
+   are registered by [I-D.draft-mcguinness-oauth-mission].
 
 15.  References
 
@@ -1490,6 +1650,14 @@ Table of Contents
    [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
               Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
               2015, <https://www.rfc-editor.org/rfc/rfc7515>.
+
+   [RFC7518]  Jones, M., "JSON Web Algorithms (JWA)", RFC 7518,
+              DOI 10.17487/RFC7518, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7518>.
+
+   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
+              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7519>.
 
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,

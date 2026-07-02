@@ -1064,7 +1064,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 2 January 2027</td>
+<td class="center">Expires 3 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1077,12 +1077,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-approval-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-01" class="published">1 July 2026</time>
+<time datetime="2026-07-02" class="published">2 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-02">2 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-03">3 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1138,7 +1138,7 @@ over. Revisions can only narrow the proposed Mission.<a href="#section-abstract-
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 2 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 3 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1181,6 +1181,14 @@ over. Revisions can only narrow the proposed Mission.<a href="#section-abstract-
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
             <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-deferred-mission-approval" class="internal xref">Deferred Mission Approval</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-sequencing-the-approval-eve" class="internal xref">Sequencing the Approval Event</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-deferred-approval-state-mac" class="internal xref">Deferred Approval State Machine</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
             <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-revisable-approval" class="internal xref">Revisable Approval</a></p>
@@ -1190,6 +1198,14 @@ over. Revisions can only narrow the proposed Mission.<a href="#section-abstract-
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
                 <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-submitting-a-revision" class="internal xref">Submitting a revision</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2.2.1">
+                    <p id="section-toc.1-1.6.2.2.2.1.1"><a href="#section-6.2.1" class="auto internal xref">6.2.1</a>.  <a href="#name-revision-errors" class="internal xref">Revision Errors</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
+                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-pending-lifetime-and-stalen" class="internal xref">Pending Lifetime and Staleness</a></p>
 </li>
             </ul>
 </li>
@@ -1282,13 +1298,14 @@ under the deferred substrate or accepts revisable approvals. The
 approval event, the Authority Set, the subset rule, and the integrity
 anchors are unchanged; this document governs only how the approval is
 reached over time.<a href="#section-2-2" class="pilcrow">¶</a></p>
-<p id="section-2-3">This profile is <strong>experimental</strong>. It depends normatively on OAuth
-Deferred Token Response
+<p id="section-2-3">This profile tracks an in-progress substrate. It depends normatively on
+OAuth Deferred Token Response
 (<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>), an early
-Internet-Draft that is not ratified and whose details may change.
-Synchronous Mission approval, which needs only the issuance profile, is
-the stable path; deploy deferred and revisable approval for evaluation
-rather than as a stable interface.<a href="#section-2-3" class="pilcrow">¶</a></p>
+Internet-Draft that is not ratified and whose details may change, so
+this profile is not yet a stable interface and will track the substrate
+as it evolves. Synchronous Mission approval, which needs only the
+issuance profile, is the stable path; deploy deferred and revisable
+approval for evaluation rather than as a stable interface.<a href="#section-2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="issuance-relationship">
@@ -1350,9 +1367,96 @@ substrate's deferred response (<code>authorization_pending</code> with a
 <code>deferral_code</code>) instead of a token, and the client polls with the
 deferred grant type until the approval resolves to a Mission-bound token
 response, <code>access_denied</code>, or <code>expired_token</code>.<a href="#section-5-1" class="pilcrow">¶</a></p>
-<p id="section-5-2">Deferral changes only the timing of the approval event. The Authority
+<div id="deferred-sequencing">
+<section id="section-5.1">
+        <h3 id="name-sequencing-the-approval-eve">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-sequencing-the-approval-eve" class="section-name selfRef">Sequencing the Approval Event</a>
+        </h3>
+<p id="section-5.1-1">The issuance profile treats the approval event as immediate: the
+Approver consents and the Mission record is created atomically with
+issuance of the authorization code
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). This profile is an explicit
+override of that sequencing for a deferred approval, and it moves the
+approval event without weakening it:<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5.1-2">
+<li id="section-5.1-2.1">
+            <p id="section-5.1-2.1.1">The client submits the proposed Mission via PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> and the
+authorization request completes into a deferred state per the
+deferred substrate (<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>).<a href="#section-5.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.1-2.2">
+            <p id="section-5.1-2.2.1">Before approval only the pending request exists. The authorization
+artifact represents a pending authorization, never authority, and no
+Mission exists. A <code>deferral_code</code>, a <code>revision_handle</code>, and any PAR
+<code>request_uri</code> are pending-request state, not a grant.<a href="#section-5.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.1-2.3">
+            <p id="section-5.1-2.3.1">The approval event executes on the asynchronous review surface. That
+surface <span class="bcp14">MUST</span> authenticate the Approver and <span class="bcp14">MUST</span> satisfy the Mission
+Intent's <code>context.acr</code>, exactly as the synchronous approval event
+requires (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.1-2.4">
+            <p id="section-5.1-2.4.1">The Mission record is created in the <code>active</code> state atomically with
+the approval decision, preserving the issuance profile's atomicity at
+the moved point.<a href="#section-5.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.1-2.5">
+            <p id="section-5.1-2.5.1">Issuance then completes per the deferred substrate: the next poll
+resolves to a Mission-bound token response.<a href="#section-5.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-5.1-3">Deferral changes only the timing of the approval event. The Authority
 Set the token is issued against, its <code>authority_hash</code>, and the recorded
-consent are exactly as in a synchronous approval.<a href="#section-5-2" class="pilcrow">¶</a></p>
+consent are exactly as in a synchronous approval.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="state-machine">
+<section id="section-5.2">
+        <h3 id="name-deferred-approval-state-mac">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-deferred-approval-state-mac" class="section-name selfRef">Deferred Approval State Machine</a>
+        </h3>
+<p id="section-5.2-1">A deferred approval is in one of four states: <code>pending</code>, <code>approved</code>,
+<code>denied</code>, or <code>revision_required</code>. The Mission Issuer:<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.2-2.1">
+            <p id="section-5.2-2.1.1">starts a deferred approval in <code>pending</code>;<a href="#section-5.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-2.2">
+            <p id="section-5.2-2.2.1"><span class="bcp14">MAY</span> move <code>pending</code> to <code>approved</code>, <code>denied</code>, or <code>revision_required</code>;<a href="#section-5.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-2.3">
+            <p id="section-5.2-2.3.1">returns <code>revision_required</code> to <code>pending</code> on an accepted revision
+(<a href="#revision-submission" class="auto internal xref">Section 6.2</a>); and<a href="#section-5.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-2.4">
+            <p id="section-5.2-2.4.1">accepts a revision only while in <code>revision_required</code>.<a href="#section-5.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.2-3"><code>approved</code> and <code>denied</code> are terminal. Resolving a deferred approval and
+replacing its proposed Mission with a revision are atomic with respect
+to each other: a concurrent approval of a proposal that a revision has
+superseded cannot commit, and a revision accepted after the approval
+resolved cannot reopen it.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-5.2-4">
+<pre>
+       submit (PAR + deferred)
+                |
+                v
+           +---------+   accept revision   +------------------+
+           | pending |&lt;--------------------| revision_required|
+           +---------+                     +------------------+
+             |  |  |                              ^
+   approve   |  |  | needs narrowing              |
+             |  |  +------------------------------+
+             |  |
+             |  +----------------&gt; denied  (terminal)
+             v
+          approved  (terminal; Mission created active)
+</pre><a href="#section-5.2-4" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
 </section>
 </div>
 <div id="revisable">
@@ -1397,7 +1501,7 @@ Cache-Control: no-store
   "error": "authorization_pending",
   "deferral_code": "dc_9P2K7zT1mX8b3N",
   "revision_required": true,
-  "clarification_handle": "ch_4QFJ3P9",
+  "revision_handle": "rvh_4QFJ3P9",
   "rejected_scope": "crm:write",
   "rejected_authorization_details": [
     { "type": "payment", "limit": "10000" }
@@ -1407,20 +1511,31 @@ Cache-Control: no-store
 }
 </pre><a href="#section-6.1-2" class="pilcrow">¶</a>
 </div>
-<p id="section-6.1-3"><code>revision_required</code> (boolean) and <code>clarification_handle</code> (string) are
+<p id="section-6.1-3"><code>revision_required</code> (boolean) and <code>revision_handle</code> (string) are
 <span class="bcp14">REQUIRED</span> on this response. <code>rejected_scope</code> and
-<code>rejected_authorization_details</code> are <span class="bcp14">OPTIONAL</span>; they tell the agent which
-dimensions of the proposed Mission were refused so it can plan a
+<code>rejected_authorization_details</code> are <span class="bcp14">OPTIONAL</span>; they name the dimensions
+of the proposed Mission that were refused so the agent can plan a
 narrowed revision without further out-of-band interaction. A Mission
 Issuer <span class="bcp14">MAY</span> omit them when disclosure would reveal sensitive policy
 state.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
-<p id="section-6.1-4">The <code>clarification_handle</code> is bound to the deferred approval and
+<p id="section-6.1-4"><code>rejected_scope</code> is a space-delimited list of scope tokens, using the
+<code>scope</code> syntax of <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>. <code>rejected_authorization_details</code> is an
+array of authorization-details-shaped subtrees that the re-derived
+Authority Set <span class="bcp14">MUST</span> exclude or narrow: each subtree names a <code>type</code> and
+the members within it that must not survive re-derivation unchanged. The
+Mission Issuer verifies per-dimension narrowing after it re-derives the
+Authority Set from the revised Intent (<a href="#revision-submission" class="auto internal xref">Section 6.2</a>); the
+client cannot author the Authority Set, so its obligation is scoped to
+the Intent members it does author (the <code>resources</code>, the
+<code>mission_expiry</code>, and the free-text <code>constraints</code>), which it revises to
+drive that narrowing.<a href="#section-6.1-4" class="pilcrow">¶</a></p>
+<p id="section-6.1-5">The <code>revision_handle</code> is bound to the deferred approval and
 authorizes one revision submission. It is not a token, grant, or
 continuation handle, and it is sender-constrained to the same key as the
 <code>deferral_code</code> (<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>). A
 client <span class="bcp14">MUST NOT</span> treat <code>revision_required</code>, the rejected dimensions, or
 the handle as evidence of any granted authority; the proposed Mission
-remains unapproved.<a href="#section-6.1-4" class="pilcrow">¶</a></p>
+remains unapproved.<a href="#section-6.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="revision-submission">
@@ -1429,32 +1544,33 @@ remains unapproved.<a href="#section-6.1-4" class="pilcrow">¶</a></p>
 <a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-submitting-a-revision" class="section-name selfRef">Submitting a revision</a>
         </h3>
 <p id="section-6.2-1">The client submits the narrowed Mission Intent to the PAR endpoint
-<span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> with the <code>clarification_handle</code> as an additional parameter,
+<span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> with the <code>revision_handle</code> as an additional parameter,
 sender-constrained as the deferred substrate requires. The Mission
 Issuer:<a href="#section-6.2-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-6.2-2">
 <li id="section-6.2-2.1">
-            <p id="section-6.2-2.1.1">verifies the <code>clarification_handle</code> is bound to a deferred approval
+            <p id="section-6.2-2.1.1">verifies the <code>revision_handle</code> is bound to a deferred approval
 in the revision-required condition, is unexpired and single-use, and
 matches the client and sender-constraint of the deferred approval;<a href="#section-6.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.2-2.2">
-            <p id="section-6.2-2.2.1">derives the Authority Set for the revised Intent, under the same
+            <p id="section-6.2-2.2.1">re-derives the Authority Set for the revised Intent, under the same
 <code>policy_version</code> that governed the proposed Mission, and verifies it
 is a subset of the proposed Mission's Authority Set under the issuance
 profile's subset rule (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), with
 <code>authorization_details</code> narrowing per the inclusion semantics of
-<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>. The revision <span class="bcp14">MUST</span> narrow every dimension named in
-<code>rejected_scope</code> or <code>rejected_authorization_details</code>
-(<a href="#revision-required" class="auto internal xref">Section 6.1</a>) and <span class="bcp14">MUST NOT</span> broaden any dimension. Deriving
-under the proposed Mission's <code>policy_version</code> keeps the subset
-comparison reproducible; if policy has changed since the proposal, the
-Mission Issuer re-derives the proposed Authority Set under the current
-policy to re-establish the baseline before comparing, or refuses the
+<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>. The re-derived Authority Set <span class="bcp14">MUST</span> exclude or narrow every
+dimension named in <code>rejected_scope</code> or
+<code>rejected_authorization_details</code> (<a href="#revision-required" class="auto internal xref">Section 6.1</a>), verified per
+dimension, and <span class="bcp14">MUST NOT</span> broaden any dimension. Deriving under the
+proposed Mission's <code>policy_version</code> keeps the subset comparison
+reproducible; if policy has changed since the proposal, the Mission
+Issuer re-derives the proposed Authority Set under the current policy
+to re-establish the baseline before comparing, or refuses the
 revision;<a href="#section-6.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.2-2.3">
-            <p id="section-6.2-2.3.1">invalidates the <code>clarification_handle</code>;<a href="#section-6.2-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-6.2-2.3.1">invalidates the <code>revision_handle</code>;<a href="#section-6.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.2-2.4">
             <p id="section-6.2-2.4.1">replaces the proposed Mission's Authority Set with the revised one
@@ -1465,14 +1581,58 @@ and re-reviews it.<a href="#section-6.2-2.4.1" class="pilcrow">¶</a></p>
 does not start a new approval. If the Mission Issuer returns a PAR
 <code>request_uri</code>, it is an artifact of PAR and <span class="bcp14">MUST NOT</span> be used to start a
 separate authorization transaction.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
-<p id="section-6.2-4">If the revision is not a subset, or otherwise fails validation, the PAR
-endpoint returns an error and the deferred approval stays in the
-revision-required condition. Because the handle is single-use, the
-client obtains a new <code>clarification_handle</code> from a subsequent
-<code>authorization_pending</code> response before retrying. A Mission Issuer
-<span class="bcp14">MUST</span> bound the number of revision cycles per deferred approval and <span class="bcp14">MUST</span>
-resolve to <code>access_denied</code> once the bound is reached or no acceptable
-narrowing remains, so a client cannot drive an unbounded revision loop.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+<div id="revision-errors">
+<section id="section-6.2.1">
+          <h4 id="name-revision-errors">
+<a href="#section-6.2.1" class="section-number selfRef">6.2.1. </a><a href="#name-revision-errors" class="section-name selfRef">Revision Errors</a>
+          </h4>
+<p id="section-6.2.1-1">The PAR endpoint reports a failed revision with a specific error:<a href="#section-6.2.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.2.1-2.1">
+              <p id="section-6.2.1-2.1.1">An expired or already-consumed <code>revision_handle</code> yields
+<code>invalid_grant</code>.<a href="#section-6.2.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.2.1-2.2">
+              <p id="section-6.2.1-2.2.1">A malformed revision (unparseable, or structurally invalid against the
+Mission Intent member definitions) yields <code>invalid_request</code>.<a href="#section-6.2.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.2.1-2.3">
+              <p id="section-6.2.1-2.3.1">A revision whose re-derived Authority Set does not narrow every
+dimension named in <code>rejected_scope</code> or <code>rejected_authorization_details</code>
+yields <code>revision_not_narrowing</code> (<a href="#iana" class="auto internal xref">Section 12</a>).<a href="#section-6.2.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.2.1-2.4">
+              <p id="section-6.2.1-2.4.1">When the deferral resolved (to <code>access_denied</code>, <code>expired_token</code>, or an
+approval) while the revision was in flight, the endpoint yields
+<code>invalid_grant</code> and the resolution is conveyed on the next poll of the
+<code>deferral_code</code>.<a href="#section-6.2.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-6.2.1-3">A malformed revision leaves the <code>revision_handle</code> reissuable: because the
+submission never advanced the approval, the client obtains a new handle
+from a subsequent <code>authorization_pending</code> response and retries. A
+consumed handle, and a handle whose deferral has resolved, are not
+reissuable.<a href="#section-6.2.1-3" class="pilcrow">¶</a></p>
+<p id="section-6.2.1-4">A Mission Issuer <span class="bcp14">MUST</span> bound the number of revision cycles per deferred
+approval and <span class="bcp14">MUST</span> resolve to <code>access_denied</code> once the bound is reached or
+no acceptable narrowing remains, so a client cannot drive an unbounded
+revision loop.<a href="#section-6.2.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="pending-staleness">
+<section id="section-6.3">
+        <h3 id="name-pending-lifetime-and-stalen">
+<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-pending-lifetime-and-stalen" class="section-name selfRef">Pending Lifetime and Staleness</a>
+        </h3>
+<p id="section-6.3-1">A deferred approval <span class="bcp14">MUST</span> carry a deployment-set maximum pending lifetime,
+after which it resolves to <code>expired_token</code> per the deferred substrate. A
+decision made after a change to the derivation <code>policy_version</code>, or to
+the applicable capability catalog, <span class="bcp14">MUST</span> be made over a proposal that has
+been re-derived and re-rendered under the current policy and catalog; the
+Mission Issuer <span class="bcp14">MUST NOT</span> commit an approval over a proposal derived under
+superseded policy.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1489,7 +1649,12 @@ narrowing remains, so a client cannot drive an unbounded revision loop.<a href="
 deployment records Consent Evidence
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>), the
 re-reviewed revision <span class="bcp14">MUST</span> get a fresh <code>consent_rendering_hash</code>; prior
-consent does not transfer to the narrowed proposal.<a href="#section-7-1.2.1" class="pilcrow">¶</a></p>
+consent does not transfer to the narrowed proposal. Each
+revision-required outcome produces Consent Evidence with decision
+<code>narrowed</code>, carrying the reviewed disclosure's <code>consent_rendering_hash</code>
+and the refused dimensions. The final evidence for the resulting
+approval <span class="bcp14">MAY</span> carry <code>predecessor_intent_hashes</code> committing the revision
+chain.<a href="#section-7-1.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-1.3">Shaping:</dt>
@@ -1564,7 +1729,7 @@ Cache-Control: no-store
 { "error": "authorization_pending",
   "deferral_code": "dfc_7M2R4kP9sT1x",
   "revision_required": true,
-  "clarification_handle": "clh_4QFJ3P9wZ2",
+  "revision_handle": "rvh_4QFJ3P9wZ2",
   "rejected_authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
@@ -1573,7 +1738,7 @@ Cache-Control: no-store
 </pre><a href="#section-8-6" class="pilcrow">¶</a>
 </div>
 <p id="section-8-7">The agent pushes a narrowed Mission Intent, dropping the write, to PAR
-with the clarification handle:<a href="#section-8-7" class="pilcrow">¶</a></p>
+with the revision handle:<a href="#section-8-7" class="pilcrow">¶</a></p>
 <div class="lang-http sourcecode" id="section-8-8">
 <pre>
 POST /par HTTP/1.1
@@ -1582,14 +1747,17 @@ Content-Type: application/x-www-form-urlencoded
 
 mission_intent=%7B...read-only%20Q3%20invoices...%7D&amp;
 client_id=s6BhdRkqt3&amp;
-clarification_handle=clh_4QFJ3P9wZ2
+revision_handle=rvh_4QFJ3P9wZ2
 </pre><a href="#section-8-8" class="pilcrow">¶</a>
 </div>
 <p id="section-8-9">The Mission Issuer verifies the handle, confirms the revised Authority
 Set is a subset of the proposed one, updates the deferred approval, and
-re-reviews (here, policy auto-approves the now-narrower read-only
-Mission). The agent keeps polling the same <code>deferral_code</code>, which now
-resolves to a Mission-bound token over the final, narrowed authority:<a href="#section-8-9" class="pilcrow">¶</a></p>
+returns it to <code>pending</code>. <code>alice</code> reviews the narrowed read-only proposal
+and approves it. Every revision resolution requires a fresh approval
+event with its own rendering; prior consent does not transfer, and the
+recorded <code>approver</code> is the principal who approved the final set. The
+agent keeps polling the same <code>deferral_code</code>, which now resolves to a
+Mission-bound token over the final, narrowed authority:<a href="#section-8-9" class="pilcrow">¶</a></p>
 <div class="lang-http sourcecode" id="section-8-10">
 <pre>
 HTTP/1.1 200 OK
@@ -1604,16 +1772,19 @@ Cache-Control: no-store
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
       "constraints": { "period": "2026-Q3" } } ],
-  "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
-    "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ" } }
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-" }
 </pre><a href="#section-8-10" class="pilcrow">¶</a>
 </div>
-<p id="section-8-11">The agent never abandoned its request; the approval resolved over the
-narrowed proposal, and the committed <code>authority_hash</code> is over the
-read-only Authority Set actually approved.<a href="#section-8-11" class="pilcrow">¶</a></p>
+<p id="section-8-11">The token carries the <code>mission</code> claim and its <code>authority_hash</code> as the
+issuance profile defines; the response also surfaces the optional
+<code>mission_id</code> parameter (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) for
+correlation. The agent never abandoned its request; the approval
+resolved over the narrowed proposal, and the committed <code>authority_hash</code>
+is over the read-only Authority Set actually approved.<a href="#section-8-11" class="pilcrow">¶</a></p>
+<p id="section-8-12">A deployment that wants a revision resolved by policy rather than by a
+fresh human approval uses the expansion profile's progressive
+authorization, drawing authority from a pre-consented ceiling
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-8-12" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conformance">
@@ -1634,7 +1805,7 @@ read-only Authority Set actually approved.<a href="#section-8-11" class="pilcrow
 issuance profile's subset rule, never a broadening;<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-2.4">
-          <p id="section-9-2.4.1">treat each <code>clarification_handle</code> as single-use and
+          <p id="section-9-2.4.1">treat each <code>revision_handle</code> as single-use and
 sender-constrained to the deferred approval; and<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-2.5">
@@ -1663,7 +1834,7 @@ parameter (scope, resource, audience, <code>authorization_details</code>) before
 re-review.<a href="#section-10-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-2.2">
-          <p id="section-10-2.2.1">Single-use handle. A <code>clarification_handle</code> <span class="bcp14">MUST</span> be invalidated after
+          <p id="section-10-2.2.1">Single-use handle. A <code>revision_handle</code> <span class="bcp14">MUST</span> be invalidated after
 one submission, success or failure. A new handle is issued on a
 subsequent revision-required response.<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
 </li>
@@ -1695,6 +1866,13 @@ security event, so a client cannot drive an unbounded reshape-and-retry
 loop to wear down a reviewer.<a href="#section-10-2.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
+<p id="section-10-3">The asynchronous review surface is part of the consent path. It <span class="bcp14">MUST</span>
+meet the approval event's authentication requirements, authenticating
+the Approver and satisfying the Mission Intent's <code>context.acr</code>
+(<a href="#deferred-sequencing" class="auto internal xref">Section 5.1</a>); deferring an approval does not lower the bar
+the synchronous event sets. Approver routing and notification, how a
+proposed Mission reaches a reviewer and how the reviewer is alerted, are
+deployment matters and are named as such here rather than specified.<a href="#section-10-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="privacy-considerations">
@@ -1727,22 +1905,41 @@ registry. For each: Change Controller IETF; Reference this document,
 <a href="#revision-required" class="auto internal xref">Section 6.1</a>.<a href="#section-12-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-12-4.1">
-          <p id="section-12-4.1.1"><code>revision_required</code> (token endpoint response)<a href="#section-12-4.1.1" class="pilcrow">¶</a></p>
+          <p id="section-12-4.1.1"><code>revision_required</code> (token response)<a href="#section-12-4.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-4.2">
-          <p id="section-12-4.2.1"><code>clarification_handle</code> (token endpoint response, PAR request)<a href="#section-12-4.2.1" class="pilcrow">¶</a></p>
+          <p id="section-12-4.2.1"><code>revision_handle</code> (token response)<a href="#section-12-4.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-4.3">
-          <p id="section-12-4.3.1"><code>rejected_scope</code> (token endpoint response)<a href="#section-12-4.3.1" class="pilcrow">¶</a></p>
+          <p id="section-12-4.3.1"><code>rejected_scope</code> (token response)<a href="#section-12-4.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-4.4">
-          <p id="section-12-4.4.1"><code>rejected_authorization_details</code> (token endpoint response)<a href="#section-12-4.4.1" class="pilcrow">¶</a></p>
+          <p id="section-12-4.4.1"><code>rejected_authorization_details</code> (token response)<a href="#section-12-4.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-12-5">PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> carries the revision as authorization-request parameters
-without a distinct usage location, so the pushed submission of the
-narrowed Intent and <code>clarification_handle</code> needs no separate
-registration.<a href="#section-12-5" class="pilcrow">¶</a></p>
+<p id="section-12-5">PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> carries authorization-request parameters without a
+distinct usage location, so the pushed submission of the narrowed Intent
+and <code>revision_handle</code> needs no separate registration, as the issuance
+profile states (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-12-5" class="pilcrow">¶</a></p>
+<p id="section-12-6">This document registers the following in the "OAuth Extensions Error"
+registry:<a href="#section-12-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12-7.1">
+          <p id="section-12-7.1.1">Name: <code>revision_not_narrowing</code><a href="#section-12-7.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-7.2">
+          <p id="section-12-7.2.1">Usage Location: token error response<a href="#section-12-7.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-7.3">
+          <p id="section-12-7.3.1">Protocol Extension: Mission Deferred Approval (this document)<a href="#section-12-7.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-7.4">
+          <p id="section-12-7.4.1">Change Controller: IETF<a href="#section-12-7.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-7.5">
+          <p id="section-12-7.5.1">Reference: this document, <a href="#revision-errors" class="auto internal xref">Section 6.2.1</a><a href="#section-12-7.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
 </section>
 </div>
 <div id="sec-combined-references">
@@ -1767,6 +1964,10 @@ registration.<a href="#section-12-5" class="pilcrow">¶</a></p>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6749">[RFC6749]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6749">https://www.rfc-editor.org/rfc/rfc6749</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8174">[RFC8174]</dt>
         <dd>

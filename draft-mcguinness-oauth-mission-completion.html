@@ -12,10 +12,10 @@ Set and gates issuance on Mission state, but a Mission keeps deriving an
 entry's authority until it is revoked or expires, even after the task
 that entry was granted for is finished. The Intent's  success_criteria 
 record when a task is done but are inert. This document defines an
- OPTIONAL  Mission Completion profile. It adds  terminal_when , an
-entry-level completion condition that, once met,  discharges  an
-Authority Set entry: the Authorization Server stops deriving tokens
-carrying that entry. Discharge is monotonic, it can only remove an
+ OPTIONAL  Mission Completion profile. It adds  terminal_when , a
+completion condition carried in a  mission_resource_access  entry's
+ constraints  that, once met,  discharges  the Authority Set entry:
+the Authorization Server stops deriving tokens carrying that entry. Discharge is monotonic, it can only remove an
 entry's authority and never widen it, so it is safe against a
 prompt-injected agent by construction; it composes with the subset rule
 as a condition a derived entry can add but never drop; and it lets a
@@ -1066,7 +1066,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 2 January 2027</td>
+<td class="center">Expires 3 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1079,12 +1079,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-completion-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-01" class="published">1 July 2026</time>
+<time datetime="2026-07-02" class="published">2 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-02">2 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-03">3 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1102,10 +1102,10 @@ Set and gates issuance on Mission state, but a Mission keeps deriving an
 entry's authority until it is revoked or expires, even after the task
 that entry was granted for is finished. The Intent's <code>success_criteria</code>
 record when a task is done but are inert. This document defines an
-<span class="bcp14">OPTIONAL</span> Mission Completion profile. It adds <code>terminal_when</code>, an
-entry-level completion condition that, once met, <strong>discharges</strong> an
-Authority Set entry: the Authorization Server stops deriving tokens
-carrying that entry. Discharge is monotonic, it can only remove an
+<span class="bcp14">OPTIONAL</span> Mission Completion profile. It adds <code>terminal_when</code>, a
+completion condition carried in a <code>mission_resource_access</code> entry's
+<code>constraints</code> that, once met, <strong>discharges</strong> the Authority Set entry:
+the Authorization Server stops deriving tokens carrying that entry. Discharge is monotonic, it can only remove an
 entry's authority and never widen it, so it is safe against a
 prompt-injected agent by construction; it composes with the subset rule
 as a condition a derived entry can add but never drop; and it lets a
@@ -1142,7 +1142,7 @@ enforceable counterpart of the inert <code>success_criteria</code>.<a href="#sec
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 2 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 3 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1192,10 +1192,13 @@ enforceable counterpart of the inert <code>success_criteria</code>.<a href="#sec
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
                 <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-determining-discharge" class="internal xref">Determining Discharge</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-discharge-visibility" class="internal xref">Discharge Visibility</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
-            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-subset-rule-extension" class="internal xref">Subset Rule Extension</a></p>
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-subset-rule" class="internal xref">Subset Rule</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
             <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-forward-compatibility" class="internal xref">Forward Compatibility</a></p>
@@ -1257,11 +1260,12 @@ Intent's <code>success_criteria</code> describe when the task is complete, but t
 issuance profile keeps them inert: they are rendered and committed, and
 carry no machine effect (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">This document supplies the enforceable counterpart. It defines
-<code>terminal_when</code>, an <span class="bcp14">OPTIONAL</span> member of a <code>mission_resource_access</code> entry
-that carries one or more completion conditions. When a condition is met,
-the entry is <strong>discharged</strong>: the Authorization Server <span class="bcp14">MUST NOT</span> thereafter
-derive a token carrying that entry, exactly as it refuses derivation for
-a non-<code>active</code> Mission.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<code>terminal_when</code>, an <span class="bcp14">OPTIONAL</span> Common Constraint
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) on a <code>mission_resource_access</code>
+entry that carries one or more completion conditions. When a condition
+is met, the entry is <strong>discharged</strong>: the Authorization Server <span class="bcp14">MUST NOT</span>
+thereafter derive a token carrying that entry, exactly as it refuses
+derivation for a non-<code>active</code> Mission.<a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">Three properties make this safe inside the Mission model and this
 document requires all three:<a href="#section-1-3" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -1301,10 +1305,9 @@ on the issuance profile; it defines one <span class="bcp14">OPTIONAL</span> entr
 rules for handling it.<a href="#section-2-1" class="pilcrow">¶</a></p>
 <p id="section-2-2">A deployment claims this profile only when it issues or consumes entries
 carrying <code>terminal_when</code>.<a href="#section-2-2" class="pilcrow">¶</a></p>
-<p id="section-2-3">This profile is <strong>experimental</strong> and is not part of the recommended v1
-deployment bundles. Its entry-discharge model is newer and less
-exercised than the issuance core and the runtime layer; treat it as a
-direction whose details may change, not yet as a stable interface.<a href="#section-2-3" class="pilcrow">¶</a></p>
+<p id="section-2-3">This profile is newer and less exercised than the issuance core and the
+runtime layer, and is not part of the recommended v1 deployment bundles.
+Its entry-discharge details may change.<a href="#section-2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="issuance-relationship">
@@ -1319,9 +1322,10 @@ integrity anchors, lifecycle states, and issuance gating, and the inert
 <code>success_criteria</code> member of the Mission Intent. It uses Mission, Mission
 Issuer, Authority Set, and derivation as the issuance profile defines
 them.<a href="#section-3-1" class="pilcrow">¶</a></p>
-<p id="section-3-2">It extends the issuance profile in two narrow, additive ways: an <span class="bcp14">OPTIONAL</span>
-        <code>terminal_when</code> member on a <code>mission_resource_access</code> entry
-(<a href="#terminal-when" class="auto internal xref">Section 5</a>), and one clause in the subset comparison
+<p id="section-3-2">It extends the issuance profile in one narrow, additive way: it registers
+<code>terminal_when</code>, an <span class="bcp14">OPTIONAL</span> Common Constraint on a
+<code>mission_resource_access</code> entry (<a href="#terminal-when" class="auto internal xref">Section 5</a>), whose subset rule
+the issuance profile's existing subset comparison applies
 (<a href="#subset-extension" class="auto internal xref">Section 7</a>). It changes no Mission state, the three-state
 lifecycle, or the meaning of any existing member.<a href="#section-3-2" class="pilcrow">¶</a></p>
 </section>
@@ -1351,8 +1355,10 @@ derivable.<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
       <h2 id="name-entry-completion-conditions">
 <a href="#section-5" class="section-number selfRef">5. </a><a href="#name-entry-completion-conditions" class="section-name selfRef">Entry Completion Conditions</a>
       </h2>
-<p id="section-5-1">A <code>mission_resource_access</code> entry (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>)
-<span class="bcp14">MAY</span> carry a <code>terminal_when</code> member:<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-1">This document defines <code>terminal_when</code>, a Common Constraint
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) carried in the <code>constraints</code>
+object of a <code>mission_resource_access</code> entry. It is registered in the
+"Mission Common Constraints" registry (<a href="#iana" class="auto internal xref">Section 15</a>).<a href="#section-5-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-5-2">
         <dt id="section-5-2.1">
 <code>terminal_when</code>:</dt>
@@ -1373,7 +1379,7 @@ are deployment- or registry-defined and opaque to this document, as
 <code>event_source</code>:</dt>
             <dd style="margin-left: 1.5em" id="section-5-2.2.2.4">
               <p id="section-5-2.2.2.4.1"><span class="bcp14">OPTIONAL</span>. A string. A URI the Authorization Server consults to
-determine whether the event has occurred.<a href="#section-5-2.2.2.4.1" class="pilcrow">¶</a></p>
+determine whether the event has occurred (<a href="#determining" class="auto internal xref">Section 6.1</a>).<a href="#section-5-2.2.2.4.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
 <dt id="section-5-2.2.2.5">
@@ -1389,11 +1395,12 @@ issuance.<a href="#section-5-2.2.2.6.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-5-3">The <code>terminal_when</code> array is part of the Authority Set: it is committed
-by <code>authority_hash</code> and reproducible under derivation
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Whether a condition has fired
-is evaluated state, not part of <code>authority_hash</code>; folding fired status
-into the anchor would make the committed authority time-varying.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-3">The <code>terminal_when</code> array is part of the entry's <code>constraints</code> and so of
+the Authority Set: it is committed by <code>authority_hash</code> and reproducible
+under derivation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Whether a
+condition has fired is evaluated state, not part of <code>authority_hash</code>;
+folding fired status into the anchor would make the committed authority
+time-varying.<a href="#section-5-3" class="pilcrow">¶</a></p>
 <p id="section-5-4"><code>terminal_when</code> is the enforceable counterpart of the inert
 <code>success_criteria</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), which
 remains inert: <code>success_criteria</code> describe completion for the Approver,
@@ -1434,33 +1441,84 @@ discharged entry at the point of use (<a href="#runtime" class="auto internal xr
 <a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-determining-discharge" class="section-name selfRef">Determining Discharge</a>
         </h3>
 <p id="section-6.1-1">The Authorization Server determines whether a condition has been met from
-the <code>event_source</code>, within <code>max_staleness</code> when present, by a mechanism
-this document does not define (a status query, a received signal, a
-recorded administrative action).<a href="#section-6.1-1" class="pilcrow">¶</a></p>
-<p id="section-6.1-2">If the Authorization Server cannot determine whether a condition has been
+the <code>event_source</code>, within <code>max_staleness</code> when present. The mechanism is
+deployment-defined (a status query, a received signal, a recorded
+administrative action). This document defines one interoperable
+event-source profile a deployment <span class="bcp14">MAY</span> use: the <code>event_source</code> URI is
+retrieved over authenticated HTTPS and returns a signed JSON status
+document, a JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>, with these members:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.1-2.1">
+            <p id="section-6.1-2.1.1"><code>occurred</code>: <span class="bcp14">REQUIRED</span>. A boolean, true when the event has occurred.<a href="#section-6.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-2.2">
+            <p id="section-6.1-2.2.1"><code>observed_at</code>: <span class="bcp14">REQUIRED</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time at which the
+status was observed.<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-2.3">
+            <p id="section-6.1-2.3.1"><code>event_type</code>: <span class="bcp14">REQUIRED</span>. A string, the <code>event_type</code> the document
+reports.<a href="#section-6.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-2.4">
+            <p id="section-6.1-2.4.1"><code>source</code>: <span class="bcp14">REQUIRED</span>. A URI identifying the reporting source.<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-6.1-3">Other source mechanisms remain deployment-defined. The Mission Issuer
+<span class="bcp14">MUST</span> authenticate and integrity-verify any event source outside its own
+trust domain before acting on its report.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+<p id="section-6.1-4">Once the Authorization Server observes that a condition has been met, the
+discharge is recorded as Authorization-Server-side state and <span class="bcp14">MUST NOT</span>
+revert, regardless of any later report from the event source: a source
+that afterward reports the event as not occurred does not restore the
+entry's authority.<a href="#section-6.1-4" class="pilcrow">¶</a></p>
+<p id="section-6.1-5">If the Authorization Server cannot determine whether a condition has been
 met, for example because <code>event_source</code> is unreachable within
 <code>max_staleness</code>, it <span class="bcp14">MUST</span> treat the entry as possibly discharged and
 refuse to derive it, as it fails closed for stale Mission state. Discharge
 removes authority, so the conservative action when status is unknown is
-to withhold issuance, never to issue.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+to withhold issuance, never to issue.<a href="#section-6.1-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="visibility">
+<section id="section-6.2">
+        <h3 id="name-discharge-visibility">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-discharge-visibility" class="section-name selfRef">Discharge Visibility</a>
+        </h3>
+<p id="section-6.2-1">A discharged entry is no longer derivable, so the surfaces that report a
+Mission's authority <span class="bcp14">MUST</span> reflect that. Where the Mission Status profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> is deployed, the Status
+operation and the token introspection projection <span class="bcp14">MUST</span> omit a discharged
+entry from the <code>authorization_details</code> they return. This is consistent
+with the audience filtering those surfaces already apply: a discharged
+entry, like an entry addressed to another audience, is not authority the
+caller may rely on.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+<p id="section-6.2-2">A per-entry discharge lifecycle signal is future work for the Mission
+Lifecycle Signals profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>;
+this document defines no discharge event.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="subset-extension">
 <section id="section-7">
-      <h2 id="name-subset-rule-extension">
-<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-subset-rule-extension" class="section-name selfRef">Subset Rule Extension</a>
+      <h2 id="name-subset-rule">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-subset-rule" class="section-name selfRef">Subset Rule</a>
       </h2>
-<p id="section-7-1">The subset comparison of the issuance profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>)
-gains one clause: when the Authorization Server narrows an entry, every
-condition in the parent entry's <code>terminal_when</code> <span class="bcp14">MUST</span> be present,
-byte-equal, in the derived entry's <code>terminal_when</code>, and the derived entry
-<span class="bcp14">MAY</span> add further conditions.<a href="#section-7-1" class="pilcrow">¶</a></p>
-<p id="section-7-2">Conditions are compared as opaque objects, not by event semantics. A
-child cannot drop or alter a parent's completion condition, only add
-more, so discharge composes monotonically: adding a condition can only
-make an entry discharge sooner, which is a narrowing. Modifying a parent
+<p id="section-7-1">Because <code>terminal_when</code> is a Common Constraint, the issuance profile's
+subset comparison (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) applies its
+registered subset rule with no new clause: for a key present in the
+reference entry's <code>constraints</code>, the same key <span class="bcp14">MUST</span> be present in the
+candidate entry and its value <span class="bcp14">MUST</span> be no broader under the key's
+registered rule. For <code>terminal_when</code>, a candidate value is no broader
+than a reference value when the candidate's condition array contains
+every condition of the reference, compared structurally after the
+canonicalization of the issuance profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); the candidate <span class="bcp14">MAY</span> add further
+conditions.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2">Conditions are compared structurally, not by event semantics. A child
+cannot drop or alter a parent's completion condition, only add more, so
+discharge composes monotonically: an added condition can only make an
+entry discharge sooner, which is a narrowing. Modifying a parent
 condition is forbidden because a verifier cannot decide whether the
 change discharges earlier or later from opaque <code>event_type</code> values.<a href="#section-7-2" class="pilcrow">¶</a></p>
 </section>
@@ -1470,19 +1528,18 @@ change discharges earlier or later from opaque <code>event_type</code> values.<a
       <h2 id="name-forward-compatibility">
 <a href="#section-8" class="section-number selfRef">8. </a><a href="#name-forward-compatibility" class="section-name selfRef">Forward Compatibility</a>
       </h2>
-<p id="section-8-1"><code>terminal_when</code> is <strong>mandatory to understand</strong>. Discharge is load-bearing
-narrowing that a consumer cannot infer from the rest of the entry, so a
-consumer that does not recognize <code>terminal_when</code> <span class="bcp14">MUST</span> fail closed: it
-<span class="bcp14">MUST NOT</span> narrow, delegate, audience-project, or rely on an entry carrying
-<code>terminal_when</code>. This is the same rule the issuance profile applies to an
-<code>authorization_details</code> type whose semantics a consumer does not
-understand (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): such an entry may be
-issued only to a consumer that understands the member, carried exactly as
-approved, and <span class="bcp14">MUST NOT</span> appear in a token a non-understanding consumer
-narrows or projects.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-1">Because <code>terminal_when</code> is a <code>constraints</code> member, a consumer that does
+not recognize it fails closed by the issuance profile's Resource Server
+enforcement rule directly: a consumer <span class="bcp14">MUST</span> fail closed on any
+<code>constraints</code> key it does not understand, or understands but cannot
+enforce, refusing the request rather than granting access while ignoring
+the key (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Discharge is
+load-bearing narrowing, so ignoring <code>terminal_when</code> would silently widen
+the grant. That enforcement rule is the honest basis of discharge's
+safety: an unrecognized <code>terminal_when</code> is refused, never dropped.<a href="#section-8-1" class="pilcrow">¶</a></p>
 <p id="section-8-2">An Authorization Server that does not implement this profile simply does
 not emit <code>terminal_when</code>, and is unaffected. The fail-closed rule binds a
-consumer that encounters the member without implementing it.<a href="#section-8-2" class="pilcrow">¶</a></p>
+consumer that encounters the constraint without implementing it.<a href="#section-8-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="derivation-guidance">
@@ -1498,19 +1555,20 @@ element of the Intent becomes:<a href="#section-9-1" class="pilcrow">¶</a></p>
           <p id="section-9-2.1.1">an <code>action</code> if removing it would leave the task undefined;<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-2.2">
-          <p id="section-9-2.2.1">a <code>constraints</code> member if removing it would merely make the task less
-restrictive; and<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-9-2.2.1">an ordinary <code>constraints</code> member if removing it would merely make the
+task less restrictive; and<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-2.3">
-          <p id="section-9-2.3.1">a <code>terminal_when</code> condition if it defines when the task is satisfied,
-retiring the entry's authority rather than widening or restricting it.<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-9-2.3.1">a <code>terminal_when</code> completion condition, itself a <code>constraints</code> member,
+if it defines when the task is satisfied, retiring the entry's
+authority rather than widening or restricting it.<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-9-3">The third case is what this profile adds. A bound that holds throughout
-the task is a constraint; an event that ends the task is a
+the task is an ordinary constraint; an event that ends the task is a
 <code>terminal_when</code> condition. For example, "only invoices under 500 USD" is
-a constraint, while "until the Q3 close is finalized" is a completion
-condition.<a href="#section-9-3" class="pilcrow">¶</a></p>
+a <code>max_amount_usd</code> constraint, while "until the Q3 close is finalized" is
+a completion condition.<a href="#section-9-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="runtime">
@@ -1524,8 +1582,11 @@ issuance profile alone. It is also a natural input to the runtime layer
 Enforcement Point that recognizes <code>terminal_when</code> <span class="bcp14">SHOULD</span> deny a
 discharged entry at the point of use, closing the window between
 discharge and token expiry the same way it denies a revoked Mission. A
-runtime Policy Enforcement Point that does not recognize <code>terminal_when</code>
-fails closed for the entry per <a href="#forward-compat" class="auto internal xref">Section 8</a>.<a href="#section-10-1" class="pilcrow">¶</a></p>
+Policy Enforcement Point learns that an entry is discharged from the
+Mission Status operation or the token introspection projection
+(<a href="#visibility" class="auto internal xref">Section 6.2</a>), the same way it learns a Mission is revoked. A runtime
+Policy Enforcement Point that does not recognize <code>terminal_when</code> fails
+closed for the entry per <a href="#forward-compat" class="auto internal xref">Section 8</a>.<a href="#section-10-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="example">
@@ -1545,11 +1606,12 @@ bounded to under 500 USD and discharged when the Q3 close is finalized:<a href="
   { "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
-    "constraints": { "max_amount_usd": 500 },
-    "terminal_when": [
-      { "event_type": "accounting-period-closed",
-        "event_source": "https://erp.example.com/periods/2026-Q3",
-        "max_staleness": "PT15M" } ] }
+    "constraints": {
+      "max_amount_usd": 500,
+      "terminal_when": [
+        { "event_type": "accounting-period-closed",
+          "event_source": "https://erp.example.com/periods/2026-Q3",
+          "max_staleness": "PT15M" } ] } }
 ]
 </pre><a href="#section-11-2" class="pilcrow">¶</a>
 </div>
@@ -1583,16 +1645,26 @@ refuse to derive it (<a href="#discharge" class="auto internal xref">Section 6</
 (<a href="#determining" class="auto internal xref">Section 6.1</a>);<a href="#section-12-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-2.3">
-          <p id="section-12-2.3.1">carry every parent completion condition unchanged into a derived entry,
-permitting only added conditions (<a href="#subset-extension" class="auto internal xref">Section 7</a>); and<a href="#section-12-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-12-2.3.1">record an observed discharge as latched state that <span class="bcp14">MUST NOT</span> revert on a
+later source report (<a href="#determining" class="auto internal xref">Section 6.1</a>);<a href="#section-12-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-2.4">
-          <p id="section-12-2.4.1">keep the <code>terminal_when</code> array within <code>authority_hash</code> and keep fired
-status out of it (<a href="#terminal-when" class="auto internal xref">Section 5</a>).<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-12-2.4.1">carry every parent completion condition into a derived entry when
+narrowing, permitting only added conditions (<a href="#subset-extension" class="auto internal xref">Section 7</a>);<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.5">
+          <p id="section-12-2.5.1">where it offers the Mission Status operation or the token introspection
+projection, omit a discharged entry from the <code>authorization_details</code> it
+returns (<a href="#visibility" class="auto internal xref">Section 6.2</a>); and<a href="#section-12-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.6">
+          <p id="section-12-2.6.1">keep the <code>terminal_when</code> condition array committed by <code>authority_hash</code>
+and keep fired status out of it (<a href="#terminal-when" class="auto internal xref">Section 5</a>).<a href="#section-12-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-12-3">A consumer conforming to this profile <span class="bcp14">MUST</span> fail closed for an entry
-carrying a <code>terminal_when</code> it does not understand (<a href="#forward-compat" class="auto internal xref">Section 8</a>).<a href="#section-12-3" class="pilcrow">¶</a></p>
+carrying a <code>terminal_when</code> constraint it does not understand
+(<a href="#forward-compat" class="auto internal xref">Section 8</a>).<a href="#section-12-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
@@ -1610,10 +1682,11 @@ cannot use <code>terminal_when</code> to widen authority, and the worst it can d
 is retire its own authority sooner.<a href="#section-13-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.2">
-          <p id="section-13-2.2.1">Fail closed on unknown member. A consumer that does not understand
-<code>terminal_when</code> <span class="bcp14">MUST</span> refuse the entry (<a href="#forward-compat" class="auto internal xref">Section 8</a>); ignoring
-the member would let a discharged entry continue to be narrowed,
-projected, or enforced, defeating discharge.<a href="#section-13-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-13-2.2.1">Fail closed on unknown constraint. A consumer that does not understand
+the <code>terminal_when</code> constraint <span class="bcp14">MUST</span> refuse the entry
+(<a href="#forward-compat" class="auto internal xref">Section 8</a>); ignoring the constraint would let a discharged
+entry continue to be narrowed, projected, or enforced, defeating
+discharge.<a href="#section-13-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.3">
           <p id="section-13-2.3.1">Fail closed on unknown status. When discharge status is
@@ -1624,9 +1697,9 @@ control.<a href="#section-13-2.3.1" class="pilcrow">¶</a></p>
         <li class="normal" id="section-13-2.4">
           <p id="section-13-2.4.1">Trusted event source. <code>event_source</code> is a trusted input to issuance: a
 party that can make the source report "not yet complete" can keep an
-entry derivable past its true completion. A deployment <span class="bcp14">SHOULD</span> authorize
-and integrity-protect the event source as it does other Mission state
-inputs, and <span class="bcp14">SHOULD</span> prefer sources in its own trust domain.<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
+entry derivable past its true completion. The Mission Issuer <span class="bcp14">MUST</span>
+authenticate and integrity-verify an event source outside its own trust
+domain (<a href="#determining" class="auto internal xref">Section 6.1</a>), and <span class="bcp14">SHOULD</span> prefer sources within it.<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.5">
           <p id="section-13-2.5.1">Already-issued tokens. Discharge gates new derivations only; a token
@@ -1657,12 +1730,41 @@ that exposure when the source is operated by another party.<a href="#section-14-
       <h2 id="name-iana-considerations">
 <a href="#section-15" class="section-number selfRef">15. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-15-1">This document makes no IANA request. <code>terminal_when</code> is an <span class="bcp14">OPTIONAL</span>
-member of the <code>mission_resource_access</code> authorization details type
-registered by the issuance profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); <code>event_type</code> values are
+<p id="section-15-1">This document registers one Common Constraint in the "Mission Common
+Constraints" registry established by the issuance profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>):<a href="#section-15-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-15-2.1">
+          <p id="section-15-2.1.1">Name: <code>terminal_when</code><a href="#section-15-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-2.2">
+          <p id="section-15-2.2.1">Value syntax: a JSON array of completion-condition objects, each with a
+<span class="bcp14">REQUIRED</span> <code>event_type</code> (string), an <span class="bcp14">OPTIONAL</span> <code>event_source</code> (string, a
+URI), and an <span class="bcp14">OPTIONAL</span> <code>max_staleness</code> (string, an ISO 8601 duration)
+(<a href="#terminal-when" class="auto internal xref">Section 5</a>).<a href="#section-15-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-2.3">
+          <p id="section-15-2.3.1">Subset rule: a candidate value is no broader than a reference value
+when the candidate's condition array contains every condition of the
+reference, compared structurally after the issuance profile's
+canonicalization; the candidate <span class="bcp14">MAY</span> add further conditions
+(<a href="#subset-extension" class="auto internal xref">Section 7</a>).<a href="#section-15-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-2.4">
+          <p id="section-15-2.4.1">Intersection rule: the union of the two condition arrays.<a href="#section-15-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-2.5">
+          <p id="section-15-2.5.1">Change Controller: IETF<a href="#section-15-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-2.6">
+          <p id="section-15-2.6.1">Reference: this document, <a href="#terminal-when" class="auto internal xref">Section 5</a><a href="#section-15-2.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-15-3"><code>terminal_when</code> is a <code>constraints</code> member of the <code>mission_resource_access</code>
+authorization details type defined by the issuance profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). <code>event_type</code> values are
 deployment- or registry-defined and opaque to this document, as
-<code>purpose</code> is, so this profile establishes no new registry.<a href="#section-15-1" class="pilcrow">¶</a></p>
+<code>purpose</code> is, so this profile establishes no registry of event types.<a href="#section-15-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
@@ -1688,6 +1790,10 @@ deployment- or registry-defined and opaque to this document, as
         <dd>
 <span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="RFC7515">[RFC7515]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Signature (JWS)"</span>, <span class="seriesInfo">RFC 7515</span>, <span class="seriesInfo">DOI 10.17487/RFC7515</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7515">https://www.rfc-editor.org/rfc/rfc7515</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC8174">[RFC8174]</dt>
       <dd>
 <span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
@@ -1704,6 +1810,10 @@ deployment- or registry-defined and opaque to this document, as
 <dt id="I-D.draft-mcguinness-oauth-mission-runtime">[I-D.draft-mcguinness-oauth-mission-runtime]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-runtime</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-runtime">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-runtime</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-signals</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-signals">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-signals</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
       <dd>
