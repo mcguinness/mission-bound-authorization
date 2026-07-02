@@ -27,6 +27,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  RFC6749:
   RFC9126:
   RFC9396:
   I-D.draft-gerber-oauth-deferred-token-response:
@@ -128,13 +129,14 @@ approval event, the Authority Set, the subset rule, and the integrity
 anchors are unchanged; this document governs only how the approval is
 reached over time.
 
-This profile is **experimental**. It depends normatively on OAuth
-Deferred Token Response
+This profile tracks an in-progress substrate. It depends normatively on
+OAuth Deferred Token Response
 ({{I-D.draft-gerber-oauth-deferred-token-response}}), an early
-Internet-Draft that is not ratified and whose details may change.
-Synchronous Mission approval, which needs only the issuance profile, is
-the stable path; deploy deferred and revisable approval for evaluation
-rather than as a stable interface.
+Internet-Draft that is not ratified and whose details may change, so
+this profile is not yet a stable interface and will track the substrate
+as it evolves. Synchronous Mission approval, which needs only the
+issuance profile, is the stable path; deploy deferred and revisable
+approval for evaluation rather than as a stable interface.
 
 # Relationship to the Issuance Profile {#issuance-relationship}
 
@@ -176,9 +178,68 @@ substrate's deferred response (`authorization_pending` with a
 deferred grant type until the approval resolves to a Mission-bound token
 response, `access_denied`, or `expired_token`.
 
+## Sequencing the Approval Event {#deferred-sequencing}
+
+The issuance profile treats the approval event as immediate: the
+Approver consents and the Mission record is created atomically with
+issuance of the authorization code
+({{I-D.draft-mcguinness-oauth-mission}}). This profile is an explicit
+override of that sequencing for a deferred approval, and it moves the
+approval event without weakening it:
+
+1. The client submits the proposed Mission via PAR {{RFC9126}} and the
+   authorization request completes into a deferred state per the
+   deferred substrate ({{I-D.draft-gerber-oauth-deferred-token-response}}).
+2. Before approval only the pending request exists. The authorization
+   artifact represents a pending authorization, never authority, and no
+   Mission exists. A `deferral_code`, a `revision_handle`, and any PAR
+   `request_uri` are pending-request state, not a grant.
+3. The approval event executes on the asynchronous review surface. That
+   surface MUST authenticate the Approver and MUST satisfy the Mission
+   Intent's `context.acr`, exactly as the synchronous approval event
+   requires ({{I-D.draft-mcguinness-oauth-mission}}).
+4. The Mission record is created in the `active` state atomically with
+   the approval decision, preserving the issuance profile's atomicity at
+   the moved point.
+5. Issuance then completes per the deferred substrate: the next poll
+   resolves to a Mission-bound token response.
+
 Deferral changes only the timing of the approval event. The Authority
 Set the token is issued against, its `authority_hash`, and the recorded
 consent are exactly as in a synchronous approval.
+
+## Deferred Approval State Machine {#state-machine}
+
+A deferred approval is in one of four states: `pending`, `approved`,
+`denied`, or `revision_required`. The Mission Issuer:
+
+- starts a deferred approval in `pending`;
+- MAY move `pending` to `approved`, `denied`, or `revision_required`;
+- returns `revision_required` to `pending` on an accepted revision
+  ({{revision-submission}}); and
+- accepts a revision only while in `revision_required`.
+
+`approved` and `denied` are terminal. Resolving a deferred approval and
+replacing its proposed Mission with a revision are atomic with respect
+to each other: a concurrent approval of a proposal that a revision has
+superseded cannot commit, and a revision accepted after the approval
+resolved cannot reopen it.
+
+~~~ text
+       submit (PAR + deferred)
+                |
+                v
+           +---------+   accept revision   +------------------+
+           | pending |<--------------------| revision_required|
+           +---------+                     +------------------+
+             |  |  |                              ^
+   approve   |  |  | needs narrowing              |
+             |  |  +------------------------------+
+             |  |
+             |  +----------------> denied  (terminal)
+             v
+          approved  (terminal; Mission created active)
+~~~
 
 # Revisable Approval {#revisable}
 
@@ -217,7 +278,7 @@ Cache-Control: no-store
   "error": "authorization_pending",
   "deferral_code": "dc_9P2K7zT1mX8b3N",
   "revision_required": true,
-  "clarification_handle": "ch_4QFJ3P9",
+  "revision_handle": "rvh_4QFJ3P9",
   "rejected_scope": "crm:write",
   "rejected_authorization_details": [
     { "type": "payment", "limit": "10000" }
@@ -227,15 +288,27 @@ Cache-Control: no-store
 }
 ~~~
 
-`revision_required` (boolean) and `clarification_handle` (string) are
+`revision_required` (boolean) and `revision_handle` (string) are
 REQUIRED on this response. `rejected_scope` and
-`rejected_authorization_details` are OPTIONAL; they tell the agent which
-dimensions of the proposed Mission were refused so it can plan a
+`rejected_authorization_details` are OPTIONAL; they name the dimensions
+of the proposed Mission that were refused so the agent can plan a
 narrowed revision without further out-of-band interaction. A Mission
 Issuer MAY omit them when disclosure would reveal sensitive policy
 state.
 
-The `clarification_handle` is bound to the deferred approval and
+`rejected_scope` is a space-delimited list of scope tokens, using the
+`scope` syntax of {{RFC6749}}. `rejected_authorization_details` is an
+array of authorization-details-shaped subtrees that the re-derived
+Authority Set MUST exclude or narrow: each subtree names a `type` and
+the members within it that must not survive re-derivation unchanged. The
+Mission Issuer verifies per-dimension narrowing after it re-derives the
+Authority Set from the revised Intent ({{revision-submission}}); the
+client cannot author the Authority Set, so its obligation is scoped to
+the Intent members it does author (the `resources`, the
+`mission_expiry`, and the free-text `constraints`), which it revises to
+drive that narrowing.
+
+The `revision_handle` is bound to the deferred approval and
 authorizes one revision submission. It is not a token, grant, or
 continuation handle, and it is sender-constrained to the same key as the
 `deferral_code` ({{I-D.draft-gerber-oauth-deferred-token-response}}). A
@@ -246,27 +319,28 @@ remains unapproved.
 ## Submitting a revision {#revision-submission}
 
 The client submits the narrowed Mission Intent to the PAR endpoint
-{{RFC9126}} with the `clarification_handle` as an additional parameter,
+{{RFC9126}} with the `revision_handle` as an additional parameter,
 sender-constrained as the deferred substrate requires. The Mission
 Issuer:
 
-1. verifies the `clarification_handle` is bound to a deferred approval
+1. verifies the `revision_handle` is bound to a deferred approval
    in the revision-required condition, is unexpired and single-use, and
    matches the client and sender-constraint of the deferred approval;
-2. derives the Authority Set for the revised Intent, under the same
+2. re-derives the Authority Set for the revised Intent, under the same
    `policy_version` that governed the proposed Mission, and verifies it
    is a subset of the proposed Mission's Authority Set under the issuance
    profile's subset rule ({{I-D.draft-mcguinness-oauth-mission}}), with
    `authorization_details` narrowing per the inclusion semantics of
-   {{RFC9396}}. The revision MUST narrow every dimension named in
-   `rejected_scope` or `rejected_authorization_details`
-   ({{revision-required}}) and MUST NOT broaden any dimension. Deriving
-   under the proposed Mission's `policy_version` keeps the subset
-   comparison reproducible; if policy has changed since the proposal, the
-   Mission Issuer re-derives the proposed Authority Set under the current
-   policy to re-establish the baseline before comparing, or refuses the
+   {{RFC9396}}. The re-derived Authority Set MUST exclude or narrow every
+   dimension named in `rejected_scope` or
+   `rejected_authorization_details` ({{revision-required}}), verified per
+   dimension, and MUST NOT broaden any dimension. Deriving under the
+   proposed Mission's `policy_version` keeps the subset comparison
+   reproducible; if policy has changed since the proposal, the Mission
+   Issuer re-derives the proposed Authority Set under the current policy
+   to re-establish the baseline before comparing, or refuses the
    revision;
-3. invalidates the `clarification_handle`;
+3. invalidates the `revision_handle`;
 4. replaces the proposed Mission's Authority Set with the revised one
    and re-reviews it.
 
@@ -275,14 +349,42 @@ does not start a new approval. If the Mission Issuer returns a PAR
 `request_uri`, it is an artifact of PAR and MUST NOT be used to start a
 separate authorization transaction.
 
-If the revision is not a subset, or otherwise fails validation, the PAR
-endpoint returns an error and the deferred approval stays in the
-revision-required condition. Because the handle is single-use, the
-client obtains a new `clarification_handle` from a subsequent
-`authorization_pending` response before retrying. A Mission Issuer
-MUST bound the number of revision cycles per deferred approval and MUST
-resolve to `access_denied` once the bound is reached or no acceptable
-narrowing remains, so a client cannot drive an unbounded revision loop.
+### Revision Errors {#revision-errors}
+
+The PAR endpoint reports a failed revision with a specific error:
+
+- An expired or already-consumed `revision_handle` yields
+  `invalid_grant`.
+- A malformed revision (unparseable, or structurally invalid against the
+  Mission Intent member definitions) yields `invalid_request`.
+- A revision whose re-derived Authority Set does not narrow every
+  dimension named in `rejected_scope` or `rejected_authorization_details`
+  yields `revision_not_narrowing` ({{iana}}).
+- When the deferral resolved (to `access_denied`, `expired_token`, or an
+  approval) while the revision was in flight, the endpoint yields
+  `invalid_grant` and the resolution is conveyed on the next poll of the
+  `deferral_code`.
+
+A malformed revision leaves the `revision_handle` reissuable: because the
+submission never advanced the approval, the client obtains a new handle
+from a subsequent `authorization_pending` response and retries. A
+consumed handle, and a handle whose deferral has resolved, are not
+reissuable.
+
+A Mission Issuer MUST bound the number of revision cycles per deferred
+approval and MUST resolve to `access_denied` once the bound is reached or
+no acceptable narrowing remains, so a client cannot drive an unbounded
+revision loop.
+
+## Pending Lifetime and Staleness {#pending-staleness}
+
+A deferred approval MUST carry a deployment-set maximum pending lifetime,
+after which it resolves to `expired_token` per the deferred substrate. A
+decision made after a change to the derivation `policy_version`, or to
+the applicable capability catalog, MUST be made over a proposal that has
+been re-derived and re-rendered under the current policy and catalog; the
+Mission Issuer MUST NOT commit an approval over a proposal derived under
+superseded policy.
 
 # Integration with the Mission Suite {#integration}
 
@@ -291,7 +393,12 @@ Consent evidence:
   deployment records Consent Evidence
   ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), the
   re-reviewed revision MUST get a fresh `consent_rendering_hash`; prior
-  consent does not transfer to the narrowed proposal.
+  consent does not transfer to the narrowed proposal. Each
+  revision-required outcome produces Consent Evidence with decision
+  `narrowed`, carrying the reviewed disclosure's `consent_rendering_hash`
+  and the refused dimensions. The final evidence for the resulting
+  approval MAY carry `predecessor_intent_hashes` committing the revision
+  chain.
 
 Shaping:
 : The `rejected_scope` and `rejected_authorization_details` parameters
@@ -356,7 +463,7 @@ Cache-Control: no-store
 { "error": "authorization_pending",
   "deferral_code": "dfc_7M2R4kP9sT1x",
   "revision_required": true,
-  "clarification_handle": "clh_4QFJ3P9wZ2",
+  "revision_handle": "rvh_4QFJ3P9wZ2",
   "rejected_authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
@@ -365,7 +472,7 @@ Cache-Control: no-store
 ~~~
 
 The agent pushes a narrowed Mission Intent, dropping the write, to PAR
-with the clarification handle:
+with the revision handle:
 
 ~~~ http
 POST /par HTTP/1.1
@@ -374,14 +481,17 @@ Content-Type: application/x-www-form-urlencoded
 
 mission_intent=%7B...read-only%20Q3%20invoices...%7D&
 client_id=s6BhdRkqt3&
-clarification_handle=clh_4QFJ3P9wZ2
+revision_handle=rvh_4QFJ3P9wZ2
 ~~~
 
 The Mission Issuer verifies the handle, confirms the revised Authority
 Set is a subset of the proposed one, updates the deferred approval, and
-re-reviews (here, policy auto-approves the now-narrower read-only
-Mission). The agent keeps polling the same `deferral_code`, which now
-resolves to a Mission-bound token over the final, narrowed authority:
+returns it to `pending`. `alice` reviews the narrowed read-only proposal
+and approves it. Every revision resolution requires a fresh approval
+event with its own rendering; prior consent does not transfer, and the
+recorded `approver` is the principal who approved the final set. The
+agent keeps polling the same `deferral_code`, which now resolves to a
+Mission-bound token over the final, narrowed authority:
 
 ~~~ http
 HTTP/1.1 200 OK
@@ -396,16 +506,20 @@ Cache-Control: no-store
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
       "constraints": { "period": "2026-Q3" } } ],
-  "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
-    "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ" } }
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-" }
 ~~~
 
-The agent never abandoned its request; the approval resolved over the
-narrowed proposal, and the committed `authority_hash` is over the
-read-only Authority Set actually approved.
+The token carries the `mission` claim and its `authority_hash` as the
+issuance profile defines; the response also surfaces the optional
+`mission_id` parameter ({{I-D.draft-mcguinness-oauth-mission}}) for
+correlation. The agent never abandoned its request; the approval
+resolved over the narrowed proposal, and the committed `authority_hash`
+is over the read-only Authority Set actually approved.
+
+A deployment that wants a revision resolved by policy rather than by a
+fresh human approval uses the expansion profile's progressive
+authorization, drawing authority from a pre-consented ceiling
+({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
 # Conformance {#conformance}
 
@@ -415,7 +529,7 @@ A Mission Issuer conforming to this profile MUST:
 - offer a revision only when the client signaled `revisable`;
 - enforce that a revision is a subset of the proposed Mission under the
   issuance profile's subset rule, never a broadening;
-- treat each `clarification_handle` as single-use and
+- treat each `revision_handle` as single-use and
   sender-constrained to the deferred approval; and
 - commit the approval over the final narrowed Authority Set.
 
@@ -434,7 +548,7 @@ revision handshake introduces.
   any dimension. The Mission Issuer enforces the subset relation per
   parameter (scope, resource, audience, `authorization_details`) before
   re-review.
-- Single-use handle. A `clarification_handle` MUST be invalidated after
+- Single-use handle. A `revision_handle` MUST be invalidated after
   one submission, success or failure. A new handle is issued on a
   subsequent revision-required response.
 - Sender-constraint continuity. The handle MUST be sender-constrained to
@@ -454,6 +568,14 @@ revision handshake introduces.
   ({{revision-submission}}), and SHOULD log excessive cycles as a
   security event, so a client cannot drive an unbounded reshape-and-retry
   loop to wear down a reviewer.
+
+The asynchronous review surface is part of the consent path. It MUST
+meet the approval event's authentication requirements, authenticating
+the Approver and satisfying the Mission Intent's `context.acr`
+({{deferred-sequencing}}); deferring an approval does not lower the bar
+the synchronous event sets. Approver routing and notification, how a
+proposed Mission reaches a reviewer and how the reviewer is alerted, are
+deployment matters and are named as such here rather than specified.
 
 # Privacy Considerations {#privacy-considerations}
 
@@ -475,15 +597,24 @@ This document registers the following in the "OAuth Parameters"
 registry. For each: Change Controller IETF; Reference this document,
 {{revision-required}}.
 
-- `revision_required` (token endpoint response)
-- `clarification_handle` (token endpoint response, PAR request)
-- `rejected_scope` (token endpoint response)
-- `rejected_authorization_details` (token endpoint response)
+- `revision_required` (token response)
+- `revision_handle` (token response)
+- `rejected_scope` (token response)
+- `rejected_authorization_details` (token response)
 
-PAR {{RFC9126}} carries the revision as authorization-request parameters
-without a distinct usage location, so the pushed submission of the
-narrowed Intent and `clarification_handle` needs no separate
-registration.
+PAR {{RFC9126}} carries authorization-request parameters without a
+distinct usage location, so the pushed submission of the narrowed Intent
+and `revision_handle` needs no separate registration, as the issuance
+profile states ({{I-D.draft-mcguinness-oauth-mission}}).
+
+This document registers the following in the "OAuth Extensions Error"
+registry:
+
+- Name: `revision_not_narrowing`
+- Usage Location: token error response
+- Protocol Extension: Mission Deferred Approval (this document)
+- Change Controller: IETF
+- Reference: this document, {{revision-errors}}
 
 --- back
 

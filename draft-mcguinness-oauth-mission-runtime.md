@@ -114,11 +114,11 @@ action is evaluated, before it executes, against the Mission the
 acting credential is bound to. The evaluation checks the action and its
 parameters against the Mission's approved authority and constraints,
 the actor context from the delegation chain, and the Mission against
-its current state. The document defines where enforcement MUST sit, how
-a permit is bound to concrete parameters to close the time-of-check to
+its current state. The document defines where enforcement sits, how a
+permit is bound to concrete parameters to close the time-of-check to
 time-of-use gap, how carried consumption bounds (budget, call counts,
 duration) are metered, and the runtime evidence each consequential
-action MUST produce.
+action produces.
 
 --- middle
 
@@ -250,7 +250,8 @@ Policy-view version:
   `policy_version` Mission-record field
   ({{I-D.draft-mcguinness-oauth-mission}}); this document does not
   interpret it beyond correlation, and defines no portable policy-version
-  registry.
+  registry. The materialized policy view and its content-addressed
+  `policy_view_id` are defined in {{policy-view}}.
 
 Runtime enforcement evidence:
 : The record a consequential action produces for a PDP decision or a
@@ -337,6 +338,10 @@ enforcement scope, including:
 - the Mission state source and maximum staleness bound used for each
   action class ({{state-freshness}});
 - the runtime enforcement evidence mechanism and retention window
+  ({{evidence}});
+- the reconciliation window for matching execution-outcome evidence to
+  decisions, the component responsible for orphaned-evidence and
+  sequence-gap detection, and that component's alerting obligation
   ({{evidence}}); and
 - any consumption-metering consistency bound it advertises
   ({{metering}}).
@@ -357,9 +362,9 @@ contractual profile.
 ## Action classification {#classification}
 
 The boundary between consequential and non-consequential actions is
-deployment policy, but a deployment MUST NOT define it so loosely that
-nothing is enforced. This document defines a default classification a
-deployment SHOULD adopt, and a floor it MUST observe.
+deployment policy, bounded by the classification floor below. This
+document defines a default classification a deployment SHOULD adopt,
+and a floor it MUST observe.
 
 | Class | Examples | PDP gate | Parameter binding |
 |---|---|---|---|
@@ -439,14 +444,6 @@ bearer grant: the runtime decision of {{decision}} remains
 authoritative, and a persisted grant beyond the single action is a
 Mission expansion, not a property of the approval itself.
 
-Consequential reads do not require parameter binding by default.
-However, a deployment MUST bind or digest read parameters when those
-parameters materially change the effective resource set or disclosure
-risk. Examples include export-like reads, bulk reads, cross-tenant or
-cross-account queries, privacy-sensitive filters, field selection that
-controls sensitive attributes, destination or delivery parameters, and
-aggregation choices that affect re-identification risk.
-
 ## PEP placement {#pep-placement}
 
 Enforcement only works at the component that can actually stop the
@@ -501,6 +498,24 @@ agent's own trust domain, not a delegate: the token is unchanged, the
 agent remains the principal of record (`client_id` still attributes the
 action to the agent), and no `act`-chain entry is added.
 
+~~~
+ Agent                Mediating PEP              Resource
+   |                  (holds cnf key)               |
+   |-- request ------>|                             |
+   |                  | run the decision;           |
+   |                  | present token with key ---->|
+   |                  |<---------- result ----------|
+   |<---- result -----|                             |
+   |                                                |
+   |     X - - - - - - unmediated path absent - - ->|
+~~~
+
+For any action class a deployment mediates, the acting credential MUST
+be sender-constrained: a bearer token is incompatible with mediated
+custody, because a bearer token can be presented by whoever holds it,
+including the agent, so the mediating PEP could not be the sole holder
+of the authority.
+
 For an action class it mediates, a deployment SHOULD hold the
 sender-constraint private key for the Mission-bound credential in the
 mediating PEP rather than in the agent component, and SHOULD do so for
@@ -528,27 +543,49 @@ profile to protect against agent compromise therefore MUST include the
 high-consequence classes in its mediated set; the protection is only as
 broad as that set.
 
+Custody has a lifecycle. A deployment SHOULD prefer per-class
+credentials with distinct `cnf` keys over sharing one key across
+mediating PEPs, so that compromise of one mediating PEP does not expose
+the authority of another. On compromise of a mediating PEP's key, the
+deployment revokes the affected tokens and re-derives. Mediating-PEP
+key rotation follows the deployment's published key set.
+
 ## Agent-compromise-resistant enforcement {#compromise-resistant}
 
 "Protects against agent compromise" is a verifiable claim, not a label.
 A deployment claims **agent-compromise-resistant enforcement** only when,
-for the high-consequence classes, all of the following hold (each is
-SHOULD in the base profile
-and MUST under this claim):
+for the high-consequence classes, all of the following hold. Each
+condition below is MUST under this claim regardless of its base-profile
+level: active-state freshness for the high-consequence classes is
+already MUST in the base profile ({{state-freshness}}); the harness
+condition makes MUST the base profile's requirement that mediated
+classes have no unmediated path ({{pep-placement}}); mediated custody
+and action-bound approval are SHOULD in the base profile
+({{custody}}, {{action-approval}}) and MUST here.
 
 - the sender-constraint private key is held by the mediating PEP, not by
   the agent component ({{custody}});
-- governed work runs with no unmediated path to those actions, as a
-  Mission-aware harness establishes
-  ({{I-D.draft-mcguinness-oauth-mission-harness}});
+- governed work runs under a harness conforming to the harness profile
+  ({{I-D.draft-mcguinness-oauth-mission-harness}}) whose published
+  execution-environment scope statement covers the mediated classes, so
+  there is no unmediated path to those actions;
 - each such action requires an action-bound approval
   ({{action-approval}}); and
 - the Mission state source for those classes is an active freshness
   mechanism, not token-lifetime expiry ({{state-freshness}}).
 
-A deployment that leaves any of these as SHOULD MUST NOT claim
+A deployment that leaves any of these unmet MUST NOT claim
 agent-compromise-resistant enforcement; it may still claim base runtime
 conformance. The claim names exactly the set of classes it covers.
+
+Each unmet condition loses a specific property:
+
+| Condition unmet | Property lost |
+|---|---|
+| Custody in the mediating PEP | Key exfiltration |
+| Harness-established no-unmediated-path | Off-path execution |
+| Action-bound approval | Unattended high-consequence action |
+| Active-state freshness | Revocation lag bounded only by token lifetime |
 
 # Resource Server runtime profile {#rs-runtime-profile}
 
@@ -787,6 +824,56 @@ are likely to match the risk of common action classes:
 | External commitment | Immediate check or single-use permit |
 | Privileged administration | Immediate check, suitable for composition with local step-up |
 
+## Materialized policy view {#policy-view}
+
+A PDP evaluates a Mission against an action through a **materialized
+policy view**: the reproducible, evaluable form of the Mission's
+approved authority, produced by the issuing Authorization Server or a
+trusted compiler and loaded by the PDP. A **trusted compiler** is a
+component the deployment trusts to materialize the Mission's approved
+authority faithfully and reproducibly; it is in the deployment's trust
+domain and its output is bound by the content-addressed
+`policy_view_id` below. The view is substrate-independent runtime
+machinery; a decision-API binding carries only its identifier on the
+wire ({{authzen}}).
+
+The materialized policy view MUST satisfy three properties:
+
+- Reproducible: the same inputs (the Mission's approved Authority Set
+  as committed by `authority_hash`, and the derivation `policy_version`
+  recorded at the approval event) produce byte-identical materialized
+  output under the canonicalization rules of
+  {{I-D.draft-mcguinness-oauth-mission}}.
+- Identifiable: the view carries a `policy_view_id`, so PDP cache
+  entries are addressable.
+- Bounded: materialization is faithful and does not enlarge the
+  Authority Set's semantic bounds. A materialized view is an
+  evaluation aid, never new authority.
+
+`policy_view_id` is the integrity-anchor encoded form
+({{I-D.draft-mcguinness-oauth-mission}}) of the SHA-256 {{RFC6234}} of
+the JCS {{RFC8785}} canonical bytes of that profile's domain-separated,
+issuer-bound integrity-anchor envelope with `typ` `mission-policy-view`:
+
+~~~
+SHA-256(JCS({
+  "typ":   "mission-policy-view",
+  "iss":   <mission.origin>,
+  "value": <materialized view payload>
+}))
+~~~
+
+The committed materialized view payload MUST carry the Mission's
+`mission_id` and `authority_hash` as members. A consistency check
+between a decision request's Mission reference and the loaded view is
+therefore an equality test: the request's Mission `id` and
+`authority_hash` either equal the committed values or the view does
+not apply. Because `policy_view_id` is a content hash, any change to
+the view yields a new `policy_view_id`, so equality on
+`policy_view_id` is the cache identity and freshness test. This
+document defines no second canonicalization and no policy-language
+wire form for the view.
+
 # Parameter binding and time-of-check to time-of-use {#parameter-binding}
 
 A permit for an operation does not authorize arbitrary parameter
@@ -821,11 +908,22 @@ that digest immediately before acting.
   component MUST record consumed identifiers for at least the permit
   lifetime and MUST refuse, fail closed, any second presentation of a
   consumed identifier. This is independent of consumption metering and
-  applies even when the action carries no consumption bound.
+  applies even when the action carries no consumption bound. The
+  consumed-identifier store MUST survive an enforcing-component
+  restart, or the component MUST fail closed for permits issued before
+  the restart; a multi-instance PEP MUST share or partition the store
+  so a single-use identifier cannot be consumed once per replica.
 - The executing PEP MUST verify those bindings and MUST recompute the
   `parameter_digest` against the parameters it is about to use. A
   mismatch MUST cause refusal: the permit does not authorize the
   changed parameters.
+
+A permit authorizes initiation. An action still executing when the
+permit expires MAY run to completion, unless the action class requires
+an execution lease, which the operation profile defines; when a lease
+is required the executing PEP MUST stop or renew before the lease
+expires. Duration-metered actions already carry such a lease
+({{metering}}).
 
 This closes the time-of-check to time-of-use gap and prevents a permit
 from being replayed for a different request (the `parameter_digest`
@@ -907,6 +1005,8 @@ different normalized action MUST cause refusal. For irreversible
 actions and external commitments, a deployment MUST define whether
 metering is reserved before execution and committed after success, or
 committed before execution; it MUST NOT leave the decrement ambiguous.
+A failed attempt releases any reserved consumption per the deployment's
+documented reserve/commit posture.
 
 # Failure modes {#failure-modes}
 
@@ -977,8 +1077,11 @@ and trusted for the refusal or decision path:
 - the `authorization_details` type and authorizing entry, or a digest
   of that entry when recording the full entry would disclose excess
   authority or sensitive policy;
-- the decision identifier, when the PDP produced one; and
-- the PDP's policy-view version.
+- the decision identifier, when the PDP produced one;
+- the PDP's policy-view version; and
+- OPTIONAL, a `compensates_decision_id` member linking a compensating
+  action's decision to the original decision identifier it reverses, so
+  a compensation can be reconciled against the action it undoes.
 
 For a token-validation failure, the record MUST NOT describe
 unverified token claims as authenticated facts. It MAY include a digest
@@ -1001,7 +1104,15 @@ one to one, so a permit that was obtained but executed more than once,
 or executed for different parameters, is detectable after the fact. The
 detailed object schema is deferred ({{deferred}}).
 
-## Record integrity and retention
+Reconciliation is bounded in time. The enforcement scope MUST publish a
+reconciliation window within which an execution-outcome record is
+expected for each decision, and MUST name the component responsible for
+detecting orphaned evidence (a decision with no matching
+execution-outcome record within that window) and sequence gaps in a
+Mission's records ({{record-integrity}}), and that component's alerting
+obligation when it detects either.
+
+## Record integrity and retention {#record-integrity}
 
 The following requirements apply to every record:
 
@@ -1020,7 +1131,8 @@ The following requirements apply to every record:
   indicator so decision order can be reconstructed without relying on
   wall-clock time alone.
 - The enforcement scope MUST publish a retention window no shorter
-  than the Mission's effective audit horizon.
+  than the Mission's audit horizon, as defined in the Mission Record
+  section of {{I-D.draft-mcguinness-oauth-mission}}.
 
 # Decision API binding {#authzen}
 
@@ -1060,6 +1172,10 @@ work and are not required to enforce it:
 - compilation of the Mission into an engine-native policy artifact
   (Cedar, OpenFGA, or equivalent) and standardization of PDP
   deployment modes;
+- offline or partitioned PDP operation (a PDP that decides while
+  disconnected from its Mission state source); fail-closed
+  ({{failure-modes}}) remains the base rule when state cannot be
+  established;
 - action-hierarchy and resource-containment subset extensions (this
   profile uses the flat subset rule of
   {{I-D.draft-mcguinness-oauth-mission}});

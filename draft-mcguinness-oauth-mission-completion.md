@@ -28,6 +28,7 @@ author:
 
 normative:
   RFC3339:
+  RFC7515:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     author:
@@ -57,6 +58,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-status-latest
+  I-D.draft-mcguinness-oauth-mission-signals:
+    title: "Mission Lifecycle Signals for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
 
 --- abstract
 
@@ -65,10 +75,10 @@ Set and gates issuance on Mission state, but a Mission keeps deriving an
 entry's authority until it is revoked or expires, even after the task
 that entry was granted for is finished. The Intent's `success_criteria`
 record when a task is done but are inert. This document defines an
-OPTIONAL Mission Completion profile. It adds `terminal_when`, an
-entry-level completion condition that, once met, **discharges** an
-Authority Set entry: the Authorization Server stops deriving tokens
-carrying that entry. Discharge is monotonic, it can only remove an
+OPTIONAL Mission Completion profile. It adds `terminal_when`, a
+completion condition carried in a `mission_resource_access` entry's
+`constraints` that, once met, **discharges** the Authority Set entry:
+the Authorization Server stops deriving tokens carrying that entry. Discharge is monotonic, it can only remove an
 entry's authority and never widen it, so it is safe against a
 prompt-injected agent by construction; it composes with the subset rule
 as a condition a derived entry can add but never drop; and it lets a
@@ -90,11 +100,12 @@ issuance profile keeps them inert: they are rendered and committed, and
 carry no machine effect ({{I-D.draft-mcguinness-oauth-mission}}).
 
 This document supplies the enforceable counterpart. It defines
-`terminal_when`, an OPTIONAL member of a `mission_resource_access` entry
-that carries one or more completion conditions. When a condition is met,
-the entry is **discharged**: the Authorization Server MUST NOT thereafter
-derive a token carrying that entry, exactly as it refuses derivation for
-a non-`active` Mission.
+`terminal_when`, an OPTIONAL Common Constraint
+({{I-D.draft-mcguinness-oauth-mission}}) on a `mission_resource_access`
+entry that carries one or more completion conditions. When a condition
+is met, the entry is **discharged**: the Authorization Server MUST NOT
+thereafter derive a token carrying that entry, exactly as it refuses
+derivation for a non-`active` Mission.
 
 Three properties make this safe inside the Mission model and this
 document requires all three:
@@ -127,10 +138,9 @@ rules for handling it.
 A deployment claims this profile only when it issues or consumes entries
 carrying `terminal_when`.
 
-This profile is **experimental** and is not part of the recommended v1
-deployment bundles. Its entry-discharge model is newer and less
-exercised than the issuance core and the runtime layer; treat it as a
-direction whose details may change, not yet as a stable interface.
+This profile is newer and less exercised than the issuance core and the
+runtime layer, and is not part of the recommended v1 deployment bundles.
+Its entry-discharge details may change.
 
 # Relationship to the Issuance Profile {#issuance-relationship}
 
@@ -142,9 +152,10 @@ integrity anchors, lifecycle states, and issuance gating, and the inert
 Issuer, Authority Set, and derivation as the issuance profile defines
 them.
 
-It extends the issuance profile in two narrow, additive ways: an OPTIONAL
-`terminal_when` member on a `mission_resource_access` entry
-({{terminal-when}}), and one clause in the subset comparison
+It extends the issuance profile in one narrow, additive way: it registers
+`terminal_when`, an OPTIONAL Common Constraint on a
+`mission_resource_access` entry ({{terminal-when}}), whose subset rule
+the issuance profile's existing subset comparison applies
 ({{subset-extension}}). It changes no Mission state, the three-state
 lifecycle, or the meaning of any existing member.
 
@@ -159,8 +170,10 @@ Discharge:
 
 # Entry Completion Conditions {#terminal-when}
 
-A `mission_resource_access` entry ({{I-D.draft-mcguinness-oauth-mission}})
-MAY carry a `terminal_when` member:
+This document defines `terminal_when`, a Common Constraint
+({{I-D.draft-mcguinness-oauth-mission}}) carried in the `constraints`
+object of a `mission_resource_access` entry. It is registered in the
+"Mission Common Constraints" registry ({{iana}}).
 
 `terminal_when`:
 : OPTIONAL. An array of completion conditions. When any condition is
@@ -174,7 +187,7 @@ MAY carry a `terminal_when` member:
 
   `event_source`:
   : OPTIONAL. A string. A URI the Authorization Server consults to
-    determine whether the event has occurred.
+    determine whether the event has occurred ({{determining}}).
 
   `max_staleness`:
   : OPTIONAL. A string. An ISO 8601 duration, matching the `duration`
@@ -182,11 +195,12 @@ MAY carry a `terminal_when` member:
     Authorization Server's view of the event MAY be when it gates
     issuance.
 
-The `terminal_when` array is part of the Authority Set: it is committed
-by `authority_hash` and reproducible under derivation
-({{I-D.draft-mcguinness-oauth-mission}}). Whether a condition has fired
-is evaluated state, not part of `authority_hash`; folding fired status
-into the anchor would make the committed authority time-varying.
+The `terminal_when` array is part of the entry's `constraints` and so of
+the Authority Set: it is committed by `authority_hash` and reproducible
+under derivation ({{I-D.draft-mcguinness-oauth-mission}}). Whether a
+condition has fired is evaluated state, not part of `authority_hash`;
+folding fired status into the anchor would make the committed authority
+time-varying.
 
 `terminal_when` is the enforceable counterpart of the inert
 `success_criteria` ({{I-D.draft-mcguinness-oauth-mission}}), which
@@ -224,9 +238,29 @@ discharged entry at the point of use ({{runtime}}).
 ## Determining Discharge {#determining}
 
 The Authorization Server determines whether a condition has been met from
-the `event_source`, within `max_staleness` when present, by a mechanism
-this document does not define (a status query, a received signal, a
-recorded administrative action).
+the `event_source`, within `max_staleness` when present. The mechanism is
+deployment-defined (a status query, a received signal, a recorded
+administrative action). This document defines one interoperable
+event-source profile a deployment MAY use: the `event_source` URI is
+retrieved over authenticated HTTPS and returns a signed JSON status
+document, a JWS {{RFC7515}}, with these members:
+
+- `occurred`: REQUIRED. A boolean, true when the event has occurred.
+- `observed_at`: REQUIRED. An RFC 3339 {{RFC3339}} date-time at which the
+  status was observed.
+- `event_type`: REQUIRED. A string, the `event_type` the document
+  reports.
+- `source`: REQUIRED. A URI identifying the reporting source.
+
+Other source mechanisms remain deployment-defined. The Mission Issuer
+MUST authenticate and integrity-verify any event source outside its own
+trust domain before acting on its report.
+
+Once the Authorization Server observes that a condition has been met, the
+discharge is recorded as Authorization-Server-side state and MUST NOT
+revert, regardless of any later report from the event source: a source
+that afterward reports the event as not occurred does not restore the
+entry's authority.
 
 If the Authorization Server cannot determine whether a condition has been
 met, for example because `event_source` is unreachable within
@@ -235,37 +269,57 @@ refuse to derive it, as it fails closed for stale Mission state. Discharge
 removes authority, so the conservative action when status is unknown is
 to withhold issuance, never to issue.
 
-# Subset Rule Extension {#subset-extension}
+## Discharge Visibility {#visibility}
 
-The subset comparison of the issuance profile ({{I-D.draft-mcguinness-oauth-mission}})
-gains one clause: when the Authorization Server narrows an entry, every
-condition in the parent entry's `terminal_when` MUST be present,
-byte-equal, in the derived entry's `terminal_when`, and the derived entry
-MAY add further conditions.
+A discharged entry is no longer derivable, so the surfaces that report a
+Mission's authority MUST reflect that. Where the Mission Status profile
+{{I-D.draft-mcguinness-oauth-mission-status}} is deployed, the Status
+operation and the token introspection projection MUST omit a discharged
+entry from the `authorization_details` they return. This is consistent
+with the audience filtering those surfaces already apply: a discharged
+entry, like an entry addressed to another audience, is not authority the
+caller may rely on.
 
-Conditions are compared as opaque objects, not by event semantics. A
-child cannot drop or alter a parent's completion condition, only add
-more, so discharge composes monotonically: adding a condition can only
-make an entry discharge sooner, which is a narrowing. Modifying a parent
+A per-entry discharge lifecycle signal is future work for the Mission
+Lifecycle Signals profile {{I-D.draft-mcguinness-oauth-mission-signals}};
+this document defines no discharge event.
+
+# Subset Rule {#subset-extension}
+
+Because `terminal_when` is a Common Constraint, the issuance profile's
+subset comparison ({{I-D.draft-mcguinness-oauth-mission}}) applies its
+registered subset rule with no new clause: for a key present in the
+reference entry's `constraints`, the same key MUST be present in the
+candidate entry and its value MUST be no broader under the key's
+registered rule. For `terminal_when`, a candidate value is no broader
+than a reference value when the candidate's condition array contains
+every condition of the reference, compared structurally after the
+canonicalization of the issuance profile
+({{I-D.draft-mcguinness-oauth-mission}}); the candidate MAY add further
+conditions.
+
+Conditions are compared structurally, not by event semantics. A child
+cannot drop or alter a parent's completion condition, only add more, so
+discharge composes monotonically: an added condition can only make an
+entry discharge sooner, which is a narrowing. Modifying a parent
 condition is forbidden because a verifier cannot decide whether the
 change discharges earlier or later from opaque `event_type` values.
 
 # Forward Compatibility {#forward-compat}
 
-`terminal_when` is **mandatory to understand**. Discharge is load-bearing
-narrowing that a consumer cannot infer from the rest of the entry, so a
-consumer that does not recognize `terminal_when` MUST fail closed: it
-MUST NOT narrow, delegate, audience-project, or rely on an entry carrying
-`terminal_when`. This is the same rule the issuance profile applies to an
-`authorization_details` type whose semantics a consumer does not
-understand ({{I-D.draft-mcguinness-oauth-mission}}): such an entry may be
-issued only to a consumer that understands the member, carried exactly as
-approved, and MUST NOT appear in a token a non-understanding consumer
-narrows or projects.
+Because `terminal_when` is a `constraints` member, a consumer that does
+not recognize it fails closed by the issuance profile's Resource Server
+enforcement rule directly: a consumer MUST fail closed on any
+`constraints` key it does not understand, or understands but cannot
+enforce, refusing the request rather than granting access while ignoring
+the key ({{I-D.draft-mcguinness-oauth-mission}}). Discharge is
+load-bearing narrowing, so ignoring `terminal_when` would silently widen
+the grant. That enforcement rule is the honest basis of discharge's
+safety: an unrecognized `terminal_when` is refused, never dropped.
 
 An Authorization Server that does not implement this profile simply does
 not emit `terminal_when`, and is unaffected. The fail-closed rule binds a
-consumer that encounters the member without implementing it.
+consumer that encounters the constraint without implementing it.
 
 # Derivation Guidance {#derivation-guidance}
 
@@ -274,16 +328,17 @@ entry from the Mission Intent, a reviewable rule governs what each
 element of the Intent becomes:
 
 - an `action` if removing it would leave the task undefined;
-- a `constraints` member if removing it would merely make the task less
-  restrictive; and
-- a `terminal_when` condition if it defines when the task is satisfied,
-  retiring the entry's authority rather than widening or restricting it.
+- an ordinary `constraints` member if removing it would merely make the
+  task less restrictive; and
+- a `terminal_when` completion condition, itself a `constraints` member,
+  if it defines when the task is satisfied, retiring the entry's
+  authority rather than widening or restricting it.
 
 The third case is what this profile adds. A bound that holds throughout
-the task is a constraint; an event that ends the task is a
+the task is an ordinary constraint; an event that ends the task is a
 `terminal_when` condition. For example, "only invoices under 500 USD" is
-a constraint, while "until the Q3 close is finalized" is a completion
-condition.
+a `max_amount_usd` constraint, while "until the Q3 close is finalized" is
+a completion condition.
 
 # Relationship to Runtime Enforcement {#runtime}
 
@@ -293,8 +348,11 @@ issuance profile alone. It is also a natural input to the runtime layer
 Enforcement Point that recognizes `terminal_when` SHOULD deny a
 discharged entry at the point of use, closing the window between
 discharge and token expiry the same way it denies a revoked Mission. A
-runtime Policy Enforcement Point that does not recognize `terminal_when`
-fails closed for the entry per {{forward-compat}}.
+Policy Enforcement Point learns that an entry is discharged from the
+Mission Status operation or the token introspection projection
+({{visibility}}), the same way it learns a Mission is revoked. A runtime
+Policy Enforcement Point that does not recognize `terminal_when` fails
+closed for the entry per {{forward-compat}}.
 
 # Worked Example {#example}
 
@@ -310,11 +368,12 @@ bounded to under 500 USD and discharged when the Q3 close is finalized:
   { "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
-    "constraints": { "max_amount_usd": 500 },
-    "terminal_when": [
-      { "event_type": "accounting-period-closed",
-        "event_source": "https://erp.example.com/periods/2026-Q3",
-        "max_staleness": "PT15M" } ] }
+    "constraints": {
+      "max_amount_usd": 500,
+      "terminal_when": [
+        { "event_type": "accounting-period-closed",
+          "event_source": "https://erp.example.com/periods/2026-Q3",
+          "max_staleness": "PT15M" } ] } }
 ]
 ~~~
 
@@ -340,13 +399,19 @@ An Authorization Server conforming to this profile MUST:
   refuse to derive it ({{discharge}});
 - refuse to derive an entry whose discharge status it cannot determine
   ({{determining}});
-- carry every parent completion condition unchanged into a derived entry,
-  permitting only added conditions ({{subset-extension}}); and
-- keep the `terminal_when` array within `authority_hash` and keep fired
-  status out of it ({{terminal-when}}).
+- record an observed discharge as latched state that MUST NOT revert on a
+  later source report ({{determining}});
+- carry every parent completion condition into a derived entry when
+  narrowing, permitting only added conditions ({{subset-extension}});
+- where it offers the Mission Status operation or the token introspection
+  projection, omit a discharged entry from the `authorization_details` it
+  returns ({{visibility}}); and
+- keep the `terminal_when` condition array committed by `authority_hash`
+  and keep fired status out of it ({{terminal-when}}).
 
 A consumer conforming to this profile MUST fail closed for an entry
-carrying a `terminal_when` it does not understand ({{forward-compat}}).
+carrying a `terminal_when` constraint it does not understand
+({{forward-compat}}).
 
 # Security Considerations {#security-considerations}
 
@@ -357,19 +422,20 @@ adds:
   so it is not a path to escalation; a compromised or injected agent
   cannot use `terminal_when` to widen authority, and the worst it can do
   is retire its own authority sooner.
-- Fail closed on unknown member. A consumer that does not understand
-  `terminal_when` MUST refuse the entry ({{forward-compat}}); ignoring
-  the member would let a discharged entry continue to be narrowed,
-  projected, or enforced, defeating discharge.
+- Fail closed on unknown constraint. A consumer that does not understand
+  the `terminal_when` constraint MUST refuse the entry
+  ({{forward-compat}}); ignoring the constraint would let a discharged
+  entry continue to be narrowed, projected, or enforced, defeating
+  discharge.
 - Fail closed on unknown status. When discharge status is
   indeterminate the Authorization Server withholds issuance
   ({{determining}}); a deployment that fails open here defeats the
   control.
 - Trusted event source. `event_source` is a trusted input to issuance: a
   party that can make the source report "not yet complete" can keep an
-  entry derivable past its true completion. A deployment SHOULD authorize
-  and integrity-protect the event source as it does other Mission state
-  inputs, and SHOULD prefer sources in its own trust domain.
+  entry derivable past its true completion. The Mission Issuer MUST
+  authenticate and integrity-verify an event source outside its own trust
+  domain ({{determining}}), and SHOULD prefer sources within it.
 - Already-issued tokens. Discharge gates new derivations only; a token
   already issued runs to expiry. Prompt cutoff relies on short token
   lifetimes or runtime point-of-use denial ({{runtime}}), the same caveat
@@ -388,12 +454,29 @@ that exposure when the source is operated by another party.
 
 # IANA Considerations {#iana}
 
-This document makes no IANA request. `terminal_when` is an OPTIONAL
-member of the `mission_resource_access` authorization details type
-registered by the issuance profile
-({{I-D.draft-mcguinness-oauth-mission}}); `event_type` values are
+This document registers one Common Constraint in the "Mission Common
+Constraints" registry established by the issuance profile
+({{I-D.draft-mcguinness-oauth-mission}}):
+
+- Name: `terminal_when`
+- Value syntax: a JSON array of completion-condition objects, each with a
+  REQUIRED `event_type` (string), an OPTIONAL `event_source` (string, a
+  URI), and an OPTIONAL `max_staleness` (string, an ISO 8601 duration)
+  ({{terminal-when}}).
+- Subset rule: a candidate value is no broader than a reference value
+  when the candidate's condition array contains every condition of the
+  reference, compared structurally after the issuance profile's
+  canonicalization; the candidate MAY add further conditions
+  ({{subset-extension}}).
+- Intersection rule: the union of the two condition arrays.
+- Change Controller: IETF
+- Reference: this document, {{terminal-when}}
+
+`terminal_when` is a `constraints` member of the `mission_resource_access`
+authorization details type defined by the issuance profile
+({{I-D.draft-mcguinness-oauth-mission}}). `event_type` values are
 deployment- or registry-defined and opaque to this document, as
-`purpose` is, so this profile establishes no new registry.
+`purpose` is, so this profile establishes no registry of event types.
 
 --- back
 
