@@ -28,6 +28,8 @@ author:
 normative:
   RFC9126:
   RFC9396:
+  RFC8705:
+  RFC9449:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     author:
@@ -68,6 +70,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
+  I-D.draft-mcguinness-oauth-mission-signals:
+    title: "Mission Lifecycle Signals for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
 
 --- abstract
 
@@ -366,10 +377,15 @@ predecessor cannot present its refresh token and so cannot expand it.
 Presenting the predecessor's refresh token in the PAR request MUST
 follow the issuance profile's handling for that token: a
 sender-constrained refresh token MUST be presented in conformance with
-its sender constraint. The refresh token is used here only to bind and
-resolve the predecessor; the successor's authority still comes only
-from the fresh consent at the approval event, never from authority the
-binding token could itself derive.
+its sender constraint. When the token is DPoP-bound {{RFC9449}}, the PAR
+request MUST carry a DPoP proof bound to the PAR endpoint (its `htu` and
+`htm`); when it is mTLS-bound {{RFC8705}}, the mutual-TLS connection of
+the PAR request satisfies the constraint. Presenting the token for
+expansion MUST NOT rotate it and MUST NOT register as a replay in the
+deployment's refresh-token replay detection: the token is used here only
+to bind and resolve the predecessor, not to refresh. The successor's
+authority still comes only from the fresh consent at the approval event,
+never from authority the binding token could itself derive.
 
 Because expansion reuses the issuance profile's grant binding, it
 needs no opaque expansion ticket or other new bearer: the predecessor
@@ -380,13 +396,21 @@ it, and a client cannot name an arbitrary predecessor.
 
 The Mission Issuer MUST resolve the predecessor from the presented
 grant and verify it is in the `active` state before adjudicating. An
-expansion request against a predecessor that is not `active` (it is
-`revoked`, `expired`, or already `superseded`, {{superseded-state}})
-MUST be refused with `invalid_grant` and the reconciliation status
-`predecessor_state_changed` ({{reconciliation}}). Issuance gating in
-the issuance profile already refuses to derive from a non-active
-Mission; this rule extends the same gate to adjudicating an expansion
-of one.
+expansion request against a predecessor that is not `active` MUST be
+refused with `invalid_grant` and a reconciliation status
+({{reconciliation}}):
+
+- if the predecessor made a terminal exit from `active` (it is
+  `revoked`, `expired`, or already `superseded`, {{superseded-state}}),
+  the status is `predecessor_state_changed`;
+- if the predecessor is in a non-terminal non-active state, for example
+  `suspended` where the Mission Status profile
+  {{I-D.draft-mcguinness-oauth-mission-status}} is deployed, the status
+  is `predecessor_not_active`.
+
+Issuance gating in the issuance profile already refuses to derive from a
+non-active Mission; this rule extends the same gate to adjudicating an
+expansion of one.
 
 # Adjudication {#adjudication}
 
@@ -435,118 +459,6 @@ derived credential's `exp` at `mission_expiry`; a successor that
 silently outlived its predecessor would let expansion launder a
 longer-lived Mission past the originally approved horizon.
 
-# Progressive Authorization {#progressive-authorization}
-
-An open-ended agentic task often cannot have its full authority
-enumerated at the initial approval, which leaves a deployment choosing
-between over-provisioning a broad standing Mission and interrupting the
-user for a fresh approval at every step. Progressive authorization is a
-third option: the Approver consents once to a bounded envelope and a
-rule for drawing authority from it, so authority can grow within the
-envelope at runtime without a fresh human approval each time, while the
-active authority any single Mission yields stays narrow.
-
-At the initial approval event ({{I-D.draft-mcguinness-oauth-mission}}),
-the Approver MAY additionally consent to:
-
-- an **authority ceiling**: the maximum authority any expansion of this
-  Mission may reach without a further human approval, expressed as an
-  Authority Set, or as the `constraints` that bound one
-  ({{I-D.draft-mcguinness-oauth-mission}}), that every in-ceiling
-  successor MUST be a subset of; and
-- a **drawdown policy**: the conditions under which the Mission Issuer
-  MAY adjudicate an in-ceiling expansion by policy rather than by a
-  fresh human approval.
-
-Where present, the ceiling and drawdown policy are recorded on the
-Mission and committed under their own integrity anchor, not under
-`authority_hash`: `authority_hash` commits only the consented Authority
-Set ({{I-D.draft-mcguinness-oauth-mission}}), and the ceiling is a bound
-on future expansions, not present authority. The consent disclosure MUST
-render the ceiling and the fact that in-ceiling expansion is
-policy-adjudicated. A Mission that carries no ceiling has no progressive
-authorization: every expansion of it is an ordinary, freshly approved
-expansion.
-
-## In-ceiling expansion {#in-ceiling-expansion}
-
-An **in-ceiling expansion** is an expansion ({{adjudication}}) whose
-successor Authority Set is a subset of the predecessor's consented
-ceiling. When the predecessor consented to a drawdown policy that
-authorizes the requested widening, the Mission Issuer MAY satisfy the
-adjudication's approval event by policy rather than by a fresh human
-approval, exactly as a parent Mission's Authority Set may permit
-policy-approved child creation
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). The successor
-is created as in {{adjudication}}: its Authority Set freshly derived and
-bound by the ceiling, its `predecessor` member set, the predecessor
-superseded.
-
-This does not widen authority without consent ({{new-consent}}). The
-consent is the human consent given at the initial approval to the
-ceiling and the drawdown policy; policy adjudication only draws within
-that pre-given consent and can never exceed the ceiling. The Mission
-Issuer MUST refuse, with `out_of_ceiling` ({{denial-reasons}}), a
-requested authority that is not a subset of the consented ceiling;
-exceeding the ceiling requires a fresh human approval that raises it,
-which is an ordinary expansion.
-
-Policy adjudication is bounded, so a pre-consented ceiling cannot become
-a standing grant a compromised agent walks up to unattended. A drawdown
-that would grant an irreversible action, an external commitment,
-privileged administration, or cross-domain authority MUST be adjudicated
-by a fresh human approval even when it is within the ceiling; the
-drawdown policy MUST NOT permit policy-only adjudication of those
-classes. A drawdown policy SHOULD bound the rate of policy-adjudicated
-drawdowns. An in-ceiling request the drawdown policy does not authorize
-is not refused with `out_of_ceiling`; it falls back to an ordinary,
-freshly human-approved expansion.
-
-## What it bounds, and what it does not {#progressive-limits}
-
-The ceiling is broad by construction, since it must cover the
-open-ended task. What stays narrow is the active authority any single
-Mission in the chain yields: each in-ceiling successor is derived for
-the authority actually needed at that step and is independently gated
-and revocable. A compromised agent cannot instantly wield the ceiling;
-it can exercise only the current active authority and request in-ceiling
-drawdown, which is policy-gated, recorded for audit ({{audit-linkage}}),
-rate-limitable, and enforced per action by the runtime layer
-({{I-D.draft-mcguinness-oauth-mission-runtime}}). Progressive
-authorization bounds, and does not eliminate, standing-authority
-exposure; a deployment SHOULD pair it with short successor lifetimes,
-constraint-bounded ceilings, and runtime enforcement. The drawdown
-policy is enforced by the Mission Issuer and is part of its trusted
-governance: a misconfigured policy can over-grant within the ceiling, so
-it is reviewed and versioned like other approval policy.
-
-## Realizing an approved access request {#arap-feedback}
-
-Progressive authorization grows authority that a deployment anticipated
-well enough to express as a ceiling. The runtime enforcement layer
-handles the unanticipated case: it can let an agent request authority it
-discovers it needs at the point of use, through an access-request and
-approval workflow ({{I-D.draft-mcguinness-oauth-mission-runtime}}). That
-workflow yields a permit for the single re-evaluated action. To persist
-the newly approved authority for the rest of the task, rather than have
-the agent re-request it on every call, the Mission Issuer MAY realize an
-approved access request as an expansion:
-
-- a request whose authority is within the Mission's consented ceiling is
-  realized as a policy-adjudicated in-ceiling expansion
-  ({{in-ceiling-expansion}}); and
-- a request whose authority exceeds the ceiling is realized only on the
-  fresh human approval the request carries, as an ordinary expansion
-  that creates the successor and, where the Approver consents, raises
-  the ceiling.
-
-Realizing a request as an expansion is subject to every rule of this
-document: the successor's authority is freshly derived and bound, the
-predecessor is superseded, and authority is never widened without the
-consent the request carries ({{new-consent}}). An access request not
-realized as an expansion grants only the single runtime permit and no
-durable Mission authority.
-
 # The Predecessor Mission Reference {#predecessor-member}
 
 The successor records a lineage link to the predecessor as a
@@ -576,14 +488,45 @@ The same `predecessor` value is recorded on the successor's immutable
 Mission record so that the lineage is durable independently of any
 derived token.
 
+This document defines two further lineage members:
+
+`related_to`:
+: OPTIONAL. A string. The `mission_id` of a Mission this Mission is
+  related to by lineage without superseding it, used for a non-superseding
+  link such as a branch ({{replacement}}). Unlike `predecessor`, its
+  presence does not imply that the referenced Mission was superseded and
+  it carries no lifecycle consequence. Like `predecessor`, it is lineage
+  and audit context only: it MUST NOT grant or widen authority, and a
+  consumer that does not understand it MUST ignore it.
+
+`successor`:
+: OPTIONAL. A string. The `mission_id` of the successor that superseded
+  this Mission by expansion, recorded on the superseded predecessor's
+  Mission record at supersession ({{superseded-state}}). It is the
+  reverse of the successor's `predecessor` link, letting a consumer that
+  holds a superseded predecessor discover its successor directly. It is
+  lineage and audit context only and MUST NOT grant or widen authority.
+  The Status profile surfaces it in the status response
+  ({{I-D.draft-mcguinness-oauth-mission-status}}) and the Signals profile
+  in the superseded lifecycle event
+  ({{I-D.draft-mcguinness-oauth-mission-signals}}).
+
+`predecessor`, `related_to`, and `successor` are each a bare `mission_id`
+string, not an object like the `parent` member of a Child Mission
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}): same-origin
+succession needs only the identifier to resolve the linked Mission at the
+shared `origin`, whereas parentage carries cascade semantics and
+cross-object integrity that require a structured member.
+
 Properties:
 
 - **Cardinality.** A successor has at most one `predecessor`. An
   expansion chain is expressed by walking `predecessor` links from a
   successor back toward the original Mission.
 - **Immutability.** `predecessor` is set at the successor's approval
-  event and MUST NOT change thereafter; the Mission record is immutable
-  except for its `state`.
+  event and MUST NOT change thereafter. The Mission record is immutable
+  except for its `state` and the one-time `successor` link a supersession
+  sets on the predecessor ({{superseded-state}}).
 - **Origin.** The predecessor and successor share an `origin`: an
   expansion is adjudicated by the predecessor's Mission Issuer. A
   consumer correlating a chain resolves each link at that origin.
@@ -624,7 +567,9 @@ The transition has these requirements:
 
 - **Atomic with successor activation.** The predecessor enters
   `superseded` in the same atomic operation that activates the
-  successor ({{adjudication}}). If that operation fails, the
+  successor ({{adjudication}}), and in that same operation the Mission
+  Issuer sets the predecessor's `successor` member to the successor's
+  `mission_id` ({{predecessor-member}}). If that operation fails, the
   predecessor remains `active` and no successor record exists; the
   Mission Issuer MUST NOT produce a partial successor or a predecessor
   left in an indeterminate state.
@@ -691,9 +636,11 @@ remain `active` after expansion (for example, a separately scoped child
 task running alongside the original), is OPTIONAL and is not defined
 here. A deployment that needs a separately scoped task alongside a
 still-active Mission creates an ordinary new Mission under the issuance
-profile and MAY set that Mission's `predecessor` member to the original
-Mission's `mission_id` to preserve lineage; doing so does not supersede
-the original, which remains `active`. An atomic, grant-bound branch
+profile and MAY set that Mission's `related_to` member
+({{predecessor-member}}) to the original Mission's `mission_id` to
+preserve lineage; it does not set `predecessor`, which would imply a
+supersession, so the original remains `active`. An atomic, grant-bound
+branch
 expansion that creates such a child within a single expansion approval
 event is deferred to a future revision of this document.
 
@@ -731,24 +678,173 @@ The reconciliation status codes are:
   a new expansion against the successor as predecessor).
 
 `predecessor_state_changed`:
-: The predecessor transitioned out of `active` (to `revoked`,
-  `expired`, or `superseded`) before this request could be
-  adjudicated, including the cases caught at request binding
-  ({{predecessor-active}}). The client MUST NOT retry the same
-  expansion against this predecessor.
+: The predecessor made a terminal exit from `active` (to `revoked`,
+  `expired`, or `superseded`) before this request could be adjudicated,
+  including the cases caught at request binding ({{predecessor-active}}).
+  The client MUST NOT retry the same expansion against this predecessor.
 
-The two codes overlap in the `superseded` case by design:
+`predecessor_not_active`:
+: The predecessor is in a non-terminal non-active state (for example
+  `suspended` under the Mission Status profile
+  {{I-D.draft-mcguinness-oauth-mission-status}}) and cannot be expanded
+  until it returns to `active`. The client MAY retry the expansion after
+  the predecessor is `active` again.
+
+The two terminal-exit codes overlap in the `superseded` case by design:
 `superseded_by_concurrent_expansion` is the specific reconciliation
 outcome when the cause is a concurrent expansion that has already won,
 and `predecessor_state_changed` is the general outcome for any other
-exit from `active`. A Mission Issuer SHOULD return the specific code
-when it can attribute the change to a concurrent expansion.
+terminal exit from `active`. A Mission Issuer SHOULD return the specific
+code when it can attribute the change to a concurrent expansion.
+`predecessor_not_active` is distinct from both: it reports a reversible,
+non-terminal state, so it invites the retry the terminal codes forbid.
 
-How the reconciliation status is conveyed to the client alongside the
-`invalid_grant` error is a deployment matter; it MAY be carried in the
-OAuth error response's `error_description` or an
-implementation-defined member. This document defines the symbolic
-codes and their meaning, not a wire location for them.
+The Mission Issuer conveys the reconciliation status in a
+`mission_expansion_status` member of the OAuth error response body,
+alongside the `invalid_grant` error:
+
+`mission_expansion_status`:
+: A string carrying one code from this document's closed sets: a
+  reconciliation status ({{reconciliation}}) or an expansion denial
+  reason ({{denial-reasons}}). It is returned in the error response of
+  the step that failed: the PAR error response for a binding or
+  reconciliation failure, and the approval or token error response for a
+  denial.
+
+# Progressive Authorization {#progressive-authorization}
+
+An open-ended agentic task often cannot have its full authority
+enumerated at the initial approval, which leaves a deployment choosing
+between over-provisioning a broad standing Mission and interrupting the
+user for a fresh approval at every step. Progressive authorization is a
+third option: the Approver consents once to a bounded envelope and a
+rule for drawing authority from it, so authority can grow within the
+envelope at runtime without a fresh human approval each time, while the
+active authority any single Mission yields stays narrow.
+
+At the initial approval event ({{I-D.draft-mcguinness-oauth-mission}}),
+the Approver MAY additionally consent to:
+
+- an **authority ceiling**, recorded as an `authority_ceiling` member on
+  the Mission: an array of authorization-details-shaped entries, each the
+  shape of an Authority Set entry ({{I-D.draft-mcguinness-oauth-mission}}),
+  that is the pre-consented maximum any expansion of this Mission may
+  reach without a further human approval and that every in-ceiling
+  successor MUST be within ({{in-ceiling-expansion}}); and
+- a **drawdown policy**, recorded as a `drawdown_policy` member on the
+  Mission: a string or URI identifying the policy under which the Mission
+  Issuer MAY adjudicate an in-ceiling expansion by policy rather than by
+  a fresh human approval. The policy's content is deployment-defined.
+
+Where present, `authority_ceiling` and `drawdown_policy` are recorded on
+the Mission and committed by a `ceiling_hash`, computed with the issuance
+profile's integrity-anchor envelope
+({{I-D.draft-mcguinness-oauth-mission}}) under the `typ`
+`mission-authority-ceiling` over an object carrying both members. They
+are not committed under `authority_hash`: `authority_hash` commits only
+the consented Authority Set ({{I-D.draft-mcguinness-oauth-mission}}), and
+the ceiling is a bound on future expansions, not present authority. The
+consent disclosure MUST render the ceiling and the fact that in-ceiling
+expansion is policy-adjudicated. A Mission that carries no
+`authority_ceiling` has no progressive authorization: every expansion of
+it is an ordinary, freshly approved expansion.
+
+## In-ceiling expansion {#in-ceiling-expansion}
+
+An **in-ceiling expansion** is an expansion ({{adjudication}}) whose
+successor Authority Set is within the predecessor's consented
+`authority_ceiling`. A requested successor Authority Set is in-ceiling
+when every one of its entries is a subset of some `authority_ceiling`
+entry under the issuance profile's subset rule
+({{I-D.draft-mcguinness-oauth-mission}}); a `constraints`-bounded ceiling
+uses the same subset semantics. When the predecessor consented to a
+drawdown policy that authorizes the requested widening, the Mission
+Issuer MAY satisfy the adjudication's approval event by policy rather
+than by a fresh human approval, exactly as a parent Mission's Authority
+Set may permit policy-approved child creation
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). The successor
+is created as in {{adjudication}}: its Authority Set freshly derived and
+bound by the ceiling, its `predecessor` member set, the predecessor
+superseded.
+
+When the adjudication is by the pre-consented drawdown policy, the
+Mission Issuer MAY complete the authorization request without prompting
+the Approver, issuing the authorization code directly on redemption of
+the expansion's `request_uri`. The successor is still created through the
+full approval-event machinery of {{adjudication}}; only the interactive
+prompt is skipped.
+
+This does not widen authority without consent ({{new-consent}}). The
+consent is the human consent given at the initial approval to the
+ceiling and the drawdown policy; policy adjudication only draws within
+that pre-given consent and can never exceed the ceiling. The Mission
+Issuer MUST refuse, with `out_of_ceiling` ({{denial-reasons}}), a
+requested authority that is not within the consented `authority_ceiling`;
+exceeding the ceiling requires a fresh human approval that raises it,
+which is an ordinary expansion.
+
+Policy adjudication is bounded, so a pre-consented ceiling cannot become
+a standing grant a compromised agent walks up to unattended. A deployment
+MUST rate-bound policy-adjudicated expansions per Mission, and MUST record
+each as an approval event whose approver context is the drawdown policy
+that authorized it ({{audit-linkage}}).
+
+Some authority classes always require a fresh human approval even within
+the ceiling. To make that testable, a deployment MUST publish a mapping
+from its action identifiers to the runtime profile's action classes
+({{I-D.draft-mcguinness-oauth-mission-runtime}}), or an equivalent
+declared classification. A drawdown that grants authority mapped to an
+irreversible, external-commitment, or privileged-administration class, or
+that grants cross-domain authority, MUST be adjudicated by a fresh human
+approval; the drawdown policy MUST NOT permit policy-only adjudication of
+those. An in-ceiling request the drawdown policy does not authorize is not
+refused with `out_of_ceiling`; it falls back to an ordinary, freshly
+human-approved expansion.
+
+## What it bounds, and what it does not {#progressive-limits}
+
+The ceiling is broad by construction, since it must cover the
+open-ended task. What stays narrow is the active authority any single
+Mission in the chain yields: each in-ceiling successor is derived for
+the authority actually needed at that step and is independently gated
+and revocable. A compromised agent cannot instantly wield the ceiling;
+it can exercise only the current active authority and request in-ceiling
+drawdown, which is policy-gated, recorded for audit ({{audit-linkage}}),
+rate-limitable, and enforced per action by the runtime layer
+({{I-D.draft-mcguinness-oauth-mission-runtime}}). Progressive
+authorization bounds, and does not eliminate, standing-authority
+exposure; a deployment SHOULD pair it with short successor lifetimes,
+constraint-bounded ceilings, and runtime enforcement. The drawdown
+policy is enforced by the Mission Issuer and is part of its trusted
+governance: a misconfigured policy can over-grant within the ceiling, so
+it is reviewed and versioned like other approval policy.
+
+## Realizing an approved access request {#arap-feedback}
+
+Progressive authorization grows authority that a deployment anticipated
+well enough to express as a ceiling. The runtime enforcement layer
+handles the unanticipated case: it can let an agent request authority it
+discovers it needs at the point of use, through an access-request and
+approval workflow ({{I-D.draft-mcguinness-oauth-mission-runtime}}). That
+workflow yields a permit for the single re-evaluated action. To persist
+the newly approved authority for the rest of the task, rather than have
+the agent re-request it on every call, the Mission Issuer MAY realize an
+approved access request as an expansion:
+
+- a request whose authority is within the Mission's consented ceiling is
+  realized as a policy-adjudicated in-ceiling expansion
+  ({{in-ceiling-expansion}}); and
+- a request whose authority exceeds the ceiling is realized only on the
+  fresh human approval the request carries, as an ordinary expansion
+  that creates the successor and, where the Approver consents, raises
+  the ceiling.
+
+Realizing a request as an expansion is subject to every rule of this
+document: the successor's authority is freshly derived and bound, the
+predecessor is superseded, and authority is never widened without the
+consent the request carries ({{new-consent}}). An access request not
+realized as an expansion grants only the single runtime permit and no
+durable Mission authority.
 
 # Expansion Denial Reasons {#denial-reasons}
 
@@ -781,8 +877,10 @@ machine-readable reason code from the closed set below:
 
 A Mission Issuer MUST NOT use a reason code to disclose policy
 boundaries beyond the adjudicated request ({{policy-probing}}); omitting
-the reason code is always permitted. As with reconciliation status, the
-wire location of a reason code is a deployment matter.
+the reason code is always permitted. When present, a reason code is
+carried in the `mission_expansion_status` member of the OAuth error
+response body ({{reconciliation}}), the same member that carries a
+reconciliation status.
 
 Two failure classes are not denial reasons and use the issuance
 profile's error vocabulary directly: an expansion request whose
@@ -871,6 +969,28 @@ new behavior: it enforces a successor's tokens exactly as it enforces
 any Mission-bound token, and treats the `predecessor` member, if it
 reads it at all, as audit context it MUST NOT use to grant authority
 ({{predecessor-member}}).
+
+## Optional capability: Expansion with Progressive Authorization {#conformance-progressive}
+
+Progressive authorization ({{progressive-authorization}}) is a named
+OPTIONAL capability. A Mission Issuer that claims **Expansion with
+Progressive Authorization** MUST:
+
+- record a consented `authority_ceiling` and `drawdown_policy` on the
+  Mission and commit them with `ceiling_hash`
+  ({{progressive-authorization}});
+- evaluate a requested successor Authority Set as in-ceiling by the
+  subset rule, and refuse an out-of-ceiling request with `out_of_ceiling`
+  ({{in-ceiling-expansion}}, {{denial-reasons}});
+- enforce the prohibited-class rule, requiring a fresh human approval for
+  a drawdown that grants an irreversible, external-commitment, or
+  privileged-administration authority, or cross-domain authority
+  ({{in-ceiling-expansion}}); and
+- rate-bound policy-adjudicated drawdowns per Mission and record each as
+  an approval event ({{in-ceiling-expansion}}).
+
+A Mission Issuer that does not claim this capability adjudicates every
+expansion as a fresh human approval.
 
 # Security Considerations
 
@@ -1012,15 +1132,18 @@ registry: it is a member defined by this profile, carried inside the
 already-registered `mission` claim. No new claim, parameter, or
 token-introspection registration is required for the lineage link.
 
-This document defines two closed sets of symbolic codes: the expansion
+This document defines two closed sets of symbolic codes, the expansion
 reconciliation status codes ({{reconciliation}}) and the expansion
-denial reasons ({{denial-reasons}}). Like the issuance profile's
-restraint with `mission` members, these are documented in this
-specification rather than placed in new IANA registries: they are
-conveyed inside existing OAuth error responses at deployment-defined
-locations, not on a new wire surface, and the closed sets are small and
-fully specified here. Should interoperable extension of either set
-prove necessary, a future revision can create a "Mission Expansion
+denial reasons ({{denial-reasons}}), both conveyed in the
+`mission_expansion_status` member of the OAuth error response body
+({{reconciliation}}). `mission_expansion_status` is a member of the OAuth
+error response JSON body, not an OAuth protocol parameter, and is
+namespaced to this document's error responses, so it requires no
+registration. Like the issuance profile's restraint with `mission`
+members, the codes are documented in this specification rather than
+placed in new IANA registries: the closed sets are small and fully
+specified here. Should interoperable extension of either set prove
+necessary, a future revision can create a "Mission Expansion
 Reconciliation Status" registry and a "Mission Expansion Denial Reason"
 registry with a Specification Required {{RFC8126}} policy; this document
 does not create them.

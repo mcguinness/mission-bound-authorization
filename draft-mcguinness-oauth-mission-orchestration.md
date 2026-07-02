@@ -58,6 +58,7 @@ normative:
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-status-latest
 
+informative:
   I-D.draft-mcguinness-oauth-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     author:
@@ -67,8 +68,6 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-authzen-latest
-
-informative:
   I-D.draft-mcguinness-oauth-mission-harness:
     title: "Mission-Aware Agent Harnesses for OAuth 2.0"
     author:
@@ -130,11 +129,19 @@ or cannot be established, the orchestrator stops new governed work and
 executes the plan: cancel, compensate, suppress, pause, or hand off to
 human review.
 
-This profile is **experimental** and is not part of the recommended v1
-deployment bundles. The unwind, compensation, and reversibility model it
-defines is newer and less exercised than the issuance core and the
-runtime layer, and compensation is inherently domain-specific; treat it
-as a direction whose details may change, not yet as a stable interface.
+The boundary with the harness profile
+({{I-D.draft-mcguinness-oauth-mission-harness}}) is the question each
+answers. The harness answers "may this unit of work continue." This
+document answers "how is in-flight state unwound once continuation is
+stopped." The runtime profile still gates each action. The checks
+compose; none replaces the others ({{relationship}}).
+
+This is a newer profile than the rest of the Mission-Bound
+Authorization family and is not part of the recommended v1 deployment
+bundles. The unwind, compensation, and reversibility model it defines is
+less exercised than the issuance core and the runtime layer, and
+compensation is inherently domain-specific. Its details may change;
+treat it as a direction, not yet as a stable interface.
 
 # Scope
 
@@ -160,7 +167,9 @@ MUST define:
 - workflow classes in scope;
 - action-class mapping for workflow steps;
 - the source of Mission state used by the orchestrator;
-- staleness bounds;
+- a staleness bound per action class, calibrated against the runtime
+  profile's non-normative freshness table
+  ({{I-D.draft-mcguinness-oauth-mission-runtime}});
 - minimum reversibility class per operation;
 - permitted compensation authorities;
 - review queues or escalation targets; and
@@ -175,12 +184,12 @@ format.
 {::boilerplate bcp14-tagged}
 
 This document uses the terms Mission, Mission state, and consequential
-action from {{I-D.draft-mcguinness-oauth-mission}}; PEP, PDP, and
+action from {{I-D.draft-mcguinness-oauth-mission}}; and PEP, PDP, and
 runtime enforcement evidence from
-{{I-D.draft-mcguinness-oauth-mission-runtime}}; and the Decision
-Evidence and Execution Evidence objects from
-{{I-D.draft-mcguinness-oauth-mission-authzen}} (the runtime profile
-defers those object schemas; the AuthZEN profile defines them).
+{{I-D.draft-mcguinness-oauth-mission-runtime}}. Where a deployment
+uses the AuthZEN profile ({{I-D.draft-mcguinness-oauth-mission-authzen}}),
+its Decision Evidence and Execution Evidence objects are examples of
+the runtime enforcement evidence records this document links.
 
 Orchestrator:
 : The component that schedules, sequences, retries, or coordinates
@@ -225,11 +234,21 @@ these reversibility classes before execution:
 `irreversible_action`, `external_commitment`, and
 `privileged_administration` are the identically-named action classes of
 {{I-D.draft-mcguinness-oauth-mission-runtime}} (Section
-"Action classification"); a step's reversibility class MUST be
-consistent with, and no lower than, the runtime action class that
-profile assigns the same operation. `read_only` and `reversible_write`
-are a reversibility refinement this profile adds that the runtime
-classification does not separately track.
+"Action classification"). A step's reversibility class MUST be at least
+the minimum this table maps from the runtime action class the runtime
+profile assigns the same operation:
+
+| Runtime action class | Minimum reversibility class |
+|---|---|
+| Non-consequential | `read_only` |
+| Consequential read | `read_only` |
+| Consequential write | `reversible_write` |
+| Irreversible action | `irreversible_action` |
+| External commitment | `external_commitment` |
+| Privileged administration | `privileged_administration` |
+
+`read_only` and `reversible_write` are a reversibility refinement this
+profile adds that the runtime classification does not separately track.
 
 The class MAY be raised by Resource policy or operation profile. As
 with the runtime classification floor
@@ -248,7 +267,9 @@ The orchestrator MUST derive reversibility class from a trusted source:
 
 An agent plan, model output, or tool description MAY suggest a class
 but MUST NOT be the sole authority for lowering class. If sources
-conflict, the orchestrator MUST use the stricter class.
+conflict, the orchestrator MUST use the class that is at least the
+minimum the mapping table of {{reversibility}} requires for the
+operation's runtime action class.
 
 # Unwind Plan {#unwind-plan}
 
@@ -292,16 +313,35 @@ unwind plan. The plan has these members:
   `continue_to_safe_point` may proceed.
 
 `evidence_policy`:
-: OPTIONAL. Deployment-defined instructions for linking Decision
-  Evidence, Execution Evidence, Harness Evidence, and Orchestration
-  Evidence. Its members, including any retention token such as the
+: OPTIONAL. Deployment-defined instructions for linking runtime
+  enforcement evidence ({{I-D.draft-mcguinness-oauth-mission-runtime}}),
+  Harness Evidence, and Orchestration Evidence. Its members, including
+  any retention token such as the
   example's `mission_audit_horizon`, are deployment-defined; the
   retention horizon aligns with the runtime profile's record-retention
   guidance ({{I-D.draft-mcguinness-oauth-mission-runtime}}).
 
 The unwind plan does not authorize compensation by itself. A
-compensation action that is consequential MUST itself pass Mission or
-deployment emergency authorization as defined by policy.
+compensation action that is consequential MUST itself be authorized
+under one of the compensation authority bases ({{compensation-authority}}):
+resource policy or a separate active Mission, never the terminated
+Mission.
+
+## Unwind Plan Integrity {#unwind-plan-integrity}
+
+The step's first Orchestration Evidence record ({{orchestration-evidence}})
+MUST carry an `unwind_plan_hash` over the step's unwind plan. It is
+computed with the integrity-anchor envelope of the issuance profile
+({{I-D.draft-mcguinness-oauth-mission}}) under a new `typ` value
+`mission-unwind-plan`, where `value` is the unwind plan object. This
+lets an auditor detect any later alteration of the plan a step ran
+under.
+
+Every unwind-plan member MUST derive from a trusted source. The
+compensation action, review queue, and safe point, like the
+reversibility class ({{action-class-source}}), MUST derive from a
+reviewed workflow definition or operation profile. Model output MUST
+NOT define them.
 
 ## Worked Unwind Plan {#worked-unwind-plan}
 
@@ -368,6 +408,14 @@ signal overrides a stale local `active` cache.
 
 # In-Flight Requests {#in-flight}
 
+An in-flight step moves through these outcome classes:
+
+~~~
+ not_dispatched --> dispatched_not_committed --> committed
+                              |
+                              +-------------------> unknown
+~~~
+
 For in-flight requests, the orchestrator MUST distinguish:
 
 `not_dispatched`:
@@ -408,42 +456,78 @@ external action did not occur.
 
 # Compensation {#compensation}
 
-Compensation is governed work. If a compensation action is performed
-under the original Mission after that Mission became non-active, the
-deployment MUST have a policy basis for emergency or remedial authority
-that is separate from ordinary Mission authority. Otherwise the
-orchestrator MUST escalate to human review.
+Compensation is governed work. After a Mission becomes non-active, a
+compensation action MUST NOT be performed by presenting that Mission's
+authority. It proceeds only under one of the bases of
+{{compensation-authority}}: `resource_policy` or `separate_mission`.
+If neither applies, the orchestrator MUST escalate to human review.
 
-The compensation record MUST link:
+The compensation record is an Orchestration Evidence record
+({{orchestration-evidence}}) with `orchestration_decision` set to
+`compensate`. In that case its `authority_basis`, `linked_evidence`,
+`compensation_action`, and `compensation_outcome` members are REQUIRED.
+Through those members the record links:
 
-- the original Mission;
-- the original decision and execution evidence when available;
-- the state transition that triggered compensation;
-- the compensation action;
-- the authority basis for compensation; and
-- the outcome.
+- the original Mission (the record's `mission`);
+- the original runtime enforcement evidence when available
+  (`linked_evidence`);
+- the state transition that triggered compensation (`mission_state`
+  and `reason`);
+- the compensation action (`compensation_action`);
+- the authority basis for compensation (`authority_basis`); and
+- the outcome (`compensation_outcome`).
 
 ## Compensation Authority Basis {#compensation-authority}
 
-The authority basis for compensation is one of:
-
-`same_mission_remedial`:
-: Deployment policy permits limited remedial action under the same
-  Mission after non-active state. This MUST be explicitly documented
-  and SHOULD be limited to reversible writes.
-
-`operator_approved`:
-: A human operator approved the compensation.
-
-`separate_mission`:
-: A separate active Mission authorizes the compensation.
+Compensation after a non-active transition MUST NOT proceed by
+presenting the terminated Mission's authority. The authority basis for
+compensation is one of:
 
 `resource_policy`:
-: Resource policy authorizes a local rollback independent of Mission
-  authority.
+: The action is authorized by the resource's or the PDP's own policy,
+  independent of Mission-bound authority. The orchestrator presents no
+  Mission-bound credential; the resource permits the rollback under its
+  own local policy.
 
-If no basis applies, the orchestrator MUST NOT compensate and MUST
-handoff to human review.
+`separate_mission`:
+: A narrow, pre-provisioned remedial Mission that is `active`
+  authorizes the compensation. It is a distinct Mission, not the
+  terminated one, and it carries its own Authority Set.
+
+An operator may gate either basis, but operator approval is not itself
+an authority basis: it does not create authority a PEP would enforce
+over a terminated Mission. If neither basis applies, the orchestrator
+MUST NOT compensate and MUST record a `human_review` decision.
+
+## Unwind Ordering and Partial Failure {#unwind-ordering}
+
+When compensation spans dependent steps, the orchestrator MUST run the
+compensations in reverse dependency order unless the unwind plan states
+another order.
+
+Compensation can complete for some steps and not others. When it does
+not complete for every step that required it, the workflow's terminal
+state is `compensation_incomplete`. The orchestrator MUST enumerate the
+steps whose compensation outcome is unknown or failed in Orchestration
+Evidence, so an auditor can see which effects were not offset.
+
+# Human Review {#human-review}
+
+When the orchestrator routes a step to human review (`human_review`),
+the review concludes with one of three outcomes:
+
+`approve`:
+: The reviewer permits the work to continue.
+
+`reject`:
+: The reviewer refuses the work.
+
+`expire`:
+: The item reached its parked maximum age without a review decision.
+
+A parked item MUST carry a deployment maximum age. The orchestrator
+MUST record the outcome and its authority basis in Orchestration
+Evidence.
 
 # Orchestration Evidence {#orchestration-evidence}
 
@@ -479,10 +563,12 @@ members:
   `operator`).
 
 `orchestration_decision`:
-: REQUIRED. One of `suppress`, `pause`, `cancel`, `compensate`,
-  `human_review`, or `record_only`. An unwind plan's
+: REQUIRED. One of `suppress`, `pause`, `cancel`,
+  `continue_to_safe_point`, `compensate`, `human_review`, or
+  `record_only`. An unwind plan's
   `pre_start_behavior`/`in_flight_behavior` values map to these: both
   `cancel_workflow` and `cancel_if_possible` record as `cancel`,
+  `continue_to_safe_point` carries through unchanged,
   `wait_then_review` and a review queue record as `human_review`, and
   `suppress`/`pause` carry through unchanged.
 
@@ -493,22 +579,40 @@ members:
 : REQUIRED. An RFC 3339 {{RFC3339}} timestamp.
 
 `linked_evidence`:
-: OPTIONAL. An array of Decision Evidence, Execution Evidence, Harness
-  Evidence, or prior Orchestration Evidence identifiers.
+: OPTIONAL. An array of runtime enforcement evidence records
+  ({{I-D.draft-mcguinness-oauth-mission-runtime}}), Harness Evidence,
+  or prior Orchestration Evidence identifiers. REQUIRED when
+  `orchestration_decision` is `compensate`.
 
 `outcome_state`:
 : OPTIONAL. One of `not_dispatched`, `dispatched_not_committed`,
   `committed`, or `unknown`.
 
+`unwind_plan_hash`:
+: REQUIRED on the step's first Orchestration Evidence record. The
+  integrity anchor over the step's unwind plan
+  ({{unwind-plan-integrity}}).
+
 `authority_basis`:
-: OPTIONAL. Present when `orchestration_decision` is `compensate`.
+: REQUIRED when `orchestration_decision` is `compensate`; otherwise
+  absent. One of `resource_policy` or `separate_mission`
+  ({{compensation-authority}}).
+
+`compensation_action`:
+: REQUIRED when `orchestration_decision` is `compensate`. The
+  deployment-defined compensation action reference.
+
+`compensation_outcome`:
+: REQUIRED when `orchestration_decision` is `compensate`. The outcome
+  of the compensation action.
 
 `evidence_envelope`:
 : OPTIONAL. Integrity protection over the Orchestration Evidence
   object. When present with `format` `jws-compact`, it is a JWS
   {{RFC7515}} Compact Serialization whose payload is the JCS
   {{RFC8785}} canonical bytes of the object with `evidence_envelope`
-  removed.
+  removed. When present, it MUST identify the signer: the JWS protected
+  header MUST carry `iss` and `kid` resolvable under deployment policy.
 
 Example:
 
@@ -528,16 +632,29 @@ Example:
   "orchestration_decision": "human_review",
   "reason": "external_commitment_dispatched_unknown",
   "outcome_state": "unknown",
+  "unwind_plan_hash":
+    "sha-256:Qk3rY7pL2mN8xW1vB6cD9fH4jK0sT5gA2eR8uI3oP7Y",
   "occurred_at": "2026-11-02T08:16:00Z"
 }
 ~~~
 
+## Record Integrity and Retention {#evidence-integrity}
+
+Orchestration Evidence records are subject to the record integrity and
+retention requirements of the runtime profile
+({{I-D.draft-mcguinness-oauth-mission-runtime}}), imported here by
+reference: append-only integrity protection under a named mechanism, a
+per-Mission sequence indicator, no raw parameters in the record, and a
+retention window no shorter than the Mission's audit horizon.
+
 ## Evidence Ordering {#evidence-ordering}
 
-An orchestrator SHOULD include a deployment-defined sequence number or
+An orchestrator MUST include a deployment-defined sequence number or
 otherwise order evidence records when multiple steps are affected by
-the same state transition. Ordering lets an auditor reconstruct whether
-the orchestrator stopped before or after a given step committed.
+the same state transition, matching the runtime profile's per-Mission
+sequencing requirement ({{I-D.draft-mcguinness-oauth-mission-runtime}}).
+Ordering lets an auditor reconstruct whether the orchestrator stopped
+before or after a given step committed.
 
 # Relationship to Harness and Runtime Profiles {#relationship}
 
@@ -579,9 +696,10 @@ MUST identify workflows and paths outside the claim.
 ## Compensation Is Authority-Bearing
 
 Compensation can itself be consequential. A deployment MUST NOT perform
-compensation under a terminated Mission unless it has a separate policy
-basis. Otherwise termination could become a path to unauthorized
-remedial actions.
+compensation by presenting a terminated Mission's authority. It acts
+only under resource policy or a separate active Mission
+({{compensation-authority}}). Otherwise termination could become a path
+to unauthorized remedial actions.
 
 ## Unknown Outcomes
 

@@ -73,7 +73,7 @@ OPTIONAL companion profile that layers on the core without changing it.
                     Signals     lifecycle-change events (push or poll)
                     Expansion   widen authority via a new approval
 
-     Sub-agents     Child Mission Delegation   strict-subset child
+     Sub-agents     Mission Child Delegation   strict-subset child
                     Missions with cascade revocation
 
      Agent runtime  Harness        session continuity is not authority
@@ -93,12 +93,15 @@ Each draft is optional on its own, but the properties many readers
 assume from "Mission-bound agents" (action-time checks, prompt stop,
 unwinding, consent evidence) only arrive when several are deployed
 together. Most agent deployments therefore want a bundle, not the core
-alone. These bundles name what to deploy for a given goal.
+alone. These bundles name what to deploy for a given goal. The short
+names in the table are the drafts' nicknames; each maps to a document
+described under "The documents" below (mission is the core; the rest
+are the companion profiles of the same names).
 
 | Bundle | Drafts | What you get |
 |---|---|---|
-| **Baseline issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch. Audit, not action-time defense. |
-| **Enforced agent** | mission + runtime + authzen + status and/or signals | Per-action enforcement at the point of use, and prompt revocation (pull via status, push via signals, or both). The minimum for an agent that takes consequential actions. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
+| **Baseline issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Enforced bundle). Audit, not action-time defense. |
+| **Enforced agent** | mission + runtime + authzen + a freshness source (status, signals, or origin token introspection) | Per-action enforcement at the point of use, and prompt revocation (pull via status or introspection, push via signals). The minimum for an agent that takes consequential actions. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
 | **Governed agent (recommended for AI agents)** | Enforced agent + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. For protection against a compromised agent, claim runtime's named agent-compromise-resistant enforcement (mediated custody, no-unmediated-egress, action-bound approval, all MUST for the high-consequence classes). Add child-delegation for sub-agents and expansion for mid-task growth, and orchestration (experimental) for safe unwinding of in-flight work. |
 
 Mission Intent Shaping is an approval-time, client-side option that
@@ -129,20 +132,30 @@ action, must not represent itself as resistant to agent compromise.
 The drafts are not all at the same stage; this is the quickest way to
 decide what to build on now.
 
-- **Stable** (depend only on ratified OAuth and finalized OpenID
-  specifications): the issuance **core**, **runtime**, **authzen**,
-  **status**, and **signals**. Build on these. For **authzen**, the
-  stable surface is its core AuthZEN decision binding; its ARAP and COAZ
+- **Stable** (normative dependencies are ratified OAuth and finalized
+  OpenID specifications): the issuance **core**, **runtime**,
+  **authzen**, **status**, and **signals**. Build on these. The core
+  confines its three tracked Internet-Draft references (the OAuth Actor
+  Profile, identity chaining, and ID-JAG) to its OPTIONAL Delegation and
+  Cross-Domain capabilities; the mandatory single-domain core depends
+  only on ratified specifications, and identity chaining is approved and
+  in the RFC Editor queue. For **authzen**, the stable surface is its
+  core AuthZEN decision binding; its Access Request and Approval Profile
+  (ARAP) and Model Context Protocol tool-authorization (COAZ)
   integrations and MCP-composition notes are informative and optional.
 - **Stable but situational** (adopt when your use case needs them):
   **expansion**, **child-delegation**, **consent-evidence**,
-  **harness**, **shaping**.
+  **harness**, **shaping**, and **audit** (its transparency substrate,
+  the SCITT architecture, is ratified as RFC 9943; its remaining tracked
+  dependency, the COSE hash envelope, is approved and in the RFC Editor
+  queue). For AI agents, consent-evidence and harness are not merely
+  situational: they are the Governed bundle's recommended set.
 - **Experimental** (adopt for evaluation, not as a stable interface):
-  **attenuation**, **audit**, and **approval** depend normatively on
-  Internet-Drafts that are not yet ratified (Attenuating Agent Tokens,
-  SCITT, and OAuth Deferred Token Response, respectively);
-  **orchestration** and **completion** define newer models that are less
-  exercised. Each names a stable path to prefer where one exists.
+  **attenuation** and **approval** depend normatively on Internet-Drafts
+  that are not yet ratified (Attenuating Agent Tokens and OAuth Deferred
+  Token Response, respectively); **orchestration** and **completion**
+  define newer models that are less exercised. Each names a stable path
+  to prefer where one exists.
 
 In short: the Enforced bundle is built entirely from stable drafts; the
 experimental profiles are additive and can wait.
@@ -181,7 +194,7 @@ Decision Point that evaluates the action against the Mission. Covers
 action classification, where the enforcement point sits, the binding of
 a permit to concrete request parameters to close the time-of-check to
 time-of-use gap, consumption metering, and fail-closed behavior. For the
-high-assurance tier it adds credential custody and mediated execution
+high-consequence classes it adds credential custody and mediated execution
 (the enforcement point, not the agent, holds the token's
 sender-constraint key, so a compromised agent cannot act off-path) and
 an action-bound approval for the highest-consequence classes. The
@@ -250,10 +263,10 @@ step-up.
 
 #### Mission Completion for OAuth 2.0
 
-The narrowing counterpart of Expansion. Adds `terminal_when`, an
-entry-level completion condition that discharges a `mission_resource_access`
-entry when it fires, so the Authorization Server stops deriving that
-entry once the task it was granted for is done. Discharge is monotonic
+The narrowing counterpart of Expansion. Adds `terminal_when`, a
+registered Common Constraint that discharges a `mission_resource_access`
+entry when its completion condition fires, so the Authorization Server
+stops deriving that entry once the task it was granted for is done. Discharge is monotonic
 (only retires authority), so it is safe against an injected agent; it
 lets a multi-resource Mission complete one entry at a time; and it is the
 enforceable counterpart of the inert `success_criteria`.
@@ -308,7 +321,7 @@ Narrowing only.
 
 ### Sub-agents
 
-#### Child Mission Delegation for OAuth 2.0
+#### Mission Child Delegation for OAuth 2.0
 
 Lets a parent Mission authorize a Child Mission for a sub-agent, with
 explicit parent lineage, strict-subset authority, expiry no later than
@@ -327,9 +340,9 @@ Profiles Attenuating Agent Tokens so a Mission-bound token holder mints a
 narrower child token offline, carrying the same `mission` claim; the
 narrowing is verifiable from the carried token chain. The kill switch is
 preserved because consumption is gated by the runtime layer re-checking
-Mission state, so a revoked Mission stops the whole chain. An
-enforced-tier capability, offered alongside Authorization-Server-mediated
-delegation.
+Mission state, so a revoked Mission stops the whole chain. A
+capability for deployments running the runtime enforcement profile,
+offered alongside Authorization-Server-mediated delegation.
 
 * [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-attenuation.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-attenuation)
