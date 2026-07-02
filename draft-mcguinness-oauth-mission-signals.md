@@ -1,6 +1,6 @@
 ---
 title: "Mission Lifecycle Signals for OAuth 2.0"
-abbrev: "Mission Signals"
+abbrev: "OAuth Mission Signals"
 category: std
 
 docname: draft-mcguinness-oauth-mission-signals-latest
@@ -35,6 +35,13 @@ normative:
   RFC8935:
   RFC8936:
   RFC9325:
+  RFC9493:
+  OIDC-SSF:
+    title: "OpenID Shared Signals Framework Specification 1.0"
+    author:
+      org: "OpenID Foundation"
+    date: 2025
+    target: "https://openid.net/specs/openid-sharedsignals-framework-1_0.html"
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     author:
@@ -74,12 +81,6 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
-  OIDC-SSF:
-    title: "OpenID Shared Signals Framework Specification 1.0"
-    author:
-      org: "OpenID Foundation"
-    date: 2025
-    target: "https://openid.net/specs/openid-sharedsignals-framework-1_0.html"
   OIDC-CAEP:
     title: "OpenID Continuous Access Evaluation Profile 1.0"
     author:
@@ -129,11 +130,14 @@ from `mission_event_stream_endpoint` ({{as-metadata}}).
 
 This document is OPTIONAL. It defines no new Mission semantics: the
 Mission, its lifecycle states, and the `mission` claim are defined in
-{{I-D.draft-mcguinness-oauth-mission}}, and the lifecycle states this
-event reports are those of
-{{I-D.draft-mcguinness-oauth-mission-status}}. A deployment that does
-not stand up an event stream uses the polling surfaces of the Status
-profile instead and is unaffected by this document.
+{{I-D.draft-mcguinness-oauth-mission}}. The states this event reports
+are the issuance profile's lifecycle state space
+{{I-D.draft-mcguinness-oauth-mission}} as extended by whichever
+lifecycle profiles the deployment runs
+({{I-D.draft-mcguinness-oauth-mission-status}} and any companion
+profile it adopts). A deployment that does not stand up an event stream
+uses the polling surfaces of the Status profile instead and is
+unaffected by this document.
 
 # Conventions and Terminology {#conventions-and-terminology}
 
@@ -147,8 +151,8 @@ and the Mission lifecycle states. It additionally uses **Security Event
 Token (SET)** {{RFC8417}} and the **Shared Signals Framework (SSF)**
 {{OIDC-SSF}} transmitter, receiver, and stream terminology.
 
-A **consumer** here is an SSF receiver that relies on Mission state --
-typically a Resource Server, or an Authorization Server acting on a
+A **consumer** here is an SSF receiver that relies on Mission state,
+typically a Resource Server or an Authorization Server acting on a
 Mission it did not issue.
 
 All JSON shown in this document is non-normative and illustrative; the
@@ -189,6 +193,18 @@ member. The consumer's stream configuration declares the method it
 uses; the Mission Issuer MUST respect it and MUST NOT silently fall
 back to a less-timely method.
 
+## Stream Scoping {#stream-scoping}
+
+Streams are configured per {{OIDC-SSF}}. A receiver adds a Mission to
+its stream with the SSF add-subject operation, using the Mission subject
+identifier ({{lifecycle-event}}). The transmitter MUST accept an
+add-subject only for a Mission the receiver is authorized for under
+deployment policy, for example a receiver whose audience is an audience
+of the Mission's authority. Absent explicit subjects, a deployment MAY
+provision an authorization-derived default stream (delivering the events
+for the Missions a receiver is authorized for) and MUST document that
+stream's scope.
+
 # The Mission Lifecycle Change Event {#lifecycle-event}
 
 A Mission Issuer emits a `mission.lifecycle-change` event, carried in
@@ -203,14 +219,21 @@ this document and described in {{iana}}, is:
 This URI is the registered event-type identifier; `mission.lifecycle-change`
 is the short name this document uses for it in prose.
 
+The SET subject is the Mission, identified by a `sub_id` Subject
+Identifier {{RFC9493}} of format `opaque` whose `id` is the canonical
+`mission_id` ({{I-D.draft-mcguinness-oauth-mission}}), carried per Shared
+Signals Framework {{OIDC-SSF}} conventions. A receiver adds a Mission to
+its stream using this same subject identifier ({{event-stream}}).
+
 The event is carried as the event-type-keyed value of the `events`
 claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
-`iat`, `exp`, and `jti`. Its claims are:
+`iat`, `jti`, and `sub_id`. Its claims are:
 
-- `mission_id` (string, required): the canonical `mission_id`
-  ({{I-D.draft-mcguinness-oauth-mission}}).
-- `mission_origin` (string, required): the Mission Issuer (`origin`)
-  issuer URL.
+- `mission` (object, required): the Mission identity, the same
+  identity members as the `mission` object of
+  {{I-D.draft-mcguinness-oauth-mission-status}}, carrying `id` (the
+  canonical `mission_id`) and `origin` (the Mission Issuer (`origin`)
+  issuer URL).
 - `state` (string, required): the new lifecycle state. The value space
   is the Mission lifecycle state space defined by the issuance profile
   {{I-D.draft-mcguinness-oauth-mission}} (`active`, `revoked`,
@@ -243,6 +266,16 @@ claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
   the event type is shared, unchanged, with multi-tenant and
   cross-substrate deployments that do.
 - `reason` (string, optional): a human-readable reason, for audit.
+- `successor` (string, optional): the successor `mission_id`. Present
+  only when `state` is `superseded`, giving the successor that replaced
+  the Mission ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
+
+The `expired` event MAY be emitted lazily. Because expiry is driven by
+the `mission_expiry` clock rather than an explicit request, a Mission
+Issuer emits the `expired` event at or after `mission_expiry`, when it
+observes the transition. A consumer does not depend on prompt emission:
+it already fails safe on the `mission_expiry` carried with cached Mission
+status ({{I-D.draft-mcguinness-oauth-mission-status}}).
 
 Example SET (decoded), for a revocation:
 
@@ -251,12 +284,17 @@ Example SET (decoded), for a revocation:
   "iss": "https://as.example.com",
   "aud": "https://erp.example.com",
   "iat": 1797843200,
-  "exp": 1797843500,
   "jti": "set_9Kp2vN7sR1tY8mZ3qX5b",
+  "sub_id": {
+    "format": "opaque",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  },
   "events": {
     "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
-      "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-      "mission_origin": "https://as.example.com",
+      "mission": {
+        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+        "origin": "https://as.example.com"
+      },
       "prior_state": "active",
       "state": "revoked",
       "version": 2,
@@ -275,16 +313,18 @@ with a Mission Issuer key resolvable in the issuer's `jwks_uri`, with a
 consumer MUST verify the signature against the Mission Issuer's
 published keys and MUST refuse a SET whose `iss` does not match the
 Mission Issuer it registered with. Because this profile is
-single-issuer, the SET `iss` equals the event's `mission_origin`; a
-consumer MAY treat a mismatch as a verification failure. (`mission_origin`
+single-issuer, the SET `iss` equals the event's `mission.origin`; a
+consumer MAY treat a mismatch as a verification failure. (`mission.origin`
 is carried in the event for cross-substrate deployments where the two
 can differ.)
 
 The SET `aud` MUST be the receiving consumer's registered audience
-identifier; a consumer MUST refuse a SET whose `aud` is not its own.
-Each SET carries an `exp`; a consumer MUST reject an expired SET and
-MUST treat `jti` as a one-time identifier for at least the SET's
-validity window (`iat` to `exp`), rejecting a replayed `jti` within it.
+identifier; a consumer MUST refuse a SET whose `aud` is not its own. A
+consumer MUST treat `jti` as a one-time identifier and reject a replayed
+`jti`, tracking each `jti` for a deployment-defined replay window
+measured from the SET's `iat`. Following {{RFC8417}}, this profile does
+not require an `exp` on the SET; a consumer MAY reject a SET whose `iat`
+is implausibly old.
 
 # Consumer Behavior on Receipt {#consumer-behavior}
 
@@ -298,12 +338,12 @@ On receiving and verifying ({{set-protection}}) a
   consumer's enforcement role.
 - Resume honoring the Mission on a verified event whose `state` is
   `active` and whose `version` is greater than the last applied for
-  that `mission_id`, subject to the same gating the issuance profile
+  that `mission.id`, subject to the same gating the issuance profile
   applies. This covers a reversible transition (for example a
   `suspended` Mission that is later resumed to `active`).
 - Apply the transition idempotently: a repeated or out-of-order event
   carrying a `version` not greater than the last applied for that
-  `mission_id` MUST NOT regress the consumer's view of the state.
+  `mission.id` MUST NOT regress the consumer's view of the state.
 - Acknowledge the event per the SSF delivery method in use.
 
 A consumer MUST NOT treat the event as authority to change Mission
@@ -312,11 +352,14 @@ state at the Mission Issuer; the Mission Issuer is authoritative
 believes the reported state is wrong re-checks through Mission Status
 rather than inventing a state.
 
-A consumer SHOULD treat a missed or delayed event as a freshness
-failure: if it has not received expected events within the Mission
-Issuer's advertised `mission_max_stale_seconds`
-({{I-D.draft-mcguinness-oauth-mission-status}}), it SHOULD fall back to
-polling Mission Status rather than continue on possibly stale state.
+A consumer anchors stream liveness to the Shared Signals Framework
+{{OIDC-SSF}} stream verification event. A consumer that cannot verify
+its stream, or that was down and may have missed events, SHOULD treat
+its cached Mission state as stale once it exceeds the Mission Issuer's
+advertised `mission_max_stale_seconds`
+({{I-D.draft-mcguinness-oauth-mission-status}}) and SHOULD fall back to
+the Mission Status operation rather than continue on possibly stale
+state.
 
 # Relationship to Revocation Propagation {#event-driven}
 
@@ -348,10 +391,16 @@ consumer's receiver ({{RFC8935}}). Decoded SET:
   "aud": "https://erp.partner.example.com",
   "iat": 1797843600,
   "jti": "set_5kQ8mP2vR9nT",
+  "sub_id": {
+    "format": "opaque",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  },
   "events": {
     "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
-      "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-      "mission_origin": "https://as.example.com",
+      "mission": {
+        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+        "origin": "https://as.example.com"
+      },
       "state": "revoked",
       "prior_state": "active",
       "version": 7,
@@ -464,10 +513,14 @@ the author-controlled `schemas.karlmcguinness.com/secevent` namespace:
 
 - `https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change`:
   emitted on any Mission lifecycle transition or the approval-event
-  emission from a Mission Issuer. Required claims: `mission_id`,
-  `mission_origin`, `state`, `version`, `committed_at`. Conditional
-  claim: `prior_state` (required on transition emissions, absent on the
-  approval-event emission). Optional claims: `tenant`, `reason`. See
+  emission from a Mission Issuer. The SET subject is a `sub_id` Subject
+  Identifier {{RFC9493}} of format `opaque` whose `id` is the
+  `mission_id`, per {{OIDC-SSF}} conventions. Required event-body
+  claims: `mission` (carrying `id` and `origin`), `state`, `version`,
+  `committed_at`. Conditional event-body claim: `prior_state` (required
+  on transition emissions, absent on the approval-event emission).
+  Optional event-body claims: `tenant`, `reason`, `successor`
+  (`successor` present only on a `superseded` transition). See
   {{lifecycle-event}} for the schema.
 
 This event type uses the OpenID Shared Signals Framework {{OIDC-SSF}}
