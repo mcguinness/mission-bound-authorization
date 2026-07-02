@@ -1,0 +1,794 @@
+
+
+
+
+Network Working Group                                      K. McGuinness
+Internet-Draft                                               Independent
+Intended status: Standards Track                             2 July 2026
+Expires: 3 January 2027
+
+
+                Mission Audit Transparency for OAuth 2.0
+              draft-mcguinness-oauth-mission-audit-latest
+
+Abstract
+
+   Mission-Bound Authorization for OAuth 2.0 and its companions produce
+   many evidence records: the approval event, lifecycle transitions,
+   consent evidence, runtime decision and execution evidence, and
+   harness, orchestration, and child-delegation evidence.  Each is
+   signed, but signed is not the same as tamper-evident, append-only, or
+   independently verifiable: a holder of the signing key can still
+   backdate, drop, or reorder records, and a cross-domain party cannot
+   confirm what was recorded without trusting the issuer's own logs.
+   This document defines an OPTIONAL Mission Audit Transparency profile.
+   It registers Mission evidence into a SCITT Transparency Service as
+   Signed Statements, with the Mission as the statement subject so a
+   Mission's records form one coherent, append-only feed, and binds the
+   resulting Receipt back so any party, in any domain, can verify
+   offline that a record was registered and not altered.  To keep
+   sensitive task data out of the log, statements commit to the evidence
+   by hash rather than carrying it.
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-
+   mcguinness-oauth-mission-audit.html.  Status information for this
+   document may be found at https://datatracker.ietf.org/doc/draft-
+   mcguinness-oauth-mission-audit/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/mcguinness/draft-mcguinness-oauth-mission.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 3 January 2027.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+   2.  Status: An OPTIONAL Extension
+   3.  Relationship to the Issuance Profile
+   4.  Conventions and Terminology
+   5.  Registering Mission Evidence
+     5.1.  Hash Commitment
+     5.2.  Evidence Types
+       5.2.1.  The Lifecycle Transition Object
+     5.3.  Registration Policy and Authoritative Producers
+     5.4.  Registration Availability
+     5.5.  Retrieval
+     5.6.  What to Register
+   6.  The Mission as Subject
+   7.  Receipts and Transparent Statements
+     7.1.  Verification Failures
+   8.  Worked Example
+   9.  What Transparency Adds, and Does Not
+   10. Conformance
+   11. Security Considerations
+   12. Privacy Considerations
+   13. IANA Considerations
+   14. References
+     14.1.  Normative References
+     14.2.  Informative References
+   Acknowledgments
+   Author's Address
+
+1.  Introduction
+
+   The issuance profile [I-D.draft-mcguinness-oauth-mission] (the
+   "issuance profile") and its companions record evidence at every
+   governance and enforcement point.  The evidence is signed, which
+   makes a single record attributable and tamper-evident in isolation.
+   It does not make the record set as a whole trustworthy: the party
+   that holds the signing key can backdate a record, omit an
+   inconvenient one, or present different histories to different
+   auditors, and nothing a relying party holds detects it.  A cross-
+   domain auditor is worse off still, with only the issuer's assertion
+   that its logs are complete.
+
+   This document closes that gap by profiling the SCITT architecture
+   [RFC9943] (the "transparency substrate").  A Mission evidence record
+   is registered with a Transparency Service as a Signed Statement; the
+   service appends it to a verifiable, non-equivocating log and returns
+   a Receipt proving inclusion.  The Signed Statement plus its Receipt
+   is a Transparent Statement that any party can verify offline: the
+   record was registered, at a committed time, in a log that cannot
+   later drop or reorder it.  The Mission is the statement subject, so
+   all of a Mission's evidence shares one subject and forms one feed an
+   auditor can assemble and replay as a single narrative (Section 5.5).
+
+   This adds transparency to evidence the suite already defines; it
+   defines no new evidence object.  It is OPTIONAL, and what it proves
+   is bounded: transparency makes misbehavior detectable and
+   attributable, it does not make a dishonest issuer honest (Section 9).
+
+2.  Status: An OPTIONAL Extension
+
+   This document is OPTIONAL.  A deployment that retains evidence
+   without a Transparency Service is fully conformant to the issuance
+   profile and its companions and is unaffected by this document.  It
+   places no new requirement on them and defines no new evidence; it
+   registers the records they already produce.
+
+   A deployment claims this profile only when it registers Mission
+   evidence with a Transparency Service.
+
+   The transparency substrate this profile builds on is ratified: it
+   depends normatively on the SCITT architecture [RFC9943], a published
+   standard.  The profile itself is newer than the substrate and less
+   exercised in deployment, so an implementer treats its interfaces as
+   still settling and validates them against real audits before relying
+   on them.  The signed evidence the suite produces without a
+   Transparency Service ([I-D.draft-mcguinness-oauth-mission]) does not
+   depend on this profile.
+
+3.  Relationship to the Issuance Profile
+
+   This document depends normatively on the issuance profile and the
+   transparency substrate, and is not implementable alone.  It reuses
+   the issuance profile's mission claim and integrity anchors, the
+   evidence objects defined across the suite, and the transparency
+   substrate's Signed Statement, Receipt, Transparent Statement, and
+   subject (feed) constructs and COSE_Sign1 [RFC9052] format.  It uses
+   Mission, Mission Issuer, and the evidence objects as the suite
+   defines them, and Transparency Service, Signed Statement, Receipt,
+   and Transparent Statement as the transparency substrate defines them.
+
+4.  Conventions and Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   Mission evidence:  Any evidence record the suite defines, including
+      the approval event, lifecycle transitions, consent evidence
+      ([I-D.draft-mcguinness-oauth-mission-consent-evidence]), and
+      runtime decision and execution evidence
+      ([I-D.draft-mcguinness-oauth-mission-runtime]).
+
+5.  Registering Mission Evidence
+
+   A producer of Mission evidence (the Mission Issuer, a Policy Decision
+   Point, a harness, or another component the deployment trusts to
+   record) MAY register a record with a Transparency Service as a Signed
+   Statement ([RFC9943]).  The Signed Statement's protected header
+   carries, in its CWT Claims:
+
+   *  iss: the producing component's issuer identifier, bound to the key
+      the record is signed with; and
+
+   *  sub: the Mission, as defined in Section 6.
+
+5.1.  Hash Commitment
+
+   A Signed Statement MUST commit to the evidence by hash rather than
+   carry the evidence itself, so sensitive task data stays out of the
+   log (Section 12).  The commitment uses the COSE hash-envelope
+   mechanism [I-D.draft-ietf-cose-hash-envelope]: the COSE_Sign1 payload
+   is the hash of the evidence, carried inline, and the protected header
+   signals how the hash was produced.  The payload is not detached, and
+   it is not the sha-256:... display string an integrity anchor uses
+   ([I-D.draft-mcguinness-oauth-mission]); it is the digest bytes
+   themselves.
+
+   The committed value is the SHA-256 [RFC6234] digest of the evidence
+   bytes that Section 5.2 fixes for the evidence type.  For an object
+   that is already signed, those bytes are the retained object as
+   issued, hashed as-is; for an object this profile canonicalizes, they
+   are its JCS canonical bytes.  The protected header carries:
+
+   *  payload-hash-alg (label 258): the COSE algorithm of the hash, -16
+      for SHA-256 [I-D.draft-ietf-cose-hash-envelope]; and
+
+   *  preimage-content-type (label 259): the media type of the evidence
+      that was hashed, from Section 5.2.
+
+   The log then proves a specific record was registered at a time; the
+   evidence is retrieved separately, under access control, and its
+   canonical bytes are rehashed and checked against the committed digest
+   (Section 7).
+
+5.2.  Evidence Types
+
+   Each registrable evidence type fixes the exact bytes that are hashed,
+   the media type carried in preimage-content-type, and the producer
+   authoritative for it.  A producer MUST commit to the canonical bytes
+   named here, and a relying party MUST verify the producer is
+   authoritative for the type (Section 5.3) before treating a record as
+   part of the Mission's feed.
+
+   +==========+=============+=================================+========+
+   |Evidence  |Canonical    | preimage-content-type           |Producer|
+   |type      |bytes        |                                 |        |
+   |          |(hashed)     |                                 |        |
+   +==========+=============+=================================+========+
+   |Approval  |Mission      | application/mission-approval-   |origin  |
+   |event     |record at    | record+json                     |        |
+   |          |creation,    |                                 |        |
+   |          |state        |                                 |        |
+   |          |excluded,    |                                 |        |
+   |          |canonicalized|                                 |        |
+   +----------+-------------+---------------------------------+--------+
+   |Lifecycle |Signals SET  | application/secevent+jwt, else  |origin  |
+   |transition|as issued;   | application/mission-lifecycle-  |        |
+   |          |else         | transition+json                 |        |
+   |          |Section 5.2.1|                                 |        |
+   |          |(JCS)        |                                 |        |
+   +----------+-------------+---------------------------------+--------+
+   |Consent   |retained     | application/mission-consent-    |origin  |
+   |evidence  |signed       | evidence+json                   |        |
+   |          |object, as   |                                 |        |
+   |          |issued       |                                 |        |
+   +----------+-------------+---------------------------------+--------+
+   |Decision  |Decision     | application/mission-decision-   |PDP key |
+   |evidence  |Evidence     | evidence+json                   |        |
+   |          |object, as   |                                 |        |
+   |          |issued       |                                 |        |
+   +----------+-------------+---------------------------------+--------+
+   |Execution |Execution    | application/mission-execution-  |PEP key |
+   |evidence  |Evidence     | evidence+json                   |        |
+   |          |object, as   |                                 |        |
+   |          |issued       |                                 |        |
+   +----------+-------------+---------------------------------+--------+
+
+                                  Table 1
+
+   The producer identifiers are principals the suite already names.  For
+   every record whose producer is the Mission origin, the Signed
+   Statement's iss MUST equal that origin
+   ([I-D.draft-mcguinness-oauth-mission]).  The PDP and PEP keys are
+   those in the deployment-published key sets the runtime and AuthZEN
+   profiles require ([I-D.draft-mcguinness-oauth-mission-runtime],
+   [I-D.draft-mcguinness-oauth-mission-authzen]).
+
+   The approval event and the lifecycle-transition object are
+   canonicalized under the issuance profile's canonicalization rules
+   ([I-D.draft-mcguinness-oauth-mission]); an already-signed object (the
+   consent, decision, and execution evidence, and the Signals SET) is
+   hashed as issued, not re-canonicalized.  The approval-event and
+   lifecycle-transition media types are defined by this profile
+   (Section 13); the consent, decision, and execution evidence types are
+   registered by the profiles that define those objects
+   ([I-D.draft-mcguinness-oauth-mission-consent-evidence],
+   [I-D.draft-mcguinness-oauth-mission-authzen]), and the Signals SET
+   media type by the Signals profile it is carried in
+   ([I-D.draft-mcguinness-oauth-mission-signals]).
+
+5.2.1.  The Lifecycle Transition Object
+
+   A deployment that does not run the Signals profile commits a
+   lifecycle transition as a minimal JSON object with these members,
+   JCS-canonicalized [RFC8785]:
+
+   *  mission_id (string, required): the Mission id.
+
+   *  origin (string, required): the Mission origin.
+
+   *  state (string, required): the new lifecycle state.
+
+   *  prior_state (string, optional): the state immediately before the
+      transition.
+
+   *  transitioned_at (string, required): an RFC 3339 [RFC3339] date-
+      time at which the transition was committed.
+
+   Its media type is application/mission-lifecycle-transition+json
+   (Section 13).
+
+5.3.  Registration Policy and Authoritative Producers
+
+   Each evidence type has one authoritative producer (Section 5.2).  A
+   relying party MUST verify that a record's iss is the authoritative
+   producer for the record's type before treating the record as part of
+   the Mission's feed; a record from any other producer is not part of
+   the feed, whatever its sub.
+
+   The deployment's Transparency Service registration policy SHOULD
+   restrict who may register Signed Statements for a Mission subject to
+   those authoritative producers, so the log does not accumulate records
+   from components that are not entitled to write to a Mission's feed.
+
+   A relying party discovers a producer's key by the producer's role.
+   The Authorization Server's key is resolved through its metadata
+   jwks_uri ([I-D.draft-mcguinness-oauth-mission]).  A PDP or PEP key is
+   resolved through the deployment-published key sets the runtime and
+   AuthZEN profiles require
+   ([I-D.draft-mcguinness-oauth-mission-runtime],
+   [I-D.draft-mcguinness-oauth-mission-authzen]).
+
+5.4.  Registration Availability
+
+   Registration is asynchronous to the events it records.  A producer
+   MUST NOT block approval, issuance, or a lifecycle transition on a
+   Transparency Service being reachable or on a Receipt being returned;
+   the governed operation proceeds and the record is registered out of
+   band.  A conforming deployment registers each record within a
+   documented time bound and records its registration backlog, so a gap
+   between an event and its registration is visible rather than silent.
+
+   A record registered late is transparent only from its registration
+   time: the Receipt proves inclusion from when the log received the
+   Signed Statement, not from when the event occurred.  A deployment
+   that needs the event time itself attested relies on the timestamps
+   the evidence carries, which the record's hash commits.
+
+5.5.  Retrieval
+
+   The transparency substrate registers Signed Statements and resolves a
+   Receipt by its entry identifier; the SCITT reference APIs
+   [I-D.draft-ietf-scitt-scrapi] give a concrete interface for
+   registration, Receipt resolution, and Transparency Service key
+   discovery where a deployment runs them.  Neither the substrate nor
+   those APIs defines a query that enumerates a subject's whole feed.  A
+   deployment that wants an auditor to retrieve all of a Mission's
+   records by sub provides that enumeration itself, out of band, over
+   the records it registered; this profile fixes the sub so those
+   records share one correlator (Section 6), not a standardized feed
+   query.
+
+5.6.  What to Register
+
+   A deployment claiming this profile MUST register at least the
+   governance-critical records: the approval event and every Mission
+   lifecycle transition.  It SHOULD also register the runtime decision
+   and execution evidence for the action classes it enforces, so the
+   action trail is transparent and not only the governance trail.
+
+6.  The Mission as Subject
+
+   The sub of every Signed Statement about a Mission is a stable
+   identifier of that Mission, derived from the mission claim's origin
+   and id.  All evidence about one Mission shares one sub and forms one
+   Transparency Service feed.  Where the deployment provides feed
+   retrieval (Section 5.5), an auditor collects a Mission's complete,
+   ordered, append-only evidence by that sub, and the substrate's non-
+   equivocation guarantee means the auditor and the deployment see the
+   same records.
+
+   For that to hold, every producer MUST compute the identical sub.
+   This profile fixes a single construction; a producer MUST use it and
+   MUST NOT use any other.  The sub is the URI formed by appending the
+   literal path segment missions and the Mission id to the origin:
+
+   <origin>/missions/<id>
+
+   The origin is used exactly as it appears in the mission claim, with
+   any single trailing slash removed, and the id is appended without
+   transformation; the issuance profile constrains mission_id to the
+   URL-safe characters [A-Za-z0-9_-]
+   ([I-D.draft-mcguinness-oauth-mission]), so no percent-encoding is
+   required.  Because the construction is fixed, independent producers
+   writing evidence about the same Mission (the Mission Issuer, a PDP, a
+   harness) compute the same sub and write to one feed.
+
+   The sub is a correlator, not a credential; presenting it authorizes
+   nothing ([I-D.draft-mcguinness-oauth-mission]).
+
+   A Child Mission
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]) is its own
+   Mission with its own id and origin, so its evidence forms its own
+   feed; its lifecycle events, including a cascaded transition, appear
+   in that feed.  The event that triggered the cascade is in the
+   parent's feed, and the child's lineage to the parent is the parent
+   member of its mission claim, which an auditor follows to the parent's
+   sub to see that trigger.
+
+   Across trust domains a Mission's origin and id are unchanged
+   ([I-D.draft-mcguinness-oauth-mission]), so every producer in every
+   domain computes the same sub.  They share one feed only when they
+   register with the same Transparency Service.  Where domains register
+   with different services, each service holds a partial feed and its
+   non-equivocation guarantee is per-service (Section 7); an auditor
+   that needs the Mission's whole history reconciles it across those
+   services, and a deployment that wants a single coherent feed SHOULD
+   have its cross-domain producers register with one shared service.
+
+7.  Receipts and Transparent Statements
+
+   On registration the Transparency Service returns a Receipt, a signed
+   inclusion proof ([RFC9943]).  The producer SHOULD retain the Receipt
+   with the evidence, or on the Mission record, as a Transparent
+   Statement (the Signed Statement augmented with its Receipt).
+
+   A relying party verifies a Transparent Statement offline, without
+   contacting the producer or the service:
+
+   1.  verify the Signed Statement signature against the producing
+       component's (iss) trust anchor;
+
+   2.  verify the Receipt signature against the Transparency Service's
+       published key or configured trust anchor;
+
+   3.  verify the inclusion proof binds the Signed Statement to the log;
+
+   4.  when auditing a specific Mission, confirm sub is that Mission's
+       feed (Section 6); and
+
+   5.  retrieve the referenced evidence under access control, rehash the
+       evidence bytes as Section 5.2 fixes them for its type (with the
+       retained salt, where one was used, Section 12), and compare the
+       result against the committed digest.
+
+   A relying party MUST complete steps 1 through 5 before relying on a
+   record as transparent.
+
+7.1.  Verification Failures
+
+   This profile distinguishes an integrity failure, where the
+   transparency claim is false, from an audit failure, where the claim
+   cannot be fully checked but is not refuted, as the consent evidence
+   profile does ([I-D.draft-mcguinness-oauth-mission-consent-evidence]):
+
+   *  A failed Signed Statement signature, Receipt signature, or
+      inclusion proof (steps 1 through 3), or a committed hash that does
+      not match the retrieved evidence (step 5), is an integrity
+      failure.  The relying party MUST reject the Transparent Statement
+      and MUST NOT treat the record as transparent.
+
+   *  Evidence that cannot be retrieved within the retention window
+      (step 5 incomplete) is an audit failure, not an integrity failure.
+      Steps 1 through 3 still establish that the record was registered,
+      at a committed time, in a non-equivocating log; only the content
+      check is incomplete.  The relying party MUST NOT treat the record
+      as content-verified, and MUST NOT treat unretrievable evidence as
+      evidence of tampering.
+
+   *  A producer or Transparency Service key that the relying party
+      cannot verify against a trust anchor (step 1 or step 2 unresolved)
+      is an audit failure, not an integrity failure.  The relying party
+      cannot attribute the Signed Statement or the Receipt to a known
+      key, so it MUST NOT treat the record as transparent; it is not
+      evidence of tampering, and the relying party MUST NOT treat it as
+      such.
+
+   A deployment MAY register the same evidence with more than one
+   Transparency Service and retain multiple Receipts.  A relying party
+   detects equivocation by comparing two things across services: the
+   Receipts issued for the same Signed Statement, which must prove
+   inclusion of the identical statement, and the records listed for the
+   same sub, which must not differ in ways the append-only property
+   forbids.  A service that presents inconsistent Receipts for one
+   statement, or a subject listing that diverges from another service's,
+   is equivocating, and the relying party can rely on the others.
+
+8.  Worked Example
+
+   At the approval event for Mission
+   msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-, the Mission Issuer records
+   Consent Evidence and registers it.  It does not put the disclosure in
+   the log; it signs a Signed Statement whose payload is the hash of the
+   Consent Evidence, carried inline, with the hash algorithm and the
+   evidence media type in the protected header (Section 5.1).  The sub
+   is the Mission feed, derived from the Mission origin and id; the iss
+   is the Mission Issuer.  Protected header, in COSE EDN ([RFC9052]):
+
+   {
+     / alg /                    1: -7,   / ES256 /
+     / payload-hash-alg /     258: -16,  / SHA-256 /
+     / preimage-content-type / 259: "application/mission-consent-evidence+json",
+     / kid /                    4: h'61732d6b65792d323032362d7133',
+     / CWT Claims /            15: {
+       / iss / 1: "https://as.example.com",
+       / sub / 2: "https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+     }
+   }
+
+   The payload is the SHA-256 digest of the retained Consent Evidence
+   object as issued (Section 5.2), carried inline as the raw digest
+   whose base64url form is CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz,
+   not that display string.  The Transparency Service appends the
+   statement and returns a Receipt, a COSE_Sign1 with an inclusion proof
+   in its unprotected header, which the Mission Issuer keeps with the
+   evidence as a Transparent Statement.
+
+   As the Mission proceeds, its other producers write to the same sub:
+   the PDP registers a decision-evidence commitment when it permits the
+   journal-entries.write, and the Mission Issuer registers a lifecycle-
+   change commitment when alice later completes the Mission.  Collecting
+   the records registered under that one sub (Section 5.5) gives the
+   Mission's whole history, in order, append-only:
+
+   sub = https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
+
+     #1  approval-event        iss=as.example.com    t0
+     #2  consent-evidence      iss=as.example.com    t0
+     #3  decision-evidence     iss=pdp.example.com   t0+6h
+     #4  lifecycle: completed  iss=as.example.com    t0+6h
+
+   A compliance auditor in another domain, holding none of these
+   deployments' logs, takes the Transparent Statement for #2, verifies
+   the Receipt against the Transparency Service's published key and the
+   inclusion proof, retrieves the Consent Evidence under access control,
+   and rehashes the retained object to compare against the committed
+   digest.  The auditor now knows that exact disclosure was registered
+   at t0 and has not since been altered, dropped, or reordered, without
+   trusting the Mission Issuer's own records.
+
+   Two failures are distinct (Section 7.1).  If the retrieved Consent
+   Evidence hashes to a value other than the committed digest, the
+   retained record was altered after registration: an integrity failure,
+   and the auditor rejects it.  If the record cannot be retrieved at
+   all, the auditor still knows from the Receipt that record #2 was
+   registered at t0 and not reordered, but cannot confirm its content:
+   an audit failure, not proof of tampering.
+
+9.  What Transparency Adds, and Does Not
+
+   Transparency makes the evidence set tamper-evident and independently
+   verifiable: a registered record cannot be silently backdated,
+   dropped, or reordered, the feed is the same for every auditor, and a
+   cross-domain party verifies a record without trusting the producer's
+   logs, which a bare signature over a narrowed token cannot give it
+   ([I-D.draft-mcguinness-oauth-mission]).
+
+   It does not make a dishonest producer honest.  A producer can
+   register a false record; transparency makes the false record
+   permanent, attributable, and visible to every auditor, which is
+   accountability, not prevention, the transparency substrate's own
+   model ([RFC9943]).  It also proves only that a record was registered,
+   not that the action the record describes occurred or was authorized;
+   that is the evidence's own semantics.  And because statements commit
+   by hash, a Receipt without the retrievable evidence proves only that
+   some record was logged, not what it said.
+
+10.  Conformance
+
+   A producer conforming to this profile MUST:
+
+   *  register Mission evidence as Signed Statements that commit to the
+      evidence by an inline hash, never the evidence in the clear
+      (Section 5);
+
+   *  set sub to the Mission feed by the fixed construction of
+      Section 6;
+
+   *  set iss to its own issuer identifier, bound to the signing key;
+      and
+
+   *  register at least the approval event and every Mission lifecycle
+      transition (Section 5).
+
+   A relying party conforming to this profile MUST:
+
+   *  perform verification steps 1 through 5 of Section 7 before relying
+      on a record as transparent;
+
+   *  treat a signature, Receipt, inclusion-proof, or committed-hash
+      mismatch as an integrity failure and reject the record;
+
+   *  treat unretrievable evidence as an audit failure, not as evidence
+      of tampering (Section 7.1); and
+
+   *  treat a producer or Transparency Service key it cannot verify
+      against a trust anchor as an audit failure, and not treat the
+      record as transparent (Section 7.1).
+
+11.  Security Considerations
+
+   The transparency substrate's security considerations apply.  This
+   profile adds:
+
+   *  Accountability, not prevention.  Transparency detects and
+      attributes tampering and omission after the fact; it does not stop
+      a producer from registering a false record (Section 9).
+
+   *  Transparency Service trust.  A single service is trusted not to
+      equivocate; a deployment that needs that property checked SHOULD
+      register with multiple independent services (Section 7).
+
+   *  Completeness.  Transparency proves what was registered, not that
+      everything was registered.  A producer that omits a record cannot
+      forge inclusion, but the gap is visible only if an auditor expects
+      the record; a deployment SHOULD register evidence on a predictable
+      schedule so omissions stand out in the feed.
+
+   *  Receipt and key management.  A Receipt is only as trustworthy as
+      the Transparency Service key that signs it; relying parties manage
+      those trust anchors as they do the producers'.
+
+   *  Log lifecycle.  Transparency Service key rotation, log retirement,
+      and migration of a Mission's feed between services are deferred to
+      future work, and a deployment whose Missions outlive a single log
+      instance handles them by local arrangement until then.
+
+12.  Privacy Considerations
+
+   A Transparency Service log is append-only and may be widely readable,
+   so nothing registered can be redacted later.  A producer MUST NOT
+   register Mission evidence in the clear; it registers an inline hash
+   commitment (Section 5), and the evidence, which can carry task
+   descriptions, principals, and high-risk authority, is retained
+   separately under access control.  Even the committed metadata leaks
+   information: the sub is a durable per-Mission correlator and the
+   registration times reveal a Mission's activity pattern.  The sub
+   construction is fixed (Section 6) and does not expose the Subject
+   directly, so the concern is not Subject leakage but that the
+   Mission's durable identifier, its existence, and its registration
+   cadence are visible in the log.  A deployment SHOULD weigh whether
+   those are sensitive, and whether the origin and id that compose the
+   sub reveal more than intended, before registering a Mission's
+   evidence in a shared or widely readable log.
+
+   Evidence whose canonical bytes are low-entropy or drawn from an
+   enumerable space MUST be committed with a random salt, retained
+   alongside the evidence and hashed together with the evidence's
+   canonical bytes.  Without a salt, a party that can guess the evidence
+   can confirm the commitment by dictionary; the salt makes the
+   committed digest unguessable while still reproducible at
+   verification, where the salt is retrieved with the evidence
+   (Section 7).
+
+   Deleting retained evidence has a consequence the log makes permanent.
+   The Receipt, the sub, and the registration cadence stay in the log,
+   but the evidence they commit to is gone, so every record over the
+   erased evidence becomes a permanent audit failure (Section 7.1): its
+   content can never again be checked against the commitment.  A
+   deployment that may need to erase evidence, for a data-subject
+   request or a retention limit, weighs this before registering.
+   Registration does not prevent erasure; it converts an erased record
+   into a permanent, visible gap rather than a silent one.
+
+13.  IANA Considerations
+
+   This document defines two media types for the evidence types of
+   Section 5.2 that no other profile defines: application/mission-
+   approval-record+json for the approval-event record, and application/
+   mission-lifecycle-transition+json for the minimal lifecycle-
+   transition object (Section 5.2.1).  This document makes no
+   registration request for them yet; registration is deferred pending a
+   demonstrated cross-domain interoperability need, and deployments
+   using these media types do so by local agreement until then.
+
+   The other evidence media types this profile registers into a
+   Transparency Service are defined elsewhere: the runtime decision and
+   execution evidence types by the AuthZEN profile
+   ([I-D.draft-mcguinness-oauth-mission-authzen]), the consent evidence
+   type by the consent evidence profile
+   ([I-D.draft-mcguinness-oauth-mission-consent-evidence]), and the
+   Signals SET media type application/secevent+jwt by RFC 8417, which
+   the Signals profile carries the event in
+   ([I-D.draft-mcguinness-oauth-mission-signals]).  The Signed Statement
+   and Receipt media types are the transparency substrate's ([RFC9943]).
+   This profile derives the sub by profile rather than registering a new
+   identifier.
+
+14.  References
+
+14.1.  Normative References
+
+   [I-D.draft-ietf-cose-hash-envelope]
+              Steele, O., Lasker, S., and H. Birkholz, "COSE Hash
+              Envelope", Work in Progress, Internet-Draft, draft-ietf-
+              cose-hash-envelope-10, 15 November 2025,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-cose-
+              hash-envelope-10>.
+
+   [I-D.draft-mcguinness-oauth-mission]
+              McGuinness, K., "Mission-Bound Authorization for OAuth
+              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
+              oauth-mission, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC3339]  Klyne, G. and C. Newman, "Date and Time on the Internet:
+              Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
+              <https://www.rfc-editor.org/rfc/rfc3339>.
+
+   [RFC6234]  Eastlake 3rd, D. and T. Hansen, "US Secure Hash Algorithms
+              (SHA and SHA-based HMAC and HKDF)", RFC 6234,
+              DOI 10.17487/RFC6234, May 2011,
+              <https://www.rfc-editor.org/rfc/rfc6234>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC8785]  Rundgren, A., Jordan, B., and S. Erdtman, "JSON
+              Canonicalization Scheme (JCS)", RFC 8785,
+              DOI 10.17487/RFC8785, June 2020,
+              <https://www.rfc-editor.org/rfc/rfc8785>.
+
+   [RFC9052]  Schaad, J., "CBOR Object Signing and Encryption (COSE):
+              Structures and Process", STD 96, RFC 9052,
+              DOI 10.17487/RFC9052, August 2022,
+              <https://www.rfc-editor.org/rfc/rfc9052>.
+
+   [RFC9943]  Birkholz, H., Delignat-Lavaud, A., Fournet, C., Deshpande,
+              Y., and S. Lasker, "An Architecture for Trustworthy and
+              Transparent Digital Supply Chains", RFC 9943,
+              DOI 10.17487/RFC9943, June 2026,
+              <https://www.rfc-editor.org/rfc/rfc9943>.
+
+14.2.  Informative References
+
+   [I-D.draft-ietf-scitt-scrapi]
+              Birkholz, H., Geater, J., and A. Delignat-Lavaud, "Supply
+              Chain Integrity, Transparency, and Trust (SCITT) Reference
+              APIs", Work in Progress, Internet-Draft, draft-ietf-scitt-
+              scrapi-11, 26 June 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-scitt-
+              scrapi-11>.
+
+   [I-D.draft-mcguinness-oauth-mission-authzen]
+              McGuinness, K., "Mission-Bound Runtime Enforcement:
+              AuthZEN Profile", Work in Progress, Internet-Draft, draft-
+              mcguinness-oauth-mission-authzen, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-authzen>.
+
+   [I-D.draft-mcguinness-oauth-mission-child-delegation]
+              McGuinness, K., "Child Mission Delegation for OAuth 2.0",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              mission-child-delegation, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-child-delegation>.
+
+   [I-D.draft-mcguinness-oauth-mission-consent-evidence]
+              McGuinness, K., "Mission Consent Evidence for OAuth 2.0",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              mission-consent-evidence, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-consent-evidence>.
+
+   [I-D.draft-mcguinness-oauth-mission-runtime]
+              McGuinness, K., "Mission-Bound Runtime Enforcement for
+              OAuth 2.0", Work in Progress, Internet-Draft, draft-
+              mcguinness-oauth-mission-runtime, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-runtime>.
+
+   [I-D.draft-mcguinness-oauth-mission-signals]
+              McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              mission-signals, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-signals>.
+
+Acknowledgments
+
+   This document is part of the Mission-Bound Authorization for OAuth
+   2.0 work and profiles the SCITT architecture to make Mission evidence
+   transparent and independently verifiable.
+
+Author's Address
+
+   Karl McGuinness
+   Independent
+   Email: public@karlmcguinness.com
