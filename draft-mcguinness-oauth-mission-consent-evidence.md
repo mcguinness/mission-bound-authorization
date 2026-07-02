@@ -28,6 +28,7 @@ author:
 normative:
   RFC3339:
   RFC6234:
+  RFC6838:
   RFC7515:
   RFC8259:
   RFC8785:
@@ -60,6 +61,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
+  I-D.draft-mcguinness-oauth-mission-approval:
+    title: "Mission Deferred Approval for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-approval-latest
   I-D.draft-mcguinness-oauth-mission-runtime:
     title: "Mission-Bound Runtime Enforcement for OAuth 2.0"
     author:
@@ -188,34 +198,53 @@ A Consent Disclosure object has these members:
 `disclosure_id`:
 : REQUIRED. A string. Unique identifier for this rendered disclosure.
 
+`source_hashes`:
+: REQUIRED. An object containing the `intent_hash` and
+  `authority_hash` values the disclosure corresponds to. The disclosure
+  object carries these two hashes rather than the full `mission`
+  container ({{consent-evidence}}) because it is constructed before
+  approval commits the Mission: the Mission `id` and lifecycle do not
+  yet exist, and the disclosure must commit only to the proposed Intent
+  and Authority Set it actually renders. The Consent Evidence object,
+  recorded at or after the decision, carries the resolved `mission`
+  container with `id`, `origin`, and the same anchors.
+
 `template_id`:
 : REQUIRED. A string identifying the disclosure template.
 
 `template_version`:
 : REQUIRED. A string identifying the template version.
 
+`template_hash`:
+: OPTIONAL. A string committing the disclosure template content bytes,
+  in the integrity-anchor encoded form of
+  {{I-D.draft-mcguinness-oauth-mission}}. REQUIRED for a deployment
+  claiming Rung 1 or above ({{rendering-assurance}}), so the template a
+  verifier retrieves is bound to the one used to render this disclosure.
+
 `locale`:
 : REQUIRED. A string identifying the locale used for presentation.
 
 `mission_summary`:
-: REQUIRED. An object. The human-readable task summary presented to
-  the Approver.
+: REQUIRED. An object presenting the task to the Approver. It MUST carry
+  the rendered `goal`, the rendered `mission_expiry`, a display of the
+  Subject, and a display of the Approver. Presentation wording is free.
 
 `authority_summary`:
-: REQUIRED. An object. The rendered summary of resources, actions,
-  constraints, delegation, expiry, and material consumption bounds. This
-  is the consent object: per the issuance profile
-  ({{I-D.draft-mcguinness-oauth-mission}}), the Approver consents to the
-  derived authority, with `mission_summary` as context. A disclosure
-  that renders `mission_summary` without a faithful `authority_summary`
-  does not conform. This profile does not fix the object's layout, but it
-  fixes what faithful means: the `authority_summary` MUST render every
-  `mission_resource_access` entry of the approved Authority Set (each
-  entry's `resource` and `actions`) and every constraint, delegation
-  right, and consumption bound carried on those entries. A summary that
+: REQUIRED. An array with exactly one element per
+  `mission_resource_access` entry of the approved Authority Set. Each
+  element carries the entry's `resource`, its `actions`, the rendered
+  form of each `constraints` key together with its value, the delegation
+  summary when the entry permits delegation, and the consumption bounds
+  when the entry carries them. This is the consent object: per the
+  issuance profile ({{I-D.draft-mcguinness-oauth-mission}}), the Approver
+  consents to the derived authority, with `mission_summary` as context.
+  Presentation wording is free; coverage is normative. An array that
   omits an entry, a constraint, a delegation right, or a consumption
   bound is not faithful, and a verifier can check the rendered set
-  against the committed Authority Set.
+  against the committed Authority Set. A disclosure that renders
+  `mission_summary` without a faithful `authority_summary` does not
+  conform.
 
 `material_notices`:
 : REQUIRED. An array. Notices that materially affect the Approver's
@@ -223,16 +252,17 @@ A Consent Disclosure object has these members:
   present, as listed in {{material-notices}}.
 
 `risk_summary`:
-: REQUIRED. An object summarizing action classes and risk dimensions
-  presented to the Approver. It MUST identify, as risk dimensions, the
+: REQUIRED. An array of objects, each with a `dimension` and a
+  `statement`. It MUST cover the risk dimensions the disclosure rules
+  name (irreversibility, spend, delegation, and data access) when the
+  Authority Set carries them, and it MUST identify, as dimensions, the
   material-notice conditions ({{material-notices}}) present in the
   Authority Set.
 
 `constraint_provenance`:
 : OPTIONAL. An array attributing bounds in the Authority Set to the
-  authority that imposed them, so the Approver and a later auditor see
-  not just a bound but whose rule it is: a delegator ceiling and a court
-  order read differently when one fails. Each entry has:
+  authority that imposed them ({{constraint-provenance}}). Each entry
+  has:
 
   `applies_to`:
   : REQUIRED. An object identifying the bound, by the Authority Set
@@ -248,26 +278,6 @@ A Consent Disclosure object has these members:
   : OPTIONAL. A string. A URI identifying the imposing instrument or
     policy, including a URN for a non-dereferenceable instrument such as
     `urn:court:order:2026-55`.
-
-  `constraint_provenance` is disclosure and audit material: it is
-  rendered for consent and committed by `consent_rendering_hash`
-  ({{consent-rendering-hash}}), but it grants no authority, is not
-  carried on any token, and is not enforced. It is the consent-layer home
-  for constraint authorship; the Authority Set itself
-  ({{I-D.draft-mcguinness-oauth-mission}}) carries only the bound, not
-  its author.
-
-  ~~~ json
-  [
-    { "applies_to": { "resource": "https://erp.example.com",
-        "constraint": "max_amount_usd" },
-      "source": "delegator",
-      "source_uri": "https://corp.example/policy/spend" },
-    { "applies_to": { "resource": "https://erp.example.com",
-        "action": "journal-entries.write" },
-      "source": "judicial", "source_uri": "urn:court:order:2026-55" }
-  ]
-  ~~~
 
 `delegation_summary`:
 : REQUIRED when the Authority Set permits delegation. An object
@@ -285,17 +295,6 @@ A Consent Disclosure object has these members:
 
 `approver`:
 : REQUIRED. The rendered identity of the Approver.
-
-`source_hashes`:
-: REQUIRED. An object containing the `intent_hash` and
-  `authority_hash` values the disclosure corresponds to. The disclosure
-  object carries these two hashes rather than the full `mission`
-  container ({{consent-evidence}}) because it is constructed before
-  approval commits the Mission: the Mission `id` and lifecycle do not
-  yet exist, and the disclosure must commit only to the proposed Intent
-  and Authority Set it actually renders. The Consent Evidence object,
-  recorded at or after the decision, carries the resolved `mission`
-  container with `id`, `origin`, and the same anchors.
 
 `shaping_evidence_hash`:
 : OPTIONAL. A string. A commitment to Shaping Evidence when shaping was
@@ -321,6 +320,33 @@ Authority Set includes delegation, external commitments, irreversible
 actions, privileged administration, cross-domain authority, or
 consumption bounds, the disclosure MUST include a material notice or a
 rendered authority summary entry covering that fact.
+
+## Constraint Provenance {#constraint-provenance}
+
+`constraint_provenance` attributes each bound in the Authority Set to
+the authority that imposed it, so the Approver and a later auditor see
+not just a bound but whose rule it is: a delegator ceiling and a court
+order read differently when one fails.
+
+`constraint_provenance` is disclosure and audit material: it is rendered
+for consent and committed by `consent_rendering_hash`
+({{consent-rendering-hash}}), but it grants no authority, is not carried
+on any token, and is not enforced. It is the consent-layer home for
+constraint authorship; the Authority Set itself
+({{I-D.draft-mcguinness-oauth-mission}}) carries only the bound, not its
+author.
+
+~~~ json
+[
+  { "applies_to": { "resource": "https://erp.example.com",
+      "constraint": "max_amount_usd" },
+    "source": "delegator",
+    "source_uri": "https://corp.example/policy/spend" },
+  { "applies_to": { "resource": "https://erp.example.com",
+      "action": "journal-entries.write" },
+    "source": "judicial", "source_uri": "urn:court:order:2026-55" }
+]
+~~~
 
 ## Material Notice Requirements {#material-notices}
 
@@ -357,13 +383,13 @@ envelope:
 }
 ~~~
 
-The value uses the same algorithm-agile integrity-anchor encoding the
-issuance profile {{I-D.draft-mcguinness-oauth-mission}} defines for
-`intent_hash` and `authority_hash`: a collision-resistant hash-name
-prefix and the base64url digest, for example `sha-256:...`. A consumer
-MUST treat the prefix as identifying the hash function and MUST NOT
-assume SHA-256; this lets the commitment migrate to a stronger function
-without ambiguity.
+The value uses the same integrity-anchor encoding the issuance profile
+{{I-D.draft-mcguinness-oauth-mission}} defines for `intent_hash` and
+`authority_hash`: a hash-name prefix and the base64url digest, for
+example `sha-256:...`. SHA-256 is the only digest algorithm defined; the
+`sha-256:` prefix identifies it, and algorithm agility is future work. A
+verifier MUST reject a commitment whose algorithm prefix it does not
+recognize and MUST NOT treat an unrecognized prefix as SHA-256.
 
 The hash commits the disclosure object, not pixels or browser state. A
 deployment MAY additionally retain screenshots or UI telemetry, but the
@@ -371,14 +397,14 @@ interoperable commitment is the structured disclosure object.
 
 So that the committed object can be related to what a human would see,
 the rendering SHOULD be a deterministic function of the disclosure
-object and its `template_id`, `template_version`, and `locale`: the same
-inputs MUST produce the same rendered form, and the named template
-MUST be retrievable or reconstructable by an authorized auditor for the
-retention period ({{audit}}). An auditor can then re-render the recorded
-disclosure into the form the Approver should have been shown. This does
-not prove what was displayed, but it reduces the gap from "the rendering
-layer showed something unverifiable" to "did the rendering layer execute
-a published deterministic template," which the higher rungs of
+object and its `template_id`, `template_version`, `template_hash`, and
+`locale`, so an auditor can re-render the recorded disclosure into the
+form the Approver should have been shown. A deployment that makes this
+guarantee normative claims Rung 1 ({{rendering-assurance}}), which fixes
+the concrete requirements. This does not prove what was displayed, but
+it reduces the gap from "the rendering layer showed something
+unverifiable" to "did the rendering layer execute a published
+deterministic template," which the higher rungs of
 {{rendering-assurance}} then address.
 
 The Mission Issuer SHOULD record `consent_rendering_hash` on the
@@ -388,10 +414,14 @@ MUST treat it as audit data only; it MUST NOT grant or widen
 authority.
 
 The Consent Disclosure object MUST be constructed after Authority Set
-derivation and before approval. If the Authority Set changes after the
-disclosure is constructed, the Mission Issuer MUST discard the
-disclosure and construct a new one; it MUST NOT reuse the prior
-`consent_rendering_hash`.
+derivation and before approval. If any disclosure input changes after
+the disclosure is constructed and before the decision (the Authority
+Set, the locale, the template, or the material notices), the Mission
+Issuer MUST discard the disclosure and construct a new one; it MUST NOT
+reuse the prior `consent_rendering_hash`. Rung 1 determinism
+({{rendering-assurance}}) applies per presentation modality: the same
+inputs produce the same rendered form within a given modality, not
+across modalities.
 
 # Rendering Assurance {#rendering-assurance}
 
@@ -414,10 +444,18 @@ Rung 0, Recorded disclosure:
   shown.
 
 Rung 1, Deterministic rendering:
-: The rendering is a deterministic function of the disclosure object and
-  its committed template ({{consent-rendering-hash}}), so an auditor can
-  re-render the intended form. The open question narrows to whether the
-  rendering layer faithfully executed a published template.
+: An auditor can re-render the intended form, so the open question
+  narrows to whether the rendering layer faithfully executed a published
+  template. A deployment claiming Rung 1 MUST:
+
+  - render the disclosure as a deterministic function of the disclosure
+    object, `template_id`, `template_version`, `template_hash`, and
+    `locale`, so the same inputs produce the same rendered form within a
+    presentation modality;
+  - commit the template content bytes in `template_hash`
+    ({{consent-disclosure}}); and
+  - keep the named template retrievable or reconstructable by an
+    authorized auditor for the retention period ({{audit}}).
 
 Rung 2, Attested rendering:
 : The Consent Evidence carries a `rendering_attestation`
@@ -477,6 +515,11 @@ A Consent Evidence object has these members:
     `origin` and the `intent_hash` and `authority_hash` the disclosure
     corresponded to, matching the disclosure object's `source_hashes`
     ({{consent-disclosure}}). It MUST NOT contain `id`.
+  - When `decision` is `narrowed`, the review required a narrowing
+    revision and no Mission was created ({{revision-events}}). Like a
+    decline, it contains `origin` and the reviewed disclosure's
+    `intent_hash` and `authority_hash`, matching that disclosure's
+    `source_hashes`, and MUST NOT contain `id`.
 
   This descriptor follows the evidence-descriptor convention of the
   issuance profile ({{I-D.draft-mcguinness-oauth-mission}}): it is the
@@ -485,23 +528,41 @@ A Consent Evidence object has these members:
   not authority-bearing on its own.
 
 `approver`:
-: REQUIRED. An object identifying the authenticated Approver.
+: REQUIRED. An object identifying the authenticated Approver. It MUST
+  carry `iss` and `sub`, per the Mission record's `approver`
+  ({{I-D.draft-mcguinness-oauth-mission}}), so binding checks and record
+  correlation are mechanical.
 
 `subject`:
 : REQUIRED when different from the Approver. An object identifying the
   Subject.
 
 `client`:
-: REQUIRED when known. An object identifying the client or agent
-  requesting the Mission.
+: OPTIONAL. An object identifying the client or agent requesting the
+  Mission. The AS MUST record it when it possesses the value at the
+  approval event.
 
 `authentication_context`:
-: REQUIRED. An object recording the `acr`, `amr`, and authentication
-  time used for the approval event when available.
+: OPTIONAL. An object recording the `acr`, `amr`, and authentication
+  time used for the approval event. The AS MUST record each of these
+  values it possesses at the approval event.
 
 `disclosure`:
-: REQUIRED. The Consent Disclosure object, or an object containing a
-  durable reference and the `consent_rendering_hash`.
+: REQUIRED. The Consent Disclosure object, or a durable reference to it
+  ({{minimization}}) paired with the `consent_rendering_hash` it verifies
+  against.
+
+`co_approvals`:
+: OPTIONAL. An array of evidence descriptors, one per co-approver, each
+  carrying the co-approver's `iss` and `sub`, its `decision`, and its
+  timestamp, all under the same `consent_rendering_hash`. This is an
+  additive hook; the issuance profile records one accountable Approver
+  ({{I-D.draft-mcguinness-oauth-mission}}) and that model is unchanged.
+
+`approval_authority`:
+: OPTIONAL. A reference identifying the standing policy or delegation the
+  Approver acted under. An additive hook that does not change the single
+  accountable Approver ({{I-D.draft-mcguinness-oauth-mission}}).
 
 `rendering_attestation`:
 : OPTIONAL. An object. Evidence that an attested, identified rendering
@@ -533,27 +594,49 @@ A Consent Evidence object has these members:
 `declined_at`:
 : REQUIRED when `decision` is `declined`. An RFC 3339 timestamp.
 
+`narrowed_at`:
+: REQUIRED when `decision` is `narrowed`. An RFC 3339 timestamp.
+
 `decision`:
-: REQUIRED. One of `approved` or `declined`.
+: REQUIRED. One of `approved`, `declined`, or `narrowed`. `narrowed`
+  records a revision-required outcome ({{revision-events}}).
 
 `decline_reason`:
 : OPTIONAL. A string. Present when `decision` is `declined` and the
   deployment records a reason.
 
+`refused_dimensions`:
+: REQUIRED when `decision` is `narrowed`. An object identifying the
+  dimensions the review refused, using the `rejected_scope` and
+  `rejected_authorization_details` shapes of the deferred-approval
+  profile ({{I-D.draft-mcguinness-oauth-mission-approval}}).
+
+`predecessor_intent_hashes`:
+: OPTIONAL. An array of `intent_hash` values committing the revision
+  chain that preceded this decision. Carried on the final evidence for
+  an approval reached through one or more `narrowed` outcomes.
+
 `policy_version`:
-: REQUIRED when known. The approval policy version in effect at the
-  approval event.
+: OPTIONAL. A string. The approval policy version in effect at the
+  approval event. The AS MUST record it when it possesses the value.
+  Because the issuance profile records `policy_version` on the Mission
+  record unconditionally ({{I-D.draft-mcguinness-oauth-mission}}), the AS
+  possesses it at an approval event, so it is present in practice.
 
 `sequence`:
-: REQUIRED. An integer. A per-Mission-Issuer consent evidence sequence
-  value or another deployment-defined monotonic indicator sufficient to
-  reconstruct evidence order.
+: REQUIRED. An integer. A monotonic sequence value sufficient to
+  reconstruct evidence order. A deployment MAY scope it per Mission
+  Issuer, per Mission, or per audit scope, provided it is monotonic
+  within the scope it chooses.
 
 `evidence_envelope`:
 : REQUIRED when retained as a portable record. An object carrying
   `format` and `value`. This document defines `jws-compact`, a JWS
   Compact Serialization {{RFC7515}} over the JCS canonical bytes of the
-  Consent Evidence object with `evidence_envelope` removed.
+  Consent Evidence object with `evidence_envelope` removed. Its protected
+  header MUST carry a `typ` of `mission-consent-evidence+jws` and a `kid`
+  that resolves in the Mission Issuer's published key material (its
+  `jwks_uri`); that is the verification path ({{integrity}}).
 
 Example:
 
@@ -582,7 +665,7 @@ Example:
   "policy_version": "approval-policy:v12",
   "sequence": 88127,
   "disclosure": {
-    "disclosure_id": "disc_4pQ9z",
+    "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
     "consent_rendering_hash":
       "sha-256:CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz"
   },
@@ -596,26 +679,31 @@ Example:
 ## Integrity and Verification {#integrity}
 
 When `evidence_envelope.format` is `jws-compact`, the protected header
-MUST identify a signing key controlled by the Mission Issuer or an
-evidence service authorized by the Mission Issuer. A verifier:
+MUST carry a `typ` of `mission-consent-evidence+jws` and a `kid` that
+resolves in the Mission Issuer's published key material (its `jwks_uri`),
+identifying a signing key controlled by the Mission Issuer or an evidence
+service authorized by the Mission Issuer. A verifier:
 
 1. removes `evidence_envelope`;
 2. canonicalizes the remaining Consent Evidence object with JCS;
-3. verifies the JWS payload against those bytes;
-4. verifies the signing key against the Mission Issuer's published key
+3. checks the protected header `typ` is `mission-consent-evidence+jws`
+   and resolves the `kid` in the Mission Issuer's `jwks_uri`;
+4. verifies the JWS payload against those bytes;
+5. verifies the signing key against the Mission Issuer's published key
    material or configured trust anchors; and
-5. when `decision` is `approved`, verifies that the Mission anchors in
+6. when `decision` is `approved`, verifies that the Mission anchors in
    `mission` match the Mission record being audited. When `decision` is
-   `declined` there is no Mission record ({{declined-events}}); the
-   verifier instead confirms the `mission` descriptor carries `origin`
-   and the two `source_hashes` anchors and no `id`; and
-6. when `rendering_confirmation` is present
+   `declined` or `narrowed` there is no Mission record
+   ({{declined-events}}, {{revision-events}}); the verifier instead
+   confirms the `mission` descriptor carries `origin` and the two
+   `source_hashes` anchors and no `id`; and
+7. when `rendering_confirmation` is present
    ({{rendering-assurance}}), verifies it against the recorded
    `approver`'s authenticator and over the `consent_rendering_hash`
    bound to the per-approval value, and treats a confirmation that does
    not verify, or whose authenticator is not bound to the recorded
    `approver`, as an integrity failure; and
-7. when `rendering_attestation` is present ({{rendering-assurance}}),
+8. when `rendering_attestation` is present ({{rendering-assurance}}),
    validates the attested component identity and its attestation against
    the verifier's configured trust anchors, and treats an attestation it
    cannot validate as unverified (the evidence then asserts no rung above
@@ -626,7 +714,7 @@ The absence of `rendering_confirmation` or `rendering_attestation` is
 not a failure; it means the evidence asserts no rung above the rendering
 the AS recorded.
 
-Steps 1 through 5 establish the integrity of the evidence record itself
+Steps 1 through 6 establish the integrity of the evidence record itself
 and rely only on the record, since `consent_rendering_hash` is carried
 inside the signed `mission`. Reconstructing the disclosure is a separate
 step that depends on retrieval: when the disclosure object is inlined, a
@@ -651,7 +739,8 @@ At an approval event, a Consent-Evidence-capable Mission Issuer MUST:
    Set and Mission Intent;
 3. compute `consent_rendering_hash`;
 4. render the disclosure to the Approver;
-5. record Consent Evidence for `approved` or `declined`; and
+5. record Consent Evidence for the decision (`approved`, `declined`, or
+   `narrowed`); and
 6. when approved, bind the Mission record to the
    `consent_rendering_hash`.
 
@@ -670,6 +759,22 @@ decision, Approver, time, and policy version when known.
 Declined evidence MUST NOT create a Mission, Mission claim, token, or
 authority. It exists to prevent silent retry, coercion, and rendering
 confusion from being invisible to audit.
+
+## Revision-Required Events {#revision-events}
+
+A revision-required outcome, in which the review can approve only a
+narrowed version and invites a narrowing revision under the
+deferred-approval profile
+({{I-D.draft-mcguinness-oauth-mission-approval}}), is recorded as Consent
+Evidence with `decision` of `narrowed`. The evidence carries the reviewed
+disclosure's `consent_rendering_hash` and the `refused_dimensions` the
+review named. Like a decline, `narrowed` evidence MUST NOT create a
+Mission, Mission claim, token, or authority: no Mission exists until an
+approval commits one.
+
+When the revision chain resolves to an approval, the final `approved`
+evidence MAY carry `predecessor_intent_hashes` committing the chain of
+reviewed proposals that preceded it.
 
 ## Expansion and Delta Disclosure {#expansion-disclosure}
 
@@ -699,15 +804,27 @@ an authorized auditor to reconstruct:
 - the Approver, Subject, and approval authentication context; and
 - the integrity path from Consent Evidence to the Mission record.
 
-Retention MUST last at least as long as the Mission's audit horizon.
+Retention MUST last at least as long as the Mission's audit horizon,
+the term the issuance profile defines
+({{I-D.draft-mcguinness-oauth-mission}}). Declined and narrowed events
+create no Mission ({{declined-events}}, {{revision-events}}) and so have
+no Mission audit horizon; a deployment MUST retain their evidence for a
+deployment-declared window.
 
 ## Minimization and Redaction {#minimization}
 
-The portable Consent Evidence object MAY contain a durable reference to
-the full Consent Disclosure object rather than the full object itself,
-provided the reference is access-controlled and the evidence includes
-`consent_rendering_hash`. A verifier with authorization MUST be able to
-retrieve or reconstruct the disclosure for the retention period.
+The portable Consent Evidence object MAY carry a durable reference to
+the full Consent Disclosure object rather than the object itself. A
+durable reference is an absolute HTTPS URI paired with the
+`consent_rendering_hash` the retrieved disclosure MUST verify against.
+The minimal retrieval profile is an authenticated HTTPS GET that returns
+the disclosure as `application/mission-consent-evidence+json`; the
+authorization it requires is deployment-defined. A verifier with
+authorization MUST be able to retrieve or reconstruct the disclosure for
+the retention period and MUST verify the retrieved object against
+`consent_rendering_hash`. Non-retrievability within the retention window
+is an audit failure ({{audit}}) within deployment agreement, not an
+integrity failure of the evidence record ({{integrity}}).
 
 Free-form task text and approver comments SHOULD be redacted or stored
 by reference when not required for ordinary audit.
@@ -718,7 +835,7 @@ A conforming Consent-Evidence-capable Mission Issuer MUST:
 
 - construct a Consent Disclosure object for each approval event;
 - compute `consent_rendering_hash`;
-- record Consent Evidence for approval and decline decisions;
+- record Consent Evidence for approval, decline, and narrowed decisions;
 - bind approved Mission records to `consent_rendering_hash`;
 - include material notices for high-risk authority; and
 - retain evidence for audit reconstruction.
@@ -757,8 +874,8 @@ for the action classes being authorized.
 
 ## Evidence Does Not Grant Authority
 
-Consent Evidence proves what was shown and decided. It MUST NOT be
-accepted as a token, grant, or substitute for the Mission's
+Consent Evidence proves what was recorded as shown and decided. It MUST
+NOT be accepted as a token, grant, or substitute for the Mission's
 `authority_hash`.
 
 ## Decline Suppression
@@ -784,15 +901,43 @@ records and runtime evidence. Where possible, portable records SHOULD
 carry hashes or references rather than full rendered text, while still
 allowing authorized audit reconstruction.
 
+A global `sequence` counter leaks approval volume: a holder of two
+evidence records can read the gap between their `sequence` values as the
+count of approvals the Mission Issuer processed in between. A deployment
+sensitive to that side channel SHOULD scope `sequence` per Mission or
+per audit scope rather than use a single global counter.
+
 # IANA Considerations {#iana}
 
-This document makes no IANA request.
+## Media Type Registry
 
-Future versions may request registration for
-`application/mission-consent-evidence+json` if portable exchange of
-Consent Evidence becomes an interoperability requirement. Until such a
-registration exists, deployments using this media type do so by local
-agreement.
+IANA is requested to register one media type per {{RFC6838}}. The
+Mission audit profile references this media type.
+
+### application/mission-consent-evidence+json
+
+- Type name: application
+- Subtype name: mission-consent-evidence+json
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: binary; JSON encoded in UTF-8
+- Security considerations: see {{security-considerations}}
+- Interoperability considerations: see this document
+- Published specification: this document
+- Applications that use this media type: OAuth Mission-Bound consent and
+  audit deployments
+- Fragment identifier considerations: same as for `application/json`
+- Additional information:
+  - Deprecated alias names for this type: none
+  - Magic number(s): none
+  - File extension(s): `.json`
+  - Macintosh file type code(s): TEXT
+- Person & email address to contact for further information:
+  Karl McGuinness <public@karlmcguinness.com>
+- Intended usage: COMMON
+- Restrictions on usage: none
+- Author: IETF
+- Change controller: IETF
 
 --- back
 
