@@ -1,9 +1,9 @@
 ---
-title: "Mission-Bound Runtime Enforcement for OAuth 2.0"
-abbrev: "OAuth Mission Runtime"
+title: "Mission-Bound Runtime Enforcement"
+abbrev: "Mission Runtime"
 category: std
 
-docname: draft-mcguinness-oauth-mission-runtime-latest
+docname: draft-mcguinness-mission-runtime-latest
 submissiontype: IETF
 number:
 date:
@@ -18,7 +18,7 @@ keyword:
  - pdp
 venue:
   github: "mcguinness/draft-mcguinness-oauth-mission"
-  latest: "https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-runtime.html"
+  latest: "https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-runtime.html"
 
 author:
  -
@@ -55,7 +55,7 @@ informative:
       -
         org: OpenID Foundation
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-authzen:
+  I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     author:
       -
@@ -63,16 +63,16 @@ informative:
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-authzen-latest
-  I-D.draft-mcguinness-oauth-mission-harness:
-    title: "Mission-Aware Agent Harnesses for OAuth 2.0"
+      Internet-Draft: draft-mcguinness-mission-authzen-latest
+  I-D.draft-mcguinness-mission-harness:
+    title: "Mission-Aware Agent Harnesses"
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-harness-latest
+      Internet-Draft: draft-mcguinness-mission-harness-latest
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
     title: "Mission Consent Evidence for OAuth 2.0"
     author:
@@ -169,7 +169,7 @@ Because the invariants are not a wire format, two conforming deployments
 do not thereby interoperate at the PEP-PDP boundary; the interoperable
 wire surface is supplied by a decision API binding ({{authzen}}),
 specified separately; the AuthZEN binding is
-{{I-D.draft-mcguinness-oauth-mission-authzen}}. This document is the
+{{I-D.draft-mcguinness-mission-authzen}}. This document is the
 architecture and invariant layer; the binding is the interoperability
 layer.
 
@@ -285,6 +285,22 @@ Mission-bound token:
 : An access token issued under a Mission per
   {{I-D.draft-mcguinness-oauth-mission}}, carrying
   `authorization_details` and a `mission` claim.
+
+# Mission Substrate {#mission-substrate}
+
+This profile is defined against the Mission model rather than against
+OAuth 2.0 mechanics. It consumes these substrate primitives: the
+Mission identifier and origin; the lifecycle state space with its
+only-`active`-permits rule and a freshness source; the Authority Set
+representation with its subset rule and Common Constraints; the
+Mission-bound credential carrying the `mission` claim; the
+integrity-anchor envelope; and the Mission's audit horizon. The
+issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
+version's normative substrate: it defines each primitive for OAuth
+2.0, and every OAuth artifact named in this document enters through
+it. Another authorization substrate that provides the same primitives
+with the same semantics can host this profile unchanged; such a
+binding is defined by that substrate, not here.
 
 # Runtime model {#runtime-model}
 
@@ -526,7 +542,7 @@ mediated action without passing the per-action check, because it never
 holds a usable credential for that class. Mediated execution depends on
 the agent having no unmediated path to the resource; a Mission-aware
 harness establishes that execution environment
-({{I-D.draft-mcguinness-oauth-mission-harness}}).
+({{I-D.draft-mcguinness-mission-harness}}).
 
 This narrows, and does not eliminate, the compromised-agent exposure.
 The mediating PEP becomes a trusted component whose compromise is
@@ -566,7 +582,7 @@ and action-bound approval are SHOULD in the base profile
 - the sender-constraint private key is held by the mediating PEP, not by
   the agent component ({{custody}});
 - governed work runs under a harness conforming to the harness profile
-  ({{I-D.draft-mcguinness-oauth-mission-harness}}) whose published
+  ({{I-D.draft-mcguinness-mission-harness}}) whose published
   execution-environment scope statement covers the mediated classes, so
   there is no unmediated path to those actions;
 - each such action requires an action-bound approval
@@ -1141,7 +1157,7 @@ the permit, and the invariants, not a wire format. A **decision API
 binding** maps that contract onto a concrete PEP-PDP wire protocol. For
 deployments using the OpenID AuthZEN Authorization API {{AUTHZEN}}, the
 normative binding is the Mission-Bound Runtime Enforcement: AuthZEN
-Profile {{I-D.draft-mcguinness-oauth-mission-authzen}}, which specifies
+Profile {{I-D.draft-mcguinness-mission-authzen}}, which specifies
 how the Mission and actor inputs, the decision and evidence objects, and
 the denial classification map onto the AuthZEN request and response.
 Other decision APIs may be bound by other specifications.
@@ -1241,7 +1257,7 @@ check catches (within-scope data laundering), and `max_calls` /
 or information-flow layer. A coarse session-level mitigation, downgrading
 egress authority once untrusted content has entered a session, is
 available at the harness layer
-({{I-D.draft-mcguinness-oauth-mission-harness}}); it raises the bar but
+({{I-D.draft-mcguinness-mission-harness}}); it raises the bar but
 is not information-flow control.
 
 ## Relationship to inspection-based controls {#inspection-controls}
@@ -1365,7 +1381,7 @@ credentials.
 This document has no IANA actions. The Mission-bound token claims this
 profile consumes are registered by {{I-D.draft-mcguinness-oauth-mission}};
 any decision-API wire members are defined by the binding
-({{authzen}}, {{I-D.draft-mcguinness-oauth-mission-authzen}}).
+({{authzen}}, {{I-D.draft-mcguinness-mission-authzen}}).
 
 --- back
 

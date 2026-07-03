@@ -43,15 +43,15 @@ normative:
       Internet-Draft: draft-mcguinness-oauth-mission-latest
 
 informative:
-  I-D.draft-mcguinness-oauth-mission-shaping:
-    title: "Mission Intent Shaping for OAuth 2.0"
+  I-D.draft-mcguinness-mission-shaping:
+    title: "Mission Intent Shaping"
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-shaping-latest
+      Internet-Draft: draft-mcguinness-mission-shaping-latest
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     author:
@@ -70,15 +70,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-approval-latest
-  I-D.draft-mcguinness-oauth-mission-runtime:
-    title: "Mission-Bound Runtime Enforcement for OAuth 2.0"
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-runtime-latest
+      Internet-Draft: draft-mcguinness-mission-runtime-latest
 
 --- abstract
 
@@ -298,7 +298,7 @@ A Consent Disclosure object has these members:
 
 `shaping_evidence_hash`:
 : OPTIONAL. A string. A commitment to Shaping Evidence when shaping was
-  used ({{I-D.draft-mcguinness-oauth-mission-shaping}}).
+  used ({{I-D.draft-mcguinness-mission-shaping}}).
 
 `predecessor`:
 : OPTIONAL. A string. The predecessor Mission identifier when this
@@ -482,7 +482,7 @@ Rung 4, Out-of-band confirmation:
 : For the most material actions, confirmation is obtained at execution
   time on a channel the rendering layer does not control, as the
   action-bound approval of the runtime layer
-  ({{I-D.draft-mcguinness-oauth-mission-runtime}}); a rendering layer
+  ({{I-D.draft-mcguinness-mission-runtime}}); a rendering layer
   would then have to compromise two independent paths. That is a
   runtime-layer mechanism recorded as its own evidence; this profile
   records the approval-time rungs above.

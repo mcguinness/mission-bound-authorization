@@ -40,15 +40,15 @@ normative:
       Internet-Draft: draft-mcguinness-oauth-mission-latest
 
 informative:
-  I-D.draft-mcguinness-oauth-mission-runtime:
-    title: "Mission-Bound Runtime Enforcement for OAuth 2.0"
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-runtime-latest
+      Internet-Draft: draft-mcguinness-mission-runtime-latest
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     author:
@@ -344,7 +344,7 @@ a completion condition.
 
 Discharge is an issuance-gating signal and is fully meaningful at the
 issuance profile alone. It is also a natural input to the runtime layer
-({{I-D.draft-mcguinness-oauth-mission-runtime}}): a runtime Policy
+({{I-D.draft-mcguinness-mission-runtime}}): a runtime Policy
 Enforcement Point that recognizes `terminal_when` SHOULD deny a
 discharged entry at the point of use, closing the window between
 discharge and token expiry the same way it denies a revoked Mission. A

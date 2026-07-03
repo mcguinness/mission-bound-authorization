@@ -52,17 +52,17 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-status-latest
-  I-D.draft-mcguinness-oauth-mission-runtime:
-    title: "Mission-Bound Runtime Enforcement for OAuth 2.0"
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-runtime-latest
+      Internet-Draft: draft-mcguinness-mission-runtime-latest
   I-D.draft-mcguinness-oauth-mission-child-delegation:
-    title: "Child Mission Delegation for OAuth 2.0"
+    title: "Mission Child Delegation for OAuth 2.0"
     author:
       -
         ins: K. McGuinness
@@ -201,7 +201,7 @@ This document does NOT define:
   creates a new Mission;
 - runtime per-action enforcement or the classification of a denial as
   expansion-eligible; that is the runtime layer's concern
-  ({{eligibility}}, {{I-D.draft-mcguinness-oauth-mission-runtime}});
+  ({{eligibility}}, {{I-D.draft-mcguinness-mission-runtime}});
 - branch expansion, in which predecessor and successor both remain
   active ({{replacement}}); or
 - multi-hop or cross-domain expansion; an expansion is adjudicated by
@@ -278,7 +278,7 @@ A Mission-aware Resource Server enforces the token's authority
 statelessly and refuses an out-of-bounds action with its usual
 insufficient-authority error ({{I-D.draft-mcguinness-oauth-mission}}).
 The runtime enforcement profile
-{{I-D.draft-mcguinness-oauth-mission-runtime}} is one source of an
+{{I-D.draft-mcguinness-mission-runtime}} is one source of an
 expansion-eligible denial: in that profile a deny is terminal for the
 attempted action, and the authority-expandable-denial escalation that
 turns such a deny into an expansion is named there as out of scope.
@@ -792,7 +792,7 @@ that authorized it ({{audit-linkage}}).
 Some authority classes always require a fresh human approval even within
 the ceiling. To make that testable, a deployment MUST publish a mapping
 from its action identifiers to the runtime profile's action classes
-({{I-D.draft-mcguinness-oauth-mission-runtime}}), or an equivalent
+({{I-D.draft-mcguinness-mission-runtime}}), or an equivalent
 declared classification. A drawdown that grants authority mapped to an
 irreversible, external-commitment, or privileged-administration class, or
 that grants cross-domain authority, MUST be adjudicated by a fresh human
@@ -811,7 +811,7 @@ and revocable. A compromised agent cannot instantly wield the ceiling;
 it can exercise only the current active authority and request in-ceiling
 drawdown, which is policy-gated, recorded for audit ({{audit-linkage}}),
 rate-limitable, and enforced per action by the runtime layer
-({{I-D.draft-mcguinness-oauth-mission-runtime}}). Progressive
+({{I-D.draft-mcguinness-mission-runtime}}). Progressive
 authorization bounds, and does not eliminate, standing-authority
 exposure; a deployment SHOULD pair it with short successor lifetimes,
 constraint-bounded ceilings, and runtime enforcement. The drawdown
@@ -825,7 +825,7 @@ Progressive authorization grows authority that a deployment anticipated
 well enough to express as a ceiling. The runtime enforcement layer
 handles the unanticipated case: it can let an agent request authority it
 discovers it needs at the point of use, through an access-request and
-approval workflow ({{I-D.draft-mcguinness-oauth-mission-runtime}}). That
+approval workflow ({{I-D.draft-mcguinness-mission-runtime}}). That
 workflow yields a permit for the single re-evaluated action. To persist
 the newly approved authority for the rest of the task, rather than have
 the agent re-request it on every call, the Mission Issuer MAY realize an

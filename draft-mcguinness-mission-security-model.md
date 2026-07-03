@@ -1,9 +1,9 @@
 ---
-title: "Mission Security Model for OAuth 2.0"
-abbrev: "OAuth Mission Security Model"
+title: "Mission Security Model"
+abbrev: "Mission Security Model"
 category: info
 
-docname: draft-mcguinness-oauth-mission-security-model-latest
+docname: draft-mcguinness-mission-security-model-latest
 submissiontype: IETF
 number:
 date:
@@ -18,7 +18,7 @@ keyword:
  - trust
 venue:
   github: "mcguinness/draft-mcguinness-oauth-mission"
-  latest: "https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-security-model.html"
+  latest: "https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-security-model.html"
 
 author:
  -
@@ -38,24 +38,24 @@ normative:
       Internet-Draft: draft-mcguinness-oauth-mission-latest
 
 informative:
-  I-D.draft-mcguinness-oauth-mission-runtime:
-    title: "Mission-Bound Runtime Enforcement for OAuth 2.0"
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-runtime-latest
-  I-D.draft-mcguinness-oauth-mission-harness:
-    title: "Mission-Aware Agent Harnesses for OAuth 2.0"
+      Internet-Draft: draft-mcguinness-mission-runtime-latest
+  I-D.draft-mcguinness-mission-harness:
+    title: "Mission-Aware Agent Harnesses"
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-harness-latest
+      Internet-Draft: draft-mcguinness-mission-harness-latest
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
     title: "Mission Consent Evidence for OAuth 2.0"
     author:
@@ -74,15 +74,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-status-latest
-  I-D.draft-mcguinness-oauth-mission-audit:
-    title: "Mission Audit Transparency for OAuth 2.0"
+  I-D.draft-mcguinness-mission-audit:
+    title: "Mission Audit Transparency"
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-audit-latest
+      Internet-Draft: draft-mcguinness-mission-audit-latest
   I-D.draft-mcguinness-oauth-mission-completion:
     title: "Mission Completion for OAuth 2.0"
     author:
@@ -101,7 +101,7 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-attenuation-latest
-  I-D.draft-mcguinness-oauth-mission-authzen:
+  I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     author:
       -
@@ -109,7 +109,7 @@ informative:
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-authzen-latest
+      Internet-Draft: draft-mcguinness-mission-authzen-latest
   I-D.draft-mcguinness-oauth-mission-approval:
     title: "Mission Deferred Approval for OAuth 2.0"
     author:
@@ -128,15 +128,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
-  I-D.draft-mcguinness-oauth-mission-orchestration:
-    title: "Mission Orchestration and Unwinding for OAuth 2.0"
+  I-D.draft-mcguinness-mission-orchestration:
+    title: "Mission Orchestration and Unwinding"
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-orchestration-latest
+      Internet-Draft: draft-mcguinness-mission-orchestration-latest
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
     author:
@@ -172,7 +172,7 @@ than restating them.
 The Mission model treats the agent as part of the attack surface: an
 agent may be prompt-injected or compromised, and the suite's purpose is
 to bound what such an agent can do, not to make it trustworthy
-({{I-D.draft-mcguinness-oauth-mission-runtime}}). Bounding the agent
+({{I-D.draft-mcguinness-mission-runtime}}). Bounding the agent
 means relying on other components: the Authorization Server that derives
 and gates authority, the enforcement points that evaluate each action,
 the harness that removes unmediated paths, and a set of optional
@@ -205,7 +205,20 @@ This document uses Mission, Mission Issuer (Authorization Server), Policy
 Enforcement Point (PEP), Policy Decision Point (PDP), Approver, Subject,
 agent, Authority Set, and Mission state as defined in
 {{I-D.draft-mcguinness-oauth-mission}} and
-{{I-D.draft-mcguinness-oauth-mission-runtime}}.
+{{I-D.draft-mcguinness-mission-runtime}}.
+
+# Mission Substrate {#mission-substrate}
+
+This model describes the components and trust relationships of the
+Mission model, not of OAuth 2.0 mechanics. Its analysis applies to any
+substrate that provides the Mission primitives the profiles consume:
+the identifier and origin, the state space with its only-active rule,
+an authority representation with a subset rule, the integrity-anchor
+envelope, and a Mission-bound credential. The issuance profile
+{{I-D.draft-mcguinness-oauth-mission}} is the OAuth 2.0 binding of
+those primitives and the substrate the profiles' security
+considerations assume; a different binding re-derives only the
+substrate-specific entries of this model.
 
 # The Untrusted Agent {#untrusted-agent}
 
@@ -224,7 +237,7 @@ agent. Two structural choices carry this:
   inert.
 - **The credential whose misuse is unacceptable is not held by the
   agent.** Under mediated execution
-  ({{I-D.draft-mcguinness-oauth-mission-runtime}}) the PEP holds the
+  ({{I-D.draft-mcguinness-mission-runtime}}) the PEP holds the
   sender-constraint key, so a compromised agent cannot present a
   high-consequence credential directly.
 
@@ -236,7 +249,7 @@ to a compromised agent. A deployment claiming the runtime profile's
 agent-compromise-resistant enforcement therefore isolates the mediating
 PEP and its key custody from agent-facing components; the harness profile
 requires this separation
-({{I-D.draft-mcguinness-oauth-mission-harness}}).
+({{I-D.draft-mcguinness-mission-harness}}).
 
 # The Trusted Base {#trusted-base}
 
@@ -272,7 +285,7 @@ Policy Enforcement Point (PEP):
   unmediated path. A compromised PEP can decline to consult the PDP or
   ignore its decision; the suite does not prevent this, and evidence
   makes it detectable after the fact, not in the moment
-  ({{I-D.draft-mcguinness-oauth-mission-runtime}}).
+  ({{I-D.draft-mcguinness-mission-runtime}}).
 
 Policy Decision Point (PDP):
 : Evaluates each action against the Mission and returns a permit or deny.
@@ -280,7 +293,7 @@ Policy Decision Point (PDP):
   PEP supplies are authentic. A compromised PDP can return arbitrary
   decisions; as with the PEP, evidence detects this after the fact but
   does not prevent it
-  ({{I-D.draft-mcguinness-oauth-mission-runtime}}).
+  ({{I-D.draft-mcguinness-mission-runtime}}).
 
 Mission state source:
 : Reports current Mission state for the freshness the runtime layer
@@ -292,7 +305,7 @@ Mission state source:
   established within the bound
   ({{I-D.draft-mcguinness-oauth-mission-status}},
   {{I-D.draft-mcguinness-oauth-mission-signals}},
-  {{I-D.draft-mcguinness-oauth-mission-runtime}}).
+  {{I-D.draft-mcguinness-mission-runtime}}).
 
 Harness:
 : Establishes the execution environment in which governed work has no
@@ -301,7 +314,7 @@ Harness:
   egress and must re-check state. A compromised harness can hand the
   agent an unmediated path, which defeats mediated execution for the
   classes that path reaches
-  ({{I-D.draft-mcguinness-oauth-mission-harness}}).
+  ({{I-D.draft-mcguinness-mission-harness}}).
 
 Orchestrator:
 : When multi-step unwinding is used, it drives compensation of in-flight
@@ -309,7 +322,7 @@ Orchestrator:
   class from a trusted source, and must compensate only under a
   documented authority basis: resource policy (`resource_policy`) or a
   separate remedial Mission
-  ({{I-D.draft-mcguinness-oauth-mission-orchestration}}). Its compromise
+  ({{I-D.draft-mcguinness-mission-orchestration}}). Its compromise
   converts the kill switch into a channel for unauthorized remedial
   actions, driving compensating writes under the guise of unwinding.
 
@@ -326,12 +339,12 @@ Access-request and approval workflow:
 : When requestable denials are used, this workflow adjudicates an agent's
   request for authority it discovers it needs, integrating the AuthZEN
   Access Request and Approval Profile
-  ({{I-D.draft-mcguinness-oauth-mission-authzen}}). It must not
+  ({{I-D.draft-mcguinness-mission-authzen}}). It must not
   auto-approve a high-consequence escalation without an independent
   approver. A compromised approval service can grant escalations the
   model would otherwise route to a human, so it is in the trusted base
   wherever the access-request flow is enabled
-  ({{I-D.draft-mcguinness-oauth-mission-runtime}}).
+  ({{I-D.draft-mcguinness-mission-runtime}}).
 
 Transparency Service:
 : When audit transparency is used, it is an append-only, non-equivocating
@@ -339,7 +352,7 @@ Transparency Service:
   compromised service can present different histories to different
   auditors; registering with more than one service makes equivocation
   detectable, but the non-equivocation guarantee is per-service
-  ({{I-D.draft-mcguinness-oauth-mission-audit}}).
+  ({{I-D.draft-mcguinness-mission-audit}}).
 
 Event source:
 : When completion or trigger-based discharge is used, it reports whether
@@ -378,7 +391,7 @@ approval that supersedes the prior Mission
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}), not by agent action.
 In a deployment that claims the runtime profile's
 agent-compromise-resistant enforcement
-({{I-D.draft-mcguinness-oauth-mission-runtime}}), the model further
+({{I-D.draft-mcguinness-mission-runtime}}), the model further
 guarantees that such an agent cannot unilaterally take a high-consequence
 action it does not hold a mediated credential for. In the base profiles
 the mechanisms behind that further guarantee (mediated credential
@@ -476,7 +489,7 @@ The token lifetime and introspection layers are the issuance profile's
 ({{I-D.draft-mcguinness-oauth-mission}}); Mission Status
 ({{I-D.draft-mcguinness-oauth-mission-status}}), Mission Lifecycle Signals
 ({{I-D.draft-mcguinness-oauth-mission-signals}}), and runtime enforcement
-({{I-D.draft-mcguinness-oauth-mission-runtime}}) each tighten the window
+({{I-D.draft-mcguinness-mission-runtime}}) each tighten the window
 as their own profile defines. A deployment reads the row for the
 mechanism it runs, or the tightest of several, to state how long a
 revoked Mission can still act.
@@ -487,7 +500,7 @@ A deployment cannot be evaluated against this model without knowing which
 components it actually trusts. The runtime profile already requires a
 deployment to document its enforcement scope, including its PEP locations,
 PDP identities, Mission state source, and the execution paths it mediates
-({{I-D.draft-mcguinness-oauth-mission-runtime}}). This model recommends
+({{I-D.draft-mcguinness-mission-runtime}}). This model recommends
 that a deployment claiming the Mission suite extend that documentation to
 its full trusted base: which of the components in {{trusted-base}} it
 relies on, which it does not deploy, and, for each consequential action
@@ -502,9 +515,9 @@ The guarantees this model states at audit time depend on artifacts that
 several profiles retain independently: Consent Evidence
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), runtime
 decision and execution evidence
-({{I-D.draft-mcguinness-oauth-mission-runtime}}), and, where audit
+({{I-D.draft-mcguinness-mission-runtime}}), and, where audit
 transparency is used, the receipts that stand over evidence a deployment
-may later erase ({{I-D.draft-mcguinness-oauth-mission-audit}}). Each of
+may later erase ({{I-D.draft-mcguinness-mission-audit}}). Each of
 those profiles anchors its retention on the Mission's audit horizon, the
 deployment-declared window that runs at least the Mission's lifetime plus
 a post-terminal period ({{I-D.draft-mcguinness-oauth-mission}}). A

@@ -1,9 +1,9 @@
 ---
-title: "Mission Intent Shaping for OAuth 2.0"
-abbrev: "OAuth Mission Shaping"
+title: "Mission Intent Shaping"
+abbrev: "Mission Shaping"
 category: info
 
-docname: draft-mcguinness-oauth-mission-shaping-latest
+docname: draft-mcguinness-mission-shaping-latest
 submissiontype: IETF
 number:
 date:
@@ -17,7 +17,7 @@ keyword:
  - shaping
 venue:
   github: "mcguinness/draft-mcguinness-oauth-mission"
-  latest: "https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-shaping.html"
+  latest: "https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-shaping.html"
 
 author:
  -
@@ -42,15 +42,15 @@ normative:
 informative:
   RFC6749:
   RFC9126:
-  I-D.draft-mcguinness-oauth-mission-runtime:
-    title: "Mission-Bound Runtime Enforcement for OAuth 2.0"
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-runtime-latest
+      Internet-Draft: draft-mcguinness-mission-runtime-latest
 
 --- abstract
 
@@ -188,6 +188,19 @@ Shaping Evidence:
 : The record of inputs, inferences, policy decisions, unresolved
   ambiguities, and capability-resolution facts that produced the Mission
   Intent proposal. Audit material, not authority.
+
+# Mission Substrate {#mission-substrate}
+
+This document is defined against the Mission model rather than against
+OAuth 2.0 mechanics. A shaper consumes two substrate primitives: the
+Mission Intent structure it proposes, and the submission channel
+through which a proposal reaches the Mission Issuer as untrusted input
+(Pushed Authorization Requests in the OAuth binding); Shaping Evidence
+additionally uses the substrate's integrity-anchor envelope. The
+issuance profile {{I-D.draft-mcguinness-oauth-mission}} defines these
+for OAuth 2.0. Another authorization substrate that accepts a
+structured, untrusted task proposal and commits it at approval can
+host the shaping practices described here unchanged.
 
 # Shaper Role and Trust Boundary {#role-and-trust-boundary}
 
@@ -696,8 +709,8 @@ require the Mission Issuer to trust the shaper.
 
 ## Runtime Enforcement {#runtime-composition}
 
-Mission-Bound Runtime Enforcement for OAuth 2.0
-{{I-D.draft-mcguinness-oauth-mission-runtime}} defines the per-action
+Mission-Bound Runtime Enforcement
+{{I-D.draft-mcguinness-mission-runtime}} defines the per-action
 PDP and PEP contract. The runtime does not consume shaper output. It
 consumes the Mission Intent and the Authority Set on the Mission record,
 both produced by the Mission Issuer, not by the shaper. A runtime that
@@ -877,5 +890,5 @@ This document is part of the Mission-Bound Authorization for OAuth 2.0
 set and describes the shaping layer that precedes Mission issuance. It
 builds on Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} and complements Mission-Bound
-Runtime Enforcement for OAuth 2.0
-{{I-D.draft-mcguinness-oauth-mission-runtime}}.
+Runtime Enforcement
+{{I-D.draft-mcguinness-mission-runtime}}.

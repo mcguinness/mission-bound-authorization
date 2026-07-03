@@ -78,15 +78,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
-  I-D.draft-mcguinness-oauth-mission-harness:
-    title: "Mission-Aware Agent Harnesses for OAuth 2.0"
+  I-D.draft-mcguinness-mission-harness:
+    title: "Mission-Aware Agent Harnesses"
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-harness-latest
+      Internet-Draft: draft-mcguinness-mission-harness-latest
 
 --- abstract
 
@@ -853,7 +853,7 @@ its tokens stops at the next state check.
 # Relationship to Harnesses
 
 A Mission-aware harness
-{{I-D.draft-mcguinness-oauth-mission-harness}} MUST NOT treat a
+{{I-D.draft-mcguinness-mission-harness}} MUST NOT treat a
 sub-agent handle as authority. When durable sub-agent work requires a
 separate authority handle, the harness can request a Child Mission
 under this profile.
