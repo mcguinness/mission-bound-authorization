@@ -40,15 +40,15 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-latest
-  I-D.draft-mcguinness-oauth-mission-runtime:
-    title: "Mission-Bound Runtime Enforcement for OAuth 2.0"
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-runtime-latest
+      Internet-Draft: draft-mcguinness-mission-runtime-latest
 
 informative:
   I-D.draft-mcguinness-oauth-mission-child-delegation:
@@ -60,15 +60,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
-  I-D.draft-mcguinness-oauth-mission-harness:
-    title: "Mission-Aware Agent Harnesses for OAuth 2.0"
+  I-D.draft-mcguinness-mission-harness:
+    title: "Mission-Aware Agent Harnesses"
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-harness-latest
+      Internet-Draft: draft-mcguinness-mission-harness-latest
 
 --- abstract
 
@@ -304,7 +304,7 @@ children; it is delivered only by the runtime enforcement layer.
 
 A consumer of a Mission-bound attenuation chain MUST evaluate it under
 the runtime enforcement profile
-({{I-D.draft-mcguinness-oauth-mission-runtime}}): on every presentation
+({{I-D.draft-mcguinness-mission-runtime}}): on every presentation
 of a token in the chain, regardless of action class, it MUST establish
 that the chain's Mission is `active`, within the deployment's declared
 freshness bound, from a Mission state source, in addition to verifying
@@ -312,11 +312,11 @@ the attenuation chain and the proof-of-possession. If the consumer
 cannot establish the Mission as `active` within the bound, including when
 the state source is unreachable, it MUST refuse, as the runtime profile
 fails closed on unestablished state
-({{I-D.draft-mcguinness-oauth-mission-runtime}}). A cached chain does
+({{I-D.draft-mcguinness-mission-runtime}}). A cached chain does
 not bypass this: a chain held in a harness cache is still re-checked
 against current Mission state on every presentation, since the cache is
 never evidence of continuing authority
-({{I-D.draft-mcguinness-oauth-mission-harness}}). A revoked or expired
+({{I-D.draft-mcguinness-mission-harness}}). A revoked or expired
 Mission MUST cause refusal of every token in the chain, regardless of
 the children's own `exp`. A deployment MUST NOT accept Mission-bound
 attenuation tokens on a path that does not enforce current Mission
@@ -324,7 +324,7 @@ state: without that check the offline chain is ungoverned bearer
 authority until it ages out, which defeats the purpose of binding it to
 a Mission. Offline attenuation is thus a capability for deployments
 running the runtime enforcement profile
-({{I-D.draft-mcguinness-oauth-mission-runtime}}); it is not available to
+({{I-D.draft-mcguinness-mission-runtime}}); it is not available to
 a deployment that relies on token lifetime alone.
 
 # Relationship to Other Delegation {#relationship-delegation}
@@ -488,7 +488,7 @@ profile, and the attenuation substrate apply. This profile adds:
 - Audit. Because the issuer does not observe offline derivations, the
   consuming enforcement points are the only place a derivation is seen;
   runtime enforcement evidence
-  ({{I-D.draft-mcguinness-oauth-mission-runtime}}) is the audit record
+  ({{I-D.draft-mcguinness-mission-runtime}}) is the audit record
   for offline-attenuated actions.
 
 # Privacy Considerations {#privacy-considerations}
@@ -517,7 +517,7 @@ Offline minting is unobserved by the Mission Issuer, so which children
 were minted and to whom is visible only at the consuming enforcement
 points, not in the issuer's records. A deployment SHOULD treat the
 runtime enforcement evidence those points produce
-({{I-D.draft-mcguinness-oauth-mission-runtime}}) as the privacy-relevant
+({{I-D.draft-mcguinness-mission-runtime}}) as the privacy-relevant
 record of offline derivations and protect it accordingly.
 
 # IANA Considerations {#iana}
