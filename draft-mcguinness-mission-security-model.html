@@ -44,7 +44,7 @@ than restating them.
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
-    wcwidth 0.8.1
+    wcwidth 0.8.2
 -->
 <link href="draft-mcguinness-mission-security-model.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
@@ -1378,31 +1378,48 @@ origin, which never sees these tokens
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.5">Policy Enforcement Point (PEP):</dt>
+<dt id="section-6-2.5">Mission Authority Server (standalone binding):</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.6">
-          <p id="section-6-2.6.1">Sits at the last controllable boundary before an action and obtains a
+          <p id="section-6-2.6.1">When the standalone Mission Authority Server binding is used, a
+service outside the OAuth Authorization Server implements the Mission
+Issuer role: it must run the approval ceremony faithfully, keep the
+Mission record and its anchors intact, and serve accurate Mission
+state, while the deployment's tokens remain ordinary and carry no
+Mission binding. Its compromise is equivalent to Mission Issuer
+compromise (forged approvals, altered records, false state), with one
+addition: in this mode the PDP's credential-to-Mission join is the
+only binding between a presented credential and a Mission, so a
+compromised Mission Authority Server combined with the PDP's trust in
+it yields arbitrary attribution of authority to any credential the
+join accepts
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.7">Policy Enforcement Point (PEP):</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.8">
+          <p id="section-6-2.8.1">Sits at the last controllable boundary before an action and obtains a
 permit before each consequential action; under mediated execution it
 holds the sender-constraint key. It must be at the last boundary and
 must not act without a permit; it assumes the harness leaves no
 unmediated path. A compromised PEP can decline to consult the PDP or
 ignore its decision; the suite does not prevent this, and evidence
 makes it detectable after the fact, not in the moment
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.7">Policy Decision Point (PDP):</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.8">
-          <p id="section-6-2.8.1">Evaluates each action against the Mission and returns a permit or deny.
+<dt id="section-6-2.9">Policy Decision Point (PDP):</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.10">
+          <p id="section-6-2.10.1">Evaluates each action against the Mission and returns a permit or deny.
 It must evaluate faithfully and fail closed; it assumes the inputs the
 PEP supplies are authentic. A compromised PDP can return arbitrary
 decisions; as with the PEP, evidence detects this after the fact but
 does not prevent it
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.8.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.9">Mission state source:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.10">
-          <p id="section-6-2.10.1">Reports current Mission state for the freshness the runtime layer
+<dt id="section-6-2.11">Mission state source:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.12">
+          <p id="section-6-2.12.1">Reports current Mission state for the freshness the runtime layer
 requires, whether by introspection, the Status surface, or pushed
 Signals. It must report accurately within the staleness bound and be
 authenticated and integrity-protected. A compromised or spoofed state
@@ -1411,46 +1428,46 @@ kill switch; the runtime layer fails closed when state cannot be
 established within the bound
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.10.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.11">Harness:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.12">
-          <p id="section-6-2.12.1">Establishes the execution environment in which governed work has no
+<dt id="section-6-2.13">Harness:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.14">
+          <p id="section-6-2.14.1">Establishes the execution environment in which governed work has no
 unmediated path to the actions the PEP mediates, and binds sessions,
 queues, and caches to Mission state. It must ensure no unmediated
 egress and must re-check state. A compromised harness can hand the
 agent an unmediated path, which defeats mediated execution for the
 classes that path reaches
-(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-6-2.12.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-6-2.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.13">Orchestrator:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.14">
-          <p id="section-6-2.14.1">When multi-step unwinding is used, it drives compensation of in-flight
+<dt id="section-6-2.15">Orchestrator:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.16">
+          <p id="section-6-2.16.1">When multi-step unwinding is used, it drives compensation of in-flight
 work after a Mission stops. It must derive each step's reversibility
 class from a trusted source, and must compensate only under a
 documented authority basis: resource policy (<code>resource_policy</code>) or a
 separate remedial Mission
 (<span>[<a href="#I-D.draft-mcguinness-mission-orchestration" class="cite xref">I-D.draft-mcguinness-mission-orchestration</a>]</span>). Its compromise
 converts the kill switch into a channel for unauthorized remedial
-actions, driving compensating writes under the guise of unwinding.<a href="#section-6-2.14.1" class="pilcrow">¶</a></p>
+actions, driving compensating writes under the guise of unwinding.<a href="#section-6-2.16.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.15">Consent rendering layer:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.16">
-          <p id="section-6-2.16.1">Renders the approved authority to the Approver at the approval event.
+<dt id="section-6-2.17">Consent rendering layer:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.18">
+          <p id="section-6-2.18.1">Renders the approved authority to the Approver at the approval event.
 It must render faithfully what is committed. A compromised renderer can
 display something other than the committed disclosure; the rendering
 assurance ladder bounds this by degree, up to an Approver authenticator
 signing the disclosure commitment, but no server-side commitment proves
 what a human perceived
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-6-2.16.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-6-2.18.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.17">Access-request and approval workflow:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.18">
-          <p id="section-6-2.18.1">When requestable denials are used, this workflow adjudicates an agent's
+<dt id="section-6-2.19">Access-request and approval workflow:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.20">
+          <p id="section-6-2.20.1">When requestable denials are used, this workflow adjudicates an agent's
 request for authority it discovers it needs, integrating the AuthZEN
 Access Request and Approval Profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). It must not
@@ -1458,27 +1475,27 @@ auto-approve a high-consequence escalation without an independent
 approver. A compromised approval service can grant escalations the
 model would otherwise route to a human, so it is in the trusted base
 wherever the access-request flow is enabled
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.18.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.20.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.19">Transparency Service:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.20">
-          <p id="section-6-2.20.1">When audit transparency is used, it is an append-only, non-equivocating
+<dt id="section-6-2.21">Transparency Service:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.22">
+          <p id="section-6-2.22.1">When audit transparency is used, it is an append-only, non-equivocating
 log that issues inclusion receipts. It must not equivocate. A single
 compromised service can present different histories to different
 auditors; registering with more than one service makes equivocation
 detectable, but the non-equivocation guarantee is per-service
-(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-6-2.20.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-6-2.22.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.21">Event source:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.22">
-          <p id="section-6-2.22.1">When completion or trigger-based discharge is used, it reports whether
+<dt id="section-6-2.23">Event source:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.24">
+          <p id="section-6-2.24.1">When completion or trigger-based discharge is used, it reports whether
 a completion event has occurred. It must report accurately and be
 authenticated. A compromised event source can keep a discharged entry
 derivable or falsely discharge one; the Authorization Server fails
 closed when it cannot determine the event status
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-completion" class="cite xref">I-D.draft-mcguinness-oauth-mission-completion</a>]</span>).<a href="#section-6-2.22.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-completion" class="cite xref">I-D.draft-mcguinness-oauth-mission-completion</a>]</span>).<a href="#section-6-2.24.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1840,6 +1857,10 @@ handles.<a href="#section-14-1" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-mission-audit">[I-D.draft-mcguinness-mission-audit]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Audit Transparency"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-audit</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-audit">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-audit</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-authority-server</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authority-server">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authority-server</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
         <dd>
