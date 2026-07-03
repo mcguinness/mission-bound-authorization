@@ -1,0 +1,693 @@
+
+
+
+
+Network Working Group                                      K. McGuinness
+Internet-Draft                                               Independent
+Intended status: Informational                               3 July 2026
+Expires: 4 January 2027
+
+
+                         Mission Security Model
+             draft-mcguinness-mission-security-model-latest
+
+Abstract
+
+   Mission-Bound Authorization for OAuth 2.0 and its companion profiles
+   spread enforcement across several components: an Authorization Server
+   derives and gates authority, a Policy Enforcement Point and Policy
+   Decision Point evaluate each action, a harness establishes a mediated
+   execution environment, a consent rendering layer discloses authority
+   to an Approver, and optional services report Mission state,
+   adjudicate requested authority, log evidence, and report completion
+   events.  Each profile states its own security considerations, but no
+   single document says which components must be trusted, what each
+   assumes of the others, and how the compromise of each degrades the
+   guarantees.  This document provides that consolidated view.  It is an
+   Informational security model for the Mission suite: it defines the
+   trusted base, the cross-cutting assumptions, and the consequence of
+   each component's compromise, and it points to the normative security
+   considerations of each profile rather than restating them.
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-
+   mcguinness-mission-security-model.html.  Status information for this
+   document may be found at https://datatracker.ietf.org/doc/draft-
+   mcguinness-mission-security-model/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/mcguinness/draft-mcguinness-oauth-mission.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 4 January 2027.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+   2.  Status: An Informational Model
+   3.  Conventions and Terminology
+   4.  Mission Substrate
+   5.  The Untrusted Agent
+   6.  The Trusted Base
+   7.  Cross-Cutting Assumptions
+   8.  What the Model Does and Does Not Guarantee
+   9.  Adversary Model and Coverage
+   10. Revocation-to-Action Latency
+   11. Documenting the Trusted Base
+   12. Retention and the Audit Horizon
+   13. Security Considerations
+   14. Privacy Considerations
+   15. IANA Considerations
+   16. References
+     16.1.  Normative References
+     16.2.  Informative References
+   Acknowledgments
+   Author's Address
+
+1.  Introduction
+
+   The Mission model treats the agent as part of the attack surface: an
+   agent may be prompt-injected or compromised, and the suite's purpose
+   is to bound what such an agent can do, not to make it trustworthy
+   ([I-D.draft-mcguinness-mission-runtime]).  Bounding the agent means
+   relying on other components: the Authorization Server that derives
+   and gates authority, the enforcement points that evaluate each
+   action, the harness that removes unmediated paths, and a set of
+   optional services.  Those components are the *trusted base*: the
+   parts that, if compromised, degrade or void the guarantees the suite
+   otherwise provides.
+
+   Each profile documents the security considerations local to its own
+   mechanism.  What no single profile provides, and what a reviewer or a
+   deploying operator needs, is the consolidated picture: the full
+   trusted base in one place, what each component must achieve, what it
+   assumes of the others, and what its compromise costs.  This document
+   is that picture.
+
+   This document defines no new mechanism, claim, or wire format.  It is
+   a model that aids review and deployment; the normative requirements
+   live in the profiles it references.
+
+2.  Status: An Informational Model
+
+   This document is Informational.  It does not place normative
+   requirements on implementations; the enforcement obligations are
+   defined by the issuance profile
+   ([I-D.draft-mcguinness-oauth-mission]) and its companions.  Where
+   this document uses words like "must," it describes an expectation the
+   consolidated model places on a deployment that claims the suite,
+   realized by the referenced profile, not a new conformance requirement
+   of its own.
+
+3.  Conventions and Terminology
+
+   This document uses Mission, Mission Issuer (Authorization Server),
+   Policy Enforcement Point (PEP), Policy Decision Point (PDP),
+   Approver, Subject, agent, Authority Set, and Mission state as defined
+   in [I-D.draft-mcguinness-oauth-mission] and
+   [I-D.draft-mcguinness-mission-runtime].
+
+4.  Mission Substrate
+
+   This model describes the components and trust relationships of the
+   Mission model, not of OAuth 2.0 mechanics.  Its analysis applies to
+   any substrate that provides the Mission primitives the profiles
+   consume: the identifier and origin, the state space with its only-
+   active rule, an authority representation with a subset rule, the
+   integrity-anchor envelope, and a Mission-bound credential.  The
+   issuance profile [I-D.draft-mcguinness-oauth-mission] is the OAuth
+   2.0 binding of those primitives and the substrate the profiles'
+   security considerations assume; a different binding re-derives only
+   the substrate-specific entries of this model.
+
+5.  The Untrusted Agent
+
+   The agent is not in the trusted base.  The model assumes the agent
+   can be prompt-injected, can be compromised, and can attempt any
+   action its position allows.  Every guarantee below is a bound on what
+   such an agent can achieve, and is stated relative to a trusted base
+   that excludes the agent.  Two structural choices carry this:
+
+   *  *Authority is fixed by an approval the agent cannot move.*
+      Authority is derived by the Authorization Server and committed at
+      the approval event, which may be asynchronous or may narrow the
+      proposed authority ([I-D.draft-mcguinness-oauth-mission],
+      [I-D.draft-mcguinness-oauth-mission-approval]); the agent proposes
+      but does not grant, and intent fields the agent can influence are
+      inert.
+
+   *  *The credential whose misuse is unacceptable is not held by the
+      agent.* Under mediated execution
+      ([I-D.draft-mcguinness-mission-runtime]) the PEP holds the sender-
+      constraint key, so a compromised agent cannot present a high-
+      consequence credential directly.
+
+   The agent and harness boundary assumes an isolation boundary between
+   them: process, host, or service separation within a single operator.
+   Without that separation, agent compromise and harness compromise are
+   one event, and the harness-compromise degradation (Section 6) applies
+   to a compromised agent.  A deployment claiming the runtime profile's
+   agent-compromise-resistant enforcement therefore isolates the
+   mediating PEP and its key custody from agent-facing components; the
+   harness profile requires this separation
+   ([I-D.draft-mcguinness-mission-harness]).
+
+6.  The Trusted Base
+
+   The following components are trusted to varying degrees.  For each:
+   what it must achieve, what it assumes of the others, and how its
+   compromise degrades the guarantees.  The authoritative security
+   considerations are in the cited profile.
+
+   Authorization Server (Mission Issuer):  The root of trust.  It
+      derives the Authority Set, runs the approval event, commits the
+      integrity anchors, and gates issuance on Mission state.  It must
+      derive faithfully and gate correctly; it assumes the Approver is
+      authenticated and the agent is untrusted.  Its compromise voids
+      the model: a compromised issuer can mint arbitrary authority.
+      This is the strongest trust assumption in the suite
+      ([I-D.draft-mcguinness-oauth-mission]).
+
+   Resource Authorization Server (cross-domain):  When cross-domain
+      access is used, a resource-side Authorization Server mints local
+      Mission-bound tokens that the Mission origin cannot observe.  It
+      must mint only within the audience and lifetime the cross-domain
+      grant scopes.  Its compromise mints arbitrary authority within its
+      own domain under the Mission's name; the damage is bounded by
+      audience scoping, short grant lifetimes, and audit, not by the
+      origin, which never sees these tokens
+      ([I-D.draft-mcguinness-oauth-mission]).
+
+   Policy Enforcement Point (PEP):  Sits at the last controllable
+      boundary before an action and obtains a permit before each
+      consequential action; under mediated execution it holds the
+      sender-constraint key.  It must be at the last boundary and must
+      not act without a permit; it assumes the harness leaves no
+      unmediated path.  A compromised PEP can decline to consult the PDP
+      or ignore its decision; the suite does not prevent this, and
+      evidence makes it detectable after the fact, not in the moment
+      ([I-D.draft-mcguinness-mission-runtime]).
+
+   Policy Decision Point (PDP):  Evaluates each action against the
+      Mission and returns a permit or deny.  It must evaluate faithfully
+      and fail closed; it assumes the inputs the PEP supplies are
+      authentic.  A compromised PDP can return arbitrary decisions; as
+      with the PEP, evidence detects this after the fact but does not
+      prevent it ([I-D.draft-mcguinness-mission-runtime]).
+
+   Mission state source:  Reports current Mission state for the
+      freshness the runtime layer requires, whether by introspection,
+      the Status surface, or pushed Signals.  It must report accurately
+      within the staleness bound and be authenticated and integrity-
+      protected.  A compromised or spoofed state source can report
+      active for a Mission that is revoked, defeating the kill switch;
+      the runtime layer fails closed when state cannot be established
+      within the bound ([I-D.draft-mcguinness-oauth-mission-status],
+      [I-D.draft-mcguinness-oauth-mission-signals],
+      [I-D.draft-mcguinness-mission-runtime]).
+
+   Harness:  Establishes the execution environment in which governed
+      work has no unmediated path to the actions the PEP mediates, and
+      binds sessions, queues, and caches to Mission state.  It must
+      ensure no unmediated egress and must re-check state.  A
+      compromised harness can hand the agent an unmediated path, which
+      defeats mediated execution for the classes that path reaches
+      ([I-D.draft-mcguinness-mission-harness]).
+
+   Orchestrator:  When multi-step unwinding is used, it drives
+      compensation of in-flight work after a Mission stops.  It must
+      derive each step's reversibility class from a trusted source, and
+      must compensate only under a documented authority basis: resource
+      policy (resource_policy) or a separate remedial Mission
+      ([I-D.draft-mcguinness-mission-orchestration]).  Its compromise
+      converts the kill switch into a channel for unauthorized remedial
+      actions, driving compensating writes under the guise of unwinding.
+
+   Consent rendering layer:  Renders the approved authority to the
+      Approver at the approval event.  It must render faithfully what is
+      committed.  A compromised renderer can display something other
+      than the committed disclosure; the rendering assurance ladder
+      bounds this by degree, up to an Approver authenticator signing the
+      disclosure commitment, but no server-side commitment proves what a
+      human perceived
+      ([I-D.draft-mcguinness-oauth-mission-consent-evidence]).
+
+   Access-request and approval workflow:  When requestable denials are
+      used, this workflow adjudicates an agent's request for authority
+      it discovers it needs, integrating the AuthZEN Access Request and
+      Approval Profile ([I-D.draft-mcguinness-mission-authzen]).  It
+      must not auto-approve a high-consequence escalation without an
+      independent approver.  A compromised approval service can grant
+      escalations the model would otherwise route to a human, so it is
+      in the trusted base wherever the access-request flow is enabled
+      ([I-D.draft-mcguinness-mission-runtime]).
+
+   Transparency Service:  When audit transparency is used, it is an
+      append-only, non-equivocating log that issues inclusion receipts.
+      It must not equivocate.  A single compromised service can present
+      different histories to different auditors; registering with more
+      than one service makes equivocation detectable, but the non-
+      equivocation guarantee is per-service
+      ([I-D.draft-mcguinness-mission-audit]).
+
+   Event source:  When completion or trigger-based discharge is used, it
+      reports whether a completion event has occurred.  It must report
+      accurately and be authenticated.  A compromised event source can
+      keep a discharged entry derivable or falsely discharge one; the
+      Authorization Server fails closed when it cannot determine the
+      event status ([I-D.draft-mcguinness-oauth-mission-completion]).
+
+7.  Cross-Cutting Assumptions
+
+   Three assumptions hold across the whole model:
+
+   *  *Sender-constrained credentials.* Mission-bound tokens are sender-
+      constrained ([I-D.draft-mcguinness-oauth-mission]); a token
+      exfiltrated without its proof-of-possession key is unusable.  The
+      model assumes the proof-of-possession mechanism is sound and keys
+      are protected by their holder.
+
+   *  *Fail-closed on uncertainty.* Wherever a trusted component cannot
+      establish the fact it needs (Mission state, a completion event, a
+      verifiable decision), the relying component refuses rather than
+      proceeds.  A deployment that fails open at any such point forfeits
+      the guarantee that point protects.
+
+   *  *Authority does not move on inert input.* Intent that the agent or
+      attacker-reachable content can influence (goal, purpose,
+      success_criteria, and disclosure-only audit material) is inert and
+      cannot derive, widen, or gate authority
+      ([I-D.draft-mcguinness-oauth-mission]).
+
+8.  What the Model Does and Does Not Guarantee
+
+   Given an intact trusted base, the model guarantees that a compromised
+   or injected agent cannot exceed the approved Authority Set and cannot
+   move authority by influencing inert intent; authority grows only by a
+   fresh approval that supersedes the prior Mission
+   ([I-D.draft-mcguinness-oauth-mission-expansion]), not by agent
+   action.  In a deployment that claims the runtime profile's agent-
+   compromise-resistant enforcement
+   ([I-D.draft-mcguinness-mission-runtime]), the model further
+   guarantees that such an agent cannot unilaterally take a high-
+   consequence action it does not hold a mediated credential for.  In
+   the base profiles the mechanisms behind that further guarantee
+   (mediated credential custody, no unmediated path, action-bound
+   approval, and an active-freshness state source) are recommendations,
+   not requirements, and a deployment that leaves them as
+   recommendations does not obtain it.  This matches the suite's front-
+   door framing: adopting the profiles does not by itself make a
+   deployment resistant to a compromised agent.  The model makes misuse
+   bounded and, where evidence is produced, attributable.
+
+   It does not make a compromised trusted component safe.  The
+   compromise of each component degrades a specific guarantee, as listed
+   in Section 6.  It does not verify the agent's reasoning or the
+   truthfulness of its outputs; semantic and intent verification are a
+   non-goal of the suite ([I-D.draft-mcguinness-oauth-mission]).  And it
+   inherits the threat models of the substrates the companions profile
+   (Token Exchange, Attenuating Agent Tokens, SCITT, Deferred Token
+   Response), which those substrates own.  Section 9 gives the per-
+   adversary-move detail: what addresses each move, and the residual it
+   leaves.
+
+9.  Adversary Model and Coverage
+
+   The trusted base (Section 6) is the component view; this is the
+   adversary view.  The adversary is assumed to control the agent, to
+   reach the content and inputs the agent processes (so it can attempt
+   prompt injection), and to capture tokens in transit.  The adversary
+   is assumed not to break the cryptographic primitives, not to forge an
+   authenticated component's signing key, and not to compromise a
+   trusted-base component; those last two are the residuals of
+   Section 6, not adversary moves this table covers.
+
+   The following maps each adversary move to the mechanism that
+   addresses it and to what is explicitly not stopped.  The residual
+   column is the honest part: it is what a deploying party still owns.
+
+   +==============+===========================+========================+
+   | Adversary    | Addressed by              | Residual: not          |
+   | move         |                           | stopped                |
+   +==============+===========================+========================+
+   | Compromised  | Authority fixed at the    | Misuse within the      |
+   | or injected  | approval event            | approved scope;        |
+   | agent acts   | (issuance); per-action    | low-consequence        |
+   | beyond its   | PDP check (runtime)       | authority the          |
+   | task         |                           | agent legitimately     |
+   |              |                           | holds                  |
+   +--------------+---------------------------+------------------------+
+   | Prompt       | Inert intent: goal,       | Injected text can      |
+   | injection    | purpose, success_criteria | still drive            |
+   | tries to     | never derive, widen, or   | actions already in     |
+   | widen        | gate authority            | scope                  |
+   | authority    |                           |                        |
+   +--------------+---------------------------+------------------------+
+   | Stolen or    | Sender-constraint (proof- | A token stolen         |
+   | exfiltrated  | of-possession); the high- | together with its      |
+   | token        | consequence key is held   | key; soundness of      |
+   |              | by the PEP, not the agent | the PoP mechanism      |
+   |              | (mediated execution)      |                        |
+   +--------------+---------------------------+------------------------+
+   | Token        | Permit bound to audience, | Correct binding        |
+   | replayed at  | resource, sub, client_id, | configuration is       |
+   | another      | and action; cross-domain  | the deployment's       |
+   | resource     | grant single-use and      |                        |
+   | (confused    | audienced                 |                        |
+   | deputy)      |                           |                        |
+   +--------------+---------------------------+------------------------+
+   | Parameters   | Parameter binding; the    | The PEP must sit       |
+   | change       | digest is reverified at   | at the last            |
+   | between      | the executing PEP         | controllable           |
+   | decision and | immediately before acting | boundary               |
+   | use (TOCTOU) |                           |                        |
+   +--------------+---------------------------+------------------------+
+   | Active       | Per-action runtime        | An issuance-only       |
+   | Mission used | enforcement, state re-    | deployment gets        |
+   | as ambient   | check, fail-closed on     | audit, not action-     |
+   | standing     | stale state               | time defense           |
+   | authority    |                           |                        |
+   +--------------+---------------------------+------------------------+
+   | Revoked or   | Issuance gating; runtime  | A window up to the     |
+   | expired      | state re-check within the | staleness bound or     |
+   | Mission      | staleness bound; short    | token TTL; a           |
+   | still acts   | token lifetimes           | spoofed state          |
+   | (kill        |                           | source (a trusted      |
+   | switch)      |                           | component)             |
+   +--------------+---------------------------+------------------------+
+   | Approver     | The rendered disclosure   | Comprehension: no      |
+   | approves     | is committed; rendering-  | server-side            |
+   | more than    | assurance ladder up to an | commitment proves      |
+   | was shown    | authenticator-signed      | what a human           |
+   |              | commitment                | perceived or           |
+   |              |                           | understood             |
+   +--------------+---------------------------+------------------------+
+   | Exfiltration | External communication is | PEP-placement          |
+   | of private   | a gated consequential     | completeness; no       |
+   | data (the    | action; harness leaves no | information-flow       |
+   | third leg of | unmediated path; session  | control, so a          |
+   | the lethal   | taint downgrades egress   | sequence of in-        |
+   | trifecta)    | after untrusted input     | scope steps can        |
+   |              | (optional; recommended,   | launder data           |
+   |              | not required)             |                        |
+   +--------------+---------------------------+------------------------+
+   | Offline sub- | Capability monotonicity   | Fan-out breadth is     |
+   | agent fan-   | (narrow-only) and the     | unobserved by the      |
+   | out abuse    | runtime kill-switch re-   | issuer; bounded by     |
+   |              | check on the carried      | depth and policy,      |
+   |              | chain                     | not by the issuer      |
+   +--------------+---------------------------+------------------------+
+   | Audit        | Transparency: append-only | Single-service         |
+   | tampered,    | log, inclusion receipts,  | equivocation (per-     |
+   | dropped, or  | non-equivocation          | service only;          |
+   | reordered    |                           | register with          |
+   |              |                           | several); a            |
+   |              |                           | producer can still     |
+   |              |                           | log a false record     |
+   |              |                           | (accountability,       |
+   |              |                           | not prevention)        |
+   +--------------+---------------------------+------------------------+
+   | Agent        | Not addressed             | Full: semantic and     |
+   | fabricates   |                           | grounding              |
+   | results or   |                           | verification are a     |
+   | acts on      |                           | non-goal; pair         |
+   | false data   |                           | with a grounding       |
+   |              |                           | layer if needed        |
+   +--------------+---------------------------+------------------------+
+   | A trusted-   | Not addressed; evidence   | Not prevented;         |
+   | base         | detects it after the fact | degrades the           |
+   | component is |                           | specific guarantee     |
+   | compromised  |                           | per Section 6          |
+   +--------------+---------------------------+------------------------+
+
+                                  Table 1
+
+   Three residuals are worth stating on their own, because they are the
+   limits most likely to matter and most often overstated away
+   elsewhere:
+
+   *  *Comprehension.* The suite can commit and bind what an Approver
+      was shown; it cannot prove what the Approver perceived or
+      understood.  No electronic-consent scheme can.
+
+   *  *Single-service equivocation.* Transparency is non-equivocating
+      only per service; a deployment that needs that property checked
+      registers with more than one independent service.
+
+   *  *Offline breadth.* Offline attenuation
+      ([I-D.draft-mcguinness-oauth-mission-attenuation]) bounds each
+      child to a narrowing of its parent, but the issuer does not
+      observe how many children are minted; breadth is bounded by depth
+      and policy, not by the issuer.
+
+   *  *Availability.* The model fails closed everywhere a trusted
+      component cannot establish the fact it needs (Section 7), which
+      trades availability for safety.  An attacker who degrades a state
+      source, an event stream, or a PDP does not gain unauthorized
+      action, but converts the attack into work stoppage and, for in-
+      flight work, unwind activity.  A deployment provisions state-
+      source, event-stream, and PDP availability accordingly, because
+      under this model their outage stops governed work rather than
+      loosening it.
+
+10.  Revocation-to-Action Latency
+
+   The kill switch is not instantaneous.  Between the moment a Mission
+   is revoked and the last possible consequential action under it there
+   is a window, and its size is a composition of the mechanisms a
+   deployment runs.  The following non-normative table names the
+   governing parameter at each layer; the end-to-end worst case for an
+   action class is the tightest layer the deployment enforces for that
+   class.
+
+   +=================+=====================+===========================+
+   | Configuration   | Worst-case window   | Governing                 |
+   |                 |                     | parameter                 |
+   +=================+=====================+===========================+
+   | Baseline (token | until the token     | access-token              |
+   | lifetime only)  | expires             | exp                       |
+   +-----------------+---------------------+---------------------------+
+   | With            | one introspection   | per-request               |
+   | introspection   | cycle               | introspection             |
+   |                 |                     | at the origin             |
+   +-----------------+---------------------+---------------------------+
+   | With Mission    | the staleness bound | published                 |
+   | Status          | of the status view  | status                    |
+   |                 |                     | staleness bound           |
+   +-----------------+---------------------+---------------------------+
+   | With Mission    | event delivery      | signal delivery           |
+   | Lifecycle       | latency, bounded by | latency plus              |
+   | Signals         | the poll fallback   | poll interval             |
+   +-----------------+---------------------+---------------------------+
+   | With runtime    | the per-class       | published per-            |
+   | enforcement     | freshness bound     | class staleness           |
+   |                 |                     | bound                     |
+   +-----------------+---------------------+---------------------------+
+
+                                  Table 2
+
+   The token lifetime and introspection layers are the issuance
+   profile's ([I-D.draft-mcguinness-oauth-mission]); Mission Status
+   ([I-D.draft-mcguinness-oauth-mission-status]), Mission Lifecycle
+   Signals ([I-D.draft-mcguinness-oauth-mission-signals]), and runtime
+   enforcement ([I-D.draft-mcguinness-mission-runtime]) each tighten the
+   window as their own profile defines.  A deployment reads the row for
+   the mechanism it runs, or the tightest of several, to state how long
+   a revoked Mission can still act.
+
+11.  Documenting the Trusted Base
+
+   A deployment cannot be evaluated against this model without knowing
+   which components it actually trusts.  The runtime profile already
+   requires a deployment to document its enforcement scope, including
+   its PEP locations, PDP identities, Mission state source, and the
+   execution paths it mediates ([I-D.draft-mcguinness-mission-runtime]).
+   This model recommends that a deployment claiming the Mission suite
+   extend that documentation to its full trusted base: which of the
+   components in Section 6 it relies on, which it does not deploy, and,
+   for each consequential action class, which components must be intact
+   for the class's guarantee to hold.  This documentation is what lets a
+   relying party or auditor reason about the deployment's actual
+   security posture rather than the model's idealized one.
+
+12.  Retention and the Audit Horizon
+
+   The guarantees this model states at audit time depend on artifacts
+   that several profiles retain independently: Consent Evidence
+   ([I-D.draft-mcguinness-oauth-mission-consent-evidence]), runtime
+   decision and execution evidence
+   ([I-D.draft-mcguinness-mission-runtime]), and, where audit
+   transparency is used, the receipts that stand over evidence a
+   deployment may later erase ([I-D.draft-mcguinness-mission-audit]).
+   Each of those profiles anchors its retention on the Mission's audit
+   horizon, the deployment-declared window that runs at least the
+   Mission's lifetime plus a post-terminal period
+   ([I-D.draft-mcguinness-oauth-mission]).  A deployment that retains
+   every such artifact for at least the audit horizon can answer, at
+   audit time, how long each artifact was to be kept for the guarantee
+   that rests on it to still hold; an artifact dropped before the
+   horizon forfeits the guarantee that depended on it.
+
+13.  Security Considerations
+
+   This document is itself a security-considerations document.  It
+   defines no mechanism and adds no attack surface.  Its content is the
+   consolidation above; the authoritative, normative security
+   considerations are those of the issuance profile
+   ([I-D.draft-mcguinness-oauth-mission]) and each companion it cites.
+   Where this document and a profile appear to differ, the profile
+   governs.
+
+14.  Privacy Considerations
+
+   The trusted components see Mission data: the Authorization Server and
+   PDP see the Authority Set, the consent rendering layer and Approver
+   see the disclosed authority, and the Transparency Service and state
+   sources see the Mission identifier and its activity over time.  The
+   single canonical mission_id is a durable cross-audience correlator
+   the suite acknowledges and does not yet narrow
+   ([I-D.draft-mcguinness-oauth-mission]); unlinkable or per-audience
+   presentation of Mission-bound authority is out of scope across the
+   suite.  Each profile's Privacy Considerations govern the data its own
+   component handles.
+
+15.  IANA Considerations
+
+   This document makes no IANA request.
+
+16.  References
+
+16.1.  Normative References
+
+   [I-D.draft-mcguinness-oauth-mission]
+              McGuinness, K., "Mission-Bound Authorization for OAuth
+              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
+              oauth-mission, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission>.
+
+16.2.  Informative References
+
+   [I-D.draft-mcguinness-mission-audit]
+              McGuinness, K., "Mission Audit Transparency", Work in
+              Progress, Internet-Draft, draft-mcguinness-mission-audit,
+              2026, <https://datatracker.ietf.org/doc/html/draft-
+              mcguinness-mission-audit>.
+
+   [I-D.draft-mcguinness-mission-authzen]
+              McGuinness, K., "Mission-Bound Runtime Enforcement:
+              AuthZEN Profile", Work in Progress, Internet-Draft, draft-
+              mcguinness-mission-authzen, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              mission-authzen>.
+
+   [I-D.draft-mcguinness-mission-harness]
+              McGuinness, K., "Mission-Aware Agent Harnesses", Work in
+              Progress, Internet-Draft, draft-mcguinness-mission-
+              harness, 2026, <https://datatracker.ietf.org/doc/html/
+              draft-mcguinness-mission-harness>.
+
+   [I-D.draft-mcguinness-mission-orchestration]
+              McGuinness, K., "Mission Orchestration and Unwinding",
+              Work in Progress, Internet-Draft, draft-mcguinness-
+              mission-orchestration, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              mission-orchestration>.
+
+   [I-D.draft-mcguinness-mission-runtime]
+              McGuinness, K., "Mission-Bound Runtime Enforcement", Work
+              in Progress, Internet-Draft, draft-mcguinness-mission-
+              runtime, 2026, <https://datatracker.ietf.org/doc/html/
+              draft-mcguinness-mission-runtime>.
+
+   [I-D.draft-mcguinness-oauth-mission-approval]
+              McGuinness, K., "Mission Deferred Approval for OAuth 2.0",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              mission-approval, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-approval>.
+
+   [I-D.draft-mcguinness-oauth-mission-attenuation]
+              McGuinness, K., "Mission Offline Attenuation for OAuth
+              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
+              oauth-mission-attenuation, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-attenuation>.
+
+   [I-D.draft-mcguinness-oauth-mission-completion]
+              McGuinness, K., "Mission Completion for OAuth 2.0", Work
+              in Progress, Internet-Draft, draft-mcguinness-oauth-
+              mission-completion, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-completion>.
+
+   [I-D.draft-mcguinness-oauth-mission-consent-evidence]
+              McGuinness, K., "Mission Consent Evidence for OAuth 2.0",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              mission-consent-evidence, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-consent-evidence>.
+
+   [I-D.draft-mcguinness-oauth-mission-expansion]
+              McGuinness, K., "Mission Expansion for OAuth 2.0", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-mission-
+              expansion, 2026, <https://datatracker.ietf.org/doc/html/
+              draft-mcguinness-oauth-mission-expansion>.
+
+   [I-D.draft-mcguinness-oauth-mission-signals]
+              McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              mission-signals, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-signals>.
+
+   [I-D.draft-mcguinness-oauth-mission-status]
+              McGuinness, K., "Mission Status and Lifecycle for OAuth
+              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
+              oauth-mission-status, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-status>.
+
+Acknowledgments
+
+   This document is part of the Mission-Bound Authorization for OAuth
+   2.0 work and consolidates the trusted base and security assumptions
+   that its profiles establish individually.
+
+Author's Address
+
+   Karl McGuinness
+   Independent
+   Email: public@karlmcguinness.com
