@@ -146,6 +146,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
+  I-D.draft-mcguinness-mission-authority-server:
+    title: "Mission Authority Server"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-mission-authority-server-latest
 
 --- abstract
 
@@ -276,6 +285,21 @@ Resource Authorization Server (cross-domain):
   by audience scoping, short grant lifetimes, and audit, not by the
   origin, which never sees these tokens
   ({{I-D.draft-mcguinness-oauth-mission}}).
+
+Mission Authority Server (standalone binding):
+: When the standalone Mission Authority Server binding is used, a
+  service outside the OAuth Authorization Server implements the Mission
+  Issuer role: it must run the approval ceremony faithfully, keep the
+  Mission record and its anchors intact, and serve accurate Mission
+  state, while the deployment's tokens remain ordinary and carry no
+  Mission binding. Its compromise is equivalent to Mission Issuer
+  compromise (forged approvals, altered records, false state), with one
+  addition: in this mode the PDP's credential-to-Mission join is the
+  only binding between a presented credential and a Mission, so a
+  compromised Mission Authority Server combined with the PDP's trust in
+  it yields arbitrary attribution of authority to any credential the
+  join accepts
+  ({{I-D.draft-mcguinness-mission-authority-server}}).
 
 Policy Enforcement Point (PEP):
 : Sits at the last controllable boundary before an action and obtains a
