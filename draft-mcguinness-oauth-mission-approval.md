@@ -42,15 +42,15 @@ normative:
       Internet-Draft: draft-mcguinness-oauth-mission-latest
 
 informative:
-  I-D.draft-mcguinness-oauth-mission-shaping:
-    title: "Mission Intent Shaping for OAuth 2.0"
+  I-D.draft-mcguinness-mission-shaping:
+    title: "Mission Intent Shaping"
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-shaping-latest
+      Internet-Draft: draft-mcguinness-mission-shaping-latest
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
     title: "Mission Consent Evidence for OAuth 2.0"
     author:
@@ -403,7 +403,7 @@ Consent evidence:
 Shaping:
 : The `rejected_scope` and `rejected_authorization_details` parameters
   are the machine-readable input a client-side shaper
-  ({{I-D.draft-mcguinness-oauth-mission-shaping}}) uses to plan the
+  ({{I-D.draft-mcguinness-mission-shaping}}) uses to plan the
   narrowed revision. Shaping narrows a proposal before submission; this
   profile narrows it during review. Together they let an orchestrator
   propose, learn what was refused, and re-propose without losing state.

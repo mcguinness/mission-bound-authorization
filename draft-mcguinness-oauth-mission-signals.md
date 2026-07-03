@@ -73,7 +73,7 @@ informative:
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
   I-D.draft-mcguinness-oauth-mission-child-delegation:
-    title: "Child Mission Delegation for OAuth 2.0"
+    title: "Mission Child Delegation for OAuth 2.0"
     author:
       -
         ins: K. McGuinness
