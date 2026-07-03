@@ -92,15 +92,20 @@ non-active. A state a companion profile adds (such as `suspended`,
 `superseded`, or `cascaded`) therefore fails safe for a consumer that
 predates it.
 
+The Architecture document (first entry in the catalog below) is the
+citable form of this view: components, the substrate interface, the
+layers, deployment patterns, and the requirements the family answers.
+
 ## How to read this suite
 
 Everyone starts with the core's Introduction, Overview, and
 terminology; every companion assumes them. From there, follow the path
 that matches your role:
 
-- **Understand the model** (an afternoon): the problem and Mission
-  sections above, the core's Introduction and Overview, then the
-  Security Model for the trust picture in one view.
+- **Understand the model** (an afternoon): the Architecture document
+  (the citable form of this page's structural view), then the core's
+  Introduction and Overview, then the Security Model for the trust
+  picture in one view.
 - **Implement issuance at an Authorization Server** (identity vendors):
   the core, then Status and Signals (the state surfaces), Consent
   Evidence (approval-surface evidence), Expansion and Completion
@@ -204,6 +209,9 @@ decide what to build on now.
   authority server composes stable profiles, but its PDP join mechanism
   is new). Each names a stable path to prefer where one exists.
 
+The architecture and security model are Informational companions and
+sit outside these buckets.
+
 In short: the Enforced bundle is built entirely from stable drafts; the
 experimental profiles are additive and can wait.
 
@@ -220,12 +228,28 @@ Server's own surfaces (issuance, approval, lifecycle, evidence of
 consent) keep "oauth" in their draft names. Profiles that specify
 components outside the Authorization Server (runtime enforcement and
 its AuthZEN binding, the agent harness, orchestration, intent shaping,
-audit transparency, the security model, the standalone authority
-server, and the mandate) are named without it: they are defined against
+audit transparency, the security model, the architecture, the
+standalone authority server, and the mandate) are named without it:
+they are defined against
 the Mission model's substrate primitives, each names those primitives
 in a Mission Substrate section, and the core is that model's OAuth 2.0
 binding. Another mission-based protocol that supplies the same
 primitives can host them unchanged.
+
+### Architecture
+
+#### An Architecture for Mission-Bound Authorization
+
+The single structural view: roles and components, the substrate
+interface (the primitives a binding provides and the profiles consume),
+the layers, deployment patterns, the requirements the family answers,
+and the document map. Informational; it defines no mechanism, and the
+profiles remain authoritative. Read this first.
+
+* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-architecture.html)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-architecture)
+* [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-architecture)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-architecture.diff)
 
 ### The model and its bindings
 
