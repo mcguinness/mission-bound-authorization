@@ -4,12 +4,12 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                               2 July 2026
-Expires: 3 January 2027
+Intended status: Informational                               3 July 2026
+Expires: 4 January 2027
 
 
-                  Mission Intent Shaping for OAuth 2.0
-             draft-mcguinness-oauth-mission-shaping-latest
+                         Mission Intent Shaping
+                draft-mcguinness-mission-shaping-latest
 
 Abstract
 
@@ -34,9 +34,9 @@ About This Document
 
    The latest revision of this draft can be found at
    https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-
-   mcguinness-oauth-mission-shaping.html.  Status information for this
+   mcguinness-mission-shaping.html.  Status information for this
    document may be found at https://datatracker.ietf.org/doc/draft-
-   mcguinness-oauth-mission-shaping/.
+   mcguinness-mission-shaping/.
 
    Source for this draft and an issue tracker can be found at
    https://github.com/mcguinness/draft-mcguinness-oauth-mission.
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 3 January 2027.
+   This Internet-Draft will expire on 4 January 2027.
 
 Copyright Notice
 
@@ -78,40 +78,41 @@ Table of Contents
      1.1.  Why This Profile Is Informational
    2.  Relationship to the Issuance Profile
    3.  Conventions and Terminology
-   4.  Shaper Role and Trust Boundary
-     4.1.  Client-Side Placement
-     4.2.  The Shaper Proposes; It Does Not Issue
-     4.3.  Deployment Roles
-   5.  Processing Model
-   6.  Mission Intent Construction
-     6.1.  Authority Ceiling and Default Deny
-     6.2.  Delegation and Child Work
-     6.3.  Construction Guidance
-   7.  Ambiguity Handling
-     7.1.  Clarifications
-     7.2.  Refusal
-   8.  Capability and Resource Resolution
-   9.  Shaping Evidence
-     9.1.  Integrity and the Evidence Hash
-     9.2.  Illustrative Evidence (Non-Normative)
-   10. Worked Example
-   11. Mission Issuer Handling
-   12. Composition
-     12.1.  Entering the Issuance Flow
-     12.2.  Runtime Enforcement
-   13. Exposing Shaping as a Service
-   14. Security Considerations
-     14.1.  Model Output Is Not Authority
-     14.2.  Shaper Compromise Does Not Directly Grant Authority
-     14.3.  Prompt Injection and Untrusted Content
-     14.4.  Silent Broadening and Stale Capability Sources
-     14.5.  Shaper-to-Client Integrity in a Multi-Process Client
-     14.6.  Confidentiality of Prompt Content
-   15. Privacy Considerations
-   16. IANA Considerations
-   17. References
-     17.1.  Normative References
-     17.2.  Informative References
+   4.  Mission Substrate
+   5.  Shaper Role and Trust Boundary
+     5.1.  Client-Side Placement
+     5.2.  The Shaper Proposes; It Does Not Issue
+     5.3.  Deployment Roles
+   6.  Processing Model
+   7.  Mission Intent Construction
+     7.1.  Authority Ceiling and Default Deny
+     7.2.  Delegation and Child Work
+     7.3.  Construction Guidance
+   8.  Ambiguity Handling
+     8.1.  Clarifications
+     8.2.  Refusal
+   9.  Capability and Resource Resolution
+   10. Shaping Evidence
+     10.1.  Integrity and the Evidence Hash
+     10.2.  Illustrative Evidence (Non-Normative)
+   11. Worked Example
+   12. Mission Issuer Handling
+   13. Composition
+     13.1.  Entering the Issuance Flow
+     13.2.  Runtime Enforcement
+   14. Exposing Shaping as a Service
+   15. Security Considerations
+     15.1.  Model Output Is Not Authority
+     15.2.  Shaper Compromise Does Not Directly Grant Authority
+     15.3.  Prompt Injection and Untrusted Content
+     15.4.  Silent Broadening and Stale Capability Sources
+     15.5.  Shaper-to-Client Integrity in a Multi-Process Client
+     15.6.  Confidentiality of Prompt Content
+   16. Privacy Considerations
+   17. IANA Considerations
+   18. References
+     18.1.  Normative References
+     18.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -132,7 +133,7 @@ Table of Contents
    Intent before the issuance profile's approval flow begins.  The
    shaper can be a deterministic rules engine, a form, an LLM-assisted
    function, or a workflow.  Whatever its implementation, its output is
-   only a proposal (Section 4.2).
+   only a proposal (Section 5.2).
 
    The purpose of this profile is to make shaping auditable and fail
    closed.  When a task request is ambiguous, the shaper does not
@@ -160,7 +161,7 @@ Table of Contents
    posture, and recommended behavior; it does not define a portable
    shaping protocol, register a media type or claim name, or define a
    conformance test suite.  A deployment that exposes shaping as a
-   network service MAY do so (Section 13), but that surface is a local
+   network service MAY do so (Section 14), but that surface is a local
    implementation detail, not an interoperability contract.
 
 2.  Relationship to the Issuance Profile
@@ -172,17 +173,17 @@ Table of Contents
 
    This document describes:
 
-   *  the shaper's role and trust boundary (Section 4);
+   *  the shaper's role and trust boundary (Section 5);
 
    *  a processing model and recommended Mission Intent construction
-      (Section 5, Section 6);
+      (Section 6, Section 7);
 
    *  recommended ambiguity, refusal, and capability-resolution behavior
-      (Section 7, Section 8);
+      (Section 8, Section 9);
 
-   *  Shaping Evidence, an audit artifact (Section 9); and
+   *  Shaping Evidence, an audit artifact (Section 10); and
 
-   *  how a shaped proposal enters the issuance flow (Section 12).
+   *  how a shaped proposal enters the issuance flow (Section 13).
 
    This document does not define a new OAuth grant type, a new access
    token format, a policy language, a runtime authorization decision
@@ -217,7 +218,7 @@ Table of Contents
    the member descriptions in the surrounding text are authoritative.
    This document uses JSON [RFC8259] as the data model for the
    illustrative objects, and JCS [RFC8785] where a hash is computed over
-   Shaping Evidence (Section 9).
+   Shaping Evidence (Section 10).
 
    This document additionally uses:
 
@@ -241,29 +242,43 @@ Table of Contents
       that produced the Mission Intent proposal.  Audit material, not
       authority.
 
-4.  Shaper Role and Trust Boundary
+4.  Mission Substrate
+
+   This document is defined against the Mission model rather than
+   against OAuth 2.0 mechanics.  A shaper consumes two substrate
+   primitives: the Mission Intent structure it proposes, and the
+   submission channel through which a proposal reaches the Mission
+   Issuer as untrusted input (Pushed Authorization Requests in the OAuth
+   binding); Shaping Evidence additionally uses the substrate's
+   integrity-anchor envelope.  The issuance profile
+   [I-D.draft-mcguinness-oauth-mission] defines these for OAuth 2.0.
+   Another authorization substrate that accepts a structured, untrusted
+   task proposal and commits it at approval can host the shaping
+   practices described here unchanged.
+
+5.  Shaper Role and Trust Boundary
 
    The Mission Shaper occupies a single, narrow role.  This section
    defines that role and the trust boundary the shaper does not cross.
    It is the stable core of this profile.
 
-4.1.  Client-Side Placement
+5.1.  Client-Side Placement
 
    The shaper executes on the client side of the Mission-Bound
    Authorization trust boundary: in the same trust domain as the
    requesting client that will submit the Mission Intent.  Its output is
    consumed by that client and submitted to the Mission Issuer through
-   the issuance profile's mission_intent submission (Section 12).
+   the issuance profile's mission_intent submission (Section 13).
 
    The shaper is not a separate principal.  It has no identity of its
    own to the Mission Issuer; the Mission Issuer sees the requesting
    client.  A deployment MAY factor the shaper into its own process or
-   network service for engineering reasons (Section 13), but doing so
+   network service for engineering reasons (Section 14), but doing so
    does not make the shaper a principal to the Authorization Server and
    does not move it across the trust boundary: it remains client-side
    machinery that produces an untrusted proposal.
 
-4.2.  The Shaper Proposes; It Does Not Issue
+5.2.  The Shaper Proposes; It Does Not Issue
 
    The Mission Shaper MUST NOT issue, derive, or certify authority of
    any kind.  It produces a Mission Intent proposal, which is untrusted
@@ -284,7 +299,7 @@ Table of Contents
       role and is NOT RECOMMENDED.  A deployment MAY integrity-protect
       shaper output for client-internal reasons (for example, to detect
       tampering between the shaper and the submission step in a multi-
-      process client, Section 14.5), but that protection has no
+      process client, Section 15.5), but that protection has no
       authority semantics at the Mission Issuer and MUST NOT be relied
       upon beyond the client.
 
@@ -310,7 +325,7 @@ Table of Contents
       the client transmits it; the Mission Issuer decides what to do
       with it.
 
-4.3.  Deployment Roles
+5.3.  Deployment Roles
 
    This profile separates four roles that implementations often
    collapse:
@@ -332,7 +347,7 @@ Table of Contents
    authority boundary: shaping produces a proposal, issuance creates an
    approved Mission, and runtime enforcement permits or denies actions.
 
-5.  Processing Model
+6.  Processing Model
 
    A sound shaper processes a request in this order:
 
@@ -342,18 +357,18 @@ Table of Contents
        trusted context, and facts inferred by the shaper.
 
    3.  Resolve candidate resources and actions against capability
-       sources (Section 8).
+       sources (Section 9).
 
    4.  Apply deployment shaping policy, including authority ceilings and
        risk classification.
 
-   5.  Detect material ambiguity (Section 7).
+   5.  Detect material ambiguity (Section 8).
 
    6.  Produce an outcome: a proposal, a request for clarification, or a
        refusal.
 
    7.  Record Shaping Evidence and, for a proposal, optionally a
-       shaping_evidence_hash (Section 9).
+       shaping_evidence_hash (Section 10).
 
    The shaper SHOULD NOT skip capability resolution merely because a
    task is natural-language plausible.  A request such as "email the
@@ -361,7 +376,7 @@ Table of Contents
    template, or data source is allowed unless the deployment's
    capability sources or policy resolve those details.
 
-6.  Mission Intent Construction
+7.  Mission Intent Construction
 
    A Mission Intent proposal MUST satisfy the syntactic requirements of
    the issuance profile's mission_intent object
@@ -383,15 +398,15 @@ Table of Contents
    not inputs from the shaper.  A shaper that has resolved such facts
    (for example, the actions a resource supports, or that the task
    implies delegated execution) records them in Shaping Evidence
-   (Section 9), where the Mission Issuer MAY consult them, rather than
+   (Section 10), where the Mission Issuer MAY consult them, rather than
    placing them in the proposal.
 
    A sound shaper does not include a resource in the proposal merely
    because the task text implies it might be useful.  The shaper should
-   have a resolution basis under Section 8, or it should produce a
+   have a resolution basis under Section 9, or it should produce a
    clarification request or a refusal.
 
-6.1.  Authority Ceiling and Default Deny
+7.1.  Authority Ceiling and Default Deny
 
    A sound shaper applies a default-deny posture.  The Mission Intent
    proposal should contain only resources that have a positive basis in
@@ -429,7 +444,7 @@ Table of Contents
    auditable across domains even though the Mission Issuer's policy
    decision of what to narrow to stays local.  The shaper still proposes
    only; the Mission Issuer validates, narrows, and binds authority at
-   approval (Section 4.2).
+   approval (Section 5.2).
 
    When a deployment or caller supplies an authority ceiling, the
    proposal MUST be a subset of it.  If the task cannot be completed
@@ -440,14 +455,14 @@ Table of Contents
    not satisfy the task.  The Mission Issuer remains responsible for
    enforcing its own ceiling even when no caller ceiling is present.
 
-6.2.  Delegation and Child Work
+7.2.  Delegation and Child Work
 
    The shaper does not author a delegation entry: delegation is a member
    of the Authority Set the Mission Issuer derives
    ([I-D.draft-mcguinness-oauth-mission]), not of the Mission Intent
    proposal.  If the task implies use of sub-agents, background workers,
    or delegated execution, the shaper SHOULD record that fact in Shaping
-   Evidence (Section 9) so the Mission Issuer can derive delegation on
+   Evidence (Section 10) so the Mission Issuer can derive delegation on
    the relevant Authority Set entry or refuse.  The shaper MAY also
    describe the desired delegation bound in free-text constraints or
    success_criteria.  A sound shaper does not infer delegated execution
@@ -455,7 +470,7 @@ Table of Contents
    actor needs explicit authority derived by the Mission Issuer, not
    session ancestry.
 
-6.3.  Construction Guidance
+7.3.  Construction Guidance
 
    The following maps a prompt or trigger onto the Mission Intent
    fields.  It is guidance, not a normative algorithm; the SHOULD/MUST
@@ -472,7 +487,7 @@ Table of Contents
      |                  | consent; preserve the   | contains         |
      |                  | user's framing so the   | instructions or  |
      |                  | disclosure matches      | commands         |
-     |                  | their understanding.    | (Section 14.3).  |
+     |                  | their understanding.    | (Section 15.3).  |
      +------------------+-------------------------+------------------+
      | resources        | Enumerate, as absolute  | SHOULD NOT widen |
      |                  | URIs, the resources,    | beyond what the  |
@@ -529,7 +544,7 @@ Table of Contents
 
                                   Table 1
 
-7.  Ambiguity Handling
+8.  Ambiguity Handling
 
    A sound shaper classifies material ambiguity.  Ambiguity is material
    when choosing one interpretation over another would change the
@@ -563,7 +578,7 @@ Table of Contents
    reason to skip the Mission Issuer consent step: the shaper is not the
    Approver's agent for consent.
 
-7.1.  Clarifications
+8.1.  Clarifications
 
    A clarification SHOULD be phrased so the requester can understand the
    authority consequence of each answer.  "Need more scope?" is not
@@ -573,7 +588,7 @@ Table of Contents
    the shaper will do if it is left unanswered (refuse, narrow, or
    wait).
 
-7.2.  Refusal
+8.2.  Refusal
 
    There are inputs a shaper SHOULD refuse to shape.  Refusal is a
    shaper-internal decision; it requires no Mission Issuer involvement,
@@ -608,7 +623,7 @@ Table of Contents
    Approver's; cost is a runtime concern.  Refusing on those grounds
    substitutes the shaper's judgment for the Approver's.
 
-8.  Capability and Resource Resolution
+9.  Capability and Resource Resolution
 
    Before proposing a resource, a sound shaper establishes a resolution
    basis.  The basis is one of:
@@ -626,7 +641,7 @@ Table of Contents
 
    A sound shaper records the resolution basis in Shaping Evidence.  A
    model-generated capability name with none of these bases is not
-   resolved, and a sound shaper treats it as unresolved (Section 7.2).
+   resolved, and a sound shaper treats it as unresolved (Section 8.2).
 
    For each resolved capability, Shaping Evidence SHOULD record what was
    requested, what it resolved to, the basis, the source consulted (for
@@ -635,7 +650,7 @@ Table of Contents
    can detect drift.  A confidence value, if recorded, is audit evidence
    only and MUST NOT be treated as authority.
 
-9.  Shaping Evidence
+10.  Shaping Evidence
 
    Shaping Evidence records how a proposal was produced.  It is audit
    material: it does not grant authority and MUST NOT be used by a
@@ -667,7 +682,7 @@ Table of Contents
    policy_decisions:  Policy rules applied during shaping.
 
    capability_resolutions:  Each resource or action and its resolution
-      basis (Section 8).
+      basis (Section 9).
 
    ambiguities:  Material ambiguities and how each was handled.
 
@@ -676,9 +691,9 @@ Table of Contents
 
    model_trace:  Model prompts, outputs, or tool calls used during
       shaping.  When retained it MUST be treated as sensitive audit data
-      (Section 15) and MUST NOT be rendered as authority.
+      (Section 16) and MUST NOT be rendered as authority.
 
-9.1.  Integrity and the Evidence Hash
+10.1.  Integrity and the Evidence Hash
 
    A deployment MAY bind a proposal to its evidence so the Mission
    record can cite how the proposal was produced.  When it does:
@@ -709,7 +724,7 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission]), so the cited evidence stays
    reproducible for that record.
 
-9.2.  Illustrative Evidence (Non-Normative)
+10.2.  Illustrative Evidence (Non-Normative)
 
    {
      "shaper_id": "mission-shaper.example.com",
@@ -731,7 +746,7 @@ Table of Contents
      ]
    }
 
-10.  Worked Example
+11.  Worked Example
 
    alice tells her agent, in free text: "reconcile our Q3 invoices and
    post any adjustments under $500."  The shaper turns that open-ended
@@ -754,7 +769,7 @@ Table of Contents
      "mission_expiry": "2026-11-05T00:00:00Z"
    }
 
-   This is only a proposal (Section 4.2).  The Mission Issuer, not the
+   This is only a proposal (Section 5.2).  The Mission Issuer, not the
    shaper, validates it, narrows it to policy, and derives the concrete
    Authority Set the agent will be bound to: a mission_resource_access
    entry for https://erp.example.com with invoices.read constrained to
@@ -764,9 +779,9 @@ Table of Contents
    invariants (period, amount, tenant) are what bound an open-ended task
    whose individual invoices were unknown when the goal was written.
    Had the request been ambiguous about which entity's invoices, the
-   shaper would have asked alice rather than guess (Section 7.1).
+   shaper would have asked alice rather than guess (Section 8.1).
 
-11.  Mission Issuer Handling
+12.  Mission Issuer Handling
 
    A Mission Issuer that receives a shaped Mission Intent MAY use a
    shaping_evidence_hash and Shaping Evidence as input to approval and
@@ -783,9 +798,9 @@ Table of Contents
    than submit a proposal built against a capability catalog or policy
    version that has since changed.
 
-12.  Composition
+13.  Composition
 
-12.1.  Entering the Issuance Flow
+13.1.  Entering the Issuance Flow
 
    Mission-Bound Authorization for OAuth 2.0
    [I-D.draft-mcguinness-oauth-mission] defines a mission_intent
@@ -798,26 +813,26 @@ Table of Contents
 
    The shaper does not invoke the PAR endpoint or the Authorization
    Endpoint and does not handle the authorization response.  Those are
-   requesting-client responsibilities (Section 4.2).  The shaper hands
+   requesting-client responsibilities (Section 5.2).  The shaper hands
    its output to the requesting client, which performs the OAuth flow
    and MAY also convey a shaping_evidence_hash as deployment extension
    data so the Mission record can cite the evidence.  Conveying it does
    not require the Mission Issuer to trust the shaper.
 
-12.2.  Runtime Enforcement
+13.2.  Runtime Enforcement
 
-   Mission-Bound Runtime Enforcement for OAuth 2.0
-   [I-D.draft-mcguinness-oauth-mission-runtime] defines the per-action
-   PDP and PEP contract.  The runtime does not consume shaper output.
-   It consumes the Mission Intent and the Authority Set on the Mission
+   Mission-Bound Runtime Enforcement
+   [I-D.draft-mcguinness-mission-runtime] defines the per-action PDP and
+   PEP contract.  The runtime does not consume shaper output.  It
+   consumes the Mission Intent and the Authority Set on the Mission
    record, both produced by the Mission Issuer, not by the shaper.  A
    runtime that reads Shaping Evidence for an authorization decision is
    misusing it.
 
-13.  Exposing Shaping as a Service
+14.  Exposing Shaping as a Service
 
    This profile requires no shaping endpoint, and a shaper is a client-
-   side function (Section 4.1).  A deployment that nevertheless factors
+   side function (Section 5.1).  A deployment that nevertheless factors
    shaping into a network service for engineering reasons MAY expose it
    over HTTPS.  The request and response shapes such a service uses are
    a local implementation detail, not an interoperability contract, and
@@ -837,16 +852,16 @@ Table of Contents
    task, tenant, or resource information; an anonymous shaping endpoint
    is appropriate only for public, non-sensitive tasks.  Exposing the
    shaper this way does not change its role: it remains client-side
-   machinery that produces an untrusted proposal (Section 4), and it is
+   machinery that produces an untrusted proposal (Section 5), and it is
    not a principal to the Authorization Server.
 
-14.  Security Considerations
+15.  Security Considerations
 
    The shaper sits at the prompt-to-Intent boundary.  Its security
    properties follow from the role contract: the shaper proposes, and
    authority is created only at the Mission Issuer's approval event.
 
-14.1.  Model Output Is Not Authority
+15.1.  Model Output Is Not Authority
 
    A model-based shaper can draft a Mission Intent, but the model MUST
    NOT be the authority that grants or widens access.  The approved
@@ -859,7 +874,7 @@ Table of Contents
    identifier and version in Shaping Evidence so failures can be
    attributed.
 
-14.2.  Shaper Compromise Does Not Directly Grant Authority
+15.2.  Shaper Compromise Does Not Directly Grant Authority
 
    A compromised shaper can produce arbitrary Mission Intent and can
    suppress ambiguity, but it cannot, by itself, cause the Mission
@@ -873,7 +888,7 @@ Table of Contents
    validate and narrow the proposal; deployments SHOULD monitor shaper
    versions and evidence for anomalous broadening.
 
-14.3.  Prompt Injection and Untrusted Content
+15.3.  Prompt Injection and Untrusted Content
 
    The shaper's input is, by assumption, partially or wholly attacker-
    influenceable: prompts may contain pasted content, content the user
@@ -891,7 +906,7 @@ Table of Contents
        instructions to the shaper.  Do not let it alter shaper policy or
        override deployment defaults.
 
-   2.  Apply the refusal behavior of Section 7.2 when the input exhibits
+   2.  Apply the refusal behavior of Section 8.2 when the input exhibits
        injection patterns.
 
    3.  Do not echo verbatim prompt-derived instruction text into goal or
@@ -900,7 +915,7 @@ Table of Contents
        came from the user.
 
    4.  Use the capability sources' resolved vocabulary as a hard
-       allowlist (Section 8); do not infer new authority types from the
+       allowlist (Section 9); do not infer new authority types from the
        prompt.
 
    5.  Record the prompt, the parsed intent, and the chosen defaults in
@@ -914,17 +929,17 @@ Table of Contents
    Mission Issuer that renders disclosure truthfully together make
    injection visible at the approval step.
 
-14.4.  Silent Broadening and Stale Capability Sources
+15.4.  Silent Broadening and Stale Capability Sources
 
    The primary failure mode is silent broadening: a vague goal becomes a
-   wide Authority Set. The ambiguity rules of Section 7 are intended to
+   wide Authority Set. The ambiguity rules of Section 8 are intended to
    fail closed by requiring clarification, narrowing, or refusal.  A
    proposal shaped against an old catalog can also resolve the wrong
    capability; capability resolutions SHOULD record source digests
-   (Section 8) and deployments SHOULD re-shape when catalog data is
+   (Section 9) and deployments SHOULD re-shape when catalog data is
    volatile, so approval and runtime enforcement can detect drift.
 
-14.5.  Shaper-to-Client Integrity in a Multi-Process Client
+15.5.  Shaper-to-Client Integrity in a Multi-Process Client
 
    In a client where the shaper runs in a different process or machine
    from the OAuth submission code, the shaper-to-submission step is an
@@ -937,9 +952,9 @@ Table of Contents
    the submission code (a client-local signature, a process-isolated
    channel).  Such protection has no semantics at the Mission Issuer and
    MUST NOT be carried into the Mission Intent as if it did
-   (Section 4.2).
+   (Section 5.2).
 
-14.6.  Confidentiality of Prompt Content
+15.6.  Confidentiality of Prompt Content
 
    Prompts may carry sensitive content (personal data, business data,
    free-form expression).  The shaper SHOULD apply the requesting
@@ -949,7 +964,7 @@ Table of Contents
    same controls the client applies to any other prompt or user-content
    log.
 
-15.  Privacy Considerations
+16.  Privacy Considerations
 
    The shaper sits where a user's natural-language prompt, which may
    carry personal data, business-confidential content, or free-form
@@ -961,7 +976,7 @@ Table of Contents
    consent disclosure the Approver reads and which may be retained in
    the Mission record.  A shaper SHOULD carry into these fields only the
    content needed to describe the task, SHOULD NOT widen resources or
-   echo unrelated prompt content (Section 6), and SHOULD avoid copying
+   echo unrelated prompt content (Section 7), and SHOULD avoid copying
    third-party personal data into goal where a non-identifying
    description suffices.
 
@@ -975,12 +990,12 @@ Table of Contents
    prompt.
 
    The shaper introduces no identifier of its own and is not a separate
-   principal to the Mission Issuer (Section 4).  It therefore adds no
+   principal to the Mission Issuer (Section 5).  It therefore adds no
    cross-party correlation surface beyond the prompt content it
    processes and the requesting-client identity the Mission Issuer
    already sees.
 
-16.  IANA Considerations
+17.  IANA Considerations
 
    This document has no IANA actions.  The Mission Intent Shaping
    profile is Informational; it registers no media type, claim name,
@@ -989,9 +1004,9 @@ Table of Contents
    would be a separate document and would carry its own registrations
    there.
 
-17.  References
+18.  References
 
-17.1.  Normative References
+18.1.  Normative References
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
@@ -1023,14 +1038,13 @@ Table of Contents
               DOI 10.17487/RFC8785, June 2020,
               <https://www.rfc-editor.org/rfc/rfc8785>.
 
-17.2.  Informative References
+18.2.  Informative References
 
-   [I-D.draft-mcguinness-oauth-mission-runtime]
-              McGuinness, K., "Mission-Bound Runtime Enforcement for
-              OAuth 2.0", Work in Progress, Internet-Draft, draft-
-              mcguinness-oauth-mission-runtime, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-runtime>.
+   [I-D.draft-mcguinness-mission-runtime]
+              McGuinness, K., "Mission-Bound Runtime Enforcement", Work
+              in Progress, Internet-Draft, draft-mcguinness-mission-
+              runtime, 2026, <https://datatracker.ietf.org/doc/html/
+              draft-mcguinness-mission-runtime>.
 
    [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
               RFC 6749, DOI 10.17487/RFC6749, October 2012,
@@ -1047,8 +1061,7 @@ Acknowledgments
    2.0 set and describes the shaping layer that precedes Mission
    issuance.  It builds on Mission-Bound Authorization for OAuth 2.0
    [I-D.draft-mcguinness-oauth-mission] and complements Mission-Bound
-   Runtime Enforcement for OAuth 2.0
-   [I-D.draft-mcguinness-oauth-mission-runtime].
+   Runtime Enforcement [I-D.draft-mcguinness-mission-runtime].
 
 Author's Address
 

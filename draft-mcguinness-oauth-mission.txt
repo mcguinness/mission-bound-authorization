@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             2 July 2026
-Expires: 3 January 2027
+Intended status: Standards Track                             3 July 2026
+Expires: 4 January 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -66,7 +66,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 3 January 2027.
+   This Internet-Draft will expire on 4 January 2027.
 
 Copyright Notice
 
@@ -3143,6 +3143,12 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-klrc-aiagent-
               auth-02>.
 
+   [I-D.draft-mcguinness-mission-runtime]
+              McGuinness, K., "Mission-Bound Runtime Enforcement", Work
+              in Progress, Internet-Draft, draft-mcguinness-mission-
+              runtime, 2026, <https://datatracker.ietf.org/doc/html/
+              draft-mcguinness-mission-runtime>.
+
    [I-D.draft-mcguinness-oauth-mission-consent-evidence]
               McGuinness, K., "Mission Consent Evidence for OAuth 2.0",
               Work in Progress, Internet-Draft, draft-mcguinness-oauth-
@@ -3155,13 +3161,6 @@ Table of Contents
               Progress, Internet-Draft, draft-mcguinness-oauth-mission-
               expansion, 2026, <https://datatracker.ietf.org/doc/html/
               draft-mcguinness-oauth-mission-expansion>.
-
-   [I-D.draft-mcguinness-oauth-mission-runtime]
-              McGuinness, K., "Mission-Bound Runtime Enforcement for
-              OAuth 2.0", Work in Progress, Internet-Draft, draft-
-              mcguinness-oauth-mission-runtime, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-runtime>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
@@ -3434,8 +3433,8 @@ A.5.  Stage 4: The Resource Server Enforces
 
    This is stateless enforcement from the token alone. journal-
    entries.write is a consequential write, so where the partner deploys
-   the runtime profile ([I-D.draft-mcguinness-oauth-mission-runtime]) it
-   also obtains a point-of-use PDP permit against current Mission state
+   the runtime profile ([I-D.draft-mcguinness-mission-runtime]) it also
+   obtains a point-of-use PDP permit against current Mission state
    before executing.  The baseline bounds the write only by token
    lifetime and max_amount_usd.
 

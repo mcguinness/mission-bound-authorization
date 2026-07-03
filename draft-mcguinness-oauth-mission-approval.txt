@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             2 July 2026
-Expires: 3 January 2027
+Intended status: Standards Track                             3 July 2026
+Expires: 4 January 2027
 
 
                 Mission Deferred Approval for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 3 January 2027.
+   This Internet-Draft will expire on 4 January 2027.
 
 Copyright Notice
 
@@ -430,9 +430,9 @@ Table of Contents
 
    Shaping:  The rejected_scope and rejected_authorization_details
       parameters are the machine-readable input a client-side shaper
-      ([I-D.draft-mcguinness-oauth-mission-shaping]) uses to plan the
-      narrowed revision.  Shaping narrows a proposal before submission;
-      this profile narrows it during review.  Together they let an
+      ([I-D.draft-mcguinness-mission-shaping]) uses to plan the narrowed
+      revision.  Shaping narrows a proposal before submission; this
+      profile narrows it during review.  Together they let an
       orchestrator propose, learn what was refused, and re-propose
       without losing state.
 
@@ -697,6 +697,12 @@ Table of Contents
 
 13.2.  Informative References
 
+   [I-D.draft-mcguinness-mission-shaping]
+              McGuinness, K., "Mission Intent Shaping", Work in
+              Progress, Internet-Draft, draft-mcguinness-mission-
+              shaping, 2026, <https://datatracker.ietf.org/doc/html/
+              draft-mcguinness-mission-shaping>.
+
    [I-D.draft-mcguinness-oauth-mission-consent-evidence]
               McGuinness, K., "Mission Consent Evidence for OAuth 2.0",
               Work in Progress, Internet-Draft, draft-mcguinness-oauth-
@@ -709,13 +715,6 @@ Table of Contents
               Progress, Internet-Draft, draft-mcguinness-oauth-mission-
               expansion, 2026, <https://datatracker.ietf.org/doc/html/
               draft-mcguinness-oauth-mission-expansion>.
-
-   [I-D.draft-mcguinness-oauth-mission-shaping]
-              McGuinness, K., "Mission Intent Shaping for OAuth 2.0",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              mission-shaping, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-shaping>.
 
 Acknowledgments
 

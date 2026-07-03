@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             2 July 2026
-Expires: 3 January 2027
+Intended status: Standards Track                             3 July 2026
+Expires: 4 January 2027
 
 
                     Mission Completion for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 3 January 2027.
+   This Internet-Draft will expire on 4 January 2027.
 
 Copyright Notice
 
@@ -370,8 +370,8 @@ Table of Contents
 
    Discharge is an issuance-gating signal and is fully meaningful at the
    issuance profile alone.  It is also a natural input to the runtime
-   layer ([I-D.draft-mcguinness-oauth-mission-runtime]): a runtime
-   Policy Enforcement Point that recognizes terminal_when SHOULD deny a
+   layer ([I-D.draft-mcguinness-mission-runtime]): a runtime Policy
+   Enforcement Point that recognizes terminal_when SHOULD deny a
    discharged entry at the point of use, closing the window between
    discharge and token expiry the same way it denies a revoked Mission.
    A Policy Enforcement Point learns that an entry is discharged from
@@ -550,12 +550,11 @@ Table of Contents
 
 16.2.  Informative References
 
-   [I-D.draft-mcguinness-oauth-mission-runtime]
-              McGuinness, K., "Mission-Bound Runtime Enforcement for
-              OAuth 2.0", Work in Progress, Internet-Draft, draft-
-              mcguinness-oauth-mission-runtime, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-runtime>.
+   [I-D.draft-mcguinness-mission-runtime]
+              McGuinness, K., "Mission-Bound Runtime Enforcement", Work
+              in Progress, Internet-Draft, draft-mcguinness-mission-
+              runtime, 2026, <https://datatracker.ietf.org/doc/html/
+              draft-mcguinness-mission-runtime>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",

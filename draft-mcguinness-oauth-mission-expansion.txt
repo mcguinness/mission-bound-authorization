@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             2 July 2026
-Expires: 3 January 2027
+Intended status: Standards Track                             3 July 2026
+Expires: 4 January 2027
 
 
                     Mission Expansion for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 3 January 2027.
+   This Internet-Draft will expire on 4 January 2027.
 
 Copyright Notice
 
@@ -227,7 +227,7 @@ Table of Contents
 
    *  runtime per-action enforcement or the classification of a denial
       as expansion-eligible; that is the runtime layer's concern
-      (Section 3.2, [I-D.draft-mcguinness-oauth-mission-runtime]);
+      (Section 3.2, [I-D.draft-mcguinness-mission-runtime]);
 
    *  branch expansion, in which predecessor and successor both remain
       active (Section 8); or
@@ -306,13 +306,13 @@ Table of Contents
    statelessly and refuses an out-of-bounds action with its usual
    insufficient-authority error ([I-D.draft-mcguinness-oauth-mission]).
    The runtime enforcement profile
-   [I-D.draft-mcguinness-oauth-mission-runtime] is one source of an
-   expansion-eligible denial: in that profile a deny is terminal for the
-   attempted action, and the authority-expandable-denial escalation that
-   turns such a deny into an expansion is named there as out of scope.
-   This document defines that expansion.  This document does not require
-   any particular denial source: a client that knows, by any means, that
-   an action needs authority the active Mission lacks MAY initiate
+   [I-D.draft-mcguinness-mission-runtime] is one source of an expansion-
+   eligible denial: in that profile a deny is terminal for the attempted
+   action, and the authority-expandable-denial escalation that turns
+   such a deny into an expansion is named there as out of scope.  This
+   document defines that expansion.  This document does not require any
+   particular denial source: a client that knows, by any means, that an
+   action needs authority the active Mission lacks MAY initiate
    expansion.  Whether the Mission Issuer adjudicates a successor
    remains its decision (Section 5); an eligible denial is not an
    authorization in favor of expansion.
@@ -835,15 +835,14 @@ Table of Contents
    Some authority classes always require a fresh human approval even
    within the ceiling.  To make that testable, a deployment MUST publish
    a mapping from its action identifiers to the runtime profile's action
-   classes ([I-D.draft-mcguinness-oauth-mission-runtime]), or an
-   equivalent declared classification.  A drawdown that grants authority
-   mapped to an irreversible, external-commitment, or privileged-
-   administration class, or that grants cross-domain authority, MUST be
-   adjudicated by a fresh human approval; the drawdown policy MUST NOT
-   permit policy-only adjudication of those.  An in-ceiling request the
-   drawdown policy does not authorize is not refused with
-   out_of_ceiling; it falls back to an ordinary, freshly human-approved
-   expansion.
+   classes ([I-D.draft-mcguinness-mission-runtime]), or an equivalent
+   declared classification.  A drawdown that grants authority mapped to
+   an irreversible, external-commitment, or privileged-administration
+   class, or that grants cross-domain authority, MUST be adjudicated by
+   a fresh human approval; the drawdown policy MUST NOT permit policy-
+   only adjudication of those.  An in-ceiling request the drawdown
+   policy does not authorize is not refused with out_of_ceiling; it
+   falls back to an ordinary, freshly human-approved expansion.
 
 10.2.  What it bounds, and what it does not
 
@@ -855,13 +854,13 @@ Table of Contents
    ceiling; it can exercise only the current active authority and
    request in-ceiling drawdown, which is policy-gated, recorded for
    audit (Section 14.6), rate-limitable, and enforced per action by the
-   runtime layer ([I-D.draft-mcguinness-oauth-mission-runtime]).
-   Progressive authorization bounds, and does not eliminate, standing-
-   authority exposure; a deployment SHOULD pair it with short successor
-   lifetimes, constraint-bounded ceilings, and runtime enforcement.  The
-   drawdown policy is enforced by the Mission Issuer and is part of its
-   trusted governance: a misconfigured policy can over-grant within the
-   ceiling, so it is reviewed and versioned like other approval policy.
+   runtime layer ([I-D.draft-mcguinness-mission-runtime]).  Progressive
+   authorization bounds, and does not eliminate, standing-authority
+   exposure; a deployment SHOULD pair it with short successor lifetimes,
+   constraint-bounded ceilings, and runtime enforcement.  The drawdown
+   policy is enforced by the Mission Issuer and is part of its trusted
+   governance: a misconfigured policy can over-grant within the ceiling,
+   so it is reviewed and versioned like other approval policy.
 
 10.3.  Realizing an approved access request
 
@@ -870,8 +869,8 @@ Table of Contents
    enforcement layer handles the unanticipated case: it can let an agent
    request authority it discovers it needs at the point of use, through
    an access-request and approval workflow
-   ([I-D.draft-mcguinness-oauth-mission-runtime]).  That workflow yields
-   a permit for the single re-evaluated action.  To persist the newly
+   ([I-D.draft-mcguinness-mission-runtime]).  That workflow yields a
+   permit for the single re-evaluated action.  To persist the newly
    approved authority for the rest of the task, rather than have the
    agent re-request it on every call, the Mission Issuer MAY realize an
    approved access request as an expansion:
@@ -1275,19 +1274,18 @@ Normative References
 
 Informative References
 
+   [I-D.draft-mcguinness-mission-runtime]
+              McGuinness, K., "Mission-Bound Runtime Enforcement", Work
+              in Progress, Internet-Draft, draft-mcguinness-mission-
+              runtime, 2026, <https://datatracker.ietf.org/doc/html/
+              draft-mcguinness-mission-runtime>.
+
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
-              McGuinness, K., "Child Mission Delegation for OAuth 2.0",
+              McGuinness, K., "Mission Child Delegation for OAuth 2.0",
               Work in Progress, Internet-Draft, draft-mcguinness-oauth-
               mission-child-delegation, 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-mission-child-delegation>.
-
-   [I-D.draft-mcguinness-oauth-mission-runtime]
-              McGuinness, K., "Mission-Bound Runtime Enforcement for
-              OAuth 2.0", Work in Progress, Internet-Draft, draft-
-              mcguinness-oauth-mission-runtime, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-runtime>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",

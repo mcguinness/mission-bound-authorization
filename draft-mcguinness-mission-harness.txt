@@ -4,12 +4,12 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             2 July 2026
-Expires: 3 January 2027
+Intended status: Standards Track                             3 July 2026
+Expires: 4 January 2027
 
 
-              Mission-Aware Agent Harnesses for OAuth 2.0
-             draft-mcguinness-oauth-mission-harness-latest
+                     Mission-Aware Agent Harnesses
+                draft-mcguinness-mission-harness-latest
 
 Abstract
 
@@ -30,9 +30,9 @@ About This Document
 
    The latest revision of this draft can be found at
    https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-
-   mcguinness-oauth-mission-harness.html.  Status information for this
+   mcguinness-mission-harness.html.  Status information for this
    document may be found at https://datatracker.ietf.org/doc/draft-
-   mcguinness-oauth-mission-harness/.
+   mcguinness-mission-harness/.
 
    Source for this draft and an issue tracker can be found at
    https://github.com/mcguinness/draft-mcguinness-oauth-mission.
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 3 January 2027.
+   This Internet-Draft will expire on 4 January 2027.
 
 Copyright Notice
 
@@ -74,40 +74,41 @@ Table of Contents
    2.  Scope
      2.1.  Harness Boundary
    3.  Conventions and Terminology
-   4.  Mission Mediation
-   5.  Mission Binding
-     5.1.  Binding Inheritance
-   6.  Resume Checks
-     6.1.  Resume Algorithm
-     6.2.  Interaction with the Orchestration Profile
-   7.  Event-Driven State Cache
-   8.  Queues and Retries
-     8.1.  Queue Item Object
-   9.  Cached Credentials and Tool Connections
-     9.1.  Cache Keys and Cross-Mission Reuse
-   10. Sub-Agent Handles
-     10.1.  Sub-Agent Stop Propagation
-   11. Harness Execution States
-   12. Stop Behavior
-     12.1.  Stop-Behavior Matrix
-     12.2.  Human-Review Outcomes
-   13. Untrusted Content and Egress
-   14. Harness Evidence
-     14.1.  Harness Evidence Object
-   15. Worked Example
-   16. Conformance
-   17. Security Considerations
-     17.1.  Harness Compromise
-     17.2.  Session Continuity Is Not Authority Continuity
-     17.3.  Cached Access as Ambient Authority
-     17.4.  Sub-Agent Fan-Out
-     17.5.  Split-Brain Session State
-     17.6.  Tool Cache Confusion
-   18. Privacy Considerations
-   19. IANA Considerations
-   20. References
-     20.1.  Normative References
-     20.2.  Informative References
+   4.  Mission Substrate
+   5.  Mission Mediation
+   6.  Mission Binding
+     6.1.  Binding Inheritance
+   7.  Resume Checks
+     7.1.  Resume Algorithm
+     7.2.  Interaction with the Orchestration Profile
+   8.  Event-Driven State Cache
+   9.  Queues and Retries
+     9.1.  Queue Item Object
+   10. Cached Credentials and Tool Connections
+     10.1.  Cache Keys and Cross-Mission Reuse
+   11. Sub-Agent Handles
+     11.1.  Sub-Agent Stop Propagation
+   12. Harness Execution States
+   13. Stop Behavior
+     13.1.  Stop-Behavior Matrix
+     13.2.  Human-Review Outcomes
+   14. Untrusted Content and Egress
+   15. Harness Evidence
+     15.1.  Harness Evidence Object
+   16. Worked Example
+   17. Conformance
+   18. Security Considerations
+     18.1.  Harness Compromise
+     18.2.  Session Continuity Is Not Authority Continuity
+     18.3.  Cached Access as Ambient Authority
+     18.4.  Sub-Agent Fan-Out
+     18.5.  Split-Brain Session State
+     18.6.  Tool Cache Confusion
+   19. Privacy Considerations
+   20. IANA Considerations
+   21. References
+     21.1.  Normative References
+     21.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -116,7 +117,7 @@ Table of Contents
    Mission-Bound Authorization for OAuth 2.0
    [I-D.draft-mcguinness-oauth-mission] (the "issuance profile") governs
    the authority under which an agent acts.  The runtime profile
-   [I-D.draft-mcguinness-oauth-mission-runtime] governs per-action
+   [I-D.draft-mcguinness-mission-runtime] governs per-action
    enforcement.  Agent harnesses add a separate layer: they preserve
    execution state so work can resume after process restarts, device
    handoffs, background scheduling, retries, and sub-agent fan-out.
@@ -133,27 +134,27 @@ Table of Contents
    This document defines:
 
    *  the mediated execution environment the harness establishes
-      (Section 4);
+      (Section 5);
 
    *  the Mission binding a harness records on sessions and task graph
-      nodes (Section 5);
+      nodes (Section 6);
 
-   *  resume-time checks (Section 6);
+   *  resume-time checks (Section 7);
 
-   *  queued work and retry behavior (Section 8);
+   *  queued work and retry behavior (Section 9);
 
-   *  cached credential and tool-connection handling (Section 9);
+   *  cached credential and tool-connection handling (Section 10);
 
-   *  sub-agent handle requirements (Section 10);
+   *  sub-agent handle requirements (Section 11);
 
-   *  harness evidence (Section 14); and
+   *  harness evidence (Section 15); and
 
-   *  conformance for a Mission-aware harness (Section 16).
+   *  conformance for a Mission-aware harness (Section 17).
 
    This document does not define a new OAuth token, a new agent
    protocol, or a replacement for Resource Server enforcement.  A
    harness check does not replace a PEP at the last controllable
-   boundary under [I-D.draft-mcguinness-oauth-mission-runtime].
+   boundary under [I-D.draft-mcguinness-mission-runtime].
 
 2.1.  Harness Boundary
 
@@ -174,7 +175,7 @@ Table of Contents
    *  workspace or artifact handles;
 
    *  runtime permits and single-use decision identifiers held by the
-      harness ([I-D.draft-mcguinness-oauth-mission-runtime]); and
+      harness ([I-D.draft-mcguinness-mission-runtime]); and
 
    *  credential references managed by the harness.
 
@@ -197,9 +198,9 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission-status]; the term Mission-bound
    token as defined by the issuance profile
    [I-D.draft-mcguinness-oauth-mission] and used by the runtime profile
-   [I-D.draft-mcguinness-oauth-mission-runtime]; and Policy Enforcement
-   Point (PEP) and mediated execution from the runtime profile
-   [I-D.draft-mcguinness-oauth-mission-runtime].
+   [I-D.draft-mcguinness-mission-runtime]; and Policy Enforcement Point
+   (PEP) and mediated execution from the runtime profile
+   [I-D.draft-mcguinness-mission-runtime].
 
    Harness:  The runtime system that preserves and resumes agent
       execution state, including sessions, task graphs, queues, tool
@@ -214,31 +215,45 @@ Table of Contents
 
    Governed work:  Harness-managed work that can invoke an action class
       or execution path in the deployment's declared runtime enforcement
-      scope ([I-D.draft-mcguinness-oauth-mission-runtime]).  Whether a
-      work item is governed follows from the deployment's documented
-      mapping of work items to that scope: a published artifact, not a
-      per-item reachability judgment.
+      scope ([I-D.draft-mcguinness-mission-runtime]).  Whether a work
+      item is governed follows from the deployment's documented mapping
+      of work items to that scope: a published artifact, not a per-item
+      reachability judgment.
 
-4.  Mission Mediation
+4.  Mission Substrate
+
+   This profile is defined against the Mission model rather than against
+   OAuth 2.0 mechanics.  It consumes these substrate primitives: the
+   Mission identifier; the lifecycle state space with its only-active-
+   permits rule and the deployment's freshness sources; the Mission-
+   bound credentials the harness holds or mediates, with their sender-
+   constraint custody; and the evidence integrity conventions imported
+   from the runtime profile.  The issuance profile
+   [I-D.draft-mcguinness-oauth-mission] is this version's normative
+   substrate; every OAuth artifact named in this document enters through
+   it.  Another substrate that provides the same primitives can host
+   this profile unchanged.
+
+5.  Mission Mediation
 
    The runtime profile's credential custody and mediated execution
-   ([I-D.draft-mcguinness-oauth-mission-runtime]) hold only if the agent
-   has no path to a consequential resource that bypasses the Policy
+   ([I-D.draft-mcguinness-mission-runtime]) hold only if the agent has
+   no path to a consequential resource that bypasses the Policy
    Enforcement Point.  Establishing that environment is the harness's
    responsibility, and it is the complement to the runtime layer holding
    the sender-constraint key: custody is moot if the agent can reach the
    resource off-path.
 
    For the action classes a deployment mediates
-   ([I-D.draft-mcguinness-oauth-mission-runtime]), a Mission-aware
-   harness MUST run governed consequential work in an execution
-   environment whose only path to those actions is through the mediating
-   PEP.  It MUST NOT leave an unmediated route to a mediated class, such
-   as a debug shell, a direct network socket, an unsanctioned egress
-   route, or a direct connector that does not pass the runtime gate.  A
-   harness that cannot guarantee this for an action class MUST NOT
-   represent work in that class as runtime-enforced, matching the
-   enforcement-scope rule of the runtime profile.
+   ([I-D.draft-mcguinness-mission-runtime]), a Mission-aware harness
+   MUST run governed consequential work in an execution environment
+   whose only path to those actions is through the mediating PEP.  It
+   MUST NOT leave an unmediated route to a mediated class, such as a
+   debug shell, a direct network socket, an unsanctioned egress route,
+   or a direct connector that does not pass the runtime gate.  A harness
+   that cannot guarantee this for an action class MUST NOT represent
+   work in that class as runtime-enforced, matching the enforcement-
+   scope rule of the runtime profile.
 
    The harness MUST publish an execution-environment scope statement.
    For each mediated action class it states the isolation mechanism that
@@ -248,7 +263,7 @@ Table of Contents
    audit obligation, not a protocol property: this profile fixes what
    the statement declares, not how a deployment proves it.
 
-5.  Mission Binding
+6.  Mission Binding
 
    A Mission-aware harness MUST bind every governed session and governed
    task graph node to a Mission reference:
@@ -278,8 +293,8 @@ Table of Contents
       operator action.  This enumeration is the shared state_source
       value space for Mission-aware execution evidence; the
       orchestration profile
-      ([I-D.draft-mcguinness-oauth-mission-orchestration]) reuses it
-      rather than defining its own.
+      ([I-D.draft-mcguinness-mission-orchestration]) reuses it rather
+      than defining its own.
 
    enforcement_scope:  OPTIONAL.  A string or object identifying the
       runtime enforcement scope that applies to this session or node.
@@ -287,13 +302,13 @@ Table of Contents
    stop_policy:  REQUIRED for governed work.  The policy the harness
       applies when the Mission is non-active or stale: one of the stop-
       behavior values suppress, pause, terminate, or handoff
-      (Section 12), or a deployment-defined policy.
+      (Section 13), or a deployment-defined policy.
 
    The Mission binding grants no authority.  It is the pointer that
    tells the harness which Mission state it must check before continuing
    work.
 
-5.1.  Binding Inheritance
+6.1.  Binding Inheritance
 
    When a harness creates a child task graph node, queue item,
    background job, or sub-agent handle from governed work, it MUST copy
@@ -304,7 +319,7 @@ Table of Contents
    record the distinct Mission binding and the relationship to the
    parent item.
 
-6.  Resume Checks
+7.  Resume Checks
 
    Before resuming governed work, a Mission-aware harness MUST establish
    that the Mission is active within the deployment's staleness bound.
@@ -335,8 +350,8 @@ Table of Contents
        [I-D.draft-mcguinness-oauth-mission-signals];
 
    3.  a runtime PDP decision under
-       [I-D.draft-mcguinness-oauth-mission-runtime] that includes a
-       current Mission state check for the action about to run; or
+       [I-D.draft-mcguinness-mission-runtime] that includes a current
+       Mission state check for the action about to run; or
 
    4.  another deployment-defined state source with equivalent freshness
        semantics.
@@ -344,7 +359,7 @@ Table of Contents
    If the harness cannot establish active state within the bound, it
    MUST NOT resume governed work.
 
-6.1.  Resume Algorithm
+7.1.  Resume Algorithm
 
    The resume check follows one sequence:
 
@@ -364,9 +379,9 @@ Table of Contents
        work and emit Harness Evidence with reason
        missing_mission_binding.
 
-   3.  Establish Mission state through Section 6.
+   3.  Establish Mission state through Section 7.
 
-   4.  If state is not active, apply stop behavior under Section 12.
+   4.  If state is not active, apply stop behavior under Section 13.
 
    5.  Hold this invariant: freshness MUST be valid at the moment each
        consequential action is submitted to the runtime gate.  The
@@ -379,23 +394,23 @@ Table of Contents
        lease explicitly covers them.
 
    Where the orchestration profile
-   ([I-D.draft-mcguinness-oauth-mission-orchestration]) is also
-   deployed, the harness MUST NOT resume a governed item that the
-   orchestrator has cancelled, or is holding for review, under its in-
-   flight handling, even when the Mission is active.  An orchestration
-   unwind decision is not a Mission-state change, so the resume check
-   above does not catch it; for items under an active unwind plan the
-   harness defers to the orchestrator's in-flight decision.
+   ([I-D.draft-mcguinness-mission-orchestration]) is also deployed, the
+   harness MUST NOT resume a governed item that the orchestrator has
+   cancelled, or is holding for review, under its in-flight handling,
+   even when the Mission is active.  An orchestration unwind decision is
+   not a Mission-state change, so the resume check above does not catch
+   it; for items under an active unwind plan the harness defers to the
+   orchestrator's in-flight decision.
 
    The harness MUST perform this algorithm even when OAuth credentials
    in the session are still valid.
 
-6.2.  Interaction with the Orchestration Profile
+7.2.  Interaction with the Orchestration Profile
 
    A deployment running both this profile and the orchestration profile
-   ([I-D.draft-mcguinness-oauth-mission-orchestration]) MUST provide a
-   means for the harness to determine whether a work item is under an
-   active unwind decision.  The mechanism is deployment-defined.
+   ([I-D.draft-mcguinness-mission-orchestration]) MUST provide a means
+   for the harness to determine whether a work item is under an active
+   unwind decision.  The mechanism is deployment-defined.
 
    Where harness stop policy and an active unwind decision would produce
    different outcomes for the same work item, the stricter outcome
@@ -403,7 +418,7 @@ Table of Contents
    the orchestrator records its decision in Orchestration Evidence, and
    the two records cross-link through their evidence identifiers.
 
-7.  Event-Driven State Cache
+8.  Event-Driven State Cache
 
    This section is OPTIONAL.  A harness MAY maintain an event-driven
    Mission state cache using
@@ -428,11 +443,11 @@ Table of Contents
    harness MUST treat the cache as stale and fall back to status polling
    or stop governed continuation.
 
-8.  Queues and Retries
+9.  Queues and Retries
 
    A queued work item under a Mission MUST carry the Mission binding of
-   Section 5.  Before dispatching it, the harness MUST run the resume
-   check of Section 6.
+   Section 6.  Before dispatching it, the harness MUST run the resume
+   check of Section 7.
 
    Retries do not inherit authority from the prior attempt.  A retry
    MUST be treated as a new continuation point and MUST re-check Mission
@@ -444,13 +459,13 @@ Table of Contents
    review, but MUST NOT dispatch them until a conforming authority path
    permits continuation.
 
-8.1.  Queue Item Object
+9.1.  Queue Item Object
 
    A governed queue item has:
 
    queue_item_id:  REQUIRED.  A string.
 
-   mission_binding:  REQUIRED.  The Mission binding from Section 5.
+   mission_binding:  REQUIRED.  The Mission binding from Section 6.
 
    action_class:  REQUIRED when known.  The runtime action class.
 
@@ -458,9 +473,8 @@ Table of Contents
 
    expires_at:  An RFC 3339 timestamp after which the item MUST NOT run.
       REQUIRED for a high-consequence action class
-      ([I-D.draft-mcguinness-oauth-mission-runtime]) unless the
-      deployment sets a maximum queue age for that class; OPTIONAL
-      otherwise.
+      ([I-D.draft-mcguinness-mission-runtime]) unless the deployment
+      sets a maximum queue age for that class; OPTIONAL otherwise.
 
    retry_of:  OPTIONAL.  Identifier of the prior attempt.
 
@@ -472,11 +486,11 @@ Table of Contents
 
    A queued item in a high-consequence action class that crossed a non-
    active period before dispatch MUST obtain a fresh action-bound
-   approval ([I-D.draft-mcguinness-oauth-mission-runtime]) before it
-   runs.  Its earlier place in the queue is not a standing approval
-   across a Mission non-active interval.
+   approval ([I-D.draft-mcguinness-mission-runtime]) before it runs.
+   Its earlier place in the queue is not a standing approval across a
+   Mission non-active interval.
 
-9.  Cached Credentials and Tool Connections
+10.  Cached Credentials and Tool Connections
 
    A harness often caches OAuth tokens, MCP sessions, API clients,
    browser contexts, or connector handles.  A Mission-aware harness MUST
@@ -488,7 +502,7 @@ Table of Contents
    1.  verify the cached item is still cryptographically and protocol-
        valid;
 
-   2.  verify the Mission is active under Section 6; and
+   2.  verify the Mission is active under Section 7; and
 
    3.  verify the action still passes runtime enforcement when the
        action is consequential.
@@ -497,14 +511,14 @@ Table of Contents
    connections associated with that Mission unusable for new governed
    work.  If the cache can safely close or revoke them, it SHOULD do so.
 
-   On any stop event (Section 12), the harness MUST also mark unusable
+   On any stop event (Section 13), the harness MUST also mark unusable
    any runtime permit and single-use decision identifier
-   ([I-D.draft-mcguinness-oauth-mission-runtime]) it holds for the
-   affected Mission.  A fresh PDP decision is REQUIRED after any non-
-   active interval; the harness MUST NOT dispatch a consequential action
-   on a permit obtained before that interval.
+   ([I-D.draft-mcguinness-mission-runtime]) it holds for the affected
+   Mission.  A fresh PDP decision is REQUIRED after any non-active
+   interval; the harness MUST NOT dispatch a consequential action on a
+   permit obtained before that interval.
 
-9.1.  Cache Keys and Cross-Mission Reuse
+10.1.  Cache Keys and Cross-Mission Reuse
 
    A cached credential, tool connection, or connector handle used for
    governed work MUST be keyed by at least:
@@ -531,7 +545,7 @@ Table of Contents
    workspace is not a basis to resume governed work under a Mission that
    is no longer active.
 
-10.  Sub-Agent Handles
+11.  Sub-Agent Handles
 
    Sub-agents and child workers MUST NOT inherit Mission authority
    merely because they descend from a parent session.  A harness that
@@ -555,7 +569,7 @@ Table of Contents
    harness MUST obtain a governed delegation or child Mission.  Session
    ancestry alone MUST NOT be used as authorization.
 
-10.1.  Sub-Agent Stop Propagation
+11.1.  Sub-Agent Stop Propagation
 
    When the harness stops a parent item because its Mission is non-
    active, it MUST identify child handles whose authority depends on
@@ -587,13 +601,13 @@ Table of Contents
    stopped, the harness MUST treat the child as still running and fail
    closed for any cached access that depends on it, mirroring the
    cancellation rule of the orchestration profile
-   ([I-D.draft-mcguinness-oauth-mission-orchestration]).
+   ([I-D.draft-mcguinness-mission-orchestration]).
 
-11.  Harness Execution States
+12.  Harness Execution States
 
    A governed work item is in one of the following harness execution
    states.  Harness Evidence types prior_harness_state and
-   resulting_harness_state (Section 14.1) against this enumeration.
+   resulting_harness_state (Section 15.1) against this enumeration.
 
             +============+====================================+
             | State      | Meaning                            |
@@ -616,7 +630,7 @@ Table of Contents
 
                                   Table 1
 
-12.  Stop Behavior
+13.  Stop Behavior
 
    When a Mission is revoked, expired, suspended, completed, or
    otherwise non-active under the deployment's lifecycle profile, the
@@ -639,7 +653,7 @@ Table of Contents
    action class, but it MUST NOT continue governed execution while
    Mission state is non-active.
 
-12.1.  Stop-Behavior Matrix
+13.1.  Stop-Behavior Matrix
 
    The harness MUST document a matrix mapping Mission state and action
    class to stop behavior.  At minimum:
@@ -682,7 +696,7 @@ Table of Contents
    administration, handoff or orchestration handling under a deployment
    unwind plan SHOULD be used when work may already be in flight.
 
-12.2.  Human-Review Outcomes
+13.2.  Human-Review Outcomes
 
    When the harness hands off a governed item to human review, the
    review concludes with one of three outcomes:
@@ -696,14 +710,14 @@ Table of Contents
 
    A parked item MUST carry a deployment maximum age.  The harness MUST
    record the outcome, its authority basis, and the reviewer in Harness
-   Evidence.  Resumed work re-enters the resume algorithm (Section 6.1):
+   Evidence.  Resumed work re-enters the resume algorithm (Section 7.1):
    review approval is not itself a Mission-state check.
 
-13.  Untrusted Content and Egress
+14.  Untrusted Content and Egress
 
    A prompt-injected agent is constrained at the point of use by the
    runtime layer, which gates each action against the Mission
-   ([I-D.draft-mcguinness-oauth-mission-runtime]).  The runtime layer
+   ([I-D.draft-mcguinness-mission-runtime]).  The runtime layer
    evaluates each action in isolation; it does not see the session as a
    whole.  The harness does: it already tracks session and task-graph
    history against Mission state.  That makes the harness the one layer
@@ -719,23 +733,23 @@ Table of Contents
    Once a session is tainted, before a consequential external-
    communication or external-commitment action, a Mission-aware harness
    SHOULD either require a fresh action-bound approval
-   ([I-D.draft-mcguinness-oauth-mission-runtime]) or downgrade that
-   authority for the session (suppress the action), rather than let the
-   agent egress on the strength of injected content.  This is the plan-
-   then-execute pattern: untrusted content may inform the agent's
-   planning, but it MUST NOT, on its own, drive an egress the Subject
-   did not direct.
+   ([I-D.draft-mcguinness-mission-runtime]) or downgrade that authority
+   for the session (suppress the action), rather than let the agent
+   egress on the strength of injected content.  This is the plan-then-
+   execute pattern: untrusted content may inform the agent's planning,
+   but it MUST NOT, on its own, drive an egress the Subject did not
+   direct.
 
    This is a coarse session-level control, not information-flow control.
    It does not track which specific datum reached which action, so it
    cannot close within-scope data laundering
    ([I-D.draft-mcguinness-oauth-mission],
-   [I-D.draft-mcguinness-oauth-mission-runtime]); it raises the bar by
-   forcing a human or a fresh approval between untrusted input and
-   egress.  A harness that applies it records the taint and the
-   resulting downgrade or approval in Harness Evidence (Section 14).
+   [I-D.draft-mcguinness-mission-runtime]); it raises the bar by forcing
+   a human or a fresh approval between untrusted input and egress.  A
+   harness that applies it records the taint and the resulting downgrade
+   or approval in Harness Evidence (Section 15).
 
-14.  Harness Evidence
+15.  Harness Evidence
 
    A Mission-aware harness MUST emit a Harness Evidence record when it
    suppresses, pauses, or terminates governed work due to Mission state,
@@ -745,7 +759,7 @@ Table of Contents
    every stop, and every reversal of a stop, remains individually
    recorded.
 
-   The Harness Evidence Object (Section 14.1) is the authoritative
+   The Harness Evidence Object (Section 15.1) is the authoritative
    definition of the record's members.  The following is a non-normative
    summary of what a record carries:
 
@@ -771,21 +785,21 @@ Table of Contents
 
    A Harness Evidence record carries the Mission as the nested mission
    object, mirroring the mission claim; the flat mission_id and
-   mission_origin of Mission Binding (Section 5) are a binding key,
+   mission_origin of Mission Binding (Section 6) are a binding key,
    whereas the evidence record mirrors the claim shape.
 
    Harness Evidence complements runtime enforcement evidence
-   ([I-D.draft-mcguinness-oauth-mission-runtime]).  It records
-   execution-continuity decisions, not Resource Server authorization.
+   ([I-D.draft-mcguinness-mission-runtime]).  It records execution-
+   continuity decisions, not Resource Server authorization.
 
    Harness Evidence records are subject to the record integrity and
    retention requirements of the runtime profile
-   ([I-D.draft-mcguinness-oauth-mission-runtime]), imported here by
-   reference: append-only integrity protection under a named mechanism,
-   a per-Mission sequence indicator, no raw parameters in the record,
-   and a retention window no shorter than the Mission's audit horizon.
+   ([I-D.draft-mcguinness-mission-runtime]), imported here by reference:
+   append-only integrity protection under a named mechanism, a per-
+   Mission sequence indicator, no raw parameters in the record, and a
+   retention window no shorter than the Mission's audit horizon.
 
-14.1.  Harness Evidence Object
+15.1.  Harness Evidence Object
 
    A Harness Evidence object is a JSON object [RFC8259] with:
 
@@ -814,11 +828,11 @@ Table of Contents
 
    prior_harness_state, resulting_harness_state:  OPTIONAL.  The harness
       execution state before and after the recorded decision, each a
-      value from the harness execution states of Section 11 (for
+      value from the harness execution states of Section 12 (for
       example, running to suppressed).
 
    state_source:  REQUIRED.  A value from the single state_source
-      enumeration of Section 5.
+      enumeration of Section 6.
 
    freshness:  OPTIONAL.  Object containing checked_at and expires_at.
 
@@ -849,7 +863,7 @@ Table of Contents
      "occurred_at": "2026-11-02T08:16:00Z"
    }
 
-15.  Worked Example
+16.  Worked Example
 
    An agent reconciling Q3 invoices under Mission
    msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9- runs as an overnight background
@@ -857,16 +871,16 @@ Table of Contents
    matter.
 
    At 02:00 the job resumes a queued task graph.  Before dispatching any
-   governed work the harness re-reads Mission state (Section 6). alice
+   governed work the harness re-reads Mission state (Section 7). alice
    cancelled the Mission at 23:00, so the harness finds it revoked: it
-   does not dispatch, marks cached ERP connections unusable (Section 9),
-   and emits the suppress evidence shown above.  The session was fully
-   recoverable; the authority that justified it was gone, and the
-   harness let the Mission, not the session, decide.
+   does not dispatch, marks cached ERP connections unusable
+   (Section 10), and emits the suppress evidence shown above.  The
+   session was fully recoverable; the authority that justified it was
+   gone, and the harness let the Mission, not the session, decide.
 
    Earlier, while still active, the agent fetched a vendor email into
    its working context to extract an invoice number.  That email is
-   untrusted content, so the session is now tainted (Section 13).  When
+   untrusted content, so the session is now tainted (Section 14).  When
    the agent, steered by text in that email, tries to send an external
    message, the harness does not let the egress proceed on the strength
    of the fetched content: it requires a fresh action-bound approval
@@ -874,7 +888,7 @@ Table of Contents
    regardless; the harness adds the session-level rule that untrusted
    input cannot, by itself, drive an egress alice never directed.
 
-16.  Conformance
+17.  Conformance
 
    A conforming Mission-aware harness MUST:
 
@@ -889,7 +903,7 @@ Table of Contents
 
    *  run governed consequential work in a mediated execution
       environment for the action classes a deployment mediates, and
-      publish the execution-environment scope statement (Section 4);
+      publish the execution-environment scope statement (Section 5);
 
    *  prevent sub-agent authority by session ancestry;
 
@@ -898,16 +912,16 @@ Table of Contents
    *  document a staleness bound per action class and its stop behavior.
 
    The runtime profile's non-normative freshness table
-   ([I-D.draft-mcguinness-oauth-mission-runtime]) is the calibration
-   reference for these per-action-class bounds.
+   ([I-D.draft-mcguinness-mission-runtime]) is the calibration reference
+   for these per-action-class bounds.
 
    A harness MUST NOT claim conformance for work it cannot suppress.  It
    MAY claim conformance for a documented subset of execution paths if
    it identifies paths outside the claim.
 
-17.  Security Considerations
+18.  Security Considerations
 
-17.1.  Harness Compromise
+18.1.  Harness Compromise
 
    The harness is a trusted component.  If it is compromised, some
    protections survive and others fall.
@@ -926,46 +940,46 @@ Table of Contents
 
    Because of this split, a deployment that claims the runtime profile's
    agent-compromise-resistant enforcement
-   ([I-D.draft-mcguinness-oauth-mission-runtime]) MUST isolate the
-   mediating PEP and its sender-constraint key custody from the agent-
-   facing harness components, by process, host, or service separation.
-   A harness that both faces the agent and holds the sender-constraint
-   key defeats mediated custody: its compromise yields the key.
+   ([I-D.draft-mcguinness-mission-runtime]) MUST isolate the mediating
+   PEP and its sender-constraint key custody from the agent-facing
+   harness components, by process, host, or service separation.  A
+   harness that both faces the agent and holds the sender-constraint key
+   defeats mediated custody: its compromise yields the key.
 
-17.2.  Session Continuity Is Not Authority Continuity
+18.2.  Session Continuity Is Not Authority Continuity
 
    The primary threat is treating recoverable runtime state as proof of
    continuing authority.  This profile requires a fresh Mission-state
    decision at continuation points where harnesses would otherwise
    resume automatically.
 
-17.3.  Cached Access as Ambient Authority
+18.3.  Cached Access as Ambient Authority
 
    Cached credentials and tool connections can bypass visible issuance
    or authorization steps.  A harness MUST tie cache use to Mission
    state and runtime enforcement, or cached access becomes ambient
    authority.
 
-17.4.  Sub-Agent Fan-Out
+18.4.  Sub-Agent Fan-Out
 
    Implicit sub-agent inheritance can amplify authority.  This profile
    requires explicit Mission or delegation binding for child handles and
    cascade stop behavior when parent authority ends.
 
-17.5.  Split-Brain Session State
+18.5.  Split-Brain Session State
 
    Multiple workers may resume the same session or queue item.  A
    harness SHOULD use compare-and-set or equivalent concurrency control
    so a stop decision cannot race with a resume decision.  When the
    state is ambiguous, fail closed and suppress governed work.
 
-17.6.  Tool Cache Confusion
+18.6.  Tool Cache Confusion
 
    Tool connection caches often hide which Mission first authorized a
-   connection.  Cache keys under Section 9.1 prevent a connection opened
-   for one Mission from becoming ambient authority for another.
+   connection.  Cache keys under Section 10.1 prevent a connection
+   opened for one Mission from becoming ambient authority for another.
 
-18.  Privacy Considerations
+19.  Privacy Considerations
 
    Harness Evidence and Mission bindings can reveal task graphs,
    workspace identifiers, tool usage, agent topology, and Mission
@@ -973,13 +987,19 @@ Table of Contents
    control access to evidence, and avoid storing raw workspace content
    in Harness Evidence unless required for audit.
 
-19.  IANA Considerations
+20.  IANA Considerations
 
    This document makes no IANA request.
 
-20.  References
+21.  References
 
-20.1.  Normative References
+21.1.  Normative References
+
+   [I-D.draft-mcguinness-mission-runtime]
+              McGuinness, K., "Mission-Bound Runtime Enforcement", Work
+              in Progress, Internet-Draft, draft-mcguinness-mission-
+              runtime, 2026, <https://datatracker.ietf.org/doc/html/
+              draft-mcguinness-mission-runtime>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
@@ -987,13 +1007,6 @@ Table of Contents
               oauth-mission, 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-mission>.
-
-   [I-D.draft-mcguinness-oauth-mission-runtime]
-              McGuinness, K., "Mission-Bound Runtime Enforcement for
-              OAuth 2.0", Work in Progress, Internet-Draft, draft-
-              mcguinness-oauth-mission-runtime, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-runtime>.
 
    [I-D.draft-mcguinness-oauth-mission-status]
               McGuinness, K., "Mission Status and Lifecycle for OAuth
@@ -1020,10 +1033,17 @@ Table of Contents
               DOI 10.17487/RFC8259, December 2017,
               <https://www.rfc-editor.org/rfc/rfc8259>.
 
-20.2.  Informative References
+21.2.  Informative References
+
+   [I-D.draft-mcguinness-mission-orchestration]
+              McGuinness, K., "Mission Orchestration and Unwinding",
+              Work in Progress, Internet-Draft, draft-mcguinness-
+              mission-orchestration, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              mission-orchestration>.
 
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
-              McGuinness, K., "Child Mission Delegation for OAuth 2.0",
+              McGuinness, K., "Mission Child Delegation for OAuth 2.0",
               Work in Progress, Internet-Draft, draft-mcguinness-oauth-
               mission-child-delegation, 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
@@ -1034,13 +1054,6 @@ Table of Contents
               Progress, Internet-Draft, draft-mcguinness-oauth-mission-
               expansion, 2026, <https://datatracker.ietf.org/doc/html/
               draft-mcguinness-oauth-mission-expansion>.
-
-   [I-D.draft-mcguinness-oauth-mission-orchestration]
-              McGuinness, K., "Mission Orchestration and Unwinding for
-              OAuth 2.0", Work in Progress, Internet-Draft, draft-
-              mcguinness-oauth-mission-orchestration, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-orchestration>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
