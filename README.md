@@ -78,6 +78,12 @@ OPTIONAL companion profile that layers on the core without changing it.
 
      Agent runtime  Harness        session continuity is not authority
                     Orchestration  unwind in-flight work safely
+
+     Standalone     Authority Server   Mission governance without an
+                    OAuth AS; enforcement joins at the PDP
+
+     Portability    Mandate    a signed, verifiable statement of a
+                    Mission for parties outside the issuing domain
 ```
 
 One rule keeps this extensible without a central registry: only the
@@ -103,6 +109,17 @@ are the companion profiles of the same names).
 | **Baseline issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Enforced bundle). Audit, not action-time defense. |
 | **Enforced agent** | mission + runtime + authzen + a freshness source (status, signals, or origin token introspection) | Per-action enforcement at the point of use, and prompt revocation (pull via status or introspection, push via signals). The minimum for an agent that takes consequential actions. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
 | **Governed agent (recommended for AI agents)** | Enforced agent + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. For protection against a compromised agent, claim runtime's named agent-compromise-resistant enforcement (mediated custody, no-unmediated-egress, action-bound approval, all MUST for the high-consequence classes). Add child-delegation for sub-agents and expansion for mid-task growth, and orchestration (experimental) for safe unwinding of in-flight work. |
+| **Standalone governance (AS-optional)** | authority-server + runtime + authzen (+ consent-evidence and harness for the Governed equivalents) | Mission governance and per-action enforcement with an unmodified OAuth Authorization Server; the authority server is the freshness source. No Mission-bound tokens and no issuance gating: revoking a Mission stops nothing at the token layer, so enforcement rests entirely on PEP coverage. The on-ramp to the Enforced and Governed bundles. |
+
+There are two ways to deploy the model. The flagship is the OAuth
+binding: the Authorization Server implements the issuance profile,
+tokens carry the `mission` claim, and issuance is gated on Mission
+state. The AS-optional mode runs a standalone Mission Authority Server
+instead: Missions are created, approved, and served without any change
+to the existing Authorization Server, and enforcement joins ordinary
+tokens to Missions at the Policy Decision Point. The Mission Mandate
+makes a Mission portable across both: a signed, verifiable statement
+of what was approved, checkable by any party without a token exchange.
 
 Mission Intent Shaping is an approval-time, client-side option that
 layers onto any bundle; it produces the Mission Intent and is not itself
@@ -154,8 +171,11 @@ decide what to build on now.
   **attenuation** and **approval** depend normatively on Internet-Drafts
   that are not yet ratified (Attenuating Agent Tokens and OAuth Deferred
   Token Response, respectively); **orchestration** and **completion**
-  define newer models that are less exercised. Each names a stable path
-  to prefer where one exists.
+  define newer models that are less exercised; **authority-server** and
+  **mandate** are the newest documents in the family and not yet
+  exercised (the mandate's normative dependencies are all ratified; the
+  authority server composes stable profiles, but its PDP join mechanism
+  is new). Each names a stable path to prefer where one exists.
 
 In short: the Enforced bundle is built entirely from stable drafts; the
 experimental profiles are additive and can wait.
@@ -173,7 +193,8 @@ Server's own surfaces (issuance, approval, lifecycle, evidence of
 consent) keep "oauth" in their draft names. Profiles that specify
 components outside the Authorization Server (runtime enforcement and
 its AuthZEN binding, the agent harness, orchestration, intent shaping,
-audit transparency, and the security model) are named without it: they
+audit transparency, the security model, the standalone authority
+server, and the mandate) are named without it: they
 are defined against the Mission model's substrate primitives, each
 names those primitives in a Mission Substrate section, and the core is
 that model's OAuth 2.0 binding. Another mission-based protocol that
@@ -193,6 +214,24 @@ builds on this one.
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission)
 * [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission.diff)
+
+### Standalone deployment
+
+#### Mission Authority Server
+
+The AS-optional binding. A Mission Authority Server implements the
+Mission Issuer role (intent submission, the approval event, the record,
+lifecycle, and state) without being an OAuth Authorization Server and
+without deriving tokens. Enforcement joins ordinary OAuth tokens to
+Missions at the Policy Decision Point, so a deployment gets Mission
+governance with an unmodified AS. No Mission-bound tokens and no
+issuance gating; runtime enforcement over every consequential path is
+required. The upgrade path is the issuance profile.
+
+* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-authority-server.html)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-authority-server)
+* [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authority-server)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-authority-server.diff)
 
 ### Runtime enforcement
 
@@ -389,6 +428,24 @@ is stopped.
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-orchestration)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-orchestration)
 * [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-orchestration.diff)
+
+### Portability
+
+#### Mission Mandate
+
+A signed, portable, independently verifiable statement of a Mission's
+committed facts (its identifiers, integrity anchors, Subject, Approver,
+and optionally its Authority Set), minted by the Mission Issuer. It is
+evidence, not a credential: presenting it authorizes nothing. It lets a
+cross-domain verifier, an external rail deriving its own vertical
+mandate, or an auditor know what was approved without a token exchange;
+current state still comes from Status or Signals. OPTIONAL selective
+disclosure via SD-JWT.
+
+* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-mandate.html)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-mandate)
+* [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-mandate)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-mandate.diff)
 
 ### Audit
 
