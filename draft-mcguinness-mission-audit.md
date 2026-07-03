@@ -1,9 +1,9 @@
 ---
-title: "Mission Audit Transparency for OAuth 2.0"
-abbrev: "OAuth Mission Audit Transparency"
+title: "Mission Audit Transparency"
+abbrev: "Mission Audit Transparency"
 category: std
 
-docname: draft-mcguinness-oauth-mission-audit-latest
+docname: draft-mcguinness-mission-audit-latest
 submissiontype: IETF
 number:
 date:
@@ -18,7 +18,7 @@ keyword:
  - scitt
 venue:
   github: "mcguinness/draft-mcguinness-oauth-mission"
-  latest: "https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-audit.html"
+  latest: "https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-audit.html"
 
 author:
  -
@@ -54,7 +54,7 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-consent-evidence-latest
-  I-D.draft-mcguinness-oauth-mission-authzen:
+  I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     author:
       -
@@ -62,7 +62,7 @@ informative:
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-authzen-latest
+      Internet-Draft: draft-mcguinness-mission-authzen-latest
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
     author:
@@ -72,17 +72,17 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
-  I-D.draft-mcguinness-oauth-mission-runtime:
-    title: "Mission-Bound Runtime Enforcement for OAuth 2.0"
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-runtime-latest
+      Internet-Draft: draft-mcguinness-mission-runtime-latest
   I-D.draft-mcguinness-oauth-mission-child-delegation:
-    title: "Child Mission Delegation for OAuth 2.0"
+    title: "Mission Child Delegation for OAuth 2.0"
     author:
       -
         ins: K. McGuinness
@@ -180,7 +180,20 @@ Mission evidence:
   lifecycle transitions, consent evidence
   ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), and runtime
   decision and execution evidence
-  ({{I-D.draft-mcguinness-oauth-mission-runtime}}).
+  ({{I-D.draft-mcguinness-mission-runtime}}).
+
+# Mission Substrate {#mission-substrate}
+
+This profile is defined against the Mission model rather than against
+OAuth 2.0 mechanics. It consumes these substrate primitives: the
+Mission identifier and origin, from which the statement subject is
+constructed; the evidence types and their canonical bytes; the
+integrity-anchor envelope; and each producer's published key material.
+The issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
+version's normative substrate. Evidence produced under another Mission
+substrate registers and verifies the same way once its types and
+canonical bytes are defined as in the evidence-type table
+({{evidence-types}}).
 
 # Registering Mission Evidence {#registration}
 
@@ -244,8 +257,8 @@ every record whose producer is the Mission `origin`, the Signed
 Statement's `iss` MUST equal that `origin`
 ({{I-D.draft-mcguinness-oauth-mission}}). The PDP and PEP keys are those
 in the deployment-published key sets the runtime and AuthZEN profiles
-require ({{I-D.draft-mcguinness-oauth-mission-runtime}},
-{{I-D.draft-mcguinness-oauth-mission-authzen}}).
+require ({{I-D.draft-mcguinness-mission-runtime}},
+{{I-D.draft-mcguinness-mission-authzen}}).
 
 The approval event and the lifecycle-transition object are canonicalized
 under the issuance profile's canonicalization rules
@@ -256,7 +269,7 @@ lifecycle-transition media types are defined by this profile ({{iana}});
 the consent, decision, and execution evidence types are registered by
 the profiles that define those objects
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}},
-{{I-D.draft-mcguinness-oauth-mission-authzen}}), and the Signals SET
+{{I-D.draft-mcguinness-mission-authzen}}), and the Signals SET
 media type by the Signals profile it is carried in
 ({{I-D.draft-mcguinness-oauth-mission-signals}}).
 
@@ -294,8 +307,8 @@ A relying party discovers a producer's key by the producer's role. The
 Authorization Server's key is resolved through its metadata `jwks_uri`
 ({{I-D.draft-mcguinness-oauth-mission}}). A PDP or PEP key is resolved
 through the deployment-published key sets the runtime and AuthZEN
-profiles require ({{I-D.draft-mcguinness-oauth-mission-runtime}},
-{{I-D.draft-mcguinness-oauth-mission-authzen}}).
+profiles require ({{I-D.draft-mcguinness-mission-runtime}},
+{{I-D.draft-mcguinness-mission-authzen}}).
 
 ## Registration Availability {#availability}
 
@@ -627,7 +640,7 @@ these media types do so by local agreement until then.
 The other evidence media types this profile registers into a Transparency
 Service are defined elsewhere: the runtime decision and execution
 evidence types by the AuthZEN profile
-({{I-D.draft-mcguinness-oauth-mission-authzen}}), the consent evidence
+({{I-D.draft-mcguinness-mission-authzen}}), the consent evidence
 type by the consent evidence profile
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), and the
 Signals SET media type `application/secevent+jwt` by RFC 8417, which the

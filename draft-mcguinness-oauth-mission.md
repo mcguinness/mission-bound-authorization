@@ -91,15 +91,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
-  I-D.draft-mcguinness-oauth-mission-runtime:
-    title: "Mission-Bound Runtime Enforcement for OAuth 2.0"
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-runtime-latest
+      Internet-Draft: draft-mcguinness-mission-runtime-latest
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     author:
@@ -3114,7 +3114,7 @@ subset of the Authority Set, it does not recompute `authority_hash`.
 This is stateless enforcement from the token alone.
 `journal-entries.write` is a consequential write, so where the partner
 deploys the runtime profile
-({{I-D.draft-mcguinness-oauth-mission-runtime}}) it also obtains a
+({{I-D.draft-mcguinness-mission-runtime}}) it also obtains a
 point-of-use PDP permit against current Mission state before executing.
 The baseline bounds the write only by token lifetime and
 `max_amount_usd`.

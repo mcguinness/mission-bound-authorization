@@ -1,9 +1,9 @@
 ---
-title: "Mission Orchestration and Unwinding for OAuth 2.0"
-abbrev: "OAuth Mission Orchestration"
+title: "Mission Orchestration and Unwinding"
+abbrev: "Mission Orchestration"
 category: std
 
-docname: draft-mcguinness-oauth-mission-orchestration-latest
+docname: draft-mcguinness-mission-orchestration-latest
 submissiontype: IETF
 number:
 date:
@@ -17,7 +17,7 @@ keyword:
  - compensation
 venue:
   github: "mcguinness/draft-mcguinness-oauth-mission"
-  latest: "https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-orchestration.html"
+  latest: "https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-orchestration.html"
 
 author:
  -
@@ -39,15 +39,15 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-latest
-  I-D.draft-mcguinness-oauth-mission-runtime:
-    title: "Mission-Bound Runtime Enforcement for OAuth 2.0"
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-runtime-latest
+      Internet-Draft: draft-mcguinness-mission-runtime-latest
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     author:
@@ -59,7 +59,7 @@ normative:
       Internet-Draft: draft-mcguinness-oauth-mission-status-latest
 
 informative:
-  I-D.draft-mcguinness-oauth-mission-authzen:
+  I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     author:
       -
@@ -67,16 +67,16 @@ informative:
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-authzen-latest
-  I-D.draft-mcguinness-oauth-mission-harness:
-    title: "Mission-Aware Agent Harnesses for OAuth 2.0"
+      Internet-Draft: draft-mcguinness-mission-authzen-latest
+  I-D.draft-mcguinness-mission-harness:
+    title: "Mission-Aware Agent Harnesses"
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-harness-latest
+      Internet-Draft: draft-mcguinness-mission-harness-latest
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     author:
@@ -115,7 +115,7 @@ simple access-control denial into governed handling of execution state.
 Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") gives a
 task an approved authority and lifecycle. The runtime profile
-{{I-D.draft-mcguinness-oauth-mission-runtime}} checks each
+{{I-D.draft-mcguinness-mission-runtime}} checks each
 consequential action before it executes. These are necessary but not
 complete for long-running workflows. A Mission can terminate after some
 steps have completed and before others run. Some completed steps can be
@@ -130,7 +130,7 @@ executes the plan: cancel, compensate, suppress, pause, or hand off to
 human review.
 
 The boundary with the harness profile
-({{I-D.draft-mcguinness-oauth-mission-harness}}) is the question each
+({{I-D.draft-mcguinness-mission-harness}}) is the question each
 answers. The harness answers "may this unit of work continue." This
 document answers "how is in-flight state unwound once continuation is
 stopped." The runtime profile still gates each action. The checks
@@ -169,7 +169,7 @@ MUST define:
 - the source of Mission state used by the orchestrator;
 - a staleness bound per action class, calibrated against the runtime
   profile's non-normative freshness table
-  ({{I-D.draft-mcguinness-oauth-mission-runtime}});
+  ({{I-D.draft-mcguinness-mission-runtime}});
 - minimum reversibility class per operation;
 - permitted compensation authorities;
 - review queues or escalation targets; and
@@ -186,8 +186,8 @@ format.
 This document uses the terms Mission, Mission state, and consequential
 action from {{I-D.draft-mcguinness-oauth-mission}}; and PEP, PDP, and
 runtime enforcement evidence from
-{{I-D.draft-mcguinness-oauth-mission-runtime}}. Where a deployment
-uses the AuthZEN profile ({{I-D.draft-mcguinness-oauth-mission-authzen}}),
+{{I-D.draft-mcguinness-mission-runtime}}. Where a deployment
+uses the AuthZEN profile ({{I-D.draft-mcguinness-mission-authzen}}),
 its Decision Evidence and Execution Evidence objects are examples of
 the runtime enforcement evidence records this document links.
 
@@ -206,6 +206,19 @@ Compensation:
 Safe point:
 : A workflow point at which the orchestrator can stop without starting
   another consequential action and with all prior outcomes recorded.
+
+# Mission Substrate {#mission-substrate}
+
+This profile is defined against the Mission model rather than against
+OAuth 2.0 mechanics. It consumes these substrate primitives: the
+Mission identifier; the lifecycle state space with its
+only-`active`-permits rule; the runtime enforcement evidence its
+records link; the integrity-anchor envelope, used for
+`unwind_plan_hash`; and the substrate's issuance gating, against which
+every compensation authority basis resolves. The issuance profile
+{{I-D.draft-mcguinness-oauth-mission}} is this version's normative
+substrate; another substrate that provides the same primitives can
+host this profile unchanged.
 
 # Reversibility Classes {#reversibility}
 
@@ -233,7 +246,7 @@ these reversibility classes before execution:
 
 `irreversible_action`, `external_commitment`, and
 `privileged_administration` are the identically-named action classes of
-{{I-D.draft-mcguinness-oauth-mission-runtime}} (Section
+{{I-D.draft-mcguinness-mission-runtime}} (Section
 "Action classification"). A step's reversibility class MUST be at least
 the minimum this table maps from the runtime action class the runtime
 profile assigns the same operation:
@@ -252,7 +265,7 @@ profile adds that the runtime classification does not separately track.
 
 The class MAY be raised by Resource policy or operation profile. As
 with the runtime classification floor
-({{I-D.draft-mcguinness-oauth-mission-runtime}}), it MUST NOT be lowered
+({{I-D.draft-mcguinness-mission-runtime}}), it MUST NOT be lowered
 by the orchestrator at runtime to avoid review or compensation
 requirements.
 
@@ -314,12 +327,12 @@ unwind plan. The plan has these members:
 
 `evidence_policy`:
 : OPTIONAL. Deployment-defined instructions for linking runtime
-  enforcement evidence ({{I-D.draft-mcguinness-oauth-mission-runtime}}),
+  enforcement evidence ({{I-D.draft-mcguinness-mission-runtime}}),
   Harness Evidence, and Orchestration Evidence. Its members, including
   any retention token such as the
   example's `mission_audit_horizon`, are deployment-defined; the
   retention horizon aligns with the runtime profile's record-retention
-  guidance ({{I-D.draft-mcguinness-oauth-mission-runtime}}).
+  guidance ({{I-D.draft-mcguinness-mission-runtime}}).
 
 The unwind plan does not authorize compensation by itself. A
 compensation action that is consequential MUST itself be authorized
@@ -395,9 +408,9 @@ An orchestrator can learn of Mission state change from:
 - Mission lifecycle signals
   ({{I-D.draft-mcguinness-oauth-mission-signals}});
 - a runtime PDP denial
-  ({{I-D.draft-mcguinness-oauth-mission-runtime}});
+  ({{I-D.draft-mcguinness-mission-runtime}});
 - a harness stop decision
-  ({{I-D.draft-mcguinness-oauth-mission-harness}});
+  ({{I-D.draft-mcguinness-mission-harness}});
 - operator action; or
 - a deployment-specific governance event.
 
@@ -542,7 +555,7 @@ members:
   nested `mission` object (`id`, `origin`, and, when known,
   `authority_hash`), the same shape as the `mission` claim of
   {{I-D.draft-mcguinness-oauth-mission}} and the Harness Evidence object
-  ({{I-D.draft-mcguinness-oauth-mission-harness}}).
+  ({{I-D.draft-mcguinness-mission-harness}}).
 
 `workflow_id`:
 : REQUIRED. The workflow or task graph identifier.
@@ -555,7 +568,7 @@ members:
 
 `state_source`:
 : REQUIRED. A value from the shared `state_source` value space defined
-  by the Harness profile ({{I-D.draft-mcguinness-oauth-mission-harness}}):
+  by the Harness profile ({{I-D.draft-mcguinness-mission-harness}}):
   `status`, `signal`, `runtime_decision`, `harness`, `operator`, or a
   deployment-defined source. This profile does not define its own; a
   trigger source from {{trigger-sources}} maps to the corresponding
@@ -580,7 +593,7 @@ members:
 
 `linked_evidence`:
 : OPTIONAL. An array of runtime enforcement evidence records
-  ({{I-D.draft-mcguinness-oauth-mission-runtime}}), Harness Evidence,
+  ({{I-D.draft-mcguinness-mission-runtime}}), Harness Evidence,
   or prior Orchestration Evidence identifiers. REQUIRED when
   `orchestration_decision` is `compensate`.
 
@@ -642,7 +655,7 @@ Example:
 
 Orchestration Evidence records are subject to the record integrity and
 retention requirements of the runtime profile
-({{I-D.draft-mcguinness-oauth-mission-runtime}}), imported here by
+({{I-D.draft-mcguinness-mission-runtime}}), imported here by
 reference: append-only integrity protection under a named mechanism, a
 per-Mission sequence indicator, no raw parameters in the record, and a
 retention window no shorter than the Mission's audit horizon.
@@ -652,17 +665,17 @@ retention window no shorter than the Mission's audit horizon.
 An orchestrator MUST include a deployment-defined sequence number or
 otherwise order evidence records when multiple steps are affected by
 the same state transition, matching the runtime profile's per-Mission
-sequencing requirement ({{I-D.draft-mcguinness-oauth-mission-runtime}}).
+sequencing requirement ({{I-D.draft-mcguinness-mission-runtime}}).
 Ordering lets an auditor reconstruct whether the orchestrator stopped
 before or after a given step committed.
 
 # Relationship to Harness and Runtime Profiles {#relationship}
 
 The harness profile
-{{I-D.draft-mcguinness-oauth-mission-harness}} governs whether a
+{{I-D.draft-mcguinness-mission-harness}} governs whether a
 session, queue item, or sub-agent handle may continue. This document
 governs how workflow state is unwound once continuation is stopped.
-The runtime profile {{I-D.draft-mcguinness-oauth-mission-runtime}}
+The runtime profile {{I-D.draft-mcguinness-mission-runtime}}
 still governs each consequential action at the last controllable
 boundary. These checks compose; none replaces the others.
 
