@@ -42,6 +42,15 @@ normative:
 informative:
   RFC6749:
   RFC9126:
+  I-D.draft-mcguinness-mission-authority-server:
+    title: "Mission Authority Server"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-mission-authority-server-latest
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     author:
@@ -57,10 +66,11 @@ informative:
 Mission-Bound Authorization for OAuth 2.0 defines a Mission Intent and
 the Authority Set an Authorization Server derives from it, but leaves
 the step that turns an open-ended task request into a candidate Mission
-Intent to deployment policy. This document is an OPTIONAL, Informational
-profile describing the Mission Shaper: a client-side component that
+Intent to deployment policy. This document is an Informational companion
+describing the Mission Shaper: a client-side component that
 turns a user prompt or upstream trigger into a candidate Mission Intent
-for submission to the issuance profile. It defines the shaper's role and
+for submission to Mission-Bound Authorization for OAuth 2.0 (the
+"issuance profile"). It defines the shaper's role and
 trust boundary, recommended behavior for ambiguity, capability
 resolution, and refusal, and an audit artifact (Shaping Evidence). It
 deliberately defines no portable shaping wire protocol and claims no
@@ -198,7 +208,11 @@ through which a proposal reaches the Mission Issuer as untrusted input
 (Pushed Authorization Requests in the OAuth binding); Shaping Evidence
 additionally uses the substrate's integrity-anchor envelope. The
 issuance profile {{I-D.draft-mcguinness-oauth-mission}} defines these
-for OAuth 2.0. Another authorization substrate that accepts a
+for OAuth 2.0. The Mission Authority Server
+({{I-D.draft-mcguinness-mission-authority-server}}) is a standalone
+binding of that submission channel; a shaped proposal enters it through
+the MAS mission submission endpoint unchanged. Another authorization
+substrate that accepts a
 structured, untrusted task proposal and commits it at approval can
 host the shaping practices described here unchanged.
 
@@ -617,6 +631,7 @@ reproducible for that record.
   "shaper_version": "policy-bundle-2026-06-30",
   "input_digest":
     "sha-256:InP9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4aB7cDe",
+  "input_exclusion_ruleset": "standard-2026-06",
   "user_supplied_facts": [
     "support ticket 456",
     "customer 1234"

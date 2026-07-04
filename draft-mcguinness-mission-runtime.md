@@ -100,6 +100,24 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
+  I-D.draft-mcguinness-oauth-mission-cross-domain:
+    title: "Mission Cross-Domain Projection for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-cross-domain-latest
+  I-D.draft-mcguinness-mission-authority-server:
+    title: "Mission Authority Server"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-mission-authority-server-latest
 
 --- abstract
 
@@ -110,15 +128,20 @@ an active Mission can become ambient authority for the actions an
 agent takes within a token's lifetime. This document specifies the
 companion runtime layer for deployments that claim runtime Mission
 enforcement. Within a declared enforcement scope, each consequential
-action is evaluated, before it executes, against the Mission the
-acting credential is bound to. The evaluation checks the action and its
-parameters against the Mission's approved authority and constraints,
-the actor context from the delegation chain, and the Mission against
-its current state. The document defines where enforcement sits, how a
-permit is bound to concrete parameters to close the time-of-check to
-time-of-use gap, how carried consumption bounds (budget, call counts,
-duration) are metered, and the runtime evidence each consequential
-action produces.
+action is evaluated, before it executes, against the Mission
+established for the acting credential. The evaluation checks the
+action and its parameters against the Mission's approved authority and
+constraints, the actor context from the delegation chain, the Mission
+against its current state, and the applicable Resource policy. The
+document defines where enforcement sits, how a permit is bound to
+concrete parameters to close the time-of-check to time-of-use gap, the
+materialized policy view a decision evaluates against, how carried
+consumption bounds (budget, call counts, duration) are metered, and
+the runtime evidence each consequential action produces. For the
+high-consequence classes it further defines action-bound approval,
+credential custody in the mediating enforcement point rather than the
+agent, and a named agent-compromise-resistant enforcement claim with
+individually verifiable conditions.
 
 --- middle
 
@@ -149,14 +172,22 @@ constraints that profile carries but does not evaluate:
 
 and, additionally, metering of the consumption bounds (budget, call
 counts, duration) the issuance profile carries as constraints but
-leaves to this layer to enforce ({{metering}}).
+leaves to this layer to enforce ({{metering}}). For the
+high-consequence classes it adds action-bound approval
+({{action-approval}}), credential custody in the mediating enforcement
+point rather than the agent ({{custody}}), and the named
+agent-compromise-resistant enforcement claim those mechanisms compose
+into ({{compromise-resistant}}).
 
 The model is a Policy Enforcement Point (PEP) at each consequential
 execution boundary that, before the action runs, obtains a decision
 from a Policy Decision Point (PDP) evaluating the action against the
 Mission. Mission-bound tokens bound what authority may exist; this
 profile defines where and how that authority is re-checked before
-consequential effects occur.
+consequential effects occur. A deployment whose acting tokens carry no
+`mission` claim can still bind each decision to a Mission: the Mission
+Substrate ({{mission-substrate}}) admits an externally established
+Mission reference ({{mission-binding}}).
 
 This profile specifies enforcement invariants, not a wire protocol: it
 does not standardize a PDP decision API, an enforcement-scope discovery
@@ -167,8 +198,8 @@ future work are collected in {{deferred}}.
 
 Because the invariants are not a wire format, two conforming deployments
 do not thereby interoperate at the PEP-PDP boundary; the interoperable
-wire surface is supplied by a decision API binding ({{authzen}}),
-specified separately; the AuthZEN binding is
+wire surface is supplied by a separately specified decision API binding
+({{authzen}}), the AuthZEN binding being
 {{I-D.draft-mcguinness-mission-authzen}}. This document is the
 architecture and invariant layer; the binding is the interoperability
 layer.
@@ -176,9 +207,11 @@ layer.
 ## Relationship to the issuance profile {#relationship}
 
 This document depends normatively on the issuance profile and is not
-implementable alone: it consumes Mission-bound access tokens that
-profile defines. It does not place any new requirement back on the
-issuance profile; it reads only fields that profile already defines:
+implementable alone: it consumes the Mission-bound access tokens that
+profile defines, or access tokens joined to an externally established
+Mission under {{mission-binding}}. It does not place any new
+requirement back on the issuance profile; it reads only fields that
+profile already defines:
 
 - the `mission` claim (`id`, `origin`, `authority_hash`);
 - the token's `authorization_details`, including entries of type
@@ -293,8 +326,12 @@ OAuth 2.0 mechanics. It consumes these substrate primitives: the
 Mission identifier and origin; the lifecycle state space with its
 only-`active`-permits rule and a freshness source; the Authority Set
 representation with its subset rule and Common Constraints; the
-Mission-bound credential carrying the `mission` claim; the
-integrity-anchor envelope; and the Mission's audit horizon. The
+Mission-bound credential carrying the `mission` claim, consumed when
+the binding provides it; the integrity-anchor envelope; and the
+Mission's audit horizon. The Mission-bound credential primitive is
+binding-dependent: a binding that does not provide it supplies an
+externally established Mission reference instead, under the
+binding-establishment step of {{mission-binding}}. The
 issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
 version's normative substrate: it defines each primitive for OAuth
 2.0, and every OAuth artifact named in this document enters through
@@ -676,10 +713,14 @@ sender-constrained token before treating its `cnf` binding as
 authenticated.
 
 A PEP MUST NOT ask a PDP to authorize an action from unverified token
-claims. If token validation fails, or if the deployment requires
-Mission governance for the protected operation and the token lacks a
-`mission` claim, the PEP MUST refuse before runtime Mission
-evaluation. When the PEP is an OAuth Resource Server, it uses the
+claims. If token validation fails, the PEP MUST refuse before runtime
+Mission evaluation. If the deployment requires Mission governance for
+the protected operation and the token lacks a `mission` claim, the PEP
+MUST likewise refuse, unless the deployment establishes the Mission
+binding externally ({{mission-binding}}); in that case the absence of
+the claim is not a refusal condition, and the join's verification of
+the supplied Mission reference applies instead. When the PEP is an
+OAuth Resource Server, it uses the
 normal OAuth error behavior for the protected resource (for example,
 Bearer token errors under {{RFC6750}}); this profile defines no new
 OAuth error code.
@@ -699,10 +740,10 @@ the declared enforcement scope.
 # The decision {#decision}
 
 Before a consequential action runs, its PEP MUST obtain a permit from
-a PDP that evaluates the action against the Mission the acting token
-is bound to. This is the normative contract. The decision API wire
-format is a deployment choice; a binding maps this contract onto a
-concrete API ({{authzen}}).
+a PDP that evaluates the action against the established Mission
+({{mission-binding}}). This is the normative contract. The decision
+API wire format is a deployment choice; a binding maps this contract
+onto a concrete API ({{authzen}}).
 
 The PEP MUST supply the inputs the PDP needs for the Mission-bound
 decision. Runtime enforcement MUST evaluate:
@@ -786,6 +827,29 @@ service, or a shared service); this document does not mandate one. The
 requirement is only that a PEP at each consequential boundary can
 reach an applicable PDP.
 
+## Mission binding establishment {#mission-binding}
+
+Every decision evaluates one Mission: the **established Mission**. A
+deployment establishes it in one of two modes:
+
+- **Credential-carried.** The acting token's `mission` claim
+  identifies the Mission, under the issuance profile's binding
+  ({{I-D.draft-mcguinness-oauth-mission}}). The PEP takes the Mission
+  reference from the validated token ({{token-validation}}).
+- **Externally established.** The token carries no `mission` claim,
+  and the PEP supplies a Mission reference from the deployment's
+  Mission binding source. The PDP MUST verify that reference against
+  the acting credential under a join a binding profile defines; an
+  unverified reference MUST NOT establish the Mission. The Mission
+  Authority Server profile defines the concrete join for this mode
+  ({{I-D.draft-mcguinness-mission-authority-server}}).
+
+A deployment MUST document the mode each enforcement scope uses
+({{runtime-conformance}}). In either mode, the established Mission is
+the Mission every input of this section (authority, Resource policy,
+parameters, actor, time, state) is evaluated against, and the Mission
+reference the permit and the evidence record bind.
+
 ## Mission state and freshness {#state-freshness}
 
 A Mission-aware decision needs the Mission's current state, which a
@@ -794,7 +858,8 @@ Mission state source it trusts for each enforcement scope. Examples
 include origin AS token introspection, a local Mission database, an
 authenticated status or event feed from the Mission `origin`, a
 materialized policy view, or a short-lived cross-domain credential
-whose lifetime is the deployment's accepted state lease.
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) whose lifetime
+is the deployment's accepted state lease.
 
 - The PDP MUST refuse a consequential action when it cannot establish,
   within the deployment's published staleness bound, that the Mission
@@ -807,12 +872,15 @@ whose lifetime is the deployment's accepted state lease.
 - When the credential issuer also holds the Mission, the PDP can learn
   state through token introspection ({{RFC7662}}) at the issuer per
   {{I-D.draft-mcguinness-oauth-mission}}. A non-origin Resource AS
-  introspecting a local token cannot report current Mission state under
-  the issuance profile; it can establish local token validity, but not
+  introspecting a local token
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) cannot report
+  current Mission state; it can establish local token validity, but not
   origin Mission freshness.
 - This document defines no cross-issuer by-Mission status query.
   Deployments that need tighter freshness than the token or
-  cross-domain grant lifetime provides use the Mission Status profile
+  cross-domain grant
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) lifetime
+  provides use the Mission Status profile
   ({{I-D.draft-mcguinness-oauth-mission-status}}) or Mission Lifecycle
   Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}), or an
   out-of-band trusted status feed.
@@ -1034,7 +1102,7 @@ refusal.
 | Condition | Required behavior |
 |---|---|
 | Token validation fails, including sender-constraint verification | Refuse before runtime Mission evaluation |
-| Mission governance is required but the token lacks a `mission` claim | Refuse before runtime Mission evaluation |
+| Mission governance is required but the token lacks a `mission` claim | Refuse before runtime Mission evaluation, unless the Mission binding is externally established ({{mission-binding}}) |
 | PEP-PDP channel authentication or integrity protection fails | Fail closed |
 | Mission state cannot be established within the staleness bound | Fail closed for consequential actions |
 | PDP unreachable | Fail closed for consequential actions; do not proceed on cached permits past the window |
@@ -1391,20 +1459,20 @@ This non-normative example shows an operation profile and the
 `parameter_digest` it produces ({{parameter-binding}}), so two
 implementations can confirm they normalize and digest the same way.
 
-Consider a `payments.send` operation. Its operation profile fixes the
-parameter set and normalization: the members are `payee`, `amount`,
-`currency`, and `account`; `amount` is a decimal string with exactly two
-fractional digits; `currency` is an uppercase ISO 4217 code; no defaults
-are inserted and no optional members are omitted; there are no set-like
-arrays to order. For a 9,000 USD payment, the normalized parameter
-object is:
+Consider a `journal-entries.write` operation under an ERP
+reconciliation Mission (`msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`) whose
+applicable entry carries a `max_amount_usd` ceiling of 500. The
+operation profile fixes the parameter set and normalization: the
+members are `amount_usd` and `source_invoice_id`; `amount_usd` is a
+decimal string with exactly two fractional digits; no defaults are
+inserted and no optional members are omitted; there are no set-like
+arrays to order. For a 423.50 USD journal entry, within the ceiling,
+the normalized parameter object is:
 
 ~~~ json
 {
-  "payee": "Acme Supply Co",
-  "amount": "9000.00",
-  "currency": "USD",
-  "account": "****4417"
+  "amount_usd": "423.50",
+  "source_invoice_id": "inv_2026Q3_842"
 }
 ~~~
 
@@ -1412,23 +1480,156 @@ The `parameter_digest` is `sha-256:` followed by the base64url,
 no-padding SHA-256 of the JCS {{RFC8785}} serialization of that object,
 under the issuance profile's canonicalization rules (no envelope; the
 normalized parameter object is digested directly). The JCS canonical
-bytes are a single line with sorted member names and no whitespace,
-shown here wrapped for layout only; remove the layout line break, adding
-no characters, to recover the canonical form:
+bytes are a single line with sorted member names and no whitespace:
 
 ~~~ text
-{"account":"****4417","amount":"9000.00","currency":"USD","payee":"Acme
- Supply Co"}
+{"amount_usd":"423.50","source_invoice_id":"inv_2026Q3_842"}
 ~~~
 
 ~~~ text
-parameter_digest = sha-256:e7GXd0GWwOK2ezlb0CfUeYhjYOF1DE68_Gg0ofbr7do
+parameter_digest = sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI
 ~~~
 
 The PDP binds its permit to this value, and the executing PEP recomputes
 it over the parameters it is about to use immediately before acting
 ({{parameter-binding}}); any change to a normalized parameter yields a
 different digest and the permit is refused.
+
+# Policy View Worked Example {#policy-view-example}
+
+This non-normative example shows the `policy_view_id` computation of
+{{policy-view}} over a minimal materialized-view envelope for the same
+Mission. The payload here is reduced to the two members the committed
+view is required to bind, `mission_id` and `authority_hash`; a
+deployment's payload also carries its evaluable materialized form,
+which this document does not standardize.
+
+~~~ json
+{
+  "typ": "mission-policy-view",
+  "iss": "https://as.example.com",
+  "value": {
+    "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  }
+}
+~~~
+
+The JCS canonical bytes are a single line with sorted member names and
+no whitespace, shown here wrapped for layout only; remove the layout
+line breaks, adding no characters, to recover the canonical form:
+
+~~~ text
+{"iss":"https://as.example.com","typ":"mission-policy-view","value":
+{"authority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5
+pNQ","mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"}}
+~~~
+
+~~~ text
+policy_view_id = sha-256:fuMqn6Nb5LfyziflJuYj8VgHHH1bskZ0SrMDxdQ8CaA
+~~~
+
+Because the identifier is a content hash, any change to the payload
+yields a different `policy_view_id` ({{policy-view}}).
+
+# Runtime Evidence Worked Examples {#evidence-examples}
+
+These non-normative records illustrate the minimum record content of
+{{evidence}} for the operation of {{parameter-digest-example}}. They
+show substrate-level record content only: the concrete schema,
+serialization, and integrity mechanism are the deployment's
+({{record-integrity}}), and a decision-API binding defines concrete
+evidence objects ({{I-D.draft-mcguinness-mission-authzen}}). In this
+deployment, the Resource Server runtime profile classifies
+`journal-entries.write` as an irreversible action (a posted entry is
+corrected only by a compensating entry), so the permit is single-use
+and execution-outcome evidence is required. The policy-view version
+cites the view of {{policy-view-example}}.
+
+A permit decision record:
+
+~~~ json
+{
+  "result": "permit",
+  "request_time": "2026-11-02T09:03:12Z",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
+  "token_issuer": "https://as.example.com",
+  "audience": "https://erp.example.com",
+  "sub": "user_3p2q8mN1a0kV7tR",
+  "client_id": "s6BhdRkqt3",
+  "action": "journal-entries.write",
+  "resource": "je_2026Q3_inv_8421",
+  "authorizing_entry": {
+    "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["journal-entries.write"],
+    "constraints": { "max_amount_usd": 500 }
+  },
+  "parameter_digest":
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+  "decision_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
+  "policy_view_version":
+    "sha-256:fuMqn6Nb5LfyziflJuYj8VgHHH1bskZ0SrMDxdQ8CaA",
+  "sequence": 17
+}
+~~~
+
+The execution-outcome record the executing PEP produces after it acts,
+keyed to the permit's decision identifier ({{evidence}}):
+
+~~~ json
+{
+  "result": "executed",
+  "outcome": "success",
+  "decision_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "origin": "https://as.example.com"
+  },
+  "parameter_digest":
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+  "outcome_time": "2026-11-02T09:03:14Z",
+  "sequence": 18
+}
+~~~
+
+A PEP refusal record for a later attempt on the same operation. A
+permit (`dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA`) bound the digest of a
+423.50 entry; between check and use the parameters became 780.00
+(normalized object
+`{"amount_usd":"780.00","source_invoice_id":"inv_2026Q3_842"}`). The
+executing PEP recomputed the digest over the parameters it was about
+to use, found a mismatch, and refused ({{parameter-binding}}); the
+record carries the recomputed digest:
+
+~~~ json
+{
+  "result": "refuse",
+  "failure_condition": "parameter_digest_mismatch",
+  "request_time": "2026-11-02T09:03:29Z",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
+  "audience": "https://erp.example.com",
+  "sub": "user_3p2q8mN1a0kV7tR",
+  "client_id": "s6BhdRkqt3",
+  "action": "journal-entries.write",
+  "resource": "je_2026Q3_inv_8421",
+  "decision_id": "dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA",
+  "parameter_digest":
+    "sha-256:UdG-TiebDHTiKRXUVURs1Jeq_vDJp_Ro8jWbBAD8hgM",
+  "sequence": 19
+}
+~~~
 
 # Acknowledgments
 {:numbered="false"}

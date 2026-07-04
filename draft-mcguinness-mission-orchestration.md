@@ -100,13 +100,15 @@ informative:
 
 Mission runtime enforcement can refuse the next consequential action,
 but Mission termination can occur while an agent workflow is already in
-flight. This document defines an OPTIONAL orchestration profile for
+flight. This document defines an optional orchestration profile for
 Mission-governed workflows. It classifies actions by reversibility,
 requires an unwind plan before execution, defines behavior when a
 Mission is revoked, expired, suspended, completed, or superseded, and
 specifies Orchestration Evidence for pause, cancel, compensation, and
 human-review decisions. The profile turns Mission termination from a
-simple access-control denial into governed handling of execution state.
+simple access-control denial into governed handling of execution state,
+with compensation authorized only by resource policy or a separate
+active Mission, never the terminated Mission.
 
 --- middle
 
@@ -214,8 +216,11 @@ OAuth 2.0 mechanics. It consumes these substrate primitives: the
 Mission identifier; the lifecycle state space with its
 only-`active`-permits rule; the runtime enforcement evidence its
 records link; the integrity-anchor envelope, used for
-`unwind_plan_hash`; and the substrate's issuance gating, against which
-every compensation authority basis resolves. The issuance profile
+`unwind_plan_hash`; and the substrate's Mission state, against which
+a compensation authority basis resolves ({{compensation-authority}}):
+a `separate_mission` basis requires a Mission that is `active` under
+the binding in use, and a `resource_policy` basis lies outside Mission
+authority entirely. The issuance profile
 {{I-D.draft-mcguinness-oauth-mission}} is this version's normative
 substrate; another substrate that provides the same primitives can
 host this profile unchanged.
@@ -373,6 +378,32 @@ NOT define them.
   }
 }
 ~~~
+
+Its `unwind_plan_hash` is computed with the integrity-anchor envelope
+({{unwind-plan-integrity}}): `typ` `mission-unwind-plan`, `iss`
+`https://as.example.com`, and this plan as the envelope `value`. The
+canonical-bytes block is the exact JCS {{RFC8785}} output, a single
+line of UTF-8 with no whitespace, shown wrapped only for layout;
+remove the layout line breaks, adding no characters, to recover the
+canonical form.
+
+Canonical bytes of the envelope:
+
+~~~ text
+{"iss":"https://as.example.com","typ":"mission-unwind-plan","value":{"ev
+idence_policy":{"link_runtime_evidence":true,"retain_for":"mission_audit
+_horizon"},"in_flight_behavior":"wait_then_review","mission_id":"msn_8Rf
+X2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","post_completion_behavior":"human_review"
+,"pre_start_behavior":"human_review","reversibility":"external_commitmen
+t","review_queue":"finance-control-review","step_id":"post_journal_entry
+"}}
+~~~
+
+~~~ text
+unwind_plan_hash = sha-256:Qf-0Xqo8QPMN0D3xMOSi2j4qTvaU2U8ne1g8UEBrAIc
+~~~
+
+The evidence example of {{orchestration-evidence}} carries this value.
 
 # State-Change Behavior {#state-change-behavior}
 
@@ -646,8 +677,43 @@ Example:
   "reason": "external_commitment_dispatched_unknown",
   "outcome_state": "unknown",
   "unwind_plan_hash":
-    "sha-256:Qk3rY7pL2mN8xW1vB6cD9fH4jK0sT5gA2eR8uI3oP7Y",
+    "sha-256:Qf-0Xqo8QPMN0D3xMOSi2j4qTvaU2U8ne1g8UEBrAIc",
   "occurred_at": "2026-11-02T08:16:00Z"
+}
+~~~
+
+A later record for the same step carries the compensate decision.
+Review confirmed that the posting committed before the Mission was
+revoked; a pre-provisioned remedial Mission that is `active`
+authorizes the reversing entry ({{compensation-authority}}). The
+record links the review record above and the original runtime
+enforcement evidence, and omits `unwind_plan_hash` because it is not
+the step's first record:
+
+~~~ json
+{
+  "event_id": "orch_9wK2nR5vXq7t",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
+  "workflow_id": "wf_invoice_recon_2026q3",
+  "step_id": "post_journal_entry",
+  "mission_state": "revoked",
+  "state_source": "status",
+  "orchestration_decision": "compensate",
+  "reason": "committed_step_reversed_after_review",
+  "outcome_state": "committed",
+  "linked_evidence": [
+    "orch_4r9SqLm8tY2p",
+    "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB"
+  ],
+  "authority_basis": "separate_mission",
+  "compensation_action": "erp.journal_entry.reverse",
+  "compensation_outcome": "completed",
+  "occurred_at": "2026-11-02T09:03:00Z"
 }
 ~~~
 
@@ -671,23 +737,16 @@ before or after a given step committed.
 
 # Relationship to Harness and Runtime Profiles {#relationship}
 
-The harness profile
-{{I-D.draft-mcguinness-mission-harness}} governs whether a
-session, queue item, or sub-agent handle may continue. This document
-governs how workflow state is unwound once continuation is stopped.
-The runtime profile {{I-D.draft-mcguinness-mission-runtime}}
-still governs each consequential action at the last controllable
-boundary. These checks compose; none replaces the others.
-
 The two execution profiles share, rather than duplicate, their common
 machinery: the `state_source` value space is defined once by the
-Harness profile and reused here ({{orchestration-evidence}}), and the
-Orchestration Evidence `mission` descriptor is the same shape as the
-Harness Evidence descriptor. The boundary is by question asked: a
-Harness Evidence record answers "may this unit of work continue," while
-an Orchestration Evidence record answers "how was in-flight workflow
-state unwound." A deployment that needs both records emits each at its
-own decision point; neither subsumes the other.
+Harness profile ({{I-D.draft-mcguinness-mission-harness}}) and reused
+here ({{orchestration-evidence}}), and the Orchestration Evidence
+`mission` descriptor is the same shape as the Harness Evidence
+descriptor. A deployment that needs both records emits each at its own
+decision point; neither subsumes the other. The runtime profile
+{{I-D.draft-mcguinness-mission-runtime}} still governs each
+consequential action at the last controllable boundary, whichever
+execution profile stops or unwinds the work.
 
 # Conformance {#conformance}
 

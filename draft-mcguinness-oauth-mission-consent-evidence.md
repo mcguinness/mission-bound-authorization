@@ -52,6 +52,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-mission-shaping-latest
+  I-D.draft-mcguinness-mission-authority-server:
+    title: "Mission Authority Server"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-mission-authority-server-latest
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     author:
@@ -84,15 +93,22 @@ informative:
 
 Mission-Bound Authorization for OAuth 2.0 commits the approved Mission
 Intent and Authority Set, but does not commit the exact consent
-disclosure shown to the Approver. This document defines an OPTIONAL
+disclosure shown to the Approver. This document defines an optional
 Consent Evidence profile. It specifies a structured consent disclosure
 object, a `consent_rendering_hash` integrity anchor, and a signed
 Consent Evidence object that records the structured disclosure the
 Authorization Server rendered or committed to rendering, which Approver
 it recorded as deciding, which Mission authority the disclosure
-corresponded to, and which notices or material risks it carried. The
-profile lets an auditor reconstruct the recorded approval surface
-without making the disclosure itself an authority grant.
+corresponded to, and which notices or material risks it carried.
+Evidence is recorded for approved, declined, and narrowed
+(revision-required) decisions, so declines and narrowing negotiations
+are visible to audit, not only approvals. A rendering-assurance ladder
+lets a deployment raise assurance by degrees, from a recorded
+disclosure through deterministic re-rendering and attested rendering
+to a confirmation signed by the Approver's authenticator over the
+disclosure commitment. The profile lets an auditor reconstruct the
+recorded approval surface without making the disclosure itself an
+authority grant.
 
 --- middle
 
@@ -103,8 +119,7 @@ Mission-Bound Authorization for OAuth 2.0
 Mission to an approval event and commits two objects: the approved
 Mission Intent and the approved Authority Set. It deliberately notes a
 remaining gap: the exact consent disclosure rendered to the Approver is
-not itself committed. A faulty or malicious rendering layer could show
-a narrower task than the Authority Set actually records.
+not itself committed.
 
 This document narrows that gap. It defines a structured consent
 disclosure object and a Consent Evidence object. The disclosure object
@@ -146,15 +161,18 @@ This document defines:
 - the consent disclosure object ({{consent-disclosure}});
 - the `consent_rendering_hash` commitment ({{consent-rendering-hash}});
 - the Consent Evidence object ({{consent-evidence}});
-- binding rules for initial Mission approval and expansion approval
-  ({{binding-to-mission}});
+- binding and recording rules for initial approval, expansion approval,
+  declined, and revision-required events ({{binding-to-mission}});
 - retention and audit reconstruction requirements ({{audit}}); and
 - conformance for a Consent-Evidence-capable Mission Issuer
   ({{conformance}}).
 
 This document does not define user-interface layout, a legal consent
 standard, or any new OAuth grant. It does not change the Authority Set
-or Mission lifecycle.
+or Mission lifecycle. Under the standalone Mission Authority Server
+binding ({{I-D.draft-mcguinness-mission-authority-server}}), the
+Mission Authority Server is the committing Mission Issuer and this
+profile composes with it unchanged.
 
 ## Evidence Model {#evidence-model}
 
@@ -393,7 +411,8 @@ recognize and MUST NOT treat an unrecognized prefix as SHA-256.
 
 The hash commits the disclosure object, not pixels or browser state. A
 deployment MAY additionally retain screenshots or UI telemetry, but the
-interoperable commitment is the structured disclosure object.
+interoperable commitment is the structured disclosure object. A worked
+disclosure and computed vector are provided in {{disclosure-vector}}.
 
 So that the committed object can be related to what a human would see,
 the rendering SHOULD be a deterministic function of the disclosure
@@ -607,9 +626,15 @@ A Consent Evidence object has these members:
 
 `refused_dimensions`:
 : REQUIRED when `decision` is `narrowed`. An object identifying the
-  dimensions the review refused, using the `rejected_scope` and
-  `rejected_authorization_details` shapes of the deferred-approval
-  profile ({{I-D.draft-mcguinness-oauth-mission-approval}}).
+  dimensions the review refused. It carries one or both of
+  `rejected_scope`, a string of space-delimited scope tokens naming the
+  refused scope, and `rejected_authorization_details`, an array of
+  authorization-details-shaped subtrees the re-derived Authority Set
+  must exclude or narrow, each naming a `type` and the members within
+  it that must not survive re-derivation unchanged. These are the
+  shapes the deferred-approval profile signals on its revision-required
+  response ({{I-D.draft-mcguinness-oauth-mission-approval}}), recorded
+  here as the review named them.
 
 `predecessor_intent_hashes`:
 : OPTIONAL. An array of `intent_hash` values committing the revision
@@ -638,7 +663,7 @@ A Consent Evidence object has these members:
   that resolves in the Mission Issuer's published key material (its
   `jwks_uri`); that is the verification path ({{integrity}}).
 
-Example:
+Example, over the worked disclosure of {{disclosure-vector}}:
 
 ~~~ json
 {
@@ -646,14 +671,14 @@ Example:
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com",
-    "intent_hash": "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
-    "authority_hash": "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "intent_hash": "sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E",
+    "authority_hash": "sha-256:-rBZZJ8tVIyGoR1tBg6BO6QG0kimVvef8vjigpoVuPw",
     "consent_rendering_hash":
-      "sha-256:CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz"
+      "sha-256:M7GB0qmwHbdRFw3IJdk14w9VBKwN2lvDkXGRb5fzatQ"
   },
   "approver": {
     "iss": "https://idp.example.com",
-    "sub": "alice"
+    "sub": "user_3p2q8mN1a0kV7tR"
   },
   "authentication_context": {
     "acr": "urn:example:acr:phishing-resistant",
@@ -667,12 +692,22 @@ Example:
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz"
+      "sha-256:M7GB0qmwHbdRFw3IJdk14w9VBKwN2lvDkXGRb5fzatQ"
   },
   "evidence_envelope": {
     "format": "jws-compact",
     "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImNvbnNlbnQt..."
   }
+}
+~~~
+
+The decoded protected header of the `evidence_envelope` value:
+
+~~~ json
+{
+  "alg": "ES256",
+  "kid": "consent-evidence-2026",
+  "typ": "mission-consent-evidence+jws"
 }
 ~~~
 
@@ -940,6 +975,161 @@ Mission audit profile references this media type.
 - Change controller: IETF
 
 --- back
+
+# Worked Disclosure and Test Vector {#disclosure-vector}
+
+This non-normative vector lets an implementation verify its
+`consent_rendering_hash` computation ({{consent-rendering-hash}}) byte
+for byte. The disclosure is the one the evidence example of
+{{consent-evidence}} records. It renders the Authority Set of the
+issuance profile's test vectors
+({{I-D.draft-mcguinness-oauth-mission}}): `invoices.read` and
+`journal-entries.write` bounded by `max_amount_usd` 500 on
+`https://erp.example.com`, approved by `alice`
+(`user_3p2q8mN1a0kV7tR`); `source_hashes` carries that profile's
+computed `intent_hash` and `authority_hash`. The `template_hash` value
+stands for the deployment's template commitment and is illustrative.
+
+The Consent Disclosure object:
+
+~~~ json
+{
+  "disclosure_id": "disc_4pQ9z",
+  "source_hashes": {
+    "intent_hash": "sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E",
+    "authority_hash": "sha-256:-rBZZJ8tVIyGoR1tBg6BO6QG0kimVvef8vjigpoVuPw"
+  },
+  "template_id": "mission-consent-standard",
+  "template_version": "2026-06",
+  "template_hash": "sha-256:50S2DpJfcfNGlzi_vzZJNJbJKkknFX65rhWJWLiMyok",
+  "locale": "en-US",
+  "mission_summary": {
+    "goal": "Reconcile Q3 invoices",
+    "mission_expiry": "2026-12-31T23:59:59Z",
+    "subject_display": "alice (user_3p2q8mN1a0kV7tR)",
+    "approver_display": "alice (user_3p2q8mN1a0kV7tR)"
+  },
+  "authority_summary": [
+    {
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read"]
+    },
+    {
+      "resource": "https://erp.example.com",
+      "actions": ["journal-entries.write"],
+      "constraints": [
+        {
+          "constraint": "max_amount_usd",
+          "value": 500,
+          "rendered":
+            "Each posted journal entry is limited to 500 US dollars."
+        }
+      ]
+    }
+  ],
+  "material_notices": [
+    {
+      "condition": "irreversible_action",
+      "applies_to": {
+        "resource": "https://erp.example.com",
+        "action": "journal-entries.write"
+      },
+      "statement":
+        "Posted journal entries are not automatically reversible."
+    }
+  ],
+  "risk_summary": [
+    {
+      "dimension": "data_access",
+      "statement":
+        "The agent can read invoices held in the ERP system."
+    },
+    {
+      "dimension": "spend",
+      "statement":
+        "The agent can post journal entries of up to 500 US dollars."
+    },
+    {
+      "dimension": "irreversibility",
+      "statement":
+        "Posted journal entries alter the ledger of record."
+    }
+  ],
+  "constraint_provenance": [
+    {
+      "applies_to": {
+        "resource": "https://erp.example.com",
+        "constraint": "max_amount_usd"
+      },
+      "source": "subject"
+    }
+  ],
+  "approver": {
+    "iss": "https://idp.example.com",
+    "sub": "user_3p2q8mN1a0kV7tR",
+    "display": "alice"
+  },
+  "display_context": {
+    "channel": "web",
+    "rendered_at": "2026-06-30T17:54:30Z"
+  }
+}
+~~~
+
+The read entry carries no constraints, so its element renders none.
+The write entry warrants a material notice and an `irreversibility`
+risk dimension because posted journal entries are not automatically
+reversible; `constraint_provenance` attributes the `max_amount_usd`
+bound to the Subject, who stated it in the task request. The Approver
+is the Subject, so the top-level `subject` member is absent.
+
+`consent_rendering_hash` is the prefixed SHA-256 over the JCS
+{{RFC8785}} canonical bytes of the integrity-anchor envelope with
+`typ` `mission-consent-disclosure`, `iss` `https://as.example.com`,
+and this disclosure object as `value`. The canonical-bytes block is
+the exact JCS output: a single line, UTF-8, no whitespace. It is shown
+here wrapped only for layout; remove the layout line breaks, adding no
+characters, to recover the canonical form. Note that JCS sorts object
+member names and preserves array order.
+
+Canonical bytes of the envelope:
+
+~~~ text
+{"iss":"https://as.example.com","typ":"mission-consent-disclosure","valu
+e":{"approver":{"display":"alice","iss":"https://idp.example.com","sub":
+"user_3p2q8mN1a0kV7tR"},"authority_summary":[{"actions":["invoices.read"
+],"resource":"https://erp.example.com"},{"actions":["journal-entries.wri
+te"],"constraints":[{"constraint":"max_amount_usd","rendered":"Each post
+ed journal entry is limited to 500 US dollars.","value":500}],"resource"
+:"https://erp.example.com"}],"constraint_provenance":[{"applies_to":{"co
+nstraint":"max_amount_usd","resource":"https://erp.example.com"},"source
+":"subject"}],"disclosure_id":"disc_4pQ9z","display_context":{"channel":
+"web","rendered_at":"2026-06-30T17:54:30Z"},"locale":"en-US","material_n
+otices":[{"applies_to":{"action":"journal-entries.write","resource":"htt
+ps://erp.example.com"},"condition":"irreversible_action","statement":"Po
+sted journal entries are not automatically reversible."}],"mission_summa
+ry":{"approver_display":"alice (user_3p2q8mN1a0kV7tR)","goal":"Reconcil
+e Q3 invoices","mission_expiry":"2026-12-31T23:59:59Z","subject_display"
+:"alice (user_3p2q8mN1a0kV7tR)"},"risk_summary":[{"dimension":"data_acce
+ss","statement":"The agent can read invoices held in the ERP system."},{
+"dimension":"spend","statement":"The agent can post journal entries of u
+p to 500 US dollars."},{"dimension":"irreversibility","statement":"Poste
+d journal entries alter the ledger of record."}],"source_hashes":{"autho
+rity_hash":"sha-256:-rBZZJ8tVIyGoR1tBg6BO6QG0kimVvef8vjigpoVuPw","intent
+_hash":"sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E"},"template_
+hash":"sha-256:50S2DpJfcfNGlzi_vzZJNJbJKkknFX65rhWJWLiMyok","template_id
+":"mission-consent-standard","template_version":"2026-06"}}
+~~~
+
+~~~ text
+consent_rendering_hash =
+  sha-256:M7GB0qmwHbdRFw3IJdk14w9VBKwN2lvDkXGRb5fzatQ
+~~~
+
+An implementation that canonicalizes the same envelope, computes
+SHA-256, and encodes as `sha-256:` followed by base64url with no
+padding reproduces this value exactly. A divergence indicates a JCS or
+encoding difference to resolve before interoperating.
 
 # Acknowledgments
 {:numbered="false"}
