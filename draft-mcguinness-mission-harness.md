@@ -443,7 +443,12 @@ permits continuation.
 
 ## Queue Item Object {#queue-item}
 
-A governed queue item has:
+The object below is a RECOMMENDED representation, not a wire format: a
+harness MAY represent queued work in any internal structure, provided
+the requirements attached to these members hold for the equivalent
+information. What is normative is the behavior: the Mission binding,
+the resume check before dispatch, and the expiry and retry rules of
+this section. A governed queue item carries:
 
 `queue_item_id`:
 : REQUIRED. A string.
@@ -619,6 +624,11 @@ enumeration.
 | `paused` | The item is suspended pending an authorized lifecycle transition. |
 | `terminated` | The item's task graph is ended and its runtime resources released. |
 | `handoff` | The item is escalated to a human or governance workflow. |
+
+This enumeration is the evidence vocabulary, not an internal
+state-machine requirement: a harness MAY run any internal execution
+states, provided each governed item's condition maps onto one of these
+values when Harness Evidence is emitted.
 
 # Stop Behavior {#stop-behavior}
 

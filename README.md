@@ -110,7 +110,8 @@ companion assumes. From there, follow the path that matches your role:
   Introduction and Overview, then the Security Model for the trust
   picture in one view.
 - **Implement issuance at an Authorization Server** (identity vendors):
-  the core, then Status and Signals (the state surfaces), Consent
+  the core, then Status (the state surface; Signals is its experimental
+  push complement), Consent
   Evidence (approval-surface evidence), Expansion and Completion
   (growing and retiring authority), Deferred Approval if approvals
   are asynchronous, and Cross-Domain Projection when Missions span
@@ -143,7 +144,7 @@ are the companion profiles of the same names).
 | Bundle | Drafts | What you get |
 |---|---|---|
 | **Baseline issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Enforced bundle). Audit, not action-time defense. |
-| **Enforced agent** | mission + runtime + authzen + a freshness source (status, signals, or origin token introspection) | Per-action enforcement at the point of use, and prompt revocation (pull via status or introspection, push via signals). The minimum for an agent that takes consequential actions. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
+| **Enforced agent** | mission + runtime + authzen + a freshness source (status or origin token introspection; signals, experimental, adds push) | Per-action enforcement at the point of use, and prompt revocation (pull via status or introspection; the experimental signals profile adds push). The minimum for an agent that takes consequential actions. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
 | **Governed agent (recommended for AI agents)** | Enforced agent + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. For protection against a compromised agent, claim runtime's named agent-compromise-resistant enforcement (see the note below the table). Add child-delegation for sub-agents and expansion for mid-task growth, and orchestration (experimental) for safe unwinding of in-flight work. |
 | **Standalone governance (AS-optional)** | authority-server (experimental) + runtime + authzen (+ consent-evidence and harness for the Governed equivalents) | Mission governance and per-action enforcement with an unmodified OAuth Authorization Server; the authority server serves the status and lifecycle surfaces itself and is the freshness source. No Mission-bound tokens and no issuance gating: revoking a Mission stops nothing at the token layer, so enforcement rests entirely on PEP coverage; no sub-agent delegation surface is specified in this mode yet. The on-ramp to the Enforced and Governed bundles. |
 
@@ -189,7 +190,7 @@ decide what to build on now.
 
 - **Stable** (normative dependencies are ratified OAuth and finalized
   OpenID specifications): the issuance **core**, **runtime**,
-  **authzen**, **status**, and **signals**. Build on these. The core
+  **authzen**, and **status**. Build on these. The core
   confines its one tracked Internet-Draft reference (the OAuth Actor
   Profile) to its OPTIONAL Delegation capability; the mandatory
   single-domain core otherwise depends only on ratified specifications.
@@ -205,9 +206,18 @@ decide what to build on now.
   queue). For AI agents, consent-evidence and harness are not merely
   situational: they are the Governed bundle's recommended set.
 - **Experimental** (adopt for evaluation, not as a stable interface):
-  **attenuation** and **approval** depend normatively on Internet-Drafts
+  **signals** is a propagation-latency optimization over correctly
+  sized polling of the status surfaces; adopt it where per-Mission
+  polling does not scale. **attenuation** and **approval** depend
+  normatively on Internet-Drafts
   that are not yet ratified (Attenuating Agent Tokens and OAuth Deferred
-  Token Response, respectively); **cross-domain** depends normatively on
+  Token Response, respectively), and attenuation's offline mint pays
+  only where runtime state checks are already deployed on every
+  consumer path. **approval-revision**, **progressive**, and
+  **metering** carve the highest-machinery capabilities out of their
+  host profiles (in-review narrowing revision, policy-adjudicated
+  in-ceiling expansion, and cumulative consumption metering); each host
+  profile stands alone without them. **cross-domain** depends normatively on
   the OAuth identity-chaining document (approved, in the RFC Editor
   queue) and ID-JAG (a working-group document); **orchestration** and
   **completion** define newer models that are less exercised;
@@ -320,18 +330,30 @@ pixels presented or the Approver's comprehension.
 
 #### Mission Deferred Approval for OAuth 2.0
 
-Makes the approval event asynchronous and negotiable. Profiles OAuth
+Makes the approval event asynchronous. Profiles OAuth
 Deferred Token Response so a Mission approval can be deferred and
-polled, and adds a `revisable` mode: when the Authorization Server can
-grant only a narrowed version of the proposed Mission, it signals which
-dimensions it refused and invites the client to push a narrowing
-revision, continuing the same approval instead of starting over.
-Narrowing only.
+polled; the Mission record is created atomically with the asynchronous
+decision. A proposal the reviewer will grant only in narrowed form
+resolves to a denial, and the client resubmits a narrower Intent.
 
 * [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-approval.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-approval)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-approval)
 * [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-approval.diff)
+
+#### Mission Approval Revision for OAuth 2.0
+
+Experimental companion to Deferred Approval. Adds a `revisable` mode:
+when the Authorization Server can grant only a narrowed version of the
+proposed Mission, it signals which dimensions it refused and invites
+the client to push a narrowing revision, continuing the same deferred
+approval instead of starting over. Narrowing only; deny-and-resubmit
+under Deferred Approval alone is the stable path.
+
+* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-approval-revision.html)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-approval-revision)
+* [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-approval-revision)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-approval-revision.diff)
 
 ### Lifecycle
 
@@ -350,11 +372,13 @@ Mission state, and an authorized party change it.
 
 #### Mission Lifecycle Signals for OAuth 2.0
 
-A profile of the OpenID Shared Signals Framework: the Mission Issuer
+Experimental. A profile of the OpenID Shared Signals Framework: the
+Mission Issuer
 emits a signed Security Event Token on each Mission lifecycle
 transition, delivered by push or poll, so a consumer learns of a
 revocation, expiry, or other transition promptly without polling. It is
-the push complement to the pull-based Status surface.
+the push complement to the pull-based Status surface, a latency
+optimization for deployments where per-Mission polling does not scale.
 
 * [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-signals.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-signals)
@@ -374,10 +398,24 @@ step-up.
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion)
 * [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-expansion.diff)
 
+#### Mission Progressive Authorization for OAuth 2.0
+
+Experimental companion to Expansion. At the initial approval the
+Approver additionally consents to an authority ceiling and a drawdown
+policy; the Mission Issuer may then adjudicate an expansion that stays
+within the ceiling by policy instead of a fresh human approval.
+High-consequence and cross-domain authority always require the human.
+Under Expansion alone, every widening is human-approved.
+
+* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-progressive.html)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-progressive)
+* [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-progressive)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-progressive.diff)
+
 #### Mission Completion for OAuth 2.0
 
 The narrowing counterpart of Expansion. Adds `terminal_when`, a
-registered Common Constraint that discharges a `mission_resource_access`
+Common Constraint that discharges a `mission_resource_access`
 entry when its completion condition fires, so the Authorization Server
 stops deriving that entry once the task it was granted for is done.
 Discharge is monotonic (only retires authority), so it is safe against
@@ -426,6 +464,21 @@ restate the enforcement semantics the runtime profile owns.
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-authzen)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authzen)
 * [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-authzen.diff)
+
+#### Mission Consumption Metering
+
+Experimental. Defines the cumulative consumption bounds a Mission
+Intent may carry (`max_budget`, `max_calls`, `max_duration`), the
+runtime metering that enforces them (atomic check-and-decrement,
+reserve/commit postures, duration leases, settlement), and the AuthZEN
+wire binding for lease renewal and settlement. Without it, Missions
+carry no cumulative bounds; the runtime profile's fail-closed rule
+covers any bound a deployment cannot meter.
+
+* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-metering.html)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-metering)
+* [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-metering)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-metering.diff)
 
 ### Agent runtime
 

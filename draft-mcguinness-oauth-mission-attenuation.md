@@ -132,9 +132,11 @@ issuer (the attenuation substrate defines no revocation of its own); and
 `authority_hash` rides the chain as a lineage anchor, not as the child's
 own authority commitment.
 
-# Status: An OPTIONAL Extension {#optional-status}
+# Status: An EXPERIMENTAL Extension {#optional-status}
 
-This document is OPTIONAL. A deployment that narrows authority only
+This document is OPTIONAL and **experimental**: adopt it for
+evaluation, not as a stable interface. A deployment that narrows
+authority only
 through the Authorization Server is fully conformant to the issuance
 profile and is unaffected by this document. It places no new requirement
 on the issuance profile, and it does not replace
@@ -143,9 +145,15 @@ attenuation in addition, for the fan-out paths where issuer round-trips
 are the bottleneck.
 
 A deployment claims this profile only when it issues or accepts
-Mission-bound attenuation-substrate tokens.
+Mission-bound attenuation-substrate tokens. Because the Mission kill
+switch reaches offline-minted tokens only through per-presentation
+runtime state checks ({{kill-switch}}), this profile is available only
+to deployments running the runtime enforcement profile
+({{I-D.draft-mcguinness-mission-runtime}}); on such a deployment the
+offline mint saves issuer round-trips, not enforcement checks. Weigh
+that saving against the chain-verification surface before adopting.
 
-This profile depends normatively on the Attenuating Agent Tokens
+This profile also depends normatively on the Attenuating Agent Tokens
 substrate ({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}), an
 in-progress Internet-Draft whose details may change; an implementation
 tracks that work as it evolves. Authorization-Server-mediated
@@ -217,8 +225,8 @@ authority from `mission_resource_access` entries
   entry's `resource`; the root's tool set MUST be a subset of that
   entry's `actions`;
 - a tool's argument constraints map to the entry's `constraints`,
-  compared under the registered Common Constraint value-space rules
-  ({{I-D.draft-mcguinness-oauth-mission}}) for registered constraint
+  compared under the specification-defined Common Constraint value-space rules
+  ({{I-D.draft-mcguinness-oauth-mission}}) for specification-defined constraint
   names and under the deployment's rules otherwise; a root argument
   constraint MUST be no broader than the mapped entry `constraints`; and
 - the root MUST derive only from entries whose `delegation` permits the
