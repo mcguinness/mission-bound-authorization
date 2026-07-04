@@ -115,6 +115,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
+  I-D.draft-mcguinness-mission-metering:
+    title: "Mission Consumption Metering"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-mission-metering-latest
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
     title: "Mission Consent Evidence for OAuth 2.0"
     author:
@@ -358,12 +367,8 @@ considered and where it belongs, not that it was overlooked.
   committed at approval; this profile defines no mid-stream widening
   that bypasses consent. Widening requires a new approval, a successor
   Mission, as specified by Mission Expansion
-  {{I-D.draft-mcguinness-oauth-mission-expansion}}. That approval MAY be
-  given by policy rather than by a human when the original approval
-  pre-consented to an authority ceiling and a drawdown policy
-  (progressive authorization,
-  {{I-D.draft-mcguinness-oauth-mission-expansion}}); a widening that no
-  consent, human or pre-given, authorizes remains out of scope.
+  {{I-D.draft-mcguinness-oauth-mission-expansion}}; a widening that no
+  consent authorizes remains out of scope.
 - **Lifecycle event distribution.** A Resource Server learns Mission
   state from the token lifetime or optional introspection
   ({{introspection}}); this profile defines no push-based notification
@@ -643,7 +648,9 @@ following members:
 `context`:
 : OPTIONAL. An object of machine-actionable bounds. This
   document defines the members below; others MAY be added by
-  deployments:
+  deployments or defined by companion profiles (an extension member
+  follows the collision-resistant naming and fail-safe rules of
+  {{extensibility}}):
 
   `acr`:
   : OPTIONAL. A string. An authentication context class for the
@@ -664,54 +671,20 @@ following members:
     ({{lifecycle}}; detail in
     {{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
-  `max_budget`:
-  : OPTIONAL. An object. A hard cap on cumulative monetary
-    spend under the Mission. Has the members:
-
-    `amount`:
-    : REQUIRED. A string. A decimal number.
-
-    `currency`:
-    : REQUIRED. A string. An ISO 4217 currency code.
-
-  `max_calls`:
-  : OPTIONAL. An array of objects. Hard caps on the count of
-    consequential call events. Each object has the members:
-
-    `call_class`:
-    : REQUIRED. A string. The named call class to meter. A `call_class`
-      value SHOULD be drawn from the `actions` identifiers of the
-      entry's `mission_resource_access` ({{authorization-derivation}}),
-      so the metered class maps to evaluated actions; a deployment that
-      meters a coarser or cross-entry class defines that class's
-      membership, and such a class is deployment-defined and not
-      interoperable, like a deployment-defined constraint. (Named
-      `call_class` rather than `scope` to avoid collision with the OAuth
-      `scope` parameter and claim.)
-
-    `count`:
-    : REQUIRED. An integer. 1 or greater.
-
-  `max_duration`:
-  : OPTIONAL. A string. An ISO 8601 duration (for
-    example, `PT8H`), matching the `duration` rule in Appendix A of
-    {{RFC3339}}, bounding cumulative wall-clock consequential activity
-    under the Mission. It is distinct from `mission_expiry`, which
-    bounds issuance rather than activity.
-
-`max_budget`, `max_calls`, and `max_duration` are **consumption
-bounds**: a deployment names them here so issuance and the runtime
-layer share one vocabulary. They are carried on the Mission and
-committed by `intent_hash`, but they are not enforced by the AS at
-issuance. The following table summarizes which party enforces each
-bound a Mission carries and what holds when that enforcer is absent:
+This document defines no cumulative consumption bounds (for example, a
+budget, call-count, or activity-duration cap): every bound this
+document defines is enforced by a party this document names. An
+experimental companion defines cumulative consumption bounds as
+`context` extension members together with the runtime metering that
+enforces them ({{I-D.draft-mcguinness-mission-metering}}). The
+following table summarizes which party enforces each bound a Mission
+carries and what holds when that enforcer is absent:
 
 | Bound | Enforced by | When that enforcer is absent |
 |---|---|---|
 | `resource` and `actions` | any Resource Server that enforces `authorization_details` ({{rs-enforcement}}) | a scope-only RS enforces only the coarse `scope` projection ({{rs-enforcement}}) |
 | per-entry `constraints` | a Resource Server that understands and enforces the key ({{rs-enforcement}}) | a Mission-aware RS fails closed; a scope-only RS does not evaluate them |
 | `max_derivations` | the origin AS at each derivation ({{lifecycle}}) | never absent at the origin; it does not bound another domain's local minting ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) |
-| `max_budget`, `max_calls`, `max_duration` | the runtime layer at the point of use ({{runtime-boundary}}) | not enforced: rendered, consented, and committed, but advisory |
 
 Example Mission Intent:
 
@@ -731,12 +704,7 @@ Example Mission Intent:
   "mission_expiry": "2026-12-31T23:59:59Z",
   "context": {
     "acr": "urn:example:acr:mfa",
-    "max_derivations": 200,
-    "max_budget": { "amount": "5000.00", "currency": "USD" },
-    "max_calls": [
-      { "call_class": "journal-entries.write", "count": 50 }
-    ],
-    "max_duration": "PT8H"
+    "max_derivations": 200
   }
 }
 ~~~
@@ -927,7 +895,7 @@ A `mission_resource_access` entry is a {{RFC9396}}
 
 `constraints`:
 : OPTIONAL. An object. Machine-actionable per-resource
-  bounds (for example, `max_amount_usd`). A member name registered as a
+  bounds (for example, `max_amount_usd`). A member name defined as a
   Common Constraint ({{common-constraints}}) has shared semantics
   across deployments; any other name is deployment-defined.
 
@@ -964,7 +932,7 @@ A `mission_resource_access` entry is a {{RFC9396}}
   understand is carried unchanged.
 
 Example Authority Set (the read entry is delegable to depth 2 and
-bounded to a Q3 issuance window by the registered `issued_after` and
+bounded to a Q3 issuance window by the `issued_after` and
 `issued_before` Common Constraints ({{common-constraints}}); the
 write entry carries no `delegation` and so is non-delegable, because
 `delegation` is per entry):
@@ -999,7 +967,8 @@ when:
 2. A.`actions` is a subset of B.`actions`.
 3. For every key K in **B**.`constraints`, K MUST also be present in
    A.`constraints`, and A's value MUST be no broader than B's under
-   K's subset rule: the registered rule when K is a Common Constraint
+   K's subset rule: the specification-defined rule when K is a Common
+   Constraint
    ({{common-constraints}}), the deployment-defined comparison
    otherwise. A key present in B but absent from A is treated as the
    broadest possible value and therefore fails this test. In short,
@@ -1027,13 +996,14 @@ parent entry has none.
 ## Common Constraints {#common-constraints}
 
 A `constraints` member name ({{authorization-derivation}}) is either a
-registered **Common Constraint** or a deployment-defined key. Common
+specification-defined **Common Constraint** or a deployment-defined
+key. Common
 Constraints give independently developed deployments one vocabulary
-they interpret, narrow, and compare identically; the "Mission Common
-Constraints" registry ({{iana-common-constraints}}) is the extension
-point.
+they interpret, narrow, and compare identically; further Common
+Constraints are defined by specification under the naming convention of
+{{iana-common-constraints}}.
 
-A registered Common Constraint defines:
+A Common Constraint definition fixes:
 
 - **Value syntax**: the JSON {{RFC8259}} value type and any additional
   rules.
@@ -1042,13 +1012,14 @@ A registered Common Constraint defines:
 - **Intersection rule**: how two values for the same key combine; the
   result MUST be no broader than either operand.
 
-A `constraints` member whose name is registered is interpreted per the
-registry. A member whose name is not registered remains
+A `constraints` member whose name is a specification-defined Common
+Constraint is interpreted per its
+definition. Any other member name remains
 deployment-defined and is interpreted only within the issuing
 deployment; a consumer that does not recognize it MUST fail closed
 ({{rs-enforcement}}).
 
-This document registers the initial Common Constraints:
+This document defines the initial Common Constraints:
 
 - `max_amount_usd` (number): a per-action ceiling, in US dollars, on a
   monetary amount. Subset: no broader when less than or equal to the
@@ -1067,15 +1038,15 @@ values are compared as decimal numbers, so `500`, `500.0`, and `5e2` are
 equal; `issued_after` and `issued_before` values are compared as the
 instants they denote after normalization to UTC, so two RFC 3339
 representations of the same instant that differ only in timezone offset
-or trailing subsecond zeros are equal. A registered Common Constraint
-MUST define its subset and intersection in value-space terms, so that
+or trailing subsecond zeros are equal. A Common Constraint definition
+MUST fix its subset and intersection in value-space terms, so that
 independent deployments compute the same result for the same values and
 the subset rule of {{subset}} is reproducible.
 
 A numeric constraint value MUST lie within the range JCS {{RFC8785}}
-serializes exactly. A future Common Constraint registration for a
-monetary value SHOULD use string-decimal syntax, as the
-`max_budget.amount` member of {{mission-intent}} does, rather than a
+serializes exactly. A future Common Constraint definition for a
+monetary value SHOULD use string-decimal syntax (a string containing a
+decimal number, paired with an ISO 4217 currency code) rather than a
 JSON number.
 
 ## Other Authorization Details Types {#other-types}
@@ -1271,7 +1242,7 @@ Authority Set yields `invalid_target` ({{RFC8707}}).
 Rendering a bound is not the same as enforcing it, and a deployment MUST
 NOT let the rendering imply otherwise. Which party enforces each bound,
 and what holds when that enforcer is absent, is summarized in the
-consumption-bounds table ({{mission-intent}}). An AS SHOULD make clear
+enforcement table ({{mission-intent}}). An AS SHOULD make clear
 to the Approver which rendered bounds its deployment actually enforces,
 so consent is not given to a limit that binds nowhere.
 
@@ -2515,10 +2486,9 @@ token's lifetime, so an active Mission can become ambient authority
 for individual consequential actions. Preventing that requires a
 runtime enforcement layer that evaluates each consequential action
 against the Mission and records evidence; such a layer composes with
-this profile and is out of scope here. This layer enforces the
-consumption bounds `max_budget`, `max_calls`, and `max_duration`; which
-party enforces each Mission-carried bound is summarized in the
-consumption-bounds table ({{mission-intent}}). Short token lifetimes and
+this profile and is out of scope here. Which party enforces each
+Mission-carried bound is summarized in the enforcement table
+({{mission-intent}}). Short token lifetimes and
 narrow authority bound, but do not eliminate, this exposure.
 
 ## Token Theft
@@ -2704,26 +2674,25 @@ Metadata" registry ({{RFC9728}}):
 - Change Controller: IETF
 - Reference: this document, {{protected-resource-metadata}}
 
-## Mission Common Constraints Registry {#iana-common-constraints}
+## Common Constraints {#iana-common-constraints}
 
-IANA is requested to create the "Mission Common Constraints" registry.
-The registration policy is Specification Required {{RFC8126}}. Each
-entry has:
+This document creates no Common Constraints registry. The Common
+Constraints it defines (`max_amount_usd`, `issued_after`,
+`issued_before`) are specified in {{common-constraints}}, and a further
+Common Constraint is defined by specification: it fixes a name matching
+`^[A-Za-z0-9_.:-]+$`, its JSON {{RFC8259}} value syntax, its subset
+rule, and its intersection rule, in value-space terms
+({{common-constraints}}). Names are kept collision-free by the same
+convention the rest of this document uses: a specification-defined name
+is coordinated within this document family, and any other name is
+collision-resistant or remains deployment-defined
+({{common-constraints}}).
 
-- Name: the `constraints` member name, matching `^[A-Za-z0-9_.:-]+$`.
-- Value syntax: the JSON {{RFC8259}} value type and any rules.
-- Subset rule: the narrowing semantics ({{common-constraints}}).
-- Intersection rule: how two values combine.
-- Change Controller.
-- Reference.
-
-The registry is seeded with the constraints defined in
-{{common-constraints}}; for each, Change Controller IETF and Reference
-this document:
-
-- `max_amount_usd`
-- `issued_after`
-- `issued_before`
+Should the set of interoperable Common Constraints grow beyond what
+specification coordination bears, a future revision can create a
+"Mission Common Constraints" registry with a Specification Required
+{{RFC8126}} policy, seeded with the entries then defined; this document
+does not create it.
 
 --- back
 
@@ -2775,12 +2744,7 @@ The agent submits this Mission Intent through PAR ({{mission-intent}}):
   "mission_expiry": "2026-12-31T23:59:59Z",
   "context": {
     "acr": "urn:example:acr:mfa",
-    "max_derivations": 200,
-    "max_budget": { "amount": "5000.00", "currency": "USD" },
-    "max_calls": [
-      { "call_class": "journal-entries.write", "count": 50 }
-    ],
-    "max_duration": "PT8H"
+    "max_derivations": 200
   }
 }
 ~~~

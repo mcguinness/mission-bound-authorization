@@ -571,10 +571,11 @@ is where trust is created. Owners: the two bindings
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) committing
 the disclosure shown to the Approver, and Deferred Approval
 ({{I-D.draft-mcguinness-oauth-mission-approval}}), the OAuth
-binding's asynchronous, negotiable path, narrowing only; the
-standalone binding is natively asynchronous. Where expansion's
-progressive authorization is used, the initial approval also consents
-an authority ceiling for later staged widening
+binding's asynchronous path, with an experimental companion adding an
+in-review narrowing negotiation; the
+standalone binding is natively asynchronous. Where the experimental
+progressive authorization companion is used, the initial approval also
+consents an authority ceiling for later staged widening
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
 ## Govern
@@ -742,8 +743,9 @@ them as a checklist.
   object (oauth-mission).
 - **R6**: What was shown at approval is committed and reconstructible
   by an auditor (oauth-mission-consent-evidence).
-- **R7**: Approval can be asynchronous and negotiable, and
-  negotiation only narrows (oauth-mission-approval).
+- **R7**: Approval can be asynchronous, and any in-review negotiation
+  only narrows (oauth-mission-approval; the experimental
+  oauth-mission-approval-revision).
 
 ## Lifecycle {#req-lifecycle}
 
@@ -790,14 +792,17 @@ it because the architecture is substrate-neutral by construction.
 | | `mission-authority-server` | The standalone Mission Issuer and the PDP join of ordinary credentials to Missions. |
 | Approval time | `mission-shaping` | Client-side shaping of a user's request into a candidate Mission Intent, as untrusted proposal. |
 | | `oauth-mission-consent-evidence` | The `consent_rendering_hash` anchor and signed evidence of what the Approver was shown. |
-| | `oauth-mission-approval` | Asynchronous, negotiable approval, narrowing only. |
+| | `oauth-mission-approval` | Asynchronous approval over the deferred substrate. |
+| | `oauth-mission-approval-revision` | Experimental: in-review narrowing revision of a deferred proposal. |
 | Lifecycle | `oauth-mission-status` | The signed pull surface and the lifecycle endpoint, with `suspended` and `completed`. |
-| | `oauth-mission-signals` | A signed event per lifecycle transition, push or poll. |
+| | `oauth-mission-signals` | Experimental: a signed event per lifecycle transition, push or poll. |
 | | `oauth-mission-expansion` | Widening through an approved successor Mission. |
+| | `oauth-mission-progressive` | Experimental: policy-adjudicated expansion within a pre-consented ceiling. |
 | | `oauth-mission-completion` | Per-entry discharge via the `terminal_when` constraint. |
 | | `oauth-mission-cross-domain` | Single-hop projection of a Mission to another trust domain via the cross-domain grant ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). |
 | Runtime enforcement | `mission-runtime` | The per-action decision contract: parameter binding, custody, fail-closed behavior. |
 | | `mission-authzen` | The concrete decision-API binding and its Decision and Execution Evidence objects. |
+| | `mission-metering` | Experimental: cumulative consumption bounds and the metering that enforces them. |
 | Agent runtime | `mission-harness` | Binding sessions, queues, and sub-agent handles to Mission state; the mediated environment. |
 | | `mission-orchestration` | Reversibility classes, unwind plans, and compensation after a stop. |
 | Sub-agents | `oauth-mission-child-delegation` | Child Missions with lineage, strict-subset authority, cascade revocation. |

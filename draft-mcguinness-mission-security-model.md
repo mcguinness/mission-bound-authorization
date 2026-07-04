@@ -261,7 +261,7 @@ agent. Two structural choices carry this:
 
 - **Authority is fixed by an approval the agent cannot move.** Authority
   is derived by the Authorization Server and committed at the approval
-  event, which may be asynchronous or may narrow the proposed authority
+  event, which may be asynchronous
   ({{I-D.draft-mcguinness-oauth-mission}},
   {{I-D.draft-mcguinness-oauth-mission-approval}}); the agent proposes
   but does not grant, and intent fields the agent can influence are

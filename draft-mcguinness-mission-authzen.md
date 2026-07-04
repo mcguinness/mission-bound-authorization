@@ -87,6 +87,24 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
+  I-D.draft-mcguinness-oauth-mission-progressive:
+    title: "Mission Progressive Authorization for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-progressive-latest
+  I-D.draft-mcguinness-mission-metering:
+    title: "Mission Consumption Metering"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-mission-metering-latest
 
 --- abstract
 
@@ -105,10 +123,7 @@ integrity, how runtime denials map onto AuthZEN decision context and
 optional error details, how requestable denials can compose with the
 AuthZEN Access Request and Approval Profile, how a Mission's approved
 authority is bound to the capability source it was derived from and a
-drifted capability definition is refused, and the AuthZEN
-representation of the runtime metering the runtime profile meters,
-including the settlement exchange that commits or releases metered
-consumption. It
+drifted capability definition is refused. It
 does not restate the enforcement semantics the runtime profile owns.
 
 --- middle
@@ -122,8 +137,9 @@ tokens issued under Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile"). The
 runtime profile is deliberately substrate-independent: it defines the
 decision contract, action classification, PEP placement, parameter
-binding and the time-of-check to time-of-use gap, consumption
-metering, failure modes, runtime enforcement evidence, and the runtime
+binding and the time-of-check to time-of-use gap, the consumption-bound
+failure posture, failure modes, runtime enforcement evidence, and the
+runtime
 conformance scope, but it states that the decision API wire format is a
 deployment choice and defines no binding of its own.
 
@@ -148,15 +164,16 @@ AuthZEN-binding deltas:
 - how requestable denials can compose with the AuthZEN Access Request
   and Approval Profile {{ARAP}};
 - the binding of a Mission's approved authority to concrete,
-  catalog-sourced capabilities ({{capability-source-binding}}); and
-- the AuthZEN representation of the runtime metering the runtime
-  profile meters ({{consumption-metering-binding}}), and the
-  settlement exchange that commits or releases metered consumption
-  ({{settlement-exchange}}).
+  catalog-sourced capabilities ({{capability-source-binding}}).
+
+The AuthZEN wire representation of cumulative consumption metering,
+including the settlement exchange and duration-lease renewal, is
+defined with the metering semantics themselves in the experimental
+metering companion ({{I-D.draft-mcguinness-mission-metering}}).
 
 This document does not restate the enforcement contract. It does not
 redefine which actions are consequential, where the PEP MUST sit, the
-semantics of parameter binding, the semantics of metering, the failure
+semantics of parameter binding, the failure
 modes, or the runtime conformance scope; those are normatively defined
 in {{I-D.draft-mcguinness-mission-runtime}} and are referenced,
 not duplicated, here.
@@ -615,8 +632,8 @@ The AuthZEN evaluations (boxcar) endpoint MAY be used to submit several
 Mission-bound decisions in one request. Each item is evaluated
 independently and on the same terms as a single request: each item
 yields its own Decision Evidence Object with its own `decision_id` and
-`sequence`, assigned in request order; consumption metering applies per
-item in request order ({{consumption-metering-binding}}); and permits
+`sequence`, assigned in request order; any metered bounds apply per
+item in request order ({{I-D.draft-mcguinness-mission-metering}}); and permits
 are per item, so a boxcar MAY return a mix of permits and denials.
 Batching is a transport optimization and changes none of the per-item
 enforcement semantics.
@@ -1074,13 +1091,6 @@ linked to the Decision Evidence by `decision_id`.
   profile requires of every record, so the execution stream has a
   verifiable order and gaps are detectable. MUST be zero or greater.
 
-`measured_duration`:
-: CONDITIONAL. A string. REQUIRED for a duration-metered action,
-  otherwise absent. An ISO 8601 duration (the `duration` rule in
-  Appendix A of {{RFC3339}}): the PEP's measured duration, the PDP's
-  commit-or-release input for `max_duration`
-  ({{consumption-metering-binding}}).
-
 `attempted_at`:
 : OPTIONAL. An RFC 3339 timestamp. timing context.
 
@@ -1198,8 +1208,11 @@ carried in Decision Evidence:
   `parameter_digest` is absent for a parameter-bound action.
 - `resource_policy`: Resource policy refuses the action independently
   of Mission authority.
-- `quota_exceeded`: a metered runtime bound is exhausted
-  ({{consumption-metering-binding}}).
+- `quota_exceeded`: a metered runtime bound is exhausted. The runtime
+  profile fixes the fail-closed posture for consumption bounds
+  ({{I-D.draft-mcguinness-mission-runtime}}); the metering semantics
+  and settlement exchange are defined by the experimental metering
+  companion ({{I-D.draft-mcguinness-mission-metering}}).
 - `capability_drift`: a catalog-sourced action's current
   capability-source digest differs from the digest committed at
   derivation, or the presented `tool_id` is outside the approved set
@@ -1236,14 +1249,14 @@ bound to the denied evaluation, an independent approver or policy
 adjudicates it (synchronously when policy auto-approves, otherwise
 asynchronously through the portable ARAP task handle), and on approval
 the PEP re-evaluates against the PDP. This is the demand-driven,
-runtime-initiated counterpart to the pre-consented drawdown of
-progressive authorization
-({{I-D.draft-mcguinness-oauth-mission-expansion}}): the agent starts
+runtime-initiated counterpart to the pre-consented drawdown of the
+experimental progressive authorization companion
+({{I-D.draft-mcguinness-oauth-mission-progressive}}): the agent starts
 narrow and requests the authority it discovers it needs, instead of
 holding it up front.
 
 Auto-approval is bounded the same way in-ceiling drawdown is
-({{I-D.draft-mcguinness-oauth-mission-expansion}}): a deployment SHOULD
+({{I-D.draft-mcguinness-oauth-mission-progressive}}): a deployment SHOULD
 rate-limit and anomaly-check synchronous auto-approval, and MUST NOT
 auto-approve a request for an `action_approval_required` denial in the
 irreversible, external-commitment, or privileged-administration classes
@@ -1260,9 +1273,11 @@ such an approval, and ARAP's `approval.id` or signed `approval.state` is
 its carrier. Second, to persist authority beyond the single
 re-evaluated action rather than re-requesting it per call, an approved
 request MAY be realized as a Mission expansion
-({{I-D.draft-mcguinness-oauth-mission-expansion}}): an in-ceiling
-request as a policy-adjudicated in-ceiling expansion, a beyond-ceiling
-request as the fresh human approval that creates the successor Mission.
+({{I-D.draft-mcguinness-oauth-mission-expansion}}): as the fresh human
+approval that creates the successor Mission or, where the experimental
+progressive authorization companion is deployed, as a
+policy-adjudicated in-ceiling expansion
+({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
 ## AuthZEN decision context
 
@@ -1493,102 +1508,6 @@ Cross-format canonicalization, signed capability manifests, and
 media-type negotiation across catalog formats are out of scope
 ({{I-D.draft-mcguinness-mission-runtime}}); this binding requires
 only the stable identifier plus source evidence above.
-
-# AuthZEN binding of consumption metering {#consumption-metering-binding}
-
-The runtime profile owns consumption-metering semantics: it meters the
-Mission's `max_budget`, `max_calls`, and `max_duration` bounds, defines
-the atomic check-and-decrement, the single-versus-distributed-PDP
-consistency posture, retry and idempotency behavior, the deployment's
-documented reserve/commit posture, and the rule that an unmetered or
-unrecognized bound MUST cause refusal
-({{I-D.draft-mcguinness-mission-runtime}}). This section adds
-only the AuthZEN wire representation; it defines no new metering
-semantics and no new constraint.
-
-A deployment that meters a per-action invocation cap evaluates the cap
-as part of the decision. When metering the cap would exceed it, the PDP
-MUST deny with `quota_exceeded` ({{runtime-denial-classification}})
-instead of returning a permit, and MUST record `quota_exceeded` as the
-`denial_reason` in Decision Evidence. Whether a metered permit is
-reserved at decision time and committed on settlement, or committed at
-decision time, follows the deployment's documented reserve/commit
-posture ({{I-D.draft-mcguinness-mission-runtime}}); this binding
-fixes neither. The exactness of the cap is the consistency bound the
-runtime profile's topology rules establish, not a property of this wire
-binding.
-
-## Settlement exchange {#settlement-exchange}
-
-The runtime profile requires the PEP to signal actual use so the PDP
-commits consumption and releases any reservation. In this binding,
-delivery of the Execution Evidence Object
-({{execution-evidence-object}}) to the PDP is that commit-or-release
-signal: on receipt the PDP commits the consumption the linked action
-used and releases any reserved excess, keyed to the Execution
-Evidence's `decision_id`.
-
-For a duration-metered action the PEP reports the measured duration in
-the Execution Evidence `measured_duration` member, and the PDP commits
-that duration against `max_duration`. A duration-lease renewal is a new
-re-evaluation request that carries the prior permit's `decision_id` in
-`context.prior_decision_id`, so the PDP continues the same metered
-activity rather than opening a new reservation. This exchange requires
-one request member and one evidence member:
-
-`context.prior_decision_id`:
-: OPTIONAL. A string. Present on a duration-lease renewal request,
-  carrying the `decision_id` of the permit being renewed. Absent on an
-  initial request.
-
-`measured_duration` (Execution Evidence):
-: REQUIRED for a duration-metered action, otherwise absent. A string
-  containing an ISO 8601 duration (the `duration` rule in Appendix A of
-  {{RFC3339}}): the PEP's measured duration for the executed action
-  ({{execution-evidence-object}}).
-
-A renewal repeats the evaluation-request envelope for the same
-activity and adds `context.prior_decision_id`. Here a long-running,
-duration-metered ledger reconciliation renews its lease before the
-prior permit expires; the action is not parameter-bound, so no
-`parameter_digest` is carried:
-
-~~~ json
-{
-  "subject": {
-    "type": "user",
-    "id": "user_3p2q8mN1a0kV7tR",
-    "properties": {
-      "iss": "https://idp.example.com"
-    }
-  },
-  "resource": {
-    "type": "ledger",
-    "id": "ledger_main"
-  },
-  "action": { "name": "reconciliation.run" },
-  "context": {
-    "mission": {
-      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-      "origin": "https://as.example.com",
-      "authority_hash":
-        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-      "state": "active"
-    },
-    "actor": { "client_id": "s6BhdRkqt3" },
-    "credential": {
-      "issuer": "https://as.example.com",
-      "expires_at": "2026-11-02T09:14:00Z"
-    },
-    "audience": "https://erp.example.com",
-    "freshness": {
-      "mode": "fresh",
-      "freshness_at": "2026-11-02T08:44:00Z"
-    },
-    "prior_decision_id": "dec_0Rt5nB8xW2qK7mJ4vS1pL9eYc"
-  }
-}
-~~~
 
 # Mission Status Composition {#mission-status-composition}
 
@@ -1828,9 +1747,9 @@ This document registers two media types per {{RFC6838}}.
 
 The `context.mission`, `context.actor`, `context.credential`,
 `context.parameters`, `context.parameter_digest`, `context.audience`,
-`context.freshness`, `context.capability_source`, and
-`context.prior_decision_id` members carried inside the AuthZEN request
-`context` object ({{pdp-request}}, {{consumption-metering-binding}}) are
+`context.freshness`, and `context.capability_source` members carried
+inside the AuthZEN request
+`context` object ({{pdp-request}}) are
 AuthZEN extension data and are not registered in an IETF registry.
 The response `context.decision_id`, `context.denial_reason`,
 `context.parameter_digest`, `context.policy_view_id`,
