@@ -172,8 +172,9 @@ Discharge:
 
 This document defines `terminal_when`, a Common Constraint
 ({{I-D.draft-mcguinness-oauth-mission}}) carried in the `constraints`
-object of a `mission_resource_access` entry. It is registered in the
-"Mission Common Constraints" registry ({{iana}}).
+object of a `mission_resource_access` entry. It is a
+specification-defined Common Constraint under the issuance profile's
+naming convention ({{iana}}).
 
 `terminal_when`:
 : OPTIONAL. An array of completion conditions. When any condition is
@@ -205,9 +206,8 @@ time-varying.
 `terminal_when` is the enforceable counterpart of the inert
 `success_criteria` ({{I-D.draft-mcguinness-oauth-mission}}), which
 remains inert: `success_criteria` describe completion for the Approver,
-`terminal_when` acts on it. It is distinct from the consumption bounds
-`max_calls`, `max_budget`, and `max_duration`
-({{I-D.draft-mcguinness-oauth-mission}}), which meter cumulative volume;
+`terminal_when` acts on it. It is distinct from a cumulative
+consumption bound, which meters volume;
 a `terminal_when` condition is a single external event.
 
 # Discharge and Issuance Gating {#discharge}
@@ -288,10 +288,10 @@ this document defines no discharge event.
 
 Because `terminal_when` is a Common Constraint, the issuance profile's
 subset comparison ({{I-D.draft-mcguinness-oauth-mission}}) applies its
-registered subset rule with no new clause: for a key present in the
+defined subset rule with no new clause: for a key present in the
 reference entry's `constraints`, the same key MUST be present in the
 candidate entry and its value MUST be no broader under the key's
-registered rule. For `terminal_when`, a candidate value is no broader
+defined rule. For `terminal_when`, a candidate value is no broader
 than a reference value when the candidate's condition array contains
 every condition of the reference, compared structurally after the
 canonicalization of the issuance profile
@@ -454,9 +454,11 @@ that exposure when the source is operated by another party.
 
 # IANA Considerations {#iana}
 
-This document registers one Common Constraint in the "Mission Common
-Constraints" registry established by the issuance profile
-({{I-D.draft-mcguinness-oauth-mission}}):
+This document has no IANA actions. It defines one Common Constraint by
+specification, under the issuance profile's Common Constraint
+convention ({{I-D.draft-mcguinness-oauth-mission}}), which requires a
+definition to fix the name, value syntax, subset rule, and intersection
+rule:
 
 - Name: `terminal_when`
 - Value syntax: a JSON array of completion-condition objects, each with a

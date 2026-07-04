@@ -147,6 +147,11 @@ treat it as a direction, not yet as a stable interface.
 
 # Scope
 
+This document is **experimental**: adopt it for evaluation, not as a
+stable interface. Safe unwinding of in-flight agent work is the least
+settled layer of the suite, and this profile is expected to change with
+implementation experience.
+
 This document defines:
 
 - action reversibility classes ({{reversibility}});
@@ -158,7 +163,9 @@ This document defines:
 - conformance for a Mission-aware orchestrator ({{conformance}}).
 
 This document does not define a workflow language, a compensation API,
-or a replacement for runtime PEP enforcement.
+or a replacement for runtime PEP enforcement. Its object shapes (the
+unwind plan and the evidence record) bind what a deployment records and
+proves, not how an orchestrator is internally structured.
 
 ## Orchestration Profile {#orchestration-profile}
 
@@ -292,7 +299,10 @@ operation's runtime action class.
 # Unwind Plan {#unwind-plan}
 
 Before dispatching a consequential step, the orchestrator MUST have an
-unwind plan. The plan has these members:
+unwind plan. The plan is deployment documentation committed for audit
+({{unwind-plan-integrity}}), not a wire format; the members below are
+the information it MUST record, in whatever representation the
+deployment commits. The plan has these members:
 
 `step_id`:
 : REQUIRED. A string identifying the workflow step.
