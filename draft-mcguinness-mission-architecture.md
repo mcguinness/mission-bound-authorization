@@ -29,6 +29,15 @@ informative:
   RFC9126:
   RFC9396:
   RFC9943:
+  I-D.draft-mcguinness-oauth-mission-cross-domain:
+    title: "Mission Cross-Domain Projection for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-cross-domain-latest
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     author:
@@ -284,7 +293,8 @@ is immutable except for its state (the Mission Record section).
 
 The core lifecycle states are `active`, `revoked`, and `expired`, and
 only `active` permits issuance or continued reliance. Companions add
-states (`suspended`, `superseded`, `cascaded`), and one rule keeps
+states (`suspended`, `completed`, `superseded`, `cascaded`), and one
+rule keeps
 that safe without a registry: a consumer treats every state other
 than the exact value `active`, including one it does not recognize,
 as non-active, so an unrecognized state fails safe (the core's
@@ -361,7 +371,8 @@ Verifiers:
   ({{I-D.draft-mcguinness-mission-mandate}}); evidence consumers
   check consent, decision, and execution evidence against the anchors
   and receipts
-  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
+  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}},
+  {{I-D.draft-mcguinness-mission-authzen}}).
 
 The two bindings converge on one object, and enforcement draws on it
 regardless of binding:
@@ -416,8 +427,10 @@ subject, and the Mandate all key on it.
 
 The states of {{the-mission}}, open to companion-defined states, with
 the only-`active` rule, fail-safe unrecognized states, and a
-freshness source with a stated staleness bound. Home: the core's
-Mission Lifecycle and Gating section; Status and Signals add the
+freshness source with a stated staleness bound. Home: the state space
+and the only-`active` rule are the core's (its Mission Lifecycle and
+Gating section); the freshness mechanisms and staleness bounds are
+the status and runtime profiles'; Status and Signals add the
 observation surfaces. Consumed by the runtime layer (per-class
 re-check, fail closed on staleness), the harness (pause, suppress,
 terminate), the orchestrator (the unwind trigger), and the Mandate
@@ -457,16 +470,21 @@ A credential carrying the `mission` claim (`id`, `origin`,
 only while the Mission is `active`. Home: the core's Mission-Bound
 Access Tokens and The Mission Claim sections.
 
-This is the optional primitive, and it is exactly where the two
-bindings split. The OAuth binding provides it; the standalone binding
-does not: the MAS's Mission Substrate section states that a MAS
-provides every other primitive unchanged and provides neither this
-credential nor issuance gating
-({{I-D.draft-mcguinness-mission-authority-server}}). Its absence
-divides the profile set cleanly: Offline Attenuation attenuates this
-credential and the token-carriage aspects of delegation ride it, so
-both require it; every other companion composes without it, which is
-what makes the standalone binding possible.
+This is the binding-dependent primitive, and it is exactly where the
+two bindings split. The OAuth binding provides it; the standalone
+binding does not: the MAS's Mission Substrate section states that a
+MAS provides every other primitive unchanged and provides neither
+this credential nor issuance gating
+({{I-D.draft-mcguinness-mission-authority-server}}). The seam is the
+runtime profile's Mission binding establishment step
+({{I-D.draft-mcguinness-mission-runtime}}): the credential carries
+the Mission reference where the binding provides one, and a binding
+without it supplies an externally established reference, verified
+under a join the binding defines, which the MAS profiles as its
+Mission Join. Offline Attenuation attenuates this credential and the
+token-carriage aspects of delegation ride it, so both require it;
+every other companion routes through the binding establishment step,
+which is what makes the standalone binding possible.
 
 ## The Audit Horizon
 
@@ -489,12 +507,17 @@ unchanged when it provides:
    constraint vocabulary;
 4. the integrity-anchor envelope and canonicalization for every
    object it commits;
-5. an audit horizon over the record and its evidence; and
-6. optionally, a Mission-bound credential carrying the `mission`
+5. an audit horizon over the record and its evidence;
+6. published key material: the issuer's signing keys, resolvable by
+   the verifiers of its signed artifacts; and
+7. optionally, a Mission-bound credential carrying the `mission`
    claim; a substrate that omits it composes as the standalone
    binding does, and the credential-carriage profiles do not apply.
 
-The per-profile Mission Substrate sections remain the authoritative
+Individual profiles name further inputs in their Mission Substrate
+sections: the evidence types and their canonical bytes for audit
+transparency, and the intent submission channel for shaping. The
+per-profile Mission Substrate sections remain the authoritative
 per-consumer statements of this interface; this section consolidates
 them and adds nothing.
 
@@ -517,7 +540,7 @@ question, sits on one trust boundary, and is owned by named documents.
               Expansion (widen), Completion (retire)
                         |
  enforce      Runtime contract -> AuthZEN binding:
- each action  a PDP permit before every action
+ each action  a PDP permit before every consequential action
                         |
  run and      Harness (continuity is not authority),
  wind down    Orchestration (unwind in-flight work)
@@ -547,8 +570,12 @@ is where trust is created. Owners: the two bindings
 {{I-D.draft-mcguinness-mission-authority-server}}), Consent Evidence
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) committing
 the disclosure shown to the Approver, and Deferred Approval
-({{I-D.draft-mcguinness-oauth-mission-approval}}) making the event
-asynchronous and negotiable, narrowing only.
+({{I-D.draft-mcguinness-oauth-mission-approval}}), the OAuth
+binding's asynchronous, negotiable path, narrowing only; the
+standalone binding is natively asynchronous. Where expansion's
+progressive authorization is used, the initial approval also consents
+an authority ceiling for later staged widening
+({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
 ## Govern
 
@@ -591,7 +618,9 @@ Child Delegation, child Missions with lineage, strict-subset
 authority, and cascade revocation
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}); Offline
 Attenuation, narrower Mission-bound tokens minted off the issuer's
-hot path ({{I-D.draft-mcguinness-oauth-mission-attenuation}}). Both
+hot path ({{I-D.draft-mcguinness-oauth-mission-attenuation}}).
+Offline attenuation requires the runtime enforcement layer: its kill
+switch is the runtime state re-check. Both
 build on the actor chain of the core's Delegation Within a Mission
 section.
 
@@ -632,6 +661,45 @@ nothing at the token layer, and enforcement rests entirely on PEP
 coverage, so a token exercised outside that coverage is ungoverned
 (the MAS's Limitations section). The upgrade path is the issuance
 profile; the record, anchors, and lifecycle carry over unchanged.
+
+In sequence, the standalone mode runs submit, poll, approve, join,
+permit:
+
+~~~
+ Client               MAS                Approver     PEP/PDP
+   |                    |                  |            |
+   | 1 submit Intent    |                  |            |
+   |------------------->|                  |            |
+   | 2 202 pending      |                  |            |
+   |<-------------------|                  |            |
+   |                    | 3 disclose       |            |
+   |                    |----------------->|            |
+   |                    | 4 approve        |            |
+   |                    |<-----------------|            |
+   |                    | Mission active   |            |
+   | 5 poll             |                  |            |
+   |------------------->|                  |            |
+   | 6 approved,        |                  |            |
+   |   mission_id       |                  |            |
+   |<-------------------|                  |            |
+   | 7 action, token,   |                  |            |
+   |   Mission ref      |                  |            |
+   |--------------------------------------------------->|
+   |                    | 8 signed status: |            |
+   |                    |   active         |            |
+   |                    |<------------------------------|
+   |                    |------------------------------>|
+   |                    |                  | 9 join;    |
+   |                    |                  |   evaluate |
+   | 10 permit          |                  |            |
+   |<---------------------------------------------------|
+~~~
+
+The token in step 7 is an ordinary OAuth token from the unchanged AS;
+steps 8 through 10 are the Mission Join and the runtime decision (the
+MAS's Mission Join section), and the MAS's staged walkthrough of the
+same flow is its end-to-end appendix
+({{I-D.draft-mcguinness-mission-authority-server}}).
 
 The bundles progress cumulatively. Baseline issuance is the core
 alone: approved, integrity-bound Missions, state-gated issuance, a
@@ -727,6 +795,7 @@ it because the architecture is substrate-neutral by construction.
 | | `oauth-mission-signals` | A signed event per lifecycle transition, push or poll. |
 | | `oauth-mission-expansion` | Widening through an approved successor Mission. |
 | | `oauth-mission-completion` | Per-entry discharge via the `terminal_when` constraint. |
+| | `oauth-mission-cross-domain` | Single-hop projection of a Mission to another trust domain via the cross-domain grant ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). |
 | Runtime enforcement | `mission-runtime` | The per-action decision contract: parameter binding, custody, fail-closed behavior. |
 | | `mission-authzen` | The concrete decision-API binding and its Decision and Execution Evidence objects. |
 | Agent runtime | `mission-harness` | Binding sessions, queues, and sub-agent handles to Mission state; the mediated environment. |

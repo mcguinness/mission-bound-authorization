@@ -81,6 +81,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
+  I-D.draft-mcguinness-mission-authority-server:
+    title: "Mission Authority Server"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-mission-authority-server-latest
   OIDC-CAEP:
     title: "OpenID Continuous Access Evaluation Profile 1.0"
     author:
@@ -91,15 +100,16 @@ informative:
 --- abstract
 
 The Mission Status and Lifecycle profile names event-driven propagation
-(Mission state changes reaching consumers over a Shared Signals or
-equivalent channel) as one way to bound revocation latency, but leaves
+(Mission state changes reaching consumers over a Shared Signals stream)
+as one way to bound revocation latency, but leaves
 the channel itself unspecified. This document
 specifies it: a profile
 of the OpenID Shared Signals Framework in which a Mission Issuer emits
 a Mission lifecycle-change Security Event Token when it commits a state
-transition, delivered push or poll, so a consumer learns of a
-revocation, expiry, or other transition without polling. It is
-OPTIONAL and builds on Mission-Bound Authorization for OAuth 2.0, the
+transition, delivered by push or poll, so a consumer learns of a
+revocation, expiry, or other transition promptly without polling
+Mission Status per Mission. It is
+optional and builds on Mission-Bound Authorization for OAuth 2.0, the
 issuance profile; a deployment that does not adopt it is unaffected.
 
 --- middle
@@ -113,8 +123,8 @@ tokens by their lifetime. The Mission Status and Lifecycle profile
 {{I-D.draft-mcguinness-oauth-mission-status}} adds surfaces for
 observing and changing state, and points to event-driven propagation
 for deployments that need Mission state changes to reach consumers
-promptly, without each consumer polling. It does not define the
-channel.
+promptly, without each consumer polling Mission Status per Mission. It
+does not define the channel.
 
 This document defines the channel. When a Mission Issuer commits a
 Mission lifecycle transition (a revocation, expiry, suspension,
@@ -146,7 +156,10 @@ unaffected by this document.
 This document uses the terms defined in the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}} and the Status profile
 {{I-D.draft-mcguinness-oauth-mission-status}}, in particular Mission,
-Mission Issuer (Authorization Server, the Mission `origin`), `mission_id`,
+Mission Issuer (the Mission `origin`: in this document's OAuth binding
+the Authorization Server; a standalone Mission Issuer, the Mission
+Authority Server {{I-D.draft-mcguinness-mission-authority-server}},
+transmits these events with the same semantics), `mission_id`,
 and the Mission lifecycle states. It additionally uses **Security Event
 Token (SET)** {{RFC8417}} and the **Shared Signals Framework (SSF)**
 {{OIDC-SSF}} transmitter, receiver, and stream terminology.
@@ -300,6 +313,61 @@ Example SET (decoded), for a revocation:
       "version": 2,
       "committed_at": "2026-11-02T09:06:40Z",
       "reason": "Quarterly reconcile completed early"
+    }
+  }
+}
+~~~
+
+Example SET (decoded), for the approval event that activates the
+Mission (`version` 1, no `prior_state`):
+
+~~~ json
+{
+  "iss": "https://as.example.com",
+  "aud": "https://erp.example.com",
+  "iat": 1797836400,
+  "jti": "set_3Fw7bJ4nQ9xD2kM6vL1c",
+  "sub_id": {
+    "format": "opaque",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  },
+  "events": {
+    "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
+      "mission": {
+        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+        "origin": "https://as.example.com"
+      },
+      "state": "active",
+      "version": 1,
+      "committed_at": "2026-11-02T07:00:00Z"
+    }
+  }
+}
+~~~
+
+Example SET (decoded), for a supersession, carrying `successor`:
+
+~~~ json
+{
+  "iss": "https://as.example.com",
+  "aud": "https://erp.example.com",
+  "iat": 1797846000,
+  "jti": "set_6Tn4rW8pB3zK7qC2mV5j",
+  "sub_id": {
+    "format": "opaque",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  },
+  "events": {
+    "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
+      "mission": {
+        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+        "origin": "https://as.example.com"
+      },
+      "prior_state": "active",
+      "state": "superseded",
+      "version": 2,
+      "committed_at": "2026-11-02T09:40:00Z",
+      "successor": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX"
     }
   }
 }
@@ -524,20 +592,12 @@ the author-controlled `schemas.karlmcguinness.com/secevent` namespace:
   {{lifecycle-event}} for the schema.
 
 This event type uses the OpenID Shared Signals Framework {{OIDC-SSF}}
-SET shape. The same event type URI is also referenced by the
-substrate-neutral Mission Authority Server work, which makes `tenant` a
-required claim; this profile makes `tenant` OPTIONAL because the OAuth
-profile has no tenant model. Because the URI is author-controlled and
-has no IANA registry or change controller to arbitrate a shared
-definition, this profile does not rely on any cross-specification
-guarantee about its required-claim set. It relies only on consumer
-robustness, which is sufficient on its own: a consumer MUST ignore
-members it does not understand and MUST NOT reject an event solely for
-a missing OPTIONAL member (notably `tenant`). A consumer built to this
-profile therefore interoperates with an emitter of either specification
-regardless of how the two reconcile, and a deployment that needs a
-binding shared definition should pursue a registered event type rather
-than depend on the author-controlled URI.
+SET shape. The standalone Mission Issuer binding
+{{I-D.draft-mcguinness-mission-authority-server}} emits this event
+type unchanged and imposes no tenant requirement; `tenant` remains
+OPTIONAL. A consumer MUST ignore members it does not understand and
+MUST NOT reject an event solely for a missing OPTIONAL member (notably
+`tenant`).
 
 ## OAuth Authorization Server Metadata Registration
 

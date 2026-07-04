@@ -51,6 +51,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-mission-shaping-latest
+  I-D.draft-mcguinness-mission-authority-server:
+    title: "Mission Authority Server"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-mission-authority-server-latest
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
     title: "Mission Consent Evidence for OAuth 2.0"
     author:
@@ -72,25 +81,30 @@ informative:
 
 --- abstract
 
-The Mission-Bound Authorization for OAuth 2.0 profile records an
-approval event at which an Approver consents to a Mission's derived
-Authority Set, but it treats that event as immediate. A human review of
-an agent's proposed Mission is often asynchronous and frequently
-results in approval of a narrowed subset rather than an all-or-nothing
-decision. This document defines an OPTIONAL Mission Deferred Approval
-profile. It profiles OAuth Deferred Token Response so a Mission approval
-can be deferred and polled, and adds a revisable approval mode in which
-the Authorization Server, when it can grant only a narrowed version of
-the proposed Mission, invites the client to push a narrowing revision
-and continue the same deferred approval rather than abandon it and start
-over. Revisions can only narrow the proposed Mission.
+Mission-Bound Authorization for OAuth 2.0 (the "issuance profile")
+records an approval event at which an Approver consents to a Mission's
+derived Authority Set, but it treats that event as immediate. A human
+review of an agent's proposed Mission is often asynchronous and
+frequently results in approval of a narrowed subset rather than an
+all-or-nothing decision. This document defines an optional Mission
+Deferred Approval profile. It profiles OAuth Deferred Token Response so
+a Mission approval can be deferred and polled, and adds a revisable
+approval mode in which the Authorization Server, when it can grant only
+a narrowed version of the proposed Mission, invites the client to push
+a narrowing revision and continue the same deferred approval rather
+than abandon it and start over. Deferral explicitly overrides the
+issuance profile's approval-event sequencing: the approval event moves
+to the asynchronous review surface, and the Mission record is created
+atomically with that decision rather than with the authorization code.
+Revisions can only narrow the proposed Mission.
 
 --- middle
 
 # Introduction
 
-The issuance profile {{I-D.draft-mcguinness-oauth-mission}} (the
-"issuance profile") derives an Authority Set from a submitted Mission
+Mission-Bound Authorization for OAuth 2.0
+{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") derives
+an Authority Set from a submitted Mission
 Intent and records an approval event at which an Approver consents to
 that authority. It specifies what the approval commits, not how the
 approval is obtained over time. Two facts about agent approval are left
@@ -128,6 +142,13 @@ under the deferred substrate or accepts revisable approvals. The
 approval event, the Authority Set, the subset rule, and the integrity
 anchors are unchanged; this document governs only how the approval is
 reached over time.
+
+This profile is specific to the OAuth binding's authorization-code
+ceremony. Under the standalone Mission Authority Server binding
+({{I-D.draft-mcguinness-mission-authority-server}}), approval is
+natively asynchronous and this re-sequencing is not needed; that
+binding defines no counterpart of the revision handshake
+({{revisable}}).
 
 This profile tracks an in-progress substrate. It depends normatively on
 OAuth Deferred Token Response
@@ -365,6 +386,20 @@ The PAR endpoint reports a failed revision with a specific error:
   `invalid_grant` and the resolution is conveyed on the next poll of the
   `deferral_code`.
 
+For example, a revision that keeps a refused write action yields:
+
+~~~ http
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "error": "revision_not_narrowing",
+  "error_description":
+    "The re-derived Authority Set retains journal-entries.write"
+}
+~~~
+
 A malformed revision leaves the `revision_handle` reissuable: because the
 submission never advanced the approval, the client obtains a new handle
 from a subsequent `authorization_pending` response and retries. A
@@ -470,6 +505,53 @@ Cache-Control: no-store
       "actions": ["journal-entries.write"] } ],
   "expires_in": 540, "interval": 5 }
 ~~~
+
+Where the deployment records Consent Evidence
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), this
+revision-required outcome is recorded with `decision` `narrowed`,
+carrying the reviewed disclosure's `consent_rendering_hash` and the
+refused dimensions; the anchor values are those of that profile's
+worked disclosure and test vector:
+
+~~~ json
+{
+  "evidence_id": "cns_5tN8wQ2rD6",
+  "mission": {
+    "origin": "https://as.example.com",
+    "intent_hash":
+      "sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E",
+    "authority_hash":
+      "sha-256:-rBZZJ8tVIyGoR1tBg6BO6QG0kimVvef8vjigpoVuPw"
+  },
+  "approver": {
+    "iss": "https://idp.example.com",
+    "sub": "user_3p2q8mN1a0kV7tR"
+  },
+  "narrowed_at": "2026-06-30T18:02:00Z",
+  "decision": "narrowed",
+  "refused_dimensions": {
+    "rejected_authorization_details": [
+      { "type": "mission_resource_access",
+        "resource": "https://erp.example.com",
+        "actions": ["journal-entries.write"] }
+    ]
+  },
+  "policy_version": "approval-policy:v12",
+  "sequence": 88126,
+  "disclosure": {
+    "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
+    "consent_rendering_hash":
+      "sha-256:M7GB0qmwHbdRFw3IJdk14w9VBKwN2lvDkXGRb5fzatQ"
+  },
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImNvbnNlbnQt..."
+  }
+}
+~~~
+
+No Mission exists yet, so the `mission` descriptor carries the
+proposal's anchors and no `id`.
 
 The agent pushes a narrowed Mission Intent, dropping the write, to PAR
 with the revision handle:
