@@ -51,6 +51,7 @@ normative:
       Internet-Draft: draft-mcguinness-mission-runtime-latest
 
 informative:
+  RFC7638:
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
     author:
@@ -60,6 +61,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
+  I-D.draft-mcguinness-oauth-mission-cross-domain:
+    title: "Mission Cross-Domain Projection for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-cross-domain-latest
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
     author:
@@ -73,29 +83,32 @@ informative:
 --- abstract
 
 Mission-Bound Authorization for OAuth 2.0 derives delegated authority
-through the Authorization Server: each narrowing is a Token Exchange at
+through the Authorization Server: each narrowing is a derivation at
 the issuer. For deep sub-agent fan-out, the common agent topology, that
 puts the Authorization Server in the hot path as a latency and
-availability dependency. This document defines an OPTIONAL Mission
+availability dependency. This document defines an optional Mission
 Offline Attenuation profile. It profiles Attenuating Agent Tokens so a
 Mission-bound token holder can mint a narrower child token offline, with
 no Authorization Server round-trip, carrying the same `mission` claim.
-The narrowing is verifiable from the carried token chain, and the
-Mission kill switch is preserved because consumption is gated by the
-runtime enforcement layer, which re-checks current Mission state on
-every presentation of a token in the chain; a revoked Mission stops the
-whole chain even though no issuer minted the children. Offline
-attenuation is offered alongside, not instead of,
-Authorization-Server-mediated delegation.
+The Mission Issuer derives the attenuation root from the Mission's
+approved Authority Set under a normative mapping; the narrowing is
+verifiable from the carried token chain, and the Mission kill switch is
+preserved because consumption is gated by the runtime enforcement
+layer, which re-checks current Mission state on every presentation of a
+token in the chain; a revoked Mission stops the whole chain even though
+no issuer minted the children. Offline attenuation is offered
+alongside, not instead of, Authorization-Server-mediated delegation.
 
 --- middle
 
 # Introduction
 
-The issuance profile {{I-D.draft-mcguinness-oauth-mission}} (the
-"issuance profile") narrows authority through the Authorization Server:
-a delegated or narrowed token is derived at the issuer, and cross-domain
-projection is a Token Exchange. For an agent that fans out to many
+Mission-Bound Authorization for OAuth 2.0
+{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") narrows
+authority through the Authorization Server: a delegated or narrowed
+token is derived at the issuer, and cross-domain projection is a Token
+Exchange ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). For an
+agent that fans out to many
 sub-agents, each needing a slice of the Mission's authority, that makes
 the Authorization Server a per-delegation latency and availability
 dependency on the execution hot path.
@@ -110,8 +123,9 @@ attenuation-substrate root; its holder then derives narrower children
 for sub-agents with no Authorization Server contact.
 
 Three things make this safe within the Mission model, and this document
-requires all three ({{kill-switch}}): the child carries the parent
-chain, so a consumer verifies the narrowing from the tokens it holds;
+requires all three ({{mission-binding-check}}, {{kill-switch}}): the
+child carries the parent chain, with audience and expiry bounded per
+hop, so a consumer verifies the narrowing from the tokens it holds;
 the Mission kill switch is preserved because consumption is gated by the
 runtime enforcement layer re-checking current Mission state, not by the
 issuer (the attenuation substrate defines no revocation of its own); and
@@ -164,6 +178,10 @@ Offline attenuation:
 : A token holder minting a narrower child of a Mission-bound attenuation
   token, signed with the parent's confirmation key, without contacting
   the Mission Issuer.
+
+Attenuating Holder:
+: The holder of a Mission-bound attenuation token, in its role of
+  minting narrower children offline under this profile.
 
 In this profile a child is a token: a narrower token minted under one
 Mission, not a new Mission. The Mission Child Delegation profile
@@ -243,6 +261,12 @@ offline, by the attenuation substrate's derivation: it selects a
 narrower tool and constraint set, increments `del_depth`, signs with the
 key the parent's `cnf` binds, and sets `par_hash` to the parent's
 commitment. No Mission Issuer contact occurs.
+
+`par_hash` commits to the exact parent token bytes, per the attenuation
+substrate's cryptographic linkage rule
+({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}): its value is
+the base64url encoding, without padding, of the SHA-256 digest of the
+parent token's JWS Signing Input.
 
 The child's `aud` MUST equal its parent's `aud` or be a subset of it,
 and the child's `exp` MUST NOT exceed its parent's `exp`. Because the
@@ -398,7 +422,7 @@ root's `cnf` binds, sets `iss` to that key's thumbprint, increments
   "sub": "user_3p2q8mN1a0kV7tR",
   "aud": "https://erp.example.com",
   "iat": 1797840030,
-  "exp": 1797840300,
+  "exp": 1797840240,
   "jti": "aat_child_2Yt7Qv9Lq",
   "cnf": { "jkt": "kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t" },
   "par_hash": "9XbVt2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQ",
@@ -419,9 +443,16 @@ root's `cnf` binds, sets `iss` to that key's thumbprint, increments
 }
 ~~~
 
-The `mission` claim is unchanged, the child's `aud` equals the root's
-and its `exp` does not exceed the root's, the write tool is gone, and the
-read constraint is unchanged (a permitted narrowing). To read an invoice
+The `mission` claim is unchanged, the child's `aud` equals the root's,
+its `exp` (1797840240) ends before the root's (1797840300), within the
+per-hop bound, the write tool is gone, and the read constraint is
+unchanged (a permitted narrowing). The child's `cnf.jkt` is the JWK
+thumbprint {{RFC7638}} of the delegate extractor's own key, which its
+per-invocation proof-of-possession must match. The child's `par_hash`
+derives as {{attenuation}} states, the base64url SHA-256 digest, without
+padding, of the root token's JWS Signing Input; the value shown is
+illustrative, since the example gives the root's decoded claims rather
+than its serialized bytes. To read an invoice
 the extractor presents the chain `[root, child]` and a per-invocation
 proof-of-possession to the gateway. The gateway verifies the chain (the
 child's signature under the root's `cnf` key, `par_hash`, the depth,
@@ -435,6 +466,15 @@ by the extractor fails on capability monotonicity:
 the Mission, the next presentation fails the state check and the whole
 chain stops, even though no issuer ever saw the child and the child's
 `exp` has not passed.
+
+For contrast, suppose the extractor presents a chain whose child
+carries `"exp": 1797840360`, sixty seconds past the root's. The
+per-hop bound check ({{mission-binding-check}}) fails before any tool
+or Mission-state evaluation: a child that outlives its parent breaks
+the chain's transitive expiry bound, so the gateway refuses the whole
+chain. A chain whose child carried a `mission` claim differing from the
+root's is refused the same way, as a re-bound chain, not read as a
+narrower grant.
 
 # Conformance {#conformance}
 

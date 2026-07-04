@@ -80,6 +80,24 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
+  I-D.draft-mcguinness-oauth-mission-cross-domain:
+    title: "Mission Cross-Domain Projection for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-cross-domain-latest
+  I-D.draft-mcguinness-mission-authority-server:
+    title: "Mission Authority Server"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-mission-authority-server-latest
 
 --- abstract
 
@@ -87,13 +105,14 @@ The Mission-Bound Authorization for OAuth 2.0 profile binds issued
 authority to a durable, human-approved Mission and gates issuance on
 Mission state, but it observes Mission state only through token lifetime
 and optional token introspection. This document
-defines the Mission state-management surfaces it defers: a canonical
-Mission Status operation (keyed by `mission_id`), a management
-endpoint for explicit lifecycle transitions (`revoke`, `suspend`, `resume`,
-`complete`), revocation-propagation guidance, and signed
-status evidence. Each capability is independently optional; an
-implementation MAY adopt any subset, and one that adopts none remains
-a conforming issuance profile. This document does not restate the base
+defines the Mission state-management surfaces it defers: the Mission
+Status operation (keyed by `mission_id`) with signed responses, the
+Mission projection for token introspection, the Mission Lifecycle
+endpoint with `revoke`, `suspend`, `resume`, and `complete` operations,
+the `suspended` and `completed` states with the consolidated lifecycle
+state machine this profile owns, and revocation-propagation guidance.
+Each capability is independently optional; an implementation can adopt
+any subset, and one that adopts none remains a conforming issuance
 profile.
 
 --- middle
@@ -108,12 +127,12 @@ It gates derivation on Mission state, carries the `mission` claim on
 every derived token, and offers only OPTIONAL token introspection
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission State via
 Token Introspection") as a way for a Resource Server to observe
-Mission state. It explicitly leaves the canonical Mission Status
-surface (keyed by `mission_id`), a standardized management endpoint
-for lifecycle transitions, signed status evidence, and
-revocation-propagation guidance to future work.
+Mission state. It names this profile for the canonical Mission Status
+surface (keyed by `mission_id`) and its signed status evidence, and
+defers a standardized management endpoint for lifecycle transitions to
+this document.
 
-This document specifies those deferred surfaces as OPTIONAL extensions
+This document specifies those surfaces as OPTIONAL extensions
 that build on the issuance profile. The capabilities are:
 
 - A dedicated **Mission Status operation**
@@ -151,9 +170,14 @@ re-specified, here.
 
 This document uses the terms defined in the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}}, in particular Mission,
-Mission Issuer (Authorization Server, the Mission `origin`), Resource
-AS, Authority Set, the `mission` claim, `mission_id`, and the
-`mission_resource_access` authorization details type. It additionally
+Mission Issuer (the Mission `origin`: in this document's OAuth binding
+the Authorization Server; a standalone Mission Issuer, the Mission
+Authority Server {{I-D.draft-mcguinness-mission-authority-server}},
+serves these surfaces with the same semantics), Authority Set, the
+`mission` claim, `mission_id`, and the `mission_resource_access`
+authorization details type. Resource AS is used as defined in the
+cross-domain companion
+{{I-D.draft-mcguinness-oauth-mission-cross-domain}}. It additionally
 uses:
 
 Mission Status Response:
@@ -720,7 +744,7 @@ The AS MUST refuse an unauthorized lifecycle request with the
 not-found response shape of {{mission-status-errors}}, so the endpoint
 does not act as a Mission enumeration oracle.
 
-## Worked Example
+## Worked Examples
 
 Revoke request:
 
@@ -779,6 +803,53 @@ Decoded JWS payload:
 The AS records the operation, actor, time, and any `reason` in its
 audit log; the response confirms the outcome through the updated
 `state`.
+
+Suspend request with a deadline:
+
+~~~ http-message
+POST /as/mission/lifecycle HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+
+mission=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
+&operation=suspend
+&suspend_until=2026-11-09T08%3A15%3A00Z
+&on_expiry=revoke
+&reason=Pending+quarterly+access+review
+&nonce=nonce_4Dq2mV8kX1sB7nR3tW
+~~~
+
+Suspend success response: the signed Mission Status Response reports
+`suspended` and surfaces the pending outcome, carrying `suspend_until`
+and `on_expiry` in `mission` alongside `state`. Decoded JWS payload:
+
+~~~ json
+{
+  "iss": "https://as.example.com",
+  "aud": "client_erp-recon-agent",
+  "sub": "client_erp-recon-agent",
+  "nonce": "nonce_4Dq2mV8kX1sB7nR3tW",
+  "iat": 1797841200,
+  "exp": 1797841260,
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "state": "suspended",
+    "suspend_until": "2026-11-09T08:15:00Z",
+    "on_expiry": "revoke",
+    "expires_at":     "2026-11-02T08:35:00Z",
+    "mission_expiry": "2026-12-31T23:59:59Z"
+  }
+}
+~~~
+
+When `suspend_until` passes without a `resume`, the AS applies
+`on_expiry` and transitions the Mission to `revoked` without a further
+request.
 
 ## Idempotency and Conflicts {#idempotency}
 
@@ -1038,7 +1109,10 @@ profile's privacy considerations.
 # Conformance {#conformance}
 
 An implementation conforms to the issuance profile
-{{I-D.draft-mcguinness-oauth-mission}} first. Each extension in this
+{{I-D.draft-mcguinness-oauth-mission}} or implements the Mission
+Issuer role of a binding that serves these surfaces, such as the
+standalone Mission Authority Server
+{{I-D.draft-mcguinness-mission-authority-server}}. Each extension in this
 document is independently OPTIONAL; an implementation names the ones it
 supports (for example, "issuance profile with Mission Status and
 Mission Lifecycle"), and an implementation that supports none of them

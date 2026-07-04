@@ -78,6 +78,9 @@ it.
  delegate     Child Delegation (child Missions, cascade revocation)
               Offline Attenuation (narrower tokens minted offline)
 
+ project      Cross-Domain Projection (one Mission honored in
+              another trust domain via the cross-domain grant)
+
  prove        Consent Evidence (what the Approver was shown)
               Mandate (portable, verifiable statement of a Mission)
               Audit (SCITT transparency for all Mission evidence)
@@ -98,9 +101,9 @@ layers, deployment patterns, and the requirements the family answers.
 
 ## How to read this suite
 
-Everyone starts with the core's Introduction, Overview, and
-terminology; every companion assumes them. From there, follow the path
-that matches your role:
+Newcomers start with the Architecture document; implementers start
+with the core's Introduction, Overview, and terminology, which every
+companion assumes. From there, follow the path that matches your role:
 
 - **Understand the model** (an afternoon): the Architecture document
   (the citable form of this page's structural view), then the core's
@@ -109,15 +112,16 @@ that matches your role:
 - **Implement issuance at an Authorization Server** (identity vendors):
   the core, then Status and Signals (the state surfaces), Consent
   Evidence (approval-surface evidence), Expansion and Completion
-  (growing and retiring authority), and Deferred Approval if approvals
-  are asynchronous.
+  (growing and retiring authority), Deferred Approval if approvals
+  are asynchronous, and Cross-Domain Projection when Missions span
+  trust domains.
 - **Deploy agents without changing your AS**: Mission Authority Server,
   then Runtime Enforcement and its AuthZEN binding (mandatory in this
   mode), then the Harness; add Consent Evidence for the Governed
   equivalents.
 - **Build enforcement (a PDP or PEP)**: Runtime Enforcement, then the
-  AuthZEN binding; read the Harness's custody and mediation sections
-  for where keys live.
+  AuthZEN binding; read runtime's custody section and the Harness's
+  mediation section for where keys live.
 - **Build an agent harness or orchestrator**: Harness, then
   Orchestration, with Runtime Enforcement for the gate they feed; Child
   Delegation when sub-agents get their own Missions.
@@ -140,8 +144,8 @@ are the companion profiles of the same names).
 |---|---|---|
 | **Baseline issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Enforced bundle). Audit, not action-time defense. |
 | **Enforced agent** | mission + runtime + authzen + a freshness source (status, signals, or origin token introspection) | Per-action enforcement at the point of use, and prompt revocation (pull via status or introspection, push via signals). The minimum for an agent that takes consequential actions. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
-| **Governed agent (recommended for AI agents)** | Enforced agent + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. For protection against a compromised agent, claim runtime's named agent-compromise-resistant enforcement (mediated custody, no-unmediated-egress, action-bound approval, all MUST for the high-consequence classes). Add child-delegation for sub-agents and expansion for mid-task growth, and orchestration (experimental) for safe unwinding of in-flight work. |
-| **Standalone governance (AS-optional)** | authority-server + runtime + authzen (+ consent-evidence and harness for the Governed equivalents) | Mission governance and per-action enforcement with an unmodified OAuth Authorization Server; the authority server is the freshness source. No Mission-bound tokens and no issuance gating: revoking a Mission stops nothing at the token layer, so enforcement rests entirely on PEP coverage. The on-ramp to the Enforced and Governed bundles. |
+| **Governed agent (recommended for AI agents)** | Enforced agent + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. For protection against a compromised agent, claim runtime's named agent-compromise-resistant enforcement (see the note below the table). Add child-delegation for sub-agents and expansion for mid-task growth, and orchestration (experimental) for safe unwinding of in-flight work. |
+| **Standalone governance (AS-optional)** | authority-server (experimental) + runtime + authzen (+ consent-evidence and harness for the Governed equivalents) | Mission governance and per-action enforcement with an unmodified OAuth Authorization Server; the authority server serves the status and lifecycle surfaces itself and is the freshness source. No Mission-bound tokens and no issuance gating: revoking a Mission stops nothing at the token layer, so enforcement rests entirely on PEP coverage; no sub-agent delegation surface is specified in this mode yet. The on-ramp to the Enforced and Governed bundles. |
 
 There are two ways to deploy the model. The flagship is the OAuth
 binding: the Authorization Server implements the issuance profile,
@@ -157,7 +161,9 @@ Mission Intent Shaping is an approval-time, client-side option that
 layers onto any bundle; it produces the Mission Intent and is not itself
 deployed at the Authorization Server. Mission Deferred Approval is an
 approval-time option for deployments whose approvals are asynchronous or
-whose reviewers narrow a proposed Mission; it layers onto any bundle.
+whose reviewers narrow a proposed Mission; it layers onto the
+OAuth-binding bundles (the Mission Authority Server is natively
+asynchronous and does not use it).
 
 Each draft also states its own scoped conformance; the bundles are
 guidance, not a new conformance class.
@@ -184,11 +190,10 @@ decide what to build on now.
 - **Stable** (normative dependencies are ratified OAuth and finalized
   OpenID specifications): the issuance **core**, **runtime**,
   **authzen**, **status**, and **signals**. Build on these. The core
-  confines its three tracked Internet-Draft references (the OAuth Actor
-  Profile, identity chaining, and ID-JAG) to its OPTIONAL Delegation and
-  Cross-Domain capabilities; the mandatory single-domain core depends
-  only on ratified specifications, and identity chaining is approved and
-  in the RFC Editor queue. For **authzen**, the stable surface is its
+  confines its one tracked Internet-Draft reference (the OAuth Actor
+  Profile) to its OPTIONAL Delegation capability; the mandatory
+  single-domain core otherwise depends only on ratified specifications.
+  For **authzen**, the stable surface is its
   core AuthZEN decision binding; its Access Request and Approval Profile
   (ARAP) and Model Context Protocol tool-authorization (COAZ)
   integrations and MCP-composition notes are informative and optional.
@@ -202,12 +207,15 @@ decide what to build on now.
 - **Experimental** (adopt for evaluation, not as a stable interface):
   **attenuation** and **approval** depend normatively on Internet-Drafts
   that are not yet ratified (Attenuating Agent Tokens and OAuth Deferred
-  Token Response, respectively); **orchestration** and **completion**
-  define newer models that are less exercised; **authority-server** and
-  **mandate** are the newest documents in the family and not yet
-  exercised (the mandate's normative dependencies are all ratified; the
-  authority server composes stable profiles, but its PDP join mechanism
-  is new). Each names a stable path to prefer where one exists.
+  Token Response, respectively); **cross-domain** depends normatively on
+  the OAuth identity-chaining document (approved, in the RFC Editor
+  queue) and ID-JAG (a working-group document); **orchestration** and
+  **completion** define newer models that are less exercised;
+  **authority-server** and **mandate** are the newest documents in the
+  family and not yet exercised (the mandate's normative dependencies are
+  all ratified; the authority server composes stable profiles, but its
+  PDP join mechanism is new). Each names a stable path to prefer where
+  one exists.
 
 The architecture and security model are Informational companions and
 sit outside these buckets.
@@ -478,6 +486,23 @@ alongside Authorization-Server-mediated delegation.
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-attenuation)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-attenuation)
 * [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-attenuation.diff)
+
+### Cross-domain projection
+
+#### Mission Cross-Domain Projection for OAuth 2.0
+
+Lets a single Mission be honored by Authorization Servers in other
+trust domains: the originating Mission Issuer projects audience-scoped
+authority through a short-lived, sender-constrained cross-domain grant
+(ID-JAG recommended), and the Resource AS mints its own local
+Mission-bound tokens from it, preserving the `mission` claim unchanged.
+One hop; the single-domain core is complete without it. Extracted from
+the core so the mandatory profile carries no cross-domain dependencies.
+
+* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-cross-domain.html)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-cross-domain)
+* [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-cross-domain)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-cross-domain.diff)
 
 ### Proof and portability
 
