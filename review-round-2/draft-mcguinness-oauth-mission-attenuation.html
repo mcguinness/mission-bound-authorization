@@ -1,0 +1,1933 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission Offline Attenuation for OAuth 2.0</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       Mission-Bound Authorization for OAuth 2.0 derives delegated authority
+through the Authorization Server: each narrowing is a derivation at
+the issuer. For deep sub-agent fan-out, the common agent topology, that
+puts the Authorization Server in the hot path as a latency and
+availability dependency. This document defines an optional Mission
+Offline Attenuation profile. It profiles Attenuating Agent Tokens so a
+Mission-bound token holder can mint a narrower child token offline, with
+no Authorization Server round-trip, carrying the same  mission  claim.
+The Mission Issuer derives the attenuation root from the Mission's
+approved Authority Set under a normative mapping; the narrowing is
+verifiable from the carried token chain, and the Mission kill switch is
+preserved because consumption is gated by the runtime enforcement
+layer, which re-checks current Mission state on every presentation of a
+token in the chain; a revoked Mission stops the whole chain even though
+no issuer minted the children. Offline attenuation is offered
+alongside, not instead of, Authorization-Server-mediated delegation. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="oauth" name="keyword">
+<meta content="mission" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="delegation" name="keyword">
+<meta content="attenuation" name="keyword">
+<meta content="draft-mcguinness-oauth-mission-attenuation-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.10.0
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.2
+-->
+<link href="draft-mcguinness-oauth-mission-attenuation.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">OAuth Mission Offline Attenuation</td>
+<td class="right">July 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 5 January 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-oauth-mission-attenuation-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-07-04" class="published">4 July 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-01-05">5 January 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission Offline Attenuation for OAuth 2.0</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">Mission-Bound Authorization for OAuth 2.0 derives delegated authority
+through the Authorization Server: each narrowing is a derivation at
+the issuer. For deep sub-agent fan-out, the common agent topology, that
+puts the Authorization Server in the hot path as a latency and
+availability dependency. This document defines an optional Mission
+Offline Attenuation profile. It profiles Attenuating Agent Tokens so a
+Mission-bound token holder can mint a narrower child token offline, with
+no Authorization Server round-trip, carrying the same <code>mission</code> claim.
+The Mission Issuer derives the attenuation root from the Mission's
+approved Authority Set under a normative mapping; the narrowing is
+verifiable from the carried token chain, and the Mission kill switch is
+preserved because consumption is gated by the runtime enforcement
+layer, which re-checks current Mission state on every presentation of a
+token in the chain; a revoked Mission stops the whole chain even though
+no issuer minted the children. Offline attenuation is offered
+alongside, not instead of, Authorization-Server-mediated delegation.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-attenuation.html">https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-attenuation.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-attenuation/">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-attenuation/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/draft-mcguinness-oauth-mission">https://github.com/mcguinness/draft-mcguinness-oauth-mission</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 5 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-status-an-optional-extensio" class="internal xref">Status: An OPTIONAL Extension</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-relationship-to-the-issuanc" class="internal xref">Relationship to the Issuance Profile</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-mission-bound-attenuation-r" class="internal xref">Mission-Bound Attenuation Roots</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-deriving-the-root-from-the-" class="internal xref">Deriving the Root from the Authority Set</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-requesting-a-root-and-disco" class="internal xref">Requesting a Root and Discovery</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-offline-attenuation" class="internal xref">Offline Attenuation</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-verifying-the-mission-bindi" class="internal xref">Verifying the Mission Binding</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-the-kill-switch-requires-ru" class="internal xref">The Kill Switch Requires Runtime Enforcement</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-relationship-to-other-deleg" class="internal xref">Relationship to Other Delegation</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-worked-example" class="internal xref">Worked Example</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref">16</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.1">
+                <p id="section-toc.1-1.16.2.1.1"><a href="#section-16.1" class="auto internal xref">16.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.2">
+                <p id="section-toc.1-1.16.2.2.1"><a href="#section-16.2" class="auto internal xref">16.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
+            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">Mission-Bound Authorization for OAuth 2.0
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile") narrows
+authority through the Authorization Server: a delegated or narrowed
+token is derived at the issuer, and cross-domain projection is a Token
+Exchange (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>). For an
+agent that fans out to many
+sub-agents, each needing a slice of the Mission's authority, that makes
+the Authorization Server a per-delegation latency and availability
+dependency on the execution hot path.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">This document removes the issuer from that path for narrowing. It
+profiles Attenuating Agent Tokens
+<span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span> (the "attenuation
+substrate"), in which a token holder mints a narrower child token
+offline by signing it with the key the parent token's <code>cnf</code> binds, and
+the child commits to its parent by hash. A Mission-bound token can be an
+attenuation-substrate root; its holder then derives narrower children
+for sub-agents with no Authorization Server contact.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">Three things make this safe within the Mission model, and this document
+requires all three (<a href="#mission-binding-check" class="auto internal xref">Section 8</a>, <a href="#kill-switch" class="auto internal xref">Section 9</a>): the
+child carries the parent chain, with audience and expiry bounded per
+hop, so a consumer verifies the narrowing from the tokens it holds;
+the Mission kill switch is preserved because consumption is gated by the
+runtime enforcement layer re-checking current Mission state, not by the
+issuer (the attenuation substrate defines no revocation of its own); and
+<code>authority_hash</code> rides the chain as a lineage anchor, not as the child's
+own authority commitment.<a href="#section-1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="optional-status">
+<section id="section-2">
+      <h2 id="name-status-an-optional-extensio">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-status-an-optional-extensio" class="section-name selfRef">Status: An OPTIONAL Extension</a>
+      </h2>
+<p id="section-2-1">This document is <span class="bcp14">OPTIONAL</span>. A deployment that narrows authority only
+through the Authorization Server is fully conformant to the issuance
+profile and is unaffected by this document. It places no new requirement
+on the issuance profile, and it does not replace
+Authorization-Server-mediated delegation; a deployment offers offline
+attenuation in addition, for the fan-out paths where issuer round-trips
+are the bottleneck.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">A deployment claims this profile only when it issues or accepts
+Mission-bound attenuation-substrate tokens.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">This profile depends normatively on the Attenuating Agent Tokens
+substrate (<span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>), an
+in-progress Internet-Draft whose details may change; an implementation
+tracks that work as it evolves. Authorization-Server-mediated
+delegation, which depends only on ratified OAuth, is the stable path;
+a deployment uses offline attenuation where its substrate dependency is
+acceptable and treats the interface as tracking the substrate.<a href="#section-2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="issuance-relationship">
+<section id="section-3">
+      <h2 id="name-relationship-to-the-issuanc">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-relationship-to-the-issuanc" class="section-name selfRef">Relationship to the Issuance Profile</a>
+      </h2>
+<p id="section-3-1">This document depends normatively on the issuance profile and the
+attenuation substrate, and is not implementable alone. It reuses the
+issuance profile's Mission, <code>mission</code> claim, Authority Set, subset rule,
+and lifecycle, and the attenuation substrate's token format, offline
+derivation, chain linkage, capability monotonicity, and proof-of-
+possession. It uses Agent (Client), Mission Issuer, Mission, and derived
+token as the issuance profile defines them, and root token, derived
+token, <code>par_hash</code>, <code>del_depth</code>, and capability monotonicity as the
+attenuation substrate defines them.<a href="#section-3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conventions">
+<section id="section-4">
+      <h2 id="name-conventions-and-terminology">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+      </h2>
+<p id="section-4-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4-2">
+        <dt id="section-4-2.1">Mission-bound attenuation root:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.2">
+          <p id="section-4-2.2.1">An attenuation-substrate root token, issued by the Mission Issuer,
+that carries the <code>mission</code> claim and whose authority is bounded by the
+Mission's Authority Set.<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-2.3">Offline attenuation:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.4">
+          <p id="section-4-2.4.1">A token holder minting a narrower child of a Mission-bound attenuation
+token, signed with the parent's confirmation key, without contacting
+the Mission Issuer.<a href="#section-4-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-2.5">Attenuating Holder:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.6">
+          <p id="section-4-2.6.1">The holder of a Mission-bound attenuation token, in its role of
+minting narrower children offline under this profile.<a href="#section-4-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-4-3">In this profile a child is a token: a narrower token minted under one
+Mission, not a new Mission. The Mission Child Delegation profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) defines Child
+Missions, which are new Missions with their own <code>mission_id</code>; the two
+are distinct.<a href="#section-4-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="root">
+<section id="section-5">
+      <h2 id="name-mission-bound-attenuation-r">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-mission-bound-attenuation-r" class="section-name selfRef">Mission-Bound Attenuation Roots</a>
+      </h2>
+<p id="section-5-1">A Mission-bound attenuation root is a Mission-bound token
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) whose carried authority is an
+<code>attenuating_agent_token</code> authorization detail
+(<span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>, <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>).
+The Mission Issuer derives that authority from the Mission's Authority
+Set by the mapping of <a href="#root-mapping" class="auto internal xref">Section 5.1</a>. The root carries the <code>mission</code>
+claim (<code>id</code>, <code>origin</code>, <code>authority_hash</code>) and the holder's confirmation
+key, as both profiles require. It <span class="bcp14">MUST</span> carry <code>aud</code> per the issuance
+profile's token rules (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
+identifying the Resource Server(s) authorized to consume its authority.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">A Mission-bound attenuation root is one shape of Mission-bound token. A
+deployment <span class="bcp14">MAY</span> also issue ordinary <code>mission_resource_access</code> tokens for
+the same Mission; the two are derived from the same Authority Set and
+gated on the same Mission state.<a href="#section-5-2" class="pilcrow">¶</a></p>
+<div id="root-mapping">
+<section id="section-5.1">
+        <h3 id="name-deriving-the-root-from-the-">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-deriving-the-root-from-the-" class="section-name selfRef">Deriving the Root from the Authority Set</a>
+        </h3>
+<p id="section-5.1-1">The Mission Issuer derives the root's <code>attenuating_agent_token</code>
+authority from <code>mission_resource_access</code> entries
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) by this mapping:<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.1-2.1">
+            <p id="section-5.1-2.1.1">each tool identifier in the root maps to an <code>actions</code> value at the
+entry's <code>resource</code>; the root's tool set <span class="bcp14">MUST</span> be a subset of that
+entry's <code>actions</code>;<a href="#section-5.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.1-2.2">
+            <p id="section-5.1-2.2.1">a tool's argument constraints map to the entry's <code>constraints</code>,
+compared under the registered Common Constraint value-space rules
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) for registered constraint
+names and under the deployment's rules otherwise; a root argument
+constraint <span class="bcp14">MUST</span> be no broader than the mapped entry <code>constraints</code>; and<a href="#section-5.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.1-2.3">
+            <p id="section-5.1-2.3.1">the root <span class="bcp14">MUST</span> derive only from entries whose <code>delegation</code> permits the
+intended holder (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.1-3">The root's authority <span class="bcp14">MUST</span> be within the Mission's approved authority
+under this mapping and the issuance profile's subset rule. An auditor
+verifies that a root is within the Authority Set by applying this same
+mapping in reverse: each root tool and argument constraint traces to a
+permitted entry action and constraint.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="request-discovery">
+<section id="section-6">
+      <h2 id="name-requesting-a-root-and-disco">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-requesting-a-root-and-disco" class="section-name selfRef">Requesting a Root and Discovery</a>
+      </h2>
+<p id="section-6-1">A Mission Issuer that supports this profile advertises it in its
+authorization server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>:<a href="#section-6-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6-2">
+        <dt id="section-6-2.1">
+<code>mission_attenuation_supported</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.2">
+          <p id="section-6-2.2.1"><span class="bcp14">OPTIONAL</span> boolean. When <code>true</code>, the Mission Issuer issues Mission-bound
+attenuation roots (<a href="#root" class="auto internal xref">Section 5</a>) and derives their authority from the
+Mission's Authority Set (<a href="#root-mapping" class="auto internal xref">Section 5.1</a>).<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-6-3">A client requests a Mission-bound attenuation root at the token endpoint.
+The attenuation substrate defines no OAuth Token Exchange <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>
+requested-token-type identifier for asking for a root; a substrate root
+is requested by carrying an <code>attenuating_agent_token</code> authorization
+detail and the holder's confirmation key
+(<span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>). To ask the
+Mission Issuer to bind such a root to the Mission and derive it from the
+Authority Set, a client includes the token-request parameter:<a href="#section-6-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6-4">
+        <dt id="section-6-4.1">
+<code>mission_attenuation_root</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-4.2">
+          <p id="section-6-4.2.1"><span class="bcp14">OPTIONAL</span> boolean. When <code>true</code> on a Mission-bound token request, the
+Mission Issuer issues the token as a Mission-bound attenuation root
+(<a href="#root" class="auto internal xref">Section 5</a>) rather than an ordinary <code>mission_resource_access</code> token.<a href="#section-6-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="attenuation">
+<section id="section-7">
+      <h2 id="name-offline-attenuation">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-offline-attenuation" class="section-name selfRef">Offline Attenuation</a>
+      </h2>
+<p id="section-7-1">The holder of a Mission-bound attenuation token mints a narrower child
+offline, by the attenuation substrate's derivation: it selects a
+narrower tool and constraint set, increments <code>del_depth</code>, signs with the
+key the parent's <code>cnf</code> binds, and sets <code>par_hash</code> to the parent's
+commitment. No Mission Issuer contact occurs.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2"><code>par_hash</code> commits to the exact parent token bytes, per the attenuation
+substrate's cryptographic linkage rule
+(<span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>): its value is
+the base64url encoding, without padding, of the SHA-256 digest of the
+parent token's JWS Signing Input.<a href="#section-7-2" class="pilcrow">¶</a></p>
+<p id="section-7-3">The child's <code>aud</code> <span class="bcp14">MUST</span> equal its parent's <code>aud</code> or be a subset of it,
+and the child's <code>exp</code> <span class="bcp14">MUST NOT</span> exceed its parent's <code>exp</code>. Because the
+Mission Issuer caps the root's <code>exp</code> at the Mission's <code>mission_expiry</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the per-hop <code>exp</code> rule bounds
+the whole chain transitively: no descendant outlives the root, hence
+none outlives the Mission.<a href="#section-7-3" class="pilcrow">¶</a></p>
+<p id="section-7-4">The <code>mission</code> claim rides the chain unchanged: every token in the chain
+carries the same <code>id</code>, <code>origin</code>, and <code>authority_hash</code> as the root. The
+child's narrowing is governed entirely by the attenuation substrate's
+capability monotonicity, which is the subset relation a consumer checks;
+because the child carries the parent chain, a consumer holding only the
+leaf and its chain can verify that the leaf is a subset of the root,
+without holding the Mission's full Authority Set.<a href="#section-7-4" class="pilcrow">¶</a></p>
+<p id="section-7-5"><code>authority_hash</code> on a derived token is a lineage anchor, not the child's
+authority commitment. The child's authority is its own carried
+constraints, narrower than the root's; <code>authority_hash</code> still commits
+the root Mission's Authority Set, so it links the chain to the approved
+Mission for audit and remains an audit anchor a consumer cannot recompute
+from the narrowed leaf, exactly as for any narrowed Mission-bound token
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-binding-check">
+<section id="section-8">
+      <h2 id="name-verifying-the-mission-bindi">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-verifying-the-mission-bindi" class="section-name selfRef">Verifying the Mission Binding</a>
+      </h2>
+<p id="section-8-1">A consumer verifies the chain linkage, capability monotonicity, depth,
+and proof-of-possession under the attenuation substrate
+(<span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>). This profile
+adds checks on the <code>mission</code> claim, which the substrate does not define
+because it has no concept of the Mission binding. In addition to the
+substrate's chain verification, a consumer <span class="bcp14">MUST</span>:<a href="#section-8-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8-2.1">
+          <p id="section-8-2.1.1">reject the chain unless every token in it carries a <code>mission</code> claim
+and every claim carries the same <code>id</code>, <code>origin</code>, and <code>authority_hash</code>
+as the root. A child cannot re-bind to a different Mission or change
+the lineage anchor; a link whose <code>mission</code> claim differs from the
+root's, or that omits it, <span class="bcp14">MUST</span> cause the whole chain to be refused,
+not treated as a narrower grant; and<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.2">
+          <p id="section-8-2.2.1">treat a chain whose root carries no <code>mission</code> claim as outside this
+profile: it is an ordinary attenuation chain with no Mission binding,
+and a consumer <span class="bcp14">MUST NOT</span> apply the Mission-state kill switch
+(<a href="#kill-switch" class="auto internal xref">Section 9</a>) to it or report it as Mission-bound;<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.3">
+          <p id="section-8-2.3.1">reject the chain if any child's <code>aud</code> is not equal to, or a subset of,
+its parent's <code>aud</code> (<a href="#attenuation" class="auto internal xref">Section 7</a>); and<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.4">
+          <p id="section-8-2.4.1">reject the chain if any child's <code>exp</code> exceeds its parent's <code>exp</code>
+(<a href="#attenuation" class="auto internal xref">Section 7</a>).<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-8-3">These checks fail safe: a chain that does not present a single, unchanged
+Mission binding, an audience within its parent's, and an expiry within
+its parent's is refused, not evaluated against a guessed Mission.<a href="#section-8-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="kill-switch">
+<section id="section-9">
+      <h2 id="name-the-kill-switch-requires-ru">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-the-kill-switch-requires-ru" class="section-name selfRef">The Kill Switch Requires Runtime Enforcement</a>
+      </h2>
+<p id="section-9-1">The attenuation substrate defines no revocation: a child, once minted,
+is valid by its signature chain until its <code>exp</code>, and no issuer can reach
+it. The Mission kill switch is therefore not automatic for offline
+children; it is delivered only by the runtime enforcement layer.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">A consumer of a Mission-bound attenuation chain <span class="bcp14">MUST</span> evaluate it under
+the runtime enforcement profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>): on every presentation
+of a token in the chain, regardless of action class, it <span class="bcp14">MUST</span> establish
+that the chain's Mission is <code>active</code>, within the deployment's declared
+freshness bound, from a Mission state source, in addition to verifying
+the attenuation chain and the proof-of-possession. If the consumer
+cannot establish the Mission as <code>active</code> within the bound, including when
+the state source is unreachable, it <span class="bcp14">MUST</span> refuse, as the runtime profile
+fails closed on unestablished state
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). A cached chain does
+not bypass this: a chain held in a harness cache is still re-checked
+against current Mission state on every presentation, since the cache is
+never evidence of continuing authority
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>). A revoked or expired
+Mission <span class="bcp14">MUST</span> cause refusal of every token in the chain, regardless of
+the children's own <code>exp</code>. A deployment <span class="bcp14">MUST NOT</span> accept Mission-bound
+attenuation tokens on a path that does not enforce current Mission
+state: without that check the offline chain is ungoverned bearer
+authority until it ages out, which defeats the purpose of binding it to
+a Mission. Offline attenuation is thus a capability for deployments
+running the runtime enforcement profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); it is not available to
+a deployment that relies on token lifetime alone.<a href="#section-9-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="relationship-delegation">
+<section id="section-10">
+      <h2 id="name-relationship-to-other-deleg">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-relationship-to-other-deleg" class="section-name selfRef">Relationship to Other Delegation</a>
+      </h2>
+<p id="section-10-1">Offline attenuation sits beside two other narrowing mechanisms:
+Authorization-Server-mediated delegation (the issuance profile's <code>act</code>
+chain and Token Exchange), which narrows at the issuer, online, so the
+issuer observes each delegation; and Child Mission Delegation
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), which creates
+a separate Child Mission with its own <code>mission_id</code>, lifecycle, and
+approval. The Mission Child Delegation profile sets out how the three
+differ. Offline attenuation creates no new Mission: every child rides
+the same <code>mission</code> claim and dies with the same Mission. Use offline
+attenuation when a sub-agent needs a narrower token under the same
+Mission, fast, at fan-out scale; use a Child Mission when it needs its
+own durable, separately revocable Mission.<a href="#section-10-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="example">
+<section id="section-11">
+      <h2 id="name-worked-example">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-worked-example" class="section-name selfRef">Worked Example</a>
+      </h2>
+<p id="section-11-1">An orchestrator agent (<code>s6BhdRkqt3</code>), acting for <code>alice</code> under Mission
+<code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code> to reconcile Q3 invoices, holds a
+Mission-bound attenuation root. Its authority covers reading Q3 invoices
+and posting journal entries under $500; <code>del_max_depth</code> allows two
+levels of offline narrowing. Decoded root token:<a href="#section-11-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-11-2">
+<pre>
+{
+  "iss": "https://as.example.com",
+  "sub": "user_3p2q8mN1a0kV7tR",
+  "client_id": "s6BhdRkqt3",
+  "aud": "https://erp.example.com",
+  "iat": 1797840000,
+  "exp": 1797840300,
+  "jti": "aat_root_7M2R4kP9sT1x",
+  "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
+  "del_depth": 0,
+  "del_max_depth": 2,
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
+  "authorization_details": [
+    { "type": "attenuating_agent_token",
+      "tools": {
+        "erp.invoices.read": {
+          "period": { "constraint_type": "exact", "value": "2026-Q3" } },
+        "erp.journal-entries.write": {
+          "amount_usd": { "constraint_type": "range", "max": 500 } } } }
+  ]
+}
+</pre><a href="#section-11-2" class="pilcrow">¶</a>
+</div>
+<p id="section-11-3">The root's <code>erp.invoices.read</code> and <code>erp.journal-entries.write</code> tools map
+to the <code>invoices.read</code> and <code>journal-entries.write</code> actions on
+<code>https://erp.example.com</code>, and the <code>amount_usd</code> argument maps to the
+Mission Common Constraint <code>max_amount_usd</code> (<a href="#root-mapping" class="auto internal xref">Section 5.1</a>); its <code>aud</code>
+names that Resource Server.<a href="#section-11-3" class="pilcrow">¶</a></p>
+<p id="section-11-4">The orchestrator spawns a read-only extraction sub-agent and, with no
+Authorization Server contact, mints a child that drops the write tool
+and keeps only the Q3 invoice read. It signs the child with the key the
+root's <code>cnf</code> binds, sets <code>iss</code> to that key's thumbprint, increments
+<code>del_depth</code>, and commits the parent by <code>par_hash</code>:<a href="#section-11-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-11-5">
+<pre>
+{
+  "iss":
+    "urn:ietf:params:oauth:jwk-thumbprint:sha-256:0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I",
+  "sub": "user_3p2q8mN1a0kV7tR",
+  "aud": "https://erp.example.com",
+  "iat": 1797840030,
+  "exp": 1797840240,
+  "jti": "aat_child_2Yt7Qv9Lq",
+  "cnf": { "jkt": "kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t" },
+  "par_hash": "9XbVt2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQ",
+  "del_depth": 1,
+  "del_max_depth": 2,
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
+  "authorization_details": [
+    { "type": "attenuating_agent_token",
+      "tools": {
+        "erp.invoices.read": {
+          "period": { "constraint_type": "exact", "value": "2026-Q3" } } } }
+  ]
+}
+</pre><a href="#section-11-5" class="pilcrow">¶</a>
+</div>
+<p id="section-11-6">The <code>mission</code> claim is unchanged, the child's <code>aud</code> equals the root's,
+its <code>exp</code> (1797840240) ends before the root's (1797840300), within the
+per-hop bound, the write tool is gone, and the read constraint is
+unchanged (a permitted narrowing). The child's <code>cnf.jkt</code> is the JWK
+thumbprint <span>[<a href="#RFC7638" class="cite xref">RFC7638</a>]</span> of the delegate extractor's own key, which its
+per-invocation proof-of-possession must match. The child's <code>par_hash</code>
+derives as <a href="#attenuation" class="auto internal xref">Section 7</a> states, the base64url SHA-256 digest, without
+padding, of the root token's JWS Signing Input; the value shown is
+illustrative, since the example gives the root's decoded claims rather
+than its serialized bytes. To read an invoice
+the extractor presents the chain <code>[root, child]</code> and a per-invocation
+proof-of-possession to the gateway. The gateway verifies the chain (the
+child's signature under the root's <code>cnf</code> key, <code>par_hash</code>, the depth,
+capability monotonicity, and the <code>aud</code> and <code>exp</code> bounds), verifies the
+proof-of-possession under the child's <code>cnf</code> key, and, because this is
+Mission-bound, checks on this presentation that
+<code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code> is <code>active</code> within the
+deployment's declared freshness bound (<a href="#kill-switch" class="auto internal xref">Section 9</a>). A write attempt
+by the extractor fails on capability monotonicity:
+<code>erp.journal-entries.write</code> is not in its tools. And when <code>alice</code> revokes
+the Mission, the next presentation fails the state check and the whole
+chain stops, even though no issuer ever saw the child and the child's
+<code>exp</code> has not passed.<a href="#section-11-6" class="pilcrow">¶</a></p>
+<p id="section-11-7">For contrast, suppose the extractor presents a chain whose child
+carries <code>"exp": 1797840360</code>, sixty seconds past the root's. The
+per-hop bound check (<a href="#mission-binding-check" class="auto internal xref">Section 8</a>) fails before any tool
+or Mission-state evaluation: a child that outlives its parent breaks
+the chain's transitive expiry bound, so the gateway refuses the whole
+chain. A chain whose child carried a <code>mission</code> claim differing from the
+root's is refused the same way, as a re-bound chain, not read as a
+narrower grant.<a href="#section-11-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conformance">
+<section id="section-12">
+      <h2 id="name-conformance">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+      </h2>
+<p id="section-12-1">A Mission Issuer conforming to this profile <span class="bcp14">MUST</span> bound a Mission-bound
+attenuation root by the Mission's Authority Set (<a href="#root-mapping" class="auto internal xref">Section 5.1</a>) and
+carry the <code>mission</code> claim, the confirmation key, and <code>aud</code> on it.<a href="#section-12-1" class="pilcrow">¶</a></p>
+<p id="section-12-2">An Attenuating Holder conforming to this profile <span class="bcp14">MUST</span> carry the
+<code>mission</code> claim unchanged into every child it mints, <span class="bcp14">MUST</span> only narrow
+authority and never broaden it, <span class="bcp14">MUST</span> keep each child's <code>aud</code> within its
+parent's and its <code>exp</code> within its parent's, and <span class="bcp14">MUST</span> increment the depth
+member the attenuation substrate defines (<code>del_depth</code>,
+<span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>).<a href="#section-12-2" class="pilcrow">¶</a></p>
+<p id="section-12-3">A consumer conforming to this profile <span class="bcp14">MUST</span> verify the attenuation chain
+and proof-of-possession per the attenuation substrate, <span class="bcp14">MUST</span> verify that
+the <code>mission</code> claim is unchanged across the chain and that each child's
+<code>aud</code> and <code>exp</code> are within its parent's (<a href="#mission-binding-check" class="auto internal xref">Section 8</a>), and
+<span class="bcp14">MUST</span> enforce current Mission state per <a href="#kill-switch" class="auto internal xref">Section 9</a>. A deployment <span class="bcp14">MUST NOT</span> claim this profile on a path that does not enforce Mission state.<a href="#section-12-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-13">
+      <h2 id="name-security-considerations">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-13-1">The security considerations of the issuance profile, the runtime
+profile, and the attenuation substrate apply. This profile adds:<a href="#section-13-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13-2.1">
+          <p id="section-13-2.1.1">No native revocation. Offline children cannot be recalled by the
+issuer; the kill switch is the runtime Mission-state check
+(<a href="#kill-switch" class="auto internal xref">Section 9</a>), which is mandatory for this profile. A deployment
+that cannot enforce Mission state <span class="bcp14">MUST NOT</span> accept these tokens.<a href="#section-13-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.2">
+          <p id="section-13-2.2.1">Stale authority. A child's <code>exp</code> bounds its life absent a state check;
+a deployment <span class="bcp14">SHOULD</span> keep child lifetimes short so that even a path
+with a coarse staleness bound limits exposure.<a href="#section-13-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.3">
+          <p id="section-13-2.3.1">Holder-key compromise. A compromised holder can mint any narrower
+child within its authority, offline and unobserved. The bound is that
+it can only narrow, never broaden (capability monotonicity), and that
+the runtime layer still gates every action against the Mission; the
+compromise does not widen authority or evade revocation.<a href="#section-13-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.4">
+          <p id="section-13-2.4.1">Depth and fan-out. <code>del_max_depth</code> bounds chain depth; a deployment
+<span class="bcp14">SHOULD</span> set it. Because offline minting is unobserved by the issuer,
+breadth is bounded at consumption, not at issuance: PEPs <span class="bcp14">SHOULD</span> meter
+the distinct leaf <code>jti</code> and <code>cnf</code> values they see per Mission and
+alert or refuse beyond a deployment-set bound, and issuers <span class="bcp14">SHOULD</span> keep
+root lifetimes short.<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.5">
+          <p id="section-13-2.5.1">Per-branch revocation. The only kill switch is whole-Mission: revoking
+the Mission stops the entire chain, but this profile provides no way to
+revoke a single branch or leaf without revoking the Mission. Per-branch
+revocation is deferred work. As a deployment mitigation, a PEP <span class="bcp14">MAY</span>
+maintain a denylist keyed by leaf <code>jti</code> or <code>cnf</code> to refuse specific
+leaves.<a href="#section-13-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.6">
+          <p id="section-13-2.6.1">Audit. Because the issuer does not observe offline derivations, the
+consuming enforcement points are the only place a derivation is seen;
+runtime enforcement evidence
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) is the audit record
+for offline-attenuated actions.<a href="#section-13-2.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-14">
+      <h2 id="name-privacy-considerations">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-14-1">The <code>mission</code> claim (<code>id</code>, <code>origin</code>, <code>authority_hash</code>) rides every token
+in an attenuation chain unchanged (<a href="#attenuation" class="auto internal xref">Section 7</a>), so every consumer
+of any child sees the same durable Mission correlator and lineage
+anchor. The chain is therefore a correlation surface across the
+sub-agents and resources it reaches: two consumers that compare the
+Mission identifiers they were shown can tell the tokens belong to one
+Mission. This profile does not narrow that correlation; the
+single-canonical-<code>mission</code> cross-audience linkability the issuance
+profile acknowledges (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) applies to
+offline children as well, and unlinkable or per-audience presentation of
+Mission-bound authority is out of scope and deferred.<a href="#section-14-1" class="pilcrow">¶</a></p>
+<p id="section-14-2">Because the child carries the parent chain, every consumer of a leaf
+sees each ancestor's full authority, not only the leaf's narrowed slice.
+A leaf presented to one Resource Server therefore discloses the broader
+authority of every token above it. To minimize that disclosure, a
+deployment <span class="bcp14">SHOULD</span> mint narrowly scoped, per-subtree roots rather than one
+broad root fanned out across unrelated subtrees, so a leaf reveals only
+the ancestors of its own subtree.<a href="#section-14-2" class="pilcrow">¶</a></p>
+<p id="section-14-3">Offline minting is unobserved by the Mission Issuer, so which children
+were minted and to whom is visible only at the consuming enforcement
+points, not in the issuer's records. A deployment <span class="bcp14">SHOULD</span> treat the
+runtime enforcement evidence those points produce
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) as the privacy-relevant
+record of offline derivations and protect it accordingly.<a href="#section-14-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana">
+<section id="section-15">
+      <h2 id="name-iana-considerations">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-15-1">A Mission-bound attenuation root carries the <code>mission</code> claim, which the
+issuance profile registers as an open object, and the
+<code>attenuating_agent_token</code> authorization detail, which the attenuation
+substrate registers; this profile combines them by reference and defines
+no new claim or registry. It registers one metadata member and one
+request parameter.<a href="#section-15-1" class="pilcrow">¶</a></p>
+<p id="section-15-2">This document registers one member in the existing "OAuth Authorization
+Server Metadata" registry <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>: Change Controller IETF; Reference
+this document, <a href="#request-discovery" class="auto internal xref">Section 6</a>.<a href="#section-15-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-15-3.1">
+          <p id="section-15-3.1.1"><code>mission_attenuation_supported</code><a href="#section-15-3.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-15-4">This document registers one parameter in the "OAuth Parameters" registry:
+Parameter Usage Location token request; Change Controller IETF; Reference
+this document, <a href="#request-discovery" class="auto internal xref">Section 6</a>.<a href="#section-15-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-15-5.1">
+          <p id="section-15-5.1.1"><code>mission_attenuation_root</code><a href="#section-15-5.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-16">
+      <h2 id="name-references">
+<a href="#section-16" class="section-number selfRef">16. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-16.1">
+        <h3 id="name-normative-references">
+<a href="#section-16.1" class="section-number selfRef">16.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-runtime</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-runtime">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-runtime</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-niyikiza-oauth-attenuating-agent-tokens">[I-D.draft-niyikiza-oauth-attenuating-agent-tokens]</dt>
+        <dd>
+<span class="refAuthor">Aimable, N.</span>, <span class="refTitle">"Attenuating Authorization Tokens for Agentic Delegation Chains"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-niyikiza-oauth-attenuating-agent-tokens-01</span>, <time datetime="2026-06-15" class="refDate">15 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-01">https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-01</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8414">[RFC8414]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8414">https://www.rfc-editor.org/rfc/rfc8414</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8693">[RFC8693]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8693">https://www.rfc-editor.org/rfc/rfc8693</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9396">[RFC9396]</dt>
+      <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-16.2">
+        <h3 id="name-informative-references">
+<a href="#section-16.2" class="section-number selfRef">16.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-harness</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-harness">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-harness</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Child Delegation for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-child-delegation</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-cross-domain</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-cross-domain">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-cross-domain</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7638">[RFC7638]</dt>
+      <dd>
+<span class="refAuthor">Jones, M.</span> and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Key (JWK) Thumbprint"</span>, <span class="seriesInfo">RFC 7638</span>, <span class="seriesInfo">DOI 10.17487/RFC7638</span>, <time datetime="2015-09" class="refDate">September 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7638">https://www.rfc-editor.org/rfc/rfc7638</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-A">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-A-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
+work and profiles Attenuating Agent Tokens for offline, holder-derived
+narrowing of Mission authority.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
