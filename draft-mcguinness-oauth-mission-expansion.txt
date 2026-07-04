@@ -95,26 +95,20 @@ Table of Contents
      7.1.  No implicit rollback
    8.  Replacement Expansion
    9.  Concurrent Expansion Reconciliation
-   10. Progressive Authorization
-     10.1.  In-ceiling expansion
-     10.2.  What it bounds, and what it does not
-     10.3.  Realizing an approved access request
-   11. Expansion Denial Reasons
-   12. Worked Example
-   13. Conformance
-     13.1.  Optional capability: Expansion with Progressive
-            Authorization
-   14. Security Considerations
-     14.1.  Predecessor confusion
-     14.2.  Authority comes only from new consent
-     14.3.  Race against predecessor lifecycle
-     14.4.  Expansion versus step-up
-     14.5.  Policy probing
-     14.6.  Audit linkage
-   15. Privacy Considerations
-     15.1.  Predecessor-chain correlation
-     15.2.  Disclosure of the broadened task
-   16. IANA Considerations
+   10. Expansion Denial Reasons
+   11. Worked Example
+   12. Conformance
+   13. Security Considerations
+     13.1.  Predecessor confusion
+     13.2.  Authority comes only from new consent
+     13.3.  Race against predecessor lifecycle
+     13.4.  Expansion versus step-up
+     13.5.  Policy probing
+     13.6.  Audit linkage
+   14. Privacy Considerations
+     14.1.  Predecessor-chain correlation
+     14.2.  Disclosure of the broadened task
+   15. IANA Considerations
    Acknowledgments
    References
      Normative References
@@ -179,7 +173,7 @@ Table of Contents
    denied because the requested authority is not in the active Mission's
    Authority Set requires expansion: the Authority Set must be enlarged
    through a new approval event.  The two are not interchangeable;
-   Section 14.4 treats the security consequence of conflating them.
+   Section 13.4 treats the security consequence of conflating them.
 
 1.3.  Relationship to the issuance profile
 
@@ -212,13 +206,9 @@ Table of Contents
       (Section 8);
 
    *  concurrent-expansion reconciliation, with a closed set of
-      reconciliation status codes (Section 9);
+      reconciliation status codes (Section 9); and
 
-   *  progressive authorization: a pre-consented authority ceiling and
-      drawdown policy under which in-ceiling expansions are policy-
-      adjudicated rather than freshly human-approved (Section 10); and
-
-   *  the expansion denial reasons (Section 11).
+   *  the expansion denial reasons (Section 10).
 
    This document does NOT define:
 
@@ -230,10 +220,17 @@ Table of Contents
       (Section 3.2, [I-D.draft-mcguinness-mission-runtime]);
 
    *  branch expansion, in which predecessor and successor both remain
-      active (Section 8); or
+      active (Section 8);
 
    *  multi-hop or cross-domain expansion; an expansion is adjudicated
-      by the predecessor's Mission Issuer (its origin).
+      by the predecessor's Mission Issuer (its origin); or
+
+   *  policy-adjudicated expansion within a pre-consented authority
+      ceiling; that is progressive authorization, defined by an
+      experimental companion
+      ([I-D.draft-mcguinness-oauth-mission-progressive]).  Under this
+      document alone, every expansion is adjudicated by a fresh human
+      approval.
 
 2.  Conventions and Terminology
 
@@ -464,10 +461,10 @@ Table of Contents
        derived Authority Set, satisfying any context.acr, and render the
        Subject when the Approver is not the Subject, per the issuance
        profile's approval event.  The consent disclosure MUST reflect
-       the successor's authority being adjudicated.  For an in-ceiling
-       expansion under progressive authorization, this consent MAY be
-       satisfied by policy rather than a fresh human approval, within
-       the limits of Section 10.1.
+       the successor's authority being adjudicated.  (The experimental
+       progressive authorization companion defines a policy-adjudicated
+       override of this step for expansions within a pre-consented
+       ceiling, [I-D.draft-mcguinness-oauth-mission-progressive].)
 
    4.  Compute the successor's integrity anchors (intent_hash,
        authority_hash) and create the successor Mission record in the
@@ -478,7 +475,7 @@ Table of Contents
    The expansion is governed by the consent obtained at step 3.
    Expansion never widens authority without a new consent: if the
    Approver declines, no successor is created and the predecessor is
-   untouched (Section 11).
+   untouched (Section 10).
 
 5.1.  Successor expiry
 
@@ -745,153 +742,12 @@ Table of Contents
 
    mission_expansion_status:  A string carrying one code from this
       document's closed sets: a reconciliation status (Section 9) or an
-      expansion denial reason (Section 11).  It is returned in the error
+      expansion denial reason (Section 10).  It is returned in the error
       response of the step that failed: the PAR error response for a
       binding or reconciliation failure, and the approval or token error
       response for a denial.
 
-10.  Progressive Authorization
-
-   An open-ended agentic task often cannot have its full authority
-   enumerated at the initial approval, which leaves a deployment
-   choosing between over-provisioning a broad standing Mission and
-   interrupting the user for a fresh approval at every step.
-   Progressive authorization is a third option: the Approver consents
-   once to a bounded envelope and a rule for drawing authority from it,
-   so authority can grow within the envelope at runtime without a fresh
-   human approval each time, while the active authority any single
-   Mission yields stays narrow.
-
-   At the initial approval event ([I-D.draft-mcguinness-oauth-mission]),
-   the Approver MAY additionally consent to:
-
-   *  an *authority ceiling*, recorded as an authority_ceiling member on
-      the Mission: an array of authorization-details-shaped entries,
-      each the shape of an Authority Set entry
-      ([I-D.draft-mcguinness-oauth-mission]), that is the pre-consented
-      maximum any expansion of this Mission may reach without a further
-      human approval and that every in-ceiling successor MUST be within
-      (Section 10.1); and
-
-   *  a *drawdown policy*, recorded as a drawdown_policy member on the
-      Mission: a string or URI identifying the policy under which the
-      Mission Issuer MAY adjudicate an in-ceiling expansion by policy
-      rather than by a fresh human approval.  The policy's content is
-      deployment-defined.
-
-   Where present, authority_ceiling and drawdown_policy are recorded on
-   the Mission and committed by a ceiling_hash, computed with the
-   issuance profile's integrity-anchor envelope
-   ([I-D.draft-mcguinness-oauth-mission]) under the typ mission-
-   authority-ceiling over an object carrying both members.  They are not
-   committed under authority_hash: authority_hash commits only the
-   consented Authority Set ([I-D.draft-mcguinness-oauth-mission]), and
-   the ceiling is a bound on future expansions, not present authority.
-   The consent disclosure MUST render the ceiling and the fact that in-
-   ceiling expansion is policy-adjudicated.  A Mission that carries no
-   authority_ceiling has no progressive authorization: every expansion
-   of it is an ordinary, freshly approved expansion.
-
-10.1.  In-ceiling expansion
-
-   An *in-ceiling expansion* is an expansion (Section 5) whose successor
-   Authority Set is within the predecessor's consented
-   authority_ceiling.  A requested successor Authority Set is in-ceiling
-   when every one of its entries is a subset of some authority_ceiling
-   entry under the issuance profile's subset rule
-   ([I-D.draft-mcguinness-oauth-mission]); a constraints-bounded ceiling
-   uses the same subset semantics.  When the predecessor consented to a
-   drawdown policy that authorizes the requested widening, the Mission
-   Issuer MAY satisfy the adjudication's approval event by policy rather
-   than by a fresh human approval, exactly as a parent Mission's
-   Authority Set may permit policy-approved child creation
-   ([I-D.draft-mcguinness-oauth-mission-child-delegation]).  The
-   successor is created as in Section 5: its Authority Set freshly
-   derived and bound by the ceiling, its predecessor member set, the
-   predecessor superseded.
-
-   When the adjudication is by the pre-consented drawdown policy, the
-   Mission Issuer MAY complete the authorization request without
-   prompting the Approver, issuing the authorization code directly on
-   redemption of the expansion's request_uri.  The successor is still
-   created through the full approval-event machinery of Section 5; only
-   the interactive prompt is skipped.
-
-   This does not widen authority without consent (Section 14.2).  The
-   consent is the human consent given at the initial approval to the
-   ceiling and the drawdown policy; policy adjudication only draws
-   within that pre-given consent and can never exceed the ceiling.  The
-   Mission Issuer MUST refuse, with out_of_ceiling (Section 11), a
-   requested authority that is not within the consented
-   authority_ceiling; exceeding the ceiling requires a fresh human
-   approval that raises it, which is an ordinary expansion.
-
-   Policy adjudication is bounded, so a pre-consented ceiling cannot
-   become a standing grant a compromised agent walks up to unattended.
-   A deployment MUST rate-bound policy-adjudicated expansions per
-   Mission, and MUST record each as an approval event whose approver
-   context is the drawdown policy that authorized it (Section 14.6).
-
-   Some authority classes always require a fresh human approval even
-   within the ceiling.  To make that testable, a deployment MUST publish
-   a mapping from its action identifiers to the runtime profile's action
-   classes ([I-D.draft-mcguinness-mission-runtime]), or an equivalent
-   declared classification.  A drawdown that grants authority mapped to
-   an irreversible, external-commitment, or privileged-administration
-   class, or that grants cross-domain authority, MUST be adjudicated by
-   a fresh human approval; the drawdown policy MUST NOT permit policy-
-   only adjudication of those.  An in-ceiling request the drawdown
-   policy does not authorize is not refused with out_of_ceiling; it
-   falls back to an ordinary, freshly human-approved expansion.
-
-10.2.  What it bounds, and what it does not
-
-   The ceiling is broad by construction, since it must cover the open-
-   ended task.  What stays narrow is the active authority any single
-   Mission in the chain yields: each in-ceiling successor is derived for
-   the authority actually needed at that step and is independently gated
-   and revocable.  A compromised agent cannot instantly wield the
-   ceiling; it can exercise only the current active authority and
-   request in-ceiling drawdown, which is policy-gated, recorded for
-   audit (Section 14.6), rate-limitable, and enforced per action by the
-   runtime layer ([I-D.draft-mcguinness-mission-runtime]).  Progressive
-   authorization bounds, and does not eliminate, standing-authority
-   exposure; a deployment SHOULD pair it with short successor lifetimes,
-   constraint-bounded ceilings, and runtime enforcement.  The drawdown
-   policy is enforced by the Mission Issuer and is part of its trusted
-   governance: a misconfigured policy can over-grant within the ceiling,
-   so it is reviewed and versioned like other approval policy.
-
-10.3.  Realizing an approved access request
-
-   Progressive authorization grows authority that a deployment
-   anticipated well enough to express as a ceiling.  The runtime
-   enforcement layer handles the unanticipated case: it can let an agent
-   request authority it discovers it needs at the point of use, through
-   an access-request and approval workflow
-   ([I-D.draft-mcguinness-mission-runtime]).  That workflow yields a
-   permit for the single re-evaluated action.  To persist the newly
-   approved authority for the rest of the task, rather than have the
-   agent re-request it on every call, the Mission Issuer MAY realize an
-   approved access request as an expansion:
-
-   *  a request whose authority is within the Mission's consented
-      ceiling is realized as a policy-adjudicated in-ceiling expansion
-      (Section 10.1); and
-
-   *  a request whose authority exceeds the ceiling is realized only on
-      the fresh human approval the request carries, as an ordinary
-      expansion that creates the successor and, where the Approver
-      consents, raises the ceiling.
-
-   Realizing a request as an expansion is subject to every rule of this
-   document: the successor's authority is freshly derived and bound, the
-   predecessor is superseded, and authority is never widened without the
-   consent the request carries (Section 14.2).  An access request not
-   realized as an expansion grants only the single runtime permit and no
-   durable Mission authority.
-
-11.  Expansion Denial Reasons
+10.  Expansion Denial Reasons
 
    An adjudication that completes with the Approver declining, or with
    the Mission Issuer refusing on policy grounds, denies the expansion:
@@ -913,13 +769,14 @@ Table of Contents
       with the Mission's recorded purpose; a different Mission, not an
       expansion of this one, is the appropriate vehicle.
 
-   out_of_ceiling:  The requested authority is not a subset of the
-      Mission's consented authority ceiling (Section 10), so it cannot
-      be granted by policy drawdown; raising the ceiling requires a
-      fresh human approval.
+   A companion profile MAY extend this set by specification (the
+   experimental progressive authorization companion defines
+   out_of_ceiling, [I-D.draft-mcguinness-oauth-mission-progressive]); a
+   consumer MUST treat an unrecognized reason code as a denial with no
+   further semantics.
 
    A Mission Issuer MUST NOT use a reason code to disclose policy
-   boundaries beyond the adjudicated request (Section 14.5); omitting
+   boundaries beyond the adjudicated request (Section 13.5); omitting
    the reason code is always permitted.  When present, a reason code is
    carried in the mission_expansion_status member of the OAuth error
    response body (Section 9), the same member that carries a
@@ -935,7 +792,7 @@ Table of Contents
    invalid_authorization_details ([RFC9396]), exactly as for any Mission
    creation.
 
-12.  Worked Example
+11.  Worked Example
 
    The Q3 reconciliation Mission msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
    authorizes reading invoices and posting journal entries under $500.
@@ -977,7 +834,7 @@ Table of Contents
    Authority Set it was actually approved for, not the predecessor's
    plus a delta.
 
-13.  Conformance
+12.  Conformance
 
    An implementation claims conformance to this document only in the
    Mission Issuer role and only when it adjudicates expansion.  A
@@ -1014,31 +871,13 @@ Table of Contents
    member, if it reads it at all, as audit context it MUST NOT use to
    grant authority (Section 6).
 
-13.1.  Optional capability: Expansion with Progressive Authorization
+   Under this document, every expansion is adjudicated by a fresh human
+   approval.  The experimental progressive authorization companion
+   defines a further OPTIONAL capability, *Expansion with Progressive
+   Authorization*, with its own conformance requirements
+   ([I-D.draft-mcguinness-oauth-mission-progressive]).
 
-   Progressive authorization (Section 10) is a named OPTIONAL
-   capability.  A Mission Issuer that claims *Expansion with Progressive
-   Authorization* MUST:
-
-   *  record a consented authority_ceiling and drawdown_policy on the
-      Mission and commit them with ceiling_hash (Section 10);
-
-   *  evaluate a requested successor Authority Set as in-ceiling by the
-      subset rule, and refuse an out-of-ceiling request with
-      out_of_ceiling (Section 10.1, Section 11);
-
-   *  enforce the prohibited-class rule, requiring a fresh human
-      approval for a drawdown that grants an irreversible, external-
-      commitment, or privileged-administration authority, or cross-
-      domain authority (Section 10.1); and
-
-   *  rate-bound policy-adjudicated drawdowns per Mission and record
-      each as an approval event (Section 10.1).
-
-   A Mission Issuer that does not claim this capability adjudicates
-   every expansion as a fresh human approval.
-
-14.  Security Considerations
+13.  Security Considerations
 
    Expansion's central guarantee is the issuance profile's, applied to
    the successor: a user's fresh approval bounds every token derived for
@@ -1046,7 +885,7 @@ Table of Contents
    predecessor binding, the predecessor-to-successor handoff, and the
    lineage link.
 
-14.1.  Predecessor confusion
+13.1.  Predecessor confusion
 
    A client could attempt to expand a Mission it does not control, for
    example by naming another tenant's or subject's mission_id in the
@@ -1065,7 +904,7 @@ Table of Contents
       Issuers; an expansion is adjudicated only at the predecessor's own
       origin.
 
-14.2.  Authority comes only from new consent
+13.2.  Authority comes only from new consent
 
    An expansion could be misused to widen authority without the Approver
    re-consenting, if a successor were allowed to inherit or extend
@@ -1083,7 +922,7 @@ Table of Contents
       predecessor's (Section 5.1), so expansion cannot launder a longer
       lifetime past the originally approved horizon.
 
-14.3.  Race against predecessor lifecycle
+13.3.  Race against predecessor lifecycle
 
    Between the moment a client decides to expand and the moment the
    Mission Issuer adjudicates, the predecessor may be revoked, expire,
@@ -1103,7 +942,7 @@ Table of Contents
       successor or stop, without leaking the predecessor's new internal
       state beyond that (Section 9).
 
-14.4.  Expansion versus step-up
+13.4.  Expansion versus step-up
 
    Conflating expansion with authentication step-up [RFC9470] would
    route an authentication shortfall through an approval event the
@@ -1118,7 +957,7 @@ Table of Contents
    (Section 1.2).  The component that classifies the denial
    (Section 3.2) makes this distinction.
 
-14.5.  Policy probing
+13.5.  Policy probing
 
    A client could submit many expansion requests for the same
    predecessor to map the Mission Issuer's policy boundary from the
@@ -1130,11 +969,11 @@ Table of Contents
       predecessor per client.
 
    *  A denial reason MUST NOT disclose policy boundaries beyond the
-      adjudicated request (Section 11); a denial reports whether the
+      adjudicated request (Section 10); a denial reports whether the
       requested authority was approved, not the full surface of what
       would have been.
 
-14.6.  Audit linkage
+13.6.  Audit linkage
 
    The predecessor member makes the expansion chain observable: an
    authorized auditor can trace a successor back through its
@@ -1146,15 +985,15 @@ Table of Contents
    General OAuth security guidance applies to the underlying credentials
    through the issuance profile.
 
-15.  Privacy Considerations
+14.  Privacy Considerations
 
    The privacy surface expansion adds over the issuance profile is the
    lineage link and the authority detail disclosed when a task is
    broadened.
 
-15.1.  Predecessor-chain correlation
+14.1.  Predecessor-chain correlation
 
-   The predecessor member that gives audit linkage (Section 14.6) is
+   The predecessor member that gives audit linkage (Section 13.6) is
    also a correlation surface: it links a successor to its predecessor
    across distinct approval events, so a party that can read the chain
    can correlate the evolving task over time, which is more than any
@@ -1165,7 +1004,7 @@ Table of Contents
    every credential audience.  The issuance profile's mission_id
    correlation considerations apply to each Mission in the chain.
 
-15.2.  Disclosure of the broadened task
+14.2.  Disclosure of the broadened task
 
    The expansion Mission Intent and the consent disclosure rendered at
    the expansion approval event reveal how the approved task is
@@ -1173,7 +1012,7 @@ Table of Contents
    the Approver and authorized governance consumers, consistent with the
    issuance profile's treatment of consent disclosure.
 
-16.  IANA Considerations
+15.  IANA Considerations
 
    Consistent with the issuance profile, which establishes no registry
    of mission claim members and registers the mission claim as an open
@@ -1185,7 +1024,7 @@ Table of Contents
 
    This document defines two closed sets of symbolic codes, the
    expansion reconciliation status codes (Section 9) and the expansion
-   denial reasons (Section 11), both conveyed in the
+   denial reasons (Section 10), both conveyed in the
    mission_expansion_status member of the OAuth error response body
    (Section 9). mission_expansion_status is a member of the OAuth error
    response JSON body, not an OAuth protocol parameter, and is
@@ -1286,6 +1125,13 @@ Informative References
               mission-child-delegation, 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-mission-child-delegation>.
+
+   [I-D.draft-mcguinness-oauth-mission-progressive]
+              McGuinness, K., "Mission Progressive Authorization for
+              OAuth 2.0", Work in Progress, Internet-Draft, draft-
+              mcguinness-oauth-mission-progressive, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-progressive>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",

@@ -1357,8 +1357,9 @@ derivable.<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
       </h2>
 <p id="section-5-1">This document defines <code>terminal_when</code>, a Common Constraint
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) carried in the <code>constraints</code>
-object of a <code>mission_resource_access</code> entry. It is registered in the
-"Mission Common Constraints" registry (<a href="#iana" class="auto internal xref">Section 15</a>).<a href="#section-5-1" class="pilcrow">¶</a></p>
+object of a <code>mission_resource_access</code> entry. It is a
+specification-defined Common Constraint under the issuance profile's
+naming convention (<a href="#iana" class="auto internal xref">Section 15</a>).<a href="#section-5-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-5-2">
         <dt id="section-5-2.1">
 <code>terminal_when</code>:</dt>
@@ -1404,9 +1405,8 @@ time-varying.<a href="#section-5-3" class="pilcrow">¶</a></p>
 <p id="section-5-4"><code>terminal_when</code> is the enforceable counterpart of the inert
 <code>success_criteria</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), which
 remains inert: <code>success_criteria</code> describe completion for the Approver,
-<code>terminal_when</code> acts on it. It is distinct from the consumption bounds
-<code>max_calls</code>, <code>max_budget</code>, and <code>max_duration</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), which meter cumulative volume;
+<code>terminal_when</code> acts on it. It is distinct from a cumulative
+consumption bound, which meters volume;
 a <code>terminal_when</code> condition is a single external event.<a href="#section-5-4" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1506,10 +1506,10 @@ this document defines no discharge event.<a href="#section-6.2-2" class="pilcrow
       </h2>
 <p id="section-7-1">Because <code>terminal_when</code> is a Common Constraint, the issuance profile's
 subset comparison (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) applies its
-registered subset rule with no new clause: for a key present in the
+defined subset rule with no new clause: for a key present in the
 reference entry's <code>constraints</code>, the same key <span class="bcp14">MUST</span> be present in the
 candidate entry and its value <span class="bcp14">MUST</span> be no broader under the key's
-registered rule. For <code>terminal_when</code>, a candidate value is no broader
+defined rule. For <code>terminal_when</code>, a candidate value is no broader
 than a reference value when the candidate's condition array contains
 every condition of the reference, compared structurally after the
 canonicalization of the issuance profile
@@ -1730,9 +1730,11 @@ that exposure when the source is operated by another party.<a href="#section-14-
       <h2 id="name-iana-considerations">
 <a href="#section-15" class="section-number selfRef">15. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-15-1">This document registers one Common Constraint in the "Mission Common
-Constraints" registry established by the issuance profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>):<a href="#section-15-1" class="pilcrow">¶</a></p>
+<p id="section-15-1">This document has no IANA actions. It defines one Common Constraint by
+specification, under the issuance profile's Common Constraint
+convention (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), which requires a
+definition to fix the name, value syntax, subset rule, and intersection
+rule:<a href="#section-15-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-15-2.1">
           <p id="section-15-2.1.1">Name: <code>terminal_when</code><a href="#section-15-2.1.1" class="pilcrow">¶</a></p>

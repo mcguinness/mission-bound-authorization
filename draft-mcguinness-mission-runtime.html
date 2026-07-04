@@ -21,8 +21,8 @@ constraints, the actor context from the delegation chain, the Mission
 against its current state, and the applicable Resource policy. The
 document defines where enforcement sits, how a permit is bound to
 concrete parameters to close the time-of-check to time-of-use gap, the
-materialized policy view a decision evaluates against, how carried
-consumption bounds (budget, call counts, duration) are metered, and
+materialized policy view a decision evaluates against, the fail-closed
+posture for consumption bounds a Mission carries, and
 the runtime evidence each consequential action produces. For the
 high-consequence classes it further defines action-bound approval,
 credential custody in the mediating enforcement point rather than the
@@ -1118,8 +1118,8 @@ constraints, the actor context from the delegation chain, the Mission
 against its current state, and the applicable Resource policy. The
 document defines where enforcement sits, how a permit is bound to
 concrete parameters to close the time-of-check to time-of-use gap, the
-materialized policy view a decision evaluates against, how carried
-consumption bounds (budget, call counts, duration) are metered, and
+materialized policy view a decision evaluates against, the fail-closed
+posture for consumption bounds a Mission carries, and
 the runtime evidence each consequential action produces. For the
 high-consequence classes it further defines action-bound approval,
 credential custody in the mediating enforcement point rather than the
@@ -1249,7 +1249,7 @@ individually verifiable conditions.<a href="#section-abstract-1" class="pilcrow"
             <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-parameter-binding-and-time-" class="internal xref">Parameter binding and time-of-check to time-of-use</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
-            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-consumption-metering" class="internal xref">Consumption metering</a></p>
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-consumption-bounds-fail-clo" class="internal xref">Consumption Bounds Fail Closed</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
             <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-failure-modes" class="internal xref">Failure modes</a></p>
@@ -1380,9 +1380,8 @@ approved authority (<a href="#decision" class="auto internal xref">Section 7</a>
 (time-of-check to time-of-use) gap (<a href="#parameter-binding" class="auto internal xref">Section 8</a>);<a href="#section-1-3.4.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-1-4">and, additionally, metering of the consumption bounds (budget, call
-counts, duration) the issuance profile carries as constraints but
-leaves to this layer to enforce (<a href="#metering" class="auto internal xref">Section 9</a>). For the
+<p id="section-1-4">and, additionally, the fail-closed treatment of consumption bounds
+(<a href="#metering" class="auto internal xref">Section 9</a>). For the
 high-consequence classes it adds action-bound approval
 (<a href="#action-approval" class="auto internal xref">Section 4.4</a>), credential custody in the mediating enforcement
 point rather than the agent (<a href="#custody" class="auto internal xref">Section 4.6</a>), and the named
@@ -1677,11 +1676,7 @@ action class (<a href="#state-freshness" class="auto internal xref">Section 7.2<
             <p id="section-4.2-3.8.1">the reconciliation window for matching execution-outcome evidence to
 decisions, the component responsible for orphaned-evidence and
 sequence-gap detection, and that component's alerting obligation
-(<a href="#evidence" class="auto internal xref">Section 11</a>); and<a href="#section-4.2-3.8.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-4.2-3.9">
-            <p id="section-4.2-3.9.1">any consumption-metering consistency bound it advertises
-(<a href="#metering" class="auto internal xref">Section 9</a>).<a href="#section-4.2-3.9.1" class="pilcrow">¶</a></p>
+(<a href="#evidence" class="auto internal xref">Section 11</a>).<a href="#section-4.2-3.8.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-4.2-4">A deployment <span class="bcp14">MUST NOT</span> claim runtime enforcement for a resource, action
@@ -2042,8 +2037,8 @@ not a new access token format.<a href="#section-5-1" class="pilcrow">¶</a></p>
 <p id="section-5-2">The Resource Server runtime profile records the enforcement-scope items
 of <a href="#runtime-conformance" class="auto internal xref">Section 4.2</a> (protected resources, action classes,
 execution paths, PEP and PDP identities, supported <code>authorization_details</code>
-types and vocabularies, Mission state source and staleness bound,
-evidence mechanism and retention, and metering consistency bound) at the
+types and vocabularies, Mission state source and staleness bound, and
+evidence mechanism and retention) at the
 granularity of its protected operations, and additionally <span class="bcp14">MUST</span> define:<a href="#section-5-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-5-3.1">
@@ -2060,8 +2055,7 @@ decision requests and responses;<a href="#section-5-3.2.1" class="pilcrow">¶</a
         <li class="normal" id="section-5-3.3">
           <p id="section-5-3.3.1">the operation profile for each protected operation or family:
 parameter normalization, default insertion, omitted optional fields,
-set-like array handling, idempotency-key handling, and duration
-measurement when duration can be metered;<a href="#section-5-3.3.1" class="pilcrow">¶</a></p>
+set-like array handling, and idempotency-key handling;<a href="#section-5-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-3.4">
           <p id="section-5-3.4.1">the permit validity window for each action class, and replay controls
@@ -2072,15 +2066,11 @@ retained;<a href="#section-5-3.4.1" class="pilcrow">¶</a></p>
         <li class="normal" id="section-5-3.5">
           <p id="section-5-3.5.1">how Resource policy is evaluated and composed with Mission authority,
 including local object authorization, tenant configuration, legal
-holds, service invariants, and risk policy;<a href="#section-5-3.5.1" class="pilcrow">¶</a></p>
+holds, service invariants, and risk policy; and<a href="#section-5-3.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-3.6">
-          <p id="section-5-3.6.1">the consumption-metering topology, including reserve, commit,
-settlement, retry, and reconciliation behavior; and<a href="#section-5-3.6.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-5-3.7">
-          <p id="section-5-3.7.1">the runtime enforcement evidence fields and privacy treatment for
-decision and refusal records.<a href="#section-5-3.7.1" class="pilcrow">¶</a></p>
+          <p id="section-5-3.6.1">the runtime enforcement evidence fields and privacy treatment for
+decision and refusal records.<a href="#section-5-3.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-5-4">A Resource Server <span class="bcp14">MUST NOT</span> claim this runtime profile for an operation
@@ -2494,8 +2484,7 @@ changed parameters.<a href="#section-8-2.5.1" class="pilcrow">¶</a></p>
 permit expires <span class="bcp14">MAY</span> run to completion, unless the action class requires
 an execution lease, which the operation profile defines; when a lease
 is required the executing PEP <span class="bcp14">MUST</span> stop or renew before the lease
-expires. Duration-metered actions already carry such a lease
-(<a href="#metering" class="auto internal xref">Section 9</a>).<a href="#section-8-3" class="pilcrow">¶</a></p>
+expires.<a href="#section-8-3" class="pilcrow">¶</a></p>
 <p id="section-8-4">This closes the time-of-check to time-of-use gap and prevents a permit
 from being replayed for a different request (the <code>parameter_digest</code>
 mismatches). For non-idempotent consequential writes, irreversible
@@ -2520,75 +2509,21 @@ risk can remain unbound.<a href="#section-8-5" class="pilcrow">¶</a></p>
 </div>
 <div id="metering">
 <section id="section-9">
-      <h2 id="name-consumption-metering">
-<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-consumption-metering" class="section-name selfRef">Consumption metering</a>
+      <h2 id="name-consumption-bounds-fail-clo">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-consumption-bounds-fail-clo" class="section-name selfRef">Consumption Bounds Fail Closed</a>
       </h2>
-<p id="section-9-1">Consumption bounds the Mission carries are enforced here, not at
-issuance. The issuance profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>)
-defines three Mission-level consumption bounds in the Mission
-<code>context</code> that this layer meters:<a href="#section-9-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-9-2.1">
-          <p id="section-9-2.1.1"><code>max_budget</code> (<code>{ amount, currency }</code>): the PDP performs an atomic
-reserve-or-charge against the remaining balance for each
-consequential action and <span class="bcp14">MUST</span> refuse when the remaining balance is
-insufficient.<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-9-2.2">
-          <p id="section-9-2.2.1"><code>max_calls</code> (<code>[ { call_class, count } ]</code>): the PDP increments an atomic
-counter for the named <code>call_class</code> and <span class="bcp14">MUST</span> refuse a call past <code>count</code>.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-9-2.3">
-          <p id="section-9-2.3.1"><code>max_duration</code> (an ISO 8601 duration, e.g. <code>PT8H</code>; the <code>duration</code>
-rule in Appendix A of <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>): the cumulative wall-clock
-duration of consequential activity under the Mission, as the issuance
-profile defines it (distinct from <code>mission_expiry</code>). The PDP
-accumulates the duration of consequential activity it reserves,
-commits, or permits and <span class="bcp14">MUST</span> refuse once that total would exceed the
-bound. For an action whose duration is not known before execution,
-the PDP <span class="bcp14">MUST</span> either reserve a bounded maximum duration or issue a
-duration lease that expires unless renewed; the PEP <span class="bcp14">MUST</span> stop the
-action or obtain a new permit before the reservation or lease is
-exhausted. After execution, the PEP <span class="bcp14">MUST</span> report the measured
-duration so the PDP can commit actual use and release any unused
-reservation. The operation profile defines how a single action's
-duration is measured so that PDPs accumulate consistently.<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<p id="section-9-3">A per-entry <code>constraints</code> value that expresses a consumption bound is
-metered the same way. When an applicable entry or the Mission's
-<code>context</code> carries such a bound, the PDP <span class="bcp14">MUST</span> meter use against it and
-<span class="bcp14">MUST</span> refuse a consequential action that would exceed it.<a href="#section-9-3" class="pilcrow">¶</a></p>
-<p id="section-9-4">The exactness of a consumption bound depends on the decision
-topology, and this profile does not overpromise:<a href="#section-9-4" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-9-5.1">
-          <p id="section-9-5.1.1">Under a <strong>single serializing PDP</strong> for the Mission, the check and
-decrement can be atomic, and the bound is exact.<a href="#section-9-5.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-9-5.2">
-          <p id="section-9-5.2.1">Under <strong>multiple or distributed PDPs</strong> (for example, Resource
-Server-hosted PDPs), an exact global counter is a distributed-counting
-problem. Such a deployment <span class="bcp14">MUST</span> publish the consistency bound it
-operates under (for example, per-PDP sub-budgets, or a bounded
-reconciliation window), and the effective guarantee is that bound,
-not exact-to-the-call enforcement.<a href="#section-9-5.2.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<p id="section-9-6">A deployment <span class="bcp14">MUST NOT</span> advertise exact consumption enforcement it
-cannot meet under its chosen topology. As with all constraints, an
-unmetered or unrecognized consumption bound <span class="bcp14">MUST</span> cause refusal rather
-than silent pass-through.<a href="#section-9-6" class="pilcrow">¶</a></p>
-<p id="section-9-7">For a metered permit, the PDP and PEP <span class="bcp14">MUST</span> define retry and idempotency
-behavior. A retry of the same normalized action under the same
-idempotency key or single-use decision identifier <span class="bcp14">MUST NOT</span> consume the
-bound twice. Reuse of an idempotency key or decision identifier for a
-different normalized action <span class="bcp14">MUST</span> cause refusal. For irreversible
-actions and external commitments, a deployment <span class="bcp14">MUST</span> define whether
-metering is reserved before execution and committed after success, or
-committed before execution; it <span class="bcp14">MUST NOT</span> leave the decrement ambiguous.
-A failed attempt releases any reserved consumption per the deployment's
-documented reserve/commit posture.<a href="#section-9-7" class="pilcrow">¶</a></p>
+<p id="section-9-1">This document defines no cumulative consumption bounds and no metering
+machinery. Cumulative bounds on Mission activity (budget, call counts,
+wall-clock duration), and the reserve, commit, lease, settlement, and
+distributed-consistency semantics that enforce them, are defined by an
+experimental companion (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">What this document fixes is the failure posture. As with all
+constraints, an unmetered or unrecognized consumption bound <span class="bcp14">MUST</span> cause
+refusal rather than silent pass-through: when an applicable entry's
+<code>constraints</code>, or the Mission's <code>context</code>, carries a bound that
+expresses cumulative consumption and the deployment does not meter it,
+the PDP <span class="bcp14">MUST</span> refuse a consequential action governed by it. A deployment
+<span class="bcp14">MUST NOT</span> advertise consumption enforcement it does not perform.<a href="#section-9-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="failure-modes">
@@ -2805,7 +2740,12 @@ the issuance profile's canonicalization rules.<a href="#section-11.3-2.1.1" clas
           <li class="normal" id="section-11.3-2.2">
             <p id="section-11.3-2.2.1">It <span class="bcp14">MUST</span> be append-only and integrity-protected; the enforcement
 scope <span class="bcp14">MUST</span> name the mechanism (a hash-linked log, signed segments, a
-transparency anchor, or equivalent).<a href="#section-11.3-2.2.1" class="pilcrow">¶</a></p>
+transparency anchor, or equivalent). Where a JSON record is
+individually signed, the <code>evidence_envelope</code> JWS convention of the
+AuthZEN profile (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) is the
+suite's one signing convention for evidence objects and <span class="bcp14">SHOULD</span> be
+used, with a <code>typ</code> that names the record's own media type, rather
+than a record-specific signing scheme.<a href="#section-11.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.3-2.3">
             <p id="section-11.3-2.3.1">Raw parameters <span class="bcp14">MUST NOT</span> appear in the record; when retained for
@@ -2846,7 +2786,8 @@ Other decision APIs may be bound by other specifications.<a href="#section-12-1"
 separate specification preserves substrate-independence: the enforcement
 contract, action classification (<a href="#classification" class="auto internal xref">Section 4.3</a>), PEP placement
 (<a href="#pep-placement" class="auto internal xref">Section 4.5</a>), parameter binding (<a href="#parameter-binding" class="auto internal xref">Section 8</a>),
-consumption metering (<a href="#metering" class="auto internal xref">Section 9</a>), and runtime enforcement evidence
+the consumption-bound failure posture (<a href="#metering" class="auto internal xref">Section 9</a>), and runtime
+enforcement evidence
 (<a href="#evidence" class="auto internal xref">Section 11</a>) are the substance, and they do not depend on the decision
 wire.<a href="#section-12-2" class="pilcrow">¶</a></p>
 </section>
@@ -2924,7 +2865,7 @@ issuance/delegation-layer primitive, not part of this runtime profile.<a href="#
 <p id="section-14.1-1">Gating every consequential action against the current Mission
 prevents an active Mission from acting as ambient authority: authority
 is checked at the point of use, parameters are bound to the permit,
-consumption is metered, and each decision or refusal path is recorded.
+and each decision or refusal path is recorded.
 This closes the approval-to-execution gap the issuance profile leaves
 open.<a href="#section-14.1-1" class="pilcrow">¶</a></p>
 <p id="section-14.1-2">It does not make a compromised enforcement component safe. A
@@ -2969,8 +2910,10 @@ heel of <a href="#pep-placement" class="auto internal xref">Section 4.5</a>). Se
 information-flow control: it evaluates each action in isolation against
 authority over resources and actions, so a sequence of
 individually-authorized steps can compose into an exfiltration no single
-check catches (within-scope data laundering), and <code>max_calls</code> /
-<code>max_budget</code> bound volume, not flow. Closing that needs a separate taint
+check catches (within-scope data laundering), and cumulative
+consumption bounds, where metered
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>), bound volume, not flow.
+Closing that needs a separate taint
 or information-flow layer. A coarse session-level mitigation, downgrading
 egress authority once untrusted content has entered a session, is
 available at the harness layer
@@ -3040,9 +2983,10 @@ below the resource owner's floor.<a href="#section-14.5-1" class="pilcrow">¶</a
         </h3>
 <p id="section-14.6-1">A permit is a lease, not a standing grant: stale Mission state <span class="bcp14">MUST</span>
 fail closed for consequential actions within the published bound
-(<a href="#state-freshness" class="auto internal xref">Section 7.2</a>). Consumption bounds are exact only under a
-single serializing PDP; a deployment <span class="bcp14">MUST NOT</span> advertise exactness it
-cannot meet across distributed decision points (<a href="#metering" class="auto internal xref">Section 9</a>).<a href="#section-14.6-1" class="pilcrow">¶</a></p>
+(<a href="#state-freshness" class="auto internal xref">Section 7.2</a>). A deployment <span class="bcp14">MUST NOT</span> advertise consumption
+enforcement it does not perform (<a href="#metering" class="auto internal xref">Section 9</a>); where cumulative
+bounds are metered, the exactness and consistency claims of the
+metering companion apply (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-14.6-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="resource-policy-remains-authoritative">
@@ -3214,6 +3158,10 @@ any decision-API wire members are defined by the binding
 <dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-harness</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-harness">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-harness</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-metering">[I-D.draft-mcguinness-mission-metering]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consumption Metering"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-metering</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-metering">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-metering</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
         <dd>

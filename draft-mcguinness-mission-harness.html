@@ -1812,7 +1812,12 @@ permits continuation.<a href="#section-9-3" class="pilcrow">¶</a></p>
         <h3 id="name-queue-item-object">
 <a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-queue-item-object" class="section-name selfRef">Queue Item Object</a>
         </h3>
-<p id="section-9.1-1">A governed queue item has:<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<p id="section-9.1-1">The object below is a <span class="bcp14">RECOMMENDED</span> representation, not a wire format: a
+harness <span class="bcp14">MAY</span> represent queued work in any internal structure, provided
+the requirements attached to these members hold for the equivalent
+information. What is normative is the behavior: the Mission binding,
+the resume check before dispatch, and the expiry and retry rules of
+this section. A governed queue item carries:<a href="#section-9.1-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-9.1-2">
           <dt id="section-9.1-2.1">
 <code>queue_item_id</code>:</dt>
@@ -2091,6 +2096,10 @@ enumeration.<a href="#section-12-1" class="pilcrow">¶</a></p>
           </tr>
         </tbody>
       </table>
+<p id="section-12-3">This enumeration is the evidence vocabulary, not an internal
+state-machine requirement: a harness <span class="bcp14">MAY</span> run any internal execution
+states, provided each governed item's condition maps onto one of these
+values when Harness Evidence is emitted.<a href="#section-12-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="stop-behavior">

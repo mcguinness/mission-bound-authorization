@@ -1411,7 +1411,7 @@ separate, optional layer.<a href="#section-abstract-2" class="pilcrow">¶</a></p
                 <p id="section-toc.1-1.17.2.6.1"><a href="#section-17.6" class="auto internal xref">17.6</a>.  <a href="#name-oauth-protected-resource-me" class="internal xref">OAuth Protected Resource Metadata Registration</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.7">
-                <p id="section-toc.1-1.17.2.7.1"><a href="#section-17.7" class="auto internal xref">17.7</a>.  <a href="#name-mission-common-constraints-" class="internal xref">Mission Common Constraints Registry</a></p>
+                <p id="section-toc.1-1.17.2.7.1"><a href="#section-17.7" class="auto internal xref">17.7</a>.  <a href="#name-common-constraints-2" class="internal xref">Common Constraints</a></p>
 </li>
             </ul>
 </li>
@@ -1694,12 +1694,8 @@ attestation problem outside both layers.<a href="#section-1.7-2.1.1" class="pilc
 committed at approval; this profile defines no mid-stream widening
 that bypasses consent. Widening requires a new approval, a successor
 Mission, as specified by Mission Expansion
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>. That approval <span class="bcp14">MAY</span> be
-given by policy rather than by a human when the original approval
-pre-consented to an authority ceiling and a drawdown policy
-(progressive authorization,
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>); a widening that no
-consent, human or pre-given, authorizes remains out of scope.<a href="#section-1.7-2.2.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>; a widening that no
+consent authorizes remains out of scope.<a href="#section-1.7-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.7-2.3">
             <p id="section-1.7-2.3.1"><strong>Lifecycle event distribution.</strong> A Resource Server learns Mission
@@ -2085,7 +2081,9 @@ date-time after which the Mission <span class="bcp14">MUST NOT</span> derive tok
         <dd style="margin-left: 1.5em" id="section-4-3.14">
           <p id="section-4-3.14.1"><span class="bcp14">OPTIONAL</span>. An object of machine-actionable bounds. This
 document defines the members below; others <span class="bcp14">MAY</span> be added by
-deployments:<a href="#section-4-3.14.1" class="pilcrow">¶</a></p>
+deployments or defined by companion profiles (an extension member
+follows the collision-resistant naming and fail-safe rules of
+<a href="#extensibility" class="auto internal xref">Section 12</a>):<a href="#section-4-3.14.1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-4-3.14.2">
             <dt id="section-4-3.14.2.1">
 <code>acr</code>:</dt>
@@ -2111,77 +2109,19 @@ locally are not counted by the origin, which cannot observe them
 (<a href="#lifecycle" class="auto internal xref">Section 9</a>; detail in
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-4-3.14.2.4.1" class="pilcrow">¶</a></p>
 </dd>
-            <dd class="break"></dd>
-<dt id="section-4-3.14.2.5">
-<code>max_budget</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-4-3.14.2.6">
-              <p id="section-4-3.14.2.6.1"><span class="bcp14">OPTIONAL</span>. An object. A hard cap on cumulative monetary
-spend under the Mission. Has the members:<a href="#section-4-3.14.2.6.1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-4-3.14.2.6.2">
-                <dt id="section-4-3.14.2.6.2.1">
-<code>amount</code>:</dt>
-                <dd style="margin-left: 1.5em" id="section-4-3.14.2.6.2.2">
-                  <p id="section-4-3.14.2.6.2.2.1"><span class="bcp14">REQUIRED</span>. A string. A decimal number.<a href="#section-4-3.14.2.6.2.2.1" class="pilcrow">¶</a></p>
-</dd>
-                <dd class="break"></dd>
-<dt id="section-4-3.14.2.6.2.3">
-<code>currency</code>:</dt>
-                <dd style="margin-left: 1.5em" id="section-4-3.14.2.6.2.4">
-                  <p id="section-4-3.14.2.6.2.4.1"><span class="bcp14">REQUIRED</span>. A string. An ISO 4217 currency code.<a href="#section-4-3.14.2.6.2.4.1" class="pilcrow">¶</a></p>
-</dd>
-              <dd class="break"></dd>
-</dl>
-</dd>
-            <dd class="break"></dd>
-<dt id="section-4-3.14.2.7">
-<code>max_calls</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-4-3.14.2.8">
-              <p id="section-4-3.14.2.8.1"><span class="bcp14">OPTIONAL</span>. An array of objects. Hard caps on the count of
-consequential call events. Each object has the members:<a href="#section-4-3.14.2.8.1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-4-3.14.2.8.2">
-                <dt id="section-4-3.14.2.8.2.1">
-<code>call_class</code>:</dt>
-                <dd style="margin-left: 1.5em" id="section-4-3.14.2.8.2.2">
-                  <p id="section-4-3.14.2.8.2.2.1"><span class="bcp14">REQUIRED</span>. A string. The named call class to meter. A <code>call_class</code>
-value <span class="bcp14">SHOULD</span> be drawn from the <code>actions</code> identifiers of the
-entry's <code>mission_resource_access</code> (<a href="#authorization-derivation" class="auto internal xref">Section 5</a>),
-so the metered class maps to evaluated actions; a deployment that
-meters a coarser or cross-entry class defines that class's
-membership, and such a class is deployment-defined and not
-interoperable, like a deployment-defined constraint. (Named
-<code>call_class</code> rather than <code>scope</code> to avoid collision with the OAuth
-<code>scope</code> parameter and claim.)<a href="#section-4-3.14.2.8.2.2.1" class="pilcrow">¶</a></p>
-</dd>
-                <dd class="break"></dd>
-<dt id="section-4-3.14.2.8.2.3">
-<code>count</code>:</dt>
-                <dd style="margin-left: 1.5em" id="section-4-3.14.2.8.2.4">
-                  <p id="section-4-3.14.2.8.2.4.1"><span class="bcp14">REQUIRED</span>. An integer. 1 or greater.<a href="#section-4-3.14.2.8.2.4.1" class="pilcrow">¶</a></p>
-</dd>
-              <dd class="break"></dd>
-</dl>
-</dd>
-            <dd class="break"></dd>
-<dt id="section-4-3.14.2.9">
-<code>max_duration</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-4-3.14.2.10">
-              <p id="section-4-3.14.2.10.1"><span class="bcp14">OPTIONAL</span>. A string. An ISO 8601 duration (for
-example, <code>PT8H</code>), matching the <code>duration</code> rule in Appendix A of
-<span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>, bounding cumulative wall-clock consequential activity
-under the Mission. It is distinct from <code>mission_expiry</code>, which
-bounds issuance rather than activity.<a href="#section-4-3.14.2.10.1" class="pilcrow">¶</a></p>
-</dd>
           <dd class="break"></dd>
 </dl>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-4-4"><code>max_budget</code>, <code>max_calls</code>, and <code>max_duration</code> are <strong>consumption
-bounds</strong>: a deployment names them here so issuance and the runtime
-layer share one vocabulary. They are carried on the Mission and
-committed by <code>intent_hash</code>, but they are not enforced by the AS at
-issuance. The following table summarizes which party enforces each
-bound a Mission carries and what holds when that enforcer is absent:<a href="#section-4-4" class="pilcrow">¶</a></p>
+<p id="section-4-4">This document defines no cumulative consumption bounds (for example, a
+budget, call-count, or activity-duration cap): every bound this
+document defines is enforced by a party this document names. An
+experimental companion defines cumulative consumption bounds as
+<code>context</code> extension members together with the runtime metering that
+enforces them (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). The
+following table summarizes which party enforces each bound a Mission
+carries and what holds when that enforcer is absent:<a href="#section-4-4" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
         <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
 <thead>
@@ -2212,13 +2152,6 @@ bound a Mission carries and what holds when that enforcer is absent:<a href="#se
             <td class="text-left" rowspan="1" colspan="1">the origin AS at each derivation (<a href="#lifecycle" class="auto internal xref">Section 9</a>)</td>
             <td class="text-left" rowspan="1" colspan="1">never absent at the origin; it does not bound another domain's local minting (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>)</td>
           </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>max_budget</code>, <code>max_calls</code>, <code>max_duration</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">the runtime layer at the point of use (<a href="#runtime-boundary" class="auto internal xref">Section 15.5</a>)</td>
-            <td class="text-left" rowspan="1" colspan="1">not enforced: rendered, consented, and committed, but advisory</td>
-          </tr>
         </tbody>
       </table>
 <p id="section-4-6">Example Mission Intent:<a href="#section-4-6" class="pilcrow">¶</a></p>
@@ -2239,12 +2172,7 @@ bound a Mission carries and what holds when that enforcer is absent:<a href="#se
   "mission_expiry": "2026-12-31T23:59:59Z",
   "context": {
     "acr": "urn:example:acr:mfa",
-    "max_derivations": 200,
-    "max_budget": { "amount": "5000.00", "currency": "USD" },
-    "max_calls": [
-      { "call_class": "journal-entries.write", "count": 50 }
-    ],
-    "max_duration": "PT8H"
+    "max_derivations": 200
   }
 }
 </pre><a href="#section-4-7" class="pilcrow">¶</a>
@@ -2449,7 +2377,7 @@ set is interpretable cross-vendor rather than ad hoc.<a href="#section-5-10.6.1"
 <code>constraints</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-5-10.8">
           <p id="section-5-10.8.1"><span class="bcp14">OPTIONAL</span>. An object. Machine-actionable per-resource
-bounds (for example, <code>max_amount_usd</code>). A member name registered as a
+bounds (for example, <code>max_amount_usd</code>). A member name defined as a
 Common Constraint (<a href="#common-constraints" class="auto internal xref">Section 5.2</a>) has shared semantics
 across deployments; any other name is deployment-defined.<a href="#section-5-10.8.1" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -2502,7 +2430,7 @@ understand is carried unchanged.<a href="#section-5-10.10.3" class="pilcrow">¶<
       <dd class="break"></dd>
 </dl>
 <p id="section-5-11">Example Authority Set (the read entry is delegable to depth 2 and
-bounded to a Q3 issuance window by the registered <code>issued_after</code> and
+bounded to a Q3 issuance window by the <code>issued_after</code> and
 <code>issued_before</code> Common Constraints (<a href="#common-constraints" class="auto internal xref">Section 5.2</a>); the
 write entry carries no <code>delegation</code> and so is non-delegable, because
 <code>delegation</code> is per entry):<a href="#section-5-11" class="pilcrow">¶</a></p>
@@ -2545,7 +2473,8 @@ when:<a href="#section-5.1-1" class="pilcrow">¶</a></p>
           <li id="section-5.1-2.3">
             <p id="section-5.1-2.3.1">For every key K in <strong>B</strong>.<code>constraints</code>, K <span class="bcp14">MUST</span> also be present in
 A.<code>constraints</code>, and A's value <span class="bcp14">MUST</span> be no broader than B's under
-K's subset rule: the registered rule when K is a Common Constraint
+K's subset rule: the specification-defined rule when K is a Common
+Constraint
 (<a href="#common-constraints" class="auto internal xref">Section 5.2</a>), the deployment-defined comparison
 otherwise. A key present in B but absent from A is treated as the
 broadest possible value and therefore fails this test. In short,
@@ -2576,12 +2505,13 @@ parent entry has none.<a href="#section-5.1-5" class="pilcrow">¶</a></p>
 <a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-common-constraints" class="section-name selfRef">Common Constraints</a>
         </h3>
 <p id="section-5.2-1">A <code>constraints</code> member name (<a href="#authorization-derivation" class="auto internal xref">Section 5</a>) is either a
-registered <strong>Common Constraint</strong> or a deployment-defined key. Common
+specification-defined <strong>Common Constraint</strong> or a deployment-defined
+key. Common
 Constraints give independently developed deployments one vocabulary
-they interpret, narrow, and compare identically; the "Mission Common
-Constraints" registry (<a href="#iana-common-constraints" class="auto internal xref">Section 17.7</a>) is the extension
-point.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
-<p id="section-5.2-2">A registered Common Constraint defines:<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+they interpret, narrow, and compare identically; further Common
+Constraints are defined by specification under the naming convention of
+<a href="#iana-common-constraints" class="auto internal xref">Section 17.7</a>.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.2-2">A Common Constraint definition fixes:<a href="#section-5.2-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-5.2-3.1">
             <p id="section-5.2-3.1.1"><strong>Value syntax</strong>: the JSON <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> value type and any additional
@@ -2596,12 +2526,13 @@ reference value, used by the subset comparison of <a href="#subset" class="auto 
 result <span class="bcp14">MUST</span> be no broader than either operand.<a href="#section-5.2-3.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.2-4">A <code>constraints</code> member whose name is registered is interpreted per the
-registry. A member whose name is not registered remains
+<p id="section-5.2-4">A <code>constraints</code> member whose name is a specification-defined Common
+Constraint is interpreted per its
+definition. Any other member name remains
 deployment-defined and is interpreted only within the issuing
 deployment; a consumer that does not recognize it <span class="bcp14">MUST</span> fail closed
 (<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>).<a href="#section-5.2-4" class="pilcrow">¶</a></p>
-<p id="section-5.2-5">This document registers the initial Common Constraints:<a href="#section-5.2-5" class="pilcrow">¶</a></p>
+<p id="section-5.2-5">This document defines the initial Common Constraints:<a href="#section-5.2-5" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-5.2-6.1">
             <p id="section-5.2-6.1.1"><code>max_amount_usd</code> (number): a per-action ceiling, in US dollars, on a
@@ -2626,14 +2557,14 @@ values are compared as decimal numbers, so <code>500</code>, <code>500.0</code>,
 equal; <code>issued_after</code> and <code>issued_before</code> values are compared as the
 instants they denote after normalization to UTC, so two RFC 3339
 representations of the same instant that differ only in timezone offset
-or trailing subsecond zeros are equal. A registered Common Constraint
-<span class="bcp14">MUST</span> define its subset and intersection in value-space terms, so that
+or trailing subsecond zeros are equal. A Common Constraint definition
+<span class="bcp14">MUST</span> fix its subset and intersection in value-space terms, so that
 independent deployments compute the same result for the same values and
 the subset rule of <a href="#subset" class="auto internal xref">Section 5.1</a> is reproducible.<a href="#section-5.2-7" class="pilcrow">¶</a></p>
 <p id="section-5.2-8">A numeric constraint value <span class="bcp14">MUST</span> lie within the range JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>
-serializes exactly. A future Common Constraint registration for a
-monetary value <span class="bcp14">SHOULD</span> use string-decimal syntax, as the
-<code>max_budget.amount</code> member of <a href="#mission-intent" class="auto internal xref">Section 4</a> does, rather than a
+serializes exactly. A future Common Constraint definition for a
+monetary value <span class="bcp14">SHOULD</span> use string-decimal syntax (a string containing a
+decimal number, paired with an ISO 4217 currency code) rather than a
 JSON number.<a href="#section-5.2-8" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2859,7 +2790,7 @@ response (<span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>). A to
 Authority Set yields <code>invalid_target</code> (<span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>).<a href="#section-6-5" class="pilcrow">¶</a></p>
 <p id="section-6-6">Rendering a bound is not the same as enforcing it, and a deployment <span class="bcp14">MUST NOT</span> let the rendering imply otherwise. Which party enforces each bound,
 and what holds when that enforcer is absent, is summarized in the
-consumption-bounds table (<a href="#mission-intent" class="auto internal xref">Section 4</a>). An AS <span class="bcp14">SHOULD</span> make clear
+enforcement table (<a href="#mission-intent" class="auto internal xref">Section 4</a>). An AS <span class="bcp14">SHOULD</span> make clear
 to the Approver which rendered bounds its deployment actually enforces,
 so consent is not given to a limit that binds nowhere.<a href="#section-6-6" class="pilcrow">¶</a></p>
 <p id="section-6-7">The <code>authority_hash</code> is the <strong>authority commitment</strong>: it binds, by
@@ -4402,10 +4333,9 @@ token's lifetime, so an active Mission can become ambient authority
 for individual consequential actions. Preventing that requires a
 runtime enforcement layer that evaluates each consequential action
 against the Mission and records evidence; such a layer composes with
-this profile and is out of scope here. This layer enforces the
-consumption bounds <code>max_budget</code>, <code>max_calls</code>, and <code>max_duration</code>; which
-party enforces each Mission-carried bound is summarized in the
-consumption-bounds table (<a href="#mission-intent" class="auto internal xref">Section 4</a>). Short token lifetimes and
+this profile and is out of scope here. Which party enforces each
+Mission-carried bound is summarized in the enforcement table
+(<a href="#mission-intent" class="auto internal xref">Section 4</a>). Short token lifetimes and
 narrow authority bound, but do not eliminate, this exposure.<a href="#section-15.5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -4707,46 +4637,25 @@ accepts only Mission-bound tokens.<a href="#section-17.6-2.2.1" class="pilcrow">
 </div>
 <div id="iana-common-constraints">
 <section id="section-17.7">
-        <h3 id="name-mission-common-constraints-">
-<a href="#section-17.7" class="section-number selfRef">17.7. </a><a href="#name-mission-common-constraints-" class="section-name selfRef">Mission Common Constraints Registry</a>
+        <h3 id="name-common-constraints-2">
+<a href="#section-17.7" class="section-number selfRef">17.7. </a><a href="#name-common-constraints-2" class="section-name selfRef">Common Constraints</a>
         </h3>
-<p id="section-17.7-1">IANA is requested to create the "Mission Common Constraints" registry.
-The registration policy is Specification Required <span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span>. Each
-entry has:<a href="#section-17.7-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-17.7-2.1">
-            <p id="section-17.7-2.1.1">Name: the <code>constraints</code> member name, matching <code>^[A-Za-z0-9_.:-]+$</code>.<a href="#section-17.7-2.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-17.7-2.2">
-            <p id="section-17.7-2.2.1">Value syntax: the JSON <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> value type and any rules.<a href="#section-17.7-2.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-17.7-2.3">
-            <p id="section-17.7-2.3.1">Subset rule: the narrowing semantics (<a href="#common-constraints" class="auto internal xref">Section 5.2</a>).<a href="#section-17.7-2.3.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-17.7-2.4">
-            <p id="section-17.7-2.4.1">Intersection rule: how two values combine.<a href="#section-17.7-2.4.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-17.7-2.5">
-            <p id="section-17.7-2.5.1">Change Controller.<a href="#section-17.7-2.5.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-17.7-2.6">
-            <p id="section-17.7-2.6.1">Reference.<a href="#section-17.7-2.6.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
-<p id="section-17.7-3">The registry is seeded with the constraints defined in
-<a href="#common-constraints" class="auto internal xref">Section 5.2</a>; for each, Change Controller IETF and Reference
-this document:<a href="#section-17.7-3" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-17.7-4.1">
-            <p id="section-17.7-4.1.1"><code>max_amount_usd</code><a href="#section-17.7-4.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-17.7-4.2">
-            <p id="section-17.7-4.2.1"><code>issued_after</code><a href="#section-17.7-4.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-17.7-4.3">
-            <p id="section-17.7-4.3.1"><code>issued_before</code><a href="#section-17.7-4.3.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
+<p id="section-17.7-1">This document creates no Common Constraints registry. The Common
+Constraints it defines (<code>max_amount_usd</code>, <code>issued_after</code>,
+<code>issued_before</code>) are specified in <a href="#common-constraints" class="auto internal xref">Section 5.2</a>, and a further
+Common Constraint is defined by specification: it fixes a name matching
+<code>^[A-Za-z0-9_.:-]+$</code>, its JSON <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> value syntax, its subset
+rule, and its intersection rule, in value-space terms
+(<a href="#common-constraints" class="auto internal xref">Section 5.2</a>). Names are kept collision-free by the same
+convention the rest of this document uses: a specification-defined name
+is coordinated within this document family, and any other name is
+collision-resistant or remains deployment-defined
+(<a href="#common-constraints" class="auto internal xref">Section 5.2</a>).<a href="#section-17.7-1" class="pilcrow">¶</a></p>
+<p id="section-17.7-2">Should the set of interoperable Common Constraints grow beyond what
+specification coordination bears, a future revision can create a
+"Mission Common Constraints" registry with a Specification Required
+<span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span> policy, seeded with the entries then defined; this document
+does not create it.<a href="#section-17.7-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -4875,6 +4784,10 @@ this document:<a href="#section-17.7-3" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">Kasselman, P.</span>, <span class="refAuthor">Lombardo, J.</span>, <span class="refAuthor">Rosomakho, Y.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Steele, N.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"AI Agent Authentication and Authorization"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-klrc-aiagent-auth-02</span>, <time datetime="2026-06-01" class="refDate">1 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-klrc-aiagent-auth-02">https://datatracker.ietf.org/doc/html/draft-klrc-aiagent-auth-02</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-metering">[I-D.draft-mcguinness-mission-metering]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consumption Metering"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-metering</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-metering">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-metering</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-runtime</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-runtime">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-runtime</a>&gt;</span>. </dd>
@@ -4987,12 +4900,7 @@ that identity; Stage 0 is otherwise unchanged from that specification.<a href="#
   "mission_expiry": "2026-12-31T23:59:59Z",
   "context": {
     "acr": "urn:example:acr:mfa",
-    "max_derivations": 200,
-    "max_budget": { "amount": "5000.00", "currency": "USD" },
-    "max_calls": [
-      { "call_class": "journal-entries.write", "count": 50 }
-    ],
-    "max_duration": "PT8H"
+    "max_derivations": 200
   }
 }
 </pre><a href="#appendix-A.2-2" class="pilcrow">¶</a>

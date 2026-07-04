@@ -1277,7 +1277,16 @@ consumer that receives a non-<code>active</code> transition stops honoring the
 Mission (<a href="#consumer-behavior" class="auto internal xref">Section 6</a>). A deployment offers this channel by
 publishing the event stream (<a href="#event-stream" class="auto internal xref">Section 3</a>); consumers discover it
 from <code>mission_event_stream_endpoint</code> (<a href="#as-metadata" class="auto internal xref">Section 9</a>).<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">This document is <span class="bcp14">OPTIONAL</span>. It defines no new Mission semantics: the
+<p id="section-1-3">This document is <span class="bcp14">OPTIONAL</span> and <strong>experimental</strong>: adopt it for
+evaluation, not as a stable interface. Push delivery is a propagation
+latency optimization over correctly sized pull: a consumer that polls
+the Status profile's surfaces within the deployment's published
+staleness bound, and fails safe on <code>mission_expiry</code>, already meets the
+suite's revocation-propagation model without this channel
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). Deploy this profile
+where polling per Mission does not scale or the staleness bound must
+shrink below a practical polling interval.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">This document defines no new Mission semantics: the
 Mission, its lifecycle states, and the <code>mission</code> claim are defined in
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. The states this event reports
 are the issuance profile's lifecycle state space
@@ -1286,7 +1295,7 @@ lifecycle profiles the deployment runs
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> and any companion
 profile it adopts). A deployment that does not stand up an event stream
 uses the polling surfaces of the Status profile instead and is
-unaffected by this document.<a href="#section-1-3" class="pilcrow">¶</a></p>
+unaffected by this document.<a href="#section-1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conventions-and-terminology">

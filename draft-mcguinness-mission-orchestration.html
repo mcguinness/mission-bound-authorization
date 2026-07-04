@@ -1333,30 +1333,36 @@ treat it as a direction, not yet as a stable interface.<a href="#section-1-4" cl
       <h2 id="name-scope">
 <a href="#section-2" class="section-number selfRef">2. </a><a href="#name-scope" class="section-name selfRef">Scope</a>
       </h2>
-<p id="section-2-1">This document defines:<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-1">This document is <strong>experimental</strong>: adopt it for evaluation, not as a
+stable interface. Safe unwinding of in-flight agent work is the least
+settled layer of the suite, and this profile is expected to change with
+implementation experience.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">This document defines:<a href="#section-2-2" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-2-2.1">
-          <p id="section-2-2.1.1">action reversibility classes (<a href="#reversibility" class="auto internal xref">Section 5</a>);<a href="#section-2-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-2-3.1">
+          <p id="section-2-3.1.1">action reversibility classes (<a href="#reversibility" class="auto internal xref">Section 5</a>);<a href="#section-2-3.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-2-2.2">
-          <p id="section-2-2.2.1">unwind plans (<a href="#unwind-plan" class="auto internal xref">Section 6</a>);<a href="#section-2-2.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-2-3.2">
+          <p id="section-2-3.2.1">unwind plans (<a href="#unwind-plan" class="auto internal xref">Section 6</a>);<a href="#section-2-3.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-2-2.3">
-          <p id="section-2-2.3.1">behavior on Mission state changes (<a href="#state-change-behavior" class="auto internal xref">Section 7</a>);<a href="#section-2-2.3.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-2-3.3">
+          <p id="section-2-3.3.1">behavior on Mission state changes (<a href="#state-change-behavior" class="auto internal xref">Section 7</a>);<a href="#section-2-3.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-2-2.4">
-          <p id="section-2-2.4.1">in-flight request handling (<a href="#in-flight" class="auto internal xref">Section 8</a>);<a href="#section-2-2.4.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-2-3.4">
+          <p id="section-2-3.4.1">in-flight request handling (<a href="#in-flight" class="auto internal xref">Section 8</a>);<a href="#section-2-3.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-2-2.5">
-          <p id="section-2-2.5.1">compensation and human review evidence (<a href="#orchestration-evidence" class="auto internal xref">Section 11</a>);
-and<a href="#section-2-2.5.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-2-3.5">
+          <p id="section-2-3.5.1">compensation and human review evidence (<a href="#orchestration-evidence" class="auto internal xref">Section 11</a>);
+and<a href="#section-2-3.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-2-2.6">
-          <p id="section-2-2.6.1">conformance for a Mission-aware orchestrator (<a href="#conformance" class="auto internal xref">Section 13</a>).<a href="#section-2-2.6.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-2-3.6">
+          <p id="section-2-3.6.1">conformance for a Mission-aware orchestrator (<a href="#conformance" class="auto internal xref">Section 13</a>).<a href="#section-2-3.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-2-3">This document does not define a workflow language, a compensation API,
-or a replacement for runtime PEP enforcement.<a href="#section-2-3" class="pilcrow">¶</a></p>
+<p id="section-2-4">This document does not define a workflow language, a compensation API,
+or a replacement for runtime PEP enforcement. Its object shapes (the
+unwind plan and the evidence record) bind what a deployment records and
+proves, not how an orchestrator is internally structured.<a href="#section-2-4" class="pilcrow">¶</a></p>
 <div id="orchestration-profile">
 <section id="section-2.1">
         <h3 id="name-orchestration-profile">
@@ -1602,7 +1608,10 @@ operation's runtime action class.<a href="#section-5.1-3" class="pilcrow">¶</a>
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-unwind-plan" class="section-name selfRef">Unwind Plan</a>
       </h2>
 <p id="section-6-1">Before dispatching a consequential step, the orchestrator <span class="bcp14">MUST</span> have an
-unwind plan. The plan has these members:<a href="#section-6-1" class="pilcrow">¶</a></p>
+unwind plan. The plan is deployment documentation committed for audit
+(<a href="#unwind-plan-integrity" class="auto internal xref">Section 6.1</a>), not a wire format; the members below are
+the information it <span class="bcp14">MUST</span> record, in whatever representation the
+deployment commits. The plan has these members:<a href="#section-6-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-6-2">
         <dt id="section-6-2.1">
 <code>step_id</code>:</dt>

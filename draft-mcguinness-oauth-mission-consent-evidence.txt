@@ -109,7 +109,8 @@ Table of Contents
    14. References
      14.1.  Normative References
      14.2.  Informative References
-   Appendix A.  Worked Disclosure and Test Vector
+   Appendix A.  Experimental Rendering-Assurance Rungs
+   Appendix B.  Worked Disclosure and Test Vector
    Acknowledgments
    Author's Address
 
@@ -278,12 +279,14 @@ Table of Contents
       affect the Approver's decision.  A notice is required for each
       material-notice condition present, as listed in Section 4.2.
 
-   risk_summary:  REQUIRED.  An array of objects, each with a dimension
-      and a statement.  It MUST cover the risk dimensions the disclosure
-      rules name (irreversibility, spend, delegation, and data access)
-      when the Authority Set carries them, and it MUST identify, as
-      dimensions, the material-notice conditions (Section 4.2) present
-      in the Authority Set.
+   risk_summary:  OPTIONAL.  An array of objects, each with a dimension
+      and a statement.  When present, it MUST cover the risk dimensions
+      the disclosure rules name (irreversibility, spend, delegation, and
+      data access) when the Authority Set carries them, and it MUST
+      identify, as dimensions, the material-notice conditions
+      (Section 4.2) present in the Authority Set. material_notices
+      remains the REQUIRED carrier of material risk; risk_summary is a
+      rendered summary over it.
 
    constraint_provenance:  OPTIONAL.  An array attributing bounds in the
       Authority Set to the authority that imposed them (Section 4.1).
@@ -418,7 +421,7 @@ Table of Contents
    The hash commits the disclosure object, not pixels or browser state.
    A deployment MAY additionally retain screenshots or UI telemetry, but
    the interoperable commitment is the structured disclosure object.  A
-   worked disclosure and computed vector are provided in Appendix A.
+   worked disclosure and computed vector are provided in Appendix B.
 
    So that the committed object can be related to what a human would
    see, the rendering SHOULD be a deterministic function of the
@@ -483,42 +486,20 @@ Table of Contents
       *  keep the named template retrievable or reconstructable by an
          authorized auditor for the retention period (Section 9).
 
-   Rung 2, Attested rendering:  The Consent Evidence carries a
-      rendering_attestation (Section 7): evidence that an attested,
-      identified rendering component (a first-party AS-hosted consent
-      surface, or a renderer attested by the platform or a trusted
-      execution environment) produced the rendering.  The trusted base
-      shrinks from any rendering layer to an attested one.
-
-   Rung 3, Approver confirmation:  The Consent Evidence carries a
-      rendering_confirmation (Section 7): a signature produced by the
-      Approver's authenticator over the consent_rendering_hash at
-      approval, binding the approval credential itself to the exact
-      committed disclosure.  The claim that the Approver approved this
-      disclosure then rests on the Approver's authenticator, not on the
-      Authorization Server.  This is the what-you-see-is-what-you-sign
-      rung, as in authenticator transaction-confirmation schemes.  A
-      deployment SHOULD reach this rung for a Mission whose Authority
-      Set carries a high-risk material-notice class (Section 4.2):
-      irreversible actions, external commitments, privileged
-      administration, or cross-domain disclosure.
-
-   Rung 4, Out-of-band confirmation:  For the most material actions,
-      confirmation is obtained at execution time on a channel the
-      rendering layer does not control, as the action-bound approval of
-      the runtime layer ([I-D.draft-mcguinness-mission-runtime]); a
-      rendering layer would then have to compromise two independent
-      paths.  That is a runtime-layer mechanism recorded as its own
-      evidence; this profile records the approval-time rungs above.
+   Rungs above 1 shrink the trusted rendering base further, from any
+   rendering layer to an attested renderer (Rung 2) and to the
+   Approver's own authenticator (Rung 3), with out-of-band execution-
+   time confirmation above that (Rung 4).  Each imports a trust
+   infrastructure (platform or TEE attestation; transaction-confirming
+   authenticators) this profile cannot supply; they are *experimental*
+   and defined in Appendix A.  Rungs 0 and 1 are the rungs of this
+   profile's conformance.
 
    No rung proves the Approver perceived or understood the disclosure; a
    compromised authenticator or trusted execution environment, or an
    Approver who confirms without reading, remains outside reach, as for
    any electronic-signature scheme.  What the ladder provides is a
-   verifiable, bounded reduction of the rendering trust base: at Rung 3
-   the claim that the Approver approved a specific disclosure is
-   verifiable up to trust in the Approver's authenticator, rather than
-   in an arbitrary rendering layer.
+   verifiable, bounded reduction of the rendering trust base.
 
 7.  Consent Evidence Object
 
@@ -580,28 +561,28 @@ Table of Contents
       that does not change the single accountable Approver
       ([I-D.draft-mcguinness-oauth-mission]).
 
-   rendering_attestation:  OPTIONAL.  An object.  Evidence that an
-      attested, identified rendering component produced the rendering
-      shown to the Approver (Rung 2, Section 6).  Its members are
-      deployment-defined and identify the attested component and its
-      attestation; this profile fixes the role, not the attestation
-      format.
+   rendering_attestation:  OPTIONAL and experimental.  An object.
+      Evidence that an attested, identified rendering component produced
+      the rendering shown to the Approver (Rung 2, Appendix A).  Its
+      members are deployment-defined and identify the attested component
+      and its attestation; this profile fixes the role, not the
+      attestation format.
 
-   rendering_confirmation:  OPTIONAL.  An object.  A confirmation
-      produced by the Approver's authenticator at approval (Rung 3,
-      Section 6).  To bind the trust to the Approver rather than the
-      Authorization Server, it MUST sign the consent_rendering_hash
-      together with a per-approval value (the evidence_id, or a nonce
-      echoed in authentication_context), so a captured confirmation
-      cannot be replayed into another record, and it MUST carry or
-      reference an authenticator credential that the verifier can
-      confirm is bound to the recorded approver.  This profile fixes
-      what is signed and bound, not the authenticator protocol.  A
-      deployment SHOULD include it for a high-risk material-notice class
-      (Section 4.2).  When present, a verifier MUST check it as part of
-      Section 7.1 and MUST treat a confirmation that does not verify, or
-      whose authenticator is not bound to the recorded approver, as an
-      integrity failure.
+   rendering_confirmation:  OPTIONAL and experimental.  An object.  A
+      confirmation produced by the Approver's authenticator at approval
+      (Rung 3, Appendix A).  To bind the trust to the Approver rather
+      than the Authorization Server, it MUST sign the
+      consent_rendering_hash together with a per-approval value (the
+      evidence_id, or a nonce echoed in authentication_context), so a
+      captured confirmation cannot be replayed into another record, and
+      it MUST carry or reference an authenticator credential that the
+      verifier can confirm is bound to the recorded approver.  This
+      profile fixes what is signed and bound, not the authenticator
+      protocol.  A deployment SHOULD include it for a high-risk
+      material-notice class (Section 4.2).  When present, a verifier
+      MUST check it as part of Section 7.1 and MUST treat a confirmation
+      that does not verify, or whose authenticator is not bound to the
+      recorded approver, as an integrity failure.
 
    approved_at:  REQUIRED when decision is approved.  An RFC 3339
       [RFC3339] timestamp.
@@ -625,10 +606,10 @@ Table of Contents
       array of authorization-details-shaped subtrees the re-derived
       Authority Set must exclude or narrow, each naming a type and the
       members within it that must not survive re-derivation unchanged.
-      These are the shapes the deferred-approval profile signals on its
-      revision-required response
-      ([I-D.draft-mcguinness-oauth-mission-approval]), recorded here as
-      the review named them.
+      These are the shapes the experimental approval-revision profile
+      signals on its revision-required response
+      ([I-D.draft-mcguinness-oauth-mission-approval-revision]), recorded
+      here as the review named them.
 
    predecessor_intent_hashes:  OPTIONAL.  An array of intent_hash values
       committing the revision chain that preceded this decision.
@@ -656,7 +637,7 @@ Table of Contents
       Mission Issuer's published key material (its jwks_uri); that is
       the verification path (Section 7.1).
 
-   Example, over the worked disclosure of Appendix A:
+   Example, over the worked disclosure of Appendix B:
 
    {
      "evidence_id": "cns_7rP2kL9mQ4",
@@ -727,14 +708,14 @@ Table of Contents
        descriptor carries origin and the two source_hashes anchors and
        no id; and
 
-   7.  when rendering_confirmation is present (Section 6), verifies it
+   7.  when rendering_confirmation is present (Appendix A), verifies it
        against the recorded approver's authenticator and over the
        consent_rendering_hash bound to the per-approval value, and
        treats a confirmation that does not verify, or whose
        authenticator is not bound to the recorded approver, as an
        integrity failure; and
 
-   8.  when rendering_attestation is present (Section 6), validates the
+   8.  when rendering_attestation is present (Appendix A), validates the
        attested component identity and its attestation against the
        verifier's configured trust anchors, and treats an attestation it
        cannot validate as unverified (the evidence then asserts no rung
@@ -799,10 +780,11 @@ Table of Contents
 8.2.  Revision-Required Events
 
    A revision-required outcome, in which the review can approve only a
-   narrowed version and invites a narrowing revision under the deferred-
-   approval profile ([I-D.draft-mcguinness-oauth-mission-approval]), is
-   recorded as Consent Evidence with decision of narrowed.  The evidence
-   carries the reviewed disclosure's consent_rendering_hash and the
+   narrowed version and invites a narrowing revision under the
+   experimental approval-revision profile
+   ([I-D.draft-mcguinness-oauth-mission-approval-revision]), is recorded
+   as Consent Evidence with decision of narrowed.  The evidence carries
+   the reviewed disclosure's consent_rendering_hash and the
    refused_dimensions the review named.  Like a decline, narrowed
    evidence MUST NOT create a Mission, Mission claim, token, or
    authority: no Mission exists until an approval commits one.
@@ -908,14 +890,12 @@ Table of Contents
    structured disclosure it commits remains outside any server-side
    commitment (Section 1).  The assurance ladder of Section 6 is how a
    deployment reduces this threat by degree: deterministic rendering
-   makes the intended form re-renderable (Rung 1), a rendering
-   attestation binds an attested renderer (Rung 2), and an Approver
-   confirmation signature over the consent_rendering_hash (Rung 3) moves
-   the trust from the rendering layer to the Approver's authenticator.
-   A deployment that needs assurance that the Approver approved a
-   specific disclosure SHOULD reach Rung 3 for its high-risk classes; no
-   rung proves perception, which remains outside reach for any
-   electronic-signature scheme.
+   makes the intended form re-renderable (Rung 1), and the experimental
+   rungs (Appendix A) bind an attested renderer (Rung 2) or the
+   Approver's own authenticator (Rung 3).  A deployment that needs
+   assurance that the Approver approved a specific disclosure SHOULD
+   evaluate Rung 3 for its high-risk classes; no rung proves perception,
+   which remains outside reach for any electronic-signature scheme.
 
 11.2.  Template Downgrade
 
@@ -1087,13 +1067,65 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-mission-approval>.
 
+   [I-D.draft-mcguinness-oauth-mission-approval-revision]
+              McGuinness, K., "Mission Approval Revision for OAuth 2.0",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              mission-approval-revision, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-approval-revision>.
+
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", Work in
               Progress, Internet-Draft, draft-mcguinness-oauth-mission-
               expansion, 2026, <https://datatracker.ietf.org/doc/html/
               draft-mcguinness-oauth-mission-expansion>.
 
-Appendix A.  Worked Disclosure and Test Vector
+Appendix A.  Experimental Rendering-Assurance Rungs
+
+   This appendix is *experimental*: adopt it for evaluation, not as a
+   stable interface.  Each rung below extends the ladder of Section 6 by
+   importing a trust infrastructure this profile does not supply:
+   platform or trusted-execution-environment attestation for Rung 2,
+   transaction-confirming authenticators for Rung 3.  The cumulative
+   rule of Section 6 applies: a rung is claimed only over a disclosure
+   that also satisfies the rungs below it.
+
+   Rung 2, Attested rendering:  The Consent Evidence carries a
+      rendering_attestation (Section 7): evidence that an attested,
+      identified rendering component (a first-party AS-hosted consent
+      surface, or a renderer attested by the platform or a trusted
+      execution environment) produced the rendering.  The trusted base
+      shrinks from any rendering layer to an attested one.
+
+   Rung 3, Approver confirmation:  The Consent Evidence carries a
+      rendering_confirmation (Section 7): a signature produced by the
+      Approver's authenticator over the consent_rendering_hash at
+      approval, binding the approval credential itself to the exact
+      committed disclosure.  The claim that the Approver approved this
+      disclosure then rests on the Approver's authenticator, not on the
+      Authorization Server.  This is the what-you-see-is-what-you-sign
+      rung, as in authenticator transaction-confirmation schemes.  A
+      deployment claiming this rung SHOULD apply it to a Mission whose
+      Authority Set carries a high-risk material-notice class
+      (Section 4.2): irreversible actions, external commitments,
+      privileged administration, or cross-domain disclosure.
+
+   Rung 4, Out-of-band confirmation:  For the most material actions,
+      confirmation is obtained at execution time on a channel the
+      rendering layer does not control, as the action-bound approval of
+      the runtime layer ([I-D.draft-mcguinness-mission-runtime]); a
+      rendering layer would then have to compromise two independent
+      paths.  That is a runtime-layer mechanism recorded as its own
+      evidence; this profile records the approval-time rungs above.
+
+   At Rung 3 the claim that the Approver approved a specific disclosure
+   is verifiable up to trust in the Approver's authenticator, rather
+   than in an arbitrary rendering layer.  The verifier obligations for
+   these rungs are steps 7 and 8 of Section 7.1; their absence asserts
+   no rung above the ones the record satisfies and is never an integrity
+   failure.
+
+Appendix B.  Worked Disclosure and Test Vector
 
    This non-normative vector lets an implementation verify its
    consent_rendering_hash computation (Section 5) byte for byte.  The

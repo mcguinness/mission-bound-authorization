@@ -475,7 +475,12 @@ Table of Contents
 
 9.1.  Queue Item Object
 
-   A governed queue item has:
+   The object below is a RECOMMENDED representation, not a wire format:
+   a harness MAY represent queued work in any internal structure,
+   provided the requirements attached to these members hold for the
+   equivalent information.  What is normative is the behavior: the
+   Mission binding, the resume check before dispatch, and the expiry and
+   retry rules of this section.  A governed queue item carries:
 
    queue_item_id:  REQUIRED.  A string.
 
@@ -671,6 +676,11 @@ Table of Contents
             +------------+------------------------------------+
 
                                   Table 1
+
+   This enumeration is the evidence vocabulary, not an internal state-
+   machine requirement: a harness MAY run any internal execution states,
+   provided each governed item's condition maps onto one of these values
+   when Harness Evidence is emitted.
 
 13.  Stop Behavior
 

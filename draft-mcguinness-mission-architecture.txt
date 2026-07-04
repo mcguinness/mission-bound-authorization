@@ -453,10 +453,11 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-consent-evidence]) committing
    the disclosure shown to the Approver, and Deferred Approval
    ([I-D.draft-mcguinness-oauth-mission-approval]), the OAuth binding's
-   asynchronous, negotiable path, narrowing only; the standalone binding
-   is natively asynchronous.  Where expansion's progressive
-   authorization is used, the initial approval also consents an
-   authority ceiling for later staged widening
+   asynchronous path, with an experimental companion adding an in-review
+   narrowing negotiation; the standalone binding is natively
+   asynchronous.  Where the experimental progressive authorization
+   companion is used, the initial approval also consents an authority
+   ceiling for later staged widening
    ([I-D.draft-mcguinness-oauth-mission-expansion]).
 
 6.3.  Govern
@@ -625,8 +626,9 @@ Table of Contents
    *  *R6*: What was shown at approval is committed and reconstructible
       by an auditor (oauth-mission-consent-evidence).
 
-   *  *R7*: Approval can be asynchronous and negotiable, and negotiation
-      only narrows (oauth-mission-approval).
+   *  *R7*: Approval can be asynchronous, and any in-review negotiation
+      only narrows (oauth-mission-approval; the experimental oauth-
+      mission-approval-revision).
 
 8.3.  Lifecycle
 
@@ -694,21 +696,30 @@ Table of Contents
    |           |consent-     |                                                    |
    |           |evidence     |                                                    |
    +-----------+-------------+----------------------------------------------------+
-   |           |oauth-       |Asynchronous, negotiable approval, narrowing only.  |
+   |           |oauth-       |Asynchronous approval over the deferred substrate.  |
    |           |mission-     |                                                    |
    |           |approval     |                                                    |
+   +-----------+-------------+----------------------------------------------------+
+   |           |oauth-       |Experimental: in-review narrowing revision of a     |
+   |           |mission-     |deferred proposal.                                  |
+   |           |approval-    |                                                    |
+   |           |revision     |                                                    |
    +-----------+-------------+----------------------------------------------------+
    |Lifecycle  |oauth-       |The signed pull surface and the lifecycle endpoint, |
    |           |mission-     |with suspended and completed.                       |
    |           |status       |                                                    |
    +-----------+-------------+----------------------------------------------------+
-   |           |oauth-       |A signed event per lifecycle transition, push or    |
-   |           |mission-     |poll.                                               |
+   |           |oauth-       |Experimental: a signed event per lifecycle          |
+   |           |mission-     |transition, push or poll.                           |
    |           |signals      |                                                    |
    +-----------+-------------+----------------------------------------------------+
    |           |oauth-       |Widening through an approved successor Mission.     |
    |           |mission-     |                                                    |
    |           |expansion    |                                                    |
+   +-----------+-------------+----------------------------------------------------+
+   |           |oauth-       |Experimental: policy-adjudicated expansion within a |
+   |           |mission-     |pre-consented ceiling.                              |
+   |           |progressive  |                                                    |
    +-----------+-------------+----------------------------------------------------+
    |           |oauth-       |Per-entry discharge via the terminal_when           |
    |           |mission-     |constraint.                                         |
@@ -723,6 +734,9 @@ Table of Contents
    +-----------+-------------+----------------------------------------------------+
    |           |mission-     |The concrete decision-API binding and its Decision  |
    |           |authzen      |and Execution Evidence objects.                     |
+   +-----------+-------------+----------------------------------------------------+
+   |           |mission-     |Experimental: cumulative consumption bounds and the |
+   |           |metering     |metering that enforces them.                        |
    +-----------+-------------+----------------------------------------------------+
    |Agent      |mission-     |Binding sessions, queues, and sub-agent handles to  |
    |runtime    |harness      |Mission state; the mediated environment.            |

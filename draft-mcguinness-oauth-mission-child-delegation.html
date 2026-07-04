@@ -1302,10 +1302,13 @@ Mission is never created by session ancestry alone.<a href="#section-abstract-1"
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.21">
-            <p id="section-toc.1-1.21.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.21.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-experimental-consumer-verif" class="internal xref">Experimental Consumer-Verified Cascade Modes</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.22">
-            <p id="section-toc.1-1.22.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.22.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.23">
+            <p id="section-toc.1-1.23.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -2107,9 +2110,7 @@ it <span class="bcp14">MUST</span> refuse child creation for that entry.<a href=
 <a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-fan-out-accounting" class="section-name selfRef">Fan-Out Accounting</a>
         </h3>
 <p id="section-9.1-1">The Mission Issuer <span class="bcp14">MUST</span> count non-terminal Child Missions against
-<code>max_children</code> until the child reaches a terminal state. If cascade is
-<code>bounded_staleness</code>, the child counts until the cascade window has
-closed or the child is otherwise confirmed non-active.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<code>max_children</code> until the child reaches a terminal state.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
 <p id="section-9.1-2">The Mission Issuer <span class="bcp14">MUST</span> serialize child creation against the same
 parent entry and fan-out bucket so concurrent requests cannot exceed
 the limit.<a href="#section-9.1-2" class="pilcrow">¶</a></p>
@@ -2160,8 +2161,9 @@ children to the successor. Continuing child work under the successor
 requires an explicit new Child Mission creation (<a href="#child-creation" class="auto internal xref">Section 6</a>)
 under a successor grant, which re-runs strict-subset validation
 (<a href="#strict-subset" class="auto internal xref">Section 8.1</a>) against the successor's Authority Set.<a href="#section-10-3" class="pilcrow">¶</a></p>
-<p id="section-10-4">The Mission Issuer <span class="bcp14">MUST</span> implement one of these cascade modes and record
-it on the Child Mission:<a href="#section-10-4" class="pilcrow">¶</a></p>
+<p id="section-10-4">Cascade under this profile is issuer-committed. The Mission Issuer
+<span class="bcp14">MUST</span> implement the <code>immediate</code> cascade mode and record the mode on the
+Child Mission:<a href="#section-10-4" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-10-5">
         <dt id="section-10-5.1">
 <code>immediate</code>:</dt>
@@ -2171,42 +2173,20 @@ state when the parent transition commits. On the reversible trigger
 the child is held non-active while the parent is suspended and
 restored to its prior state on parent resume.<a href="#section-10-5.2.1" class="pilcrow">¶</a></p>
 </dd>
-        <dd class="break"></dd>
-<dt id="section-10-5.3">
-<code>bounded_staleness</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-10-5.4">
-          <p id="section-10-5.4.1">The Child Mission is treated as non-active no later than the cascade
-staleness bound, measured from the consumer's last confirmed-active
-observation of the parent, aligned with the Status profile's freshness
-model (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). That bound is
-the deployment's <code>mission_max_stale_seconds</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) unless the deployment
-publishes a different bound for child cascade.<a href="#section-10-5.4.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-10-5.5">
-<code>status_required</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-10-5.6">
-          <p id="section-10-5.6.1">Consumers <span class="bcp14">MUST</span> check parent state, per reliance decision and within
-the deployment's declared freshness window
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), before accepting
-child Mission authority. The Mission Issuer <span class="bcp14">MUST</span> select this mode only
-where every audience of child tokens is known, by registration or
-deployment policy, to implement this profile's parent-state check;
-otherwise the Mission Issuer <span class="bcp14">MUST</span> compensate with short child-token
-lifetimes or introspection-required paths.<a href="#section-10-5.6.1" class="pilcrow">¶</a></p>
-</dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-10-6">The cascade mode <span class="bcp14">MUST NOT</span> allow a Child Mission to continue deriving
+<p id="section-10-6">Two consumer-verified cascade modes, <code>bounded_staleness</code> and
+<code>status_required</code>, which trade issuer-committed transitions for
+consumer-side parent-state checks, are experimental and defined in
+<a href="#experimental-cascade" class="auto internal xref">Appendix A</a>. A cascade mode <span class="bcp14">MUST NOT</span> allow a Child Mission
+to continue deriving
 new credentials after the parent is known to be non-active.<a href="#section-10-6" class="pilcrow">¶</a></p>
-<p id="section-10-7">The cascade behavior by trigger and mode:<a href="#section-10-7" class="pilcrow">¶</a></p>
+<p id="section-10-7">The cascade behavior by trigger:<a href="#section-10-7" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
         <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Trigger</th>
-            <th class="text-left" rowspan="1" colspan="1">Mode</th>
             <th class="text-left" rowspan="1" colspan="1">Resulting child state</th>
             <th class="text-left" rowspan="1" colspan="1">Who observes</th>
           </tr>
@@ -2215,31 +2195,11 @@ new credentials after the parent is known to be non-active.<a href="#section-10-
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Terminal (<code>revoked</code>, <code>expired</code>, <code>completed</code>, <code>superseded</code>, <code>cascaded</code>)</td>
             <td class="text-left" rowspan="1" colspan="1">
-              <code>immediate</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">
               <code>cascaded</code> (terminal)</td>
             <td class="text-left" rowspan="1" colspan="1">Mission Issuer sets it; consumers read it from Mission Status or a lifecycle event</td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">Terminal</td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>bounded_staleness</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">non-active by the staleness bound</td>
-            <td class="text-left" rowspan="1" colspan="1">Consumer, from its last confirmed-active parent observation</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Terminal</td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>status_required</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">non-active on the next parent-state check</td>
-            <td class="text-left" rowspan="1" colspan="1">Consumer, per reliance decision</td>
-          </tr>
-          <tr>
             <td class="text-left" rowspan="1" colspan="1">Reversible (<code>suspended</code>)</td>
-            <td class="text-left" rowspan="1" colspan="1">any</td>
             <td class="text-left" rowspan="1" colspan="1">reported <code>suspended</code>; restored on resume</td>
             <td class="text-left" rowspan="1" colspan="1">Origin reports it; consumers read it (<a href="#child-state" class="auto internal xref">Section 10.1</a>)</td>
           </tr>
@@ -2279,8 +2239,7 @@ Child Mission, both conditions <span class="bcp14">MUST</span> hold:<a href="#se
             <p id="section-10.1-4.1.1">the Child Mission state is <code>active</code>; and<a href="#section-10.1-4.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.1-4.2">
-            <p id="section-10.1-4.2.1">the Parent Mission is active or the cascade mode and freshness rules
-still permit reliance on the prior active state.<a href="#section-10.1-4.2.1" class="pilcrow">¶</a></p>
+            <p id="section-10.1-4.2.1">the Parent Mission is <code>active</code>.<a href="#section-10.1-4.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-10.1-5">If either condition fails, the Mission Issuer <span class="bcp14">MUST</span> refuse derivation.<a href="#section-10.1-5" class="pilcrow">¶</a></p>
@@ -2302,10 +2261,11 @@ known, <code>cascade_mode</code>, and freshness information.<a href="#section-10
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-10.1-9">Consumers that cannot obtain parent state <span class="bcp14">MUST</span> obey the cascade mode:
-for <code>status_required</code>, they <span class="bcp14">MUST</span> refuse; for <code>bounded_staleness</code>, they
-<span class="bcp14">MUST</span> refuse after the bound; for <code>immediate</code>, they rely on the Mission
-Issuer's child state transition.<a href="#section-10.1-9" class="pilcrow">¶</a></p>
+<p id="section-10.1-9">Under <code>immediate</code> cascade a consumer needs no parent-state check of its
+own: it relies on the Mission Issuer's child state transition, read
+from the child's own state surfaces. The consumer obligations of the
+experimental consumer-verified modes are defined with those modes
+(<a href="#experimental-cascade" class="auto internal xref">Appendix A</a>).<a href="#section-10.1-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2758,17 +2718,99 @@ Delegation Denial Reason" registry with a Specification Required
 </div>
 </section>
 </div>
-<div id="acknowledgments">
+<div id="experimental-cascade">
 <section id="appendix-A">
+      <h2 id="name-experimental-consumer-verif">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-experimental-consumer-verif" class="section-name selfRef">Experimental Consumer-Verified Cascade Modes</a>
+      </h2>
+<p id="appendix-A-1">This appendix is <strong>experimental</strong>: adopt it for evaluation, not as a
+stable interface. It defines two cascade modes that trade the
+issuer-committed transition of <code>immediate</code> (<a href="#cascade" class="auto internal xref">Section 10</a>) for
+consumer-side parent-state checks, for deployments where the Mission
+Issuer cannot commit child transitions synchronously with the parent's.
+Each shifts a per-reliance obligation onto every consumer of child
+tokens, which is why they are not part of the base profile.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="appendix-A-2">
+        <dt id="appendix-A-2.1">
+<code>bounded_staleness</code>:</dt>
+        <dd style="margin-left: 1.5em" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">The Child Mission is treated as non-active no later than the cascade
+staleness bound, measured from the consumer's last confirmed-active
+observation of the parent, aligned with the Status profile's freshness
+model (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). That bound is
+the deployment's <code>mission_max_stale_seconds</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) unless the deployment
+publishes a different bound for child cascade. Under this mode a
+non-terminal child counts against <code>max_children</code>
+(<a href="#fanout-accounting" class="auto internal xref">Section 9.1</a>) until the cascade window has closed or the
+child is otherwise confirmed non-active.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="appendix-A-2.3">
+<code>status_required</code>:</dt>
+        <dd style="margin-left: 1.5em" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Consumers <span class="bcp14">MUST</span> check parent state, per reliance decision and within
+the deployment's declared freshness window
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), before accepting
+child Mission authority. The Mission Issuer <span class="bcp14">MUST</span> select this mode only
+where every audience of child tokens is known, by registration or
+deployment policy, to implement this profile's parent-state check;
+otherwise the Mission Issuer <span class="bcp14">MUST</span> compensate with short child-token
+lifetimes or introspection-required paths.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="appendix-A-3">The cascade behavior by trigger and mode:<a href="#appendix-A-3" class="pilcrow">¶</a></p>
+<table class="center" id="table-2">
+        <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Trigger</th>
+            <th class="text-left" rowspan="1" colspan="1">Mode</th>
+            <th class="text-left" rowspan="1" colspan="1">Resulting child state</th>
+            <th class="text-left" rowspan="1" colspan="1">Who observes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Terminal</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>bounded_staleness</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">non-active by the staleness bound</td>
+            <td class="text-left" rowspan="1" colspan="1">Consumer, from its last confirmed-active parent observation</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Terminal</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>status_required</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">non-active on the next parent-state check</td>
+            <td class="text-left" rowspan="1" colspan="1">Consumer, per reliance decision</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="appendix-A-5">A consumer that cannot obtain parent state <span class="bcp14">MUST</span> obey the mode: for
+<code>status_required</code>, it <span class="bcp14">MUST</span> refuse; for <code>bounded_staleness</code>, it <span class="bcp14">MUST</span>
+refuse after the bound. For derivation under these modes, the Mission
+Issuer <span class="bcp14">MAY</span> rely on a prior confirmed-active parent observation within
+the mode's freshness rules where it cannot observe the parent
+synchronously; a Child Mission <span class="bcp14">MUST NOT</span> derive after the parent is
+known to be non-active. The <code>immediate</code> rules of <a href="#cascade" class="auto internal xref">Section 10</a> and
+<a href="#child-state" class="auto internal xref">Section 10.1</a> otherwise apply unchanged.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-B">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-A-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
-set and defines explicit child authority for sub-agent work.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<p id="appendix-B-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
+set and defines explicit child authority for sub-agent work.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-B">
+<section id="appendix-C">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>
