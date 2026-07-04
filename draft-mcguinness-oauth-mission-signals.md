@@ -138,7 +138,17 @@ Mission ({{consumer-behavior}}). A deployment offers this channel by
 publishing the event stream ({{event-stream}}); consumers discover it
 from `mission_event_stream_endpoint` ({{as-metadata}}).
 
-This document is OPTIONAL. It defines no new Mission semantics: the
+This document is OPTIONAL and **experimental**: adopt it for
+evaluation, not as a stable interface. Push delivery is a propagation
+latency optimization over correctly sized pull: a consumer that polls
+the Status profile's surfaces within the deployment's published
+staleness bound, and fails safe on `mission_expiry`, already meets the
+suite's revocation-propagation model without this channel
+({{I-D.draft-mcguinness-oauth-mission-status}}). Deploy this profile
+where polling per Mission does not scale or the staleness bound must
+shrink below a practical polling interval.
+
+This document defines no new Mission semantics: the
 Mission, its lifecycle states, and the `mission` claim are defined in
 {{I-D.draft-mcguinness-oauth-mission}}. The states this event reports
 are the issuance profile's lifecycle state space

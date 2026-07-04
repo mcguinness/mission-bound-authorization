@@ -73,6 +73,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-mission-harness-latest
+  I-D.draft-mcguinness-mission-metering:
+    title: "Mission Consumption Metering"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-mission-metering-latest
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
     title: "Mission Consent Evidence for OAuth 2.0"
     author:
@@ -135,8 +144,8 @@ constraints, the actor context from the delegation chain, the Mission
 against its current state, and the applicable Resource policy. The
 document defines where enforcement sits, how a permit is bound to
 concrete parameters to close the time-of-check to time-of-use gap, the
-materialized policy view a decision evaluates against, how carried
-consumption bounds (budget, call counts, duration) are metered, and
+materialized policy view a decision evaluates against, the fail-closed
+posture for consumption bounds a Mission carries, and
 the runtime evidence each consequential action produces. For the
 high-consequence classes it further defines action-bound approval,
 credential custody in the mediating enforcement point rather than the
@@ -170,9 +179,8 @@ constraints that profile carries but does not evaluate:
 4. execution-time re-evaluation that closes the approval-to-execution
    (time-of-check to time-of-use) gap ({{parameter-binding}});
 
-and, additionally, metering of the consumption bounds (budget, call
-counts, duration) the issuance profile carries as constraints but
-leaves to this layer to enforce ({{metering}}). For the
+and, additionally, the fail-closed treatment of consumption bounds
+({{metering}}). For the
 high-consequence classes it adds action-bound approval
 ({{action-approval}}), credential custody in the mediating enforcement
 point rather than the agent ({{custody}}), and the named
@@ -395,9 +403,7 @@ enforcement scope, including:
 - the reconciliation window for matching execution-outcome evidence to
   decisions, the component responsible for orphaned-evidence and
   sequence-gap detection, and that component's alerting obligation
-  ({{evidence}}); and
-- any consumption-metering consistency bound it advertises
-  ({{metering}}).
+  ({{evidence}}).
 
 A deployment MUST NOT claim runtime enforcement for a resource, action
 class, `authorization_details` type, or execution path outside that
@@ -652,8 +658,8 @@ not a new access token format.
 The Resource Server runtime profile records the enforcement-scope items
 of {{runtime-conformance}} (protected resources, action classes,
 execution paths, PEP and PDP identities, supported `authorization_details`
-types and vocabularies, Mission state source and staleness bound,
-evidence mechanism and retention, and metering consistency bound) at the
+types and vocabularies, Mission state source and staleness bound, and
+evidence mechanism and retention) at the
 granularity of its protected operations, and additionally MUST define:
 
 - the endpoint families, methods, tools, or operation identifiers in
@@ -665,17 +671,14 @@ granularity of its protected operations, and additionally MUST define:
   decision requests and responses;
 - the operation profile for each protected operation or family:
   parameter normalization, default insertion, omitted optional fields,
-  set-like array handling, idempotency-key handling, and duration
-  measurement when duration can be metered;
+  set-like array handling, and idempotency-key handling;
 - the permit validity window for each action class, and replay controls
   for permit use, including where single-use decision identifiers and
   idempotency keys are recorded and how long consumed identifiers are
   retained;
 - how Resource policy is evaluated and composed with Mission authority,
   including local object authorization, tenant configuration, legal
-  holds, service invariants, and risk policy;
-- the consumption-metering topology, including reserve, commit,
-  settlement, retry, and reconciliation behavior; and
+  holds, service invariants, and risk policy; and
 - the runtime enforcement evidence fields and privacy treatment for
   decision and refusal records.
 
@@ -1006,8 +1009,7 @@ A permit authorizes initiation. An action still executing when the
 permit expires MAY run to completion, unless the action class requires
 an execution lease, which the operation profile defines; when a lease
 is required the executing PEP MUST stop or renew before the lease
-expires. Duration-metered actions already carry such a lease
-({{metering}}).
+expires.
 
 This closes the time-of-check to time-of-use gap and prevents a permit
 from being replayed for a different request (the `parameter_digest`
@@ -1031,66 +1033,21 @@ disclosure risk include privacy-sensitive filters and aggregation
 level. Ordinary reads that do not change the resource set or disclosure
 risk can remain unbound.
 
-# Consumption metering {#metering}
+# Consumption Bounds Fail Closed {#metering}
 
-Consumption bounds the Mission carries are enforced here, not at
-issuance. The issuance profile ({{I-D.draft-mcguinness-oauth-mission}})
-defines three Mission-level consumption bounds in the Mission
-`context` that this layer meters:
+This document defines no cumulative consumption bounds and no metering
+machinery. Cumulative bounds on Mission activity (budget, call counts,
+wall-clock duration), and the reserve, commit, lease, settlement, and
+distributed-consistency semantics that enforce them, are defined by an
+experimental companion ({{I-D.draft-mcguinness-mission-metering}}).
 
-- `max_budget` (`{ amount, currency }`): the PDP performs an atomic
-  reserve-or-charge against the remaining balance for each
-  consequential action and MUST refuse when the remaining balance is
-  insufficient.
-- `max_calls` (`[ { call_class, count } ]`): the PDP increments an atomic
-  counter for the named `call_class` and MUST refuse a call past `count`.
-- `max_duration` (an ISO 8601 duration, e.g. `PT8H`; the `duration`
-  rule in Appendix A of {{RFC3339}}): the cumulative wall-clock
-  duration of consequential activity under the Mission, as the issuance
-  profile defines it (distinct from `mission_expiry`). The PDP
-  accumulates the duration of consequential activity it reserves,
-  commits, or permits and MUST refuse once that total would exceed the
-  bound. For an action whose duration is not known before execution,
-  the PDP MUST either reserve a bounded maximum duration or issue a
-  duration lease that expires unless renewed; the PEP MUST stop the
-  action or obtain a new permit before the reservation or lease is
-  exhausted. After execution, the PEP MUST report the measured
-  duration so the PDP can commit actual use and release any unused
-  reservation. The operation profile defines how a single action's
-  duration is measured so that PDPs accumulate consistently.
-
-A per-entry `constraints` value that expresses a consumption bound is
-metered the same way. When an applicable entry or the Mission's
-`context` carries such a bound, the PDP MUST meter use against it and
-MUST refuse a consequential action that would exceed it.
-
-The exactness of a consumption bound depends on the decision
-topology, and this profile does not overpromise:
-
-- Under a **single serializing PDP** for the Mission, the check and
-  decrement can be atomic, and the bound is exact.
-- Under **multiple or distributed PDPs** (for example, Resource
-  Server-hosted PDPs), an exact global counter is a distributed-counting
-  problem. Such a deployment MUST publish the consistency bound it
-  operates under (for example, per-PDP sub-budgets, or a bounded
-  reconciliation window), and the effective guarantee is that bound,
-  not exact-to-the-call enforcement.
-
-A deployment MUST NOT advertise exact consumption enforcement it
-cannot meet under its chosen topology. As with all constraints, an
-unmetered or unrecognized consumption bound MUST cause refusal rather
-than silent pass-through.
-
-For a metered permit, the PDP and PEP MUST define retry and idempotency
-behavior. A retry of the same normalized action under the same
-idempotency key or single-use decision identifier MUST NOT consume the
-bound twice. Reuse of an idempotency key or decision identifier for a
-different normalized action MUST cause refusal. For irreversible
-actions and external commitments, a deployment MUST define whether
-metering is reserved before execution and committed after success, or
-committed before execution; it MUST NOT leave the decrement ambiguous.
-A failed attempt releases any reserved consumption per the deployment's
-documented reserve/commit posture.
+What this document fixes is the failure posture. As with all
+constraints, an unmetered or unrecognized consumption bound MUST cause
+refusal rather than silent pass-through: when an applicable entry's
+`constraints`, or the Mission's `context`, carries a bound that
+expresses cumulative consumption and the deployment does not meter it,
+the PDP MUST refuse a consequential action governed by it. A deployment
+MUST NOT advertise consumption enforcement it does not perform.
 
 # Failure modes {#failure-modes}
 
@@ -1206,7 +1163,12 @@ The following requirements apply to every record:
   the issuance profile's canonicalization rules.
 - It MUST be append-only and integrity-protected; the enforcement
   scope MUST name the mechanism (a hash-linked log, signed segments, a
-  transparency anchor, or equivalent).
+  transparency anchor, or equivalent). Where a JSON record is
+  individually signed, the `evidence_envelope` JWS convention of the
+  AuthZEN profile ({{I-D.draft-mcguinness-mission-authzen}}) is the
+  suite's one signing convention for evidence objects and SHOULD be
+  used, with a `typ` that names the record's own media type, rather
+  than a record-specific signing scheme.
 - Raw parameters MUST NOT appear in the record; when retained for
   forensics they MUST be in separately access-controlled storage
   referenced by an opaque identifier, with only the
@@ -1234,7 +1196,8 @@ This document defines no binding of its own. Keeping the binding in a
 separate specification preserves substrate-independence: the enforcement
 contract, action classification ({{classification}}), PEP placement
 ({{pep-placement}}), parameter binding ({{parameter-binding}}),
-consumption metering ({{metering}}), and runtime enforcement evidence
+the consumption-bound failure posture ({{metering}}), and runtime
+enforcement evidence
 ({{evidence}}) are the substance, and they do not depend on the decision
 wire.
 
@@ -1281,7 +1244,7 @@ issuance/delegation-layer primitive, not part of this runtime profile.
 Gating every consequential action against the current Mission
 prevents an active Mission from acting as ambient authority: authority
 is checked at the point of use, parameters are bound to the permit,
-consumption is metered, and each decision or refusal path is recorded.
+and each decision or refusal path is recorded.
 This closes the approval-to-execution gap the issuance profile leaves
 open.
 
@@ -1320,8 +1283,10 @@ heel of {{pep-placement}}). Second, this profile provides no
 information-flow control: it evaluates each action in isolation against
 authority over resources and actions, so a sequence of
 individually-authorized steps can compose into an exfiltration no single
-check catches (within-scope data laundering), and `max_calls` /
-`max_budget` bound volume, not flow. Closing that needs a separate taint
+check catches (within-scope data laundering), and cumulative
+consumption bounds, where metered
+({{I-D.draft-mcguinness-mission-metering}}), bound volume, not flow.
+Closing that needs a separate taint
 or information-flow layer. A coarse session-level mitigation, downgrading
 egress authority once untrusted content has entered a session, is
 available at the harness layer
@@ -1382,9 +1347,10 @@ below the resource owner's floor.
 
 A permit is a lease, not a standing grant: stale Mission state MUST
 fail closed for consequential actions within the published bound
-({{state-freshness}}). Consumption bounds are exact only under a
-single serializing PDP; a deployment MUST NOT advertise exactness it
-cannot meet across distributed decision points ({{metering}}).
+({{state-freshness}}). A deployment MUST NOT advertise consumption
+enforcement it does not perform ({{metering}}); where cumulative
+bounds are metered, the exactness and consistency claims of the
+metering companion apply ({{I-D.draft-mcguinness-mission-metering}}).
 
 ## Resource policy remains authoritative
 

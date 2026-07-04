@@ -688,9 +688,7 @@ it MUST refuse child creation for that entry.
 ## Fan-Out Accounting {#fanout-accounting}
 
 The Mission Issuer MUST count non-terminal Child Missions against
-`max_children` until the child reaches a terminal state. If cascade is
-`bounded_staleness`, the child counts until the cascade window has
-closed or the child is otherwise confirmed non-active.
+`max_children` until the child reaches a terminal state.
 
 The Mission Issuer MUST serialize child creation against the same
 parent entry and fan-out bucket so concurrent requests cannot exceed
@@ -733,8 +731,9 @@ requires an explicit new Child Mission creation ({{child-creation}})
 under a successor grant, which re-runs strict-subset validation
 ({{strict-subset}}) against the successor's Authority Set.
 
-The Mission Issuer MUST implement one of these cascade modes and record
-it on the Child Mission:
+Cascade under this profile is issuer-committed. The Mission Issuer
+MUST implement the `immediate` cascade mode and record the mode on the
+Child Mission:
 
 `immediate`:
 : On a terminal trigger the Child Mission transitions to the `cascaded`
@@ -742,36 +741,19 @@ it on the Child Mission:
   the child is held non-active while the parent is suspended and
   restored to its prior state on parent resume.
 
-`bounded_staleness`:
-: The Child Mission is treated as non-active no later than the cascade
-  staleness bound, measured from the consumer's last confirmed-active
-  observation of the parent, aligned with the Status profile's freshness
-  model ({{I-D.draft-mcguinness-oauth-mission-status}}). That bound is
-  the deployment's `mission_max_stale_seconds`
-  ({{I-D.draft-mcguinness-oauth-mission-status}}) unless the deployment
-  publishes a different bound for child cascade.
-
-`status_required`:
-: Consumers MUST check parent state, per reliance decision and within
-  the deployment's declared freshness window
-  ({{I-D.draft-mcguinness-oauth-mission-status}}), before accepting
-  child Mission authority. The Mission Issuer MUST select this mode only
-  where every audience of child tokens is known, by registration or
-  deployment policy, to implement this profile's parent-state check;
-  otherwise the Mission Issuer MUST compensate with short child-token
-  lifetimes or introspection-required paths.
-
-The cascade mode MUST NOT allow a Child Mission to continue deriving
+Two consumer-verified cascade modes, `bounded_staleness` and
+`status_required`, which trade issuer-committed transitions for
+consumer-side parent-state checks, are experimental and defined in
+{{experimental-cascade}}. A cascade mode MUST NOT allow a Child Mission
+to continue deriving
 new credentials after the parent is known to be non-active.
 
-The cascade behavior by trigger and mode:
+The cascade behavior by trigger:
 
-| Trigger | Mode | Resulting child state | Who observes |
-|---------|------|-----------------------|--------------|
-| Terminal (`revoked`, `expired`, `completed`, `superseded`, `cascaded`) | `immediate` | `cascaded` (terminal) | Mission Issuer sets it; consumers read it from Mission Status or a lifecycle event |
-| Terminal | `bounded_staleness` | non-active by the staleness bound | Consumer, from its last confirmed-active parent observation |
-| Terminal | `status_required` | non-active on the next parent-state check | Consumer, per reliance decision |
-| Reversible (`suspended`) | any | reported `suspended`; restored on resume | Origin reports it; consumers read it ({{child-state}}) |
+| Trigger | Resulting child state | Who observes |
+|---------|-----------------------|--------------|
+| Terminal (`revoked`, `expired`, `completed`, `superseded`, `cascaded`) | `cascaded` (terminal) | Mission Issuer sets it; consumers read it from Mission Status or a lifecycle event |
+| Reversible (`suspended`) | reported `suspended`; restored on resume | Origin reports it; consumers read it ({{child-state}}) |
 
 ## Child Mission State {#child-state}
 
@@ -797,8 +779,7 @@ A Child Mission also depends on parent state. For derivation under a
 Child Mission, both conditions MUST hold:
 
 - the Child Mission state is `active`; and
-- the Parent Mission is active or the cascade mode and freshness rules
-  still permit reliance on the prior active state.
+- the Parent Mission is `active`.
 
 If either condition fails, the Mission Issuer MUST refuse derivation.
 
@@ -817,10 +798,11 @@ projection for authorized callers, as additional context:
 : Object containing parent `id`, `origin`, current parent `state` when
   known, `cascade_mode`, and freshness information.
 
-Consumers that cannot obtain parent state MUST obey the cascade mode:
-for `status_required`, they MUST refuse; for `bounded_staleness`, they
-MUST refuse after the bound; for `immediate`, they rely on the Mission
-Issuer's child state transition.
+Under `immediate` cascade a consumer needs no parent-state check of its
+own: it relies on the Mission Issuer's child state transition, read
+from the child's own state surfaces. The consumer obligations of the
+experimental consumer-verified modes are defined with those modes
+({{experimental-cascade}}).
 
 # Child Evidence {#child-evidence}
 
@@ -1059,6 +1041,54 @@ Delegation Denial Reason" registry with a Specification Required
 {{RFC8126}} policy; this document does not create it.
 
 --- back
+
+# Experimental Consumer-Verified Cascade Modes {#experimental-cascade}
+
+This appendix is **experimental**: adopt it for evaluation, not as a
+stable interface. It defines two cascade modes that trade the
+issuer-committed transition of `immediate` ({{cascade}}) for
+consumer-side parent-state checks, for deployments where the Mission
+Issuer cannot commit child transitions synchronously with the parent's.
+Each shifts a per-reliance obligation onto every consumer of child
+tokens, which is why they are not part of the base profile.
+
+`bounded_staleness`:
+: The Child Mission is treated as non-active no later than the cascade
+  staleness bound, measured from the consumer's last confirmed-active
+  observation of the parent, aligned with the Status profile's freshness
+  model ({{I-D.draft-mcguinness-oauth-mission-status}}). That bound is
+  the deployment's `mission_max_stale_seconds`
+  ({{I-D.draft-mcguinness-oauth-mission-status}}) unless the deployment
+  publishes a different bound for child cascade. Under this mode a
+  non-terminal child counts against `max_children`
+  ({{fanout-accounting}}) until the cascade window has closed or the
+  child is otherwise confirmed non-active.
+
+`status_required`:
+: Consumers MUST check parent state, per reliance decision and within
+  the deployment's declared freshness window
+  ({{I-D.draft-mcguinness-oauth-mission-status}}), before accepting
+  child Mission authority. The Mission Issuer MUST select this mode only
+  where every audience of child tokens is known, by registration or
+  deployment policy, to implement this profile's parent-state check;
+  otherwise the Mission Issuer MUST compensate with short child-token
+  lifetimes or introspection-required paths.
+
+The cascade behavior by trigger and mode:
+
+| Trigger | Mode | Resulting child state | Who observes |
+|---------|------|-----------------------|--------------|
+| Terminal | `bounded_staleness` | non-active by the staleness bound | Consumer, from its last confirmed-active parent observation |
+| Terminal | `status_required` | non-active on the next parent-state check | Consumer, per reliance decision |
+
+A consumer that cannot obtain parent state MUST obey the mode: for
+`status_required`, it MUST refuse; for `bounded_staleness`, it MUST
+refuse after the bound. For derivation under these modes, the Mission
+Issuer MAY rely on a prior confirmed-active parent observation within
+the mode's freshness rules where it cannot observe the parent
+synchronously; a Child Mission MUST NOT derive after the parent is
+known to be non-active. The `immediate` rules of {{cascade}} and
+{{child-state}} otherwise apply unchanged.
 
 # Acknowledgments
 {:numbered="false"}
