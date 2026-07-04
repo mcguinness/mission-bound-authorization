@@ -94,12 +94,15 @@ Mission-Bound Authorization for OAuth 2.0 defines delegated tokens and
 the rule that authority narrows down a delegation chain. Agent
 harnesses, however, can spawn sub-agents whose work outlives a call
 frame or crosses a different execution boundary. This document defines
-an OPTIONAL Child Mission Delegation profile. A parent Mission can
-authorize a child Mission for a sub-agent, with explicit parent
+an optional Mission Child Delegation profile. A parent Mission can
+authorize a Child Mission for a sub-agent, with explicit parent
 lineage, strict-subset authority, expiry no later than the parent,
-separate child actor identity, fan-out controls, and cascade revocation
-when the parent Mission is no longer active. A child Mission is never
-created by session ancestry alone.
+separate child actor identity, fan-out controls, and cascade
+termination when the parent Mission ends, with suspend-and-resume
+propagation while the parent is suspended. Child creation is permitted
+only where a parent entry's delegation policy carries a `children`
+object, and child credentials never transit the parent. A Child
+Mission is never created by session ancestry alone.
 
 --- middle
 
@@ -375,6 +378,75 @@ The child actor then authenticates at the token endpoint and redeems
 its own grant for the Child Mission's tokens ({{child-client-identity}}).
 Failure at any step MUST prevent child creation.
 
+## Worked Example {#worked-example}
+
+Under the Q3 reconciliation Mission
+`msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`, the approved agent
+`s6BhdRkqt3`, acting for `alice`, spawns a read-only invoice
+extraction sub-agent and submits a child Mission Intent through PAR
+bound to the parent's grant:
+
+~~~ http
+POST /par HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+
+mission_intent=%7B...read-only%20Q3%20invoice%20extraction...%7D&
+parent=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-&
+parent_token=<refresh%20token%20bound%20to%20the%20parent>&
+child_actor=%7B%22sub%22%3A%22subagent-invoice-extractor%22%2C
+  %22sub_profile%22%3A%22ai_agent%22%7D&
+client_id=s6BhdRkqt3
+~~~
+
+The Mission Issuer processes the request per {{request-processing}}
+and creates the Child Mission. The sub-agent then authenticates as
+`subagent-invoice-extractor` at the token endpoint and redeems its own
+grant ({{child-client-identity}}); no child credential transits the
+parent. The decoded child access token:
+
+~~~ json
+{
+  "iss": "https://as.example.com",
+  "sub": "user_3p2q8mN1a0kV7tR",
+  "aud": "https://erp.example.com",
+  "client_id": "subagent-invoice-extractor",
+  "iat": 1793607300,
+  "exp": 1793607600,
+  "jti": "at_5vB8nQ2xT7mK4rW1Zs9c",
+  "authorization_details": [
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read"],
+      "constraints": {
+        "issued_after": "2026-07-01T00:00:00Z",
+        "issued_before": "2026-09-30T23:59:59Z"
+      } }
+  ],
+  "cnf": { "jkt": "wZ5nT8qL2xV9rB4mC7sD1yF6jH3kP0aG5uE8oS2iN4w" },
+  "mission": {
+    "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
+    "parent": {
+      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+      "origin": "https://as.example.com",
+      "authority_hash":
+        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "depth": 1,
+      "delegation_id": "dlg_7pQ4m",
+      "cascade_mode": "immediate"
+    }
+  }
+}
+~~~
+
+`mission.id` is the Child Mission and `mission.authority_hash` commits
+the child Authority Set; the `parent` object is lineage, with `depth` 1
+for a child of a root Mission. The `cnf` key is the sub-agent's own
+({{child-client-identity}}).
+
 ## Child Creation Denial Reasons {#denial-reasons}
 
 This profile defines these symbolic denial reasons:
@@ -415,6 +487,17 @@ body the symbolic reason rides in a `mission_denial_reason` member
 alongside the OAuth `error` member. A child creation request presented
 on the front channel with `parent_token` MUST be rejected with
 `invalid_request` ({{child-creation}}).
+
+For example, a child Mission Intent that drops the parent entry's
+`issued_before` constraint proposes a relaxation, not a subset. The
+Mission Issuer refuses it ({{strict-subset}}) with:
+
+~~~ json
+{
+  "error": "invalid_request",
+  "mission_denial_reason": "not_strict_subset"
+}
+~~~
 
 # The Parent Mission Reference {#parent-member}
 
@@ -470,7 +553,7 @@ Example:
     "authority_hash":
       "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
     "parent": {
-      "id": "msn_parent_8RfX2Lqv9TqMv4z7sA2bN1k0",
+      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "origin": "https://as.example.com",
       "authority_hash":
         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
@@ -796,7 +879,7 @@ Example:
 {
   "evidence_id": "chd_8K2nP4qV",
   "parent": {
-    "id": "msn_parent_8RfX2Lqv9TqMv4z7sA2bN1k0",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
@@ -808,7 +891,7 @@ Example:
       "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2"
   },
   "child_actor": {
-    "sub": "subagent-contract-reviewer",
+    "sub": "subagent-invoice-extractor",
     "sub_profile": "ai_agent"
   },
   "attenuation": {

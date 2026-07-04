@@ -98,14 +98,18 @@ informative:
 
 Agent harnesses preserve execution state across restarts, retries,
 background jobs, tool-connection reuse, and sub-agent orchestration.
-That continuity is not authority. This document defines an OPTIONAL
+That continuity is not authority. This document defines an optional
 Mission-aware harness profile for deployments using Mission-Bound
-Authorization for OAuth 2.0. It specifies how a harness binds sessions,
-task graphs, queues, cached tool connections, and sub-agent handles to
-Mission state; when it must re-check Mission status; and how it must
-pause, suppress, or terminate work when the Mission is no longer
-active. A conforming harness never treats session continuity as proof
-that Mission authority continues.
+Authorization, with OAuth 2.0 as this version's normative substrate.
+It specifies how a harness binds sessions, task graphs, queues, cached
+tool connections, and sub-agent handles to Mission state; when it must
+re-check Mission status; and how it must pause, suppress, or terminate
+work when the Mission is no longer active. For the action classes a
+deployment mediates, the harness also establishes the mediated
+execution environment: governed work runs with no path to those
+actions that bypasses the enforcement point, and the harness publishes
+an execution-environment scope statement. A conforming harness never
+treats session continuity as proof that Mission authority continues.
 
 --- middle
 
@@ -124,7 +128,10 @@ survive after the Mission that justified it is revoked. A cached tool
 connection can remain usable after the business condition that
 authorized it ends. A child agent can keep running after its parent
 Mission is suspended. This profile defines what a harness must do to
-avoid treating recoverable runtime state as authorization.
+avoid treating recoverable runtime state as authorization. That is one
+of the harness's two duties; the other is establishing the mediated
+execution environment, in which work in a mediated action class has no
+path that bypasses the enforcement point ({{mediated-egress}}).
 
 # Scope
 
@@ -162,9 +169,10 @@ This profile applies to harness-managed continuity state, including:
 - credential references managed by the harness.
 
 It does not require a harness to inspect application data unrelated to
-governed execution. It does require the harness to know when a piece of
-continuity state is governed by a Mission and to stop using that state
-as an execution basis when the Mission is no longer active.
+governed execution (defined in {{conventions}}). It does require the
+harness to know when a piece of continuity state is governed by a
+Mission and to stop using that state as an execution basis when the
+Mission is no longer active.
 
 # Conventions and Terminology {#conventions}
 
@@ -208,8 +216,15 @@ OAuth 2.0 mechanics. It consumes these substrate primitives: the
 Mission identifier; the lifecycle state space with its
 only-`active`-permits rule and the deployment's freshness sources; the
 Mission-bound credentials the harness holds or mediates, with their
-sender-constraint custody; and the evidence integrity conventions
-imported from the runtime profile. The issuance profile
+sender-constraint custody, when the binding in use provides them; and
+the evidence integrity conventions imported from the runtime profile.
+The Mission-bound credential primitive is binding-dependent: under a
+binding without Mission-bound credentials, the harness binds governed
+work items to the externally established Mission reference of the
+runtime profile's Mission binding establishment step
+({{I-D.draft-mcguinness-mission-runtime}}), and the custody duties of
+{{cached-access}} apply to whatever acting credentials the deployment
+uses. The issuance profile
 {{I-D.draft-mcguinness-oauth-mission}} is this version's normative
 substrate; every OAuth artifact named in this document enters through
 it. Another substrate that provides the same primitives can host this
@@ -463,6 +478,36 @@ non-active period before dispatch MUST obtain a fresh action-bound
 approval ({{I-D.draft-mcguinness-mission-runtime}}) before it
 runs. Its earlier place in the queue is not a standing approval across
 a Mission non-active interval.
+
+Example: a queued `journal-entries.write` posting under the Q3
+invoice-reconciliation Mission, retried once. `expires_at` is present
+because the posting is in a high-consequence action class:
+
+~~~ json
+{
+  "queue_item_id": "queue_journal_post_7",
+  "mission_binding": {
+    "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "mission_origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "status_checked_at": "2026-11-01T22:00:00Z",
+    "status_expires_at": "2026-11-01T22:05:00Z",
+    "state": "active",
+    "state_source": "status",
+    "stop_policy": "suppress"
+  },
+  "action_class": "external_commitment",
+  "not_before": "2026-11-02T02:00:00Z",
+  "expires_at": "2026-11-02T06:00:00Z",
+  "retry_of": "queue_journal_post_6",
+  "idempotency_key": "idem_jrnl_2026q3_0042"
+}
+~~~
+
+Before dispatching this item at 02:00, the harness re-runs the resume
+check: the binding's status lease expired at 22:05, so the recorded
+`active` state is not a basis to continue.
 
 # Cached Credentials and Tool Connections {#cached-access}
 

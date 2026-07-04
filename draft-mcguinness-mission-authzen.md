@@ -94,16 +94,21 @@ Mission-Bound Runtime Enforcement specifies a
 substrate-independent decision contract: before each consequential
 action runs, a Policy Enforcement Point (PEP) obtains a permit from a
 Policy Decision Point (PDP) that evaluates the action against the
-Mission the acting token is bound to. That contract is independent of
+established Mission. That contract is independent of
 the decision wire format. This document is the concrete OpenID AuthZEN
-binding of that contract. It defines how a Mission is materialized
-into an evaluable policy view, how the abstract decision inputs map
+binding of that contract. It defines how the runtime profile's
+materialized policy view is referenced on the wire through its
+`policy_view_id`, how the abstract decision inputs map
 onto the AuthZEN Authorization API request and response, the Decision
 Evidence and Execution Evidence objects a deployment emits and their
 integrity, how runtime denials map onto AuthZEN decision context and
 optional error details, how requestable denials can compose with the
-AuthZEN Access Request and Approval Profile, and the AuthZEN
-representation of the runtime metering the runtime profile meters. It
+AuthZEN Access Request and Approval Profile, how a Mission's approved
+authority is bound to the capability source it was derived from and a
+drifted capability definition is refused, and the AuthZEN
+representation of the runtime metering the runtime profile meters,
+including the settlement exchange that commits or releases metered
+consumption. It
 does not restate the enforcement semantics the runtime profile owns.
 
 --- middle
@@ -122,15 +127,19 @@ metering, failure modes, runtime enforcement evidence, and the runtime
 conformance scope, but it states that the decision API wire format is a
 deployment choice and defines no binding of its own.
 
-This document is that AuthZEN profile. It binds the runtime profile's
-abstract decision contract to the OpenID AuthZEN Authorization API
-{{AUTHZEN}}. It carries only the AuthZEN-binding deltas:
+This document is the OpenID AuthZEN binding of that contract: it maps
+the runtime profile's abstract decision contract onto the OpenID
+AuthZEN Authorization API {{AUTHZEN}} and carries only the
+AuthZEN-binding deltas:
 
-- how a Mission becomes a materialized policy view the PDP evaluates
+- how the runtime profile's materialized policy view is referenced on
+  the wire through its `policy_view_id`
   ({{mission-to-policy-materialization}});
 - how the runtime profile's decision inputs map onto the AuthZEN
   `subject`/`resource`/`action`/`context` envelope, the worked PDP
   request, and the PDP-side consistency checks ({{pdp-request}});
+- batch evaluations over the AuthZEN evaluations endpoint
+  ({{batch-evaluations}});
 - the Decision Evidence and Execution Evidence objects, their
   integrity, and worked examples ({{decision-evidence-object}},
   {{execution-evidence-object}});
@@ -141,7 +150,9 @@ abstract decision contract to the OpenID AuthZEN Authorization API
 - the binding of a Mission's approved authority to concrete,
   catalog-sourced capabilities ({{capability-source-binding}}); and
 - the AuthZEN representation of the runtime metering the runtime
-  profile meters ({{consumption-metering-binding}}).
+  profile meters ({{consumption-metering-binding}}), and the
+  settlement exchange that commits or releases metered consumption
+  ({{settlement-exchange}}).
 
 This document does not restate the enforcement contract. It does not
 redefine which actions are consequential, where the PEP MUST sit, the
@@ -162,13 +173,14 @@ The end-to-end flow this binding realizes:
    |           |<- permit ------|                     |
    |           |  (+ context)   |                     |
    |           | execute        |                     |
-   |           |- Execution Evidence ->|  (commit/     |
-   |           |                |        release)      |
+   |           |- Execution --->|                     |
+   |           |  Evidence      | commit / release    |
    |<- result -|                |                     |
    |           |                |                     |
-   |           |<- deny (+ access_request) -|          |
-   |           |- submit access request -->|--------->|
-   |           |<-------------- approval ------------- |
+   |           |<- deny --------|                     |
+   |           |  (+ access_request)                  |
+   |           |- submit access request ------------->|
+   |           |<--------------- approval ------------|
    |           |- re-evaluate ->|                     |
 ~~~
 
@@ -480,7 +492,7 @@ absent.
 
 ## Worked PDP request
 
-For a Q3 invoicing Mission:
+For the ERP reconciliation Mission:
 
 ~~~ http-message
 POST /pdp/access/v1/evaluation HTTP/1.1
@@ -515,12 +527,12 @@ Authorization: ...
         "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
     },
     "actor": {
-      "client_id": "client_erp-recon-agent",
+      "client_id": "s6BhdRkqt3",
       "client_instance_id": "inst_macbook_7f3a",
       "act": [
         {
           "iss": "https://as.example.com",
-          "sub": "client_erp-recon-agent"
+          "sub": "s6BhdRkqt3"
         }
       ]
     },
@@ -533,7 +545,7 @@ Authorization: ...
       "source_invoice_id": "inv_2026Q3_842"
     },
     "parameter_digest":
-      "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA8dRn",
+      "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
     "audience": "https://erp.example.com",
     "freshness": {
       "mission_status_issued_at": "2026-11-02T08:14:00Z",
@@ -608,6 +620,130 @@ item in request order ({{consumption-metering-binding}}); and permits
 are per item, so a boxcar MAY return a mix of permits and denials.
 Batching is a transport optimization and changes none of the per-item
 enforcement semantics.
+
+A batch request for two journal-entry writes under the ERP
+reconciliation Mission, where the second exceeds the entry's
+`max_amount_usd` ceiling of 500. The shared `subject` is hoisted to the
+request's default members per {{AUTHZEN}}; each item carries its
+complete `context`:
+
+~~~ http-message
+POST /pdp/access/v1/evaluations HTTP/1.1
+Host: pdp.example.com
+Content-Type: application/json
+Authorization: ...
+
+{
+  "subject": {
+    "type": "user",
+    "id": "user_3p2q8mN1a0kV7tR",
+    "properties": {
+      "iss": "https://idp.example.com"
+    }
+  },
+  "evaluations": [
+    {
+      "resource": {
+        "type": "journal-entry",
+        "id": "je_2026Q3_inv_8421"
+      },
+      "action": { "name": "journal-entries.write" },
+      "context": {
+        "mission": {
+          "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+          "origin": "https://as.example.com",
+          "authority_hash":
+            "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+          "state": "active"
+        },
+        "actor": { "client_id": "s6BhdRkqt3" },
+        "credential": {
+          "issuer": "https://as.example.com",
+          "expires_at": "2026-11-02T09:14:00Z"
+        },
+        "parameters": {
+          "amount_usd": "423.50",
+          "source_invoice_id": "inv_2026Q3_842"
+        },
+        "parameter_digest":
+          "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+        "audience": "https://erp.example.com",
+        "freshness": {
+          "mode": "fresh",
+          "freshness_at": "2026-11-02T08:14:00Z"
+        }
+      }
+    },
+    {
+      "resource": {
+        "type": "journal-entry",
+        "id": "je_2026Q3_inv_9310"
+      },
+      "action": { "name": "journal-entries.write" },
+      "context": {
+        "mission": {
+          "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+          "origin": "https://as.example.com",
+          "authority_hash":
+            "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+          "state": "active"
+        },
+        "actor": { "client_id": "s6BhdRkqt3" },
+        "credential": {
+          "issuer": "https://as.example.com",
+          "expires_at": "2026-11-02T09:14:00Z"
+        },
+        "parameters": {
+          "amount_usd": "780.00",
+          "source_invoice_id": "inv_2026Q3_931"
+        },
+        "parameter_digest":
+          "sha-256:mzFwtXAT6_hY0v8_NFHMDJG39HFuWY2fRcOCSFGDyyE",
+        "audience": "https://erp.example.com",
+        "freshness": {
+          "mode": "fresh",
+          "freshness_at": "2026-11-02T08:14:00Z"
+        }
+      }
+    }
+  ]
+}
+~~~
+
+The response returns one decision per item, in request order; the
+first is a permit and the second a `parameter_violation` deny, whose
+failing `max_amount_usd` key is listed in that item's Decision
+Evidence `contributing_constraints`:
+
+~~~ json
+{
+  "evaluations": [
+    {
+      "decision": true,
+      "context": {
+        "decision_id": "dec_2FpQ8kV5nR1tX7mB4sJ9eL6wYc",
+        "parameter_digest":
+          "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+        "policy_view_id":
+          "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
+        "permit_expires_at": "2026-11-02T08:15:00Z",
+        "single_use": true
+      }
+    },
+    {
+      "decision": false,
+      "context": {
+        "decision_id": "dec_6JwN3xT9rQ4mV8kP1sB5eZ2yLd",
+        "denial_reason": "parameter_violation",
+        "parameter_digest":
+          "sha-256:mzFwtXAT6_hY0v8_NFHMDJG39HFuWY2fRcOCSFGDyyE",
+        "policy_view_id":
+          "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
+      }
+    }
+  ]
+}
+~~~
 
 # Decision Evidence Object {#decision-evidence-object}
 
@@ -701,7 +837,10 @@ canonicalization, and integrity envelope an AuthZEN deployment emits.
 
 `denial_reason`:
 : CONDITIONAL. A string. Present when `decision` is `deny`. A value from
-  the closed set in {{runtime-denial-classification}}. When the denial
+  the set of {{runtime-denial-classification}}, including any
+  specification-defined extension under that section's extensibility
+  rule; a consumer MUST treat an unrecognized value as a deny and MUST
+  NOT attach any other semantics to it. When the denial
   is a constraint violation, the value is `parameter_violation` and the
   specific failing `constraints` keys are carried in
   `contributing_constraints`, not in `denial_reason`, so the reason
@@ -736,7 +875,12 @@ verified, at least `audience`, an action descriptor, `evaluated_at`,
 Mission state to send to the PDP). These name PEP-side conditions and
 are disjoint from the PDP denial reasons of
 {{runtime-denial-classification}}; a record that can populate the
-PDP-derived members is a Decision Evidence Object instead.
+PDP-derived members is a Decision Evidence Object instead. When the
+deployment establishes the Mission binding externally under the
+runtime profile's binding-establishment step
+({{I-D.draft-mcguinness-mission-runtime}}), absence of the `mission`
+claim is not a pre-decision refusal and `mission_claim_missing` does
+not apply; the external join's verification governs instead.
 
 ## Integrity {#decision-evidence-integrity}
 
@@ -805,12 +949,12 @@ envelopes with unsupported formats.
     }
   },
   "actor": {
-    "client_id": "client_erp-recon-agent",
+    "client_id": "s6BhdRkqt3",
     "client_instance_id": "inst_macbook_7f3a",
     "act": [
       {
         "iss": "https://as.example.com",
-        "sub": "client_erp-recon-agent"
+        "sub": "s6BhdRkqt3"
       }
     ]
   },
@@ -824,7 +968,7 @@ envelopes with unsupported formats.
   },
   "action": { "name": "journal-entries.write" },
   "parameter_digest":
-    "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA8dRn",
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
   "audience": "https://erp.example.com",
   "decision": "permit",
   "contributing_constraints": [
@@ -842,6 +986,41 @@ envelopes with unsupported formats.
 Decision Evidence is durable and integrity-protected. It is the
 authoritative record of what the PDP evaluated, not proof that the
 action occurred.
+
+## Request digest worked value {#request-digest-worked}
+
+For a consequential action that is not parameter-bound (here a
+consequential read), the record carries `request_digest` in place of
+`parameter_digest`. The runtime profile does not standardize the
+digested request form, so the emitting deployment states the exact
+input; this non-normative example digests exactly the following
+evaluation-request summary object:
+
+~~~ json
+{
+  "action": "journal-entries.read",
+  "audience": "https://erp.example.com",
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "resource": "je_2026Q3_inv_8421",
+  "subject": "user_3p2q8mN1a0kV7tR"
+}
+~~~
+
+The value is the integrity-anchor encoded form of the SHA-256 of the
+JCS {{RFC8785}} canonical bytes of that object (one line, sorted
+member names, no whitespace, shown here wrapped for layout only;
+remove the layout line breaks, adding no characters, to recover the
+canonical form):
+
+~~~ text
+{"action":"journal-entries.read","audience":"https://erp.example.com
+","mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","resource":
+"je_2026Q3_inv_8421","subject":"user_3p2q8mN1a0kV7tR"}
+~~~
+
+~~~ text
+request_digest = sha-256:sK12VE_g01AHD2v-O1vsf1Gf_xT_htjX0UN0Oe0dDRU
+~~~
 
 # Execution Evidence Object {#execution-evidence-object}
 
@@ -930,7 +1109,7 @@ members other than those defined above.
   "decision_id":  "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
   "mission_id":   "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "parameter_digest":
-    "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA8dRn",
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
   "outcome":      "completed",
   "sequence":     43,
   "attempted_at": "2026-11-02T08:14:04Z",
@@ -1035,6 +1214,18 @@ carried in Decision Evidence:
   This is distinct from `parameter_violation`, which is a constraint the
   PDP evaluated and found violated.
 
+This document defines no other denial-reason values. A companion
+profile MAY extend the set by specification; an extension value MUST
+be either a collision-resistant name (following the Collision-Resistant
+Name guidance of {{RFC7519}} Section 4.2) or a name coordinated within
+this document family, so values cannot collide. A consumer of a denial
+reason, wherever it is carried (the Decision Evidence `denial_reason`,
+{{decision-evidence-object}}, or the response `context.denial_reason`,
+{{runtime-denial-classification}}), MUST treat an unrecognized value as
+a deny and MUST NOT attach any other semantics to it, mirroring the
+issuance profile's open lifecycle state space
+({{I-D.draft-mcguinness-oauth-mission}}).
+
 A deny is terminal for the attempted action: the agent does not proceed
 on a denial. A deny need not end the task, however. For an
 `out_of_authority` or `action_approval_required` denial, the PDP MAY
@@ -1084,8 +1275,11 @@ AuthZEN decisions use a boolean `decision` member and an optional
   decision.
 
 `denial_reason`:
-: REQUIRED when `decision` is `false`. A string from the closed set in
-  {{runtime-denial-classification}}. A constraint violation uses
+: REQUIRED when `decision` is `false`. A string from the set of
+  {{runtime-denial-classification}}, including any
+  specification-defined extension under that section's extensibility
+  rule; a consumer MUST treat an unrecognized value as a deny and MUST
+  NOT attach any other semantics to it. A constraint violation uses
   `parameter_violation`; the specific failing `constraints` keys are
   carried in the Decision Evidence `contributing_constraints`, not here.
 
@@ -1138,7 +1332,7 @@ lifetime controls required by the runtime profile.
   "context": {
     "decision_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
     "parameter_digest":
-      "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA8dRn",
+      "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
     "policy_view_id":
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
     "permit_expires_at": "2026-11-02T08:15:00Z",
@@ -1187,6 +1381,34 @@ not as transport errors.
   }
 }
 ~~~
+
+A requestable denial additionally carries `context.access_request`.
+Here deployment policy requires an action-bound approval for the
+journal-entry write, no valid fresh approval is present, and the PDP
+marks the denial requestable under {{ARAP}}:
+
+~~~ json
+{
+  "decision": false,
+  "context": {
+    "decision_id": "dec_7YbK4nQ9tR2xV6mL1sP8eJ3wZc",
+    "denial_reason": "action_approval_required",
+    "parameter_digest":
+      "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+    "policy_view_id":
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
+    "access_request": {
+      "endpoint": "https://requests.example.com/access-requests",
+      "denial_binding": "dec_7YbK4nQ9tR2xV6mL1sP8eJ3wZc"
+    }
+  }
+}
+~~~
+
+The `access_request` members are the ARAP requestable-denial context
+{{ARAP}}; this profile does not define their shape. Its presence does
+not change the `decision: false` result: the PEP refuses the action,
+submits the access request, and re-evaluates only after approval.
 
 Malformed requests, authentication failures, or PDP processing errors
 that prevent evaluation MAY be returned as AuthZEN or transport-level
@@ -1325,6 +1547,49 @@ one request member and one evidence member:
   {{RFC3339}}): the PEP's measured duration for the executed action
   ({{execution-evidence-object}}).
 
+A renewal repeats the evaluation-request envelope for the same
+activity and adds `context.prior_decision_id`. Here a long-running,
+duration-metered ledger reconciliation renews its lease before the
+prior permit expires; the action is not parameter-bound, so no
+`parameter_digest` is carried:
+
+~~~ json
+{
+  "subject": {
+    "type": "user",
+    "id": "user_3p2q8mN1a0kV7tR",
+    "properties": {
+      "iss": "https://idp.example.com"
+    }
+  },
+  "resource": {
+    "type": "ledger",
+    "id": "ledger_main"
+  },
+  "action": { "name": "reconciliation.run" },
+  "context": {
+    "mission": {
+      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+      "origin": "https://as.example.com",
+      "authority_hash":
+        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "state": "active"
+    },
+    "actor": { "client_id": "s6BhdRkqt3" },
+    "credential": {
+      "issuer": "https://as.example.com",
+      "expires_at": "2026-11-02T09:14:00Z"
+    },
+    "audience": "https://erp.example.com",
+    "freshness": {
+      "mode": "fresh",
+      "freshness_at": "2026-11-02T08:44:00Z"
+    },
+    "prior_decision_id": "dec_0Rt5nB8xW2qK7mJ4vS1pL9eYc"
+  }
+}
+~~~
+
 # Mission Status Composition {#mission-status-composition}
 
 The PDP relies on Mission state to decide. The runtime profile defines
@@ -1378,8 +1643,9 @@ A PEP conforming to this binding MUST:
 A PDP conforming to this binding MUST:
 
 - perform the PDP-side consistency checks ({{pdp-request}});
-- return every denial with a denial-reason identifier from the closed
-  set of {{runtime-denial-classification}}; and
+- return every denial with a denial-reason identifier from the set of
+  {{runtime-denial-classification}}, including any
+  specification-defined extension under its extensibility rule; and
 - produce Decision Evidence with the required members and a verifiable
   integrity envelope ({{decision-evidence-object}},
   {{decision-evidence-integrity}}).

@@ -42,6 +42,15 @@ normative:
       Internet-Draft: draft-mcguinness-oauth-mission-latest
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-cross-domain:
+    title: "Mission Cross-Domain Projection for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-cross-domain-latest
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     author:
@@ -81,8 +90,8 @@ informative:
 
 --- abstract
 
-A Mission's committed facts, the approved task, the consented
-authority, the principals, and the expiry, live on the Mission record
+A Mission's committed facts (the approved task, the consented
+authority, the principals, and the expiry) live on the Mission record
 at its issuer, and a party outside the issuing domain cannot verify
 what was approved short of a token-exchange hop or trust in the
 issuer's own records. This document defines the Mission Mandate: a
@@ -91,15 +100,16 @@ committed facts, minted by the Mission Issuer. A Mandate is evidence,
 not a credential; presenting one authorizes nothing. It lets a
 cross-domain verifier, an external rail deriving its own vertical
 mandate, or an auditor verify what was approved from the artifact plus
-a current-state check. An OPTIONAL selective-disclosure presentation
+a current-state check. An optional selective-disclosure presentation
 limits what a given verifier sees.
 
 --- middle
 
 # Introduction
 
-The issuance profile {{I-D.draft-mcguinness-oauth-mission}} (the
-"issuance profile") commits a Mission's facts at the approval event:
+Mission-Bound Authorization for OAuth 2.0
+{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile")
+commits a Mission's facts at the approval event:
 the approved Mission Intent and consented Authority Set under their
 integrity anchors, the Subject and Approver, the agent `client_id`,
 the derivation `policy_version`, and the `mission_expiry`. Those facts
@@ -127,6 +137,20 @@ identifier to the full committed record: presenting a Mandate
 authorizes nothing either. It lets a verifier know what was approved;
 authority remains the substrate's job
 ({{cross-domain-verification}}).
+
+# Status: An OPTIONAL Extension {#optional-status}
+
+This document is OPTIONAL. A deployment that never mints Mandates is
+fully conformant to the issuance profile and its companions and is
+unaffected by this document; the Mandate defines no authority surface
+and places no requirement on deployments that do not claim it.
+
+The Mandate is among the newest artifacts in the family. Its normative
+dependencies are ratified: JWS, JWT, and SD-JWT are published
+standards, and the issuance profile's committed record is its only
+Mission input. The artifact itself is not yet exercised in deployment,
+so an implementer validates the verification steps and failure
+taxonomy against real cross-domain use before relying on them.
 
 # Conventions and Terminology {#conventions}
 
@@ -296,8 +320,8 @@ recompute the anchor ({{privacy-considerations}}).
 ## Example {#example}
 
 A decoded Mandate for the issuance profile's worked-example Mission.
-All values are illustrative; the hash values are not computed from the
-displayed JSON.
+The signature value is illustrative; all other segments are computed
+from the displayed JSON.
 
 Protected header:
 
@@ -349,6 +373,72 @@ Payload:
 }
 ~~~
 
+The JWS segments are computed over the header and payload above,
+serialized with no whitespace and members in the order displayed.
+Line breaks within encoded segments are for display only.
+
+Protected header, base64url:
+
+~~~ text
+eyJ0eXAiOiJtaXNzaW9uLW1hbmRhdGUrand0IiwiYWxnIjoiRVMyNTYiLCJraWQiOi
+Jhcy1rZXktMjAyNi1xMyJ9
+~~~
+
+Payload, base64url:
+
+~~~ text
+eyJpc3MiOiJodHRwczovL2FzLmV4YW1wbGUuY29tIiwiaWF0IjoxNzk3ODQxMDAwLC
+JqdGkiOiJtbmRfNFhxN3ZCMmtSOXNUMW1aNnBMM24iLCJtaXNzaW9uIjp7ImlkIjoi
+bXNuXzhSZlgyTHF2OVRxTXY0ejdzQTJiTjFrMFlwRWRIYzktIiwib3JpZ2luIjoiaH
+R0cHM6Ly9hcy5leGFtcGxlLmNvbSIsImF1dGhvcml0eV9oYXNoIjoic2hhLTI1Njps
+M0t2WjRtUDV4MHdRclI2dFkybkQ5Yk03c1gxY0Y4Z0gydko0a0U1cE5RIiwiaW50ZW
+50X2hhc2giOiJzaGEtMjU2OndRN3A0TEhuWDlNZDBMcUo2c1pKOGI4bVozck4yeFQ1
+cFY0bEU2c1FxWVkifSwic3ViamVjdCI6eyJpc3MiOiJodHRwczovL2lkcC5leGFtcG
+xlLmNvbSIsInN1YiI6InVzZXJfM3AycThtTjFhMGtWN3RSIn0sImFwcHJvdmVyIjp7
+ImlzcyI6Imh0dHBzOi8vaWRwLmV4YW1wbGUuY29tIiwic3ViIjoidXNlcl8zcDJxOG
+1OMWEwa1Y3dFIifSwiY2xpZW50X2lkIjoiczZCaGRSa3F0MyIsIm1pc3Npb25fZXhw
+aXJ5IjoiMjAyNi0xMi0zMVQyMzo1OTo1OVoiLCJwb2xpY3lfdmVyc2lvbiI6ImRlcG
+xveS1wb2xpY3k6djE3Iiwic3RhdGVfYXRfaXNzdWFuY2UiOiJhY3RpdmUiLCJtYW5k
+YXRlX2V4cCI6MTgwNTYxNzAwMCwiYXV0aG9yaXR5X3NldCI6W3sidHlwZSI6Im1pc3
+Npb25fcmVzb3VyY2VfYWNjZXNzIiwicmVzb3VyY2UiOiJodHRwczovL2VycC5leGFt
+cGxlLmNvbSIsImFjdGlvbnMiOlsiaW52b2ljZXMucmVhZCJdLCJkZWxlZ2F0aW9uIj
+p7Im1heF9kZXB0aCI6MiwiYWxsb3dlZF9kZWxlZ2F0ZXMiOlt7InN1Yl9wcm9maWxl
+IjoiYWlfYWdlbnQifV19fSx7InR5cGUiOiJtaXNzaW9uX3Jlc291cmNlX2FjY2Vzcy
+IsInJlc291cmNlIjoiaHR0cHM6Ly9lcnAuZXhhbXBsZS5jb20iLCJhY3Rpb25zIjpb
+ImpvdXJuYWwtZW50cmllcy53cml0ZSJdLCJjb25zdHJhaW50cyI6eyJtYXhfYW1vdW
+50X3VzZCI6NTAwfX1dfQ
+~~~
+
+JWS signing input, the two segments joined by `.`:
+
+~~~ text
+eyJ0eXAiOiJtaXNzaW9uLW1hbmRhdGUrand0IiwiYWxnIjoiRVMyNTYiLCJraWQiOi
+Jhcy1rZXktMjAyNi1xMyJ9.eyJpc3MiOiJodHRwczovL2FzLmV4YW1wbGUuY29tIiw
+iaWF0IjoxNzk3ODQxMDAwLCJqdGkiOiJtbmRfNFhxN3ZCMmtSOXNUMW1aNnBMM24iL
+CJtaXNzaW9uIjp7ImlkIjoibXNuXzhSZlgyTHF2OVRxTXY0ejdzQTJiTjFrMFlwRWR
+IYzktIiwib3JpZ2luIjoiaHR0cHM6Ly9hcy5leGFtcGxlLmNvbSIsImF1dGhvcml0e
+V9oYXNoIjoic2hhLTI1NjpsM0t2WjRtUDV4MHdRclI2dFkybkQ5Yk03c1gxY0Y4Z0g
+ydko0a0U1cE5RIiwiaW50ZW50X2hhc2giOiJzaGEtMjU2OndRN3A0TEhuWDlNZDBMc
+Uo2c1pKOGI4bVozck4yeFQ1cFY0bEU2c1FxWVkifSwic3ViamVjdCI6eyJpc3MiOiJ
+odHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6InVzZXJfM3AycThtTjFhMGtWN
+3RSIn0sImFwcHJvdmVyIjp7ImlzcyI6Imh0dHBzOi8vaWRwLmV4YW1wbGUuY29tIiw
+ic3ViIjoidXNlcl8zcDJxOG1OMWEwa1Y3dFIifSwiY2xpZW50X2lkIjoiczZCaGRSa
+3F0MyIsIm1pc3Npb25fZXhwaXJ5IjoiMjAyNi0xMi0zMVQyMzo1OTo1OVoiLCJwb2x
+pY3lfdmVyc2lvbiI6ImRlcGxveS1wb2xpY3k6djE3Iiwic3RhdGVfYXRfaXNzdWFuY
+2UiOiJhY3RpdmUiLCJtYW5kYXRlX2V4cCI6MTgwNTYxNzAwMCwiYXV0aG9yaXR5X3N
+ldCI6W3sidHlwZSI6Im1pc3Npb25fcmVzb3VyY2VfYWNjZXNzIiwicmVzb3VyY2UiO
+iJodHRwczovL2VycC5leGFtcGxlLmNvbSIsImFjdGlvbnMiOlsiaW52b2ljZXMucmV
+hZCJdLCJkZWxlZ2F0aW9uIjp7Im1heF9kZXB0aCI6MiwiYWxsb3dlZF9kZWxlZ2F0Z
+XMiOlt7InN1Yl9wcm9maWxlIjoiYWlfYWdlbnQifV19fSx7InR5cGUiOiJtaXNzaW9
+uX3Jlc291cmNlX2FjY2VzcyIsInJlc291cmNlIjoiaHR0cHM6Ly9lcnAuZXhhbXBsZ
+S5jb20iLCJhY3Rpb25zIjpbImpvdXJuYWwtZW50cmllcy53cml0ZSJdLCJjb25zdHJ
+haW50cyI6eyJtYXhfYW1vdW50X3VzZCI6NTAwfX1dfQ
+~~~
+
+The Mandate's JWS Compact Serialization appends `.` and the signature
+over the signing input; the signature value depends on the issuer's
+key and is not reproduced here.
+
 # Selective Disclosure {#selective-disclosure}
 
 This section is OPTIONAL. The plain JWS form of {{mandate}} is the
@@ -392,7 +482,8 @@ Mandate:
 3. **Issuer trust.** Decide by local policy or configured trust
    anchors whether the `iss` origin is trusted. A verifier MUST NOT
    trust an origin merely because it appears inside a signed artifact,
-   mirroring the issuance profile's cross-domain issuer-trust rule. A
+   mirroring the issuer-trust rule of the cross-domain projection
+   profile ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). A
    Mandate from an untrusted origin proves nothing.
 4. **Anchor recomputation.** When `authority_set` is present in full,
    the verifier MAY recompute `authority_hash` over it per the
@@ -440,10 +531,11 @@ Stale:
 
 ## Cross-Domain Verification {#cross-domain-verification}
 
-The issuance profile's cross-domain binding projects authority: the
-cross-domain grant carries the `mission` claim and the audience-scoped
-Authority Set entries to one Resource AS, which mints local tokens
-from it. That projection remains the only path to local tokens; a
+Mission Cross-Domain Projection for OAuth 2.0
+{{I-D.draft-mcguinness-oauth-mission-cross-domain}} projects
+authority: the cross-domain grant carries the `mission` claim and the
+audience-scoped Authority Set entries to one Resource AS, which mints
+local tokens from it. That projection remains the only path to local tokens; a
 Mandate replaces nothing in it, is not redeemable, is not audienced,
 and authorizes nothing.
 
@@ -556,8 +648,10 @@ high-consequence decisions SHOULD register them.
 ## Confusion with the Cross-Domain Grant
 
 Both artifacts are issuer-signed JWTs carrying Mission facts. The
-cross-domain grant is redeemable, audienced, sender-constrained, and
-single-use; the Mandate is none of these. The distinct protected `typ`
+cross-domain grant
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) is redeemable,
+audienced, sender-constrained, and single-use; the Mandate is none of
+these. The distinct protected `typ`
 is the mechanical separator: a token endpoint MUST NOT accept a
 `mission-mandate+jwt` as any grant or assertion, and a Mandate
 Verifier rejects a grant presented as a Mandate at step 1 of
