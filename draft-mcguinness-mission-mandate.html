@@ -7,8 +7,8 @@
 <title>Mission Mandate</title>
 <meta content="Karl McGuinness" name="author">
 <meta content="
-       A Mission's committed facts, the approved task, the consented
-authority, the principals, and the expiry, live on the Mission record
+       A Mission's committed facts (the approved task, the consented
+authority, the principals, and the expiry) live on the Mission record
 at its issuer, and a party outside the issuing domain cannot verify
 what was approved short of a token-exchange hop or trust in the
 issuer's own records. This document defines the Mission Mandate: a
@@ -17,7 +17,7 @@ committed facts, minted by the Mission Issuer. A Mandate is evidence,
 not a credential; presenting one authorizes nothing. It lets a
 cross-domain verifier, an external rail deriving its own vertical
 mandate, or an auditor verify what was approved from the artifact plus
-a current-state check. An  OPTIONAL  selective-disclosure presentation
+a current-state check. An optional selective-disclosure presentation
 limits what a given verifier sees. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
@@ -1063,7 +1063,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 4 January 2027</td>
+<td class="center">Expires 5 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1076,12 +1076,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-mandate-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-03" class="published">3 July 2026</time>
+<time datetime="2026-07-04" class="published">4 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-04">4 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-05">5 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1094,8 +1094,8 @@ svg {
 <h1 id="title">Mission Mandate</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
-<p id="section-abstract-1">A Mission's committed facts, the approved task, the consented
-authority, the principals, and the expiry, live on the Mission record
+<p id="section-abstract-1">A Mission's committed facts (the approved task, the consented
+authority, the principals, and the expiry) live on the Mission record
 at its issuer, and a party outside the issuing domain cannot verify
 what was approved short of a token-exchange hop or trust in the
 issuer's own records. This document defines the Mission Mandate: a
@@ -1104,7 +1104,7 @@ committed facts, minted by the Mission Issuer. A Mandate is evidence,
 not a credential; presenting one authorizes nothing. It lets a
 cross-domain verifier, an external rail deriving its own vertical
 mandate, or an auditor verify what was approved from the artifact plus
-a current-state check. An <span class="bcp14">OPTIONAL</span> selective-disclosure presentation
+a current-state check. An optional selective-disclosure presentation
 limits what a given verifier sees.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
@@ -1137,7 +1137,7 @@ limits what a given verifier sees.<a href="#section-abstract-1" class="pilcrow">
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 4 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 5 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1170,116 +1170,119 @@ limits what a given verifier sees.<a href="#section-abstract-1" class="pilcrow">
             <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
-            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-status-an-optional-extensio" class="internal xref">Status: An OPTIONAL Extension</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
-            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-mission-substrate" class="internal xref">Mission Substrate</a></p>
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
-            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-mission-mandate" class="internal xref">Mission Mandate</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
-                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-jose-header" class="internal xref">JOSE Header</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
-                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-mandate-claims" class="internal xref">Mandate Claims</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
-                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-state-at-issuance" class="internal xref">State at Issuance</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.4">
-                <p id="section-toc.1-1.4.2.4.1"><a href="#section-4.4" class="auto internal xref">4.4</a>.  <a href="#name-minting" class="internal xref">Minting</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.5">
-                <p id="section-toc.1-1.4.2.5.1"><a href="#section-4.5" class="auto internal xref">4.5</a>.  <a href="#name-example" class="internal xref">Example</a></p>
-</li>
-            </ul>
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-mission-substrate" class="internal xref">Mission Substrate</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
-            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-selective-disclosure" class="internal xref">Selective Disclosure</a></p>
-</li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
-            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-mandate-verification" class="internal xref">Mandate Verification</a></p>
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-mission-mandate" class="internal xref">Mission Mandate</a></p>
 <ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
-                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-failure-taxonomy" class="internal xref">Failure Taxonomy</a></p>
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-jose-header" class="internal xref">JOSE Header</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-mandate-claims" class="internal xref">Mandate Claims</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-state-at-issuance" class="internal xref">State at Issuance</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
+                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-minting" class="internal xref">Minting</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5">
+                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-example" class="internal xref">Example</a></p>
 </li>
             </ul>
 </li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-selective-disclosure" class="internal xref">Selective Disclosure</a></p>
+</li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
-            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-mandate-use" class="internal xref">Mandate Use</a></p>
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-mandate-verification" class="internal xref">Mandate Verification</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
-                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-cross-domain-verification" class="internal xref">Cross-Domain Verification</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
-                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-vertical-derivation" class="internal xref">Vertical Derivation</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
-                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-mission-evidence" class="internal xref">Mission Evidence</a></p>
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-failure-taxonomy" class="internal xref">Failure Taxonomy</a></p>
 </li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
-            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-non-goals-and-deferred-work" class="internal xref">Non-Goals and Deferred Work</a></p>
-</li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
-            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-conformance" class="internal xref">Conformance</a></p>
-</li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
-            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-mandate-use" class="internal xref">Mandate Use</a></p>
 <ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
-                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-mandate-as-credential-misus" class="internal xref">Mandate-as-Credential Misuse</a></p>
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-cross-domain-verification" class="internal xref">Cross-Domain Verification</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
-                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-stale-state-reliance" class="internal xref">Stale-State Reliance</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-vertical-derivation" class="internal xref">Vertical Derivation</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
-                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-issuer-key-compromise" class="internal xref">Issuer Key Compromise</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.4">
-                <p id="section-toc.1-1.10.2.4.1"><a href="#section-10.4" class="auto internal xref">10.4</a>.  <a href="#name-confusion-with-the-cross-do" class="internal xref">Confusion with the Cross-Domain Grant</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.3">
+                <p id="section-toc.1-1.8.2.3.1"><a href="#section-8.3" class="auto internal xref">8.3</a>.  <a href="#name-mission-evidence" class="internal xref">Mission Evidence</a></p>
 </li>
             </ul>
 </li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-non-goals-and-deferred-work" class="internal xref">Non-Goals and Deferred Work</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
-            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
-                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-task-data-propagation" class="internal xref">Task-Data Propagation</a></p>
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-mandate-as-credential-misus" class="internal xref">Mandate-as-Credential Misuse</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-stale-state-reliance" class="internal xref">Stale-State Reliance</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.3">
+                <p id="section-toc.1-1.11.2.3.1"><a href="#section-11.3" class="auto internal xref">11.3</a>.  <a href="#name-issuer-key-compromise" class="internal xref">Issuer Key Compromise</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.4">
+                <p id="section-toc.1-1.11.2.4.1"><a href="#section-11.4" class="auto internal xref">11.4</a>.  <a href="#name-confusion-with-the-cross-do" class="internal xref">Confusion with the Cross-Domain Grant</a></p>
 </li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
-            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
-                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-media-type-registration" class="internal xref">Media Type Registration</a></p>
+                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-task-data-propagation" class="internal xref">Task-Data Propagation</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1.2.1">
-                    <p id="section-toc.1-1.12.2.1.2.1.1"><a href="#section-12.1.1" class="auto internal xref">12.1.1</a>.  <a href="#name-application-mission-mandate" class="internal xref">application/mission-mandate+jwt</a></p>
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-media-type-registration" class="internal xref">Media Type Registration</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1.2.1">
+                    <p id="section-toc.1-1.13.2.1.2.1.1"><a href="#section-13.1.1" class="auto internal xref">13.1.1</a>.  <a href="#name-application-mission-mandate" class="internal xref">application/mission-mandate+jwt</a></p>
 </li>
                 </ul>
 </li>
             </ul>
 </li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
-            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-references" class="internal xref">References</a></p>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-references" class="internal xref">References</a></p>
 <ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
-                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
+                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
-                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2">
+                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
 </li>
             </ul>
 </li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
-            <p id="section-toc.1-1.14.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
-</li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
-            <p id="section-toc.1-1.15.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.15.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1290,8 +1293,9 @@ limits what a given verifier sees.<a href="#section-abstract-1" class="pilcrow">
       <h2 id="name-introduction">
 <a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
       </h2>
-<p id="section-1-1">The issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the
-"issuance profile") commits a Mission's facts at the approval event:
+<p id="section-1-1">Mission-Bound Authorization for OAuth 2.0
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile")
+commits a Mission's facts at the approval event:
 the approved Mission Intent and consented Authority Set under their
 integrity anchors, the Subject and Approver, the agent <code>client_id</code>,
 the derivation <code>policy_version</code>, and the <code>mission_expiry</code>. Those facts
@@ -1308,7 +1312,7 @@ verify it against the issuer's published keys, with no exchange and no
 callback for the facts themselves. Only currency is external: a
 Mandate proves what was committed as of its <code>iat</code>, and a verifier that
 relies on the Mission being active checks current state separately
-(<a href="#state-at-issuance" class="auto internal xref">Section 4.3</a>).<a href="#section-1-2" class="pilcrow">¶</a></p>
+(<a href="#state-at-issuance" class="auto internal xref">Section 5.3</a>).<a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">A Mandate is evidence, not a credential. The issuance profile makes
 <code>mission_id</code> an informational reference: presenting it authorizes
 nothing (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Binding the
@@ -1316,58 +1320,75 @@ Mission to the Grant"). A Mandate extends that rule from the
 identifier to the full committed record: presenting a Mandate
 authorizes nothing either. It lets a verifier know what was approved;
 authority remains the substrate's job
-(<a href="#cross-domain-verification" class="auto internal xref">Section 7.1</a>).<a href="#section-1-3" class="pilcrow">¶</a></p>
+(<a href="#cross-domain-verification" class="auto internal xref">Section 8.1</a>).<a href="#section-1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="optional-status">
+<section id="section-2">
+      <h2 id="name-status-an-optional-extensio">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-status-an-optional-extensio" class="section-name selfRef">Status: An OPTIONAL Extension</a>
+      </h2>
+<p id="section-2-1">This document is <span class="bcp14">OPTIONAL</span>. A deployment that never mints Mandates is
+fully conformant to the issuance profile and its companions and is
+unaffected by this document; the Mandate defines no authority surface
+and places no requirement on deployments that do not claim it.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">The Mandate is among the newest artifacts in the family. Its normative
+dependencies are ratified: JWS, JWT, and SD-JWT are published
+standards, and the issuance profile's committed record is its only
+Mission input. The artifact itself is not yet exercised in deployment,
+so an implementer validates the verification steps and failure
+taxonomy against real cross-domain use before relying on them.<a href="#section-2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conventions">
-<section id="section-2">
+<section id="section-3">
       <h2 id="name-conventions-and-terminology">
-<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
       </h2>
-<p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+<p id="section-3-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
 "<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
 described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
-appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
-<p id="section-2-2">All JSON shown in this document is non-normative and illustrative; the
-member definitions in the surrounding text are authoritative.<a href="#section-2-2" class="pilcrow">¶</a></p>
-<p id="section-2-3">This document uses the terms Mission, Mission record, Mission Intent,
+appear in all capitals, as shown here.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">All JSON shown in this document is non-normative and illustrative; the
+member definitions in the surrounding text are authoritative.<a href="#section-3-2" class="pilcrow">¶</a></p>
+<p id="section-3-3">This document uses the terms Mission, Mission record, Mission Intent,
 Authority Set, integrity anchor, <code>mission</code> claim, <code>mission_id</code>,
 Subject, Approver, and audit horizon as the issuance profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> defines them. It additionally
-uses:<a href="#section-2-3" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-2-4">
-        <dt id="section-2-4.1">Mission Issuer:</dt>
-        <dd style="margin-left: 1.5em" id="section-2-4.2">
-          <p id="section-2-4.2.1">The component that approved and holds the Mission, identified by the
+uses:<a href="#section-3-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-3-4">
+        <dt id="section-3-4.1">Mission Issuer:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-4.2">
+          <p id="section-3-4.2.1">The component that approved and holds the Mission, identified by the
 Mission's <code>origin</code>: the OAuth Authorization Server under the
 issuance profile, or a Mission Authority Server
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>) under the
-standalone binding.<a href="#section-2-4.2.1" class="pilcrow">¶</a></p>
+standalone binding.<a href="#section-3-4.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-4.3">Mission Mandate (Mandate):</dt>
-        <dd style="margin-left: 1.5em" id="section-2-4.4">
-          <p id="section-2-4.4.1">A signed, portable statement of a Mission's committed facts, minted
-by the Mission Issuer (<a href="#mandate" class="auto internal xref">Section 4</a>).<a href="#section-2-4.4.1" class="pilcrow">¶</a></p>
+<dt id="section-3-4.3">Mission Mandate (Mandate):</dt>
+        <dd style="margin-left: 1.5em" id="section-3-4.4">
+          <p id="section-3-4.4.1">A signed, portable statement of a Mission's committed facts, minted
+by the Mission Issuer (<a href="#mandate" class="auto internal xref">Section 5</a>).<a href="#section-3-4.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-4.5">Mandate Issuer, Mandate Verifier:</dt>
-        <dd style="margin-left: 1.5em" id="section-2-4.6">
-          <p id="section-2-4.6.1">The conformance roles of <a href="#conformance" class="auto internal xref">Section 9</a>: the Mission Issuer acting
+<dt id="section-3-4.5">Mandate Issuer, Mandate Verifier:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-4.6">
+          <p id="section-3-4.6.1">The conformance roles of <a href="#conformance" class="auto internal xref">Section 10</a>: the Mission Issuer acting
 as the minter of Mandates (always the Mission <code>origin</code>), and a party
-that validates a Mandate (<a href="#verification" class="auto internal xref">Section 6</a>) and relies on it as
-evidence.<a href="#section-2-4.6.1" class="pilcrow">¶</a></p>
+that validates a Mandate (<a href="#verification" class="auto internal xref">Section 7</a>) and relies on it as
+evidence.<a href="#section-3-4.6.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
 </section>
 </div>
 <div id="mission-substrate">
-<section id="section-3">
+<section id="section-4">
       <h2 id="name-mission-substrate">
-<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-mission-substrate" class="section-name selfRef">Mission Substrate</a>
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-mission-substrate" class="section-name selfRef">Mission Substrate</a>
       </h2>
-<p id="section-3-1">This profile is defined against the Mission model rather than against
+<p id="section-4-1">This profile is defined against the Mission model rather than against
 OAuth 2.0 mechanics. It consumes these substrate primitives: the
 Mission record's committed members and their immutability; the
 integrity-anchor envelope with its encoded digest form; the lifecycle
@@ -1378,162 +1399,162 @@ normative substrate, publishing keys through its Authorization Server
 metadata <code>jwks_uri</code>; the Mission Authority Server
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>) is a standalone
 binding of the same primitives with its own metadata <code>jwks_uri</code>. A
-Mandate minted under either binding is verified identically.<a href="#section-3-1" class="pilcrow">¶</a></p>
+Mandate minted under either binding is verified identically.<a href="#section-4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mandate">
-<section id="section-4">
+<section id="section-5">
       <h2 id="name-mission-mandate">
-<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-mission-mandate" class="section-name selfRef">Mission Mandate</a>
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-mission-mandate" class="section-name selfRef">Mission Mandate</a>
       </h2>
-<p id="section-4-1">A Mission Mandate is a JWT <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> signed as a JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> by
+<p id="section-5-1">A Mission Mandate is a JWT <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> signed as a JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> by
 the Mission Issuer, stating the committed facts of exactly one Mission
 as of the Mandate's <code>iat</code>. The JWS Compact Serialization is the
-Mandate's wire and evidence form.<a href="#section-4-1" class="pilcrow">¶</a></p>
+Mandate's wire and evidence form.<a href="#section-5-1" class="pilcrow">¶</a></p>
 <div id="header">
-<section id="section-4.1">
+<section id="section-5.1">
         <h3 id="name-jose-header">
-<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-jose-header" class="section-name selfRef">JOSE Header</a>
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-jose-header" class="section-name selfRef">JOSE Header</a>
         </h3>
-<p id="section-4.1-1">The protected header <span class="bcp14">MUST</span> carry:<a href="#section-4.1-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-4.1-2">
-          <dt id="section-4.1-2.1">
+<p id="section-5.1-1">The protected header <span class="bcp14">MUST</span> carry:<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5.1-2">
+          <dt id="section-5.1-2.1">
 <code>typ</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.1-2.2">
-            <p id="section-4.1-2.2.1"><span class="bcp14">REQUIRED</span>. <code>mission-mandate+jwt</code>. Per <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> Section 4.1.9 the
+          <dd style="margin-left: 1.5em" id="section-5.1-2.2">
+            <p id="section-5.1-2.2.1"><span class="bcp14">REQUIRED</span>. <code>mission-mandate+jwt</code>. Per <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> Section 4.1.9 the
 value omits the <code>application/</code> prefix of the media type registered
-in <a href="#iana" class="auto internal xref">Section 12</a>.<a href="#section-4.1-2.2.1" class="pilcrow">¶</a></p>
+in <a href="#iana" class="auto internal xref">Section 13</a>.<a href="#section-5.1-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-4.1-2.3">
+<dt id="section-5.1-2.3">
 <code>alg</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.1-2.4">
-            <p id="section-4.1-2.4.1"><span class="bcp14">REQUIRED</span>. An asymmetric JWS algorithm. <code>none</code> <span class="bcp14">MUST NOT</span> be used.<a href="#section-4.1-2.4.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-5.1-2.4">
+            <p id="section-5.1-2.4.1"><span class="bcp14">REQUIRED</span>. An asymmetric JWS algorithm. <code>none</code> <span class="bcp14">MUST NOT</span> be used.<a href="#section-5.1-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-4.1-2.5">
+<dt id="section-5.1-2.5">
 <code>kid</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.1-2.6">
-            <p id="section-4.1-2.6.1"><span class="bcp14">REQUIRED</span>. A key identifier that resolves in the Mission Issuer's
-published key material (<a href="#mission-substrate" class="auto internal xref">Section 3</a>).<a href="#section-4.1-2.6.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-5.1-2.6">
+            <p id="section-5.1-2.6.1"><span class="bcp14">REQUIRED</span>. A key identifier that resolves in the Mission Issuer's
+published key material (<a href="#mission-substrate" class="auto internal xref">Section 4</a>).<a href="#section-5.1-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
 </section>
 </div>
 <div id="claims">
-<section id="section-4.2">
+<section id="section-5.2">
         <h3 id="name-mandate-claims">
-<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-mandate-claims" class="section-name selfRef">Mandate Claims</a>
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-mandate-claims" class="section-name selfRef">Mandate Claims</a>
         </h3>
-<span class="break"></span><dl class="dlParallel" id="section-4.2-1">
-          <dt id="section-4.2-1.1">
+<span class="break"></span><dl class="dlParallel" id="section-5.2-1">
+          <dt id="section-5.2-1.1">
 <code>iss</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.2-1.2">
-            <p id="section-4.2-1.2.1"><span class="bcp14">REQUIRED</span>. A string. The Mission <code>origin</code>.<a href="#section-4.2-1.2.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-5.2-1.2">
+            <p id="section-5.2-1.2.1"><span class="bcp14">REQUIRED</span>. A string. The Mission <code>origin</code>.<a href="#section-5.2-1.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-4.2-1.3">
+<dt id="section-5.2-1.3">
 <code>iat</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.2-1.4">
-            <p id="section-4.2-1.4.1"><span class="bcp14">REQUIRED</span>. A NumericDate <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>. When the Mandate was minted.<a href="#section-4.2-1.4.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-5.2-1.4">
+            <p id="section-5.2-1.4.1"><span class="bcp14">REQUIRED</span>. A NumericDate <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>. When the Mandate was minted.<a href="#section-5.2-1.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-4.2-1.5">
+<dt id="section-5.2-1.5">
 <code>jti</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.2-1.6">
-            <p id="section-4.2-1.6.1"><span class="bcp14">REQUIRED</span>. A string. A unique identifier for this Mandate. It <span class="bcp14">MUST NOT</span> be reused by the issuer.<a href="#section-4.2-1.6.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-5.2-1.6">
+            <p id="section-5.2-1.6.1"><span class="bcp14">REQUIRED</span>. A string. A unique identifier for this Mandate. It <span class="bcp14">MUST NOT</span> be reused by the issuer.<a href="#section-5.2-1.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-4.2-1.7">
+<dt id="section-5.2-1.7">
 <code>mission</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.2-1.8">
-            <p id="section-4.2-1.8.1"><span class="bcp14">REQUIRED</span>. An object in the <code>mission</code> claim shape of the issuance
+          <dd style="margin-left: 1.5em" id="section-5.2-1.8">
+            <p id="section-5.2-1.8.1"><span class="bcp14">REQUIRED</span>. An object in the <code>mission</code> claim shape of the issuance
 profile, extended per its extensibility rules: <code>id</code>, <code>origin</code>, and
 <code>authority_hash</code>, plus <code>intent_hash</code> committing the approved Mission
 Intent. All four members are <span class="bcp14">REQUIRED</span> here. <code>mission.origin</code> <span class="bcp14">MUST</span>
-equal <code>iss</code>.<a href="#section-4.2-1.8.1" class="pilcrow">¶</a></p>
+equal <code>iss</code>.<a href="#section-5.2-1.8.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-4.2-1.9">
+<dt id="section-5.2-1.9">
 <code>subject</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.2-1.10">
-            <p id="section-4.2-1.10.1"><span class="bcp14">REQUIRED</span>. An object with <code>iss</code> and <code>sub</code>, the Mission record's
-<code>subject</code>.<a href="#section-4.2-1.10.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-5.2-1.10">
+            <p id="section-5.2-1.10.1"><span class="bcp14">REQUIRED</span>. An object with <code>iss</code> and <code>sub</code>, the Mission record's
+<code>subject</code>.<a href="#section-5.2-1.10.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-4.2-1.11">
+<dt id="section-5.2-1.11">
 <code>approver</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.2-1.12">
-            <p id="section-4.2-1.12.1"><span class="bcp14">REQUIRED</span>. An object with <code>iss</code> and <code>sub</code>, the Mission record's
-<code>approver</code>.<a href="#section-4.2-1.12.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-5.2-1.12">
+            <p id="section-5.2-1.12.1"><span class="bcp14">REQUIRED</span>. An object with <code>iss</code> and <code>sub</code>, the Mission record's
+<code>approver</code>.<a href="#section-5.2-1.12.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-4.2-1.13">
+<dt id="section-5.2-1.13">
 <code>client_id</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.2-1.14">
-            <p id="section-4.2-1.14.1"><span class="bcp14">REQUIRED</span>. A string. The Mission record's <code>client_id</code>.<a href="#section-4.2-1.14.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-5.2-1.14">
+            <p id="section-5.2-1.14.1"><span class="bcp14">REQUIRED</span>. A string. The Mission record's <code>client_id</code>.<a href="#section-5.2-1.14.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-4.2-1.15">
+<dt id="section-5.2-1.15">
 <code>mission_expiry</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.2-1.16">
-            <p id="section-4.2-1.16.1"><span class="bcp14">REQUIRED</span>. A string. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time, the Mission
-record's <code>mission_expiry</code>.<a href="#section-4.2-1.16.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-5.2-1.16">
+            <p id="section-5.2-1.16.1"><span class="bcp14">REQUIRED</span>. A string. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time, the Mission
+record's <code>mission_expiry</code>.<a href="#section-5.2-1.16.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-4.2-1.17">
+<dt id="section-5.2-1.17">
 <code>policy_version</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.2-1.18">
-            <p id="section-4.2-1.18.1"><span class="bcp14">REQUIRED</span>. A string. The Mission record's <code>policy_version</code>.<a href="#section-4.2-1.18.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-5.2-1.18">
+            <p id="section-5.2-1.18.1"><span class="bcp14">REQUIRED</span>. A string. The Mission record's <code>policy_version</code>.<a href="#section-5.2-1.18.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-4.2-1.19">
+<dt id="section-5.2-1.19">
 <code>state_at_issuance</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.2-1.20">
-            <p id="section-4.2-1.20.1"><span class="bcp14">REQUIRED</span>. A string. The Mission's lifecycle state at <code>iat</code>
-(<a href="#state-at-issuance" class="auto internal xref">Section 4.3</a>).<a href="#section-4.2-1.20.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-5.2-1.20">
+            <p id="section-5.2-1.20.1"><span class="bcp14">REQUIRED</span>. A string. The Mission's lifecycle state at <code>iat</code>
+(<a href="#state-at-issuance" class="auto internal xref">Section 5.3</a>).<a href="#section-5.2-1.20.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-4.2-1.21">
+<dt id="section-5.2-1.21">
 <code>authority_set</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.2-1.22">
-            <p id="section-4.2-1.22.1"><span class="bcp14">OPTIONAL</span>. An array. The full consented Authority Set, exactly as
+          <dd style="margin-left: 1.5em" id="section-5.2-1.22">
+            <p id="section-5.2-1.22.1"><span class="bcp14">OPTIONAL</span>. An array. The full consented Authority Set, exactly as
 recorded on the Mission record, preserving array order (the order is
 part of the canonical form under the issuance profile's
 canonicalization rules). When present, a verifier <span class="bcp14">MAY</span> recompute
-<code>authority_hash</code> over it (<a href="#verification" class="auto internal xref">Section 6</a>).<a href="#section-4.2-1.22.1" class="pilcrow">¶</a></p>
+<code>authority_hash</code> over it (<a href="#verification" class="auto internal xref">Section 7</a>).<a href="#section-5.2-1.22.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-4.2-1.23">
+<dt id="section-5.2-1.23">
 <code>mandate_exp</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.2-1.24">
-            <p id="section-4.2-1.24.1"><span class="bcp14">OPTIONAL</span>. A NumericDate. An expiry of the Mandate artifact itself,
+          <dd style="margin-left: 1.5em" id="section-5.2-1.24">
+            <p id="section-5.2-1.24.1"><span class="bcp14">OPTIONAL</span>. A NumericDate. An expiry of the Mandate artifact itself,
 distinct from <code>mission_expiry</code>: after it, the Mandate <span class="bcp14">MUST NOT</span> be
 relied on as evidence. When absent, the Mandate is valid as evidence
 for the Mission's audit horizon, the retention term the issuance
 profile defines. It is deliberately not the standard <code>exp</code> claim,
-whose validity window would read as a credential lifetime.<a href="#section-4.2-1.24.1" class="pilcrow">¶</a></p>
+whose validity window would read as a credential lifetime.<a href="#section-5.2-1.24.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-4.2-2">The claim set is open in the manner of the <code>mission</code> claim: a
+<p id="section-5.2-2">The claim set is open in the manner of the <code>mission</code> claim: a
 companion profile of the issuance profile <span class="bcp14">MAY</span> add members with
 coordinated short names, and any other extension member <span class="bcp14">MUST</span> use a
 collision-resistant name. A consumer <span class="bcp14">MUST</span> ignore members it does not
-understand and <span class="bcp14">MUST NOT</span> derive authority from any member.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+understand and <span class="bcp14">MUST NOT</span> derive authority from any member.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="state-at-issuance">
-<section id="section-4.3">
+<section id="section-5.3">
         <h3 id="name-state-at-issuance">
-<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-state-at-issuance" class="section-name selfRef">State at Issuance</a>
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-state-at-issuance" class="section-name selfRef">State at Issuance</a>
         </h3>
-<p id="section-4.3-1"><code>state_at_issuance</code> records history, not currency. A Mandate proves
+<p id="section-5.3-1"><code>state_at_issuance</code> records history, not currency. A Mandate proves
 the Mission's committed facts as of <code>iat</code>; it <span class="bcp14">MUST NOT</span> be treated as
 proof of the Mission's current state. The Mission may have transitioned
-since minting, and nothing in the artifact would show it.<a href="#section-4.3-1" class="pilcrow">¶</a></p>
-<p id="section-4.3-2">Current state comes from a state surface, not from the Mandate: the
+since minting, and nothing in the artifact would show it.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<p id="section-5.3-2">Current state comes from a state surface, not from the Mandate: the
 Mission Status operation, keyed by the <code>mission.id</code> the Mandate
 carries (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>); a lifecycle
 Signals stream (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>); or
@@ -1544,47 +1565,47 @@ source its deployment trusts, within a freshness bound its policy
 sets; where the origin advertises a propagation bound, the freshness
 bound <span class="bcp14">SHOULD</span> be no looser
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). Reliance that needs
-no active Mission, such as auditing a completed one, needs no check.<a href="#section-4.3-2" class="pilcrow">¶</a></p>
+no active Mission, such as auditing a completed one, needs no check.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="minting">
-<section id="section-4.4">
+<section id="section-5.4">
         <h3 id="name-minting">
-<a href="#section-4.4" class="section-number selfRef">4.4. </a><a href="#name-minting" class="section-name selfRef">Minting</a>
+<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-minting" class="section-name selfRef">Minting</a>
         </h3>
-<p id="section-4.4-1">The Mission Issuer <span class="bcp14">MAY</span> mint a Mandate at any time within the Mission's
+<p id="section-5.4-1">The Mission Issuer <span class="bcp14">MAY</span> mint a Mandate at any time within the Mission's
 audit horizon, including after the Mission reaches a terminal state.
 Each claim <span class="bcp14">MUST</span> be populated from the Mission record's committed
 members; <code>state_at_issuance</code> <span class="bcp14">MUST</span> equal the Mission's lifecycle state
 at <code>iat</code>. The issuer <span class="bcp14">MUST NOT</span> mint a Mandate whose facts diverge from
-the record.<a href="#section-4.4-1" class="pilcrow">¶</a></p>
-<p id="section-4.4-2">To whom Mandates are issued, and through what request surface, is
+the record.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
+<p id="section-5.4-2">To whom Mandates are issued, and through what request surface, is
 deployment policy; this document defines the artifact, not a delivery
 protocol. An issuer <span class="bcp14">SHOULD</span> mint narrowly for the recipient's need, in
 particular omitting <code>authority_set</code> when the recipient does not
-recompute the anchor (<a href="#privacy-considerations" class="auto internal xref">Section 11</a>).<a href="#section-4.4-2" class="pilcrow">¶</a></p>
+recompute the anchor (<a href="#privacy-considerations" class="auto internal xref">Section 12</a>).<a href="#section-5.4-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="example">
-<section id="section-4.5">
+<section id="section-5.5">
         <h3 id="name-example">
-<a href="#section-4.5" class="section-number selfRef">4.5. </a><a href="#name-example" class="section-name selfRef">Example</a>
+<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-example" class="section-name selfRef">Example</a>
         </h3>
-<p id="section-4.5-1">A decoded Mandate for the issuance profile's worked-example Mission.
-All values are illustrative; the hash values are not computed from the
-displayed JSON.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
-<p id="section-4.5-2">Protected header:<a href="#section-4.5-2" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-4.5-3">
+<p id="section-5.5-1">A decoded Mandate for the issuance profile's worked-example Mission.
+The signature value is illustrative; all other segments are computed
+from the displayed JSON.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+<p id="section-5.5-2">Protected header:<a href="#section-5.5-2" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-5.5-3">
 <pre>
 {
   "typ": "mission-mandate+jwt",
   "alg": "ES256",
   "kid": "as-key-2026-q3"
 }
-</pre><a href="#section-4.5-3" class="pilcrow">¶</a>
+</pre><a href="#section-5.5-3" class="pilcrow">¶</a>
 </div>
-<p id="section-4.5-4">Payload:<a href="#section-4.5-4" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-4.5-5">
+<p id="section-5.5-4">Payload:<a href="#section-5.5-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-5.5-5">
 <pre>
 {
   "iss": "https://as.example.com",
@@ -1621,121 +1642,186 @@ displayed JSON.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
       "constraints": { "max_amount_usd": 500 } }
   ]
 }
-</pre><a href="#section-4.5-5" class="pilcrow">¶</a>
+</pre><a href="#section-5.5-5" class="pilcrow">¶</a>
 </div>
+<p id="section-5.5-6">The JWS segments are computed over the header and payload above,
+serialized with no whitespace and members in the order displayed.
+Line breaks within encoded segments are for display only.<a href="#section-5.5-6" class="pilcrow">¶</a></p>
+<p id="section-5.5-7">Protected header, base64url:<a href="#section-5.5-7" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-5.5-8">
+<pre>
+eyJ0eXAiOiJtaXNzaW9uLW1hbmRhdGUrand0IiwiYWxnIjoiRVMyNTYiLCJraWQiOi
+Jhcy1rZXktMjAyNi1xMyJ9
+</pre><a href="#section-5.5-8" class="pilcrow">¶</a>
+</div>
+<p id="section-5.5-9">Payload, base64url:<a href="#section-5.5-9" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-5.5-10">
+<pre>
+eyJpc3MiOiJodHRwczovL2FzLmV4YW1wbGUuY29tIiwiaWF0IjoxNzk3ODQxMDAwLC
+JqdGkiOiJtbmRfNFhxN3ZCMmtSOXNUMW1aNnBMM24iLCJtaXNzaW9uIjp7ImlkIjoi
+bXNuXzhSZlgyTHF2OVRxTXY0ejdzQTJiTjFrMFlwRWRIYzktIiwib3JpZ2luIjoiaH
+R0cHM6Ly9hcy5leGFtcGxlLmNvbSIsImF1dGhvcml0eV9oYXNoIjoic2hhLTI1Njps
+M0t2WjRtUDV4MHdRclI2dFkybkQ5Yk03c1gxY0Y4Z0gydko0a0U1cE5RIiwiaW50ZW
+50X2hhc2giOiJzaGEtMjU2OndRN3A0TEhuWDlNZDBMcUo2c1pKOGI4bVozck4yeFQ1
+cFY0bEU2c1FxWVkifSwic3ViamVjdCI6eyJpc3MiOiJodHRwczovL2lkcC5leGFtcG
+xlLmNvbSIsInN1YiI6InVzZXJfM3AycThtTjFhMGtWN3RSIn0sImFwcHJvdmVyIjp7
+ImlzcyI6Imh0dHBzOi8vaWRwLmV4YW1wbGUuY29tIiwic3ViIjoidXNlcl8zcDJxOG
+1OMWEwa1Y3dFIifSwiY2xpZW50X2lkIjoiczZCaGRSa3F0MyIsIm1pc3Npb25fZXhw
+aXJ5IjoiMjAyNi0xMi0zMVQyMzo1OTo1OVoiLCJwb2xpY3lfdmVyc2lvbiI6ImRlcG
+xveS1wb2xpY3k6djE3Iiwic3RhdGVfYXRfaXNzdWFuY2UiOiJhY3RpdmUiLCJtYW5k
+YXRlX2V4cCI6MTgwNTYxNzAwMCwiYXV0aG9yaXR5X3NldCI6W3sidHlwZSI6Im1pc3
+Npb25fcmVzb3VyY2VfYWNjZXNzIiwicmVzb3VyY2UiOiJodHRwczovL2VycC5leGFt
+cGxlLmNvbSIsImFjdGlvbnMiOlsiaW52b2ljZXMucmVhZCJdLCJkZWxlZ2F0aW9uIj
+p7Im1heF9kZXB0aCI6MiwiYWxsb3dlZF9kZWxlZ2F0ZXMiOlt7InN1Yl9wcm9maWxl
+IjoiYWlfYWdlbnQifV19fSx7InR5cGUiOiJtaXNzaW9uX3Jlc291cmNlX2FjY2Vzcy
+IsInJlc291cmNlIjoiaHR0cHM6Ly9lcnAuZXhhbXBsZS5jb20iLCJhY3Rpb25zIjpb
+ImpvdXJuYWwtZW50cmllcy53cml0ZSJdLCJjb25zdHJhaW50cyI6eyJtYXhfYW1vdW
+50X3VzZCI6NTAwfX1dfQ
+</pre><a href="#section-5.5-10" class="pilcrow">¶</a>
+</div>
+<p id="section-5.5-11">JWS signing input, the two segments joined by <code>.</code>:<a href="#section-5.5-11" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-5.5-12">
+<pre>
+eyJ0eXAiOiJtaXNzaW9uLW1hbmRhdGUrand0IiwiYWxnIjoiRVMyNTYiLCJraWQiOi
+Jhcy1rZXktMjAyNi1xMyJ9.eyJpc3MiOiJodHRwczovL2FzLmV4YW1wbGUuY29tIiw
+iaWF0IjoxNzk3ODQxMDAwLCJqdGkiOiJtbmRfNFhxN3ZCMmtSOXNUMW1aNnBMM24iL
+CJtaXNzaW9uIjp7ImlkIjoibXNuXzhSZlgyTHF2OVRxTXY0ejdzQTJiTjFrMFlwRWR
+IYzktIiwib3JpZ2luIjoiaHR0cHM6Ly9hcy5leGFtcGxlLmNvbSIsImF1dGhvcml0e
+V9oYXNoIjoic2hhLTI1NjpsM0t2WjRtUDV4MHdRclI2dFkybkQ5Yk03c1gxY0Y4Z0g
+ydko0a0U1cE5RIiwiaW50ZW50X2hhc2giOiJzaGEtMjU2OndRN3A0TEhuWDlNZDBMc
+Uo2c1pKOGI4bVozck4yeFQ1cFY0bEU2c1FxWVkifSwic3ViamVjdCI6eyJpc3MiOiJ
+odHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6InVzZXJfM3AycThtTjFhMGtWN
+3RSIn0sImFwcHJvdmVyIjp7ImlzcyI6Imh0dHBzOi8vaWRwLmV4YW1wbGUuY29tIiw
+ic3ViIjoidXNlcl8zcDJxOG1OMWEwa1Y3dFIifSwiY2xpZW50X2lkIjoiczZCaGRSa
+3F0MyIsIm1pc3Npb25fZXhwaXJ5IjoiMjAyNi0xMi0zMVQyMzo1OTo1OVoiLCJwb2x
+pY3lfdmVyc2lvbiI6ImRlcGxveS1wb2xpY3k6djE3Iiwic3RhdGVfYXRfaXNzdWFuY
+2UiOiJhY3RpdmUiLCJtYW5kYXRlX2V4cCI6MTgwNTYxNzAwMCwiYXV0aG9yaXR5X3N
+ldCI6W3sidHlwZSI6Im1pc3Npb25fcmVzb3VyY2VfYWNjZXNzIiwicmVzb3VyY2UiO
+iJodHRwczovL2VycC5leGFtcGxlLmNvbSIsImFjdGlvbnMiOlsiaW52b2ljZXMucmV
+hZCJdLCJkZWxlZ2F0aW9uIjp7Im1heF9kZXB0aCI6MiwiYWxsb3dlZF9kZWxlZ2F0Z
+XMiOlt7InN1Yl9wcm9maWxlIjoiYWlfYWdlbnQifV19fSx7InR5cGUiOiJtaXNzaW9
+uX3Jlc291cmNlX2FjY2VzcyIsInJlc291cmNlIjoiaHR0cHM6Ly9lcnAuZXhhbXBsZ
+S5jb20iLCJhY3Rpb25zIjpbImpvdXJuYWwtZW50cmllcy53cml0ZSJdLCJjb25zdHJ
+haW50cyI6eyJtYXhfYW1vdW50X3VzZCI6NTAwfX1dfQ
+</pre><a href="#section-5.5-12" class="pilcrow">¶</a>
+</div>
+<p id="section-5.5-13">The Mandate's JWS Compact Serialization appends <code>.</code> and the signature
+over the signing input; the signature value depends on the issuer's
+key and is not reproduced here.<a href="#section-5.5-13" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="selective-disclosure">
-<section id="section-5">
+<section id="section-6">
       <h2 id="name-selective-disclosure">
-<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-selective-disclosure" class="section-name selfRef">Selective Disclosure</a>
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-selective-disclosure" class="section-name selfRef">Selective Disclosure</a>
       </h2>
-<p id="section-5-1">This section is <span class="bcp14">OPTIONAL</span>. The plain JWS form of <a href="#mandate" class="auto internal xref">Section 4</a> is the
+<p id="section-6-1">This section is <span class="bcp14">OPTIONAL</span>. The plain JWS form of <a href="#mandate" class="auto internal xref">Section 5</a> is the
 mandatory-to-implement baseline. An issuer <span class="bcp14">MAY</span> additionally mint a
 Mandate as an SD-JWT <span>[<a href="#RFC9901" class="cite xref">RFC9901</a>]</span>, so a holder passing the Mandate
 onward discloses to a given verifier only what it needs; this
 addresses the payload-disclosure concern the issuance profile's
-privacy considerations record.<a href="#section-5-1" class="pilcrow">¶</a></p>
-<p id="section-5-2">The disclosable elements are exactly: the <code>authority_set</code> entries,
+privacy considerations record.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">The disclosable elements are exactly: the <code>authority_set</code> entries,
 each an array-element disclosure per <span>[<a href="#RFC9901" class="cite xref">RFC9901</a>]</span>, and any free-text
-Intent-derived extension member added under <a href="#claims" class="auto internal xref">Section 4.2</a>. All other
+Intent-derived extension member added under <a href="#claims" class="auto internal xref">Section 5.2</a>. All other
 claims, in particular <code>iss</code>, <code>mission</code>, <code>subject</code>, and
 <code>state_at_issuance</code>, <span class="bcp14">MUST</span> remain plaintext, so every presentation
 still identifies the Mission, its issuer, its Subject, and its state
-as of minting.<a href="#section-5-2" class="pilcrow">¶</a></p>
-<p id="section-5-3">A verifier <span class="bcp14">MUST NOT</span> recompute <code>authority_hash</code> from a partial
+as of minting.<a href="#section-6-2" class="pilcrow">¶</a></p>
+<p id="section-6-3">A verifier <span class="bcp14">MUST NOT</span> recompute <code>authority_hash</code> from a partial
 presentation: the anchor is defined only over the full Authority Set
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), and an undisclosed
-array-element digest in <code>authority_set</code> means the set is partial.<a href="#section-5-3" class="pilcrow">¶</a></p>
-<p id="section-5-4">The SD-JWT form carries the protected header <code>typ</code>
+array-element digest in <code>authority_set</code> means the set is partial.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-4">The SD-JWT form carries the protected header <code>typ</code>
         <code>mission-mandate+sd-jwt</code> and the SD-JWT serialization of <span>[<a href="#RFC9901" class="cite xref">RFC9901</a>]</span>,
-with no Key Binding JWT (<a href="#non-goals" class="auto internal xref">Section 8</a>). This document registers a
-media type only for the plain JWS form (<a href="#iana" class="auto internal xref">Section 12</a>); the SD-JWT form is
-identified by its <code>typ</code>.<a href="#section-5-4" class="pilcrow">¶</a></p>
+with no Key Binding JWT (<a href="#non-goals" class="auto internal xref">Section 9</a>). This document registers a
+media type only for the plain JWS form (<a href="#iana" class="auto internal xref">Section 13</a>); the SD-JWT form is
+identified by its <code>typ</code>.<a href="#section-6-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="verification">
-<section id="section-6">
+<section id="section-7">
       <h2 id="name-mandate-verification">
-<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-mandate-verification" class="section-name selfRef">Mandate Verification</a>
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-mandate-verification" class="section-name selfRef">Mandate Verification</a>
       </h2>
-<p id="section-6-1">A Mandate Verifier <span class="bcp14">MUST</span> perform these steps before relying on a
-Mandate:<a href="#section-6-1" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-6-2">
-<li id="section-6-2.1">
-          <p id="section-6-2.1.1"><strong>Type.</strong> Confirm the protected header <code>typ</code> is
+<p id="section-7-1">A Mandate Verifier <span class="bcp14">MUST</span> perform these steps before relying on a
+Mandate:<a href="#section-7-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-7-2">
+<li id="section-7-2.1">
+          <p id="section-7-2.1.1"><strong>Type.</strong> Confirm the protected header <code>typ</code> is
 <code>mission-mandate+jwt</code> (or <code>mission-mandate+sd-jwt</code> for the SD-JWT
 form, then applying <span>[<a href="#RFC9901" class="cite xref">RFC9901</a>]</span> processing). Reject any other
-value.<a href="#section-6-2.1.1" class="pilcrow">¶</a></p>
+value.<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-6-2.2">
-          <p id="section-6-2.2.1"><strong>Signature.</strong> Resolve the <span class="bcp14">REQUIRED</span> <code>kid</code> in the Mission Issuer's
-published key material (<a href="#mission-substrate" class="auto internal xref">Section 3</a>) and verify the JWS
-signature. Confirm <code>mission.origin</code> equals <code>iss</code>.<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+        <li id="section-7-2.2">
+          <p id="section-7-2.2.1"><strong>Signature.</strong> Resolve the <span class="bcp14">REQUIRED</span> <code>kid</code> in the Mission Issuer's
+published key material (<a href="#mission-substrate" class="auto internal xref">Section 4</a>) and verify the JWS
+signature. Confirm <code>mission.origin</code> equals <code>iss</code>.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-6-2.3">
-          <p id="section-6-2.3.1"><strong>Issuer trust.</strong> Decide by local policy or configured trust
+        <li id="section-7-2.3">
+          <p id="section-7-2.3.1"><strong>Issuer trust.</strong> Decide by local policy or configured trust
 anchors whether the <code>iss</code> origin is trusted. A verifier <span class="bcp14">MUST NOT</span>
 trust an origin merely because it appears inside a signed artifact,
-mirroring the issuance profile's cross-domain issuer-trust rule. A
-Mandate from an untrusted origin proves nothing.<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
+mirroring the issuer-trust rule of the cross-domain projection
+profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>). A
+Mandate from an untrusted origin proves nothing.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-6-2.4">
-          <p id="section-6-2.4.1"><strong>Anchor recomputation.</strong> When <code>authority_set</code> is present in full,
+        <li id="section-7-2.4">
+          <p id="section-7-2.4.1"><strong>Anchor recomputation.</strong> When <code>authority_set</code> is present in full,
 the verifier <span class="bcp14">MAY</span> recompute <code>authority_hash</code> over it per the
 issuance profile's integrity-anchor rules (the
 <code>mission-authority-set</code> envelope with <code>iss</code> set to the origin) and
 <span class="bcp14">MUST</span> reject the Mandate on mismatch. It <span class="bcp14">MAY</span> likewise verify
-<code>intent_hash</code> against a Mission Intent it holds.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+<code>intent_hash</code> against a Mission Intent it holds.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-6-2.5">
-          <p id="section-6-2.5.1"><strong>Freshness.</strong> When reliance requires an active Mission, obtain
+        <li id="section-7-2.5">
+          <p id="section-7-2.5.1"><strong>Freshness.</strong> When reliance requires an active Mission, obtain
 current state within the freshness bound of
-<a href="#state-at-issuance" class="auto internal xref">Section 4.3</a>. <code>state_at_issuance</code> never substitutes.<a href="#section-6-2.5.1" class="pilcrow">¶</a></p>
+<a href="#state-at-issuance" class="auto internal xref">Section 5.3</a>. <code>state_at_issuance</code> never substitutes.<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-6-2.6">
-          <p id="section-6-2.6.1"><strong>Hash agility.</strong> Reject any integrity anchor whose algorithm
+        <li id="section-7-2.6">
+          <p id="section-7-2.6.1"><strong>Hash agility.</strong> Reject any integrity anchor whose algorithm
 prefix the verifier does not recognize, and never treat an
-unrecognized prefix as <code>sha-256</code>, per the issuance profile.<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
+unrecognized prefix as <code>sha-256</code>, per the issuance profile.<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-6-3">A verifier <span class="bcp14">MUST</span> additionally reject a Mandate whose required claims
+<p id="section-7-3">A verifier <span class="bcp14">MUST</span> additionally reject a Mandate whose required claims
 are absent or malformed, and <span class="bcp14">MUST NOT</span> rely on a Mandate whose
-<code>mandate_exp</code> has passed.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<code>mandate_exp</code> has passed.<a href="#section-7-3" class="pilcrow">¶</a></p>
 <div id="failures">
-<section id="section-6.1">
+<section id="section-7.1">
         <h3 id="name-failure-taxonomy">
-<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-failure-taxonomy" class="section-name selfRef">Failure Taxonomy</a>
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-failure-taxonomy" class="section-name selfRef">Failure Taxonomy</a>
         </h3>
-<p id="section-6.1-1">Verification failures fall into three classes, and a verifier <span class="bcp14">MUST</span>
-distinguish them:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-6.1-2">
-          <dt id="section-6.1-2.1">Invalid:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.1-2.2">
-            <p id="section-6.1-2.2.1">The artifact fails as an artifact: signature, <code>typ</code>, required-claim
+<p id="section-7.1-1">Verification failures fall into three classes, and a verifier <span class="bcp14">MUST</span>
+distinguish them:<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-7.1-2">
+          <dt id="section-7.1-2.1">Invalid:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-2.2">
+            <p id="section-7.1-2.2.1">The artifact fails as an artifact: signature, <code>typ</code>, required-claim
 structure, <code>iss</code>/<code>origin</code> mismatch, anchor mismatch under step 4, or
 an unrecognized hash prefix under step 6. The Mandate <span class="bcp14">MUST</span> be
-rejected and <span class="bcp14">MUST NOT</span> be relied on for anything.<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
+rejected and <span class="bcp14">MUST NOT</span> be relied on for anything.<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-6.1-2.3">Unverifiable:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.1-2.4">
-            <p id="section-6.1-2.4.1">Verification cannot complete: the issuer's key material is
+<dt id="section-7.1-2.3">Unverifiable:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-2.4">
+            <p id="section-7.1-2.4.1">Verification cannot complete: the issuer's key material is
 unreachable, the <code>kid</code> does not resolve, or no trust anchor covers
 the origin. This is not evidence of tampering, mirroring the audit
 profile's classification (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>);
 the verifier <span class="bcp14">MUST NOT</span> treat the Mandate as verified and <span class="bcp14">MUST NOT</span>
-treat the failure as proof the artifact is false.<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
+treat the failure as proof the artifact is false.<a href="#section-7.1-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-6.1-2.5">Stale:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.1-2.6">
-            <p id="section-6.1-2.6.1">The artifact verifies, but reliance requires an active Mission and
+<dt id="section-7.1-2.5">Stale:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-2.6">
+            <p id="section-7.1-2.6.1">The artifact verifies, but reliance requires an active Mission and
 no current state was obtained within the freshness bound (step 5).
 The verifier <span class="bcp14">MUST NOT</span> proceed with that reliance until it obtains
-current state.<a href="#section-6.1-2.6.1" class="pilcrow">¶</a></p>
+current state.<a href="#section-7.1-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -1744,35 +1830,36 @@ current state.<a href="#section-6.1-2.6.1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="use">
-<section id="section-7">
+<section id="section-8">
       <h2 id="name-mandate-use">
-<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-mandate-use" class="section-name selfRef">Mandate Use</a>
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-mandate-use" class="section-name selfRef">Mandate Use</a>
       </h2>
 <div id="cross-domain-verification">
-<section id="section-7.1">
+<section id="section-8.1">
         <h3 id="name-cross-domain-verification">
-<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-cross-domain-verification" class="section-name selfRef">Cross-Domain Verification</a>
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-cross-domain-verification" class="section-name selfRef">Cross-Domain Verification</a>
         </h3>
-<p id="section-7.1-1">The issuance profile's cross-domain binding projects authority: the
-cross-domain grant carries the <code>mission</code> claim and the audience-scoped
-Authority Set entries to one Resource AS, which mints local tokens
-from it. That projection remains the only path to local tokens; a
+<p id="section-8.1-1">Mission Cross-Domain Projection for OAuth 2.0
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span> projects
+authority: the cross-domain grant carries the <code>mission</code> claim and the
+audience-scoped Authority Set entries to one Resource AS, which mints
+local tokens from it. That projection remains the only path to local tokens; a
 Mandate replaces nothing in it, is not redeemable, is not audienced,
-and authorizes nothing.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
-<p id="section-7.1-2">What a Mandate adds is knowledge. A verifier that needed to know what
+and authorizes nothing.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-2">What a Mandate adds is knowledge. A verifier that needed to know what
 a Mission approved previously had only the token-exchange projection,
 available only in the grant flow and only audience-scoped. With a
-Mandate plus a current-state check (<a href="#state-at-issuance" class="auto internal xref">Section 4.3</a>), any
+Mandate plus a current-state check (<a href="#state-at-issuance" class="auto internal xref">Section 5.3</a>), any
 authorized recipient verifies the committed facts without standing in
-the token path at all.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
+the token path at all.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="vertical-derivation">
-<section id="section-7.2">
+<section id="section-8.2">
         <h3 id="name-vertical-derivation">
-<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-vertical-derivation" class="section-name selfRef">Vertical Derivation</a>
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-vertical-derivation" class="section-name selfRef">Vertical Derivation</a>
         </h3>
-<p id="section-7.2-1">This subsection is informative. An external rail with its own mandate
+<p id="section-8.2-1">This subsection is informative. An external rail with its own mandate
 artifact, for example a payments network's payment mandate, can mint
 its vertical artifact from a Mission Mandate, recording the Mandate's
 <code>mission.id</code> and <code>authority_hash</code> in its own artifact. The two then
@@ -1780,288 +1867,290 @@ share an audit anchor: activity on the rail joins back to the approved
 Mission that motivated it. The derivation itself, what the rail's
 artifact authorizes and how it is consented and revoked, is governed
 by that rail, not by this document; the Mission Mandate contributes
-committed facts and audit continuity, never authority.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+committed facts and audit continuity, never authority.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="audit-evidence">
-<section id="section-7.3">
+<section id="section-8.3">
         <h3 id="name-mission-evidence">
-<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-mission-evidence" class="section-name selfRef">Mission Evidence</a>
+<a href="#section-8.3" class="section-number selfRef">8.3. </a><a href="#name-mission-evidence" class="section-name selfRef">Mission Evidence</a>
         </h3>
-<p id="section-7.3-1">A Mandate is registrable Mission evidence. For deployments running the
+<p id="section-8.3-1">A Mandate is registrable Mission evidence. For deployments running the
 audit transparency profile (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>),
-the Mandate slots into its evidence-type pattern with these values:<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+the Mandate slots into its evidence-type pattern with these values:<a href="#section-8.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-7.3-2.1">
-            <p id="section-7.3-2.1.1"><strong>Canonical bytes</strong>: the JWS Compact Serialization as issued, hashed
-as-is (an already-signed object is not re-canonicalized).<a href="#section-7.3-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-8.3-2.1">
+            <p id="section-8.3-2.1.1"><strong>Canonical bytes</strong>: the JWS Compact Serialization as issued, hashed
+as-is (an already-signed object is not re-canonicalized).<a href="#section-8.3-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.3-2.2">
-            <p id="section-7.3-2.2.1"><strong><code>preimage-content-type</code></strong>: <code>application/mission-mandate+jwt</code>
-(<a href="#iana" class="auto internal xref">Section 12</a>).<a href="#section-7.3-2.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-8.3-2.2">
+            <p id="section-8.3-2.2.1"><strong><code>preimage-content-type</code></strong>: <code>application/mission-mandate+jwt</code>
+(<a href="#iana" class="auto internal xref">Section 13</a>).<a href="#section-8.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.3-2.3">
-            <p id="section-7.3-2.3.1"><strong>Authoritative producer</strong>: the Mission <code>origin</code>; the registering
+          <li class="normal" id="section-8.3-2.3">
+            <p id="section-8.3-2.3.1"><strong>Authoritative producer</strong>: the Mission <code>origin</code>; the registering
 <code>iss</code> <span class="bcp14">MUST</span> equal it, which holds by construction since a Mandate's
-<code>iss</code> is the origin (<a href="#conformance" class="auto internal xref">Section 9</a>).<a href="#section-7.3-2.3.1" class="pilcrow">¶</a></p>
+<code>iss</code> is the origin (<a href="#conformance" class="auto internal xref">Section 10</a>).<a href="#section-8.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-7.3-3">Registration gives a Mandate an independent existence proof, which
-bounds a later issuer key compromise (<a href="#security-considerations" class="auto internal xref">Section 10</a>).<a href="#section-7.3-3" class="pilcrow">¶</a></p>
+<p id="section-8.3-3">Registration gives a Mandate an independent existence proof, which
+bounds a later issuer key compromise (<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-8.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="non-goals">
-<section id="section-8">
+<section id="section-9">
       <h2 id="name-non-goals-and-deferred-work">
-<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-non-goals-and-deferred-work" class="section-name selfRef">Non-Goals and Deferred Work</a>
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-non-goals-and-deferred-work" class="section-name selfRef">Non-Goals and Deferred Work</a>
       </h2>
 <ul class="normal">
-<li class="normal" id="section-8-1.1">
-          <p id="section-8-1.1.1">A Mandate is not a credential and is never authority-bearing;
+<li class="normal" id="section-9-1.1">
+          <p id="section-9-1.1.1">A Mandate is not a credential and is never authority-bearing;
 anything authority-bearing belongs to the substrate's issuance
-surfaces.<a href="#section-8-1.1.1" class="pilcrow">¶</a></p>
+surfaces.<a href="#section-9-1.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-8-1.2">
-          <p id="section-8-1.2.1">No key binding. A Mandate binds no holder key, and its presentation
+        <li class="normal" id="section-9-1.2">
+          <p id="section-9-1.2.1">No key binding. A Mandate binds no holder key, and its presentation
 proves nothing about the presenter. A holder-bound Mandate, a
 <code>cnf</code>-style confirmation with key-bound presentation, is named
-future work.<a href="#section-8-1.2.1" class="pilcrow">¶</a></p>
+future work.<a href="#section-9-1.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-8-1.3">
-          <p id="section-8-1.3.1">No revocation of the Mandate artifact. State currency is the status
-surface's job (<a href="#state-at-issuance" class="auto internal xref">Section 4.3</a>); <code>mandate_exp</code> bounds the
-artifact's evidence lifetime, and no revocation list is defined.<a href="#section-8-1.3.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-9-1.3">
+          <p id="section-9-1.3.1">No revocation of the Mandate artifact. State currency is the status
+surface's job (<a href="#state-at-issuance" class="auto internal xref">Section 5.3</a>); <code>mandate_exp</code> bounds the
+artifact's evidence lifetime, and no revocation list is defined.<a href="#section-9-1.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-8-1.4">
-          <p id="section-8-1.4.1">No multi-Mission bundling. A Mandate states exactly one Mission.<a href="#section-8-1.4.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-9-1.4">
+          <p id="section-9-1.4.1">No multi-Mission bundling. A Mandate states exactly one Mission.<a href="#section-9-1.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
 </div>
 <div id="conformance">
-<section id="section-9">
+<section id="section-10">
       <h2 id="name-conformance">
-<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
       </h2>
-<p id="section-9-1">A <strong>Mandate Issuer</strong> <span class="bcp14">MUST</span>:<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-10-1">A <strong>Mandate Issuer</strong> <span class="bcp14">MUST</span>:<a href="#section-10-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-9-2.1">
-          <p id="section-9-2.1.1">be the Mission <code>origin</code> and set <code>iss</code> to it;<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-10-2.1">
+          <p id="section-10-2.1.1">be the Mission <code>origin</code> and set <code>iss</code> to it;<a href="#section-10-2.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-2.2">
-          <p id="section-9-2.2.1">mint only over an existing Mission record, populating every claim
-from its committed members (<a href="#minting" class="auto internal xref">Section 4.4</a>);<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-10-2.2">
+          <p id="section-10-2.2.1">mint only over an existing Mission record, populating every claim
+from its committed members (<a href="#minting" class="auto internal xref">Section 5.4</a>);<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-2.3">
-          <p id="section-9-2.3.1">set <code>state_at_issuance</code> to the Mission's lifecycle state at <code>iat</code>;<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-10-2.3">
+          <p id="section-10-2.3.1">set <code>state_at_issuance</code> to the Mission's lifecycle state at <code>iat</code>;<a href="#section-10-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-2.4">
-          <p id="section-9-2.4.1">when including <code>authority_set</code>, include the consented Authority Set
-exactly as recorded, in recorded order;<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-10-2.4">
+          <p id="section-10-2.4.1">when including <code>authority_set</code>, include the consented Authority Set
+exactly as recorded, in recorded order;<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-2.5">
-          <p id="section-9-2.5.1">sign with a key resolvable by <code>kid</code> in its published key material,
-with the protected <code>typ</code> of <a href="#header" class="auto internal xref">Section 4.1</a>; and<a href="#section-9-2.5.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-10-2.5">
+          <p id="section-10-2.5.1">sign with a key resolvable by <code>kid</code> in its published key material,
+with the protected <code>typ</code> of <a href="#header" class="auto internal xref">Section 5.1</a>; and<a href="#section-10-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-2.6">
-          <p id="section-9-2.6.1">issue <code>jti</code> values it never reuses.<a href="#section-9-2.6.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-10-2.6">
+          <p id="section-10-2.6.1">issue <code>jti</code> values it never reuses.<a href="#section-10-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-9-3">A <strong>Mandate Verifier</strong> <span class="bcp14">MUST</span>:<a href="#section-9-3" class="pilcrow">¶</a></p>
+<p id="section-10-3">A <strong>Mandate Verifier</strong> <span class="bcp14">MUST</span>:<a href="#section-10-3" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-9-4.1">
-          <p id="section-9-4.1.1">perform steps 1 through 6 of <a href="#verification" class="auto internal xref">Section 6</a> before reliance;<a href="#section-9-4.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-10-4.1">
+          <p id="section-10-4.1.1">perform steps 1 through 6 of <a href="#verification" class="auto internal xref">Section 7</a> before reliance;<a href="#section-10-4.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-4.2">
-          <p id="section-9-4.2.1">classify failures per <a href="#failures" class="auto internal xref">Section 6.1</a> and treat only the invalid class
-as evidence against the artifact;<a href="#section-9-4.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-10-4.2">
+          <p id="section-10-4.2.1">classify failures per <a href="#failures" class="auto internal xref">Section 7.1</a> and treat only the invalid class
+as evidence against the artifact;<a href="#section-10-4.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-4.3">
-          <p id="section-9-4.3.1">obtain current state within its freshness bound whenever reliance
-requires an active Mission; and<a href="#section-9-4.3.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-10-4.3">
+          <p id="section-10-4.3.1">obtain current state within its freshness bound whenever reliance
+requires an active Mission; and<a href="#section-10-4.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-4.4">
-          <p id="section-9-4.4.1">never grant access, mint credentials, or widen authority on
-presentation of a Mandate (<a href="#security-considerations" class="auto internal xref">Section 10</a>).<a href="#section-9-4.4.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-10-4.4">
+          <p id="section-10-4.4.1">never grant access, mint credentials, or widen authority on
+presentation of a Mandate (<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-10-4.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
 </div>
 <div id="security-considerations">
-<section id="section-10">
+<section id="section-11">
       <h2 id="name-security-considerations">
-<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
       </h2>
 <div id="mandate-as-credential-misuse">
-<section id="section-10.1">
+<section id="section-11.1">
         <h3 id="name-mandate-as-credential-misus">
-<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-mandate-as-credential-misus" class="section-name selfRef">Mandate-as-Credential Misuse</a>
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-mandate-as-credential-misus" class="section-name selfRef">Mandate-as-Credential Misuse</a>
         </h3>
-<p id="section-10.1-1">The central risk is the mandate-as-credential anti-pattern: granting
+<p id="section-11.1-1">The central risk is the mandate-as-credential anti-pattern: granting
 access because a presenter holds a well-signed Mandate. A Mandate
 binds no presenter, proves no possession, and commits no current
 state; accepting it as a credential turns a freely copyable audit
 artifact into a bearer token. A verifier <span class="bcp14">MUST NOT</span> grant access, mint a
 credential, or widen any authority on presentation of a Mandate.
 Authority flows only through the substrate's issuance surfaces
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-11.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="stale-state-reliance">
-<section id="section-10.2">
+<section id="section-11.2">
         <h3 id="name-stale-state-reliance">
-<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-stale-state-reliance" class="section-name selfRef">Stale-State Reliance</a>
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-stale-state-reliance" class="section-name selfRef">Stale-State Reliance</a>
         </h3>
-<p id="section-10.2-1">A verified Mandate over a revoked Mission is still a verified Mandate:
+<p id="section-11.2-1">A verified Mandate over a revoked Mission is still a verified Mandate:
 treating <code>state_at_issuance</code> as current state extends reliance past
 revocation with no artifact-level signal. The freshness rule of
-<a href="#state-at-issuance" class="auto internal xref">Section 4.3</a> is the control; the stale class of <a href="#failures" class="auto internal xref">Section 6.1</a>
-makes the omission a named failure rather than a silent acceptance.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<a href="#state-at-issuance" class="auto internal xref">Section 5.3</a> is the control; the stale class of <a href="#failures" class="auto internal xref">Section 7.1</a>
+makes the omission a named failure rather than a silent acceptance.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="issuer-key-compromise">
-<section id="section-10.3">
+<section id="section-11.3">
         <h3 id="name-issuer-key-compromise">
-<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-issuer-key-compromise" class="section-name selfRef">Issuer Key Compromise</a>
+<a href="#section-11.3" class="section-number selfRef">11.3. </a><a href="#name-issuer-key-compromise" class="section-name selfRef">Issuer Key Compromise</a>
         </h3>
-<p id="section-10.3-1">A party holding the Mission Issuer's signing key can mint Mandates for
+<p id="section-11.3-1">A party holding the Mission Issuer's signing key can mint Mandates for
 Missions that never existed, until the key is rotated out of the
 published set. Verifiers bound this by resolving <code>kid</code> against live
-key material; audit registration (<a href="#audit-evidence" class="auto internal xref">Section 7.3</a>) narrows it
+key material; audit registration (<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>) narrows it
 further, since a genuine Mandate has an independent, timestamped
 existence proof and a forged one either goes unregistered or leaves a
 permanent, attributable trace. A deployment whose Mandates feed
-high-consequence decisions <span class="bcp14">SHOULD</span> register them.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+high-consequence decisions <span class="bcp14">SHOULD</span> register them.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="confusion-with-the-cross-domain-grant">
-<section id="section-10.4">
+<section id="section-11.4">
         <h3 id="name-confusion-with-the-cross-do">
-<a href="#section-10.4" class="section-number selfRef">10.4. </a><a href="#name-confusion-with-the-cross-do" class="section-name selfRef">Confusion with the Cross-Domain Grant</a>
+<a href="#section-11.4" class="section-number selfRef">11.4. </a><a href="#name-confusion-with-the-cross-do" class="section-name selfRef">Confusion with the Cross-Domain Grant</a>
         </h3>
-<p id="section-10.4-1">Both artifacts are issuer-signed JWTs carrying Mission facts. The
-cross-domain grant is redeemable, audienced, sender-constrained, and
-single-use; the Mandate is none of these. The distinct protected <code>typ</code>
+<p id="section-11.4-1">Both artifacts are issuer-signed JWTs carrying Mission facts. The
+cross-domain grant
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) is redeemable,
+audienced, sender-constrained, and single-use; the Mandate is none of
+these. The distinct protected <code>typ</code>
 is the mechanical separator: a token endpoint <span class="bcp14">MUST NOT</span> accept a
 <code>mission-mandate+jwt</code> as any grant or assertion, and a Mandate
 Verifier rejects a grant presented as a Mandate at step 1 of
-<a href="#verification" class="auto internal xref">Section 6</a>.<a href="#section-10.4-1" class="pilcrow">¶</a></p>
+<a href="#verification" class="auto internal xref">Section 7</a>.<a href="#section-11.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="privacy-considerations">
-<section id="section-11">
+<section id="section-12">
       <h2 id="name-privacy-considerations">
-<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
 <div id="task-data-propagation">
-<section id="section-11.1">
+<section id="section-12.1">
         <h3 id="name-task-data-propagation">
-<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-task-data-propagation" class="section-name selfRef">Task-Data Propagation</a>
+<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-task-data-propagation" class="section-name selfRef">Task-Data Propagation</a>
         </h3>
-<p id="section-11.1-1">A Mandate carries what the Mission record committed: principals, task
+<p id="section-12.1-1">A Mandate carries what the Mission record committed: principals, task
 anchors, expiry, and optionally the full Authority Set with its
 business bounds. It travels to parties that would otherwise never hold
 Mission data, and unlike a token it has no audience to scope it. An
 issuer <span class="bcp14">SHOULD</span> apply the restraint the issuance profile applies at a
 domain boundary: omit <code>authority_set</code> unless the recipient needs
 anchor recomputation, prefer the selective-disclosure form
-(<a href="#selective-disclosure" class="auto internal xref">Section 5</a>) where a holder re-presents the Mandate
+(<a href="#selective-disclosure" class="auto internal xref">Section 6</a>) where a holder re-presents the Mandate
 onward, and avoid Intent-derived free-text extension members by
-default.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
-<p id="section-11.1-2">The Mandate also extends the correlation surface the issuance
+default.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
+<p id="section-12.1-2">The Mandate also extends the correlation surface the issuance
 profile's privacy considerations describe: it carries <code>mission.id</code> and
 <code>authority_hash</code> to parties outside the token path, and any two
 holders can correlate on them. That is the artifact's purpose, an
 auditable shared anchor; a deployment <span class="bcp14">SHOULD</span> weigh it before minting
-Mandates for recipients that do not need durable correlation.<a href="#section-11.1-2" class="pilcrow">¶</a></p>
+Mandates for recipients that do not need durable correlation.<a href="#section-12.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="iana">
-<section id="section-12">
+<section id="section-13">
       <h2 id="name-iana-considerations">
-<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
 <div id="media-type-registration">
-<section id="section-12.1">
+<section id="section-13.1">
         <h3 id="name-media-type-registration">
-<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-media-type-registration" class="section-name selfRef">Media Type Registration</a>
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-media-type-registration" class="section-name selfRef">Media Type Registration</a>
         </h3>
-<p id="section-12.1-1">IANA is requested to register one media type per <span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
+<p id="section-13.1-1">IANA is requested to register one media type per <span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>.<a href="#section-13.1-1" class="pilcrow">¶</a></p>
 <div id="applicationmission-mandatejwt">
-<section id="section-12.1.1">
+<section id="section-13.1.1">
           <h4 id="name-application-mission-mandate">
-<a href="#section-12.1.1" class="section-number selfRef">12.1.1. </a><a href="#name-application-mission-mandate" class="section-name selfRef">application/mission-mandate+jwt</a>
+<a href="#section-13.1.1" class="section-number selfRef">13.1.1. </a><a href="#name-application-mission-mandate" class="section-name selfRef">application/mission-mandate+jwt</a>
           </h4>
 <ul class="normal">
-<li class="normal" id="section-12.1.1-1.1">
-              <p id="section-12.1.1-1.1.1">Type name: application<a href="#section-12.1.1-1.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-13.1.1-1.1">
+              <p id="section-13.1.1-1.1.1">Type name: application<a href="#section-13.1.1-1.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-12.1.1-1.2">
-              <p id="section-12.1.1-1.2.1">Subtype name: mission-mandate+jwt<a href="#section-12.1.1-1.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-13.1.1-1.2">
+              <p id="section-13.1.1-1.2.1">Subtype name: mission-mandate+jwt<a href="#section-13.1.1-1.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-12.1.1-1.3">
-              <p id="section-12.1.1-1.3.1">Required parameters: none<a href="#section-12.1.1-1.3.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-13.1.1-1.3">
+              <p id="section-13.1.1-1.3.1">Required parameters: none<a href="#section-13.1.1-1.3.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-12.1.1-1.4">
-              <p id="section-12.1.1-1.4.1">Optional parameters: none<a href="#section-12.1.1-1.4.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-13.1.1-1.4">
+              <p id="section-13.1.1-1.4.1">Optional parameters: none<a href="#section-13.1.1-1.4.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-12.1.1-1.5">
-              <p id="section-12.1.1-1.5.1">Encoding considerations: binary; JWS Compact Serialization<a href="#section-12.1.1-1.5.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-13.1.1-1.5">
+              <p id="section-13.1.1-1.5.1">Encoding considerations: binary; JWS Compact Serialization<a href="#section-13.1.1-1.5.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-12.1.1-1.6">
-              <p id="section-12.1.1-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 10</a><a href="#section-12.1.1-1.6.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-13.1.1-1.6">
+              <p id="section-13.1.1-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 11</a><a href="#section-13.1.1-1.6.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-12.1.1-1.7">
-              <p id="section-12.1.1-1.7.1">Interoperability considerations: see this document<a href="#section-12.1.1-1.7.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-13.1.1-1.7">
+              <p id="section-13.1.1-1.7.1">Interoperability considerations: see this document<a href="#section-13.1.1-1.7.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-12.1.1-1.8">
-              <p id="section-12.1.1-1.8.1">Published specification: this document<a href="#section-12.1.1-1.8.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-13.1.1-1.8">
+              <p id="section-13.1.1-1.8.1">Published specification: this document<a href="#section-13.1.1-1.8.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-12.1.1-1.9">
-              <p id="section-12.1.1-1.9.1">Applications that use this media type: Mission-Bound Authorization
-issuers, verifiers, and audit deployments<a href="#section-12.1.1-1.9.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-13.1.1-1.9">
+              <p id="section-13.1.1-1.9.1">Applications that use this media type: Mission-Bound Authorization
+issuers, verifiers, and audit deployments<a href="#section-13.1.1-1.9.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-12.1.1-1.10">
-              <p id="section-12.1.1-1.10.1">Fragment identifier considerations: not applicable<a href="#section-12.1.1-1.10.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-13.1.1-1.10">
+              <p id="section-13.1.1-1.10.1">Fragment identifier considerations: not applicable<a href="#section-13.1.1-1.10.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-12.1.1-1.11">
-              <p id="section-12.1.1-1.11.1">Additional information:<a href="#section-12.1.1-1.11.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-13.1.1-1.11">
+              <p id="section-13.1.1-1.11.1">Additional information:<a href="#section-13.1.1-1.11.1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-12.1.1-1.11.2.1">
-                  <p id="section-12.1.1-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-12.1.1-1.11.2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-13.1.1-1.11.2.1">
+                  <p id="section-13.1.1-1.11.2.1.1">Deprecated alias names for this type: none<a href="#section-13.1.1-1.11.2.1.1" class="pilcrow">¶</a></p>
 </li>
-                <li class="normal" id="section-12.1.1-1.11.2.2">
-                  <p id="section-12.1.1-1.11.2.2.1">Magic number(s): none<a href="#section-12.1.1-1.11.2.2.1" class="pilcrow">¶</a></p>
+                <li class="normal" id="section-13.1.1-1.11.2.2">
+                  <p id="section-13.1.1-1.11.2.2.1">Magic number(s): none<a href="#section-13.1.1-1.11.2.2.1" class="pilcrow">¶</a></p>
 </li>
-                <li class="normal" id="section-12.1.1-1.11.2.3">
-                  <p id="section-12.1.1-1.11.2.3.1">File extension(s): none<a href="#section-12.1.1-1.11.2.3.1" class="pilcrow">¶</a></p>
+                <li class="normal" id="section-13.1.1-1.11.2.3">
+                  <p id="section-13.1.1-1.11.2.3.1">File extension(s): none<a href="#section-13.1.1-1.11.2.3.1" class="pilcrow">¶</a></p>
 </li>
-                <li class="normal" id="section-12.1.1-1.11.2.4">
-                  <p id="section-12.1.1-1.11.2.4.1">Macintosh file type code(s): none<a href="#section-12.1.1-1.11.2.4.1" class="pilcrow">¶</a></p>
+                <li class="normal" id="section-13.1.1-1.11.2.4">
+                  <p id="section-13.1.1-1.11.2.4.1">Macintosh file type code(s): none<a href="#section-13.1.1-1.11.2.4.1" class="pilcrow">¶</a></p>
 </li>
               </ul>
 </li>
-            <li class="normal" id="section-12.1.1-1.12">
-              <p id="section-12.1.1-1.12.1">Person &amp; email address to contact for further information:
-Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-12.1.1-1.12.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-13.1.1-1.12">
+              <p id="section-13.1.1-1.12.1">Person &amp; email address to contact for further information:
+Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-13.1.1-1.12.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-12.1.1-1.13">
-              <p id="section-12.1.1-1.13.1">Intended usage: COMMON<a href="#section-12.1.1-1.13.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-13.1.1-1.13">
+              <p id="section-13.1.1-1.13.1">Intended usage: COMMON<a href="#section-13.1.1-1.13.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-12.1.1-1.14">
-              <p id="section-12.1.1-1.14.1">Restrictions on usage: none<a href="#section-12.1.1-1.14.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-13.1.1-1.14">
+              <p id="section-13.1.1-1.14.1">Restrictions on usage: none<a href="#section-13.1.1-1.14.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-12.1.1-1.15">
-              <p id="section-12.1.1-1.15.1">Author: IETF<a href="#section-12.1.1-1.15.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-13.1.1-1.15">
+              <p id="section-13.1.1-1.15.1">Author: IETF<a href="#section-13.1.1-1.15.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-12.1.1-1.16">
-              <p id="section-12.1.1-1.16.1">Change controller: IETF<a href="#section-12.1.1-1.16.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-13.1.1-1.16">
+              <p id="section-13.1.1-1.16.1">Change controller: IETF<a href="#section-13.1.1-1.16.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </section>
@@ -2071,14 +2160,14 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 </section>
 </div>
 <div id="sec-combined-references">
-<section id="section-13">
+<section id="section-14">
       <h2 id="name-references">
-<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-references" class="section-name selfRef">References</a>
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-references" class="section-name selfRef">References</a>
       </h2>
 <div id="sec-normative-references">
-<section id="section-13.1">
+<section id="section-14.1">
         <h3 id="name-normative-references">
-<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
@@ -2117,9 +2206,9 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 </section>
 </div>
 <div id="sec-informative-references">
-<section id="section-13.2">
+<section id="section-14.2">
         <h3 id="name-informative-references">
-<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+<a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
 <dt id="I-D.draft-mcguinness-mission-audit">[I-D.draft-mcguinness-mission-audit]</dt>
@@ -2129,6 +2218,10 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-authority-server</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authority-server">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authority-server</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-cross-domain</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-cross-domain">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-cross-domain</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
         <dd>

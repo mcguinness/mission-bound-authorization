@@ -14,15 +14,20 @@ an active Mission can become ambient authority for the actions an
 agent takes within a token's lifetime. This document specifies the
 companion runtime layer for deployments that claim runtime Mission
 enforcement. Within a declared enforcement scope, each consequential
-action is evaluated, before it executes, against the Mission the
-acting credential is bound to. The evaluation checks the action and its
-parameters against the Mission's approved authority and constraints,
-the actor context from the delegation chain, and the Mission against
-its current state. The document defines where enforcement sits, how a
-permit is bound to concrete parameters to close the time-of-check to
-time-of-use gap, how carried consumption bounds (budget, call counts,
-duration) are metered, and the runtime evidence each consequential
-action produces. 
+action is evaluated, before it executes, against the Mission
+established for the acting credential. The evaluation checks the
+action and its parameters against the Mission's approved authority and
+constraints, the actor context from the delegation chain, the Mission
+against its current state, and the applicable Resource policy. The
+document defines where enforcement sits, how a permit is bound to
+concrete parameters to close the time-of-check to time-of-use gap, the
+materialized policy view a decision evaluates against, how carried
+consumption bounds (budget, call counts, duration) are metered, and
+the runtime evidence each consequential action produces. For the
+high-consequence classes it further defines action-bound approval,
+credential custody in the mediating enforcement point rather than the
+agent, and a named agent-compromise-resistant enforcement claim with
+individually verifiable conditions. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="oauth" name="keyword">
@@ -1068,7 +1073,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 4 January 2027</td>
+<td class="center">Expires 5 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1081,12 +1086,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-runtime-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-03" class="published">3 July 2026</time>
+<time datetime="2026-07-04" class="published">4 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-04">4 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-05">5 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1106,15 +1111,20 @@ an active Mission can become ambient authority for the actions an
 agent takes within a token's lifetime. This document specifies the
 companion runtime layer for deployments that claim runtime Mission
 enforcement. Within a declared enforcement scope, each consequential
-action is evaluated, before it executes, against the Mission the
-acting credential is bound to. The evaluation checks the action and its
-parameters against the Mission's approved authority and constraints,
-the actor context from the delegation chain, and the Mission against
-its current state. The document defines where enforcement sits, how a
-permit is bound to concrete parameters to close the time-of-check to
-time-of-use gap, how carried consumption bounds (budget, call counts,
-duration) are metered, and the runtime evidence each consequential
-action produces.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+action is evaluated, before it executes, against the Mission
+established for the acting credential. The evaluation checks the
+action and its parameters against the Mission's approved authority and
+constraints, the actor context from the delegation chain, the Mission
+against its current state, and the applicable Resource policy. The
+document defines where enforcement sits, how a permit is bound to
+concrete parameters to close the time-of-check to time-of-use gap, the
+materialized policy view a decision evaluates against, how carried
+consumption bounds (budget, call counts, duration) are metered, and
+the runtime evidence each consequential action produces. For the
+high-consequence classes it further defines action-bound approval,
+credential custody in the mediating enforcement point rather than the
+agent, and a named agent-compromise-resistant enforcement claim with
+individually verifiable conditions.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1146,7 +1156,7 @@ action produces.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 4 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 5 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1225,10 +1235,13 @@ action produces.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-the-decision" class="internal xref">The decision</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
-                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-mission-state-and-freshness" class="internal xref">Mission state and freshness</a></p>
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-mission-binding-establishme" class="internal xref">Mission binding establishment</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
-                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-materialized-policy-view" class="internal xref">Materialized policy view</a></p>
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-mission-state-and-freshness" class="internal xref">Mission state and freshness</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
+                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-materialized-policy-view" class="internal xref">Materialized policy view</a></p>
 </li>
             </ul>
 </li>
@@ -1317,10 +1330,16 @@ action produces.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-parameter-digest-worked-exa" class="internal xref">Parameter Digest Worked Example</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
-            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-policy-view-worked-example" class="internal xref">Policy View Worked Example</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19">
-            <p id="section-toc.1-1.19.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.19.1"><a href="#appendix-C" class="auto internal xref">Appendix C</a>.  <a href="#name-runtime-evidence-worked-exa" class="internal xref">Runtime Evidence Worked Examples</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.20">
+            <p id="section-toc.1-1.20.1"><a href="#appendix-D" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.21">
+            <p id="section-toc.1-1.21.1"><a href="#appendix-E" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1363,13 +1382,21 @@ approved authority (<a href="#decision" class="auto internal xref">Section 7</a>
       </ol>
 <p id="section-1-4">and, additionally, metering of the consumption bounds (budget, call
 counts, duration) the issuance profile carries as constraints but
-leaves to this layer to enforce (<a href="#metering" class="auto internal xref">Section 9</a>).<a href="#section-1-4" class="pilcrow">¶</a></p>
+leaves to this layer to enforce (<a href="#metering" class="auto internal xref">Section 9</a>). For the
+high-consequence classes it adds action-bound approval
+(<a href="#action-approval" class="auto internal xref">Section 4.4</a>), credential custody in the mediating enforcement
+point rather than the agent (<a href="#custody" class="auto internal xref">Section 4.6</a>), and the named
+agent-compromise-resistant enforcement claim those mechanisms compose
+into (<a href="#compromise-resistant" class="auto internal xref">Section 4.7</a>).<a href="#section-1-4" class="pilcrow">¶</a></p>
 <p id="section-1-5">The model is a Policy Enforcement Point (PEP) at each consequential
 execution boundary that, before the action runs, obtains a decision
 from a Policy Decision Point (PDP) evaluating the action against the
 Mission. Mission-bound tokens bound what authority may exist; this
 profile defines where and how that authority is re-checked before
-consequential effects occur.<a href="#section-1-5" class="pilcrow">¶</a></p>
+consequential effects occur. A deployment whose acting tokens carry no
+<code>mission</code> claim can still bind each decision to a Mission: the Mission
+Substrate (<a href="#mission-substrate" class="auto internal xref">Section 3</a>) admits an externally established
+Mission reference (<a href="#mission-binding" class="auto internal xref">Section 7.1</a>).<a href="#section-1-5" class="pilcrow">¶</a></p>
 <p id="section-1-6">This profile specifies enforcement invariants, not a wire protocol: it
 does not standardize a PDP decision API, an enforcement-scope discovery
 format, a Mission Status endpoint, or a portable audit receipt. It
@@ -1378,8 +1405,8 @@ enforcement; the surfaces it deliberately leaves to deployments or
 future work are collected in <a href="#deferred" class="auto internal xref">Section 13</a>.<a href="#section-1-6" class="pilcrow">¶</a></p>
 <p id="section-1-7">Because the invariants are not a wire format, two conforming deployments
 do not thereby interoperate at the PEP-PDP boundary; the interoperable
-wire surface is supplied by a decision API binding (<a href="#authzen" class="auto internal xref">Section 12</a>),
-specified separately; the AuthZEN binding is
+wire surface is supplied by a separately specified decision API binding
+(<a href="#authzen" class="auto internal xref">Section 12</a>), the AuthZEN binding being
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>. This document is the
 architecture and invariant layer; the binding is the interoperability
 layer.<a href="#section-1-7" class="pilcrow">¶</a></p>
@@ -1389,9 +1416,11 @@ layer.<a href="#section-1-7" class="pilcrow">¶</a></p>
 <a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-relationship-to-the-issuanc" class="section-name selfRef">Relationship to the issuance profile</a>
         </h3>
 <p id="section-1.1-1">This document depends normatively on the issuance profile and is not
-implementable alone: it consumes Mission-bound access tokens that
-profile defines. It does not place any new requirement back on the
-issuance profile; it reads only fields that profile already defines:<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+implementable alone: it consumes the Mission-bound access tokens that
+profile defines, or access tokens joined to an externally established
+Mission under <a href="#mission-binding" class="auto internal xref">Section 7.1</a>. It does not place any new
+requirement back on the issuance profile; it reads only fields that
+profile already defines:<a href="#section-1.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-1.1-2.1">
             <p id="section-1.1-2.1.1">the <code>mission</code> claim (<code>id</code>, <code>origin</code>, <code>authority_hash</code>);<a href="#section-1.1-2.1.1" class="pilcrow">¶</a></p>
@@ -1492,7 +1521,7 @@ the runtime layer and is distinct from the issuance profile's
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); this document does not
 interpret it beyond correlation, and defines no portable policy-version
 registry. The materialized policy view and its content-addressed
-<code>policy_view_id</code> are defined in <a href="#policy-view" class="auto internal xref">Section 7.2</a>.<a href="#section-2-3.12.1" class="pilcrow">¶</a></p>
+<code>policy_view_id</code> are defined in <a href="#policy-view" class="auto internal xref">Section 7.3</a>.<a href="#section-2-3.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-2-3.13">Runtime enforcement evidence:</dt>
@@ -1530,7 +1559,7 @@ apply.<a href="#section-2-3.20.1" class="pilcrow">¶</a></p>
         <dd style="margin-left: 1.5em" id="section-2-3.22">
           <p id="section-2-3.22.1">A deployment-trusted source from which the PDP establishes the
 Mission lifecycle state or the freshness of that state
-(<a href="#state-freshness" class="auto internal xref">Section 7.1</a>).<a href="#section-2-3.22.1" class="pilcrow">¶</a></p>
+(<a href="#state-freshness" class="auto internal xref">Section 7.2</a>).<a href="#section-2-3.22.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-2-3.23">Mission-bound token:</dt>
@@ -1553,8 +1582,12 @@ OAuth 2.0 mechanics. It consumes these substrate primitives: the
 Mission identifier and origin; the lifecycle state space with its
 only-<code>active</code>-permits rule and a freshness source; the Authority Set
 representation with its subset rule and Common Constraints; the
-Mission-bound credential carrying the <code>mission</code> claim; the
-integrity-anchor envelope; and the Mission's audit horizon. The
+Mission-bound credential carrying the <code>mission</code> claim, consumed when
+the binding provides it; the integrity-anchor envelope; and the
+Mission's audit horizon. The Mission-bound credential primitive is
+binding-dependent: a binding that does not provide it supplies an
+externally established Mission reference instead, under the
+binding-establishment step of <a href="#mission-binding" class="auto internal xref">Section 7.1</a>. The
 issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> is this
 version's normative substrate: it defines each primitive for OAuth
 2.0, and every OAuth artifact named in this document enters through
@@ -1634,7 +1667,7 @@ vocabularies it supports;<a href="#section-4.2-3.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.2-3.6">
             <p id="section-4.2-3.6.1">the Mission state source and maximum staleness bound used for each
-action class (<a href="#state-freshness" class="auto internal xref">Section 7.1</a>);<a href="#section-4.2-3.6.1" class="pilcrow">¶</a></p>
+action class (<a href="#state-freshness" class="auto internal xref">Section 7.2</a>);<a href="#section-4.2-3.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.2-3.7">
             <p id="section-4.2-3.7.1">the runtime enforcement evidence mechanism and retention window
@@ -1756,7 +1789,7 @@ treated as consequential and gated. These three are the
 <strong>high-consequence classes</strong>, to which this profile's strictest
 requirements attach (action-bound approval (<a href="#action-approval" class="auto internal xref">Section 4.4</a>),
 mediated custody (<a href="#custody" class="auto internal xref">Section 4.6</a>), active-state freshness
-(<a href="#state-freshness" class="auto internal xref">Section 7.1</a>), and execution-outcome evidence (<a href="#evidence" class="auto internal xref">Section 11</a>),
+(<a href="#state-freshness" class="auto internal xref">Section 7.2</a>), and execution-outcome evidence (<a href="#evidence" class="auto internal xref">Section 11</a>),
 each as specified in its own section).
 A Mission's <code>purpose</code>, or
 deployment policy, <span class="bcp14">MAY</span> raise an action to a stricter class; it <span class="bcp14">MUST NOT</span> lower an action below any minimum classification the Resource
@@ -1935,7 +1968,7 @@ A deployment claims <strong>agent-compromise-resistant enforcement</strong> only
 for the high-consequence classes, all of the following hold. Each
 condition below is <span class="bcp14">MUST</span> under this claim regardless of its base-profile
 level: active-state freshness for the high-consequence classes is
-already <span class="bcp14">MUST</span> in the base profile (<a href="#state-freshness" class="auto internal xref">Section 7.1</a>); the harness
+already <span class="bcp14">MUST</span> in the base profile (<a href="#state-freshness" class="auto internal xref">Section 7.2</a>); the harness
 condition makes <span class="bcp14">MUST</span> the base profile's requirement that mediated
 classes have no unmediated path (<a href="#pep-placement" class="auto internal xref">Section 4.5</a>); mediated custody
 and action-bound approval are <span class="bcp14">SHOULD</span> in the base profile
@@ -1957,7 +1990,7 @@ there is no unmediated path to those actions;<a href="#section-4.7-2.2.1" class=
 </li>
           <li class="normal" id="section-4.7-2.4">
             <p id="section-4.7-2.4.1">the Mission state source for those classes is an active freshness
-mechanism, not token-lifetime expiry (<a href="#state-freshness" class="auto internal xref">Section 7.1</a>).<a href="#section-4.7-2.4.1" class="pilcrow">¶</a></p>
+mechanism, not token-lifetime expiry (<a href="#state-freshness" class="auto internal xref">Section 7.2</a>).<a href="#section-4.7-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-4.7-3">A deployment that leaves any of these unmet <span class="bcp14">MUST NOT</span> claim
@@ -2085,10 +2118,14 @@ Resource Server, and <span class="bcp14">MUST</span> verify the proof-of-possess
 sender-constrained token before treating its <code>cnf</code> binding as
 authenticated.<a href="#section-6-2" class="pilcrow">¶</a></p>
 <p id="section-6-3">A PEP <span class="bcp14">MUST NOT</span> ask a PDP to authorize an action from unverified token
-claims. If token validation fails, or if the deployment requires
-Mission governance for the protected operation and the token lacks a
-<code>mission</code> claim, the PEP <span class="bcp14">MUST</span> refuse before runtime Mission
-evaluation. When the PEP is an OAuth Resource Server, it uses the
+claims. If token validation fails, the PEP <span class="bcp14">MUST</span> refuse before runtime
+Mission evaluation. If the deployment requires Mission governance for
+the protected operation and the token lacks a <code>mission</code> claim, the PEP
+<span class="bcp14">MUST</span> likewise refuse, unless the deployment establishes the Mission
+binding externally (<a href="#mission-binding" class="auto internal xref">Section 7.1</a>); in that case the absence of
+the claim is not a refusal condition, and the join's verification of
+the supplied Mission reference applies instead. When the PEP is an
+OAuth Resource Server, it uses the
 normal OAuth error behavior for the protected resource (for example,
 Bearer token errors under <span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>); this profile defines no new
 OAuth error code.<a href="#section-6-3" class="pilcrow">¶</a></p>
@@ -2111,10 +2148,10 @@ the declared enforcement scope.<a href="#section-6-4" class="pilcrow">¶</a></p>
 <a href="#section-7" class="section-number selfRef">7. </a><a href="#name-the-decision" class="section-name selfRef">The decision</a>
       </h2>
 <p id="section-7-1">Before a consequential action runs, its PEP <span class="bcp14">MUST</span> obtain a permit from
-a PDP that evaluates the action against the Mission the acting token
-is bound to. This is the normative contract. The decision API wire
-format is a deployment choice; a binding maps this contract onto a
-concrete API (<a href="#authzen" class="auto internal xref">Section 12</a>).<a href="#section-7-1" class="pilcrow">¶</a></p>
+a PDP that evaluates the action against the established Mission
+(<a href="#mission-binding" class="auto internal xref">Section 7.1</a>). This is the normative contract. The decision
+API wire format is a deployment choice; a binding maps this contract
+onto a concrete API (<a href="#authzen" class="auto internal xref">Section 12</a>).<a href="#section-7-1" class="pilcrow">¶</a></p>
 <p id="section-7-2">The PEP <span class="bcp14">MUST</span> supply the inputs the PDP needs for the Mission-bound
 decision. Runtime enforcement <span class="bcp14">MUST</span> evaluate:<a href="#section-7-2" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -2190,7 +2227,7 @@ decision input (<a href="#parameter-binding" class="auto internal xref">Section 
 </li>
         <li class="normal" id="section-7-3.6">
           <p id="section-7-3.6.1"><strong>State.</strong> The PDP <span class="bcp14">MUST</span> refuse unless the Mission is <code>active</code>
-(<a href="#state-freshness" class="auto internal xref">Section 7.1</a>).<a href="#section-7-3.6.1" class="pilcrow">¶</a></p>
+(<a href="#state-freshness" class="auto internal xref">Section 7.2</a>).<a href="#section-7-3.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-7-4">On a deny, the PEP <span class="bcp14">MUST</span> refuse the action; a deny is terminal for the
@@ -2207,54 +2244,89 @@ Mission's <code>origin</code>, embedded in the Resource Server, a tenant-scoped
 service, or a shared service); this document does not mandate one. The
 requirement is only that a PEP at each consequential boundary can
 reach an applicable PDP.<a href="#section-7-5" class="pilcrow">¶</a></p>
-<div id="state-freshness">
+<div id="mission-binding">
 <section id="section-7.1">
-        <h3 id="name-mission-state-and-freshness">
-<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-mission-state-and-freshness" class="section-name selfRef">Mission state and freshness</a>
+        <h3 id="name-mission-binding-establishme">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-mission-binding-establishme" class="section-name selfRef">Mission binding establishment</a>
         </h3>
-<p id="section-7.1-1">A Mission-aware decision needs the Mission's current state, which a
+<p id="section-7.1-1">Every decision evaluates one Mission: the <strong>established Mission</strong>. A
+deployment establishes it in one of two modes:<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.1-2.1">
+            <p id="section-7.1-2.1.1"><strong>Credential-carried.</strong> The acting token's <code>mission</code> claim
+identifies the Mission, under the issuance profile's binding
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The PEP takes the Mission
+reference from the validated token (<a href="#token-validation" class="auto internal xref">Section 6</a>).<a href="#section-7.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.2">
+            <p id="section-7.1-2.2.1"><strong>Externally established.</strong> The token carries no <code>mission</code> claim,
+and the PEP supplies a Mission reference from the deployment's
+Mission binding source. The PDP <span class="bcp14">MUST</span> verify that reference against
+the acting credential under a join a binding profile defines; an
+unverified reference <span class="bcp14">MUST NOT</span> establish the Mission. The Mission
+Authority Server profile defines the concrete join for this mode
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-7.1-3">A deployment <span class="bcp14">MUST</span> document the mode each enforcement scope uses
+(<a href="#runtime-conformance" class="auto internal xref">Section 4.2</a>). In either mode, the established Mission is
+the Mission every input of this section (authority, Resource policy,
+parameters, actor, time, state) is evaluated against, and the Mission
+reference the permit and the evidence record bind.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="state-freshness">
+<section id="section-7.2">
+        <h3 id="name-mission-state-and-freshness">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-mission-state-and-freshness" class="section-name selfRef">Mission state and freshness</a>
+        </h3>
+<p id="section-7.2-1">A Mission-aware decision needs the Mission's current state, which a
 token alone does not convey. A runtime deployment <span class="bcp14">MUST</span> define the
 Mission state source it trusts for each enforcement scope. Examples
 include origin AS token introspection, a local Mission database, an
 authenticated status or event feed from the Mission <code>origin</code>, a
 materialized policy view, or a short-lived cross-domain credential
-whose lifetime is the deployment's accepted state lease.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) whose lifetime
+is the deployment's accepted state lease.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-7.1-2.1">
-            <p id="section-7.1-2.1.1">The PDP <span class="bcp14">MUST</span> refuse a consequential action when it cannot establish,
+<li class="normal" id="section-7.2-2.1">
+            <p id="section-7.2-2.1.1">The PDP <span class="bcp14">MUST</span> refuse a consequential action when it cannot establish,
 within the deployment's published staleness bound, that the Mission
-is <code>active</code>.<a href="#section-7.1-2.1.1" class="pilcrow">¶</a></p>
+is <code>active</code>.<a href="#section-7.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.1-2.2">
-            <p id="section-7.1-2.2.1">A state source <span class="bcp14">MUST</span> either report the Mission state with a freshness
+          <li class="normal" id="section-7.2-2.2">
+            <p id="section-7.2-2.2.1">A state source <span class="bcp14">MUST</span> either report the Mission state with a freshness
 time, or define a lease interval over which a previously established
 <code>active</code> state remains acceptable for the relevant action class.
 A permit issued from that state view <span class="bcp14">MUST</span> expire no later than the
-applicable freshness time or lease interval.<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
+applicable freshness time or lease interval.<a href="#section-7.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.1-2.3">
-            <p id="section-7.1-2.3.1">When the credential issuer also holds the Mission, the PDP can learn
+          <li class="normal" id="section-7.2-2.3">
+            <p id="section-7.2-2.3.1">When the credential issuer also holds the Mission, the PDP can learn
 state through token introspection (<span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>) at the issuer per
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. A non-origin Resource AS
-introspecting a local token cannot report current Mission state under
-the issuance profile; it can establish local token validity, but not
-origin Mission freshness.<a href="#section-7.1-2.3.1" class="pilcrow">¶</a></p>
+introspecting a local token
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) cannot report
+current Mission state; it can establish local token validity, but not
+origin Mission freshness.<a href="#section-7.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.1-2.4">
-            <p id="section-7.1-2.4.1">This document defines no cross-issuer by-Mission status query.
+          <li class="normal" id="section-7.2-2.4">
+            <p id="section-7.2-2.4.1">This document defines no cross-issuer by-Mission status query.
 Deployments that need tighter freshness than the token or
-cross-domain grant lifetime provides use the Mission Status profile
+cross-domain grant
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) lifetime
+provides use the Mission Status profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) or Mission Lifecycle
 Signals (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), or an
-out-of-band trusted status feed.<a href="#section-7.1-2.4.1" class="pilcrow">¶</a></p>
+out-of-band trusted status feed.<a href="#section-7.2-2.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.1-2.5">
-            <p id="section-7.1-2.5.1">Each enforcement scope <span class="bcp14">MUST</span> publish its maximum staleness bound per
+          <li class="normal" id="section-7.2-2.5">
+            <p id="section-7.2-2.5.1">Each enforcement scope <span class="bcp14">MUST</span> publish its maximum staleness bound per
 action class and state source. This document does not impose one
-universal value.<a href="#section-7.1-2.5.1" class="pilcrow">¶</a></p>
+universal value.<a href="#section-7.2-2.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.1-2.6">
-            <p id="section-7.1-2.6.1">For the high-consequence classes, the state source <span class="bcp14">MUST</span> be an active
+          <li class="normal" id="section-7.2-2.6">
+            <p id="section-7.2-2.6.1">For the high-consequence classes, the state source <span class="bcp14">MUST</span> be an active
 freshness mechanism that can reflect a revocation within the staleness
 bound: origin token introspection (<span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>), the Mission Status
 profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), or Mission
@@ -2262,11 +2334,11 @@ Lifecycle Signals (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" 
 Token-lifetime expiry alone is not an acceptable state source for
 these classes: it bounds staleness only by the lifetime, so a revoked
 Mission keeps deriving consequence until tokens age out, which is the
-ambient-authority gap this profile exists to close.<a href="#section-7.1-2.6.1" class="pilcrow">¶</a></p>
+ambient-authority gap this profile exists to close.<a href="#section-7.2-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-7.1-3">The following non-normative guidance illustrates freshness bounds that
-are likely to match the risk of common action classes:<a href="#section-7.1-3" class="pilcrow">¶</a></p>
+<p id="section-7.2-3">The following non-normative guidance illustrates freshness bounds that
+are likely to match the risk of common action classes:<a href="#section-7.2-3" class="pilcrow">¶</a></p>
 <table class="center" id="table-3">
           <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
 <thead>
@@ -2301,11 +2373,11 @@ are likely to match the risk of common action classes:<a href="#section-7.1-3" c
 </section>
 </div>
 <div id="policy-view">
-<section id="section-7.2">
+<section id="section-7.3">
         <h3 id="name-materialized-policy-view">
-<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-materialized-policy-view" class="section-name selfRef">Materialized policy view</a>
+<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-materialized-policy-view" class="section-name selfRef">Materialized policy view</a>
         </h3>
-<p id="section-7.2-1">A PDP evaluates a Mission against an action through a <strong>materialized
+<p id="section-7.3-1">A PDP evaluates a Mission against an action through a <strong>materialized
 policy view</strong>: the reproducible, evaluable form of the Mission's
 approved authority, produced by the issuing Authorization Server or a
 trusted compiler and loaded by the PDP. A <strong>trusted compiler</strong> is a
@@ -2314,40 +2386,40 @@ authority faithfully and reproducibly; it is in the deployment's trust
 domain and its output is bound by the content-addressed
 <code>policy_view_id</code> below. The view is substrate-independent runtime
 machinery; a decision-API binding carries only its identifier on the
-wire (<a href="#authzen" class="auto internal xref">Section 12</a>).<a href="#section-7.2-1" class="pilcrow">¶</a></p>
-<p id="section-7.2-2">The materialized policy view <span class="bcp14">MUST</span> satisfy three properties:<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+wire (<a href="#authzen" class="auto internal xref">Section 12</a>).<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+<p id="section-7.3-2">The materialized policy view <span class="bcp14">MUST</span> satisfy three properties:<a href="#section-7.3-2" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-7.2-3.1">
-            <p id="section-7.2-3.1.1">Reproducible: the same inputs (the Mission's approved Authority Set
+<li class="normal" id="section-7.3-3.1">
+            <p id="section-7.3-3.1.1">Reproducible: the same inputs (the Mission's approved Authority Set
 as committed by <code>authority_hash</code>, and the derivation <code>policy_version</code>
 recorded at the approval event) produce byte-identical materialized
 output under the canonicalization rules of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-7.2-3.1.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-7.3-3.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.2-3.2">
-            <p id="section-7.2-3.2.1">Identifiable: the view carries a <code>policy_view_id</code>, so PDP cache
-entries are addressable.<a href="#section-7.2-3.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-7.3-3.2">
+            <p id="section-7.3-3.2.1">Identifiable: the view carries a <code>policy_view_id</code>, so PDP cache
+entries are addressable.<a href="#section-7.3-3.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-7.2-3.3">
-            <p id="section-7.2-3.3.1">Bounded: materialization is faithful and does not enlarge the
+          <li class="normal" id="section-7.3-3.3">
+            <p id="section-7.3-3.3.1">Bounded: materialization is faithful and does not enlarge the
 Authority Set's semantic bounds. A materialized view is an
-evaluation aid, never new authority.<a href="#section-7.2-3.3.1" class="pilcrow">¶</a></p>
+evaluation aid, never new authority.<a href="#section-7.3-3.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-7.2-4"><code>policy_view_id</code> is the integrity-anchor encoded form
+<p id="section-7.3-4"><code>policy_view_id</code> is the integrity-anchor encoded form
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) of the SHA-256 <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span> of
 the JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical bytes of that profile's domain-separated,
-issuer-bound integrity-anchor envelope with <code>typ</code> <code>mission-policy-view</code>:<a href="#section-7.2-4" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-7.2-5">
+issuer-bound integrity-anchor envelope with <code>typ</code> <code>mission-policy-view</code>:<a href="#section-7.3-4" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-7.3-5">
 <pre>
 SHA-256(JCS({
   "typ":   "mission-policy-view",
   "iss":   &lt;mission.origin&gt;,
   "value": &lt;materialized view payload&gt;
 }))
-</pre><a href="#section-7.2-5" class="pilcrow">¶</a>
+</pre><a href="#section-7.3-5" class="pilcrow">¶</a>
 </div>
-<p id="section-7.2-6">The committed materialized view payload <span class="bcp14">MUST</span> carry the Mission's
+<p id="section-7.3-6">The committed materialized view payload <span class="bcp14">MUST</span> carry the Mission's
 <code>mission_id</code> and <code>authority_hash</code> as members. A consistency check
 between a decision request's Mission reference and the loaded view is
 therefore an equality test: the request's Mission <code>id</code> and
@@ -2356,7 +2428,7 @@ not apply. Because <code>policy_view_id</code> is a content hash, any change to
 the view yields a new <code>policy_view_id</code>, so equality on
 <code>policy_view_id</code> is the cache identity and freshness test. This
 document defines no second canonicalization and no policy-language
-wire form for the view.<a href="#section-7.2-6" class="pilcrow">¶</a></p>
+wire form for the view.<a href="#section-7.3-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2392,7 +2464,7 @@ actor context, sender-constraint confirmation key when present,
 action, resource, the authorizing <code>authorization_details</code> entry or
 an entry digest, the PDP's policy-view version, and a permit lifetime
 control bounded by the Mission state freshness requirement
-(<a href="#state-freshness" class="auto internal xref">Section 7.1</a>). For a reversible consequential write, the
+(<a href="#state-freshness" class="auto internal xref">Section 7.2</a>). For a reversible consequential write, the
 control <span class="bcp14">MUST</span> be either a single-use decision identifier or a short
 validity window combined with an idempotency key that prevents repeat
 execution of the same normalized action. For an irreversible action,
@@ -2543,7 +2615,7 @@ refusal.<a href="#section-10-1" class="pilcrow">¶</a></p>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Mission governance is required but the token lacks a <code>mission</code> claim</td>
-            <td class="text-left" rowspan="1" colspan="1">Refuse before runtime Mission evaluation</td>
+            <td class="text-left" rowspan="1" colspan="1">Refuse before runtime Mission evaluation, unless the Mission binding is externally established (<a href="#mission-binding" class="auto internal xref">Section 7.1</a>)</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">PEP-PDP channel authentication or integrity protection fails</td>
@@ -2968,7 +3040,7 @@ below the resource owner's floor.<a href="#section-14.5-1" class="pilcrow">¶</a
         </h3>
 <p id="section-14.6-1">A permit is a lease, not a standing grant: stale Mission state <span class="bcp14">MUST</span>
 fail closed for consequential actions within the published bound
-(<a href="#state-freshness" class="auto internal xref">Section 7.1</a>). Consumption bounds are exact only under a
+(<a href="#state-freshness" class="auto internal xref">Section 7.2</a>). Consumption bounds are exact only under a
 single serializing PDP; a deployment <span class="bcp14">MUST NOT</span> advertise exactness it
 cannot meet across distributed decision points (<a href="#metering" class="auto internal xref">Section 9</a>).<a href="#section-14.6-1" class="pilcrow">¶</a></p>
 </section>
@@ -3131,6 +3203,10 @@ any decision-API wire members are defined by the binding
         <dd>
 <span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"OpenID AuthZEN Authorization API 1.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://openid.net/specs/authorization-api-1_0-final.html">https://openid.net/specs/authorization-api-1_0-final.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-authority-server</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authority-server">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authority-server</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-authzen</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authzen">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authzen</a>&gt;</span>. </dd>
@@ -3142,6 +3218,10 @@ any decision-API wire members are defined by the binding
 <dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-consent-evidence</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-consent-evidence">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-consent-evidence</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-cross-domain</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-cross-domain">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-cross-domain</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
         <dd>
@@ -3172,20 +3252,20 @@ any decision-API wire members are defined by the binding
 <p id="appendix-A-1">This non-normative example shows an operation profile and the
 <code>parameter_digest</code> it produces (<a href="#parameter-binding" class="auto internal xref">Section 8</a>), so two
 implementations can confirm they normalize and digest the same way.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
-<p id="appendix-A-2">Consider a <code>payments.send</code> operation. Its operation profile fixes the
-parameter set and normalization: the members are <code>payee</code>, <code>amount</code>,
-<code>currency</code>, and <code>account</code>; <code>amount</code> is a decimal string with exactly two
-fractional digits; <code>currency</code> is an uppercase ISO 4217 code; no defaults
-are inserted and no optional members are omitted; there are no set-like
-arrays to order. For a 9,000 USD payment, the normalized parameter
-object is:<a href="#appendix-A-2" class="pilcrow">¶</a></p>
+<p id="appendix-A-2">Consider a <code>journal-entries.write</code> operation under an ERP
+reconciliation Mission (<code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code>) whose
+applicable entry carries a <code>max_amount_usd</code> ceiling of 500. The
+operation profile fixes the parameter set and normalization: the
+members are <code>amount_usd</code> and <code>source_invoice_id</code>; <code>amount_usd</code> is a
+decimal string with exactly two fractional digits; no defaults are
+inserted and no optional members are omitted; there are no set-like
+arrays to order. For a 423.50 USD journal entry, within the ceiling,
+the normalized parameter object is:<a href="#appendix-A-2" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="appendix-A-3">
 <pre>
 {
-  "payee": "Acme Supply Co",
-  "amount": "9000.00",
-  "currency": "USD",
-  "account": "****4417"
+  "amount_usd": "423.50",
+  "source_invoice_id": "inv_2026Q3_842"
 }
 </pre><a href="#appendix-A-3" class="pilcrow">¶</a>
 </div>
@@ -3193,18 +3273,15 @@ object is:<a href="#appendix-A-2" class="pilcrow">¶</a></p>
 no-padding SHA-256 of the JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> serialization of that object,
 under the issuance profile's canonicalization rules (no envelope; the
 normalized parameter object is digested directly). The JCS canonical
-bytes are a single line with sorted member names and no whitespace,
-shown here wrapped for layout only; remove the layout line break, adding
-no characters, to recover the canonical form:<a href="#appendix-A-4" class="pilcrow">¶</a></p>
+bytes are a single line with sorted member names and no whitespace:<a href="#appendix-A-4" class="pilcrow">¶</a></p>
 <div class="lang-text sourcecode" id="appendix-A-5">
 <pre>
-{"account":"****4417","amount":"9000.00","currency":"USD","payee":"Acme
- Supply Co"}
+{"amount_usd":"423.50","source_invoice_id":"inv_2026Q3_842"}
 </pre><a href="#appendix-A-5" class="pilcrow">¶</a>
 </div>
 <div class="lang-text sourcecode" id="appendix-A-6">
 <pre>
-parameter_digest = sha-256:e7GXd0GWwOK2ezlb0CfUeYhjYOF1DE68_Gg0ofbr7do
+parameter_digest = sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI
 </pre><a href="#appendix-A-6" class="pilcrow">¶</a>
 </div>
 <p id="appendix-A-7">The PDP binds its permit to this value, and the executing PEP recomputes
@@ -3213,19 +3290,164 @@ it over the parameters it is about to use immediately before acting
 different digest and the permit is refused.<a href="#appendix-A-7" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="acknowledgments">
+<div id="policy-view-example">
 <section id="appendix-B">
+      <h2 id="name-policy-view-worked-example">
+<a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-policy-view-worked-example" class="section-name selfRef">Policy View Worked Example</a>
+      </h2>
+<p id="appendix-B-1">This non-normative example shows the <code>policy_view_id</code> computation of
+<a href="#policy-view" class="auto internal xref">Section 7.3</a> over a minimal materialized-view envelope for the same
+Mission. The payload here is reduced to the two members the committed
+view is required to bind, <code>mission_id</code> and <code>authority_hash</code>; a
+deployment's payload also carries its evaluable materialized form,
+which this document does not standardize.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-B-2">
+<pre>
+{
+  "typ": "mission-policy-view",
+  "iss": "https://as.example.com",
+  "value": {
+    "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  }
+}
+</pre><a href="#appendix-B-2" class="pilcrow">¶</a>
+</div>
+<p id="appendix-B-3">The JCS canonical bytes are a single line with sorted member names and
+no whitespace, shown here wrapped for layout only; remove the layout
+line breaks, adding no characters, to recover the canonical form:<a href="#appendix-B-3" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="appendix-B-4">
+<pre>
+{"iss":"https://as.example.com","typ":"mission-policy-view","value":
+{"authority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5
+pNQ","mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"}}
+</pre><a href="#appendix-B-4" class="pilcrow">¶</a>
+</div>
+<div class="lang-text sourcecode" id="appendix-B-5">
+<pre>
+policy_view_id = sha-256:fuMqn6Nb5LfyziflJuYj8VgHHH1bskZ0SrMDxdQ8CaA
+</pre><a href="#appendix-B-5" class="pilcrow">¶</a>
+</div>
+<p id="appendix-B-6">Because the identifier is a content hash, any change to the payload
+yields a different <code>policy_view_id</code> (<a href="#policy-view" class="auto internal xref">Section 7.3</a>).<a href="#appendix-B-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="evidence-examples">
+<section id="appendix-C">
+      <h2 id="name-runtime-evidence-worked-exa">
+<a href="#appendix-C" class="section-number selfRef">Appendix C. </a><a href="#name-runtime-evidence-worked-exa" class="section-name selfRef">Runtime Evidence Worked Examples</a>
+      </h2>
+<p id="appendix-C-1">These non-normative records illustrate the minimum record content of
+<a href="#evidence" class="auto internal xref">Section 11</a> for the operation of <a href="#parameter-digest-example" class="auto internal xref">Appendix A</a>. They
+show substrate-level record content only: the concrete schema,
+serialization, and integrity mechanism are the deployment's
+(<a href="#record-integrity" class="auto internal xref">Section 11.3</a>), and a decision-API binding defines concrete
+evidence objects (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). In this
+deployment, the Resource Server runtime profile classifies
+<code>journal-entries.write</code> as an irreversible action (a posted entry is
+corrected only by a compensating entry), so the permit is single-use
+and execution-outcome evidence is required. The policy-view version
+cites the view of <a href="#policy-view-example" class="auto internal xref">Appendix B</a>.<a href="#appendix-C-1" class="pilcrow">¶</a></p>
+<p id="appendix-C-2">A permit decision record:<a href="#appendix-C-2" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-C-3">
+<pre>
+{
+  "result": "permit",
+  "request_time": "2026-11-02T09:03:12Z",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
+  "token_issuer": "https://as.example.com",
+  "audience": "https://erp.example.com",
+  "sub": "user_3p2q8mN1a0kV7tR",
+  "client_id": "s6BhdRkqt3",
+  "action": "journal-entries.write",
+  "resource": "je_2026Q3_inv_8421",
+  "authorizing_entry": {
+    "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["journal-entries.write"],
+    "constraints": { "max_amount_usd": 500 }
+  },
+  "parameter_digest":
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+  "decision_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
+  "policy_view_version":
+    "sha-256:fuMqn6Nb5LfyziflJuYj8VgHHH1bskZ0SrMDxdQ8CaA",
+  "sequence": 17
+}
+</pre><a href="#appendix-C-3" class="pilcrow">¶</a>
+</div>
+<p id="appendix-C-4">The execution-outcome record the executing PEP produces after it acts,
+keyed to the permit's decision identifier (<a href="#evidence" class="auto internal xref">Section 11</a>):<a href="#appendix-C-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-C-5">
+<pre>
+{
+  "result": "executed",
+  "outcome": "success",
+  "decision_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "origin": "https://as.example.com"
+  },
+  "parameter_digest":
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+  "outcome_time": "2026-11-02T09:03:14Z",
+  "sequence": 18
+}
+</pre><a href="#appendix-C-5" class="pilcrow">¶</a>
+</div>
+<p id="appendix-C-6">A PEP refusal record for a later attempt on the same operation. A
+permit (<code>dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA</code>) bound the digest of a
+423.50 entry; between check and use the parameters became 780.00
+(normalized object
+<code>{"amount_usd":"780.00","source_invoice_id":"inv_2026Q3_842"}</code>). The
+executing PEP recomputed the digest over the parameters it was about
+to use, found a mismatch, and refused (<a href="#parameter-binding" class="auto internal xref">Section 8</a>); the
+record carries the recomputed digest:<a href="#appendix-C-6" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-C-7">
+<pre>
+{
+  "result": "refuse",
+  "failure_condition": "parameter_digest_mismatch",
+  "request_time": "2026-11-02T09:03:29Z",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
+  "audience": "https://erp.example.com",
+  "sub": "user_3p2q8mN1a0kV7tR",
+  "client_id": "s6BhdRkqt3",
+  "action": "journal-entries.write",
+  "resource": "je_2026Q3_inv_8421",
+  "decision_id": "dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA",
+  "parameter_digest":
+    "sha-256:UdG-TiebDHTiKRXUVURs1Jeq_vDJp_Ro8jWbBAD8hgM",
+  "sequence": 19
+}
+</pre><a href="#appendix-C-7" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-D">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-B-1">This document is the runtime companion to Mission-Bound Authorization
+<p id="appendix-D-1">This document is the runtime companion to Mission-Bound Authorization
 for OAuth 2.0 and builds on the OpenID AuthZEN Authorization API and
 the OAuth 2.0 Rich Authorization Requests and JWT access token
-specifications.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+specifications.<a href="#appendix-D-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-C">
+<section id="appendix-E">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

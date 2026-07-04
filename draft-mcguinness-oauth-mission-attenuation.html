@@ -8,20 +8,21 @@
 <meta content="Karl McGuinness" name="author">
 <meta content="
        Mission-Bound Authorization for OAuth 2.0 derives delegated authority
-through the Authorization Server: each narrowing is a Token Exchange at
+through the Authorization Server: each narrowing is a derivation at
 the issuer. For deep sub-agent fan-out, the common agent topology, that
 puts the Authorization Server in the hot path as a latency and
-availability dependency. This document defines an  OPTIONAL  Mission
+availability dependency. This document defines an optional Mission
 Offline Attenuation profile. It profiles Attenuating Agent Tokens so a
 Mission-bound token holder can mint a narrower child token offline, with
 no Authorization Server round-trip, carrying the same  mission  claim.
-The narrowing is verifiable from the carried token chain, and the
-Mission kill switch is preserved because consumption is gated by the
-runtime enforcement layer, which re-checks current Mission state on
-every presentation of a token in the chain; a revoked Mission stops the
-whole chain even though no issuer minted the children. Offline
-attenuation is offered alongside, not instead of,
-Authorization-Server-mediated delegation. 
+The Mission Issuer derives the attenuation root from the Mission's
+approved Authority Set under a normative mapping; the narrowing is
+verifiable from the carried token chain, and the Mission kill switch is
+preserved because consumption is gated by the runtime enforcement
+layer, which re-checks current Mission state on every presentation of a
+token in the chain; a revoked Mission stops the whole chain even though
+no issuer minted the children. Offline attenuation is offered
+alongside, not instead of, Authorization-Server-mediated delegation. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="oauth" name="keyword">
@@ -1067,7 +1068,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 4 January 2027</td>
+<td class="center">Expires 5 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1080,12 +1081,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-attenuation-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-03" class="published">3 July 2026</time>
+<time datetime="2026-07-04" class="published">4 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-04">4 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-05">5 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1099,20 +1100,21 @@ svg {
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
 <p id="section-abstract-1">Mission-Bound Authorization for OAuth 2.0 derives delegated authority
-through the Authorization Server: each narrowing is a Token Exchange at
+through the Authorization Server: each narrowing is a derivation at
 the issuer. For deep sub-agent fan-out, the common agent topology, that
 puts the Authorization Server in the hot path as a latency and
-availability dependency. This document defines an <span class="bcp14">OPTIONAL</span> Mission
+availability dependency. This document defines an optional Mission
 Offline Attenuation profile. It profiles Attenuating Agent Tokens so a
 Mission-bound token holder can mint a narrower child token offline, with
 no Authorization Server round-trip, carrying the same <code>mission</code> claim.
-The narrowing is verifiable from the carried token chain, and the
-Mission kill switch is preserved because consumption is gated by the
-runtime enforcement layer, which re-checks current Mission state on
-every presentation of a token in the chain; a revoked Mission stops the
-whole chain even though no issuer minted the children. Offline
-attenuation is offered alongside, not instead of,
-Authorization-Server-mediated delegation.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+The Mission Issuer derives the attenuation root from the Mission's
+approved Authority Set under a normative mapping; the narrowing is
+verifiable from the carried token chain, and the Mission kill switch is
+preserved because consumption is gated by the runtime enforcement
+layer, which re-checks current Mission state on every presentation of a
+token in the chain; a revoked Mission stops the whole chain even though
+no issuer minted the children. Offline attenuation is offered
+alongside, not instead of, Authorization-Server-mediated delegation.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1144,7 +1146,7 @@ Authorization-Server-mediated delegation.<a href="#section-abstract-1" class="pi
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 4 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 5 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1249,10 +1251,12 @@ Authorization-Server-mediated delegation.<a href="#section-abstract-1" class="pi
       <h2 id="name-introduction">
 <a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
       </h2>
-<p id="section-1-1">The issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the
-"issuance profile") narrows authority through the Authorization Server:
-a delegated or narrowed token is derived at the issuer, and cross-domain
-projection is a Token Exchange. For an agent that fans out to many
+<p id="section-1-1">Mission-Bound Authorization for OAuth 2.0
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile") narrows
+authority through the Authorization Server: a delegated or narrowed
+token is derived at the issuer, and cross-domain projection is a Token
+Exchange (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>). For an
+agent that fans out to many
 sub-agents, each needing a slice of the Mission's authority, that makes
 the Authorization Server a per-delegation latency and availability
 dependency on the execution hot path.<a href="#section-1-1" class="pilcrow">¶</a></p>
@@ -1265,8 +1269,9 @@ the child commits to its parent by hash. A Mission-bound token can be an
 attenuation-substrate root; its holder then derives narrower children
 for sub-agents with no Authorization Server contact.<a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">Three things make this safe within the Mission model, and this document
-requires all three (<a href="#kill-switch" class="auto internal xref">Section 9</a>): the child carries the parent
-chain, so a consumer verifies the narrowing from the tokens it holds;
+requires all three (<a href="#mission-binding-check" class="auto internal xref">Section 8</a>, <a href="#kill-switch" class="auto internal xref">Section 9</a>): the
+child carries the parent chain, with audience and expiry bounded per
+hop, so a consumer verifies the narrowing from the tokens it holds;
 the Mission kill switch is preserved because consumption is gated by the
 runtime enforcement layer re-checking current Mission state, not by the
 issuer (the attenuation substrate defines no revocation of its own); and
@@ -1335,6 +1340,12 @@ Mission's Authority Set.<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
           <p id="section-4-2.4.1">A token holder minting a narrower child of a Mission-bound attenuation
 token, signed with the parent's confirmation key, without contacting
 the Mission Issuer.<a href="#section-4-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-2.5">Attenuating Holder:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.6">
+          <p id="section-4-2.6.1">The holder of a Mission-bound attenuation token, in its role of
+minting narrower children offline under this profile.<a href="#section-4-2.6.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1446,26 +1457,31 @@ offline, by the attenuation substrate's derivation: it selects a
 narrower tool and constraint set, increments <code>del_depth</code>, signs with the
 key the parent's <code>cnf</code> binds, and sets <code>par_hash</code> to the parent's
 commitment. No Mission Issuer contact occurs.<a href="#section-7-1" class="pilcrow">¶</a></p>
-<p id="section-7-2">The child's <code>aud</code> <span class="bcp14">MUST</span> equal its parent's <code>aud</code> or be a subset of it,
+<p id="section-7-2"><code>par_hash</code> commits to the exact parent token bytes, per the attenuation
+substrate's cryptographic linkage rule
+(<span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>): its value is
+the base64url encoding, without padding, of the SHA-256 digest of the
+parent token's JWS Signing Input.<a href="#section-7-2" class="pilcrow">¶</a></p>
+<p id="section-7-3">The child's <code>aud</code> <span class="bcp14">MUST</span> equal its parent's <code>aud</code> or be a subset of it,
 and the child's <code>exp</code> <span class="bcp14">MUST NOT</span> exceed its parent's <code>exp</code>. Because the
 Mission Issuer caps the root's <code>exp</code> at the Mission's <code>mission_expiry</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the per-hop <code>exp</code> rule bounds
 the whole chain transitively: no descendant outlives the root, hence
-none outlives the Mission.<a href="#section-7-2" class="pilcrow">¶</a></p>
-<p id="section-7-3">The <code>mission</code> claim rides the chain unchanged: every token in the chain
+none outlives the Mission.<a href="#section-7-3" class="pilcrow">¶</a></p>
+<p id="section-7-4">The <code>mission</code> claim rides the chain unchanged: every token in the chain
 carries the same <code>id</code>, <code>origin</code>, and <code>authority_hash</code> as the root. The
 child's narrowing is governed entirely by the attenuation substrate's
 capability monotonicity, which is the subset relation a consumer checks;
 because the child carries the parent chain, a consumer holding only the
 leaf and its chain can verify that the leaf is a subset of the root,
-without holding the Mission's full Authority Set.<a href="#section-7-3" class="pilcrow">¶</a></p>
-<p id="section-7-4"><code>authority_hash</code> on a derived token is a lineage anchor, not the child's
+without holding the Mission's full Authority Set.<a href="#section-7-4" class="pilcrow">¶</a></p>
+<p id="section-7-5"><code>authority_hash</code> on a derived token is a lineage anchor, not the child's
 authority commitment. The child's authority is its own carried
 constraints, narrower than the root's; <code>authority_hash</code> still commits
 the root Mission's Authority Set, so it links the chain to the approved
 Mission for audit and remains an audit anchor a consumer cannot recompute
 from the narrowed leaf, exactly as for any narrowed Mission-bound token
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7-4" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-binding-check">
@@ -1620,7 +1636,7 @@ root's <code>cnf</code> binds, sets <code>iss</code> to that key's thumbprint, i
   "sub": "user_3p2q8mN1a0kV7tR",
   "aud": "https://erp.example.com",
   "iat": 1797840030,
-  "exp": 1797840300,
+  "exp": 1797840240,
   "jti": "aat_child_2Yt7Qv9Lq",
   "cnf": { "jkt": "kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t" },
   "par_hash": "9XbVt2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQ",
@@ -1641,9 +1657,16 @@ root's <code>cnf</code> binds, sets <code>iss</code> to that key's thumbprint, i
 }
 </pre><a href="#section-11-5" class="pilcrow">¶</a>
 </div>
-<p id="section-11-6">The <code>mission</code> claim is unchanged, the child's <code>aud</code> equals the root's
-and its <code>exp</code> does not exceed the root's, the write tool is gone, and the
-read constraint is unchanged (a permitted narrowing). To read an invoice
+<p id="section-11-6">The <code>mission</code> claim is unchanged, the child's <code>aud</code> equals the root's,
+its <code>exp</code> (1797840240) ends before the root's (1797840300), within the
+per-hop bound, the write tool is gone, and the read constraint is
+unchanged (a permitted narrowing). The child's <code>cnf.jkt</code> is the JWK
+thumbprint <span>[<a href="#RFC7638" class="cite xref">RFC7638</a>]</span> of the delegate extractor's own key, which its
+per-invocation proof-of-possession must match. The child's <code>par_hash</code>
+derives as <a href="#attenuation" class="auto internal xref">Section 7</a> states, the base64url SHA-256 digest, without
+padding, of the root token's JWS Signing Input; the value shown is
+illustrative, since the example gives the root's decoded claims rather
+than its serialized bytes. To read an invoice
 the extractor presents the chain <code>[root, child]</code> and a per-invocation
 proof-of-possession to the gateway. The gateway verifies the chain (the
 child's signature under the root's <code>cnf</code> key, <code>par_hash</code>, the depth,
@@ -1657,6 +1680,14 @@ by the extractor fails on capability monotonicity:
 the Mission, the next presentation fails the state check and the whole
 chain stops, even though no issuer ever saw the child and the child's
 <code>exp</code> has not passed.<a href="#section-11-6" class="pilcrow">¶</a></p>
+<p id="section-11-7">For contrast, suppose the extractor presents a chain whose child
+carries <code>"exp": 1797840360</code>, sixty seconds past the root's. The
+per-hop bound check (<a href="#mission-binding-check" class="auto internal xref">Section 8</a>) fails before any tool
+or Mission-state evaluation: a child that outlives its parent breaks
+the chain's transitive expiry bound, so the gateway refuses the whole
+chain. A chain whose child carried a <code>mission</code> claim differing from the
+root's is refused the same way, as a re-bound chain, not read as a
+narrower grant.<a href="#section-11-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conformance">
@@ -1849,8 +1880,16 @@ this document, <a href="#request-discovery" class="auto internal xref">Section 6
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-harness</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-harness">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-harness</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Child Delegation for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-child-delegation</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-cross-domain</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-cross-domain">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-cross-domain</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7638">[RFC7638]</dt>
+      <dd>
+<span class="refAuthor">Jones, M.</span> and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Key (JWK) Thumbprint"</span>, <span class="seriesInfo">RFC 7638</span>, <span class="seriesInfo">DOI 10.17487/RFC7638</span>, <time datetime="2015-09" class="refDate">September 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7638">https://www.rfc-editor.org/rfc/rfc7638</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>

@@ -9,13 +9,15 @@
 <meta content="
        Mission runtime enforcement can refuse the next consequential action,
 but Mission termination can occur while an agent workflow is already in
-flight. This document defines an  OPTIONAL  orchestration profile for
+flight. This document defines an optional orchestration profile for
 Mission-governed workflows. It classifies actions by reversibility,
 requires an unwind plan before execution, defines behavior when a
 Mission is revoked, expired, suspended, completed, or superseded, and
 specifies Orchestration Evidence for pause, cancel, compensation, and
 human-review decisions. The profile turns Mission termination from a
-simple access-control denial into governed handling of execution state. 
+simple access-control denial into governed handling of execution state,
+with compensation authorized only by resource policy or a separate
+active Mission, never the terminated Mission. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="oauth" name="keyword">
@@ -1060,7 +1062,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 4 January 2027</td>
+<td class="center">Expires 5 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1073,12 +1075,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-orchestration-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-03" class="published">3 July 2026</time>
+<time datetime="2026-07-04" class="published">4 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-04">4 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-05">5 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1093,13 +1095,15 @@ svg {
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
 <p id="section-abstract-1">Mission runtime enforcement can refuse the next consequential action,
 but Mission termination can occur while an agent workflow is already in
-flight. This document defines an <span class="bcp14">OPTIONAL</span> orchestration profile for
+flight. This document defines an optional orchestration profile for
 Mission-governed workflows. It classifies actions by reversibility,
 requires an unwind plan before execution, defines behavior when a
 Mission is revoked, expired, suspended, completed, or superseded, and
 specifies Orchestration Evidence for pause, cancel, compensation, and
 human-review decisions. The profile turns Mission termination from a
-simple access-control denial into governed handling of execution state.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+simple access-control denial into governed handling of execution state,
+with compensation authorized only by resource policy or a separate
+active Mission, never the terminated Mission.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1131,7 +1135,7 @@ simple access-control denial into governed handling of execution state.<a href="
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 4 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 5 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1450,8 +1454,11 @@ OAuth 2.0 mechanics. It consumes these substrate primitives: the
 Mission identifier; the lifecycle state space with its
 only-<code>active</code>-permits rule; the runtime enforcement evidence its
 records link; the integrity-anchor envelope, used for
-<code>unwind_plan_hash</code>; and the substrate's issuance gating, against which
-every compensation authority basis resolves. The issuance profile
+<code>unwind_plan_hash</code>; and the substrate's Mission state, against which
+a compensation authority basis resolves (<a href="#compensation-authority" class="auto internal xref">Section 9.1</a>):
+a <code>separate_mission</code> basis requires a Mission that is <code>active</code> under
+the binding in use, and a <code>resource_policy</code> basis lies outside Mission
+authority entirely. The issuance profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> is this version's normative
 substrate; another substrate that provides the same primitives can
 host this profile unchanged.<a href="#section-4-1" class="pilcrow">¶</a></p>
@@ -1718,6 +1725,31 @@ reviewed workflow definition or operation profile. Model output <span class="bcp
 }
 </pre><a href="#section-6.2-1" class="pilcrow">¶</a>
 </div>
+<p id="section-6.2-2">Its <code>unwind_plan_hash</code> is computed with the integrity-anchor envelope
+(<a href="#unwind-plan-integrity" class="auto internal xref">Section 6.1</a>): <code>typ</code> <code>mission-unwind-plan</code>, <code>iss</code>
+          <code>https://as.example.com</code>, and this plan as the envelope <code>value</code>. The
+canonical-bytes block is the exact JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> output, a single
+line of UTF-8 with no whitespace, shown wrapped only for layout;
+remove the layout line breaks, adding no characters, to recover the
+canonical form.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
+<p id="section-6.2-3">Canonical bytes of the envelope:<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-6.2-4">
+<pre>
+{"iss":"https://as.example.com","typ":"mission-unwind-plan","value":{"ev
+idence_policy":{"link_runtime_evidence":true,"retain_for":"mission_audit
+_horizon"},"in_flight_behavior":"wait_then_review","mission_id":"msn_8Rf
+X2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","post_completion_behavior":"human_review"
+,"pre_start_behavior":"human_review","reversibility":"external_commitmen
+t","review_queue":"finance-control-review","step_id":"post_journal_entry
+"}}
+</pre><a href="#section-6.2-4" class="pilcrow">¶</a>
+</div>
+<div class="lang-text sourcecode" id="section-6.2-5">
+<pre>
+unwind_plan_hash = sha-256:Qf-0Xqo8QPMN0D3xMOSi2j4qTvaU2U8ne1g8UEBrAIc
+</pre><a href="#section-6.2-5" class="pilcrow">¶</a>
+</div>
+<p id="section-6.2-6">The evidence example of <a href="#orchestration-evidence" class="auto internal xref">Section 11</a> carries this value.<a href="#section-6.2-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2149,10 +2181,45 @@ header <span class="bcp14">MUST</span> carry <code>iss</code> and <code>kid</cod
   "reason": "external_commitment_dispatched_unknown",
   "outcome_state": "unknown",
   "unwind_plan_hash":
-    "sha-256:Qk3rY7pL2mN8xW1vB6cD9fH4jK0sT5gA2eR8uI3oP7Y",
+    "sha-256:Qf-0Xqo8QPMN0D3xMOSi2j4qTvaU2U8ne1g8UEBrAIc",
   "occurred_at": "2026-11-02T08:16:00Z"
 }
 </pre><a href="#section-11-4" class="pilcrow">¶</a>
+</div>
+<p id="section-11-5">A later record for the same step carries the compensate decision.
+Review confirmed that the posting committed before the Mission was
+revoked; a pre-provisioned remedial Mission that is <code>active</code>
+authorizes the reversing entry (<a href="#compensation-authority" class="auto internal xref">Section 9.1</a>). The
+record links the review record above and the original runtime
+enforcement evidence, and omits <code>unwind_plan_hash</code> because it is not
+the step's first record:<a href="#section-11-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-11-6">
+<pre>
+{
+  "event_id": "orch_9wK2nR5vXq7t",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
+  "workflow_id": "wf_invoice_recon_2026q3",
+  "step_id": "post_journal_entry",
+  "mission_state": "revoked",
+  "state_source": "status",
+  "orchestration_decision": "compensate",
+  "reason": "committed_step_reversed_after_review",
+  "outcome_state": "committed",
+  "linked_evidence": [
+    "orch_4r9SqLm8tY2p",
+    "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB"
+  ],
+  "authority_basis": "separate_mission",
+  "compensation_action": "erp.journal_entry.reverse",
+  "compensation_outcome": "completed",
+  "occurred_at": "2026-11-02T09:03:00Z"
+}
+</pre><a href="#section-11-6" class="pilcrow">¶</a>
 </div>
 <div id="evidence-integrity">
 <section id="section-11.1">
@@ -2187,22 +2254,16 @@ before or after a given step committed.<a href="#section-11.2-1" class="pilcrow"
       <h2 id="name-relationship-to-harness-and">
 <a href="#section-12" class="section-number selfRef">12. </a><a href="#name-relationship-to-harness-and" class="section-name selfRef">Relationship to Harness and Runtime Profiles</a>
       </h2>
-<p id="section-12-1">The harness profile
-<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span> governs whether a
-session, queue item, or sub-agent handle may continue. This document
-governs how workflow state is unwound once continuation is stopped.
-The runtime profile <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>
-still governs each consequential action at the last controllable
-boundary. These checks compose; none replaces the others.<a href="#section-12-1" class="pilcrow">¶</a></p>
-<p id="section-12-2">The two execution profiles share, rather than duplicate, their common
+<p id="section-12-1">The two execution profiles share, rather than duplicate, their common
 machinery: the <code>state_source</code> value space is defined once by the
-Harness profile and reused here (<a href="#orchestration-evidence" class="auto internal xref">Section 11</a>), and the
-Orchestration Evidence <code>mission</code> descriptor is the same shape as the
-Harness Evidence descriptor. The boundary is by question asked: a
-Harness Evidence record answers "may this unit of work continue," while
-an Orchestration Evidence record answers "how was in-flight workflow
-state unwound." A deployment that needs both records emits each at its
-own decision point; neither subsumes the other.<a href="#section-12-2" class="pilcrow">¶</a></p>
+Harness profile (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>) and reused
+here (<a href="#orchestration-evidence" class="auto internal xref">Section 11</a>), and the Orchestration Evidence
+<code>mission</code> descriptor is the same shape as the Harness Evidence
+descriptor. A deployment that needs both records emits each at its own
+decision point; neither subsumes the other. The runtime profile
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span> still governs each
+consequential action at the last controllable boundary, whichever
+execution profile stops or unwinds the work.<a href="#section-12-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conformance">

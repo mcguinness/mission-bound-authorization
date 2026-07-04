@@ -9,8 +9,8 @@
 <meta content="
        Mission-Bound Authorization for OAuth 2.0 and its companions produce
 many evidence records: the approval event, lifecycle transitions,
-consent evidence, runtime decision and execution evidence, and harness,
-orchestration, and child-delegation evidence. Each is signed, but signed
+consent evidence, runtime decision and execution evidence, and further
+evidence types profiles define. Each is signed, but signed
 is not the same as tamper-evident, append-only, or independently
 verifiable: a holder of the signing key can still backdate, drop, or
 reorder records, and a cross-domain party cannot confirm what was
@@ -1067,7 +1067,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 4 January 2027</td>
+<td class="center">Expires 5 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1080,12 +1080,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-audit-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-03" class="published">3 July 2026</time>
+<time datetime="2026-07-04" class="published">4 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-04">4 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-05">5 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1100,8 +1100,8 @@ svg {
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
 <p id="section-abstract-1">Mission-Bound Authorization for OAuth 2.0 and its companions produce
 many evidence records: the approval event, lifecycle transitions,
-consent evidence, runtime decision and execution evidence, and harness,
-orchestration, and child-delegation evidence. Each is signed, but signed
+consent evidence, runtime decision and execution evidence, and further
+evidence types profiles define. Each is signed, but signed
 is not the same as tamper-evident, append-only, or independently
 verifiable: a holder of the signing key can still backdate, drop, or
 reorder records, and a cross-domain party cannot confirm what was
@@ -1144,7 +1144,7 @@ commit to the evidence by hash rather than carrying it.<a href="#section-abstrac
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 4 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 5 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1271,8 +1271,9 @@ commit to the evidence by hash rather than carrying it.<a href="#section-abstrac
       <h2 id="name-introduction">
 <a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
       </h2>
-<p id="section-1-1">The issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the
-"issuance profile") and its companions record evidence at every
+<p id="section-1-1">Mission-Bound Authorization for OAuth 2.0
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile") and
+its companions record evidence at every
 governance and enforcement point. The evidence is signed, which makes a
 single record attributable and tamper-evident in isolation. It does not
 make the record set as a whole trustworthy: the party that holds the
@@ -1310,7 +1311,9 @@ records they already produce.<a href="#section-2-1" class="pilcrow">¶</a></p>
 with a Transparency Service.<a href="#section-2-2" class="pilcrow">¶</a></p>
 <p id="section-2-3">The transparency substrate this profile builds on is ratified: it
 depends normatively on the SCITT architecture <span>[<a href="#RFC9943" class="cite xref">RFC9943</a>]</span>, a published
-standard. The profile itself is newer than the substrate and less
+standard. Its hash commitment uses the COSE hash-envelope headers
+(<span>[<a href="#I-D.draft-ietf-cose-hash-envelope" class="cite xref">I-D.draft-ietf-cose-hash-envelope</a>]</span>), approved and in the RFC
+Editor queue. The profile itself is newer than the substrate and less
 exercised in deployment, so an implementer treats its interfaces as
 still settling and validates them against real audits before relying on
 them. The signed evidence the suite produces without a Transparency
@@ -1495,27 +1498,47 @@ record as part of the Mission's feed.<a href="#section-6.2-1" class="pilcrow">¶
 </td>
               <td class="text-left" rowspan="1" colspan="1">PEP key</td>
             </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Mission Mandate</td>
+              <td class="text-left" rowspan="1" colspan="1">JWS Compact Serialization, as issued</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>application/mission-mandate+jwt</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>origin</code>
+</td>
+            </tr>
           </tbody>
         </table>
-<p id="section-6.2-3">The producer identifiers are principals the suite already names. For
+<p id="section-6.2-3">The table is extensible by specification: a profile <span class="bcp14">MAY</span> define an
+additional evidence type by fixing its canonical bytes, its
+<code>preimage-content-type</code>, and its authoritative producer, as the
+Mandate profile does for the Mission Mandate
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>). A relying party admits an
+extension type it implements; it ignores records of a type it does
+not implement, and they are not audit failures.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<p id="section-6.2-4">The producer identifiers are principals the suite already names. For
 every record whose producer is the Mission <code>origin</code>, the Signed
 Statement's <code>iss</code> <span class="bcp14">MUST</span> equal that <code>origin</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The PDP and PEP keys are those
 in the deployment-published key sets the runtime and AuthZEN profiles
 require (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-6.2-3" class="pilcrow">¶</a></p>
-<p id="section-6.2-4">The approval event and the lifecycle-transition object are canonicalized
+<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+<p id="section-6.2-5">The approval event and the lifecycle-transition object are canonicalized
 under the issuance profile's canonicalization rules
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); an already-signed object (the
-consent, decision, and execution evidence, and the Signals SET) is
+consent, decision, and execution evidence, the Signals SET, and the
+Mandate) is
 hashed as issued, not re-canonicalized. The approval-event and
 lifecycle-transition media types are defined by this profile (<a href="#iana" class="auto internal xref">Section 14</a>);
 the consent, decision, and execution evidence types are registered by
 the profiles that define those objects
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), and the Signals SET
+<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), the Signals SET
 media type by the Signals profile it is carried in
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>).<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), and the Mandate
+media type by the Mandate profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>).<a href="#section-6.2-5" class="pilcrow">¶</a></p>
 <div id="transition-object">
 <section id="section-6.2.1">
           <h4 id="name-the-lifecycle-transition-ob">
@@ -1545,6 +1568,51 @@ date-time at which the transition was committed.<a href="#section-6.2.1-2.5.1" c
           </ul>
 <p id="section-6.2.1-3">Its media type is <code>application/mission-lifecycle-transition+json</code>
 (<a href="#iana" class="auto internal xref">Section 14</a>).<a href="#section-6.2.1-3" class="pilcrow">¶</a></p>
+<div id="transition-vector">
+<section id="section-6.2.1.1">
+            <h5 id="name-computed-example">
+<a href="#section-6.2.1.1" class="section-number selfRef">6.2.1.1. </a><a href="#name-computed-example" class="section-name selfRef">Computed Example</a>
+            </h5>
+<p id="section-6.2.1.1-1">A minimal transition object recording the revocation of Mission
+<code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code>:<a href="#section-6.2.1.1-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-6.2.1.1-2">
+<pre>
+{
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "origin": "https://as.example.com",
+  "state": "revoked",
+  "transitioned_at": "2026-11-02T08:30:00Z"
+}
+</pre><a href="#section-6.2.1.1-2" class="pilcrow">¶</a>
+</div>
+<p id="section-6.2.1.1-3">Its JCS canonical bytes (one line; breaks are for display only):<a href="#section-6.2.1.1-3" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-6.2.1.1-4">
+<pre>
+{"mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","origin":"ht
+tps://as.example.com","state":"revoked","transitioned_at":"2026-1
+1-02T08:30:00Z"}
+</pre><a href="#section-6.2.1.1-4" class="pilcrow">¶</a>
+</div>
+<p id="section-6.2.1.1-5">The committed digest is the SHA-256 of those bytes; its base64url
+form is <code>BoPjN-2ntPWo_athC5AQY1n1EIHtgQbBVbdRyJ3qSv4</code>. The Signed
+Statement carries the digest bytes inline as its payload, with this
+protected header (<a href="#hash-commitment" class="auto internal xref">Section 6.1</a>, <a href="#feed" class="auto internal xref">Section 7</a>):<a href="#section-6.2.1.1-5" class="pilcrow">¶</a></p>
+<div class="lang-cbor-diag sourcecode" id="section-6.2.1.1-6">
+<pre>
+{
+  / alg /                    1: -7,   / ES256 /
+  / payload-hash-alg /     258: -16,  / SHA-256 /
+  / preimage-content-type / 259: "application/mission-lifecycle-transition+json",
+  / kid /                    4: h'61732d6b65792d323032362d7133',
+  / CWT Claims /            15: {
+    / iss / 1: "https://as.example.com",
+    / sub / 2: "https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  }
+}
+</pre><a href="#section-6.2.1.1-6" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
 </section>
 </div>
 </section>
@@ -1564,8 +1632,12 @@ who may register Signed Statements for a Mission subject to those
 authoritative producers, so the log does not accumulate records from
 components that are not entitled to write to a Mission's feed.<a href="#section-6.3-2" class="pilcrow">¶</a></p>
 <p id="section-6.3-3">A relying party discovers a producer's key by the producer's role. The
-Authorization Server's key is resolved through its metadata <code>jwks_uri</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A PDP or PEP key is resolved
+<code>origin</code>'s key is resolved through its published key material: the
+Authorization Server's metadata <code>jwks_uri</code> in the OAuth binding
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), or the Mission Authority
+Server's discovery <code>jwks_uri</code> in the standalone binding
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>). A PDP or PEP key
+is resolved
 through the deployment-published key sets the runtime and AuthZEN
 profiles require (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-6.3-3" class="pilcrow">¶</a></p>
@@ -1983,7 +2055,9 @@ Service are defined elsewhere: the runtime decision and execution
 evidence types by the AuthZEN profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), the consent evidence
 type by the consent evidence profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>), and the
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>), the
+Mission Mandate media type by the Mandate profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>), and the
 Signals SET media type <code>application/secevent+jwt</code> by RFC 8417, which the
 Signals profile carries the event in
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>). The Signed Statement
@@ -2052,9 +2126,17 @@ identifier.<a href="#section-14-2" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">Birkholz, H.</span>, <span class="refAuthor">Geater, J.</span>, and <span class="refAuthor">A. Delignat-Lavaud</span>, <span class="refTitle">"Supply Chain Integrity, Transparency, and Trust (SCITT) Reference APIs"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-scitt-scrapi-11</span>, <time datetime="2026-06-26" class="refDate">26 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-scitt-scrapi-11">https://datatracker.ietf.org/doc/html/draft-ietf-scitt-scrapi-11</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-authority-server</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authority-server">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authority-server</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-authzen</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authzen">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authzen</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-mandate">[I-D.draft-mcguinness-mission-mandate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Mandate"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-mandate</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-mandate">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-mandate</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
         <dd>

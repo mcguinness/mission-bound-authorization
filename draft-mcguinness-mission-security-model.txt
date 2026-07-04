@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                               3 July 2026
-Expires: 4 January 2027
+Intended status: Informational                               4 July 2026
+Expires: 5 January 2027
 
 
                          Mission Security Model
@@ -14,20 +14,25 @@ Expires: 4 January 2027
 Abstract
 
    Mission-Bound Authorization for OAuth 2.0 and its companion profiles
-   spread enforcement across several components: an Authorization Server
-   derives and gates authority, a Policy Enforcement Point and Policy
-   Decision Point evaluate each action, a harness establishes a mediated
-   execution environment, a consent rendering layer discloses authority
-   to an Approver, and optional services report Mission state,
+   spread enforcement across several components: a Mission Issuer
+   derives authority and, in the OAuth binding, gates issuance (an OAuth
+   Authorization Server, or a standalone Mission Authority Server that
+   records and serves Missions without issuing tokens); a Policy
+   Enforcement Point and Policy Decision Point evaluate each action; a
+   harness establishes a mediated execution environment; a consent
+   rendering layer discloses authority to an Approver; an orchestrator
+   unwinds in-flight work; and optional services report Mission state,
    adjudicate requested authority, log evidence, and report completion
-   events.  Each profile states its own security considerations, but no
-   single document says which components must be trusted, what each
-   assumes of the others, and how the compromise of each degrades the
-   guarantees.  This document provides that consolidated view.  It is an
-   Informational security model for the Mission suite: it defines the
-   trusted base, the cross-cutting assumptions, and the consequence of
-   each component's compromise, and it points to the normative security
-   considerations of each profile rather than restating them.
+   events.  In cross-domain use, a resource-side Authorization Server
+   joins this base.  Each profile states its own security
+   considerations, but no single document says which components must be
+   trusted, what each assumes of the others, and how the compromise of
+   each degrades the guarantees.  This document provides that
+   consolidated view.  It is an Informational security model for the
+   Mission suite: it defines the trusted base, the cross-cutting
+   assumptions, and the consequence of each component's compromise, and
+   it points to the normative security considerations of each profile
+   rather than restating them.
 
 About This Document
 
@@ -57,7 +62,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 January 2027.
+   This Internet-Draft will expire on 5 January 2027.
 
 Copyright Notice
 
@@ -102,12 +107,13 @@ Table of Contents
    agent may be prompt-injected or compromised, and the suite's purpose
    is to bound what such an agent can do, not to make it trustworthy
    ([I-D.draft-mcguinness-mission-runtime]).  Bounding the agent means
-   relying on other components: the Authorization Server that derives
-   and gates authority, the enforcement points that evaluate each
-   action, the harness that removes unmediated paths, and a set of
-   optional services.  Those components are the *trusted base*: the
-   parts that, if compromised, degrade or void the guarantees the suite
-   otherwise provides.
+   relying on other components: the Mission Issuer that derives
+   authority and, in the OAuth binding, gates issuance (an Authorization
+   Server or a standalone Mission Authority Server), the enforcement
+   points that evaluate each action, the harness that removes unmediated
+   paths, and a set of optional services.  Those components are the
+   *trusted base*: the parts that, if compromised, degrade or void the
+   guarantees the suite otherwise provides.
 
    Each profile documents the security considerations local to its own
    mechanism.  What no single profile provides, and what a reviewer or a
@@ -133,10 +139,11 @@ Table of Contents
 
 3.  Conventions and Terminology
 
-   This document uses Mission, Mission Issuer (Authorization Server),
-   Policy Enforcement Point (PEP), Policy Decision Point (PDP),
-   Approver, Subject, agent, Authority Set, and Mission state as defined
-   in [I-D.draft-mcguinness-oauth-mission] and
+   This document uses Mission, Mission Issuer (the Authorization Server
+   in the OAuth binding; the Mission Authority Server in the standalone
+   binding), Policy Enforcement Point (PEP), Policy Decision Point
+   (PDP), Approver, Subject, agent, Authority Set, and Mission state as
+   defined in [I-D.draft-mcguinness-oauth-mission] and
    [I-D.draft-mcguinness-mission-runtime].
 
 4.  Mission Substrate
@@ -146,11 +153,15 @@ Table of Contents
    any substrate that provides the Mission primitives the profiles
    consume: the identifier and origin, the state space with its only-
    active rule, an authority representation with a subset rule, the
-   integrity-anchor envelope, and a Mission-bound credential.  The
-   issuance profile [I-D.draft-mcguinness-oauth-mission] is the OAuth
-   2.0 binding of those primitives and the substrate the profiles'
-   security considerations assume; a different binding re-derives only
-   the substrate-specific entries of this model.
+   integrity-anchor envelope, and, where the binding provides one, a
+   Mission-bound credential; a binding without that credential supplies
+   an externally established Mission reference instead, verified under
+   the runtime profile's Mission binding establishment step
+   ([I-D.draft-mcguinness-mission-runtime]).  The issuance profile
+   [I-D.draft-mcguinness-oauth-mission] is the OAuth 2.0 binding of
+   those primitives and the substrate the profiles' security
+   considerations assume; a different binding re-derives only the
+   substrate-specific entries of this model.
 
 5.  The Untrusted Agent
 
@@ -208,7 +219,7 @@ Table of Contents
       own domain under the Mission's name; the damage is bounded by
       audience scoping, short grant lifetimes, and audit, not by the
       origin, which never sees these tokens
-      ([I-D.draft-mcguinness-oauth-mission]).
+      ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
 
    Mission Authority Server (standalone binding):  When the standalone
       Mission Authority Server binding is used, a service outside the
@@ -469,7 +480,7 @@ Table of Contents
 
                                   Table 1
 
-   Three residuals are worth stating on their own, because they are the
+   Four residuals are worth stating on their own, because they are the
    limits most likely to matter and most often overstated away
    elsewhere:
 
@@ -681,6 +692,13 @@ Table of Contents
               mission-consent-evidence, 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-mission-consent-evidence>.
+
+   [I-D.draft-mcguinness-oauth-mission-cross-domain]
+              McGuinness, K., "Mission Cross-Domain Projection for OAuth
+              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
+              oauth-mission-cross-domain, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-cross-domain>.
 
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", Work in

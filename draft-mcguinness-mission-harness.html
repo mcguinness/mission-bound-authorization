@@ -9,14 +9,18 @@
 <meta content="
        Agent harnesses preserve execution state across restarts, retries,
 background jobs, tool-connection reuse, and sub-agent orchestration.
-That continuity is not authority. This document defines an  OPTIONAL 
+That continuity is not authority. This document defines an optional
 Mission-aware harness profile for deployments using Mission-Bound
-Authorization for OAuth 2.0. It specifies how a harness binds sessions,
-task graphs, queues, cached tool connections, and sub-agent handles to
-Mission state; when it must re-check Mission status; and how it must
-pause, suppress, or terminate work when the Mission is no longer
-active. A conforming harness never treats session continuity as proof
-that Mission authority continues. 
+Authorization, with OAuth 2.0 as this version's normative substrate.
+It specifies how a harness binds sessions, task graphs, queues, cached
+tool connections, and sub-agent handles to Mission state; when it must
+re-check Mission status; and how it must pause, suppress, or terminate
+work when the Mission is no longer active. For the action classes a
+deployment mediates, the harness also establishes the mediated
+execution environment: governed work runs with no path to those
+actions that bypasses the enforcement point, and the harness publishes
+an execution-environment scope statement. A conforming harness never
+treats session continuity as proof that Mission authority continues. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="oauth" name="keyword">
@@ -1061,7 +1065,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 4 January 2027</td>
+<td class="center">Expires 5 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1074,12 +1078,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-harness-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-03" class="published">3 July 2026</time>
+<time datetime="2026-07-04" class="published">4 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-04">4 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-05">5 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1094,14 +1098,18 @@ svg {
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
 <p id="section-abstract-1">Agent harnesses preserve execution state across restarts, retries,
 background jobs, tool-connection reuse, and sub-agent orchestration.
-That continuity is not authority. This document defines an <span class="bcp14">OPTIONAL</span>
+That continuity is not authority. This document defines an optional
 Mission-aware harness profile for deployments using Mission-Bound
-Authorization for OAuth 2.0. It specifies how a harness binds sessions,
-task graphs, queues, cached tool connections, and sub-agent handles to
-Mission state; when it must re-check Mission status; and how it must
-pause, suppress, or terminate work when the Mission is no longer
-active. A conforming harness never treats session continuity as proof
-that Mission authority continues.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+Authorization, with OAuth 2.0 as this version's normative substrate.
+It specifies how a harness binds sessions, task graphs, queues, cached
+tool connections, and sub-agent handles to Mission state; when it must
+re-check Mission status; and how it must pause, suppress, or terminate
+work when the Mission is no longer active. For the action classes a
+deployment mediates, the harness also establishes the mediated
+execution environment: governed work runs with no path to those
+actions that bypasses the enforcement point, and the harness publishes
+an execution-environment scope statement. A conforming harness never
+treats session continuity as proof that Mission authority continues.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1133,7 +1141,7 @@ that Mission authority continues.<a href="#section-abstract-1" class="pilcrow">�
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 4 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 5 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1326,7 +1334,10 @@ survive after the Mission that justified it is revoked. A cached tool
 connection can remain usable after the business condition that
 authorized it ends. A child agent can keep running after its parent
 Mission is suspended. This profile defines what a harness must do to
-avoid treating recoverable runtime state as authorization.<a href="#section-1-2" class="pilcrow">¶</a></p>
+avoid treating recoverable runtime state as authorization. That is one
+of the harness's two duties; the other is establishing the mediated
+execution environment, in which work in a mediated action class has no
+path that bypasses the enforcement point (<a href="#mediated-egress" class="auto internal xref">Section 5</a>).<a href="#section-1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="scope">
@@ -1404,9 +1415,10 @@ harness (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref
 </li>
         </ul>
 <p id="section-2.1-3">It does not require a harness to inspect application data unrelated to
-governed execution. It does require the harness to know when a piece of
-continuity state is governed by a Mission and to stop using that state
-as an execution basis when the Mission is no longer active.<a href="#section-2.1-3" class="pilcrow">¶</a></p>
+governed execution (defined in <a href="#conventions" class="auto internal xref">Section 3</a>). It does require the
+harness to know when a piece of continuity state is governed by a
+Mission and to stop using that state as an execution basis when the
+Mission is no longer active.<a href="#section-2.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1472,8 +1484,15 @@ OAuth 2.0 mechanics. It consumes these substrate primitives: the
 Mission identifier; the lifecycle state space with its
 only-<code>active</code>-permits rule and the deployment's freshness sources; the
 Mission-bound credentials the harness holds or mediates, with their
-sender-constraint custody; and the evidence integrity conventions
-imported from the runtime profile. The issuance profile
+sender-constraint custody, when the binding in use provides them; and
+the evidence integrity conventions imported from the runtime profile.
+The Mission-bound credential primitive is binding-dependent: under a
+binding without Mission-bound credentials, the harness binds governed
+work items to the externally established Mission reference of the
+runtime profile's Mission binding establishment step
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and the custody duties of
+<a href="#cached-access" class="auto internal xref">Section 10</a> apply to whatever acting credentials the deployment
+uses. The issuance profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> is this version's normative
 substrate; every OAuth artifact named in this document enters through
 it. Another substrate that provides the same primitives can host this
@@ -1849,6 +1868,35 @@ non-active period before dispatch <span class="bcp14">MUST</span> obtain a fresh
 approval (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) before it
 runs. Its earlier place in the queue is not a standing approval across
 a Mission non-active interval.<a href="#section-9.1-4" class="pilcrow">¶</a></p>
+<p id="section-9.1-5">Example: a queued <code>journal-entries.write</code> posting under the Q3
+invoice-reconciliation Mission, retried once. <code>expires_at</code> is present
+because the posting is in a high-consequence action class:<a href="#section-9.1-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-9.1-6">
+<pre>
+{
+  "queue_item_id": "queue_journal_post_7",
+  "mission_binding": {
+    "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "mission_origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "status_checked_at": "2026-11-01T22:00:00Z",
+    "status_expires_at": "2026-11-01T22:05:00Z",
+    "state": "active",
+    "state_source": "status",
+    "stop_policy": "suppress"
+  },
+  "action_class": "external_commitment",
+  "not_before": "2026-11-02T02:00:00Z",
+  "expires_at": "2026-11-02T06:00:00Z",
+  "retry_of": "queue_journal_post_6",
+  "idempotency_key": "idem_jrnl_2026q3_0042"
+}
+</pre><a href="#section-9.1-6" class="pilcrow">¶</a>
+</div>
+<p id="section-9.1-7">Before dispatching this item at 02:00, the harness re-runs the resume
+check: the binding's status lease expired at 22:05, so the recorded
+<code>active</code> state is not a basis to continue.<a href="#section-9.1-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

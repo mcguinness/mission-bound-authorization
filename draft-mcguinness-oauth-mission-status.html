@@ -11,13 +11,14 @@
 authority to a durable, human-approved Mission and gates issuance on
 Mission state, but it observes Mission state only through token lifetime
 and optional token introspection. This document
-defines the Mission state-management surfaces it defers: a canonical
-Mission Status operation (keyed by  mission_id ), a management
-endpoint for explicit lifecycle transitions ( revoke ,  suspend ,  resume ,
- complete ), revocation-propagation guidance, and signed
-status evidence. Each capability is independently optional; an
-implementation  MAY  adopt any subset, and one that adopts none remains
-a conforming issuance profile. This document does not restate the base
+defines the Mission state-management surfaces it defers: the Mission
+Status operation (keyed by  mission_id ) with signed responses, the
+Mission projection for token introspection, the Mission Lifecycle
+endpoint with  revoke ,  suspend ,  resume , and  complete  operations,
+the  suspended  and  completed  states with the consolidated lifecycle
+state machine this profile owns, and revocation-propagation guidance.
+Each capability is independently optional; an implementation can adopt
+any subset, and one that adopts none remains a conforming issuance
 profile. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
@@ -1065,7 +1066,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 4 January 2027</td>
+<td class="center">Expires 5 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1078,12 +1079,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-status-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-03" class="published">3 July 2026</time>
+<time datetime="2026-07-04" class="published">4 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-04">4 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-05">5 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1100,13 +1101,14 @@ svg {
 authority to a durable, human-approved Mission and gates issuance on
 Mission state, but it observes Mission state only through token lifetime
 and optional token introspection. This document
-defines the Mission state-management surfaces it defers: a canonical
-Mission Status operation (keyed by <code>mission_id</code>), a management
-endpoint for explicit lifecycle transitions (<code>revoke</code>, <code>suspend</code>, <code>resume</code>,
-<code>complete</code>), revocation-propagation guidance, and signed
-status evidence. Each capability is independently optional; an
-implementation <span class="bcp14">MAY</span> adopt any subset, and one that adopts none remains
-a conforming issuance profile. This document does not restate the base
+defines the Mission state-management surfaces it defers: the Mission
+Status operation (keyed by <code>mission_id</code>) with signed responses, the
+Mission projection for token introspection, the Mission Lifecycle
+endpoint with <code>revoke</code>, <code>suspend</code>, <code>resume</code>, and <code>complete</code> operations,
+the <code>suspended</code> and <code>completed</code> states with the consolidated lifecycle
+state machine this profile owns, and revocation-propagation guidance.
+Each capability is independently optional; an implementation can adopt
+any subset, and one that adopts none remains a conforming issuance
 profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
@@ -1139,7 +1141,7 @@ profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 4 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 5 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1222,7 +1224,7 @@ profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
                 <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-authorization" class="internal xref">Authorization</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.6">
-                <p id="section-toc.1-1.5.2.6.1"><a href="#section-5.6" class="auto internal xref">5.6</a>.  <a href="#name-worked-example" class="internal xref">Worked Example</a></p>
+                <p id="section-toc.1-1.5.2.6.1"><a href="#section-5.6" class="auto internal xref">5.6</a>.  <a href="#name-worked-examples" class="internal xref">Worked Examples</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.7">
                 <p id="section-toc.1-1.5.2.7.1"><a href="#section-5.7" class="auto internal xref">5.7</a>.  <a href="#name-idempotency-and-conflicts" class="internal xref">Idempotency and Conflicts</a></p>
@@ -1341,11 +1343,11 @@ It gates derivation on Mission state, carries the <code>mission</code> claim on
 every derived token, and offers only <span class="bcp14">OPTIONAL</span> token introspection
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission State via
 Token Introspection") as a way for a Resource Server to observe
-Mission state. It explicitly leaves the canonical Mission Status
-surface (keyed by <code>mission_id</code>), a standardized management endpoint
-for lifecycle transitions, signed status evidence, and
-revocation-propagation guidance to future work.<a href="#section-1-1" class="pilcrow">¶</a></p>
-<p id="section-1-2">This document specifies those deferred surfaces as <span class="bcp14">OPTIONAL</span> extensions
+Mission state. It names this profile for the canonical Mission Status
+surface (keyed by <code>mission_id</code>) and its signed status evidence, and
+defers a standardized management endpoint for lifecycle transitions to
+this document.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">This document specifies those surfaces as <span class="bcp14">OPTIONAL</span> extensions
 that build on the issuance profile. The capabilities are:<a href="#section-1-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-1-3.1">
@@ -1398,9 +1400,14 @@ described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</s
 appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
 <p id="section-2-2">This document uses the terms defined in the issuance profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, in particular Mission,
-Mission Issuer (Authorization Server, the Mission <code>origin</code>), Resource
-AS, Authority Set, the <code>mission</code> claim, <code>mission_id</code>, and the
-<code>mission_resource_access</code> authorization details type. It additionally
+Mission Issuer (the Mission <code>origin</code>: in this document's OAuth binding
+the Authorization Server; a standalone Mission Issuer, the Mission
+Authority Server <span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>,
+serves these surfaces with the same semantics), Authority Set, the
+<code>mission</code> claim, <code>mission_id</code>, and the <code>mission_resource_access</code>
+authorization details type. Resource AS is used as defined in the
+cross-domain companion
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>. It additionally
 uses:<a href="#section-2-2" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-2-3">
         <dt id="section-2-3.1">Mission Status Response:</dt>
@@ -2339,10 +2346,10 @@ not-found response shape of <a href="#mission-status-errors" class="auto interna
 does not act as a Mission enumeration oracle.<a href="#section-5.5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="worked-example">
+<div id="worked-examples">
 <section id="section-5.6">
-        <h3 id="name-worked-example">
-<a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-worked-example" class="section-name selfRef">Worked Example</a>
+        <h3 id="name-worked-examples">
+<a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-worked-examples" class="section-name selfRef">Worked Examples</a>
         </h3>
 <p id="section-5.6-1">Revoke request:<a href="#section-5.6-1" class="pilcrow">¶</a></p>
 <div class="lang-http-message sourcecode" id="section-5.6-2">
@@ -2401,6 +2408,52 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
 <p id="section-5.6-7">The AS records the operation, actor, time, and any <code>reason</code> in its
 audit log; the response confirms the outcome through the updated
 <code>state</code>.<a href="#section-5.6-7" class="pilcrow">¶</a></p>
+<p id="section-5.6-8">Suspend request with a deadline:<a href="#section-5.6-8" class="pilcrow">¶</a></p>
+<div class="lang-http-message sourcecode" id="section-5.6-9">
+<pre>
+POST /as/mission/lifecycle HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+
+mission=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
+&amp;operation=suspend
+&amp;suspend_until=2026-11-09T08%3A15%3A00Z
+&amp;on_expiry=revoke
+&amp;reason=Pending+quarterly+access+review
+&amp;nonce=nonce_4Dq2mV8kX1sB7nR3tW
+</pre><a href="#section-5.6-9" class="pilcrow">¶</a>
+</div>
+<p id="section-5.6-10">Suspend success response: the signed Mission Status Response reports
+<code>suspended</code> and surfaces the pending outcome, carrying <code>suspend_until</code>
+and <code>on_expiry</code> in <code>mission</code> alongside <code>state</code>. Decoded JWS payload:<a href="#section-5.6-10" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-5.6-11">
+<pre>
+{
+  "iss": "https://as.example.com",
+  "aud": "client_erp-recon-agent",
+  "sub": "client_erp-recon-agent",
+  "nonce": "nonce_4Dq2mV8kX1sB7nR3tW",
+  "iat": 1797841200,
+  "exp": 1797841260,
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "origin": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "state": "suspended",
+    "suspend_until": "2026-11-09T08:15:00Z",
+    "on_expiry": "revoke",
+    "expires_at":     "2026-11-02T08:35:00Z",
+    "mission_expiry": "2026-12-31T23:59:59Z"
+  }
+}
+</pre><a href="#section-5.6-11" class="pilcrow">¶</a>
+</div>
+<p id="section-5.6-12">When <code>suspend_until</code> passes without a <code>resume</code>, the AS applies
+<code>on_expiry</code> and transitions the Mission to <code>revoked</code> without a further
+request.<a href="#section-5.6-12" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="idempotency">
@@ -2752,7 +2805,10 @@ profile's privacy considerations.<a href="#section-9.2-1" class="pilcrow">¶</a>
 <a href="#section-10" class="section-number selfRef">10. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
       </h2>
 <p id="section-10-1">An implementation conforms to the issuance profile
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> first. Each extension in this
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> or implements the Mission
+Issuer role of a binding that serves these surfaces, such as the
+standalone Mission Authority Server
+<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>. Each extension in this
 document is independently <span class="bcp14">OPTIONAL</span>; an implementation names the ones it
 supports (for example, "issuance profile with Mission Status and
 Mission Lifecycle"), and an implementation that supports none of them
@@ -2992,9 +3048,17 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
 <a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-authority-server</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authority-server">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authority-server</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Child Delegation for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-child-delegation</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-cross-domain</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-cross-domain">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-cross-domain</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
         <dd>

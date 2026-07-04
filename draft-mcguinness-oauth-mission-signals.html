@@ -8,15 +8,16 @@
 <meta content="Karl McGuinness" name="author">
 <meta content="
        The Mission Status and Lifecycle profile names event-driven propagation
-(Mission state changes reaching consumers over a Shared Signals or
-equivalent channel) as one way to bound revocation latency, but leaves
+(Mission state changes reaching consumers over a Shared Signals stream)
+as one way to bound revocation latency, but leaves
 the channel itself unspecified. This document
 specifies it: a profile
 of the OpenID Shared Signals Framework in which a Mission Issuer emits
 a Mission lifecycle-change Security Event Token when it commits a state
-transition, delivered push or poll, so a consumer learns of a
-revocation, expiry, or other transition without polling. It is
- OPTIONAL  and builds on Mission-Bound Authorization for OAuth 2.0, the
+transition, delivered by push or poll, so a consumer learns of a
+revocation, expiry, or other transition promptly without polling
+Mission Status per Mission. It is
+optional and builds on Mission-Bound Authorization for OAuth 2.0, the
 issuance profile; a deployment that does not adopt it is unaffected. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
@@ -1064,7 +1065,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 4 January 2027</td>
+<td class="center">Expires 5 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1077,12 +1078,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-signals-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-03" class="published">3 July 2026</time>
+<time datetime="2026-07-04" class="published">4 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-04">4 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-05">5 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1096,15 +1097,16 @@ svg {
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
 <p id="section-abstract-1">The Mission Status and Lifecycle profile names event-driven propagation
-(Mission state changes reaching consumers over a Shared Signals or
-equivalent channel) as one way to bound revocation latency, but leaves
+(Mission state changes reaching consumers over a Shared Signals stream)
+as one way to bound revocation latency, but leaves
 the channel itself unspecified. This document
 specifies it: a profile
 of the OpenID Shared Signals Framework in which a Mission Issuer emits
 a Mission lifecycle-change Security Event Token when it commits a state
-transition, delivered push or poll, so a consumer learns of a
-revocation, expiry, or other transition without polling. It is
-<span class="bcp14">OPTIONAL</span> and builds on Mission-Bound Authorization for OAuth 2.0, the
+transition, delivered by push or poll, so a consumer learns of a
+revocation, expiry, or other transition promptly without polling
+Mission Status per Mission. It is
+optional and builds on Mission-Bound Authorization for OAuth 2.0, the
 issuance profile; a deployment that does not adopt it is unaffected.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
@@ -1137,7 +1139,7 @@ issuance profile; a deployment that does not adopt it is unaffected.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 4 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 5 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1262,8 +1264,8 @@ tokens by their lifetime. The Mission Status and Lifecycle profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> adds surfaces for
 observing and changing state, and points to event-driven propagation
 for deployments that need Mission state changes to reach consumers
-promptly, without each consumer polling. It does not define the
-channel.<a href="#section-1-1" class="pilcrow">¶</a></p>
+promptly, without each consumer polling Mission Status per Mission. It
+does not define the channel.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">This document defines the channel. When a Mission Issuer commits a
 Mission lifecycle transition (a revocation, expiry, suspension,
 completion, or the approval event that activates a Mission), it emits
@@ -1299,7 +1301,10 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <p id="section-2-2">This document uses the terms defined in the issuance profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and the Status profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, in particular Mission,
-Mission Issuer (Authorization Server, the Mission <code>origin</code>), <code>mission_id</code>,
+Mission Issuer (the Mission <code>origin</code>: in this document's OAuth binding
+the Authorization Server; a standalone Mission Issuer, the Mission
+Authority Server <span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>,
+transmits these events with the same semantics), <code>mission_id</code>,
 and the Mission lifecycle states. It additionally uses <strong>Security Event
 Token (SET)</strong> <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> and the <strong>Shared Signals Framework (SSF)</strong>
         <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span> transmitter, receiver, and stream terminology.<a href="#section-2-2" class="pilcrow">¶</a></p>
@@ -1480,6 +1485,61 @@ status (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite 
   }
 }
 </pre><a href="#section-4-9" class="pilcrow">¶</a>
+</div>
+<p id="section-4-10">Example SET (decoded), for the approval event that activates the
+Mission (<code>version</code> 1, no <code>prior_state</code>):<a href="#section-4-10" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4-11">
+<pre>
+{
+  "iss": "https://as.example.com",
+  "aud": "https://erp.example.com",
+  "iat": 1797836400,
+  "jti": "set_3Fw7bJ4nQ9xD2kM6vL1c",
+  "sub_id": {
+    "format": "opaque",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  },
+  "events": {
+    "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
+      "mission": {
+        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+        "origin": "https://as.example.com"
+      },
+      "state": "active",
+      "version": 1,
+      "committed_at": "2026-11-02T07:00:00Z"
+    }
+  }
+}
+</pre><a href="#section-4-11" class="pilcrow">¶</a>
+</div>
+<p id="section-4-12">Example SET (decoded), for a supersession, carrying <code>successor</code>:<a href="#section-4-12" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4-13">
+<pre>
+{
+  "iss": "https://as.example.com",
+  "aud": "https://erp.example.com",
+  "iat": 1797846000,
+  "jti": "set_6Tn4rW8pB3zK7qC2mV5j",
+  "sub_id": {
+    "format": "opaque",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  },
+  "events": {
+    "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
+      "mission": {
+        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+        "origin": "https://as.example.com"
+      },
+      "prior_state": "active",
+      "state": "superseded",
+      "version": 2,
+      "committed_at": "2026-11-02T09:40:00Z",
+      "successor": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX"
+    }
+  }
+}
+</pre><a href="#section-4-13" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -1767,20 +1827,12 @@ Optional event-body claims: <code>tenant</code>, <code>reason</code>, <code>succ
 </li>
         </ul>
 <p id="section-13.1-3">This event type uses the OpenID Shared Signals Framework <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span>
-SET shape. The same event type URI is also referenced by the
-substrate-neutral Mission Authority Server work, which makes <code>tenant</code> a
-required claim; this profile makes <code>tenant</code> <span class="bcp14">OPTIONAL</span> because the OAuth
-profile has no tenant model. Because the URI is author-controlled and
-has no IANA registry or change controller to arbitrate a shared
-definition, this profile does not rely on any cross-specification
-guarantee about its required-claim set. It relies only on consumer
-robustness, which is sufficient on its own: a consumer <span class="bcp14">MUST</span> ignore
-members it does not understand and <span class="bcp14">MUST NOT</span> reject an event solely for
-a missing <span class="bcp14">OPTIONAL</span> member (notably <code>tenant</code>). A consumer built to this
-profile therefore interoperates with an emitter of either specification
-regardless of how the two reconcile, and a deployment that needs a
-binding shared definition should pursue a registered event type rather
-than depend on the author-controlled URI.<a href="#section-13.1-3" class="pilcrow">¶</a></p>
+SET shape. The standalone Mission Issuer binding
+<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span> emits this event
+type unchanged and imposes no tenant requirement; <code>tenant</code> remains
+<span class="bcp14">OPTIONAL</span>. A consumer <span class="bcp14">MUST</span> ignore members it does not understand and
+<span class="bcp14">MUST NOT</span> reject an event solely for a missing <span class="bcp14">OPTIONAL</span> member (notably
+<code>tenant</code>).<a href="#section-13.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="oauth-authorization-server-metadata-registration">
@@ -1872,6 +1924,10 @@ IETF; Reference this document, <a href="#as-metadata" class="auto internal xref"
 <a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-authority-server</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authority-server">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authority-server</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Child Delegation for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-child-delegation</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation</a>&gt;</span>. </dd>

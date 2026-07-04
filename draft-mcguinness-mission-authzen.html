@@ -11,16 +11,21 @@
 substrate-independent decision contract: before each consequential
 action runs, a Policy Enforcement Point (PEP) obtains a permit from a
 Policy Decision Point (PDP) that evaluates the action against the
-Mission the acting token is bound to. That contract is independent of
+established Mission. That contract is independent of
 the decision wire format. This document is the concrete OpenID AuthZEN
-binding of that contract. It defines how a Mission is materialized
-into an evaluable policy view, how the abstract decision inputs map
+binding of that contract. It defines how the runtime profile's
+materialized policy view is referenced on the wire through its
+ policy_view_id , how the abstract decision inputs map
 onto the AuthZEN Authorization API request and response, the Decision
 Evidence and Execution Evidence objects a deployment emits and their
 integrity, how runtime denials map onto AuthZEN decision context and
 optional error details, how requestable denials can compose with the
-AuthZEN Access Request and Approval Profile, and the AuthZEN
-representation of the runtime metering the runtime profile meters. It
+AuthZEN Access Request and Approval Profile, how a Mission's approved
+authority is bound to the capability source it was derived from and a
+drifted capability definition is refused, and the AuthZEN
+representation of the runtime metering the runtime profile meters,
+including the settlement exchange that commits or releases metered
+consumption. It
 does not restate the enforcement semantics the runtime profile owns. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
@@ -1066,7 +1071,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 4 January 2027</td>
+<td class="center">Expires 5 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1079,12 +1084,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-authzen-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-03" class="published">3 July 2026</time>
+<time datetime="2026-07-04" class="published">4 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-04">4 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-05">5 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1101,16 +1106,21 @@ svg {
 substrate-independent decision contract: before each consequential
 action runs, a Policy Enforcement Point (PEP) obtains a permit from a
 Policy Decision Point (PDP) that evaluates the action against the
-Mission the acting token is bound to. That contract is independent of
+established Mission. That contract is independent of
 the decision wire format. This document is the concrete OpenID AuthZEN
-binding of that contract. It defines how a Mission is materialized
-into an evaluable policy view, how the abstract decision inputs map
+binding of that contract. It defines how the runtime profile's
+materialized policy view is referenced on the wire through its
+<code>policy_view_id</code>, how the abstract decision inputs map
 onto the AuthZEN Authorization API request and response, the Decision
 Evidence and Execution Evidence objects a deployment emits and their
 integrity, how runtime denials map onto AuthZEN decision context and
 optional error details, how requestable denials can compose with the
-AuthZEN Access Request and Approval Profile, and the AuthZEN
-representation of the runtime metering the runtime profile meters. It
+AuthZEN Access Request and Approval Profile, how a Mission's approved
+authority is bound to the capability source it was derived from and a
+drifted capability definition is refused, and the AuthZEN
+representation of the runtime metering the runtime profile meters,
+including the settlement exchange that commits or releases metered
+consumption. It
 does not restate the enforcement semantics the runtime profile owns.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
@@ -1143,7 +1153,7 @@ does not restate the enforcement semantics the runtime profile owns.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 4 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 5 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1238,6 +1248,9 @@ does not restate the enforcement semantics the runtime profile owns.<a href="#se
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.4">
                 <p id="section-toc.1-1.6.2.4.1"><a href="#section-6.4" class="auto internal xref">6.4</a>.  <a href="#name-worked-example" class="internal xref">Worked example</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.5">
+                <p id="section-toc.1-1.6.2.5.1"><a href="#section-6.5" class="auto internal xref">6.5</a>.  <a href="#name-request-digest-worked-value" class="internal xref">Request digest worked value</a></p>
 </li>
             </ul>
 </li>
@@ -1382,12 +1395,14 @@ binding and the time-of-check to time-of-use gap, consumption
 metering, failure modes, runtime enforcement evidence, and the runtime
 conformance scope, but it states that the decision API wire format is a
 deployment choice and defines no binding of its own.<a href="#section-1-1" class="pilcrow">¶</a></p>
-<p id="section-1-2">This document is that AuthZEN profile. It binds the runtime profile's
-abstract decision contract to the OpenID AuthZEN Authorization API
-<span>[<a href="#AUTHZEN" class="cite xref">AUTHZEN</a>]</span>. It carries only the AuthZEN-binding deltas:<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-2">This document is the OpenID AuthZEN binding of that contract: it maps
+the runtime profile's abstract decision contract onto the OpenID
+AuthZEN Authorization API <span>[<a href="#AUTHZEN" class="cite xref">AUTHZEN</a>]</span> and carries only the
+AuthZEN-binding deltas:<a href="#section-1-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-1-3.1">
-          <p id="section-1-3.1.1">how a Mission becomes a materialized policy view the PDP evaluates
+          <p id="section-1-3.1.1">how the runtime profile's materialized policy view is referenced on
+the wire through its <code>policy_view_id</code>
 (<a href="#mission-to-policy-materialization" class="auto internal xref">Section 4</a>);<a href="#section-1-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-3.2">
@@ -1396,25 +1411,31 @@ abstract decision contract to the OpenID AuthZEN Authorization API
 request, and the PDP-side consistency checks (<a href="#pdp-request" class="auto internal xref">Section 5</a>);<a href="#section-1-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-3.3">
-          <p id="section-1-3.3.1">the Decision Evidence and Execution Evidence objects, their
-integrity, and worked examples (<a href="#decision-evidence-object" class="auto internal xref">Section 6</a>,
-<a href="#execution-evidence-object" class="auto internal xref">Section 7</a>);<a href="#section-1-3.3.1" class="pilcrow">¶</a></p>
+          <p id="section-1-3.3.1">batch evaluations over the AuthZEN evaluations endpoint
+(<a href="#batch-evaluations" class="auto internal xref">Section 5.10</a>);<a href="#section-1-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-3.4">
-          <p id="section-1-3.4.1">how runtime denials map onto AuthZEN decision context and optional
-error details (<a href="#runtime-denial-classification" class="auto internal xref">Section 8</a>);<a href="#section-1-3.4.1" class="pilcrow">¶</a></p>
+          <p id="section-1-3.4.1">the Decision Evidence and Execution Evidence objects, their
+integrity, and worked examples (<a href="#decision-evidence-object" class="auto internal xref">Section 6</a>,
+<a href="#execution-evidence-object" class="auto internal xref">Section 7</a>);<a href="#section-1-3.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-3.5">
-          <p id="section-1-3.5.1">how requestable denials can compose with the AuthZEN Access Request
-and Approval Profile <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>;<a href="#section-1-3.5.1" class="pilcrow">¶</a></p>
+          <p id="section-1-3.5.1">how runtime denials map onto AuthZEN decision context and optional
+error details (<a href="#runtime-denial-classification" class="auto internal xref">Section 8</a>);<a href="#section-1-3.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-3.6">
-          <p id="section-1-3.6.1">the binding of a Mission's approved authority to concrete,
-catalog-sourced capabilities (<a href="#capability-source-binding" class="auto internal xref">Section 9</a>); and<a href="#section-1-3.6.1" class="pilcrow">¶</a></p>
+          <p id="section-1-3.6.1">how requestable denials can compose with the AuthZEN Access Request
+and Approval Profile <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>;<a href="#section-1-3.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-3.7">
-          <p id="section-1-3.7.1">the AuthZEN representation of the runtime metering the runtime
-profile meters (<a href="#consumption-metering-binding" class="auto internal xref">Section 10</a>).<a href="#section-1-3.7.1" class="pilcrow">¶</a></p>
+          <p id="section-1-3.7.1">the binding of a Mission's approved authority to concrete,
+catalog-sourced capabilities (<a href="#capability-source-binding" class="auto internal xref">Section 9</a>); and<a href="#section-1-3.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-3.8">
+          <p id="section-1-3.8.1">the AuthZEN representation of the runtime metering the runtime
+profile meters (<a href="#consumption-metering-binding" class="auto internal xref">Section 10</a>), and the
+settlement exchange that commits or releases metered consumption
+(<a href="#settlement-exchange" class="auto internal xref">Section 10.1</a>).<a href="#section-1-3.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-1-4">This document does not restate the enforcement contract. It does not
@@ -1435,13 +1456,14 @@ not duplicated, here.<a href="#section-1-4" class="pilcrow">¶</a></p>
    |           |&lt;- permit ------|                     |
    |           |  (+ context)   |                     |
    |           | execute        |                     |
-   |           |- Execution Evidence -&gt;|  (commit/     |
-   |           |                |        release)      |
+   |           |- Execution ---&gt;|                     |
+   |           |  Evidence      | commit / release    |
    |&lt;- result -|                |                     |
    |           |                |                     |
-   |           |&lt;- deny (+ access_request) -|          |
-   |           |- submit access request --&gt;|---------&gt;|
-   |           |&lt;-------------- approval ------------- |
+   |           |&lt;- deny --------|                     |
+   |           |  (+ access_request)                  |
+   |           |- submit access request -------------&gt;|
+   |           |&lt;--------------- approval ------------|
    |           |- re-evaluate -&gt;|                     |
 </pre><a href="#section-1-6" class="pilcrow">¶</a>
 </div>
@@ -1911,7 +1933,7 @@ absent.<a href="#section-5.7-1" class="pilcrow">¶</a></p>
         <h3 id="name-worked-pdp-request">
 <a href="#section-5.8" class="section-number selfRef">5.8. </a><a href="#name-worked-pdp-request" class="section-name selfRef">Worked PDP request</a>
         </h3>
-<p id="section-5.8-1">For a Q3 invoicing Mission:<a href="#section-5.8-1" class="pilcrow">¶</a></p>
+<p id="section-5.8-1">For the ERP reconciliation Mission:<a href="#section-5.8-1" class="pilcrow">¶</a></p>
 <div class="breakable lang-http-message sourcecode" id="section-5.8-2">
 <pre>
 POST /pdp/access/v1/evaluation HTTP/1.1
@@ -1946,12 +1968,12 @@ Authorization: ...
         "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
     },
     "actor": {
-      "client_id": "client_erp-recon-agent",
+      "client_id": "s6BhdRkqt3",
       "client_instance_id": "inst_macbook_7f3a",
       "act": [
         {
           "iss": "https://as.example.com",
-          "sub": "client_erp-recon-agent"
+          "sub": "s6BhdRkqt3"
         }
       ]
     },
@@ -1964,7 +1986,7 @@ Authorization: ...
       "source_invoice_id": "inv_2026Q3_842"
     },
     "parameter_digest":
-      "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA8dRn",
+      "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
     "audience": "https://erp.example.com",
     "freshness": {
       "mission_status_issued_at": "2026-11-02T08:14:00Z",
@@ -2061,6 +2083,130 @@ item in request order (<a href="#consumption-metering-binding" class="auto inter
 are per item, so a boxcar <span class="bcp14">MAY</span> return a mix of permits and denials.
 Batching is a transport optimization and changes none of the per-item
 enforcement semantics.<a href="#section-5.10-1" class="pilcrow">¶</a></p>
+<p id="section-5.10-2">A batch request for two journal-entry writes under the ERP
+reconciliation Mission, where the second exceeds the entry's
+<code>max_amount_usd</code> ceiling of 500. The shared <code>subject</code> is hoisted to the
+request's default members per <span>[<a href="#AUTHZEN" class="cite xref">AUTHZEN</a>]</span>; each item carries its
+complete <code>context</code>:<a href="#section-5.10-2" class="pilcrow">¶</a></p>
+<div class="breakable lang-http-message sourcecode" id="section-5.10-3">
+<pre>
+POST /pdp/access/v1/evaluations HTTP/1.1
+Host: pdp.example.com
+Content-Type: application/json
+Authorization: ...
+
+{
+  "subject": {
+    "type": "user",
+    "id": "user_3p2q8mN1a0kV7tR",
+    "properties": {
+      "iss": "https://idp.example.com"
+    }
+  },
+  "evaluations": [
+    {
+      "resource": {
+        "type": "journal-entry",
+        "id": "je_2026Q3_inv_8421"
+      },
+      "action": { "name": "journal-entries.write" },
+      "context": {
+        "mission": {
+          "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+          "origin": "https://as.example.com",
+          "authority_hash":
+            "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+          "state": "active"
+        },
+        "actor": { "client_id": "s6BhdRkqt3" },
+        "credential": {
+          "issuer": "https://as.example.com",
+          "expires_at": "2026-11-02T09:14:00Z"
+        },
+        "parameters": {
+          "amount_usd": "423.50",
+          "source_invoice_id": "inv_2026Q3_842"
+        },
+        "parameter_digest":
+          "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+        "audience": "https://erp.example.com",
+        "freshness": {
+          "mode": "fresh",
+          "freshness_at": "2026-11-02T08:14:00Z"
+        }
+      }
+    },
+    {
+      "resource": {
+        "type": "journal-entry",
+        "id": "je_2026Q3_inv_9310"
+      },
+      "action": { "name": "journal-entries.write" },
+      "context": {
+        "mission": {
+          "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+          "origin": "https://as.example.com",
+          "authority_hash":
+            "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+          "state": "active"
+        },
+        "actor": { "client_id": "s6BhdRkqt3" },
+        "credential": {
+          "issuer": "https://as.example.com",
+          "expires_at": "2026-11-02T09:14:00Z"
+        },
+        "parameters": {
+          "amount_usd": "780.00",
+          "source_invoice_id": "inv_2026Q3_931"
+        },
+        "parameter_digest":
+          "sha-256:mzFwtXAT6_hY0v8_NFHMDJG39HFuWY2fRcOCSFGDyyE",
+        "audience": "https://erp.example.com",
+        "freshness": {
+          "mode": "fresh",
+          "freshness_at": "2026-11-02T08:14:00Z"
+        }
+      }
+    }
+  ]
+}
+</pre><a href="#section-5.10-3" class="pilcrow">¶</a>
+</div>
+<p id="section-5.10-4">The response returns one decision per item, in request order; the
+first is a permit and the second a <code>parameter_violation</code> deny, whose
+failing <code>max_amount_usd</code> key is listed in that item's Decision
+Evidence <code>contributing_constraints</code>:<a href="#section-5.10-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-5.10-5">
+<pre>
+{
+  "evaluations": [
+    {
+      "decision": true,
+      "context": {
+        "decision_id": "dec_2FpQ8kV5nR1tX7mB4sJ9eL6wYc",
+        "parameter_digest":
+          "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+        "policy_view_id":
+          "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
+        "permit_expires_at": "2026-11-02T08:15:00Z",
+        "single_use": true
+      }
+    },
+    {
+      "decision": false,
+      "context": {
+        "decision_id": "dec_6JwN3xT9rQ4mV8kP1sB5eZ2yLd",
+        "denial_reason": "parameter_violation",
+        "parameter_digest":
+          "sha-256:mzFwtXAT6_hY0v8_NFHMDJG39HFuWY2fRcOCSFGDyyE",
+        "policy_view_id":
+          "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
+      }
+    }
+  ]
+}
+</pre><a href="#section-5.10-5" class="pilcrow">¶</a>
+</div>
 </section>
 </div>
 </section>
@@ -2210,7 +2356,9 @@ verifiable order and gaps are detectable. <span class="bcp14">MUST</span> be zer
 <code>denial_reason</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.1-1.32">
             <p id="section-6.1-1.32.1">CONDITIONAL. A string. Present when <code>decision</code> is <code>deny</code>. A value from
-the closed set in <a href="#runtime-denial-classification" class="auto internal xref">Section 8</a>. When the denial
+the set of <a href="#runtime-denial-classification" class="auto internal xref">Section 8</a>, including any
+specification-defined extension under that section's extensibility
+rule; a consumer <span class="bcp14">MUST</span> treat an unrecognized value as a deny and <span class="bcp14">MUST NOT</span> attach any other semantics to it. When the denial
 is a constraint violation, the value is <code>parameter_violation</code> and the
 specific failing <code>constraints</code> keys are carried in
 <code>contributing_constraints</code>, not in <code>denial_reason</code>, so the reason
@@ -2257,7 +2405,12 @@ verified, at least <code>audience</code>, an action descriptor, <code>evaluated_
 Mission state to send to the PDP). These name PEP-side conditions and
 are disjoint from the PDP denial reasons of
 <a href="#runtime-denial-classification" class="auto internal xref">Section 8</a>; a record that can populate the
-PDP-derived members is a Decision Evidence Object instead.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+PDP-derived members is a Decision Evidence Object instead. When the
+deployment establishes the Mission binding externally under the
+runtime profile's binding-establishment step
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), absence of the <code>mission</code>
+claim is not a pre-decision refusal and <code>mission_claim_missing</code> does
+not apply; the external join's verification governs instead.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="decision-evidence-integrity">
@@ -2341,12 +2494,12 @@ envelopes with unsupported formats.<a href="#section-6.3-5" class="pilcrow">¶</
     }
   },
   "actor": {
-    "client_id": "client_erp-recon-agent",
+    "client_id": "s6BhdRkqt3",
     "client_instance_id": "inst_macbook_7f3a",
     "act": [
       {
         "iss": "https://as.example.com",
-        "sub": "client_erp-recon-agent"
+        "sub": "s6BhdRkqt3"
       }
     ]
   },
@@ -2360,7 +2513,7 @@ envelopes with unsupported formats.<a href="#section-6.3-5" class="pilcrow">¶</
   },
   "action": { "name": "journal-entries.write" },
   "parameter_digest":
-    "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA8dRn",
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
   "audience": "https://erp.example.com",
   "decision": "permit",
   "contributing_constraints": [
@@ -2378,6 +2531,47 @@ envelopes with unsupported formats.<a href="#section-6.3-5" class="pilcrow">¶</
 <p id="section-6.4-2">Decision Evidence is durable and integrity-protected. It is the
 authoritative record of what the PDP evaluated, not proof that the
 action occurred.<a href="#section-6.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="request-digest-worked">
+<section id="section-6.5">
+        <h3 id="name-request-digest-worked-value">
+<a href="#section-6.5" class="section-number selfRef">6.5. </a><a href="#name-request-digest-worked-value" class="section-name selfRef">Request digest worked value</a>
+        </h3>
+<p id="section-6.5-1">For a consequential action that is not parameter-bound (here a
+consequential read), the record carries <code>request_digest</code> in place of
+<code>parameter_digest</code>. The runtime profile does not standardize the
+digested request form, so the emitting deployment states the exact
+input; this non-normative example digests exactly the following
+evaluation-request summary object:<a href="#section-6.5-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-6.5-2">
+<pre>
+{
+  "action": "journal-entries.read",
+  "audience": "https://erp.example.com",
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "resource": "je_2026Q3_inv_8421",
+  "subject": "user_3p2q8mN1a0kV7tR"
+}
+</pre><a href="#section-6.5-2" class="pilcrow">¶</a>
+</div>
+<p id="section-6.5-3">The value is the integrity-anchor encoded form of the SHA-256 of the
+JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical bytes of that object (one line, sorted
+member names, no whitespace, shown here wrapped for layout only;
+remove the layout line breaks, adding no characters, to recover the
+canonical form):<a href="#section-6.5-3" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-6.5-4">
+<pre>
+{"action":"journal-entries.read","audience":"https://erp.example.com
+","mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","resource":
+"je_2026Q3_inv_8421","subject":"user_3p2q8mN1a0kV7tR"}
+</pre><a href="#section-6.5-4" class="pilcrow">¶</a>
+</div>
+<div class="lang-text sourcecode" id="section-6.5-5">
+<pre>
+request_digest = sha-256:sK12VE_g01AHD2v-O1vsf1Gf_xT_htjX0UN0Oe0dDRU
+</pre><a href="#section-6.5-5" class="pilcrow">¶</a>
+</div>
 </section>
 </div>
 </section>
@@ -2520,7 +2714,7 @@ members other than those defined above.<a href="#section-7.1-2" class="pilcrow">
   "decision_id":  "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
   "mission_id":   "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "parameter_digest":
-    "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA8dRn",
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
   "outcome":      "completed",
   "sequence":     43,
   "attempted_at": "2026-11-02T08:14:04Z",
@@ -2664,7 +2858,18 @@ This is distinct from <code>parameter_violation</code>, which is a constraint th
 PDP evaluated and found violated.<a href="#section-8-2.13.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-8-3">A deny is terminal for the attempted action: the agent does not proceed
+<p id="section-8-3">This document defines no other denial-reason values. A companion
+profile <span class="bcp14">MAY</span> extend the set by specification; an extension value <span class="bcp14">MUST</span>
+be either a collision-resistant name (following the Collision-Resistant
+Name guidance of <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> Section 4.2) or a name coordinated within
+this document family, so values cannot collide. A consumer of a denial
+reason, wherever it is carried (the Decision Evidence <code>denial_reason</code>,
+<a href="#decision-evidence-object" class="auto internal xref">Section 6</a>, or the response <code>context.denial_reason</code>,
+<a href="#runtime-denial-classification" class="auto internal xref">Section 8</a>), <span class="bcp14">MUST</span> treat an unrecognized value as
+a deny and <span class="bcp14">MUST NOT</span> attach any other semantics to it, mirroring the
+issuance profile's open lifecycle state space
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">A deny is terminal for the attempted action: the agent does not proceed
 on a denial. A deny need not end the task, however. For an
 <code>out_of_authority</code> or <code>action_approval_required</code> denial, the PDP <span class="bcp14">MAY</span>
 mark the denial <strong>requestable</strong> by including a <code>context.access_request</code>
@@ -2678,15 +2883,15 @@ runtime-initiated counterpart to the pre-consented drawdown of
 progressive authorization
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>): the agent starts
 narrow and requests the authority it discovers it needs, instead of
-holding it up front.<a href="#section-8-3" class="pilcrow">¶</a></p>
-<p id="section-8-4">Auto-approval is bounded the same way in-ceiling drawdown is
+holding it up front.<a href="#section-8-4" class="pilcrow">¶</a></p>
+<p id="section-8-5">Auto-approval is bounded the same way in-ceiling drawdown is
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>): a deployment <span class="bcp14">SHOULD</span>
 rate-limit and anomaly-check synchronous auto-approval, and <span class="bcp14">MUST NOT</span>
 auto-approve a request for an <code>action_approval_required</code> denial in the
 irreversible, external-commitment, or privileged-administration classes
 without an independent approver, so a compromised agent cannot drive the
-request loop to escalate itself unattended.<a href="#section-8-4" class="pilcrow">¶</a></p>
-<p id="section-8-5">Two ARAP properties carry weight here and match this profile's stance.
+request loop to escalate itself unattended.<a href="#section-8-5" class="pilcrow">¶</a></p>
+<p id="section-8-6">Two ARAP properties carry weight here and match this profile's stance.
 First, an ARAP approval is input context, not a bearer grant: the PDP
 remains authoritative at enforcement, so the PEP <span class="bcp14">MUST</span> obtain a fresh
 decision, and any resulting permit and evidence remain subject to this
@@ -2698,7 +2903,7 @@ re-evaluated action rather than re-requesting it per call, an approved
 request <span class="bcp14">MAY</span> be realized as a Mission expansion
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>): an in-ceiling
 request as a policy-adjudicated in-ceiling expansion, a beyond-ceiling
-request as the fresh human approval that creates the successor Mission.<a href="#section-8-5" class="pilcrow">¶</a></p>
+request as the fresh human approval that creates the successor Mission.<a href="#section-8-6" class="pilcrow">¶</a></p>
 <div id="authzen-decision-context">
 <section id="section-8.1">
         <h3 id="name-authzen-decision-context">
@@ -2718,8 +2923,10 @@ decision.<a href="#section-8.1-2.2.1" class="pilcrow">¶</a></p>
 <dt id="section-8.1-2.3">
 <code>denial_reason</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-8.1-2.4">
-            <p id="section-8.1-2.4.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>false</code>. A string from the closed set in
-<a href="#runtime-denial-classification" class="auto internal xref">Section 8</a>. A constraint violation uses
+            <p id="section-8.1-2.4.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>false</code>. A string from the set of
+<a href="#runtime-denial-classification" class="auto internal xref">Section 8</a>, including any
+specification-defined extension under that section's extensibility
+rule; a consumer <span class="bcp14">MUST</span> treat an unrecognized value as a deny and <span class="bcp14">MUST NOT</span> attach any other semantics to it. A constraint violation uses
 <code>parameter_violation</code>; the specific failing <code>constraints</code> keys are
 carried in the Decision Evidence <code>contributing_constraints</code>, not here.<a href="#section-8.1-2.4.1" class="pilcrow">¶</a></p>
 </dd>
@@ -2797,7 +3004,7 @@ lifetime controls required by the runtime profile.<a href="#section-8.2-1" class
   "context": {
     "decision_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
     "parameter_digest":
-      "sha-256:t2Wq9pK7sR3mL6xT4bN1eY8jC5vH0nF2pV9zKqA8dRn",
+      "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
     "policy_view_id":
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
     "permit_expires_at": "2026-11-02T08:15:00Z",
@@ -2855,11 +3062,38 @@ not as transport errors.<a href="#section-8.4-1" class="pilcrow">¶</a></p>
 }
 </pre><a href="#section-8.4-2" class="pilcrow">¶</a>
 </div>
-<p id="section-8.4-3">Malformed requests, authentication failures, or PDP processing errors
+<p id="section-8.4-3">A requestable denial additionally carries <code>context.access_request</code>.
+Here deployment policy requires an action-bound approval for the
+journal-entry write, no valid fresh approval is present, and the PDP
+marks the denial requestable under <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>:<a href="#section-8.4-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-8.4-4">
+<pre>
+{
+  "decision": false,
+  "context": {
+    "decision_id": "dec_7YbK4nQ9tR2xV6mL1sP8eJ3wZc",
+    "denial_reason": "action_approval_required",
+    "parameter_digest":
+      "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+    "policy_view_id":
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
+    "access_request": {
+      "endpoint": "https://requests.example.com/access-requests",
+      "denial_binding": "dec_7YbK4nQ9tR2xV6mL1sP8eJ3wZc"
+    }
+  }
+}
+</pre><a href="#section-8.4-4" class="pilcrow">¶</a>
+</div>
+<p id="section-8.4-5">The <code>access_request</code> members are the ARAP requestable-denial context
+<span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>; this profile does not define their shape. Its presence does
+not change the <code>decision: false</code> result: the PEP refuses the action,
+submits the access request, and re-evaluates only after approval.<a href="#section-8.4-5" class="pilcrow">¶</a></p>
+<p id="section-8.4-6">Malformed requests, authentication failures, or PDP processing errors
 that prevent evaluation <span class="bcp14">MAY</span> be returned as AuthZEN or transport-level
 errors. A deployment <span class="bcp14">MAY</span> additionally carry <span>[<a href="#RFC9457" class="cite xref">RFC9457</a>]</span> problem
 details for structured error information when the PDP is consumed over
-HTTP outside the AuthZEN envelope.<a href="#section-8.4-3" class="pilcrow">¶</a></p>
+HTTP outside the AuthZEN envelope.<a href="#section-8.4-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3027,6 +3261,49 @@ containing an ISO 8601 duration (the <code>duration</code> rule in Appendix A of
 </dd>
         <dd class="break"></dd>
 </dl>
+<p id="section-10.1-4">A renewal repeats the evaluation-request envelope for the same
+activity and adds <code>context.prior_decision_id</code>. Here a long-running,
+duration-metered ledger reconciliation renews its lease before the
+prior permit expires; the action is not parameter-bound, so no
+<code>parameter_digest</code> is carried:<a href="#section-10.1-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-10.1-5">
+<pre>
+{
+  "subject": {
+    "type": "user",
+    "id": "user_3p2q8mN1a0kV7tR",
+    "properties": {
+      "iss": "https://idp.example.com"
+    }
+  },
+  "resource": {
+    "type": "ledger",
+    "id": "ledger_main"
+  },
+  "action": { "name": "reconciliation.run" },
+  "context": {
+    "mission": {
+      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+      "origin": "https://as.example.com",
+      "authority_hash":
+        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "state": "active"
+    },
+    "actor": { "client_id": "s6BhdRkqt3" },
+    "credential": {
+      "issuer": "https://as.example.com",
+      "expires_at": "2026-11-02T09:14:00Z"
+    },
+    "audience": "https://erp.example.com",
+    "freshness": {
+      "mode": "fresh",
+      "freshness_at": "2026-11-02T08:44:00Z"
+    },
+    "prior_decision_id": "dec_0Rt5nB8xW2qK7mJ4vS1pL9eYc"
+  }
+}
+</pre><a href="#section-10.1-5" class="pilcrow">¶</a>
+</div>
 </section>
 </div>
 </section>
@@ -3105,8 +3382,9 @@ pre-decision refusal record for a refusal before any PDP decision
           <p id="section-12-5.1.1">perform the PDP-side consistency checks (<a href="#pdp-request" class="auto internal xref">Section 5</a>);<a href="#section-12-5.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-5.2">
-          <p id="section-12-5.2.1">return every denial with a denial-reason identifier from the closed
-set of <a href="#runtime-denial-classification" class="auto internal xref">Section 8</a>; and<a href="#section-12-5.2.1" class="pilcrow">¶</a></p>
+          <p id="section-12-5.2.1">return every denial with a denial-reason identifier from the set of
+<a href="#runtime-denial-classification" class="auto internal xref">Section 8</a>, including any
+specification-defined extension under its extensibility rule; and<a href="#section-12-5.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-5.3">
           <p id="section-12-5.3.1">produce Decision Evidence with the required members and a verifiable

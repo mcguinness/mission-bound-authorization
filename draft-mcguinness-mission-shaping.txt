@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                               3 July 2026
-Expires: 4 January 2027
+Intended status: Informational                               4 July 2026
+Expires: 5 January 2027
 
 
                          Mission Intent Shaping
@@ -17,16 +17,16 @@ Abstract
    and the Authority Set an Authorization Server derives from it, but
    leaves the step that turns an open-ended task request into a
    candidate Mission Intent to deployment policy.  This document is an
-   OPTIONAL, Informational profile describing the Mission Shaper: a
-   client-side component that turns a user prompt or upstream trigger
-   into a candidate Mission Intent for submission to the issuance
-   profile.  It defines the shaper's role and trust boundary,
-   recommended behavior for ambiguity, capability resolution, and
-   refusal, and an audit artifact (Shaping Evidence).  It deliberately
-   defines no portable shaping wire protocol and claims no cross-vendor
-   conformance: the shaper proposes only, and authority is created
-   solely by the issuance profile's validation and approval, never by
-   the shaper.
+   Informational companion describing the Mission Shaper: a client-side
+   component that turns a user prompt or upstream trigger into a
+   candidate Mission Intent for submission to Mission-Bound
+   Authorization for OAuth 2.0 (the "issuance profile").  It defines the
+   shaper's role and trust boundary, recommended behavior for ambiguity,
+   capability resolution, and refusal, and an audit artifact (Shaping
+   Evidence).  It deliberately defines no portable shaping wire protocol
+   and claims no cross-vendor conformance: the shaper proposes only, and
+   authority is created solely by the issuance profile's validation and
+   approval, never by the shaper.
 
 About This Document
 
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 January 2027.
+   This Internet-Draft will expire on 5 January 2027.
 
 Copyright Notice
 
@@ -252,9 +252,13 @@ Table of Contents
    binding); Shaping Evidence additionally uses the substrate's
    integrity-anchor envelope.  The issuance profile
    [I-D.draft-mcguinness-oauth-mission] defines these for OAuth 2.0.
-   Another authorization substrate that accepts a structured, untrusted
-   task proposal and commits it at approval can host the shaping
-   practices described here unchanged.
+   The Mission Authority Server
+   ([I-D.draft-mcguinness-mission-authority-server]) is a standalone
+   binding of that submission channel; a shaped proposal enters it
+   through the MAS mission submission endpoint unchanged.  Another
+   authorization substrate that accepts a structured, untrusted task
+   proposal and commits it at approval can host the shaping practices
+   described here unchanged.
 
 5.  Shaper Role and Trust Boundary
 
@@ -731,6 +735,7 @@ Table of Contents
      "shaper_version": "policy-bundle-2026-06-30",
      "input_digest":
        "sha-256:InP9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4aB7cDe",
+     "input_exclusion_ruleset": "standard-2026-06",
      "user_supplied_facts": [
        "support ticket 456",
        "customer 1234"
@@ -1039,6 +1044,13 @@ Table of Contents
               <https://www.rfc-editor.org/rfc/rfc8785>.
 
 18.2.  Informative References
+
+   [I-D.draft-mcguinness-mission-authority-server]
+              McGuinness, K., "Mission Authority Server", Work in
+              Progress, Internet-Draft, draft-mcguinness-mission-
+              authority-server, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              mission-authority-server>.
 
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", Work

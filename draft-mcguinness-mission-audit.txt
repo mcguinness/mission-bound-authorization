@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             3 July 2026
-Expires: 4 January 2027
+Intended status: Standards Track                             4 July 2026
+Expires: 5 January 2027
 
 
                        Mission Audit Transparency
@@ -16,19 +16,19 @@ Abstract
    Mission-Bound Authorization for OAuth 2.0 and its companions produce
    many evidence records: the approval event, lifecycle transitions,
    consent evidence, runtime decision and execution evidence, and
-   harness, orchestration, and child-delegation evidence.  Each is
-   signed, but signed is not the same as tamper-evident, append-only, or
-   independently verifiable: a holder of the signing key can still
-   backdate, drop, or reorder records, and a cross-domain party cannot
-   confirm what was recorded without trusting the issuer's own logs.
-   This document defines an OPTIONAL Mission Audit Transparency profile.
-   It registers Mission evidence into a SCITT Transparency Service as
-   Signed Statements, with the Mission as the statement subject so a
-   Mission's records form one coherent, append-only feed, and binds the
-   resulting Receipt back so any party, in any domain, can verify
-   offline that a record was registered and not altered.  To keep
-   sensitive task data out of the log, statements commit to the evidence
-   by hash rather than carrying it.
+   further evidence types profiles define.  Each is signed, but signed
+   is not the same as tamper-evident, append-only, or independently
+   verifiable: a holder of the signing key can still backdate, drop, or
+   reorder records, and a cross-domain party cannot confirm what was
+   recorded without trusting the issuer's own logs.  This document
+   defines an OPTIONAL Mission Audit Transparency profile.  It registers
+   Mission evidence into a SCITT Transparency Service as Signed
+   Statements, with the Mission as the statement subject so a Mission's
+   records form one coherent, append-only feed, and binds the resulting
+   Receipt back so any party, in any domain, can verify offline that a
+   record was registered and not altered.  To keep sensitive task data
+   out of the log, statements commit to the evidence by hash rather than
+   carrying it.
 
 About This Document
 
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 January 2027.
+   This Internet-Draft will expire on 5 January 2027.
 
 Copyright Notice
 
@@ -106,16 +106,16 @@ Table of Contents
 
 1.  Introduction
 
-   The issuance profile [I-D.draft-mcguinness-oauth-mission] (the
-   "issuance profile") and its companions record evidence at every
-   governance and enforcement point.  The evidence is signed, which
-   makes a single record attributable and tamper-evident in isolation.
-   It does not make the record set as a whole trustworthy: the party
-   that holds the signing key can backdate a record, omit an
-   inconvenient one, or present different histories to different
-   auditors, and nothing a relying party holds detects it.  A cross-
-   domain auditor is worse off still, with only the issuer's assertion
-   that its logs are complete.
+   Mission-Bound Authorization for OAuth 2.0
+   [I-D.draft-mcguinness-oauth-mission] (the "issuance profile") and its
+   companions record evidence at every governance and enforcement point.
+   The evidence is signed, which makes a single record attributable and
+   tamper-evident in isolation.  It does not make the record set as a
+   whole trustworthy: the party that holds the signing key can backdate
+   a record, omit an inconvenient one, or present different histories to
+   different auditors, and nothing a relying party holds detects it.  A
+   cross-domain auditor is worse off still, with only the issuer's
+   assertion that its logs are complete.
 
    This document closes that gap by profiling the SCITT architecture
    [RFC9943] (the "transparency substrate").  A Mission evidence record
@@ -147,7 +147,9 @@ Table of Contents
 
    The transparency substrate this profile builds on is ratified: it
    depends normatively on the SCITT architecture [RFC9943], a published
-   standard.  The profile itself is newer than the substrate and less
+   standard.  Its hash commitment uses the COSE hash-envelope headers
+   ([I-D.draft-ietf-cose-hash-envelope]), approved and in the RFC Editor
+   queue.  The profile itself is newer than the substrate and less
    exercised in deployment, so an implementer treats its interfaces as
    still settling and validates them against real audits before relying
    on them.  The signed evidence the suite produces without a
@@ -244,41 +246,49 @@ Table of Contents
    authoritative for the type (Section 6.3) before treating a record as
    part of the Mission's feed.
 
-   +==========+=============+=================================+========+
-   |Evidence  |Canonical    | preimage-content-type           |Producer|
-   |type      |bytes        |                                 |        |
-   |          |(hashed)     |                                 |        |
-   +==========+=============+=================================+========+
-   |Approval  |Mission      | application/mission-approval-   |origin  |
-   |event     |record at    | record+json                     |        |
-   |          |creation,    |                                 |        |
-   |          |state        |                                 |        |
-   |          |excluded,    |                                 |        |
-   |          |canonicalized|                                 |        |
-   +----------+-------------+---------------------------------+--------+
-   |Lifecycle |Signals SET  | application/secevent+jwt, else  |origin  |
-   |transition|as issued;   | application/mission-lifecycle-  |        |
-   |          |else         | transition+json                 |        |
-   |          |Section 6.2.1|                                 |        |
-   |          |(JCS)        |                                 |        |
-   +----------+-------------+---------------------------------+--------+
-   |Consent   |retained     | application/mission-consent-    |origin  |
-   |evidence  |signed       | evidence+json                   |        |
-   |          |object, as   |                                 |        |
-   |          |issued       |                                 |        |
-   +----------+-------------+---------------------------------+--------+
-   |Decision  |Decision     | application/mission-decision-   |PDP key |
-   |evidence  |Evidence     | evidence+json                   |        |
-   |          |object, as   |                                 |        |
-   |          |issued       |                                 |        |
-   +----------+-------------+---------------------------------+--------+
-   |Execution |Execution    | application/mission-execution-  |PEP key |
-   |evidence  |Evidence     | evidence+json                   |        |
-   |          |object, as   |                                 |        |
-   |          |issued       |                                 |        |
-   +----------+-------------+---------------------------------+--------+
+     +============+=================+====================+==========+
+     | Evidence   | Canonical bytes | preimage-content-  | Producer |
+     | type       | (hashed)        | type               |          |
+     +============+=================+====================+==========+
+     | Approval   | Mission record  | application/       | origin   |
+     | event      | at creation,    | mission-approval-  |          |
+     |            | state excluded, | record+json        |          |
+     |            | canonicalized   |                    |          |
+     +------------+-----------------+--------------------+----------+
+     | Lifecycle  | Signals SET as  | application/       | origin   |
+     | transition | issued; else    | secevent+jwt, else |          |
+     |            | Section 6.2.1   | application/       |          |
+     |            | (JCS)           | mission-lifecycle- |          |
+     |            |                 | transition+json    |          |
+     +------------+-----------------+--------------------+----------+
+     | Consent    | retained signed | application/       | origin   |
+     | evidence   | object, as      | mission-consent-   |          |
+     |            | issued          | evidence+json      |          |
+     +------------+-----------------+--------------------+----------+
+     | Decision   | Decision        | application/       | PDP key  |
+     | evidence   | Evidence        | mission-decision-  |          |
+     |            | object, as      | evidence+json      |          |
+     |            | issued          |                    |          |
+     +------------+-----------------+--------------------+----------+
+     | Execution  | Execution       | application/       | PEP key  |
+     | evidence   | Evidence        | mission-execution- |          |
+     |            | object, as      | evidence+json      |          |
+     |            | issued          |                    |          |
+     +------------+-----------------+--------------------+----------+
+     | Mission    | JWS Compact     | application/       | origin   |
+     | Mandate    | Serialization,  | mission-           |          |
+     |            | as issued       | mandate+jwt        |          |
+     +------------+-----------------+--------------------+----------+
 
-                                  Table 1
+                                 Table 1
+
+   The table is extensible by specification: a profile MAY define an
+   additional evidence type by fixing its canonical bytes, its preimage-
+   content-type, and its authoritative producer, as the Mandate profile
+   does for the Mission Mandate
+   ([I-D.draft-mcguinness-mission-mandate]).  A relying party admits an
+   extension type it implements; it ignores records of a type it does
+   not implement, and they are not audit failures.
 
    The producer identifiers are principals the suite already names.  For
    every record whose producer is the Mission origin, the Signed
@@ -291,15 +301,16 @@ Table of Contents
    The approval event and the lifecycle-transition object are
    canonicalized under the issuance profile's canonicalization rules
    ([I-D.draft-mcguinness-oauth-mission]); an already-signed object (the
-   consent, decision, and execution evidence, and the Signals SET) is
-   hashed as issued, not re-canonicalized.  The approval-event and
-   lifecycle-transition media types are defined by this profile
-   (Section 14); the consent, decision, and execution evidence types are
-   registered by the profiles that define those objects
+   consent, decision, and execution evidence, the Signals SET, and the
+   Mandate) is hashed as issued, not re-canonicalized.  The approval-
+   event and lifecycle-transition media types are defined by this
+   profile (Section 14); the consent, decision, and execution evidence
+   types are registered by the profiles that define those objects
    ([I-D.draft-mcguinness-oauth-mission-consent-evidence],
-   [I-D.draft-mcguinness-mission-authzen]), and the Signals SET media
-   type by the Signals profile it is carried in
-   ([I-D.draft-mcguinness-oauth-mission-signals]).
+   [I-D.draft-mcguinness-mission-authzen]), the Signals SET media type
+   by the Signals profile it is carried in
+   ([I-D.draft-mcguinness-oauth-mission-signals]), and the Mandate media
+   type by the Mandate profile ([I-D.draft-mcguinness-mission-mandate]).
 
 6.2.1.  The Lifecycle Transition Object
 
@@ -322,6 +333,40 @@ Table of Contents
    Its media type is application/mission-lifecycle-transition+json
    (Section 14).
 
+6.2.1.1.  Computed Example
+
+   A minimal transition object recording the revocation of Mission
+   msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-:
+
+   {
+     "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+     "origin": "https://as.example.com",
+     "state": "revoked",
+     "transitioned_at": "2026-11-02T08:30:00Z"
+   }
+
+   Its JCS canonical bytes (one line; breaks are for display only):
+
+   {"mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","origin":"ht
+   tps://as.example.com","state":"revoked","transitioned_at":"2026-1
+   1-02T08:30:00Z"}
+
+   The committed digest is the SHA-256 of those bytes; its base64url
+   form is BoPjN-2ntPWo_athC5AQY1n1EIHtgQbBVbdRyJ3qSv4.  The Signed
+   Statement carries the digest bytes inline as its payload, with this
+   protected header (Section 6.1, Section 7):
+
+   {
+     / alg /                    1: -7,   / ES256 /
+     / payload-hash-alg /     258: -16,  / SHA-256 /
+     / preimage-content-type / 259: "application/mission-lifecycle-transition+json",
+     / kid /                    4: h'61732d6b65792d323032362d7133',
+     / CWT Claims /            15: {
+       / iss / 1: "https://as.example.com",
+       / sub / 2: "https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+     }
+   }
+
 6.3.  Registration Policy and Authoritative Producers
 
    Each evidence type has one authoritative producer (Section 6.2).  A
@@ -336,9 +381,12 @@ Table of Contents
    from components that are not entitled to write to a Mission's feed.
 
    A relying party discovers a producer's key by the producer's role.
-   The Authorization Server's key is resolved through its metadata
-   jwks_uri ([I-D.draft-mcguinness-oauth-mission]).  A PDP or PEP key is
-   resolved through the deployment-published key sets the runtime and
+   The origin's key is resolved through its published key material: the
+   Authorization Server's metadata jwks_uri in the OAuth binding
+   ([I-D.draft-mcguinness-oauth-mission]), or the Mission Authority
+   Server's discovery jwks_uri in the standalone binding
+   ([I-D.draft-mcguinness-mission-authority-server]).  A PDP or PEP key
+   is resolved through the deployment-published key sets the runtime and
    AuthZEN profiles require ([I-D.draft-mcguinness-mission-runtime],
    [I-D.draft-mcguinness-mission-authzen]).
 
@@ -690,13 +738,14 @@ Table of Contents
    execution evidence types by the AuthZEN profile
    ([I-D.draft-mcguinness-mission-authzen]), the consent evidence type
    by the consent evidence profile
-   ([I-D.draft-mcguinness-oauth-mission-consent-evidence]), and the
-   Signals SET media type application/secevent+jwt by RFC 8417, which
-   the Signals profile carries the event in
-   ([I-D.draft-mcguinness-oauth-mission-signals]).  The Signed Statement
-   and Receipt media types are the transparency substrate's ([RFC9943]).
-   This profile derives the sub by profile rather than registering a new
-   identifier.
+   ([I-D.draft-mcguinness-oauth-mission-consent-evidence]), the Mission
+   Mandate media type by the Mandate profile
+   ([I-D.draft-mcguinness-mission-mandate]), and the Signals SET media
+   type application/secevent+jwt by RFC 8417, which the Signals profile
+   carries the event in ([I-D.draft-mcguinness-oauth-mission-signals]).
+   The Signed Statement and Receipt media types are the transparency
+   substrate's ([RFC9943]).  This profile derives the sub by profile
+   rather than registering a new identifier.
 
 15.  References
 
@@ -760,12 +809,25 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-ietf-scitt-
               scrapi-11>.
 
+   [I-D.draft-mcguinness-mission-authority-server]
+              McGuinness, K., "Mission Authority Server", Work in
+              Progress, Internet-Draft, draft-mcguinness-mission-
+              authority-server, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              mission-authority-server>.
+
    [I-D.draft-mcguinness-mission-authzen]
               McGuinness, K., "Mission-Bound Runtime Enforcement:
               AuthZEN Profile", Work in Progress, Internet-Draft, draft-
               mcguinness-mission-authzen, 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               mission-authzen>.
+
+   [I-D.draft-mcguinness-mission-mandate]
+              McGuinness, K., "Mission Mandate", Work in Progress,
+              Internet-Draft, draft-mcguinness-mission-mandate, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              mission-mandate>.
 
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", Work

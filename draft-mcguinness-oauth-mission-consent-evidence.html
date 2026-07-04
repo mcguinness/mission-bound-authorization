@@ -9,15 +9,22 @@
 <meta content="
        Mission-Bound Authorization for OAuth 2.0 commits the approved Mission
 Intent and Authority Set, but does not commit the exact consent
-disclosure shown to the Approver. This document defines an  OPTIONAL 
+disclosure shown to the Approver. This document defines an optional
 Consent Evidence profile. It specifies a structured consent disclosure
 object, a  consent_rendering_hash  integrity anchor, and a signed
 Consent Evidence object that records the structured disclosure the
 Authorization Server rendered or committed to rendering, which Approver
 it recorded as deciding, which Mission authority the disclosure
-corresponded to, and which notices or material risks it carried. The
-profile lets an auditor reconstruct the recorded approval surface
-without making the disclosure itself an authority grant. 
+corresponded to, and which notices or material risks it carried.
+Evidence is recorded for approved, declined, and narrowed
+(revision-required) decisions, so declines and narrowing negotiations
+are visible to audit, not only approvals. A rendering-assurance ladder
+lets a deployment raise assurance by degrees, from a recorded
+disclosure through deterministic re-rendering and attested rendering
+to a confirmation signed by the Approver's authenticator over the
+disclosure commitment. The profile lets an auditor reconstruct the
+recorded approval surface without making the disclosure itself an
+authority grant. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="oauth" name="keyword">
@@ -1062,7 +1069,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 4 January 2027</td>
+<td class="center">Expires 5 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1075,12 +1082,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-consent-evidence-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-03" class="published">3 July 2026</time>
+<time datetime="2026-07-04" class="published">4 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-04">4 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-05">5 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1095,15 +1102,22 @@ svg {
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
 <p id="section-abstract-1">Mission-Bound Authorization for OAuth 2.0 commits the approved Mission
 Intent and Authority Set, but does not commit the exact consent
-disclosure shown to the Approver. This document defines an <span class="bcp14">OPTIONAL</span>
+disclosure shown to the Approver. This document defines an optional
 Consent Evidence profile. It specifies a structured consent disclosure
 object, a <code>consent_rendering_hash</code> integrity anchor, and a signed
 Consent Evidence object that records the structured disclosure the
 Authorization Server rendered or committed to rendering, which Approver
 it recorded as deciding, which Mission authority the disclosure
-corresponded to, and which notices or material risks it carried. The
-profile lets an auditor reconstruct the recorded approval surface
-without making the disclosure itself an authority grant.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+corresponded to, and which notices or material risks it carried.
+Evidence is recorded for approved, declined, and narrowed
+(revision-required) decisions, so declines and narrowing negotiations
+are visible to audit, not only approvals. A rendering-assurance ladder
+lets a deployment raise assurance by degrees, from a recorded
+disclosure through deterministic re-rendering and attested rendering
+to a confirmation signed by the Approver's authenticator over the
+disclosure commitment. The profile lets an auditor reconstruct the
+recorded approval surface without making the disclosure itself an
+authority grant.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1135,7 +1149,7 @@ without making the disclosure itself an authority grant.<a href="#section-abstra
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 4 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 5 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1276,10 +1290,13 @@ without making the disclosure itself an authority grant.<a href="#section-abstra
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
-            <p id="section-toc.1-1.15.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.15.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-worked-disclosure-and-test-" class="internal xref">Worked Disclosure and Test Vector</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
-            <p id="section-toc.1-1.16.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.16.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1295,8 +1312,7 @@ without making the disclosure itself an authority grant.<a href="#section-abstra
 Mission to an approval event and commits two objects: the approved
 Mission Intent and the approved Authority Set. It deliberately notes a
 remaining gap: the exact consent disclosure rendered to the Approver is
-not itself committed. A faulty or malicious rendering layer could show
-a narrower task than the Authority Set actually records.<a href="#section-1-1" class="pilcrow">¶</a></p>
+not itself committed.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">This document narrows that gap. It defines a structured consent
 disclosure object and a Consent Evidence object. The disclosure object
 is what the Authorization Server renders or commits to rendering. The
@@ -1345,8 +1361,8 @@ later enforced.<a href="#section-1-5" class="pilcrow">¶</a></p>
           <p id="section-2-2.3.1">the Consent Evidence object (<a href="#consent-evidence" class="auto internal xref">Section 7</a>);<a href="#section-2-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-2-2.4">
-          <p id="section-2-2.4.1">binding rules for initial Mission approval and expansion approval
-(<a href="#binding-to-mission" class="auto internal xref">Section 8</a>);<a href="#section-2-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-2-2.4.1">binding and recording rules for initial approval, expansion approval,
+declined, and revision-required events (<a href="#binding-to-mission" class="auto internal xref">Section 8</a>);<a href="#section-2-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-2-2.5">
           <p id="section-2-2.5.1">retention and audit reconstruction requirements (<a href="#audit" class="auto internal xref">Section 9</a>); and<a href="#section-2-2.5.1" class="pilcrow">¶</a></p>
@@ -1358,7 +1374,10 @@ later enforced.<a href="#section-1-5" class="pilcrow">¶</a></p>
       </ul>
 <p id="section-2-3">This document does not define user-interface layout, a legal consent
 standard, or any new OAuth grant. It does not change the Authority Set
-or Mission lifecycle.<a href="#section-2-3" class="pilcrow">¶</a></p>
+or Mission lifecycle. Under the standalone Mission Authority Server
+binding (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), the
+Mission Authority Server is the committing Mission Issuer and this
+profile composes with it unchanged.<a href="#section-2-3" class="pilcrow">¶</a></p>
 <div id="evidence-model">
 <section id="section-2.1">
         <h3 id="name-evidence-model">
@@ -1722,7 +1741,8 @@ verifier <span class="bcp14">MUST</span> reject a commitment whose algorithm pre
 recognize and <span class="bcp14">MUST NOT</span> treat an unrecognized prefix as SHA-256.<a href="#section-5-3" class="pilcrow">¶</a></p>
 <p id="section-5-4">The hash commits the disclosure object, not pixels or browser state. A
 deployment <span class="bcp14">MAY</span> additionally retain screenshots or UI telemetry, but the
-interoperable commitment is the structured disclosure object.<a href="#section-5-4" class="pilcrow">¶</a></p>
+interoperable commitment is the structured disclosure object. A worked
+disclosure and computed vector are provided in <a href="#disclosure-vector" class="auto internal xref">Appendix A</a>.<a href="#section-5-4" class="pilcrow">¶</a></p>
 <p id="section-5-5">So that the committed object can be related to what a human would see,
 the rendering <span class="bcp14">SHOULD</span> be a deterministic function of the disclosure
 object and its <code>template_id</code>, <code>template_version</code>, <code>template_hash</code>, and
@@ -2008,9 +2028,15 @@ deployment records a reason.<a href="#section-7-2.32.1" class="pilcrow">¶</a></
 <code>refused_dimensions</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.34">
           <p id="section-7-2.34.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>narrowed</code>. An object identifying the
-dimensions the review refused, using the <code>rejected_scope</code> and
-<code>rejected_authorization_details</code> shapes of the deferred-approval
-profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>).<a href="#section-7-2.34.1" class="pilcrow">¶</a></p>
+dimensions the review refused. It carries one or both of
+<code>rejected_scope</code>, a string of space-delimited scope tokens naming the
+refused scope, and <code>rejected_authorization_details</code>, an array of
+authorization-details-shaped subtrees the re-derived Authority Set
+must exclude or narrow, each naming a <code>type</code> and the members within
+it that must not survive re-derivation unchanged. These are the
+shapes the deferred-approval profile signals on its revision-required
+response (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>), recorded
+here as the review named them.<a href="#section-7-2.34.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.35">
@@ -2053,7 +2079,7 @@ that resolves in the Mission Issuer's published key material (its
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-7-3">Example:<a href="#section-7-3" class="pilcrow">¶</a></p>
+<p id="section-7-3">Example, over the worked disclosure of <a href="#disclosure-vector" class="auto internal xref">Appendix A</a>:<a href="#section-7-3" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-7-4">
 <pre>
 {
@@ -2061,14 +2087,14 @@ that resolves in the Mission Issuer's published key material (its
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com",
-    "intent_hash": "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
-    "authority_hash": "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "intent_hash": "sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E",
+    "authority_hash": "sha-256:-rBZZJ8tVIyGoR1tBg6BO6QG0kimVvef8vjigpoVuPw",
     "consent_rendering_hash":
-      "sha-256:CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz"
+      "sha-256:M7GB0qmwHbdRFw3IJdk14w9VBKwN2lvDkXGRb5fzatQ"
   },
   "approver": {
     "iss": "https://idp.example.com",
-    "sub": "alice"
+    "sub": "user_3p2q8mN1a0kV7tR"
   },
   "authentication_context": {
     "acr": "urn:example:acr:phishing-resistant",
@@ -2082,7 +2108,7 @@ that resolves in the Mission Issuer's published key material (its
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz"
+      "sha-256:M7GB0qmwHbdRFw3IJdk14w9VBKwN2lvDkXGRb5fzatQ"
   },
   "evidence_envelope": {
     "format": "jws-compact",
@@ -2090,6 +2116,16 @@ that resolves in the Mission Issuer's published key material (its
   }
 }
 </pre><a href="#section-7-4" class="pilcrow">¶</a>
+</div>
+<p id="section-7-5">The decoded protected header of the <code>evidence_envelope</code> value:<a href="#section-7-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-7-6">
+<pre>
+{
+  "alg": "ES256",
+  "kid": "consent-evidence-2026",
+  "typ": "mission-consent-evidence+jws"
+}
+</pre><a href="#section-7-6" class="pilcrow">¶</a>
 </div>
 <div id="integrity">
 <section id="section-7.1">
@@ -2587,6 +2623,10 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-authority-server</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authority-server">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authority-server</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-runtime</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-runtime">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-runtime</a>&gt;</span>. </dd>
@@ -2608,17 +2648,174 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 </div>
 </section>
 </div>
-<div id="acknowledgments">
+<div id="disclosure-vector">
 <section id="appendix-A">
+      <h2 id="name-worked-disclosure-and-test-">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-worked-disclosure-and-test-" class="section-name selfRef">Worked Disclosure and Test Vector</a>
+      </h2>
+<p id="appendix-A-1">This non-normative vector lets an implementation verify its
+<code>consent_rendering_hash</code> computation (<a href="#consent-rendering-hash" class="auto internal xref">Section 5</a>) byte
+for byte. The disclosure is the one the evidence example of
+<a href="#consent-evidence" class="auto internal xref">Section 7</a> records. It renders the Authority Set of the
+issuance profile's test vectors
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): <code>invoices.read</code> and
+<code>journal-entries.write</code> bounded by <code>max_amount_usd</code> 500 on
+<code>https://erp.example.com</code>, approved by <code>alice</code>
+(<code>user_3p2q8mN1a0kV7tR</code>); <code>source_hashes</code> carries that profile's
+computed <code>intent_hash</code> and <code>authority_hash</code>. The <code>template_hash</code> value
+stands for the deployment's template commitment and is illustrative.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<p id="appendix-A-2">The Consent Disclosure object:<a href="#appendix-A-2" class="pilcrow">¶</a></p>
+<div class="breakable lang-json sourcecode" id="appendix-A-3">
+<pre>
+{
+  "disclosure_id": "disc_4pQ9z",
+  "source_hashes": {
+    "intent_hash": "sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E",
+    "authority_hash": "sha-256:-rBZZJ8tVIyGoR1tBg6BO6QG0kimVvef8vjigpoVuPw"
+  },
+  "template_id": "mission-consent-standard",
+  "template_version": "2026-06",
+  "template_hash": "sha-256:50S2DpJfcfNGlzi_vzZJNJbJKkknFX65rhWJWLiMyok",
+  "locale": "en-US",
+  "mission_summary": {
+    "goal": "Reconcile Q3 invoices",
+    "mission_expiry": "2026-12-31T23:59:59Z",
+    "subject_display": "alice (user_3p2q8mN1a0kV7tR)",
+    "approver_display": "alice (user_3p2q8mN1a0kV7tR)"
+  },
+  "authority_summary": [
+    {
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read"]
+    },
+    {
+      "resource": "https://erp.example.com",
+      "actions": ["journal-entries.write"],
+      "constraints": [
+        {
+          "constraint": "max_amount_usd",
+          "value": 500,
+          "rendered":
+            "Each posted journal entry is limited to 500 US dollars."
+        }
+      ]
+    }
+  ],
+  "material_notices": [
+    {
+      "condition": "irreversible_action",
+      "applies_to": {
+        "resource": "https://erp.example.com",
+        "action": "journal-entries.write"
+      },
+      "statement":
+        "Posted journal entries are not automatically reversible."
+    }
+  ],
+  "risk_summary": [
+    {
+      "dimension": "data_access",
+      "statement":
+        "The agent can read invoices held in the ERP system."
+    },
+    {
+      "dimension": "spend",
+      "statement":
+        "The agent can post journal entries of up to 500 US dollars."
+    },
+    {
+      "dimension": "irreversibility",
+      "statement":
+        "Posted journal entries alter the ledger of record."
+    }
+  ],
+  "constraint_provenance": [
+    {
+      "applies_to": {
+        "resource": "https://erp.example.com",
+        "constraint": "max_amount_usd"
+      },
+      "source": "subject"
+    }
+  ],
+  "approver": {
+    "iss": "https://idp.example.com",
+    "sub": "user_3p2q8mN1a0kV7tR",
+    "display": "alice"
+  },
+  "display_context": {
+    "channel": "web",
+    "rendered_at": "2026-06-30T17:54:30Z"
+  }
+}
+</pre><a href="#appendix-A-3" class="pilcrow">¶</a>
+</div>
+<p id="appendix-A-4">The read entry carries no constraints, so its element renders none.
+The write entry warrants a material notice and an <code>irreversibility</code>
+risk dimension because posted journal entries are not automatically
+reversible; <code>constraint_provenance</code> attributes the <code>max_amount_usd</code>
+bound to the Subject, who stated it in the task request. The Approver
+is the Subject, so the top-level <code>subject</code> member is absent.<a href="#appendix-A-4" class="pilcrow">¶</a></p>
+<p id="appendix-A-5"><code>consent_rendering_hash</code> is the prefixed SHA-256 over the JCS
+<span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical bytes of the integrity-anchor envelope with
+<code>typ</code> <code>mission-consent-disclosure</code>, <code>iss</code> <code>https://as.example.com</code>,
+and this disclosure object as <code>value</code>. The canonical-bytes block is
+the exact JCS output: a single line, UTF-8, no whitespace. It is shown
+here wrapped only for layout; remove the layout line breaks, adding no
+characters, to recover the canonical form. Note that JCS sorts object
+member names and preserves array order.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
+<p id="appendix-A-6">Canonical bytes of the envelope:<a href="#appendix-A-6" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="appendix-A-7">
+<pre>
+{"iss":"https://as.example.com","typ":"mission-consent-disclosure","valu
+e":{"approver":{"display":"alice","iss":"https://idp.example.com","sub":
+"user_3p2q8mN1a0kV7tR"},"authority_summary":[{"actions":["invoices.read"
+],"resource":"https://erp.example.com"},{"actions":["journal-entries.wri
+te"],"constraints":[{"constraint":"max_amount_usd","rendered":"Each post
+ed journal entry is limited to 500 US dollars.","value":500}],"resource"
+:"https://erp.example.com"}],"constraint_provenance":[{"applies_to":{"co
+nstraint":"max_amount_usd","resource":"https://erp.example.com"},"source
+":"subject"}],"disclosure_id":"disc_4pQ9z","display_context":{"channel":
+"web","rendered_at":"2026-06-30T17:54:30Z"},"locale":"en-US","material_n
+otices":[{"applies_to":{"action":"journal-entries.write","resource":"htt
+ps://erp.example.com"},"condition":"irreversible_action","statement":"Po
+sted journal entries are not automatically reversible."}],"mission_summa
+ry":{"approver_display":"alice (user_3p2q8mN1a0kV7tR)","goal":"Reconcil
+e Q3 invoices","mission_expiry":"2026-12-31T23:59:59Z","subject_display"
+:"alice (user_3p2q8mN1a0kV7tR)"},"risk_summary":[{"dimension":"data_acce
+ss","statement":"The agent can read invoices held in the ERP system."},{
+"dimension":"spend","statement":"The agent can post journal entries of u
+p to 500 US dollars."},{"dimension":"irreversibility","statement":"Poste
+d journal entries alter the ledger of record."}],"source_hashes":{"autho
+rity_hash":"sha-256:-rBZZJ8tVIyGoR1tBg6BO6QG0kimVvef8vjigpoVuPw","intent
+_hash":"sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E"},"template_
+hash":"sha-256:50S2DpJfcfNGlzi_vzZJNJbJKkknFX65rhWJWLiMyok","template_id
+":"mission-consent-standard","template_version":"2026-06"}}
+</pre><a href="#appendix-A-7" class="pilcrow">¶</a>
+</div>
+<div class="lang-text sourcecode" id="appendix-A-8">
+<pre>
+consent_rendering_hash =
+  sha-256:M7GB0qmwHbdRFw3IJdk14w9VBKwN2lvDkXGRb5fzatQ
+</pre><a href="#appendix-A-8" class="pilcrow">¶</a>
+</div>
+<p id="appendix-A-9">An implementation that canonicalizes the same envelope, computes
+SHA-256, and encodes as <code>sha-256:</code> followed by base64url with no
+padding reproduces this value exactly. A divergence indicates a JCS or
+encoding difference to resolve before interoperating.<a href="#appendix-A-9" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-B">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-A-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
-set and binds the approval surface to the Mission authority record.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<p id="appendix-B-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
+set and binds the approval surface to the Mission authority record.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-B">
+<section id="appendix-C">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

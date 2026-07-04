@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             3 July 2026
-Expires: 4 January 2027
+Intended status: Standards Track                             4 July 2026
+Expires: 5 January 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -20,15 +20,20 @@ Abstract
    agent takes within a token's lifetime.  This document specifies the
    companion runtime layer for deployments that claim runtime Mission
    enforcement.  Within a declared enforcement scope, each consequential
-   action is evaluated, before it executes, against the Mission the
-   acting credential is bound to.  The evaluation checks the action and
-   its parameters against the Mission's approved authority and
-   constraints, the actor context from the delegation chain, and the
-   Mission against its current state.  The document defines where
-   enforcement sits, how a permit is bound to concrete parameters to
-   close the time-of-check to time-of-use gap, how carried consumption
-   bounds (budget, call counts, duration) are metered, and the runtime
-   evidence each consequential action produces.
+   action is evaluated, before it executes, against the Mission
+   established for the acting credential.  The evaluation checks the
+   action and its parameters against the Mission's approved authority
+   and constraints, the actor context from the delegation chain, the
+   Mission against its current state, and the applicable Resource
+   policy.  The document defines where enforcement sits, how a permit is
+   bound to concrete parameters to close the time-of-check to time-of-
+   use gap, the materialized policy view a decision evaluates against,
+   how carried consumption bounds (budget, call counts, duration) are
+   metered, and the runtime evidence each consequential action produces.
+   For the high-consequence classes it further defines action-bound
+   approval, credential custody in the mediating enforcement point
+   rather than the agent, and a named agent-compromise-resistant
+   enforcement claim with individually verifiable conditions.
 
 About This Document
 
@@ -58,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 January 2027.
+   This Internet-Draft will expire on 5 January 2027.
 
 Copyright Notice
 
@@ -91,8 +96,9 @@ Table of Contents
    5.  Resource Server runtime profile
    6.  Token presentation and validation
    7.  The decision
-     7.1.  Mission state and freshness
-     7.2.  Materialized policy view
+     7.1.  Mission binding establishment
+     7.2.  Mission state and freshness
+     7.3.  Materialized policy view
    8.  Parameter binding and time-of-check to time-of-use
    9.  Consumption metering
    10. Failure modes
@@ -119,6 +125,8 @@ Table of Contents
      16.1.  Normative References
      16.2.  Informative References
    Appendix A.  Parameter Digest Worked Example
+   Appendix B.  Policy View Worked Example
+   Appendix C.  Runtime Evidence Worked Examples
    Acknowledgments
    Author's Address
 
@@ -152,14 +160,21 @@ Table of Contents
 
    and, additionally, metering of the consumption bounds (budget, call
    counts, duration) the issuance profile carries as constraints but
-   leaves to this layer to enforce (Section 9).
+   leaves to this layer to enforce (Section 9).  For the high-
+   consequence classes it adds action-bound approval (Section 4.4),
+   credential custody in the mediating enforcement point rather than the
+   agent (Section 4.6), and the named agent-compromise-resistant
+   enforcement claim those mechanisms compose into (Section 4.7).
 
    The model is a Policy Enforcement Point (PEP) at each consequential
    execution boundary that, before the action runs, obtains a decision
    from a Policy Decision Point (PDP) evaluating the action against the
    Mission.  Mission-bound tokens bound what authority may exist; this
    profile defines where and how that authority is re-checked before
-   consequential effects occur.
+   consequential effects occur.  A deployment whose acting tokens carry
+   no mission claim can still bind each decision to a Mission: the
+   Mission Substrate (Section 3) admits an externally established
+   Mission reference (Section 7.1).
 
    This profile specifies enforcement invariants, not a wire protocol:
    it does not standardize a PDP decision API, an enforcement-scope
@@ -170,8 +185,8 @@ Table of Contents
 
    Because the invariants are not a wire format, two conforming
    deployments do not thereby interoperate at the PEP-PDP boundary; the
-   interoperable wire surface is supplied by a decision API binding
-   (Section 12), specified separately; the AuthZEN binding is
+   interoperable wire surface is supplied by a separately specified
+   decision API binding (Section 12), the AuthZEN binding being
    [I-D.draft-mcguinness-mission-authzen].  This document is the
    architecture and invariant layer; the binding is the interoperability
    layer.
@@ -179,9 +194,11 @@ Table of Contents
 1.1.  Relationship to the issuance profile
 
    This document depends normatively on the issuance profile and is not
-   implementable alone: it consumes Mission-bound access tokens that
-   profile defines.  It does not place any new requirement back on the
-   issuance profile; it reads only fields that profile already defines:
+   implementable alone: it consumes the Mission-bound access tokens that
+   profile defines, or access tokens joined to an externally established
+   Mission under Section 7.1.  It does not place any new requirement
+   back on the issuance profile; it reads only fields that profile
+   already defines:
 
    *  the mission claim (id, origin, authority_hash);
 
@@ -258,7 +275,7 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission]); this document does not
       interpret it beyond correlation, and defines no portable policy-
       version registry.  The materialized policy view and its content-
-      addressed policy_view_id are defined in Section 7.2.
+      addressed policy_view_id are defined in Section 7.3.
 
    Runtime enforcement evidence:  The record a consequential action
       produces for a PDP decision or a PEP refusal path (Section 11).
@@ -281,7 +298,7 @@ Table of Contents
 
    Mission state source:  A deployment-trusted source from which the PDP
       establishes the Mission lifecycle state or the freshness of that
-      state (Section 7.1).
+      state (Section 7.2).
 
    Mission-bound token:  An access token issued under a Mission per
       [I-D.draft-mcguinness-oauth-mission], carrying
@@ -294,14 +311,18 @@ Table of Contents
    Mission identifier and origin; the lifecycle state space with its
    only-active-permits rule and a freshness source; the Authority Set
    representation with its subset rule and Common Constraints; the
-   Mission-bound credential carrying the mission claim; the integrity-
-   anchor envelope; and the Mission's audit horizon.  The issuance
-   profile [I-D.draft-mcguinness-oauth-mission] is this version's
-   normative substrate: it defines each primitive for OAuth 2.0, and
-   every OAuth artifact named in this document enters through it.
-   Another authorization substrate that provides the same primitives
-   with the same semantics can host this profile unchanged; such a
-   binding is defined by that substrate, not here.
+   Mission-bound credential carrying the mission claim, consumed when
+   the binding provides it; the integrity-anchor envelope; and the
+   Mission's audit horizon.  The Mission-bound credential primitive is
+   binding-dependent: a binding that does not provide it supplies an
+   externally established Mission reference instead, under the binding-
+   establishment step of Section 7.1.  The issuance profile
+   [I-D.draft-mcguinness-oauth-mission] is this version's normative
+   substrate: it defines each primitive for OAuth 2.0, and every OAuth
+   artifact named in this document enters through it.  Another
+   authorization substrate that provides the same primitives with the
+   same semantics can host this profile unchanged; such a binding is
+   defined by that substrate, not here.
 
 4.  Runtime model
 
@@ -355,7 +376,7 @@ Table of Contents
       (Section 5);
 
    *  the Mission state source and maximum staleness bound used for each
-      action class (Section 7.1);
+      action class (Section 7.2);
 
    *  the runtime enforcement evidence mechanism and retention window
       (Section 11);
@@ -440,7 +461,7 @@ Table of Contents
    as consequential and gated.  These three are the *high-consequence
    classes*, to which this profile's strictest requirements attach
    (action-bound approval (Section 4.4), mediated custody (Section 4.6),
-   active-state freshness (Section 7.1), and execution-outcome evidence
+   active-state freshness (Section 7.2), and execution-outcome evidence
    (Section 11), each as specified in its own section).  A Mission's
    purpose, or deployment policy, MAY raise an action to a stricter
    class; it MUST NOT lower an action below any minimum classification
@@ -608,7 +629,7 @@ Table of Contents
    hold.  Each condition below is MUST under this claim regardless of
    its base-profile level: active-state freshness for the high-
    consequence classes is already MUST in the base profile
-   (Section 7.1); the harness condition makes MUST the base profile's
+   (Section 7.2); the harness condition makes MUST the base profile's
    requirement that mediated classes have no unmediated path
    (Section 4.5); mediated custody and action-bound approval are SHOULD
    in the base profile (Section 4.6, Section 4.4) and MUST here.
@@ -625,7 +646,7 @@ Table of Contents
       and
 
    *  the Mission state source for those classes is an active freshness
-      mechanism, not token-lifetime expiry (Section 7.1).
+      mechanism, not token-lifetime expiry (Section 7.2).
 
    A deployment that leaves any of these unmet MUST NOT claim agent-
    compromise-resistant enforcement; it may still claim base runtime
@@ -731,13 +752,17 @@ Table of Contents
    authenticated.
 
    A PEP MUST NOT ask a PDP to authorize an action from unverified token
-   claims.  If token validation fails, or if the deployment requires
-   Mission governance for the protected operation and the token lacks a
-   mission claim, the PEP MUST refuse before runtime Mission evaluation.
-   When the PEP is an OAuth Resource Server, it uses the normal OAuth
-   error behavior for the protected resource (for example, Bearer token
-   errors under [RFC6750]); this profile defines no new OAuth error
-   code.
+   claims.  If token validation fails, the PEP MUST refuse before
+   runtime Mission evaluation.  If the deployment requires Mission
+   governance for the protected operation and the token lacks a mission
+   claim, the PEP MUST likewise refuse, unless the deployment
+   establishes the Mission binding externally (Section 7.1); in that
+   case the absence of the claim is not a refusal condition, and the
+   join's verification of the supplied Mission reference applies
+   instead.  When the PEP is an OAuth Resource Server, it uses the
+   normal OAuth error behavior for the protected resource (for example,
+   Bearer token errors under [RFC6750]); this profile defines no new
+   OAuth error code.
 
    Where the PEP and PDP are separate components, the decision request
    and response MUST be integrity-protected and the parties MUST
@@ -755,10 +780,10 @@ Table of Contents
 7.  The decision
 
    Before a consequential action runs, its PEP MUST obtain a permit from
-   a PDP that evaluates the action against the Mission the acting token
-   is bound to.  This is the normative contract.  The decision API wire
-   format is a deployment choice; a binding maps this contract onto a
-   concrete API (Section 12).
+   a PDP that evaluates the action against the established Mission
+   (Section 7.1).  This is the normative contract.  The decision API
+   wire format is a deployment choice; a binding maps this contract onto
+   a concrete API (Section 12).
 
    The PEP MUST supply the inputs the PDP needs for the Mission-bound
    decision.  Runtime enforcement MUST evaluate:
@@ -828,7 +853,7 @@ Table of Contents
       not a decision input (Section 8).
 
    *  *State.* The PDP MUST refuse unless the Mission is active
-      (Section 7.1).
+      (Section 7.2).
 
    On a deny, the PEP MUST refuse the action; a deny is terminal for the
    attempted action.  A deny need not end the task, however: a decision-
@@ -846,7 +871,31 @@ Table of Contents
    The requirement is only that a PEP at each consequential boundary can
    reach an applicable PDP.
 
-7.1.  Mission state and freshness
+7.1.  Mission binding establishment
+
+   Every decision evaluates one Mission: the *established Mission*. A
+   deployment establishes it in one of two modes:
+
+   *  *Credential-carried.* The acting token's mission claim identifies
+      the Mission, under the issuance profile's binding
+      ([I-D.draft-mcguinness-oauth-mission]).  The PEP takes the Mission
+      reference from the validated token (Section 6).
+
+   *  *Externally established.* The token carries no mission claim, and
+      the PEP supplies a Mission reference from the deployment's Mission
+      binding source.  The PDP MUST verify that reference against the
+      acting credential under a join a binding profile defines; an
+      unverified reference MUST NOT establish the Mission.  The Mission
+      Authority Server profile defines the concrete join for this mode
+      ([I-D.draft-mcguinness-mission-authority-server]).
+
+   A deployment MUST document the mode each enforcement scope uses
+   (Section 4.2).  In either mode, the established Mission is the
+   Mission every input of this section (authority, Resource policy,
+   parameters, actor, time, state) is evaluated against, and the Mission
+   reference the permit and the evidence record bind.
+
+7.2.  Mission state and freshness
 
    A Mission-aware decision needs the Mission's current state, which a
    token alone does not convey.  A runtime deployment MUST define the
@@ -854,7 +903,8 @@ Table of Contents
    include origin AS token introspection, a local Mission database, an
    authenticated status or event feed from the Mission origin, a
    materialized policy view, or a short-lived cross-domain credential
-   whose lifetime is the deployment's accepted state lease.
+   ([I-D.draft-mcguinness-oauth-mission-cross-domain]) whose lifetime is
+   the deployment's accepted state lease.
 
    *  The PDP MUST refuse a consequential action when it cannot
       establish, within the deployment's published staleness bound, that
@@ -869,13 +919,15 @@ Table of Contents
    *  When the credential issuer also holds the Mission, the PDP can
       learn state through token introspection ([RFC7662]) at the issuer
       per [I-D.draft-mcguinness-oauth-mission].  A non-origin Resource
-      AS introspecting a local token cannot report current Mission state
-      under the issuance profile; it can establish local token validity,
-      but not origin Mission freshness.
+      AS introspecting a local token
+      ([I-D.draft-mcguinness-oauth-mission-cross-domain]) cannot report
+      current Mission state; it can establish local token validity, but
+      not origin Mission freshness.
 
    *  This document defines no cross-issuer by-Mission status query.
       Deployments that need tighter freshness than the token or cross-
-      domain grant lifetime provides use the Mission Status profile
+      domain grant ([I-D.draft-mcguinness-oauth-mission-cross-domain])
+      lifetime provides use the Mission Status profile
       ([I-D.draft-mcguinness-oauth-mission-status]) or Mission Lifecycle
       Signals ([I-D.draft-mcguinness-oauth-mission-signals]), or an out-
       of-band trusted status feed.
@@ -920,7 +972,7 @@ Table of Contents
 
                                  Table 3
 
-7.2.  Materialized policy view
+7.3.  Materialized policy view
 
    A PDP evaluates a Mission against an action through a *materialized
    policy view*: the reproducible, evaluable form of the Mission's
@@ -997,7 +1049,7 @@ Table of Contents
       action, resource, the authorizing authorization_details entry or
       an entry digest, the PDP's policy-view version, and a permit
       lifetime control bounded by the Mission state freshness
-      requirement (Section 7.1).  For a reversible consequential write,
+      requirement (Section 7.2).  For a reversible consequential write,
       the control MUST be either a single-use decision identifier or a
       short validity window combined with an idempotency key that
       prevents repeat execution of the same normalized action.  For an
@@ -1122,66 +1174,70 @@ Table of Contents
    MUST behave as follows; in all cases the evidence record (Section 11)
    MUST be sufficient to reconstruct which path produced a refusal.
 
-      +============================+================================+
-      | Condition                  | Required behavior              |
-      +============================+================================+
-      | Token validation fails,    | Refuse before runtime Mission  |
-      | including sender-          | evaluation                     |
-      | constraint verification    |                                |
-      +----------------------------+--------------------------------+
-      | Mission governance is      | Refuse before runtime Mission  |
-      | required but the token     | evaluation                     |
-      | lacks a mission claim      |                                |
-      +----------------------------+--------------------------------+
-      | PEP-PDP channel            | Fail closed                    |
-      | authentication or          |                                |
-      | integrity protection fails |                                |
-      +----------------------------+--------------------------------+
-      | Mission state cannot be    | Fail closed for consequential  |
-      | established within the     | actions                        |
-      | staleness bound            |                                |
-      +----------------------------+--------------------------------+
-      | PDP unreachable            | Fail closed for consequential  |
-      |                            | actions; do not proceed on     |
-      |                            | cached permits past the window |
-      +----------------------------+--------------------------------+
-      | Mission not active         | Refuse                         |
-      +----------------------------+--------------------------------+
-      | mission_expiry passed,     | Refuse                         |
-      | when known from the        |                                |
-      | Mission state source       |                                |
-      +----------------------------+--------------------------------+
-      | Unsupported                | Refuse                         |
-      | authorization_details type |                                |
-      | for the action             |                                |
-      +----------------------------+--------------------------------+
-      | Unknown or unmetered       | Refuse                         |
-      | constraint on the          |                                |
-      | applicable entry           |                                |
-      +----------------------------+--------------------------------+
-      | Consumption bound would be | Refuse                         |
-      | exceeded                   |                                |
-      +----------------------------+--------------------------------+
-      | parameter_digest mismatch  | Refuse                         |
-      | at the executing PEP       |                                |
-      +----------------------------+--------------------------------+
-      | Re-presentation of a       | Refuse (fail closed)           |
-      | consumed single-use        |                                |
-      | decision identifier        |                                |
-      +----------------------------+--------------------------------+
-      | Required act chain missing | Refuse                         |
-      | or malformed               |                                |
-      +----------------------------+--------------------------------+
-      | Invoked capability         | Refuse                         |
-      | identity outside the       |                                |
-      | approved actions           |                                |
-      +----------------------------+--------------------------------+
-      | Resource policy refuses    | Refuse                         |
-      | the action                 |                                |
-      +----------------------------+--------------------------------+
-      | Request would broaden the  | Refuse (expansion is out of    |
-      | Mission's authority        | scope)                         |
-      +----------------------------+--------------------------------+
+   +=========================+=========================================+
+   | Condition               | Required behavior                       |
+   +=========================+=========================================+
+   | Token validation fails, | Refuse before runtime Mission           |
+   | including sender-       | evaluation                              |
+   | constraint verification |                                         |
+   +-------------------------+-----------------------------------------+
+   | Mission governance is   | Refuse before runtime Mission           |
+   | required but the token  | evaluation, unless the                  |
+   | lacks a mission claim   | Mission binding is externally           |
+   |                         | established (Section 7.1)               |
+   +-------------------------+-----------------------------------------+
+   | PEP-PDP channel         | Fail closed                             |
+   | authentication or       |                                         |
+   | integrity protection    |                                         |
+   | fails                   |                                         |
+   +-------------------------+-----------------------------------------+
+   | Mission state cannot be | Fail closed for consequential           |
+   | established within the  | actions                                 |
+   | staleness bound         |                                         |
+   +-------------------------+-----------------------------------------+
+   | PDP unreachable         | Fail closed for consequential           |
+   |                         | actions; do not proceed on              |
+   |                         | cached permits past the                 |
+   |                         | window                                  |
+   +-------------------------+-----------------------------------------+
+   | Mission not active      | Refuse                                  |
+   +-------------------------+-----------------------------------------+
+   | mission_expiry passed,  | Refuse                                  |
+   | when known from the     |                                         |
+   | Mission state source    |                                         |
+   +-------------------------+-----------------------------------------+
+   | Unsupported             | Refuse                                  |
+   | authorization_details   |                                         |
+   | type for the action     |                                         |
+   +-------------------------+-----------------------------------------+
+   | Unknown or unmetered    | Refuse                                  |
+   | constraint on the       |                                         |
+   | applicable entry        |                                         |
+   +-------------------------+-----------------------------------------+
+   | Consumption bound would | Refuse                                  |
+   | be exceeded             |                                         |
+   +-------------------------+-----------------------------------------+
+   | parameter_digest        | Refuse                                  |
+   | mismatch at the         |                                         |
+   | executing PEP           |                                         |
+   +-------------------------+-----------------------------------------+
+   | Re-presentation of a    | Refuse (fail closed)                    |
+   | consumed single-use     |                                         |
+   | decision identifier     |                                         |
+   +-------------------------+-----------------------------------------+
+   | Required act chain      | Refuse                                  |
+   | missing or malformed    |                                         |
+   +-------------------------+-----------------------------------------+
+   | Invoked capability      | Refuse                                  |
+   | identity outside the    |                                         |
+   | approved actions        |                                         |
+   +-------------------------+-----------------------------------------+
+   | Resource policy refuses | Refuse                                  |
+   | the action              |                                         |
+   +-------------------------+-----------------------------------------+
+   | Request would broaden   | Refuse (expansion is out of             |
+   | the Mission's authority | scope)                                  |
+   +-------------------------+-----------------------------------------+
 
                                   Table 4
 
@@ -1472,7 +1528,7 @@ Table of Contents
 
    A permit is a lease, not a standing grant: stale Mission state MUST
    fail closed for consequential actions within the published bound
-   (Section 7.1).  Consumption bounds are exact only under a single
+   (Section 7.2).  Consumption bounds are exact only under a single
    serializing PDP; a deployment MUST NOT advertise exactness it cannot
    meet across distributed decision points (Section 9).
 
@@ -1604,6 +1660,13 @@ Table of Contents
               2026, <https://openid.net/specs/authorization-api-
               1_0-final.html>.
 
+   [I-D.draft-mcguinness-mission-authority-server]
+              McGuinness, K., "Mission Authority Server", Work in
+              Progress, Internet-Draft, draft-mcguinness-mission-
+              authority-server, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              mission-authority-server>.
+
    [I-D.draft-mcguinness-mission-authzen]
               McGuinness, K., "Mission-Bound Runtime Enforcement:
               AuthZEN Profile", Work in Progress, Internet-Draft, draft-
@@ -1623,6 +1686,13 @@ Table of Contents
               mission-consent-evidence, 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-mission-consent-evidence>.
+
+   [I-D.draft-mcguinness-oauth-mission-cross-domain]
+              McGuinness, K., "Mission Cross-Domain Projection for OAuth
+              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
+              oauth-mission-cross-domain, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-cross-domain>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
@@ -1656,38 +1726,160 @@ Appendix A.  Parameter Digest Worked Example
    parameter_digest it produces (Section 8), so two implementations can
    confirm they normalize and digest the same way.
 
-   Consider a payments.send operation.  Its operation profile fixes the
-   parameter set and normalization: the members are payee, amount,
-   currency, and account; amount is a decimal string with exactly two
-   fractional digits; currency is an uppercase ISO 4217 code; no
-   defaults are inserted and no optional members are omitted; there are
-   no set-like arrays to order.  For a 9,000 USD payment, the normalized
-   parameter object is:
+   Consider a journal-entries.write operation under an ERP
+   reconciliation Mission (msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-) whose
+   applicable entry carries a max_amount_usd ceiling of 500.  The
+   operation profile fixes the parameter set and normalization: the
+   members are amount_usd and source_invoice_id; amount_usd is a decimal
+   string with exactly two fractional digits; no defaults are inserted
+   and no optional members are omitted; there are no set-like arrays to
+   order.  For a 423.50 USD journal entry, within the ceiling, the
+   normalized parameter object is:
 
    {
-     "payee": "Acme Supply Co",
-     "amount": "9000.00",
-     "currency": "USD",
-     "account": "****4417"
+     "amount_usd": "423.50",
+     "source_invoice_id": "inv_2026Q3_842"
    }
 
    The parameter_digest is sha-256: followed by the base64url, no-
    padding SHA-256 of the JCS [RFC8785] serialization of that object,
    under the issuance profile's canonicalization rules (no envelope; the
    normalized parameter object is digested directly).  The JCS canonical
-   bytes are a single line with sorted member names and no whitespace,
-   shown here wrapped for layout only; remove the layout line break,
-   adding no characters, to recover the canonical form:
+   bytes are a single line with sorted member names and no whitespace:
 
-   {"account":"****4417","amount":"9000.00","currency":"USD","payee":"Acme
-    Supply Co"}
+   {"amount_usd":"423.50","source_invoice_id":"inv_2026Q3_842"}
 
-   parameter_digest = sha-256:e7GXd0GWwOK2ezlb0CfUeYhjYOF1DE68_Gg0ofbr7do
+   parameter_digest = sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI
 
    The PDP binds its permit to this value, and the executing PEP
    recomputes it over the parameters it is about to use immediately
    before acting (Section 8); any change to a normalized parameter
    yields a different digest and the permit is refused.
+
+Appendix B.  Policy View Worked Example
+
+   This non-normative example shows the policy_view_id computation of
+   Section 7.3 over a minimal materialized-view envelope for the same
+   Mission.  The payload here is reduced to the two members the
+   committed view is required to bind, mission_id and authority_hash; a
+   deployment's payload also carries its evaluable materialized form,
+   which this document does not standardize.
+
+   {
+     "typ": "mission-policy-view",
+     "iss": "https://as.example.com",
+     "value": {
+       "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+       "authority_hash":
+         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+     }
+   }
+
+   The JCS canonical bytes are a single line with sorted member names
+   and no whitespace, shown here wrapped for layout only; remove the
+   layout line breaks, adding no characters, to recover the canonical
+   form:
+
+   {"iss":"https://as.example.com","typ":"mission-policy-view","value":
+   {"authority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5
+   pNQ","mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"}}
+
+   policy_view_id = sha-256:fuMqn6Nb5LfyziflJuYj8VgHHH1bskZ0SrMDxdQ8CaA
+
+   Because the identifier is a content hash, any change to the payload
+   yields a different policy_view_id (Section 7.3).
+
+Appendix C.  Runtime Evidence Worked Examples
+
+   These non-normative records illustrate the minimum record content of
+   Section 11 for the operation of Appendix A.  They show substrate-
+   level record content only: the concrete schema, serialization, and
+   integrity mechanism are the deployment's (Section 11.3), and a
+   decision-API binding defines concrete evidence objects
+   ([I-D.draft-mcguinness-mission-authzen]).  In this deployment, the
+   Resource Server runtime profile classifies journal-entries.write as
+   an irreversible action (a posted entry is corrected only by a
+   compensating entry), so the permit is single-use and execution-
+   outcome evidence is required.  The policy-view version cites the view
+   of Appendix B.
+
+   A permit decision record:
+
+   {
+     "result": "permit",
+     "request_time": "2026-11-02T09:03:12Z",
+     "mission": {
+       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+       "origin": "https://as.example.com",
+       "authority_hash":
+         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+     },
+     "token_issuer": "https://as.example.com",
+     "audience": "https://erp.example.com",
+     "sub": "user_3p2q8mN1a0kV7tR",
+     "client_id": "s6BhdRkqt3",
+     "action": "journal-entries.write",
+     "resource": "je_2026Q3_inv_8421",
+     "authorizing_entry": {
+       "type": "mission_resource_access",
+       "resource": "https://erp.example.com",
+       "actions": ["journal-entries.write"],
+       "constraints": { "max_amount_usd": 500 }
+     },
+     "parameter_digest":
+       "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+     "decision_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
+     "policy_view_version":
+       "sha-256:fuMqn6Nb5LfyziflJuYj8VgHHH1bskZ0SrMDxdQ8CaA",
+     "sequence": 17
+   }
+
+   The execution-outcome record the executing PEP produces after it
+   acts, keyed to the permit's decision identifier (Section 11):
+
+   {
+     "result": "executed",
+     "outcome": "success",
+     "decision_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
+     "mission": {
+       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+       "origin": "https://as.example.com"
+     },
+     "parameter_digest":
+       "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+     "outcome_time": "2026-11-02T09:03:14Z",
+     "sequence": 18
+   }
+
+   A PEP refusal record for a later attempt on the same operation.  A
+   permit (dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA) bound the digest of a
+   423.50 entry; between check and use the parameters became 780.00
+   (normalized object
+   {"amount_usd":"780.00","source_invoice_id":"inv_2026Q3_842"}).  The
+   executing PEP recomputed the digest over the parameters it was about
+   to use, found a mismatch, and refused (Section 8); the record carries
+   the recomputed digest:
+
+   {
+     "result": "refuse",
+     "failure_condition": "parameter_digest_mismatch",
+     "request_time": "2026-11-02T09:03:29Z",
+     "mission": {
+       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+       "origin": "https://as.example.com",
+       "authority_hash":
+         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+     },
+     "audience": "https://erp.example.com",
+     "sub": "user_3p2q8mN1a0kV7tR",
+     "client_id": "s6BhdRkqt3",
+     "action": "journal-entries.write",
+     "resource": "je_2026Q3_inv_8421",
+     "decision_id": "dec_9HtV3wN6xQ1rB8mP5kS2eL7jY4zA",
+     "parameter_digest":
+       "sha-256:UdG-TiebDHTiKRXUVURs1Jeq_vDJp_Ro8jWbBAD8hgM",
+     "sequence": 19
+   }
 
 Acknowledgments
 
