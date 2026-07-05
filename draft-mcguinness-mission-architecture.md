@@ -29,6 +29,8 @@ informative:
   RFC9126:
   RFC9396:
   RFC9943:
+  I-D.draft-mcguinness-oauth-client-instance-assertion:
+  I-D.draft-mcguinness-oauth-ai-agent-instance:
   I-D.draft-mcguinness-oauth-mission-cross-domain:
     title: "Mission Cross-Domain Projection for OAuth 2.0"
     target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-cross-domain.html
@@ -362,7 +364,13 @@ Agent (client):
 : Proposes the Mission Intent and executes the task; in the OAuth
   binding it holds derived Mission-bound tokens; outside the trusted
   base and assumed compromisable
-  ({{I-D.draft-mcguinness-oauth-mission}}).
+  ({{I-D.draft-mcguinness-oauth-mission}}). A deployment may
+  authenticate concrete agent instances under the
+  client-instance-assertion profile and its AI-agent profile
+  ({{I-D.draft-mcguinness-oauth-client-instance-assertion}},
+  {{I-D.draft-mcguinness-oauth-ai-agent-instance}}), which sharpens
+  delegation chains, joins, and evidence attribution to instance
+  granularity without touching the Mission model.
 
 Subject:
 : The user or system on whose behalf the Mission is approved, an

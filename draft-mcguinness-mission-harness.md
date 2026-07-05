@@ -60,6 +60,8 @@ normative:
       Internet-Draft: draft-mcguinness-mission-runtime-latest
 
 informative:
+  I-D.draft-mcguinness-oauth-client-instance-assertion:
+  I-D.draft-mcguinness-oauth-ai-agent-instance:
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
     target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-signals.html
@@ -617,6 +619,18 @@ stopped, the harness MUST treat the child as still running and fail
 closed for any cached access that depends on it, mirroring the
 cancellation rule of the orchestration profile
 ({{I-D.draft-mcguinness-mission-orchestration}}).
+
+Where the deployment authenticates agent instances
+({{I-D.draft-mcguinness-oauth-client-instance-assertion}}; for AI
+agents, {{I-D.draft-mcguinness-oauth-ai-agent-instance}}), the harness
+SHOULD record the instance identifier (`agent_instance_id`, or the
+instance `sub`) in its Mission binding ({{mission-binding}}) and in
+sub-agent termination evidence, giving stop propagation and its
+evidence a which-runtime dimension: which concrete instance was asked
+to stop, and which confirmed. Sub-agent chains under the agent
+instance profile cannot shed identity, which strengthens the
+fail-closed rule above: an unconfirmed stop names the exact instance
+the harness treats as still running.
 
 # Harness Execution States {#harness-states}
 

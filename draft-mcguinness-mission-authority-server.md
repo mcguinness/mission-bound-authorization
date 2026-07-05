@@ -80,6 +80,8 @@ informative:
   RFC8126:
   RFC8414:
   RFC9635:
+  I-D.draft-mcguinness-oauth-client-instance-assertion:
+  I-D.draft-mcguinness-oauth-ai-agent-instance:
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-harness.html
@@ -842,6 +844,17 @@ each PDP to the MAS with the Mission Join Assertion
 ({{join-assertion}}); that upgrade strengthens who verifies the join,
 not what the join can prove.
 
+Where the deployment's Authorization Server issues tokens under the
+client-instance-assertion profile
+({{I-D.draft-mcguinness-oauth-client-instance-assertion}}), the acting
+credential identifies a concrete runtime instance: the token's `act`
+entry carries the instance `sub` and an instance-specific `cnf` key.
+The PDP SHOULD include that instance in the join, so the client join
+binds (subject, client, instance) rather than (subject, client). This
+restores per-instance granularity behind a shared gateway `client_id`:
+the validated instance joins, not every workload in the `client_id`
+equivalence class.
+
 # Mission Join Assertion {#join-assertion}
 
 The Mission Join of {{mission-join}} rests on subject and client
@@ -926,6 +939,16 @@ claims:
 
 `aud`:
 : OPTIONAL. The PDP or PDPs the assertion is minted for.
+
+When the introspected token carries instance identity
+({{I-D.draft-mcguinness-oauth-client-instance-assertion}}), the MAS
+SHOULD include the instance identifier in the `token` object: the
+`act` entry's `sub`, and the `agent_instance_id` where the agent
+profile ({{I-D.draft-mcguinness-oauth-ai-agent-instance}}) is in use.
+Under that profile the `cnf` key the `jkt` thumbprint binds is
+instance-specific, never shared across a client's instances, so the
+assertion's token binding is materially stronger: it names one runtime
+instance, not any holder of a client-shared key.
 
 The endpoint returns HTTP 200 with a JSON object whose `assertion`
 member carries the JWT. Each minting is a join evidence event: the MAS
@@ -1075,8 +1098,12 @@ to one directory subject), any credential in the equivalence class
 joins; a deployment SHOULD keep the mapping one-to-one for subjects
 that hold Missions and MUST document its granularity. The client join
 is coarse the same way where several workloads share one `client_id`:
-any of them joins. A second residual: two Missions held by the same
-subject and client are distinguished only by the PEP-supplied
+any of them joins. Client instance assertions
+({{I-D.draft-mcguinness-oauth-client-instance-assertion}}) are the
+standard fix: the join then binds the validated instance
+({{mission-join}}), and this residual remains only for deployments
+without instance identity. A second residual: two Missions held by
+the same subject and client are distinguished only by the PEP-supplied
 reference, so a faulty or compromised PEP can attribute work to the
 wrong same-party Mission, bounded by that Mission's authority and
 visible in evidence.
