@@ -65,6 +65,24 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-mission-aauth-latest
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-mission-substrate-latest
+  I-D.draft-mcguinness-oauth-mission-management:
+    title: "Mission Management for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-management-latest
   I-D.draft-mcguinness-mission-shaping:
     title: "Mission Intent Shaping"
     author:
@@ -514,6 +532,11 @@ the security model's retention analysis.
 
 ## The Binding Checklist {#binding-checklist}
 
+For a new binding this checklist is now normatively stated by Mission
+Substrate Requirements ({{I-D.draft-mcguinness-mission-substrate}});
+this section remains the informative summary, and the three existing
+bindings remain authoritative for themselves.
+
 Another mission-based protocol hosts the substrate-neutral profiles
 unchanged when it provides:
 
@@ -608,7 +631,9 @@ complement ({{I-D.draft-mcguinness-oauth-mission-signals}});
 Expansion, widening only via an approved successor
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}); Completion,
 per-entry discharge
-({{I-D.draft-mcguinness-oauth-mission-completion}}).
+({{I-D.draft-mcguinness-oauth-mission-completion}}); and Management,
+fleet enumeration and bulk lifecycle for operators
+({{I-D.draft-mcguinness-oauth-mission-management}}).
 
 ## Enforce Each Action
 
@@ -810,6 +835,7 @@ it because the architecture is substrate-neutral by construction.
 | The model and its bindings | `oauth-mission` | The core issuance profile: the Mission, the approval event and anchors, the `mission` claim, the subset rule, state-gated issuance. |
 | | `mission-authority-server` | The standalone Mission Issuer and the PDP join of ordinary credentials to Missions. |
 | | `mission-aauth` | The AAuth binding: the Person Server as Mission Issuer, the mission blob as the record under AAuth's `s256` commitment, issuance gating at the token endpoint. |
+| | `mission-substrate` | Normative requirements on any further binding of the model; the existing bindings and the core are unchanged by it. |
 | Approval time | `mission-shaping` | Client-side shaping of a user's request into a candidate Mission Intent, as untrusted proposal. |
 | | `oauth-mission-consent-evidence` | The `consent_rendering_hash` anchor and signed evidence of what the Approver was shown. |
 | | `oauth-mission-approval` | Asynchronous approval over the deferred substrate. |
@@ -818,6 +844,7 @@ it because the architecture is substrate-neutral by construction.
 | | `oauth-mission-signals` | Experimental: a signed event per lifecycle transition, push or poll. |
 | | `oauth-mission-expansion` | Widening through an approved successor Mission. |
 | | `oauth-mission-progressive` | Experimental: policy-adjudicated expansion within a pre-consented ceiling. |
+| | `oauth-mission-management` | Fleet enumeration and bulk lifecycle operations for operators and incident response; dry-run-first, per-Mission semantics. |
 | | `oauth-mission-completion` | Per-entry discharge via the `terminal_when` constraint. |
 | | `oauth-mission-cross-domain` | Single-hop projection of a Mission to another trust domain via the cross-domain grant ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). |
 | Runtime enforcement | `mission-runtime` | The per-action decision contract: parameter binding, custody, fail-closed behavior. |
