@@ -29,6 +29,7 @@ author:
 normative:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission.html
     author:
       -
         ins: K. McGuinness
@@ -38,6 +39,7 @@ normative:
       Internet-Draft: draft-mcguinness-oauth-mission-latest
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-expansion.html
     author:
       -
         ins: K. McGuinness
@@ -49,6 +51,7 @@ normative:
 informative:
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-runtime.html
     author:
       -
         ins: K. McGuinness
@@ -58,6 +61,7 @@ informative:
       Internet-Draft: draft-mcguinness-mission-runtime-latest
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-child-delegation.html
     author:
       -
         ins: K. McGuinness
@@ -67,6 +71,7 @@ informative:
       Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
     title: "Mission Consent Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-consent-evidence.html
     author:
       -
         ins: K. McGuinness

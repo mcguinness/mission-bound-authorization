@@ -31,6 +31,7 @@ normative:
   RFC8785:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission.html
     author:
       -
         ins: K. McGuinness
@@ -44,6 +45,7 @@ informative:
   RFC9126:
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-authority-server.html
     author:
       -
         ins: K. McGuinness
@@ -53,6 +55,7 @@ informative:
       Internet-Draft: draft-mcguinness-mission-authority-server-latest
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-runtime.html
     author:
       -
         ins: K. McGuinness

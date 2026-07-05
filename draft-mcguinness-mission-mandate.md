@@ -33,6 +33,7 @@ normative:
   RFC9901:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission.html
     author:
       -
         ins: K. McGuinness
@@ -44,6 +45,7 @@ normative:
 informative:
   I-D.draft-mcguinness-oauth-mission-cross-domain:
     title: "Mission Cross-Domain Projection for OAuth 2.0"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-cross-domain.html
     author:
       -
         ins: K. McGuinness
@@ -53,6 +55,7 @@ informative:
       Internet-Draft: draft-mcguinness-oauth-mission-cross-domain-latest
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-status.html
     author:
       -
         ins: K. McGuinness
@@ -62,6 +65,7 @@ informative:
       Internet-Draft: draft-mcguinness-oauth-mission-status-latest
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-signals.html
     author:
       -
         ins: K. McGuinness
@@ -71,6 +75,7 @@ informative:
       Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
   I-D.draft-mcguinness-mission-audit:
     title: "Mission Audit Transparency"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-audit.html
     author:
       -
         ins: K. McGuinness
@@ -80,6 +85,7 @@ informative:
       Internet-Draft: draft-mcguinness-mission-audit-latest
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-authority-server.html
     author:
       -
         ins: K. McGuinness

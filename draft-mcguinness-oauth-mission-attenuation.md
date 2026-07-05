@@ -33,6 +33,7 @@ normative:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission.html
     author:
       -
         ins: K. McGuinness
@@ -42,6 +43,7 @@ normative:
       Internet-Draft: draft-mcguinness-oauth-mission-latest
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-runtime.html
     author:
       -
         ins: K. McGuinness
@@ -54,6 +56,7 @@ informative:
   RFC7638:
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-child-delegation.html
     author:
       -
         ins: K. McGuinness
@@ -63,6 +66,7 @@ informative:
       Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
   I-D.draft-mcguinness-oauth-mission-cross-domain:
     title: "Mission Cross-Domain Projection for OAuth 2.0"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-cross-domain.html
     author:
       -
         ins: K. McGuinness
@@ -72,6 +76,7 @@ informative:
       Internet-Draft: draft-mcguinness-oauth-mission-cross-domain-latest
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-harness.html
     author:
       -
         ins: K. McGuinness
