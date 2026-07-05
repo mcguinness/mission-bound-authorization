@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             4 July 2026
-Expires: 5 January 2027
+Intended status: Standards Track                             5 July 2026
+Expires: 6 January 2027
 
 
                         Mission Authority Server
@@ -59,7 +59,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 January 2027.
+   This Internet-Draft will expire on 6 January 2027.
 
 Copyright Notice
 
