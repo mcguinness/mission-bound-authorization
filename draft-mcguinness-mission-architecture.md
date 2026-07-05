@@ -56,6 +56,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-mission-authority-server-latest
+  I-D.draft-mcguinness-mission-aauth:
+    title: "Mission-Bound Authorization for AAuth"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-mission-aauth-latest
   I-D.draft-mcguinness-mission-shaping:
     title: "Mission Intent Shaping"
     author:
@@ -206,8 +215,8 @@ informative:
 A Mission is a durable, approval-backed governance object for
 authorization: the approved task, with a lifecycle, that authority is
 derived for, bound to, and gated on. It is not a new way to express
-authority. The Mission model spans a core issuance profile, a
-standalone binding, and optional companion profiles, and no single
+authority. The Mission model spans a core issuance profile, two further
+bindings, and optional companion profiles, and no single
 document shows how the pieces fit. This document is that structural
 view: the roles and components, the substrate primitives the
 companions consume, the layers the profiles form, the deployment
@@ -232,11 +241,13 @@ profile", {{I-D.draft-mcguinness-oauth-mission}}, here "the core")
 defines the object and its OAuth 2.0 {{RFC6749}} binding, a
 standalone binding hosts the same object without changing an existing
 Authorization Server
-({{I-D.draft-mcguinness-mission-authority-server}}), and optional
+({{I-D.draft-mcguinness-mission-authority-server}}), an AAuth binding
+gives that protocol's native mission concept the model's structure and
+lifecycle ({{I-D.draft-mcguinness-mission-aauth}}), and optional
 companions layer approval, lifecycle, enforcement, runtime,
 delegation, and proof capabilities on top. The decomposition keeps
 each interface small but spreads the structure across many documents
-and two bindings; this document is the single structural view.
+and three bindings; this document is the single structural view.
 
 It defines no protocol, no object, and no requirement. It is a map,
 not the territory: every mechanism named points at the profile that
@@ -254,7 +265,8 @@ Enforcement Point (PEP), Policy Decision Point (PDP), and
 consequential action are the runtime profile's
 ({{I-D.draft-mcguinness-mission-runtime}}); Mission Authority Server
 (MAS) is defined by
-{{I-D.draft-mcguinness-mission-authority-server}}.
+{{I-D.draft-mcguinness-mission-authority-server}}; the AAuth binding
+is defined by {{I-D.draft-mcguinness-mission-aauth}}.
 
 Its boundary with the Mission Security Model
 ({{I-D.draft-mcguinness-mission-security-model}}) is deliberate: this
@@ -323,13 +335,16 @@ Approver:
 
 Mission Issuer:
 : Validates the Mission Intent, runs the approval event, records the
-  Mission, and owns its state. Two bindings. OAuth Authorization
+  Mission, and owns its state. Three bindings. OAuth Authorization
   Server: every derived token carries the `mission` claim, and
   issuance and refresh are gated on Mission state
   ({{I-D.draft-mcguinness-oauth-mission}}). Mission Authority Server:
   the same record, anchors, and lifecycle without issuing tokens; the
   PDP joins ordinary credentials to the Mission at the point of use
-  ({{I-D.draft-mcguinness-mission-authority-server}}).
+  ({{I-D.draft-mcguinness-mission-authority-server}}). AAuth Person
+  Server: the mission blob carries the record under AAuth's `s256`
+  commitment, and the Person Server issues or gates every auth token,
+  so issuance gating holds ({{I-D.draft-mcguinness-mission-aauth}}).
 
 Resource Server:
 : The protected resource. In the OAuth binding it enforces
@@ -374,7 +389,7 @@ Verifiers:
   ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}},
   {{I-D.draft-mcguinness-mission-authzen}}).
 
-The two bindings converge on one object, and enforcement draws on it
+The bindings converge on one object, and enforcement draws on it
 regardless of binding:
 
 ~~~
@@ -471,7 +486,9 @@ only while the Mission is `active`. Home: the core's Mission-Bound
 Access Tokens and The Mission Claim sections.
 
 This is the binding-dependent primitive, and it is exactly where the
-two bindings split. The OAuth binding provides it; the standalone
+bindings split. The OAuth and AAuth bindings provide it (the AAuth
+auth token carries the `mission` claim under per-request signature
+coverage, {{I-D.draft-mcguinness-mission-aauth}}); the standalone
 binding does not: the MAS's Mission Substrate section states that a
 MAS provides every other primitive unchanged and provides neither
 this credential nor issuance gating
@@ -529,9 +546,10 @@ question, sits on one trust boundary, and is owned by named documents.
 ~~~
  propose      Intent Shaping (client side, untrusted)
                         |
- approve      Mission Issuer: the OAuth AS binding
- and record   or the Mission Authority Server binding
-              (+ Consent Evidence, Deferred Approval)
+ approve      Mission Issuer: the OAuth AS, Mission
+ and record   Authority Server, or AAuth Person Server
+              binding (+ Consent Evidence, Deferred
+              Approval)
                         |
               the Mission: intent_hash,
               authority_hash, lifecycle state
@@ -565,15 +583,16 @@ endpoint.
 
 The question: how does a proposed task become an approved, committed
 Mission? The boundary: the Mission Issuer's own; the approval event
-is where trust is created. Owners: the two bindings
+is where trust is created. Owners: the three bindings
 ({{I-D.draft-mcguinness-oauth-mission}},
-{{I-D.draft-mcguinness-mission-authority-server}}), Consent Evidence
+{{I-D.draft-mcguinness-mission-authority-server}},
+{{I-D.draft-mcguinness-mission-aauth}}), Consent Evidence
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) committing
 the disclosure shown to the Approver, and Deferred Approval
 ({{I-D.draft-mcguinness-oauth-mission-approval}}), the OAuth
 binding's asynchronous path, with an experimental companion adding an
 in-review narrowing negotiation; the
-standalone binding is natively asynchronous. Where the experimental
+standalone and AAuth bindings are natively asynchronous. Where the experimental
 progressive authorization companion is used, the initial approval also
 consents an authority ceiling for later staged widening
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
@@ -790,6 +809,7 @@ it because the architecture is substrate-neutral by construction.
 |---|---|---|
 | The model and its bindings | `oauth-mission` | The core issuance profile: the Mission, the approval event and anchors, the `mission` claim, the subset rule, state-gated issuance. |
 | | `mission-authority-server` | The standalone Mission Issuer and the PDP join of ordinary credentials to Missions. |
+| | `mission-aauth` | The AAuth binding: the Person Server as Mission Issuer, the mission blob as the record under AAuth's `s256` commitment, issuance gating at the token endpoint. |
 | Approval time | `mission-shaping` | Client-side shaping of a user's request into a candidate Mission Intent, as untrusted proposal. |
 | | `oauth-mission-consent-evidence` | The `consent_rendering_hash` anchor and signed evidence of what the Approver was shown. |
 | | `oauth-mission-approval` | Asynchronous approval over the deferred substrate. |
