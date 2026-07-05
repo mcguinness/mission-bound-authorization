@@ -33,15 +33,20 @@ concrete resources, actions, and constraints) for it; and an **approval
 event** commits both as integrity anchors (`intent_hash` and
 `authority_hash`) and records the Mission.
 
-The Mission Issuer comes in two bindings. In the **OAuth binding**, the
-Authorization Server is the Mission Issuer: every derived token carries
-a `mission` claim binding it back to the approved task, and token
-issuance is gated on Mission state, so revoking or expiring the Mission
-stops all further authority at once. In the **standalone binding**, a
-Mission Authority Server holds the same object without issuing tokens,
-and enforcement joins ordinary tokens to the Mission at the Policy
-Decision Point. In both, authority only narrows as it flows down to
-derived and delegated credentials; widening requires a fresh approval.
+The Mission Issuer comes in three bindings. In the **OAuth binding**,
+the Authorization Server is the Mission Issuer: every derived token
+carries a `mission` claim binding it back to the approved task, and
+token issuance is gated on Mission state, so revoking or expiring the
+Mission stops all further authority at once. In the **standalone
+binding**, a Mission Authority Server holds the same object without
+issuing tokens, and enforcement joins ordinary tokens to the Mission at
+the Policy Decision Point. In the **AAuth binding**, the AAuth Person
+Server is the Mission Issuer: it gives AAuth's native mission concept
+the Mission model's structure, lifecycle, and anchors, and because the
+Person Server issues or gates every AAuth auth token, issuance gating
+holds there too. In all three, authority only narrows as it flows down
+to derived and delegated credentials; widening requires a fresh
+approval.
 
 The **core** defines the model and its OAuth 2.0 binding. Everything
 else is an OPTIONAL companion profile that layers on without changing
@@ -53,8 +58,10 @@ it.
  propose      Mission Intent Shaping (client side, untrusted proposal)
                          |
                          v
- approve      Mission Issuer, one of two bindings:
- and record   +--------------------------+  +--------------------------+
+ approve      Mission Issuer, one of three bindings (the third,
+ and record   the AAuth Person Server, hosts AAuth's native
+              missions and gates its auth tokens):
+              +--------------------------+  +--------------------------+
               | OAuth AS (issuance core) |  | Mission Authority Server |
               | PAR -> approval event    |  | submit -> async approval |
               | Mission-bound tokens,    |  | no tokens; the PDP joins |
@@ -219,7 +226,9 @@ decide what to build on now.
   in-ceiling expansion, and cumulative consumption metering); each host
   profile stands alone without them. **cross-domain** depends normatively on
   the OAuth identity-chaining document (approved, in the RFC Editor
-  queue) and ID-JAG (a working-group document); **orchestration** and
+  queue) and ID-JAG (a working-group document); **aauth** binds the
+  model to the AAuth protocol, an individual draft it tracks;
+  **orchestration** and
   **completion** define newer models that are less exercised;
   **authority-server** and **mandate** are the newest documents in the
   family and not yet exercised (the mandate's normative dependencies are
@@ -247,7 +256,8 @@ consent) keep "oauth" in their draft names. Profiles that specify
 components outside the Authorization Server (runtime enforcement and
 its AuthZEN binding, the agent harness, orchestration, intent shaping,
 audit transparency, the security model, the architecture, the
-standalone authority server, and the mandate) are named without it:
+standalone authority server, the AAuth binding, and the mandate) are
+named without it:
 they are defined against
 the Mission model's substrate primitives, each names those primitives
 in a Mission Substrate section, and the core is that model's OAuth 2.0
@@ -299,6 +309,26 @@ required. The upgrade path is the issuance profile.
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-authority-server)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authority-server)
 * [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-authority-server.diff)
+
+#### Mission-Bound Authorization for AAuth
+
+The AAuth binding, the first to a non-OAuth substrate. AAuth already
+carries a mission reference on every signed request; this binding gives
+that native concept the Mission model's structure: the AAuth Person
+Server is the Mission Issuer, the mission blob carries the Mission
+record and its integrity anchors under AAuth's own `s256` commitment,
+the propose/clarify/approve interaction is the (natively asynchronous)
+approval event, and the family lifecycle rides AAuth's two wire states
+(`active`, `terminated`) with revocation and expiry made normative and
+the only-`active` rule governing. Because the Person Server issues or
+gates every AAuth auth token, this binding provides true issuance
+gating, and the auth token is a Mission-bound credential, so runtime
+enforcement composes credential-carried.
+
+* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-aauth.html)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-aauth)
+* [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-aauth)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-aauth.diff)
 
 ### Approval time
 
