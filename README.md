@@ -230,7 +230,9 @@ decide what to build on now.
   model to the AAuth protocol, an individual draft it tracks;
   **orchestration** and
   **completion** define newer models that are less exercised;
-  **authority-server** and **mandate** are the newest documents in the
+  **substrate** consolidates binding requirements for substrates that
+  do not yet exist, and **management** is the newest operational
+  surface; **authority-server** and **mandate** are the newest documents in the
   family and not yet exercised (the mandate's normative dependencies are
   all ratified; the authority server composes stable profiles, but its
   PDP join mechanism is new). Each names a stable path to prefer where
@@ -256,8 +258,8 @@ consent) keep "oauth" in their draft names. Profiles that specify
 components outside the Authorization Server (runtime enforcement and
 its AuthZEN binding, the agent harness, orchestration, intent shaping,
 audit transparency, the security model, the architecture, the
-standalone authority server, the AAuth binding, and the mandate) are
-named without it:
+standalone authority server, the AAuth binding, the substrate
+requirements, and the mandate) are named without it:
 they are defined against
 the Mission model's substrate primitives, each names those primitives
 in a Mission Substrate section, and the core is that model's OAuth 2.0
@@ -329,6 +331,22 @@ enforcement composes credential-carried.
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-aauth)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-aauth)
 * [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-aauth.diff)
+
+#### Mission Substrate Requirements
+
+For authors of new bindings. Consolidates, normatively, what any
+further binding of the Mission model must provide (identifier and
+origin, the lifecycle state space with the only-`active` rule, the
+Authority Set with the subset rule, the integrity anchors, key
+material, the audit horizon, approval-event fidelity, and either a
+Mission-bound credential or a defined join). Changes nothing for the
+three existing bindings, which remain authoritative for themselves;
+the core remains the model's definitional home.
+
+* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-substrate.html)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-substrate)
+* [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-substrate)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-substrate.diff)
 
 ### Approval time
 
@@ -457,6 +475,22 @@ at a time; and it is the enforceable counterpart of the inert
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-completion)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-completion)
 * [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-completion.diff)
+
+#### Mission Management for OAuth 2.0
+
+The fleet-management surface the status profile defers: authenticated
+Mission enumeration (by subject, client, state, or expiry window, with
+purpose-recorded audit) and bulk lifecycle operations (dry-run first,
+then execute against the evaluated set, with a per-Mission outcome
+manifest). Operator- and incident-response-facing; each bulk
+transition applies the status profile's per-Mission semantics and
+emits its per-Mission events. The highest-blast-radius surface in the
+family, and documented as such.
+
+* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-management.html)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-management)
+* [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-management)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-management.diff)
 
 ### Runtime enforcement
 

@@ -35,6 +35,7 @@ normative:
   RFC8785:
   RFC9068:
   RFC9700:
+  RFC9728:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     author:
@@ -48,6 +49,15 @@ normative:
 informative:
   RFC9470:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
+  I-D.draft-mcguinness-mission-audit:
+    title: "Mission Audit Transparency"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-mission-audit-latest
   AUTHZEN:
     target: https://openid.net/specs/authorization-api-1_0-final.html
     title: "OpenID AuthZEN Authorization API 1.0"
@@ -448,6 +458,27 @@ use classification to evade the floor or a Resource-policy minimum, and
 once an action is a consequential write or higher it MUST be gated and
 bound as the table requires.
 
+The three highest classes are defined by predicates; the table's
+examples illustrate them:
+
+Irreversible action:
+: the action's effect cannot be reversed by the same authority within
+  the deployment's own systems.
+
+External commitment:
+: the action creates an obligation or communication binding the
+  Subject to a party outside the deployment.
+
+Privileged administration:
+: the action changes who holds authority or how authority is
+  evaluated.
+
+Classification remains deployment-scoped: each deployment applies the
+predicates to its own actions and systems. The predicates make the
+resulting classifications comparable across deployments and auditable:
+an assignment is justified by whether its predicate holds, not by
+resemblance to the examples.
+
 **Classification floor.** Actions in the **irreversible**, **external
 commitment**, and **privileged administration** classes MUST be
 treated as consequential and gated. These three are the
@@ -459,11 +490,49 @@ each as specified in its own section).
 A Mission's `purpose`, or
 deployment policy, MAY raise an action to a stricter class; it MUST
 NOT lower an action below any minimum classification the Resource
-policy ({{decision}}) sets for it, and in any case MUST NOT classify an
+policy ({{decision}}) sets for it, including a floor the resource owner
+publishes in its protected resource metadata ({{class-floors}}), and in
+any case MUST NOT classify an
 irreversible, external-commitment, or privileged-administration action
 as non-consequential. A deployment
 that leaves such an action ungated does not enforce this profile for
 that action's class ({{pep-placement}}).
+
+### Resource-owner class floors {#class-floors}
+
+A resource owner can carry its classification minimums to any PDP
+through its protected resource metadata {{RFC9728}}:
+
+`mission_action_class_floors`:
+: OPTIONAL JSON object. Each member name is an action identifier from
+  the resource's `actions` vocabulary
+  ({{I-D.draft-mcguinness-oauth-mission}}); an action-family
+  identifier, in the issuance profile's action-family form, sets the
+  floor for every action in the family. Each value is the minimum
+  runtime action class for the mapped action: one of
+  `consequential_read`, `consequential_write`, `irreversible_action`,
+  `external_commitment`, or `privileged_administration`, naming the
+  classes of this section.
+
+A PDP with access to the resource's metadata MUST NOT classify a
+mapped action below its floor. The member is the interoperable
+carriage of the Resource-policy minimum the classification floor above
+already binds; it raises, and never lowers, an action's class. A PDP
+that does not recognize a mapped value MUST treat it as naming a
+high-consequence class.
+
+For the ERP resource of the worked examples
+({{parameter-digest-example}}):
+
+~~~ json
+{
+  "resource": "https://erp.example.com",
+  "mission_action_class_floors": {
+    "journal-entries.read": "consequential_read",
+    "journal-entries.write": "irreversible_action"
+  }
+}
+~~~
 
 ## Action-bound approval {#action-approval}
 
@@ -767,11 +836,16 @@ decision. Runtime enforcement MUST evaluate:
   and MUST refuse if it does not understand or cannot enforce those
   semantics. For a capability sourced from a discovered catalog (an MCP
   tool catalog, an OpenAPI document, or an equivalent source), where the
-  validating server recorded a source-content digest for the capability
-  at derivation, the PDP MUST also refuse the action when the current
-  source digest differs from the digest recorded at derivation
-  (capability drift); the recorded digest is part of the derived
-  authority and is covered by `authority_hash`
+  validating server recorded a digest of the capability's extracted
+  definition at derivation, the PDP MUST also refuse the action when
+  the digest of the capability's current extracted definition differs
+  from the recorded digest (capability drift); the extraction rule per
+  source format is the decision-API binding's ({{authzen}}). A source
+  change that leaves the extracted definition byte-identical does not
+  by itself refuse; where the deployment also recorded a whole-source
+  digest, that digest's stricter semantics apply and any source change
+  refuses. The recorded digests are part of the derived authority and
+  are covered by `authority_hash`
   ({{I-D.draft-mcguinness-oauth-mission}}). Cross-format
   canonicalization, signed capability manifests, and cross-catalog
   identity remain out of scope ({{deferred}}).
@@ -1180,6 +1254,18 @@ The following requirements apply to every record:
   than the Mission's audit horizon, as defined in the Mission Record
   section of {{I-D.draft-mcguinness-oauth-mission}}.
 
+Digest encoding is uniform across this document family: every digest a
+family document defines uses the `sha-256:` prefixed base64url,
+no-padding encoding of the issuance profile's integrity-anchor rules
+({{I-D.draft-mcguinness-oauth-mission}}). The exceptions are externally
+fixed encodings: the COSE hashed payload of the audit companion's
+Signed Statements ({{I-D.draft-mcguinness-mission-audit}}) carries the
+raw digest bytes the COSE hash-envelope mechanism requires, and the
+attenuation substrate's parent-hash form
+({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}) is unprefixed
+base64url. Each exception is identified by its carrying context; the
+`sha-256:` prefix appears in neither.
+
 # Decision API binding {#authzen}
 
 The decision contract of {{decision}} is abstract: it fixes the inputs,
@@ -1208,8 +1294,9 @@ work and are not required to enforce it:
 
 - a standardized enforcement-scope manifest format and discovery
   mechanism;
-- cross-format capability-source binding beyond same-source digest
-  drift (signed capability manifests, cross-catalog identity);
+- cross-format capability-source binding beyond per-capability
+  definition-digest drift (signed capability manifests, cross-catalog
+  identity);
 - portable, third-party-verifiable decision receipts (this profile
   fixes only the local runtime enforcement evidence record);
 - separate Decision Evidence and Execution Evidence object schemas and
@@ -1412,7 +1499,18 @@ credentials.
 
 # IANA Considerations
 
-This document has no IANA actions. The Mission-bound token claims this
+## OAuth Protected Resource Metadata Registration
+
+This document registers the following in the "OAuth Protected Resource
+Metadata" registry ({{RFC9728}}):
+
+- Metadata Name: `mission_action_class_floors`
+- Metadata Description: JSON object mapping a protected resource's
+  action identifiers to minimum runtime action classes.
+- Change Controller: IETF
+- Reference: this document, {{class-floors}}
+
+The Mission-bound token claims this
 profile consumes are registered by {{I-D.draft-mcguinness-oauth-mission}};
 any decision-API wire members are defined by the binding
 ({{authzen}}, {{I-D.draft-mcguinness-mission-authzen}}).
@@ -1427,7 +1525,7 @@ implementations can confirm they normalize and digest the same way.
 
 Consider a `journal-entries.write` operation under an ERP
 reconciliation Mission (`msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`) whose
-applicable entry carries a `max_amount_usd` ceiling of 500. The
+applicable entry carries a `max_amount_usd` ceiling of "500.00". The
 operation profile fixes the parameter set and normalization: the
 members are `amount_usd` and `source_invoice_id`; `amount_usd` is a
 decimal string with exactly two fractional digits; no defaults are
@@ -1535,7 +1633,7 @@ A permit decision record:
     "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
-    "constraints": { "max_amount_usd": 500 }
+    "constraints": { "max_amount_usd": "500.00" }
   },
   "parameter_digest":
     "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
