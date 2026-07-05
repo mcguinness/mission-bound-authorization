@@ -228,20 +228,29 @@ evaluating the action ({{mission-join}}). Per-action enforcement then
 proceeds under the runtime profile
 {{I-D.draft-mcguinness-mission-runtime}} unchanged.
 
-The OAuth binding remains the flagship. A deployment that can change
-its AS gets Mission-bound credentials and issuance gating, which the
-MAS mode does not provide ({{limitations}}). The MAS mode is the
-on-ramp, and its upgrade path is the issuance profile: the record,
-anchors, and lifecycle a MAS operates are the issuance profile's own,
-so upgrading carries them over unchanged.
+The OAuth binding remains the flagship of the family, and a
+deployment that changes its AS gets Mission-bound credentials and
+issuance gating, which the MAS mode does not provide
+({{limitations}}). The MAS is nonetheless a peer binding, not a
+staging area: decoupling governance from token issuance is an
+architectural choice some deployments make deliberately and keep. For
+deployments that want Mission-bound tokens later, the path is smooth:
+the record, anchors, and lifecycle a MAS operates are the issuance
+profile's own, so moving issuance into the AS carries them over
+unchanged.
 
 ## Applicability
 
 This profile targets deployments that need governed, approvable,
 revocable agent tasks but cannot extend their Authorization Server,
 and that can route consequential actions through the runtime profile's
-enforcement. A deployment that controls its AS SHOULD implement the
-issuance profile instead; a deployment that cannot deploy runtime
+enforcement. It is also a deliberate architectural choice in its own
+right: a deployment MAY prefer a standalone Mission Issuer even where
+it controls its AS, to keep governance decoupled from token issuance
+or to govern with one Mission Issuer across many Authorization
+Servers, accepting the enforcement posture of {{limitations}}. A
+deployment that wants Mission-bound tokens and issuance gating
+implements the issuance profile; a deployment that cannot deploy runtime
 enforcement over its consequential action paths obtains records but no
 enforcement from this profile and SHOULD NOT claim it
 ({{limitations}}).
