@@ -833,22 +833,23 @@ Table of Contents
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", Work
               in Progress, Internet-Draft, draft-mcguinness-mission-
-              runtime, 2026, <https://datatracker.ietf.org/doc/html/
-              draft-mcguinness-mission-runtime>.
+              runtime, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-mission-
+              runtime.html>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission>.
+              oauth-mission, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-oauth-
+              mission.html>.
 
    [I-D.draft-mcguinness-oauth-mission-status]
               McGuinness, K., "Mission Status and Lifecycle for OAuth
               2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission-status, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-status>.
+              oauth-mission-status, 2026, <https://mcguinness.github.io/
+              draft-mcguinness-oauth-mission/draft-mcguinness-oauth-
+              mission-status.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -883,27 +884,29 @@ Table of Contents
               McGuinness, K., "Mission-Bound Runtime Enforcement:
               AuthZEN Profile", Work in Progress, Internet-Draft, draft-
               mcguinness-mission-authzen, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              mission-authzen>.
+              <https://mcguinness.github.io/draft-mcguinness-oauth-
+              mission/draft-mcguinness-mission-authzen.html>.
 
    [I-D.draft-mcguinness-mission-harness]
               McGuinness, K., "Mission-Aware Agent Harnesses", Work in
               Progress, Internet-Draft, draft-mcguinness-mission-
-              harness, 2026, <https://datatracker.ietf.org/doc/html/
-              draft-mcguinness-mission-harness>.
+              harness, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-mission-
+              harness.html>.
 
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", Work in
               Progress, Internet-Draft, draft-mcguinness-oauth-mission-
-              expansion, 2026, <https://datatracker.ietf.org/doc/html/
-              draft-mcguinness-oauth-mission-expansion>.
+              expansion, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-oauth-mission-
+              expansion.html>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
               Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              mission-signals, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-signals>.
+              mission-signals, 2026, <https://mcguinness.github.io/
+              draft-mcguinness-oauth-mission/draft-mcguinness-oauth-
+              mission-signals.html>.
 
 Acknowledgments
 

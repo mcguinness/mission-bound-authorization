@@ -501,9 +501,9 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission>.
+              oauth-mission, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-oauth-
+              mission.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -519,55 +519,56 @@ Table of Contents
    [I-D.draft-mcguinness-mission-aauth]
               McGuinness, K., "Mission-Bound Authorization for AAuth",
               Work in Progress, Internet-Draft, draft-mcguinness-
-              mission-aauth, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              mission-aauth>.
+              mission-aauth, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-mission-
+              aauth.html>.
 
    [I-D.draft-mcguinness-mission-architecture]
               McGuinness, K., "An Architecture for Mission-Bound
               Authorization", Work in Progress, Internet-Draft, draft-
               mcguinness-mission-architecture, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              mission-architecture>.
+              <https://mcguinness.github.io/draft-mcguinness-oauth-
+              mission/draft-mcguinness-mission-architecture.html>.
 
    [I-D.draft-mcguinness-mission-audit]
               McGuinness, K., "Mission Audit Transparency", Work in
               Progress, Internet-Draft, draft-mcguinness-mission-audit,
-              2026, <https://datatracker.ietf.org/doc/html/draft-
-              mcguinness-mission-audit>.
+              2026, <https://mcguinness.github.io/draft-mcguinness-
+              oauth-mission/draft-mcguinness-mission-audit.html>.
 
    [I-D.draft-mcguinness-mission-authority-server]
               McGuinness, K., "Mission Authority Server", Work in
               Progress, Internet-Draft, draft-mcguinness-mission-
-              authority-server, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              mission-authority-server>.
+              authority-server, 2026, <https://mcguinness.github.io/
+              draft-mcguinness-oauth-mission/draft-mcguinness-mission-
+              authority-server.html>.
 
    [I-D.draft-mcguinness-mission-mandate]
               McGuinness, K., "Mission Mandate", Work in Progress,
               Internet-Draft, draft-mcguinness-mission-mandate, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              mission-mandate>.
+              <https://mcguinness.github.io/draft-mcguinness-oauth-
+              mission/draft-mcguinness-mission-mandate.html>.
 
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", Work
               in Progress, Internet-Draft, draft-mcguinness-mission-
-              runtime, 2026, <https://datatracker.ietf.org/doc/html/
-              draft-mcguinness-mission-runtime>.
+              runtime, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-mission-
+              runtime.html>.
 
    [I-D.draft-mcguinness-mission-security-model]
               McGuinness, K., "Mission Security Model", Work in
               Progress, Internet-Draft, draft-mcguinness-mission-
-              security-model, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              mission-security-model>.
+              security-model, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-mission-
+              security-model.html>.
 
    [I-D.draft-mcguinness-oauth-mission-status]
               McGuinness, K., "Mission Status and Lifecycle for OAuth
               2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission-status, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-status>.
+              oauth-mission-status, 2026, <https://mcguinness.github.io/
+              draft-mcguinness-oauth-mission/draft-mcguinness-oauth-
+              mission-status.html>.
 
 Acknowledgments
 

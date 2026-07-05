@@ -1258,9 +1258,9 @@ Normative References
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission>.
+              oauth-mission, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-oauth-
+              mission.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -1334,43 +1334,45 @@ Informative References
    [I-D.draft-mcguinness-mission-authority-server]
               McGuinness, K., "Mission Authority Server", Work in
               Progress, Internet-Draft, draft-mcguinness-mission-
-              authority-server, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              mission-authority-server>.
+              authority-server, 2026, <https://mcguinness.github.io/
+              draft-mcguinness-oauth-mission/draft-mcguinness-mission-
+              authority-server.html>.
 
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",
               Work in Progress, Internet-Draft, draft-mcguinness-oauth-
               mission-child-delegation, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-child-delegation>.
+              <https://mcguinness.github.io/draft-mcguinness-oauth-
+              mission/draft-mcguinness-oauth-mission-child-
+              delegation.html>.
 
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
               McGuinness, K., "Mission Cross-Domain Projection for OAuth
               2.0", Work in Progress, Internet-Draft, draft-mcguinness-
               oauth-mission-cross-domain, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-cross-domain>.
+              <https://mcguinness.github.io/draft-mcguinness-oauth-
+              mission/draft-mcguinness-oauth-mission-cross-domain.html>.
 
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", Work in
               Progress, Internet-Draft, draft-mcguinness-oauth-mission-
-              expansion, 2026, <https://datatracker.ietf.org/doc/html/
-              draft-mcguinness-oauth-mission-expansion>.
+              expansion, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-oauth-mission-
+              expansion.html>.
 
    [I-D.draft-mcguinness-oauth-mission-management]
               McGuinness, K., "Mission Management for OAuth 2.0", Work
               in Progress, Internet-Draft, draft-mcguinness-oauth-
-              mission-management, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-management>.
+              mission-management, 2026, <https://mcguinness.github.io/
+              draft-mcguinness-oauth-mission/draft-mcguinness-oauth-
+              mission-management.html>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
               Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              mission-signals, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-signals>.
+              mission-signals, 2026, <https://mcguinness.github.io/
+              draft-mcguinness-oauth-mission/draft-mcguinness-oauth-
+              mission-signals.html>.
 
    [RFC9110]  Fielding, R., Ed., Nottingham, M., Ed., and J. Reschke,
               Ed., "HTTP Semantics", STD 97, RFC 9110,

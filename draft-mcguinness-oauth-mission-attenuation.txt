@@ -607,15 +607,16 @@ Table of Contents
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", Work
               in Progress, Internet-Draft, draft-mcguinness-mission-
-              runtime, 2026, <https://datatracker.ietf.org/doc/html/
-              draft-mcguinness-mission-runtime>.
+              runtime, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-mission-
+              runtime.html>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission>.
+              oauth-mission, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-oauth-
+              mission.html>.
 
    [I-D.draft-niyikiza-oauth-attenuating-agent-tokens]
               Aimable, N., "Attenuating Authorization Tokens for Agentic
@@ -653,22 +654,24 @@ Table of Contents
    [I-D.draft-mcguinness-mission-harness]
               McGuinness, K., "Mission-Aware Agent Harnesses", Work in
               Progress, Internet-Draft, draft-mcguinness-mission-
-              harness, 2026, <https://datatracker.ietf.org/doc/html/
-              draft-mcguinness-mission-harness>.
+              harness, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-mission-
+              harness.html>.
 
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",
               Work in Progress, Internet-Draft, draft-mcguinness-oauth-
               mission-child-delegation, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-child-delegation>.
+              <https://mcguinness.github.io/draft-mcguinness-oauth-
+              mission/draft-mcguinness-oauth-mission-child-
+              delegation.html>.
 
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
               McGuinness, K., "Mission Cross-Domain Projection for OAuth
               2.0", Work in Progress, Internet-Draft, draft-mcguinness-
               oauth-mission-cross-domain, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-cross-domain>.
+              <https://mcguinness.github.io/draft-mcguinness-oauth-
+              mission/draft-mcguinness-oauth-mission-cross-domain.html>.
 
    [RFC7638]  Jones, M. and N. Sakimura, "JSON Web Key (JWK)
               Thumbprint", RFC 7638, DOI 10.17487/RFC7638, September

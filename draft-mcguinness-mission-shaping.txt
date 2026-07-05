@@ -1016,9 +1016,9 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission>.
+              oauth-mission, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-oauth-
+              mission.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -1048,15 +1048,16 @@ Table of Contents
    [I-D.draft-mcguinness-mission-authority-server]
               McGuinness, K., "Mission Authority Server", Work in
               Progress, Internet-Draft, draft-mcguinness-mission-
-              authority-server, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              mission-authority-server>.
+              authority-server, 2026, <https://mcguinness.github.io/
+              draft-mcguinness-oauth-mission/draft-mcguinness-mission-
+              authority-server.html>.
 
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", Work
               in Progress, Internet-Draft, draft-mcguinness-mission-
-              runtime, 2026, <https://datatracker.ietf.org/doc/html/
-              draft-mcguinness-mission-runtime>.
+              runtime, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-mission-
+              runtime.html>.
 
    [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
               RFC 6749, DOI 10.17487/RFC6749, October 2012,

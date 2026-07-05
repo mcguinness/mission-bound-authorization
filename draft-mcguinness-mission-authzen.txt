@@ -1935,15 +1935,16 @@ Table of Contents
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", Work
               in Progress, Internet-Draft, draft-mcguinness-mission-
-              runtime, 2026, <https://datatracker.ietf.org/doc/html/
-              draft-mcguinness-mission-runtime>.
+              runtime, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-mission-
+              runtime.html>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission>.
+              oauth-mission, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-oauth-
+              mission.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -2010,21 +2011,23 @@ Table of Contents
    [I-D.draft-mcguinness-mission-metering]
               McGuinness, K., "Mission Consumption Metering", Work in
               Progress, Internet-Draft, draft-mcguinness-mission-
-              metering, 2026, <https://datatracker.ietf.org/doc/html/
-              draft-mcguinness-mission-metering>.
+              metering, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-mission-
+              metering.html>.
 
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", Work in
               Progress, Internet-Draft, draft-mcguinness-oauth-mission-
-              expansion, 2026, <https://datatracker.ietf.org/doc/html/
-              draft-mcguinness-oauth-mission-expansion>.
+              expansion, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-oauth-mission-
+              expansion.html>.
 
    [I-D.draft-mcguinness-oauth-mission-progressive]
               McGuinness, K., "Mission Progressive Authorization for
               OAuth 2.0", Work in Progress, Internet-Draft, draft-
               mcguinness-oauth-mission-progressive, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-progressive>.
+              <https://mcguinness.github.io/draft-mcguinness-oauth-
+              mission/draft-mcguinness-oauth-mission-progressive.html>.
 
    [RFC9457]  Nottingham, M., Wilde, E., and S. Dalal, "Problem Details
               for HTTP APIs", RFC 9457, DOI 10.17487/RFC9457, July 2023,

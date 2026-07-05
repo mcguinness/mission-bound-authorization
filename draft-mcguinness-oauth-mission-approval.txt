@@ -381,9 +381,9 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission>.
+              oauth-mission, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-oauth-
+              mission.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -404,35 +404,39 @@ Table of Contents
    [I-D.draft-mcguinness-mission-authority-server]
               McGuinness, K., "Mission Authority Server", Work in
               Progress, Internet-Draft, draft-mcguinness-mission-
-              authority-server, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              mission-authority-server>.
+              authority-server, 2026, <https://mcguinness.github.io/
+              draft-mcguinness-oauth-mission/draft-mcguinness-mission-
+              authority-server.html>.
 
    [I-D.draft-mcguinness-mission-shaping]
               McGuinness, K., "Mission Intent Shaping", Work in
               Progress, Internet-Draft, draft-mcguinness-mission-
-              shaping, 2026, <https://datatracker.ietf.org/doc/html/
-              draft-mcguinness-mission-shaping>.
+              shaping, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-mission-
+              shaping.html>.
 
    [I-D.draft-mcguinness-oauth-mission-approval-revision]
               McGuinness, K., "Mission Approval Revision for OAuth 2.0",
               Work in Progress, Internet-Draft, draft-mcguinness-oauth-
               mission-approval-revision, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-approval-revision>.
+              <https://mcguinness.github.io/draft-mcguinness-oauth-
+              mission/draft-mcguinness-oauth-mission-approval-
+              revision.html>.
 
    [I-D.draft-mcguinness-oauth-mission-consent-evidence]
               McGuinness, K., "Mission Consent Evidence for OAuth 2.0",
               Work in Progress, Internet-Draft, draft-mcguinness-oauth-
               mission-consent-evidence, 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-consent-evidence>.
+              <https://mcguinness.github.io/draft-mcguinness-oauth-
+              mission/draft-mcguinness-oauth-mission-consent-
+              evidence.html>.
 
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", Work in
               Progress, Internet-Draft, draft-mcguinness-oauth-mission-
-              expansion, 2026, <https://datatracker.ietf.org/doc/html/
-              draft-mcguinness-oauth-mission-expansion>.
+              expansion, 2026, <https://mcguinness.github.io/draft-
+              mcguinness-oauth-mission/draft-mcguinness-oauth-mission-
+              expansion.html>.
 
 Acknowledgments
 
