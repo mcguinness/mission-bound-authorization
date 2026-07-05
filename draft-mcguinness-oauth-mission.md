@@ -214,6 +214,16 @@ verify it, and a holder of only a narrowed subset (a downstream or
 cross-domain party) treats it as an audit anchor it cannot recompute
 ({{consent-binding}}).
 
+This chain is the first of two deliberate security tiers. It gives
+task-bound issuance, auditability, and a revocation gate over future
+derivation, which is sufficient for a low-risk workflow whose exposure
+is bounded by short token lifetimes and narrow authority. It does not
+evaluate individual actions: an agent taking consequential autonomous
+actions needs the second tier, the runtime enforcement layer
+({{runtime-boundary}}), specified separately. A deployment chooses its
+tier deliberately, matching the enforcement it runs to the consequence
+of what its agents do.
+
 ## Why a New Object
 
 OAuth already has objects near this need, but none is the approved
@@ -450,7 +460,9 @@ Mission Intent:
 Authority Set:
 : The set of `authorization_details` entries the AS derives from a
   Mission Intent and the Approver approves
-  ({{authorization-derivation}}).
+  ({{authorization-derivation}}). "Authority Set" names these concrete
+  entries; it does not mean an identity authority, a trust authority,
+  a legal authority, or an issuing authority.
 
 Mission:
 : The durable, immutable record created at the approval event
@@ -745,7 +757,11 @@ member definitions, MUST refuse the request with `invalid_request`.
 
 A Mission Intent is closed at the top level: an AS MUST reject with
 `invalid_request` a Mission Intent containing a top-level member this
-document does not define. Deployment extensions belong in `context`.
+document does not define. The top level is closed because its members
+feed approval rendering and the `intent_hash` commitment: an undefined
+member would enter what the Approver reads and what the anchor
+commits. Extension data belongs under `context`, so deployment-defined
+semantics are explicit and cannot masquerade as core Intent semantics.
 This closure also keeps issuer-output members, such as a client-planted
 `authority_hash`, from entering through the Intent.
 
@@ -2222,6 +2238,25 @@ the following:
   derivation event; the AS MUST refuse it unless the Mission is
   `active` ({{lifecycle}}).
 
+## Design Alternative: Rebinding client_id to the Delegate {#client-id-rebinding}
+
+A rejected alternative rebinds `client_id` to the immediate delegate
+on each hop, the plain {{RFC9068}} reading in which `client_id` names
+the immediate client. Rebinding loses the stable approved-agent
+binding that every consumer of a derived token can verify: each
+downstream token presents as a new client rather than an actor
+executing within the approved Mission, and joining who was approved to
+who executed requires reconstructing the hop history from issuance
+records rather than reading both from the token. Rebinding is also
+safe only where every Resource Server processes `act` anyway, since
+the delegation history lives nowhere else; that is exactly the
+discipline this profile's chosen design requires, so rebinding buys no
+relaxation. The operational rule of {{rs-enforcement}} therefore holds
+regardless of the binding choice: a Resource Server that authorizes or
+logs the caller MUST process the `act` chain, and a deployment SHOULD
+NOT route delegated tokens to a Resource Server that authorizes or
+logs on `client_id` without processing `act`.
+
 ## Self-Exchange Down-Scoping {#self-exchange}
 
 An agent MAY present its own Mission-bound access token as the
@@ -2662,6 +2697,14 @@ Mission uses `mission_id`, and `intent_hash` and `approver` distinguish
 Missions that share an Authority Set.
 
 # Privacy Considerations
+
+A Mission identifier is a correlation handle. A deployment should
+expose stable Mission identifiers only to parties that enforce, audit,
+or observe that Mission, prefer audience-scoped projections of
+authority where possible, and minimize status and introspection
+disclosures to authorized callers. The subsections that follow and the
+introspection minimization rules
+({{caller-authorization-and-minimization}}) give the specific rules.
 
 ## Mission Identifier Correlation {#mission-identifier-correlation}
 
