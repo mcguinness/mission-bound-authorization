@@ -369,7 +369,7 @@ bounded to under 500 USD and discharged when the Q3 close is finalized:
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
     "constraints": {
-      "max_amount_usd": 500,
+      "max_amount_usd": "500.00",
       "terminal_when": [
         { "event_type": "accounting-period-closed",
           "event_source": "https://erp.example.com/periods/2026-Q3",

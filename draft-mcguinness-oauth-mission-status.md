@@ -89,6 +89,15 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-cross-domain-latest
+  I-D.draft-mcguinness-oauth-mission-management:
+    title: "Mission Management for OAuth 2.0"
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-management-latest
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     author:
@@ -887,15 +896,16 @@ lifecycle endpoint is the authoritative Mission state change.
 
 ## Deferred Lifecycle Capabilities {#deferred-lifecycle}
 
-This endpoint operates on one Mission at a time. The following
-management capabilities are deferred to future work. Bulk lifecycle
-operations and Mission enumeration for incident response, such as
-revoking every Mission for a compromised Subject, client, or tenant,
-are not defined here. Approver transfer or re-anchoring, changing the
-party that anchors a Mission's consent, is not defined here.
-Administrative monotonic narrowing, such as shortening a Mission's
-`mission_expiry` or retiring a single Authority Set entry, is not
-defined here.
+This endpoint operates on one Mission at a time. Mission enumeration
+and bulk lifecycle operations for incident response, such as revoking
+every Mission for a compromised Subject, client, or tenant, are
+specified separately by Mission Management
+{{I-D.draft-mcguinness-oauth-mission-management}}; this document does
+not require them. The following capabilities remain deferred to future
+work. Approver transfer or re-anchoring, changing the party that
+anchors a Mission's consent, is not defined here. Administrative
+monotonic narrowing, such as shortening a Mission's `mission_expiry`
+or retiring a single Authority Set entry, is not defined here.
 
 # Revocation Propagation {#revocation-enforcement-classes}
 

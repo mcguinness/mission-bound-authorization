@@ -28,6 +28,9 @@ author:
 
 normative:
   RFC3339:
+  RFC7519:
+  RFC7638:
+  RFC7662:
   RFC8259:
   RFC8615:
   RFC9325:
@@ -549,7 +552,7 @@ Cache-Control: no-store
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["invoices.read", "journal-entries.write"],
-      "constraints": { "max_amount_usd": 500 } }
+      "constraints": { "max_amount_usd": "500.00" } }
   ]
 }
 ~~~
@@ -632,6 +635,11 @@ from AS metadata {{RFC8414}}, resolved from this document instead:
   client authentication, so no registry entry names it; this document
   uses `dpop_bound_token`.
 
+`mission_join_assertion_endpoint`:
+: OPTIONAL. A string containing a URL. The join-assertion endpoint
+  ({{join-assertion}}). Present when the MAS mints Mission Join
+  Assertions.
+
 `mission_event_stream_endpoint`:
 : OPTIONAL. A string containing a URL. Present when the MAS supports
   Mission Lifecycle Signals; semantics per
@@ -664,6 +672,8 @@ Example:
     "https://mas.example.com/mas/mission/lifecycle",
   "mission_auth_methods_supported":
     ["dpop_bound_token", "private_key_jwt"],
+  "mission_join_assertion_endpoint":
+    "https://mas.example.com/mas/mission/join-assertion",
   "mission_max_stale_seconds": 60,
   "jwks_uri": "https://mas.example.com/.well-known/jwks.json"
 }
@@ -803,7 +813,146 @@ The join proves that the credential belongs to the same subject and
 client the Mission names. It does not prove the credential was derived
 under the Mission; no MAS-mode mechanism can, because the AS issues
 tokens with no knowledge of Missions ({{limitations}},
-{{join-spoofing}}).
+{{join-spoofing}}). A deployment MAY move the join's verification from
+each PDP to the MAS with the Mission Join Assertion
+({{join-assertion}}); that upgrade strengthens who verifies the join,
+not what the join can prove.
+
+# Mission Join Assertion {#join-assertion}
+
+The Mission Join of {{mission-join}} rests on subject and client
+mapping tables that every PDP operates and keeps correct. This section
+defines an OPTIONAL upgrade from mapping-table equality to a
+credential-bound proof: the MAS verifies the join centrally and mints
+a signed assertion of it, so the PDP verifies one signature and one
+token binding instead of operating a mapping table. A MAS that
+supports the upgrade publishes its join-assertion endpoint as
+`mission_join_assertion_endpoint` ({{discovery}}). The endpoint MUST
+meet the TLS and caller-authentication requirements of the mission
+submission endpoint ({{mission-submission}}).
+
+## Assertion Request {#join-assertion-request}
+
+The PEP, or the client acting for it, POSTs a JSON object:
+
+`mission_id`:
+: REQUIRED. A string. The Mission the join is asserted against; its
+  `origin` is the MAS.
+
+`access_token`:
+: A string. The acting access token. REQUIRED unless the digest pair
+  is present.
+
+`token_sha256`:
+: A string. The unpadded base64url SHA-256 digest of the access
+  token's ASCII bytes.
+
+`token_jkt`:
+: A string. The JWK thumbprint {{RFC7638}}, using SHA-256, of the
+  token's `cnf` public key.
+
+The caller presents `access_token`, or `token_sha256` together with
+`token_jkt`. The digest pair keeps the credential itself off this
+wire, but it is usable only where the deployment's introspection
+surface can resolve a token by digest; `access_token` is the
+interoperable form. The acting token MUST be sender-constrained: a
+token without a `cnf` key gives the assertion nothing to bind, and the
+MAS MUST NOT mint one for it.
+
+The MAS verifies the join centrally:
+
+1. It introspects the token at the deployment's Authorization Server
+   {{RFC7662}}, under introspection credentials the MAS holds there.
+   Calling the AS is permitted in MAS mode; changing it is not. A
+   token the AS reports inactive fails the request.
+2. It verifies the subject and client joins of {{mission-join}}
+   against the introspection response, under its own documented
+   account and client mappings and delegate policy.
+
+A token that does not join is refused with the `join_failed` error
+(HTTP 403), in the error format of {{submission-errors}}. An unknown
+or not-visible `mission_id` returns `not_found`, preserving the
+anti-oracle property.
+
+## The Assertion {#join-assertion-artifact}
+
+On success the MAS mints a Mission Join Assertion: a signed JWT
+{{RFC7519}} whose protected header carries the `typ`
+`mission-join+jwt` and a `kid` resolvable in the MAS's `jwks_uri`. Its
+claims:
+
+`iss`:
+: REQUIRED. The MAS's issuer URL.
+
+`mission`:
+: REQUIRED. An object containing `id`, `origin`, and
+  `authority_hash`.
+
+`token`:
+: REQUIRED. An object containing `sha256`, the token digest as in
+  {{join-assertion-request}}, and `jkt`, the thumbprint of the token's
+  `cnf` public key {{RFC7638}}.
+
+`iat`:
+: REQUIRED. Issuance time.
+
+`exp`:
+: REQUIRED. Expiry. It MUST NOT exceed the access token's remaining
+  lifetime.
+
+`aud`:
+: OPTIONAL. The PDP or PDPs the assertion is minted for.
+
+The endpoint returns HTTP 200 with a JSON object whose `assertion`
+member carries the JWT. Each minting is a join evidence event: the MAS
+records the Mission reference, the token digest and thumbprint, the
+authenticated caller, and the validity window, retained for the audit
+horizon.
+
+Example claims:
+
+~~~ json
+{
+  "iss": "https://mas.example.com",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "origin": "https://mas.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
+  "token": {
+    "sha256": "rN2kQ4mZ7tP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2n",
+    "jkt": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
+  },
+  "iat": 1797840000,
+  "exp": 1797841800
+}
+~~~
+
+## PDP Consumption {#join-assertion-pdp}
+
+A PDP presented with a Join Assertion verifies, in place of the
+mapping checks of {{mission-join}} steps 3 and 4:
+
+- the signature, under a key from the MAS's `jwks_uri`, and the
+  `mission-join+jwt` header `typ`;
+- that `iss` and the `mission` claim match the referenced Mission's
+  `origin`, `mission_id`, and `authority_hash`;
+- that `exp` has not passed and any `aud` names this PDP; and
+- the token binding: the presented credential's digest equals
+  `token.sha256` and its `cnf` key's thumbprint equals `token.jkt`.
+
+Every other join rule holds unchanged: the PDP resolves Mission state
+at the MAS under the runtime profile's freshness rules, denies with
+`mission_mismatch` when any check above fails, and draws authority
+from the Mission.
+
+For the high-consequence action classes
+({{I-D.draft-mcguinness-mission-runtime}}) in MAS mode, the PDP SHOULD
+require a Join Assertion. The mapping join of {{mission-join}} remains
+the conformance floor: a deployment without the endpoint still joins,
+and a PDP MUST NOT treat possession of an assertion as authority,
+per the family rule that references and binding proofs grant nothing.
 
 # Limitations {#limitations}
 
@@ -900,11 +1049,36 @@ with `mission_mismatch`. The residual is mapping coarseness. Where the
 deployment's account mapping is many-to-one (several AS accounts map
 to one directory subject), any credential in the equivalence class
 joins; a deployment SHOULD keep the mapping one-to-one for subjects
-that hold Missions and MUST document its granularity. A second
-residual: two Missions held by the same subject and client are
-distinguished only by the PEP-supplied reference, so a faulty or
-compromised PEP can attribute work to the wrong same-party Mission,
-bounded by that Mission's authority and visible in evidence.
+that hold Missions and MUST document its granularity. The client join
+is coarse the same way where several workloads share one `client_id`:
+any of them joins. A second residual: two Missions held by the same
+subject and client are distinguished only by the PEP-supplied
+reference, so a faulty or compromised PEP can attribute work to the
+wrong same-party Mission, bounded by that Mission's authority and
+visible in evidence.
+
+The Mission Join Assertion ({{join-assertion}}) is the mitigation for
+the coarse-mapping and shared-client residuals: the MAS evaluates the
+mapping once, centrally, under its documented policy, and binds the
+result to one introspected token by digest and key thumbprint, so the
+join stops being a standing property of every credential in an
+equivalence class and becomes a minted, audited, token-bound event.
+
+## Join Assertion Trust {#sec-join-assertion}
+
+A captured Join Assertion moves no authority: it names one token by
+digest and key thumbprint, so a replay without that token and its
+sender-constraint key proves nothing, and `exp`, capped at the token's
+remaining lifetime, bounds the window in which the proof is live. The
+introspection call names a trust relationship specific to this
+upgrade: the MAS relies on the deployment's AS, through RFC 7662
+introspection, for the token's validity, subject, and client, and the
+deployment documents that reliance and protects the MAS's
+introspection credentials accordingly. The structural gain is
+concentration: the subject and client mappings are evaluated at one
+audited point under one documented policy, instead of configured
+independently at N PDPs, where one drifted table is a silent join
+widening.
 
 ## Ambient Authority of Ungated Tokens
 
@@ -989,6 +1163,7 @@ for each, Change Controller IETF and Reference this document:
 - `mission_status_signing_alg_values_supported`
 - `mission_lifecycle_endpoint`
 - `mission_auth_methods_supported`
+- `mission_join_assertion_endpoint`
 - `mission_event_stream_endpoint`
 - `mission_max_stale_seconds`
 - `jwks_uri`
@@ -1065,7 +1240,7 @@ Cache-Control: no-store
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["invoices.read", "journal-entries.write"],
-      "constraints": { "max_amount_usd": 500 } }
+      "constraints": { "max_amount_usd": "500.00" } }
   ]
 }
 ~~~

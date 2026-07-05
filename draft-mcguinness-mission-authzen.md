@@ -34,6 +34,7 @@ normative:
   RFC7519:
   RFC8259:
   RFC8785:
+  RFC9110:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     author:
@@ -618,13 +619,17 @@ self-consistent:
    cannot. A parameter-bound action MUST NOT be permitted without a
    verified `parameter_digest`.
 6. For a catalog-sourced action whose approved entry recorded a
-   capability source digest at derivation
+   capability source binding at derivation
    ({{capability-source-binding}}), `context.capability_source` MUST be
-   present and match the approved source binding; otherwise the PDP
-   returns `capability_drift`. Whether an action is catalog-sourced, and
-   whether a source digest was recorded, are determined from the
-   materialized policy view, not from the PEP's request; where no source
-   digest was recorded, this check does not apply.
+   present and match the approved binding: the presented `source_digest`,
+   computed over the capability's current extracted definition
+   ({{capability-extraction}}), MUST equal the recorded value, and, where
+   a `catalog_digest` was recorded, the presented `catalog_digest` MUST
+   equal it likewise; otherwise the PDP returns `capability_drift`.
+   Whether an action is catalog-sourced, and which digests were
+   recorded, are determined from the materialized policy view, not from
+   the PEP's request; where no source binding was recorded, this check
+   does not apply.
 
 ## Batch evaluations {#batch-evaluations}
 
@@ -640,8 +645,8 @@ enforcement semantics.
 
 A batch request for two journal-entry writes under the ERP
 reconciliation Mission, where the second exceeds the entry's
-`max_amount_usd` ceiling of 500. The shared `subject` is hoisted to the
-request's default members per {{AUTHZEN}}; each item carries its
+`max_amount_usd` ceiling of "500.00". The shared `subject` is hoisted
+to the request's default members per {{AUTHZEN}}; each item carries its
 complete `context`:
 
 ~~~ http-message
@@ -739,6 +744,8 @@ Evidence `contributing_constraints`:
       "decision": true,
       "context": {
         "decision_id": "dec_2FpQ8kV5nR1tX7mB4sJ9eL6wYc",
+        "action_class": "irreversible_action",
+        "class_source": "deployment",
         "parameter_digest":
           "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
         "policy_view_id":
@@ -752,6 +759,8 @@ Evidence `contributing_constraints`:
       "context": {
         "decision_id": "dec_6JwN3xT9rQ4mV8kP1sB5eZ2yLd",
         "denial_reason": "parameter_violation",
+        "action_class": "irreversible_action",
+        "class_source": "deployment",
         "parameter_digest":
           "sha-256:mzFwtXAT6_hY0v8_NFHMDJG39HFuWY2fRcOCSFGDyyE",
         "policy_view_id":
@@ -802,6 +811,23 @@ canonicalization, and integrity envelope an AuthZEN deployment emits.
 `audience`:
 : REQUIRED. A string. PDP inputs as supplied, after PDP-side
   normalization.
+
+`action_class`:
+: REQUIRED. A string. the runtime action class the PDP applied to the
+  action: one of `consequential_read`, `consequential_write`,
+  `irreversible_action`, `external_commitment`, or
+  `privileged_administration`, naming the classes of
+  {{I-D.draft-mcguinness-mission-runtime}}. Every decision this
+  binding records is on a consequential action, so the member is always
+  present.
+
+`class_source`:
+: REQUIRED when `action_class` is present. A string. how the applied
+  class was assigned: `default` (the runtime profile's default
+  classification), `resource_floor` (the resource's published
+  `mission_action_class_floors` floor set or raised it,
+  {{I-D.draft-mcguinness-mission-runtime}}), or `deployment`
+  (deployment policy assigned it).
 
 `actor`:
 : OPTIONAL. An object. PDP inputs as supplied, after PDP-side
@@ -987,6 +1013,8 @@ envelopes with unsupported formats.
   "parameter_digest":
     "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
   "audience": "https://erp.example.com",
+  "action_class": "irreversible_action",
+  "class_source": "deployment",
   "decision": "permit",
   "contributing_constraints": [
     "mission_resource_access", "max_amount_usd"
@@ -1213,10 +1241,11 @@ carried in Decision Evidence:
   ({{I-D.draft-mcguinness-mission-runtime}}); the metering semantics
   and settlement exchange are defined by the experimental metering
   companion ({{I-D.draft-mcguinness-mission-metering}}).
-- `capability_drift`: a catalog-sourced action's current
-  capability-source digest differs from the digest committed at
-  derivation, or the presented `tool_id` is outside the approved set
-  ({{capability-source-binding}}).
+- `capability_drift`: the digest of a catalog-sourced action's current
+  extracted capability definition differs from the `source_digest`
+  committed at derivation, a recorded `catalog_digest` no longer
+  matches the retrieved source, or the presented `tool_id` is outside
+  the approved set ({{capability-source-binding}}).
 - `unsupported_authorization_type`: the action targets an
   `authorization_details` type the PDP does not understand or cannot
   enforce, so it refuses rather than guess the type's semantics
@@ -1298,6 +1327,15 @@ AuthZEN decisions use a boolean `decision` member and an optional
   `parameter_violation`; the specific failing `constraints` keys are
   carried in the Decision Evidence `contributing_constraints`, not here.
 
+`action_class`:
+: REQUIRED. A string. the runtime action class the PDP applied, from
+  the value set of {{decision-evidence-object}}, so the PEP can verify
+  it is enforcing that class's permit controls.
+
+`class_source`:
+: REQUIRED when `action_class` is present. A string. one of `default`,
+  `resource_floor`, or `deployment` ({{decision-evidence-object}}).
+
 `parameter_digest`:
 : REQUIRED when the request was parameter-bound. A string. The digest
   bound to the decision.
@@ -1346,6 +1384,8 @@ lifetime controls required by the runtime profile.
   "decision": true,
   "context": {
     "decision_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
+    "action_class": "irreversible_action",
+    "class_source": "deployment",
     "parameter_digest":
       "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
     "policy_view_id":
@@ -1378,6 +1418,32 @@ cache MUST key on the complete request envelope, so a cached permit
 cannot be reused for a request whose envelope differs in any bound
 field.
 
+## Decision identifier propagation {#decision-id-propagation}
+
+In a split topology the resource request the permit authorizes is
+served by a Resource Server that did not see the PDP exchange. The PEP
+SHOULD propagate the permit's `decision_id` to the resource request in
+the `Mission-Decision` request header field ({{iana}}); the field value
+is the `decision_id`, whose ABNF ({{decision-evidence-object}}) is
+field-value-safe. The field is protected in transit per deployment: at
+minimum it rides the TLS channel this binding already requires
+({{security-considerations}}), and where the deployment signs resource
+requests the signature MUST cover it.
+
+A Resource Server that logs the received `decision_id` with the access
+it serves closes the decision-to-access join: the Decision Evidence,
+the Execution Evidence, and the Resource Server's access log then share
+one identifier, so an access is joined to the decision that permitted
+it without timestamp correlation. This is the wire realization of the
+issuance profile's recommendation that a Resource Server log the
+decision identifier accompanying a Mission-governed request
+({{I-D.draft-mcguinness-oauth-mission}}).
+
+The field is a correlation aid, not an authorization. Its presence or
+value grants nothing, the Resource Server's token validation and PEP
+obligations are unchanged, and a Resource Server MUST NOT treat it as a
+permit; the permit-binding rules above govern.
+
 ## Error response shape
 
 The PDP returns its permit or denial in the AuthZEN response
@@ -1391,6 +1457,8 @@ not as transport errors.
   "context": {
     "decision_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
     "denial_reason": "stale_state",
+    "action_class": "irreversible_action",
+    "class_source": "deployment",
     "policy_view_id":
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
   }
@@ -1408,6 +1476,8 @@ marks the denial requestable under {{ARAP}}:
   "context": {
     "decision_id": "dec_7YbK4nQ9tR2xV6mL1sP8eJ3wZc",
     "denial_reason": "action_approval_required",
+    "action_class": "irreversible_action",
+    "class_source": "deployment",
     "parameter_digest":
       "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
     "policy_view_id":
@@ -1462,7 +1532,8 @@ and presented by the executing component at request time in
 {
   "tool_id": "mcp://docs.example.com/tools/write_document",
   "source_uri": "https://docs.example.com/.well-known/mcp",
-  "source_digest": "sha-256:Qm0a...base64url-no-pad",
+  "source_digest":
+    "sha-256:OAbEIh2DTYUVP7DjRhHct4aapsT8PybZq2ILdut9UP0",
   "operation_ref": "tools/write_document"
 }
 ~~~
@@ -1477,32 +1548,108 @@ and presented by the executing component at request time in
 
 `source_digest`:
 : A string. the integrity-anchor encoded form
-  ({{I-D.draft-mcguinness-oauth-mission}}) over the exact retrieved
-  source representation, recorded at derivation time.
+  ({{I-D.draft-mcguinness-oauth-mission}}) over the capability's
+  extracted definition ({{capability-extraction}}), recorded at
+  derivation time. At request time it is computed over the current
+  extracted definition, so the PDP's comparison detects a mutated
+  definition.
 
 `operation_ref`:
 : A string. the source-format-specific operation
   reference (MCP tool name, OpenAPI `operationId`, or equivalent).
 
+`catalog_digest`:
+: OPTIONAL. A string. the integrity-anchor encoded form over the exact
+  retrieved source representation, recorded at derivation time. Its
+  semantics are strictly stricter than `source_digest`: when recorded,
+  any change to the retrieved source refuses, whether or not it touches
+  the capability. A deployment records it where the whole catalog is
+  the trust unit.
+
 Rules:
 
 - The validating server records `tool_id`, `source_uri`,
-  `source_digest`, and `operation_ref` for every consequential action
-  sourced from a discovered catalog. These values are part of the
-  approved Mission's derived authority and are therefore covered by
-  `authority_hash` ({{I-D.draft-mcguinness-oauth-mission}}).
+  `source_digest`, `operation_ref`, and any `catalog_digest` for every
+  consequential action sourced from a discovered catalog. These values
+  are part of the approved Mission's derived authority and are
+  therefore covered by `authority_hash`
+  ({{I-D.draft-mcguinness-oauth-mission}}).
 - The PEP presents `tool_id` on consequential requests for
-  catalog-sourced actions. The runtime profile owns the drift semantics:
-  it requires the PDP to refuse an invoked identity outside the approved
-  `actions` and, where a source digest was recorded at derivation, to
-  refuse when the current source digest differs from it
-  ({{I-D.draft-mcguinness-mission-runtime}}). This binding adds
-  only the wire representation: such a refusal is carried as
-  `capability_drift` ({{runtime-denial-classification}}). It defines no
-  drift rule of its own.
+  catalog-sourced actions. The runtime profile owns the drift
+  semantics: it requires the PDP to refuse an invoked identity outside
+  the approved `actions` and, where a per-capability source digest was
+  recorded at derivation, to refuse when the digest of the capability's
+  current extracted definition differs from it
+  ({{I-D.draft-mcguinness-mission-runtime}}). The comparison is per
+  capability: a catalog change that leaves the extracted definition
+  byte-identical does not refuse, and a mutated definition refuses even
+  when the rest of the catalog is unchanged. Where `catalog_digest` was
+  recorded, any difference from the current retrieved source also
+  refuses. This binding adds only the wire representation: such a
+  refusal is carried as `capability_drift`
+  ({{runtime-denial-classification}}). It defines no drift rule of its
+  own.
 - Actions not sourced from a discovered catalog (deployment-registered
   `authorization_details` types, first-party operations with stable
   identity) do not require this binding.
+
+## Per-Capability Extraction {#capability-extraction}
+
+`source_digest` is computed over the extracted per-capability
+definition, not the whole retrieved source, so a revision elsewhere in
+a shared catalog does not invalidate a Mission's approved capabilities,
+while any mutation of an approved capability's own definition still
+refuses. The extraction rule is fixed per source format:
+
+- For an MCP tool catalog, the extracted definition is the single
+  tool's definition object as retrieved (the member of the catalog's
+  tool list whose name is the capability's), JCS-canonicalized
+  {{RFC8785}}.
+- For an OpenAPI document, the extracted definition is an object with
+  two members: `operation`, the operation object `operation_ref`
+  identifies, and `components`, an object carrying, under their
+  component names, the components of the document the operation
+  references by name, directly or transitively. The assembled object
+  is JCS-canonicalized.
+- For another source format, the binding profile in use defines the
+  extraction rule. A capability whose format has no defined extraction
+  rule cannot carry a `source_digest`; the whole-source
+  `catalog_digest` remains available for it.
+
+For the MCP tool of the minimum binding above, the extracted
+definition is the tool's definition object:
+
+~~~ json
+{
+  "name": "write_document",
+  "description": "Create or update a document",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "path": { "type": "string" },
+      "content": { "type": "string" }
+    },
+    "required": ["path", "content"]
+  }
+}
+~~~
+
+The JCS canonical bytes are a single line with sorted member names and
+no whitespace, shown here wrapped for layout only; remove the layout
+line breaks, adding no characters, to recover the canonical form:
+
+~~~ text
+{"description":"Create or update a document","inputSchema":{"propert
+ies":{"content":{"type":"string"},"path":{"type":"string"}},"require
+d":["path","content"],"type":"object"},"name":"write_document"}
+~~~
+
+~~~ text
+source_digest = sha-256:OAbEIh2DTYUVP7DjRhHct4aapsT8PybZq2ILdut9UP0
+~~~
+
+Adding, removing, or renaming another tool in the same catalog leaves
+this value unchanged; any byte change to this definition changes it.
 
 Cross-format canonicalization, signed capability manifests, and
 media-type negotiation across catalog formats are out of scope
@@ -1551,7 +1698,7 @@ A PEP conforming to this binding MUST:
   against `context.audience`, not the AuthZEN `resource` member;
 - supply `context.parameter_digest` for a parameter-bound action class
   ({{parameter-digest}}), and `context.capability_source` for a
-  catalog-sourced action whose approved entry recorded a source digest
+  catalog-sourced action whose approved entry recorded a source binding
   ({{capability-source-binding}}); and
 - emit a Decision Evidence Object for each PDP decision
   ({{decision-evidence-object}}), an Execution Evidence Object for each
@@ -1564,7 +1711,10 @@ A PDP conforming to this binding MUST:
 - perform the PDP-side consistency checks ({{pdp-request}});
 - return every denial with a denial-reason identifier from the set of
   {{runtime-denial-classification}}, including any
-  specification-defined extension under its extensibility rule; and
+  specification-defined extension under its extensibility rule;
+- return the applied `action_class`, with its `class_source`, in the
+  decision context and record both in Decision Evidence
+  ({{decision-evidence-object}}); and
 - produce Decision Evidence with the required members and a verifiable
   integrity envelope ({{decision-evidence-object}},
   {{decision-evidence-integrity}}).
@@ -1745,6 +1895,16 @@ This document registers two media types per {{RFC6838}}.
 - Author: IETF
 - Change controller: IETF
 
+## HTTP Field Name Registration
+
+This document registers the following in the "Hypertext Transfer
+Protocol (HTTP) Field Name" registry ({{RFC9110}}):
+
+- Field Name: Mission-Decision
+- Status: permanent
+- Reference: this document, {{decision-id-propagation}}
+- Comments: none
+
 The `context.mission`, `context.actor`, `context.credential`,
 `context.parameters`, `context.parameter_digest`, `context.audience`,
 `context.freshness`, and `context.capability_source` members carried
@@ -1752,6 +1912,7 @@ inside the AuthZEN request
 `context` object ({{pdp-request}}) are
 AuthZEN extension data and are not registered in an IETF registry.
 The response `context.decision_id`, `context.denial_reason`,
+`context.action_class`, `context.class_source`,
 `context.parameter_digest`, `context.policy_view_id`,
 `context.permit_expires_at`, `context.single_use`,
 `context.insufficient_claims`, and `context.access_request` members

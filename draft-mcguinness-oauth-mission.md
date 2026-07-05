@@ -28,6 +28,7 @@ author:
 
 normative:
   RFC3339:
+  RFC3986:
   RFC6234:
   RFC6749:
   RFC7636:
@@ -527,6 +528,14 @@ a capability is discovered out of band or by attempt: a Token
 Exchange, a cross-domain grant issuance, or an introspection request
 fails if the issuer does not support it.
 
+The smallest useful conforming deployment, noted here informatively,
+is a Mission Issuer that derives in narrowing mode from the Intent's
+`proposed_authority` ({{authorization-derivation}}), emits only the
+Common Constraints of {{common-constraints}}, and implements none of
+the OPTIONAL capabilities; a scope-only Resource Server still operates
+at the coarse scope level ({{rs-enforcement}}). This note names a
+starting point and creates no new conformance class.
+
 # Overview
 
 ## Principal Model
@@ -624,6 +633,18 @@ following members:
 : OPTIONAL. An array of strings. Human-readable bounds on
   the task (for example, "read only invoices from 2026"). These
   inform derivation and consent rendering.
+
+`proposed_authority`:
+: OPTIONAL. An array of objects, each shaped as an {{RFC9396}}
+  `authorization_details` entry. The client's concrete authority
+  proposal for the task. It is untrusted input like the rest of the
+  Intent and is committed by `intent_hash` with it
+  ({{integrity-anchors}}). When present, the AS MUST derive each
+  Authority Set entry as a subset ({{subset}}) of some
+  `proposed_authority` entry, and the deterministic-reproducibility
+  rule for narrowing-mode derivation applies
+  ({{authorization-derivation}}); `goal` and `constraints` then serve
+  as rendering and bounding context over the proposed authority.
 
 `success_criteria`:
 : OPTIONAL. An array of strings. Human-readable
@@ -753,7 +774,10 @@ deployment-defined.
 A client MUST NOT submit `authorization_details` directly together
 with `mission_intent`; the AS derives authorization details from the
 Intent ({{authorization-derivation}}). A request carrying both MUST
-be refused with `invalid_request`. A client MAY submit `scope` and
+be refused with `invalid_request`. This prohibition governs the raw
+{{RFC9396}} request parameter; a client proposes concrete authority
+inside the Intent, through `proposed_authority`
+({{mission-intent}}). A client MAY submit `scope` and
 `resource` ({{RFC8707}}) values; the AS treats them as a requested
 subset and MUST NOT grant authority beyond what the Mission Intent
 yields.
@@ -785,7 +809,10 @@ more {{RFC9396}} `authorization_details` entries of type
 - Bound every derived entry by the Mission Intent: each derived entry's
   `resource` MUST be one of the Intent's `resources` values, and the
   derived authority MUST NOT exceed any machine-actionable `context`
-  bound. Fidelity to the Intent's `goal` and `constraints` is a SHOULD,
+  bound. When the Intent carries `proposed_authority`
+  ({{mission-intent}}), each derived entry MUST additionally be a
+  subset ({{subset}}) of some `proposed_authority` entry. Fidelity to
+  the Intent's `goal` and `constraints` is a SHOULD,
   auditable through the recorded `policy_version`.
 - Record the policy version used for derivation as the Mission's
   `policy_version`.
@@ -819,7 +846,8 @@ the derived Authority Set, never the Intent.
 
 Two rules keep local derivation accountable rather than opaque. First,
 reproducibility, scoped to how the AS derives. When the AS derives by
-narrowing a client-proposed set of `authorization_details` (below), the
+narrowing the Intent's `proposed_authority` entries
+({{mission-intent}}), the
 same Mission Intent and the same `policy_version` MUST yield the same
 Authority Set at a given AS, so a derivation can be re-checked and a
 divergence detected. When the AS derives generatively, from free text or
@@ -834,8 +862,8 @@ is what a cross-domain trust decision actually needs, even though the
 policy itself does not travel.
 
 Where cross-vendor interoperability matters, an AS SHOULD derive the
-Authority Set by narrowing a client-proposed set of
-`authorization_details` to policy, rather than generating one from free
+Authority Set by narrowing the Intent's `proposed_authority` entries
+({{mission-intent}}) to policy, rather than generating one from free
 text. Narrowing is governed by the subset rule ({{subset}}), which is
 interoperable, so the result is verifiable and enforceable in any domain
 even though the policy decision of what to narrow to stays local; the
@@ -882,6 +910,17 @@ A `mission_resource_access` entry is a {{RFC9396}}
   `authorization_details`, and this member is distinct from the
   {{RFC9396}} common `locations` field.
 
+`resource_match`:
+: OPTIONAL. A string: `exact` (the default, and the behavior when the
+  member is absent) or `prefix`. Under `exact` the entry applies to the
+  `resource` URI alone. Under `prefix` the entry authorizes the
+  `resource` itself and any URI beneath it at a path-segment boundary
+  (the `resource` followed by `/` and further path). These two values
+  are the only ones defined; a consumer MUST treat an entry whose
+  `resource_match` value it does not recognize as unenforceable and
+  fail closed ({{rs-enforcement}}). Containment between effective
+  resource sets is compared as defined in {{subset}}.
+
 `actions`:
 : REQUIRED. An array of strings. Permitted action
   identifiers, each matching `[A-Za-z0-9_.:-]+`. Like an OAuth scope, an
@@ -891,7 +930,14 @@ A `mission_resource_access` entry is a {{RFC9396}}
   understand is fail-closed by construction (the action is simply not
   within the authority it can enforce). An AS SHOULD draw action
   identifiers from a namespace the serving resource documents, so the
-  set is interpretable cross-vendor rather than ad hoc.
+  set is interpretable cross-vendor rather than ad hoc. A value MAY
+  instead be an **action family**: an action identifier followed by
+  `.*`, authorizing every action whose dot-separated identifier
+  extends the family name at a segment boundary (`invoices.*`
+  authorizes `invoices.read` and `invoices.q3.export`, not
+  `invoicesx.read`). A consent rendering MUST present a family as the
+  breadth it is: all actions under the name, not one action. An AS
+  SHOULD treat deriving a family as high-risk breadth.
 
 `constraints`:
 : OPTIONAL. An object. Machine-actionable per-resource
@@ -953,7 +999,7 @@ write entry carries no `delegation` and so is non-delegable, because
   { "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
-    "constraints": { "max_amount_usd": 500 } }
+    "constraints": { "max_amount_usd": "500.00" } }
 ]
 ~~~
 
@@ -963,8 +1009,20 @@ When the AS narrows the Authority Set for a derived token, a derived
 `mission_resource_access` entry A is a subset of a Mission entry B
 when:
 
-1. A.`resource` equals B.`resource`.
-2. A.`actions` is a subset of B.`actions`.
+1. A's effective resource set is contained in B's
+   (`resource_match`, {{authorization-derivation}}): when neither
+   entry sets `resource_match: "prefix"`, A.`resource` equals
+   B.`resource`; when B is a `prefix` entry, A (whether `exact` or
+   `prefix`) is contained when A.`resource` equals B.`resource` or
+   extends its path at a path-segment boundary; a `prefix` A is never
+   contained in an `exact` B.
+2. Every A.`actions` value is within some B.`actions` value: a value
+   is within an equal value; a literal action is within a family whose
+   name it extends at a segment boundary (`invoices.read` is within
+   `invoices.*`); a family is within a reference family when its own
+   name extends the reference's name at a segment boundary
+   (`invoices.q3.*` is within `invoices.*`). A family is never within
+   a literal action.
 3. For every key K in **B**.`constraints`, K MUST also be present in
    A.`constraints`, and A's value MUST be no broader than B's under
    K's subset rule: the specification-defined rule when K is a Common
@@ -977,14 +1035,20 @@ when:
 The AS MUST refuse to derive an entry that is not a subset of some
 Mission Authority Set entry.
 
-This comparison is deliberately flat: `resource` matches by exact
-equality and `actions` by array membership. It does not yet define
-resource containment (a path-prefix or hierarchical resource) or action
-families (an `invoices.*` hierarchy). Real hierarchical resources are
-expected to need both, so an extension defining hierarchical resource
-and action subset semantics is known near-term work; until then a
-deployment expresses hierarchy through explicit entries or constraints,
-and the runtime layer enforces it ({{runtime-boundary}}).
+Resource containment under a `prefix` reference is compared after
+RFC 3986 {{RFC3986}} syntax-based normalization of both URIs: lowercase
+the scheme and host, remove a default port, decode percent-encoded
+octets of unreserved characters, and remove dot-segments. This
+normalization applies to comparison only, never to hashing: anchor
+computation ({{integrity-anchors}}, {{canonicalization}}) remains
+byte-exact over the recorded values and is untouched by this rule.
+
+The default comparison is deliberately flat: `resource` matches by
+exact equality and a literal action by array membership. Hierarchy is
+opt-in and closed to the two forms above: `resource_match: "prefix"`
+for resource containment and `.*` action families for action
+containment ({{authorization-derivation}}). A deployment that uses
+neither retains the flat behavior unchanged.
 
 The `delegation` member is policy, not authority, and is not part of
 this comparison ({{delegation-constraints}}). A derived entry's
@@ -1021,9 +1085,10 @@ deployment; a consumer that does not recognize it MUST fail closed
 
 This document defines the initial Common Constraints:
 
-- `max_amount_usd` (number): a per-action ceiling, in US dollars, on a
-  monetary amount. Subset: no broader when less than or equal to the
-  reference value. Intersection: the minimum of the two values.
+- `max_amount_usd` (string containing a decimal number): a per-action
+  ceiling, in US dollars, on a monetary amount. Subset: no broader when
+  the value is less than or equal to the reference value, compared in
+  decimal value space. Intersection: the minimum of the two values.
 - `issued_after` (string, an RFC 3339 {{RFC3339}} date-time): the
   action applies only to resources issued at or after this instant.
   Subset: no broader when greater than or equal to the reference.
@@ -1032,22 +1097,37 @@ This document defines the initial Common Constraints:
   action applies only to resources issued at or before this instant.
   Subset: no broader when less than or equal to the reference.
   Intersection: the earlier instant.
+- `tenant` (string): the action applies only to resources of the named
+  tenant. Subset: no broader when equal to the reference value.
+  Intersection: the common value when the two are equal; otherwise
+  there is no intersection and the combination fails.
+- `recipient_domain` (string, a DNS name): the action applies only to
+  recipients within the named domain. Subset: no broader when equal to
+  the reference or a DNS subdomain of it. Intersection: the narrower
+  value when one is equal to or a subdomain of the other; otherwise
+  there is no intersection and the combination fails.
 
 These comparisons are in value space, not lexical: `max_amount_usd`
-values are compared as decimal numbers, so `500`, `500.0`, and `5e2` are
-equal; `issued_after` and `issued_before` values are compared as the
+values are compared as the decimal numbers the strings contain, so
+`"500"`, `"500.0"`, and `"500.00"` are equal; `issued_after` and
+`issued_before` values are compared as the
 instants they denote after normalization to UTC, so two RFC 3339
 representations of the same instant that differ only in timezone offset
-or trailing subsecond zeros are equal. A Common Constraint definition
+or trailing subsecond zeros are equal; `recipient_domain` values are
+compared as DNS names, case-insensitively and on whole labels, so
+`mail.example.com` is within `example.com` and `notexample.com` is
+not. A Common Constraint definition
 MUST fix its subset and intersection in value-space terms, so that
 independent deployments compute the same result for the same values and
 the subset rule of {{subset}} is reproducible.
 
 A numeric constraint value MUST lie within the range JCS {{RFC8785}}
-serializes exactly. A future Common Constraint definition for a
-monetary value SHOULD use string-decimal syntax (a string containing a
-decimal number, paired with an ISO 4217 currency code) rather than a
-JSON number.
+serializes exactly. Monetary constraints avoid that hazard with
+string-decimal syntax: `max_amount_usd` is a string containing a
+decimal number, and a future Common Constraint for a monetary value
+SHOULD likewise use string-decimal (paired with an ISO 4217 currency
+code where the name does not fix the currency) rather than a JSON
+number.
 
 ## Other Authorization Details Types {#other-types}
 
@@ -1129,7 +1209,9 @@ The mapping is:
   lines up with MCP filtering its tool list by the caller's granted
   authority and routing each tool call for authorization.
 - `constraints` carry machine-actionable bounds on a tool's
-  arguments, for example an amount ceiling or a recipient domain.
+  arguments, for example an amount ceiling or a recipient domain (the
+  `max_amount_usd` and `recipient_domain` Common Constraints,
+  {{common-constraints}}).
   Like all `constraints`, they are committed by `authority_hash` and
   carried to the point of use, but they are evaluated against the
   concrete call arguments by a runtime enforcement layer, not at
@@ -1144,7 +1226,7 @@ through a messaging MCP server, derives:
   { "type": "mission_resource_access",
     "resource": "https://finance.example.com/mcp",
     "actions": ["query_invoices", "post_adjustment"],
-    "constraints": { "max_amount_usd": 500 } },
+    "constraints": { "max_amount_usd": "500.00" } },
   { "type": "mission_resource_access",
     "resource": "https://mail.example.com/mcp",
     "actions": ["send_message"],
@@ -1220,7 +1302,10 @@ At the approval event the AS MUST, in order:
    that renders only the `goal`, `success_criteria`, or Mission Intent
    and not the derived Authority Set does not conform. When the Approver
    is not the Subject, the rendering MUST identify the Subject the
-   authority is granted for.
+   authority is granted for. When the Intent carried
+   `proposed_authority` ({{mission-intent}}), the rendering MUST
+   distinguish the entries the client proposed from any entry or
+   broadening the AS added.
 4. Compute the integrity anchors ({{integrity-anchors}}):
    `authority_hash` over the consented Authority Set and
    `intent_hash` over the approved Mission Intent.
@@ -1234,8 +1319,20 @@ confusable-character presentation in them. The rendering MUST visually
 distinguish the AS-derived Authority Set from client-supplied text, so
 crafted client text cannot pass as derived authority.
 
+A deployment MUST declare a minimum approval-authentication strength
+for Missions whose derived Authority Set carries high-risk authority:
+irreversible, external-commitment, or privileged-administration
+actions under the deployment's classification, or a consumption bound
+({{I-D.draft-mcguinness-mission-metering}}). The approval
+authentication for such a Mission MUST meet that minimum, and
+`context.acr` can raise the required strength but never lower it below
+the floor. The material notices of the consent-evidence profile
+identify these same high-risk classes
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
+
 An Approver who declines, and an Approver whose authentication cannot
-satisfy `context.acr`, yield `access_denied` on the authorization
+satisfy `context.acr` or the declared approval-strength floor, yield
+`access_denied` on the authorization
 response ({{RFC6749}}). A token-endpoint `resource` value outside the
 Authority Set yields `invalid_target` ({{RFC8707}}).
 
@@ -1383,9 +1480,12 @@ to computing an anchor and to comparing committed values:
   each array in a fixed, reproducible order; that order is part of
   the canonical form.
 - URI-valued members are compared byte-for-byte unless a member's
-  definition specifies a normalization. This document defines none,
-  so `resource` and every other URI MUST match exactly (this governs
-  the `resource` equality test of {{subset}}).
+  definition specifies a normalization. The only normalization this
+  document defines is the RFC 3986 {{RFC3986}} comparison of the
+  resource-containment test ({{subset}}), which applies to that
+  comparison alone: the default `resource` equality test of {{subset}}
+  remains an exact match, and anchor computation is always byte-exact
+  over the recorded values.
 
 Test vectors for both anchors are provided in {{test-vectors}}.
 
@@ -1499,7 +1599,7 @@ content. It MUST NOT be reused.
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": 500 } }
+      "constraints": { "max_amount_usd": "500.00" } }
   ],
   "authority_hash":
     "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
@@ -1718,7 +1818,7 @@ Example decoded token payload:
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": 500 } }
+      "constraints": { "max_amount_usd": "500.00" } }
   ],
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "mission": {
@@ -1775,6 +1875,9 @@ required. A Resource Server:
   `mission_bound_authorization_required` protected resource metadata
   member ({{protected-resource-metadata}}).
 - MAY treat the `mission` claim as audit and correlation context.
+- SHOULD, when serving Mission-bound requests, log the `mission`
+  claim's `id` and the token `jti` with each served request, so its
+  access logs join to Mission evidence.
 - MAY recompute `authority_hash` ({{integrity-anchors}}); recomputation
   is OPTIONAL. A Resource Server that performs it recomputes the anchor
   over the full Authority Set it independently holds, compares the
@@ -2031,7 +2134,7 @@ While the Mission is `active`, the response is the standard
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": 500 } }
+      "constraints": { "max_amount_usd": "500.00" } }
   ],
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
@@ -2678,7 +2781,8 @@ Metadata" registry ({{RFC9728}}):
 
 This document creates no Common Constraints registry. The Common
 Constraints it defines (`max_amount_usd`, `issued_after`,
-`issued_before`) are specified in {{common-constraints}}, and a further
+`issued_before`, `tenant`, `recipient_domain`) are specified in
+{{common-constraints}}, and a further
 Common Constraint is defined by specification: it fixes a name matching
 `^[A-Za-z0-9_.:-]+$`, its JSON {{RFC8259}} value syntax, its subset
 rule, and its intersection rule, in value-space terms
@@ -2768,7 +2872,7 @@ and renders it for `alice`'s consent:
   { "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
-    "constraints": { "max_amount_usd": 500 } }
+    "constraints": { "max_amount_usd": "500.00" } }
 ]
 ~~~
 
@@ -2811,7 +2915,7 @@ token response ({{mission-bound-tokens}}). The decoded token:
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": 500 } }
+      "constraints": { "max_amount_usd": "500.00" } }
   ],
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "mission": {
@@ -2836,7 +2940,7 @@ The agent calls the ERP Resource Server (`erp.example.com`) with that
 token. The Resource Server validates the JWT and the `cnf` binding and
 enforces the `authorization_details` whose `resource` it serves,
 permitting `invoices.read` within the Q3 issuance window and
-`journal-entries.write` up to `max_amount_usd: 500`
+`journal-entries.write` up to `max_amount_usd: "500.00"`
 ({{rs-enforcement}}). It treats the `mission` claim as audit and
 correlation context and makes no call to the AS.
 
@@ -2899,7 +3003,7 @@ intent_hash = sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E
   { "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
-    "constraints": { "max_amount_usd": 500 } }
+    "constraints": { "max_amount_usd": "500.00" } }
 ]
 ~~~
 
@@ -2909,12 +3013,12 @@ Canonical bytes of the envelope:
 {"iss":"https://as.example.com","typ":"mission-authority-set","value":[{
 "actions":["invoices.read"],"resource":"https://erp.example.com","type":
 "mission_resource_access"},{"actions":["journal-entries.write"],"constra
-ints":{"max_amount_usd":500},"resource":"https://erp.example.com","type"
-:"mission_resource_access"}]}
+ints":{"max_amount_usd":"500.00"},"resource":"https://erp.example.com","
+type":"mission_resource_access"}]}
 ~~~
 
 ~~~ text
-authority_hash = sha-256:-rBZZJ8tVIyGoR1tBg6BO6QG0kimVvef8vjigpoVuPw
+authority_hash = sha-256:H3xcKuSglGecACyY2qGQYunTGqIalyeXS1Qr0dCcgjs
 ~~~
 
 An implementation that canonicalizes the same `value` under the same

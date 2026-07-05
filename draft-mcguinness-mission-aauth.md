@@ -422,10 +422,10 @@ The approved mission blob for a reconciliation Mission at
       { "type": "mission_resource_access",
         "resource": "https://erp.example.com",
         "actions": ["journal-entries.write"],
-        "constraints": { "max_amount_usd": 500 } }
+        "constraints": { "max_amount_usd": "500.00" } }
     ],
     "authority_hash":
-      "sha-256:1LZO-O3pgh2_O3KbcE-AbJq5CQE8WNhMTiZoD2aSdAg",
+      "sha-256:8E_S7bQywIgdnBoenwp18sXp2v1PWQ7VRzQylzfQCFI",
     "intent_hash":
       "sha-256:9wNdxTWMa1fLT4be0wf2FJUMRbVBSYAe9yrRhTqdbVA",
     "subject": { "iss": "https://ps.example.com", "sub": "alice" },
@@ -449,7 +449,7 @@ member order shown, it is:
 
 ~~~ text
 AAuth-Mission: approver="https://ps.example.com";
-    s256="UKoQpNgqYAwnIEnA2oUdUcZ6kVxt2oiZTaGkHinp-qQ"
+    s256="delTEXHXFuXePfECaHw4E8hNp2UtHAMf9XAP3eo6Pc4"
 ~~~
 
 # Mission Intent {#mission-intent}
@@ -728,11 +728,11 @@ in the PS-asserted mode, narrowed to read-only authority:
   "exp": 1797843600,
   "mission": {
     "approver": "https://ps.example.com",
-    "s256": "UKoQpNgqYAwnIEnA2oUdUcZ6kVxt2oiZTaGkHinp-qQ",
+    "s256": "delTEXHXFuXePfECaHw4E8hNp2UtHAMf9XAP3eo6Pc4",
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://ps.example.com",
     "authority_hash":
-      "sha-256:1LZO-O3pgh2_O3KbcE-AbJq5CQE8WNhMTiZoD2aSdAg"
+      "sha-256:8E_S7bQywIgdnBoenwp18sXp2v1PWQ7VRzQylzfQCFI"
   }
 }
 ~~~
