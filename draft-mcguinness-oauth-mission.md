@@ -71,6 +71,8 @@ informative:
   I-D.draft-ietf-oauth-transaction-tokens:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   I-D.draft-cecchetti-oauth-rar-cedar:
+  I-D.draft-mcguinness-oauth-client-instance-assertion:
+  I-D.draft-mcguinness-oauth-ai-agent-instance:
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-status.html
@@ -2245,6 +2247,23 @@ the following:
   derivation event; the AS MUST refuse it unless the Mission is
   `active` ({{lifecycle}}).
 
+Where a deployment authenticates client instances
+({{I-D.draft-mcguinness-oauth-client-instance-assertion}}; for AI
+agents, its agent profile
+{{I-D.draft-mcguinness-oauth-ai-agent-instance}}), the delegate
+identified by the outermost `act` is the concrete instance: `act.sub`
+is the instance identifier and `act.cnf` is the instance-specific
+key. This profile's requirement that a delegated token be
+sender-constrained to the delegate's own key then lands on an
+instance-possessed key by construction. An `allowed_delegates`
+matcher can select instance-grade actors
+({{delegation-constraints}}), for example
+`{ "sub_profile": "client_instance" }`. The `sub_profile` values
+used here (`ai_agent`, `client_instance`) are drawn from the
+entity-profiles vocabulary those instance profiles use; the Actor
+Profile {{I-D.draft-mcguinness-oauth-actor-profile}} remains the
+structural reference for the actor object.
+
 ## Design Alternative: Rebinding client_id to the Delegate {#client-id-rebinding}
 
 A rejected alternative rebinds `client_id` to the immediate delegate
@@ -2321,7 +2340,10 @@ modeled on the RFC 8693 `may_act` actor object ({{RFC8693}} Section
 matchers, generalized to actor-type classes. A `{ "sub": ... }`
 matcher permits a specific delegate by client identifier; a
 `{ "sub_profile": ... }` matcher permits any actor of that type (for
-example, `ai_agent`). A deployment can thus permit a specific client,
+example, `ai_agent`). An actor's `sub_profile` MAY carry multiple
+space-separated values; a `{ "sub_profile": ... }` matcher is
+satisfied when its value is among the actor's values. A deployment
+can thus permit a specific client,
 a class of actors, or both, and a delegate is permitted if it matches
 any entry. The AS MUST authenticate the delegate at the Token Exchange
 and assert the actor's `sub` and `sub_profile` itself. A self-asserted

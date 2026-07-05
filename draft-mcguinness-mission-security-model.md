@@ -39,6 +39,8 @@ normative:
       Internet-Draft: draft-mcguinness-oauth-mission-latest
 
 informative:
+  I-D.draft-mcguinness-oauth-client-instance-assertion:
+  I-D.draft-mcguinness-oauth-ai-agent-instance:
   I-D.draft-mcguinness-oauth-mission-cross-domain:
     title: "Mission Cross-Domain Projection for OAuth 2.0"
     target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-cross-domain.html
@@ -422,6 +424,16 @@ Event source:
   derivable or falsely discharge one; the Authorization Server fails
   closed when it cannot determine the event status
   ({{I-D.draft-mcguinness-oauth-mission-completion}}).
+
+Instance identity is identity substrate, like agent identity
+generally. The instance issuer or agent attester that mints instance
+assertions ({{I-D.draft-mcguinness-oauth-client-instance-assertion}},
+{{I-D.draft-mcguinness-oauth-ai-agent-instance}}) sits outside this
+model's trusted base, and its compromise forges actor attribution (who
+executed) without forging Mission authority (what was approved). A
+deployment that relies on instance-grade joins or instance-attributed
+evidence extends its documented trust statement ({{documenting}}) to
+that issuer.
 
 # Cross-Cutting Assumptions {#cross-cutting}
 

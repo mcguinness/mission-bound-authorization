@@ -63,6 +63,8 @@ normative:
 
 informative:
   RFC8126:
+  I-D.draft-mcguinness-oauth-client-instance-assertion:
+  I-D.draft-mcguinness-oauth-ai-agent-instance:
   I-D.draft-mcguinness-oauth-mission-attenuation:
     title: "Mission Offline Attenuation for OAuth 2.0"
     target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-attenuation.html
@@ -288,6 +290,16 @@ with child-specific binding to the parent. The request contains:
   : RECOMMENDED. The actor-type classification (for example,
     `ai_agent`), matched against the parent entry's
     `allowed_child_actors` ({{fanout}}).
+
+  A `child_actor` MAY be identified at instance granularity where the
+  deployment authenticates client instances
+  ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}; for AI
+  agents, {{I-D.draft-mcguinness-oauth-ai-agent-instance}}): `sub`
+  carries the instance identifier and `sub_profile` the
+  space-separated value list (for example,
+  `ai_agent client_instance`). The child client-identity rule
+  ({{child-client-identity}}), under which child credentials never
+  transit the parent, composes naturally with instance-specific keys.
 
 The Mission Issuer MUST resolve the parent from `parent_token`, verify
 that it matches `parent`, verify that the parent is `active`, and verify
@@ -651,7 +663,10 @@ profile's `children` member is such a member.
   : OPTIONAL. An array of matcher objects of the same form as the core's
     `allowed_delegates` ({{I-D.draft-mcguinness-oauth-mission}}),
     constraining which actors or actor classes may receive a Child
-    Mission from this entry.
+    Mission from this entry. Matchers are evaluated under the core's
+    `allowed_delegates` matching rules, including the rule that a
+    `{ "sub_profile": ... }` matcher is satisfied when its value is
+    among the actor's space-separated `sub_profile` values.
 
   `max_child_depth`:
   : OPTIONAL. A positive integer, default 1. The maximum
