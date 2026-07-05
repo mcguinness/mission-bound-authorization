@@ -1201,6 +1201,9 @@ authority grant.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
                 <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-material-notice-requirement" class="internal xref">Material Notice Requirements</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-layered-rendering" class="internal xref">Layered Rendering</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
@@ -1633,7 +1636,9 @@ least <code>channel</code> (for example, <code>web</code>, <code>device</code>, 
         <dd style="margin-left: 1.5em" id="section-4-2.38">
           <p id="section-4-2.38.1"><span class="bcp14">OPTIONAL</span>. An array describing explicit approver interactions required
 by policy, such as checking a high-risk notice or confirming an
-expansion delta.<a href="#section-4-2.38.1" class="pilcrow">¶</a></p>
+expansion delta. <span class="bcp14">REQUIRED</span> when <code>material_notices</code> carries a notice of
+a high-risk class (<a href="#material-notices" class="auto internal xref">Section 4.2</a>); it then carries one
+acknowledgment action per such notice.<a href="#section-4-2.38.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1716,6 +1721,44 @@ Approver; and<a href="#section-4.2-2.9.1" class="pilcrow">¶</a></p>
 <p id="section-4.2-3">Each notice <span class="bcp14">MUST</span> identify the Authority Set entry or entries it
 describes. A generic warning that "this may be risky" is not sufficient
 for this profile.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
+<p id="section-4.2-4">Four conditions are the high-risk notice classes: irreversible action,
+external commitment, privileged administration, and a consumption
+bound. For each material notice of a high-risk class,
+<code>approver_actions</code> (<a href="#consent-disclosure" class="auto internal xref">Section 4</a>) <span class="bcp14">MUST</span> carry an explicit
+acknowledgment action identifying that notice, and the Mission Issuer
+<span class="bcp14">MUST NOT</span> record an <code>approved</code> decision unless the Approver completed
+every acknowledgment the disclosure carries. The acknowledgment is per
+notice and is recorded in the evidence through the committed
+disclosure; a single blanket confirmation does not satisfy it. The same
+classes key the minimum approval-authentication strength the issuance
+profile's deployment floor sets
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-4.2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="layered-rendering">
+<section id="section-4.3">
+        <h3 id="name-layered-rendering">
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-layered-rendering" class="section-name selfRef">Layered Rendering</a>
+        </h3>
+<p id="section-4.3-1">A deployment <span class="bcp14">MAY</span> render the disclosure summary-first, with detail
+behind further interaction, provided that:<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.3-2.1">
+            <p id="section-4.3-2.1.1">the committed Consent Disclosure object retains the full coverage of
+<a href="#consent-disclosure" class="auto internal xref">Section 4</a>; layering removes nothing from the object;<a href="#section-4.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.3-2.2">
+            <p id="section-4.3-2.2.1">every material notice, and any acknowledgment it requires
+(<a href="#material-notices" class="auto internal xref">Section 4.2</a>), surfaces in the first layer; and<a href="#section-4.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.3-2.3">
+            <p id="section-4.3-2.3.1">the full rendering of <code>authority_summary</code> is one interaction away,
+and the first layer states that it is available.<a href="#section-4.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-4.3-3"><code>consent_rendering_hash</code> (<a href="#consent-rendering-hash" class="auto internal xref">Section 5</a>) commits the
+disclosure object, not a layer, so layering changes presentation, not
+evidence.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2065,9 +2108,9 @@ that resolves in the Mission Issuer's published key material (its
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com",
     "intent_hash": "sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E",
-    "authority_hash": "sha-256:-rBZZJ8tVIyGoR1tBg6BO6QG0kimVvef8vjigpoVuPw",
+    "authority_hash": "sha-256:H3xcKuSglGecACyY2qGQYunTGqIalyeXS1Qr0dCcgjs",
     "consent_rendering_hash":
-      "sha-256:M7GB0qmwHbdRFw3IJdk14w9VBKwN2lvDkXGRb5fzatQ"
+      "sha-256:UadIff2z6aIb50BR8aytdoi3odBdWvLsRzyLFIC4wwM"
   },
   "approver": {
     "iss": "https://idp.example.com",
@@ -2085,7 +2128,7 @@ that resolves in the Mission Issuer's published key material (its
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:M7GB0qmwHbdRFw3IJdk14w9VBKwN2lvDkXGRb5fzatQ"
+      "sha-256:UadIff2z6aIb50BR8aytdoi3odBdWvLsRzyLFIC4wwM"
   },
   "evidence_envelope": {
     "format": "jws-compact",
@@ -2355,7 +2398,9 @@ by reference when not required for ordinary audit.<a href="#section-9.1-2" class
           <p id="section-10-2.4.1">bind approved Mission records to <code>consent_rendering_hash</code>;<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-2.5">
-          <p id="section-10-2.5.1">include material notices for high-risk authority; and<a href="#section-10-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-10-2.5.1">include material notices for high-risk authority, with the
+per-notice acknowledgment the high-risk classes require
+(<a href="#material-notices" class="auto internal xref">Section 4.2</a>); and<a href="#section-10-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-2.6">
           <p id="section-10-2.6.1">retain evidence for audit reconstruction.<a href="#section-10-2.6.1" class="pilcrow">¶</a></p>
@@ -2666,9 +2711,7 @@ Approver's authenticator, not on the Authorization Server. This is the
 what-you-see-is-what-you-sign rung, as in authenticator
 transaction-confirmation schemes. A deployment claiming this rung
 <span class="bcp14">SHOULD</span> apply it to a Mission whose Authority Set carries a high-risk
-material-notice
-class (<a href="#material-notices" class="auto internal xref">Section 4.2</a>): irreversible actions, external
-commitments, privileged administration, or cross-domain disclosure.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+material-notice class (<a href="#material-notices" class="auto internal xref">Section 4.2</a>).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="appendix-A-2.5">Rung 4, Out-of-band confirmation:</dt>
@@ -2701,7 +2744,7 @@ for byte. The disclosure is the one the evidence example of
 <a href="#consent-evidence" class="auto internal xref">Section 7</a> records. It renders the Authority Set of the
 issuance profile's test vectors
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): <code>invoices.read</code> and
-<code>journal-entries.write</code> bounded by <code>max_amount_usd</code> 500 on
+<code>journal-entries.write</code> bounded by <code>max_amount_usd</code> "500.00" on
 <code>https://erp.example.com</code>, approved by <code>alice</code>
 (<code>user_3p2q8mN1a0kV7tR</code>); <code>source_hashes</code> carries that profile's
 computed <code>intent_hash</code> and <code>authority_hash</code>. The <code>template_hash</code> value
@@ -2713,7 +2756,7 @@ stands for the deployment's template commitment and is illustrative.<a href="#ap
   "disclosure_id": "disc_4pQ9z",
   "source_hashes": {
     "intent_hash": "sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E",
-    "authority_hash": "sha-256:-rBZZJ8tVIyGoR1tBg6BO6QG0kimVvef8vjigpoVuPw"
+    "authority_hash": "sha-256:H3xcKuSglGecACyY2qGQYunTGqIalyeXS1Qr0dCcgjs"
   },
   "template_id": "mission-consent-standard",
   "template_version": "2026-06",
@@ -2736,9 +2779,9 @@ stands for the deployment's template commitment and is illustrative.<a href="#ap
       "constraints": [
         {
           "constraint": "max_amount_usd",
-          "value": 500,
+          "value": "500.00",
           "rendered":
-            "Each posted journal entry is limited to 500 US dollars."
+            "Each posted journal entry is capped at 500.00 US dollars."
         }
       ]
     }
@@ -2788,7 +2831,17 @@ stands for the deployment's template commitment and is illustrative.<a href="#ap
   "display_context": {
     "channel": "web",
     "rendered_at": "2026-06-30T17:54:30Z"
-  }
+  },
+  "approver_actions": [
+    {
+      "action": "acknowledge_notice",
+      "applies_to": {
+        "resource": "https://erp.example.com",
+        "action": "journal-entries.write"
+      },
+      "condition": "irreversible_action"
+    }
+  ]
 }
 </pre><a href="#appendix-B-3" class="pilcrow">¶</a>
 </div>
@@ -2796,8 +2849,10 @@ stands for the deployment's template commitment and is illustrative.<a href="#ap
 The write entry warrants a material notice and an <code>irreversibility</code>
 risk dimension because posted journal entries are not automatically
 reversible; <code>constraint_provenance</code> attributes the <code>max_amount_usd</code>
-bound to the Subject, who stated it in the task request. The Approver
-is the Subject, so the top-level <code>subject</code> member is absent.<a href="#appendix-B-4" class="pilcrow">¶</a></p>
+bound to the Subject, who stated it in the task request. The notice is
+of a high-risk class, so <code>approver_actions</code> carries its per-notice
+acknowledgment (<a href="#material-notices" class="auto internal xref">Section 4.2</a>). The Approver is the Subject, so
+the top-level <code>subject</code> member is absent.<a href="#appendix-B-4" class="pilcrow">¶</a></p>
 <p id="appendix-B-5"><code>consent_rendering_hash</code> is the prefixed SHA-256 over the JCS
 <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical bytes of the integrity-anchor envelope with
 <code>typ</code> <code>mission-consent-disclosure</code>, <code>iss</code> <code>https://as.example.com</code>,
@@ -2811,34 +2866,37 @@ member names and preserves array order.<a href="#appendix-B-5" class="pilcrow">�
 <pre>
 {"iss":"https://as.example.com","typ":"mission-consent-disclosure","valu
 e":{"approver":{"display":"alice","iss":"https://idp.example.com","sub":
-"user_3p2q8mN1a0kV7tR"},"authority_summary":[{"actions":["invoices.read"
-],"resource":"https://erp.example.com"},{"actions":["journal-entries.wri
-te"],"constraints":[{"constraint":"max_amount_usd","rendered":"Each post
-ed journal entry is limited to 500 US dollars.","value":500}],"resource"
-:"https://erp.example.com"}],"constraint_provenance":[{"applies_to":{"co
-nstraint":"max_amount_usd","resource":"https://erp.example.com"},"source
-":"subject"}],"disclosure_id":"disc_4pQ9z","display_context":{"channel":
-"web","rendered_at":"2026-06-30T17:54:30Z"},"locale":"en-US","material_n
-otices":[{"applies_to":{"action":"journal-entries.write","resource":"htt
-ps://erp.example.com"},"condition":"irreversible_action","statement":"Po
-sted journal entries are not automatically reversible."}],"mission_summa
-ry":{"approver_display":"alice (user_3p2q8mN1a0kV7tR)","goal":"Reconcil
-e Q3 invoices","mission_expiry":"2026-12-31T23:59:59Z","subject_display"
-:"alice (user_3p2q8mN1a0kV7tR)"},"risk_summary":[{"dimension":"data_acce
-ss","statement":"The agent can read invoices held in the ERP system."},{
-"dimension":"spend","statement":"The agent can post journal entries of u
-p to 500 US dollars."},{"dimension":"irreversibility","statement":"Poste
-d journal entries alter the ledger of record."}],"source_hashes":{"autho
-rity_hash":"sha-256:-rBZZJ8tVIyGoR1tBg6BO6QG0kimVvef8vjigpoVuPw","intent
-_hash":"sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E"},"template_
-hash":"sha-256:50S2DpJfcfNGlzi_vzZJNJbJKkknFX65rhWJWLiMyok","template_id
-":"mission-consent-standard","template_version":"2026-06"}}
+"user_3p2q8mN1a0kV7tR"},"approver_actions":[{"action":"acknowledge_notic
+e","applies_to":{"action":"journal-entries.write","resource":"https://er
+p.example.com"},"condition":"irreversible_action"}],"authority_summary":
+[{"actions":["invoices.read"],"resource":"https://erp.example.com"},{"ac
+tions":["journal-entries.write"],"constraints":[{"constraint":"max_amoun
+t_usd","rendered":"Each posted journal entry is capped at 500.00 US doll
+ars.","value":"500.00"}],"resource":"https://erp.example.com"}],"constra
+int_provenance":[{"applies_to":{"constraint":"max_amount_usd","resource"
+:"https://erp.example.com"},"source":"subject"}],"disclosure_id":"disc_4
+pQ9z","display_context":{"channel":"web","rendered_at":"2026-06-30T17:54
+:30Z"},"locale":"en-US","material_notices":[{"applies_to":{"action":"jou
+rnal-entries.write","resource":"https://erp.example.com"},"condition":"i
+rreversible_action","statement":"Posted journal entries are not automati
+cally reversible."}],"mission_summary":{"approver_display":"alice (user_
+3p2q8mN1a0kV7tR)","goal":"Reconcile Q3 invoices","mission_expiry":"2026-
+12-31T23:59:59Z","subject_display":"alice (user_3p2q8mN1a0kV7tR)"},"risk
+_summary":[{"dimension":"data_access","statement":"The agent can read in
+voices held in the ERP system."},{"dimension":"spend","statement":"The a
+gent can post journal entries of up to 500 US dollars."},{"dimension":"i
+rreversibility","statement":"Posted journal entries alter the ledger o
+f record."}],"source_hashes":{"authority_hash":"sha-256:H3xcKuSglGecACyY
+2qGQYunTGqIalyeXS1Qr0dCcgjs","intent_hash":"sha-256:P38IRTmTaUESJ5RpCw1W
+XmIqfsQmYek7zxiQWERcq-E"},"template_hash":"sha-256:50S2DpJfcfNGlzi_vzZJN
+JbJKkknFX65rhWJWLiMyok","template_id":"mission-consent-standard","templa
+te_version":"2026-06"}}
 </pre><a href="#appendix-B-7" class="pilcrow">¶</a>
 </div>
 <div class="lang-text sourcecode" id="appendix-B-8">
 <pre>
 consent_rendering_hash =
-  sha-256:M7GB0qmwHbdRFw3IJdk14w9VBKwN2lvDkXGRb5fzatQ
+  sha-256:UadIff2z6aIb50BR8aytdoi3odBdWvLsRzyLFIC4wwM
 </pre><a href="#appendix-B-8" class="pilcrow">¶</a>
 </div>
 <p id="appendix-B-9">An implementation that canonicalizes the same envelope, computes

@@ -1210,6 +1210,11 @@ individually verifiable conditions.<a href="#section-abstract-1" class="pilcrow"
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
                 <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-action-classification" class="internal xref">Action classification</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3.2.1">
+                    <p id="section-toc.1-1.4.2.3.2.1.1"><a href="#section-4.3.1" class="auto internal xref">4.3.1</a>.  <a href="#name-resource-owner-class-floors" class="internal xref">Resource-owner class floors</a></p>
+</li>
+                </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.4">
                 <p id="section-toc.1-1.4.2.4.1"><a href="#section-4.4" class="auto internal xref">4.4</a>.  <a href="#name-action-bound-approval" class="internal xref">Action-bound approval</a></p>
@@ -1314,6 +1319,11 @@ individually verifiable conditions.<a href="#section-abstract-1" class="pilcrow"
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
             <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.1">
+                <p id="section-toc.1-1.15.2.1.1"><a href="#section-15.1" class="auto internal xref">15.1</a>.  <a href="#name-oauth-protected-resource-me" class="internal xref">OAuth Protected Resource Metadata Registration</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
             <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref">16</a>. <a href="#name-references" class="internal xref">References</a></p>
@@ -1778,7 +1788,34 @@ separately PDP-gated by this profile. A deployment <span class="bcp14">MUST NOT<
 use classification to evade the floor or a Resource-policy minimum, and
 once an action is a consequential write or higher it <span class="bcp14">MUST</span> be gated and
 bound as the table requires.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
-<p id="section-4.3-4"><strong>Classification floor.</strong> Actions in the <strong>irreversible</strong>, <strong>external
+<p id="section-4.3-4">The three highest classes are defined by predicates; the table's
+examples illustrate them:<a href="#section-4.3-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4.3-5">
+          <dt id="section-4.3-5.1">Irreversible action:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.3-5.2">
+            <p id="section-4.3-5.2.1">the action's effect cannot be reversed by the same authority within
+the deployment's own systems.<a href="#section-4.3-5.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.3-5.3">External commitment:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.3-5.4">
+            <p id="section-4.3-5.4.1">the action creates an obligation or communication binding the
+Subject to a party outside the deployment.<a href="#section-4.3-5.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.3-5.5">Privileged administration:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.3-5.6">
+            <p id="section-4.3-5.6.1">the action changes who holds authority or how authority is
+evaluated.<a href="#section-4.3-5.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-4.3-6">Classification remains deployment-scoped: each deployment applies the
+predicates to its own actions and systems. The predicates make the
+resulting classifications comparable across deployments and auditable:
+an assignment is justified by whether its predicate holds, not by
+resemblance to the examples.<a href="#section-4.3-6" class="pilcrow">¶</a></p>
+<p id="section-4.3-7"><strong>Classification floor.</strong> Actions in the <strong>irreversible</strong>, <strong>external
 commitment</strong>, and <strong>privileged administration</strong> classes <span class="bcp14">MUST</span> be
 treated as consequential and gated. These three are the
 <strong>high-consequence classes</strong>, to which this profile's strictest
@@ -1788,11 +1825,57 @@ mediated custody (<a href="#custody" class="auto internal xref">Section 4.6</a>)
 each as specified in its own section).
 A Mission's <code>purpose</code>, or
 deployment policy, <span class="bcp14">MAY</span> raise an action to a stricter class; it <span class="bcp14">MUST NOT</span> lower an action below any minimum classification the Resource
-policy (<a href="#decision" class="auto internal xref">Section 7</a>) sets for it, and in any case <span class="bcp14">MUST NOT</span> classify an
+policy (<a href="#decision" class="auto internal xref">Section 7</a>) sets for it, including a floor the resource owner
+publishes in its protected resource metadata (<a href="#class-floors" class="auto internal xref">Section 4.3.1</a>), and in
+any case <span class="bcp14">MUST NOT</span> classify an
 irreversible, external-commitment, or privileged-administration action
 as non-consequential. A deployment
 that leaves such an action ungated does not enforce this profile for
-that action's class (<a href="#pep-placement" class="auto internal xref">Section 4.5</a>).<a href="#section-4.3-4" class="pilcrow">¶</a></p>
+that action's class (<a href="#pep-placement" class="auto internal xref">Section 4.5</a>).<a href="#section-4.3-7" class="pilcrow">¶</a></p>
+<div id="class-floors">
+<section id="section-4.3.1">
+          <h4 id="name-resource-owner-class-floors">
+<a href="#section-4.3.1" class="section-number selfRef">4.3.1. </a><a href="#name-resource-owner-class-floors" class="section-name selfRef">Resource-owner class floors</a>
+          </h4>
+<p id="section-4.3.1-1">A resource owner can carry its classification minimums to any PDP
+through its protected resource metadata <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>:<a href="#section-4.3.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4.3.1-2">
+            <dt id="section-4.3.1-2.1">
+<code>mission_action_class_floors</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-4.3.1-2.2">
+              <p id="section-4.3.1-2.2.1"><span class="bcp14">OPTIONAL</span> JSON object. Each member name is an action identifier from
+the resource's <code>actions</code> vocabulary
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); an action-family
+identifier, in the issuance profile's action-family form, sets the
+floor for every action in the family. Each value is the minimum
+runtime action class for the mapped action: one of
+<code>consequential_read</code>, <code>consequential_write</code>, <code>irreversible_action</code>,
+<code>external_commitment</code>, or <code>privileged_administration</code>, naming the
+classes of this section.<a href="#section-4.3.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+</dl>
+<p id="section-4.3.1-3">A PDP with access to the resource's metadata <span class="bcp14">MUST NOT</span> classify a
+mapped action below its floor. The member is the interoperable
+carriage of the Resource-policy minimum the classification floor above
+already binds; it raises, and never lowers, an action's class. A PDP
+that does not recognize a mapped value <span class="bcp14">MUST</span> treat it as naming a
+high-consequence class.<a href="#section-4.3.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.3.1-4">For the ERP resource of the worked examples
+(<a href="#parameter-digest-example" class="auto internal xref">Appendix A</a>):<a href="#section-4.3.1-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4.3.1-5">
+<pre>
+{
+  "resource": "https://erp.example.com",
+  "mission_action_class_floors": {
+    "journal-entries.read": "consequential_read",
+    "journal-entries.write": "irreversible_action"
+  }
+}
+</pre><a href="#section-4.3.1-5" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
 </section>
 </div>
 <div id="action-approval">
@@ -2162,11 +2245,16 @@ evaluate the action under that type's documented runtime semantics
 and <span class="bcp14">MUST</span> refuse if it does not understand or cannot enforce those
 semantics. For a capability sourced from a discovered catalog (an MCP
 tool catalog, an OpenAPI document, or an equivalent source), where the
-validating server recorded a source-content digest for the capability
-at derivation, the PDP <span class="bcp14">MUST</span> also refuse the action when the current
-source digest differs from the digest recorded at derivation
-(capability drift); the recorded digest is part of the derived
-authority and is covered by <code>authority_hash</code>
+validating server recorded a digest of the capability's extracted
+definition at derivation, the PDP <span class="bcp14">MUST</span> also refuse the action when
+the digest of the capability's current extracted definition differs
+from the recorded digest (capability drift); the extraction rule per
+source format is the decision-API binding's (<a href="#authzen" class="auto internal xref">Section 12</a>). A source
+change that leaves the extracted definition byte-identical does not
+by itself refuse; where the deployment also recorded a whole-source
+digest, that digest's stricter semantics apply and any source change
+refuses. The recorded digests are part of the derived authority and
+are covered by <code>authority_hash</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Cross-format
 canonicalization, signed capability manifests, and cross-catalog
 identity remain out of scope (<a href="#deferred" class="auto internal xref">Section 13</a>).<a href="#section-7-3.1.1" class="pilcrow">¶</a></p>
@@ -2764,6 +2852,17 @@ than the Mission's audit horizon, as defined in the Mission Record
 section of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-11.3-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
+<p id="section-11.3-3">Digest encoding is uniform across this document family: every digest a
+family document defines uses the <code>sha-256:</code> prefixed base64url,
+no-padding encoding of the issuance profile's integrity-anchor rules
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The exceptions are externally
+fixed encodings: the COSE hashed payload of the audit companion's
+Signed Statements (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>) carries the
+raw digest bytes the COSE hash-envelope mechanism requires, and the
+attenuation substrate's parent-hash form
+(<span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>) is unprefixed
+base64url. Each exception is identified by its carrying context; the
+<code>sha-256:</code> prefix appears in neither.<a href="#section-11.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2805,8 +2904,9 @@ work and are not required to enforce it:<a href="#section-13-1" class="pilcrow">
 mechanism;<a href="#section-13-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.2">
-          <p id="section-13-2.2.1">cross-format capability-source binding beyond same-source digest
-drift (signed capability manifests, cross-catalog identity);<a href="#section-13-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-13-2.2.1">cross-format capability-source binding beyond per-capability
+definition-digest drift (signed capability manifests, cross-catalog
+identity);<a href="#section-13-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.3">
           <p id="section-13-2.3.1">portable, third-party-verifiable decision receipts (this profile
@@ -3073,10 +3173,34 @@ credentials.<a href="#section-14.11-2" class="pilcrow">¶</a></p>
       <h2 id="name-iana-considerations">
 <a href="#section-15" class="section-number selfRef">15. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-15-1">This document has no IANA actions. The Mission-bound token claims this
+<div id="oauth-protected-resource-metadata-registration">
+<section id="section-15.1">
+        <h3 id="name-oauth-protected-resource-me">
+<a href="#section-15.1" class="section-number selfRef">15.1. </a><a href="#name-oauth-protected-resource-me" class="section-name selfRef">OAuth Protected Resource Metadata Registration</a>
+        </h3>
+<p id="section-15.1-1">This document registers the following in the "OAuth Protected Resource
+Metadata" registry (<span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>):<a href="#section-15.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-15.1-2.1">
+            <p id="section-15.1-2.1.1">Metadata Name: <code>mission_action_class_floors</code><a href="#section-15.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-15.1-2.2">
+            <p id="section-15.1-2.2.1">Metadata Description: JSON object mapping a protected resource's
+action identifiers to minimum runtime action classes.<a href="#section-15.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-15.1-2.3">
+            <p id="section-15.1-2.3.1">Change Controller: IETF<a href="#section-15.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-15.1-2.4">
+            <p id="section-15.1-2.4.1">Reference: this document, <a href="#class-floors" class="auto internal xref">Section 4.3.1</a><a href="#section-15.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-15.1-3">The Mission-bound token claims this
 profile consumes are registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>;
 any decision-API wire members are defined by the binding
-(<a href="#authzen" class="auto internal xref">Section 12</a>, <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-15-1" class="pilcrow">¶</a></p>
+(<a href="#authzen" class="auto internal xref">Section 12</a>, <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-15.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="sec-combined-references">
@@ -3131,8 +3255,12 @@ any decision-API wire members are defined by the binding
 <span class="refAuthor">Bertocci, V.</span>, <span class="refTitle">"JSON Web Token (JWT) Profile for OAuth 2.0 Access Tokens"</span>, <span class="seriesInfo">RFC 9068</span>, <span class="seriesInfo">DOI 10.17487/RFC9068</span>, <time datetime="2021-10" class="refDate">October 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9068">https://www.rfc-editor.org/rfc/rfc9068</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC9700">[RFC9700]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Labunets, A.</span>, and <span class="refAuthor">D. Fett</span>, <span class="refTitle">"Best Current Practice for OAuth 2.0 Security"</span>, <span class="seriesInfo">BCP 240</span>, <span class="seriesInfo">RFC 9700</span>, <span class="seriesInfo">DOI 10.17487/RFC9700</span>, <time datetime="2025-01" class="refDate">January 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9700">https://www.rfc-editor.org/rfc/rfc9700</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9728">[RFC9728]</dt>
+      <dd>
+<span class="refAuthor">Jones, M.B.</span>, <span class="refAuthor">Hunt, P.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth 2.0 Protected Resource Metadata"</span>, <span class="seriesInfo">RFC 9728</span>, <span class="seriesInfo">DOI 10.17487/RFC9728</span>, <time datetime="2025-04" class="refDate">April 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9728">https://www.rfc-editor.org/rfc/rfc9728</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
@@ -3146,6 +3274,10 @@ any decision-API wire members are defined by the binding
 <dt id="AUTHZEN">[AUTHZEN]</dt>
         <dd>
 <span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"OpenID AuthZEN Authorization API 1.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://openid.net/specs/authorization-api-1_0-final.html">https://openid.net/specs/authorization-api-1_0-final.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-audit">[I-D.draft-mcguinness-mission-audit]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Audit Transparency"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-audit</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-audit">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-audit</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
         <dd>
@@ -3202,7 +3334,7 @@ any decision-API wire members are defined by the binding
 implementations can confirm they normalize and digest the same way.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <p id="appendix-A-2">Consider a <code>journal-entries.write</code> operation under an ERP
 reconciliation Mission (<code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code>) whose
-applicable entry carries a <code>max_amount_usd</code> ceiling of 500. The
+applicable entry carries a <code>max_amount_usd</code> ceiling of "500.00". The
 operation profile fixes the parameter set and normalization: the
 members are <code>amount_usd</code> and <code>source_invoice_id</code>; <code>amount_usd</code> is a
 decimal string with exactly two fractional digits; no defaults are
@@ -3319,7 +3451,7 @@ cites the view of <a href="#policy-view-example" class="auto internal xref">Appe
     "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
-    "constraints": { "max_amount_usd": 500 }
+    "constraints": { "max_amount_usd": "500.00" }
   },
   "parameter_digest":
     "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",

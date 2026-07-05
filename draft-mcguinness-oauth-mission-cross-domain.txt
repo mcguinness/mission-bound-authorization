@@ -732,7 +732,7 @@ A.1.  Stage 2: Cross-Domain Projection via ID-JAG (Between Domains)
        { "type": "mission_resource_access",
          "resource": "https://erp.partner.example.com",
          "actions": ["journal-entries.write"],
-         "constraints": { "max_amount_usd": 500 } }
+         "constraints": { "max_amount_usd": "500.00" } }
      ],
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
@@ -774,7 +774,7 @@ A.2.  Stage 3: The Resource AS Issues a Local Access Token
        { "type": "mission_resource_access",
          "resource": "https://erp.partner.example.com",
          "actions": ["journal-entries.write"],
-         "constraints": { "max_amount_usd": 500 } }
+         "constraints": { "max_amount_usd": "500.00" } }
      ],
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",

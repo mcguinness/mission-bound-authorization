@@ -382,6 +382,11 @@ Table of Contents
 
 5.7.  The Binding Checklist
 
+   For a new binding this checklist is now normatively stated by Mission
+   Substrate Requirements ([I-D.draft-mcguinness-mission-substrate]);
+   this section remains the informative summary, and the three existing
+   bindings remain authoritative for themselves.
+
    Another mission-based protocol hosts the substrate-neutral profiles
    unchanged when it provides:
 
@@ -481,7 +486,9 @@ Table of Contents
    complement ([I-D.draft-mcguinness-oauth-mission-signals]); Expansion,
    widening only via an approved successor
    ([I-D.draft-mcguinness-oauth-mission-expansion]); Completion, per-
-   entry discharge ([I-D.draft-mcguinness-oauth-mission-completion]).
+   entry discharge ([I-D.draft-mcguinness-oauth-mission-completion]);
+   and Management, fleet enumeration and bulk lifecycle for operators
+   ([I-D.draft-mcguinness-oauth-mission-management]).
 
 6.4.  Enforce Each Action
 
@@ -704,6 +711,10 @@ Table of Contents
    |           |             |s256 commitment, issuance gating at the token       |
    |           |             |endpoint.                                           |
    +-----------+-------------+----------------------------------------------------+
+   |           |mission-     |Normative requirements on any further binding of the|
+   |           |substrate    |model; the existing bindings and the core are       |
+   |           |             |unchanged by it.                                    |
+   +-----------+-------------+----------------------------------------------------+
    |Approval   |mission-     |Client-side shaping of a user's request into a      |
    |time       |shaping      |candidate Mission Intent, as untrusted proposal.    |
    +-----------+-------------+----------------------------------------------------+
@@ -736,6 +747,10 @@ Table of Contents
    |           |oauth-       |Experimental: policy-adjudicated expansion within a |
    |           |mission-     |pre-consented ceiling.                              |
    |           |progressive  |                                                    |
+   +-----------+-------------+----------------------------------------------------+
+   |           |oauth-       |Fleet enumeration and bulk lifecycle operations for |
+   |           |mission-     |operators and incident response; dry-run-first, per-|
+   |           |management   |Mission semantics.                                  |
    +-----------+-------------+----------------------------------------------------+
    |           |oauth-       |Per-entry discharge via the terminal_when           |
    |           |mission-     |constraint.                                         |
@@ -861,6 +876,12 @@ Table of Contents
               shaping, 2026, <https://datatracker.ietf.org/doc/html/
               draft-mcguinness-mission-shaping>.
 
+   [I-D.draft-mcguinness-mission-substrate]
+              McGuinness, K., "Mission Substrate Requirements", Work in
+              Progress, Internet-Draft, draft-mcguinness-mission-
+              substrate, 2026, <https://datatracker.ietf.org/doc/html/
+              draft-mcguinness-mission-substrate>.
+
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", Work in Progress, Internet-Draft, draft-mcguinness-
@@ -915,6 +936,13 @@ Table of Contents
               Progress, Internet-Draft, draft-mcguinness-oauth-mission-
               expansion, 2026, <https://datatracker.ietf.org/doc/html/
               draft-mcguinness-oauth-mission-expansion>.
+
+   [I-D.draft-mcguinness-oauth-mission-management]
+              McGuinness, K., "Mission Management for OAuth 2.0", Work
+              in Progress, Internet-Draft, draft-mcguinness-oauth-
+              mission-management, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-management>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",

@@ -1620,43 +1620,47 @@ the security model's retention analysis.<a href="#section-5.6-1" class="pilcrow"
         <h3 id="name-the-binding-checklist">
 <a href="#section-5.7" class="section-number selfRef">5.7. </a><a href="#name-the-binding-checklist" class="section-name selfRef">The Binding Checklist</a>
         </h3>
-<p id="section-5.7-1">Another mission-based protocol hosts the substrate-neutral profiles
-unchanged when it provides:<a href="#section-5.7-1" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-5.7-2">
-<li id="section-5.7-2.1">
-            <p id="section-5.7-2.1.1">a unique, opaque Mission identifier with an authoritative origin;<a href="#section-5.7-2.1.1" class="pilcrow">¶</a></p>
+<p id="section-5.7-1">For a new binding this checklist is now normatively stated by Mission
+Substrate Requirements (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>);
+this section remains the informative summary, and the three existing
+bindings remain authoritative for themselves.<a href="#section-5.7-1" class="pilcrow">¶</a></p>
+<p id="section-5.7-2">Another mission-based protocol hosts the substrate-neutral profiles
+unchanged when it provides:<a href="#section-5.7-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5.7-3">
+<li id="section-5.7-3.1">
+            <p id="section-5.7-3.1.1">a unique, opaque Mission identifier with an authoritative origin;<a href="#section-5.7-3.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.7-2.2">
-            <p id="section-5.7-2.2.1">the lifecycle state space with the only-<code>active</code> rule, fail-safe
-unrecognized states, and a freshness source with a staleness bound;<a href="#section-5.7-2.2.1" class="pilcrow">¶</a></p>
+          <li id="section-5.7-3.2">
+            <p id="section-5.7-3.2.1">the lifecycle state space with the only-<code>active</code> rule, fail-safe
+unrecognized states, and a freshness source with a staleness bound;<a href="#section-5.7-3.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.7-2.3">
-            <p id="section-5.7-2.3.1">an Authority Set representation with a subset rule and a shared
-constraint vocabulary;<a href="#section-5.7-2.3.1" class="pilcrow">¶</a></p>
+          <li id="section-5.7-3.3">
+            <p id="section-5.7-3.3.1">an Authority Set representation with a subset rule and a shared
+constraint vocabulary;<a href="#section-5.7-3.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.7-2.4">
-            <p id="section-5.7-2.4.1">the integrity-anchor envelope and canonicalization for every
-object it commits;<a href="#section-5.7-2.4.1" class="pilcrow">¶</a></p>
+          <li id="section-5.7-3.4">
+            <p id="section-5.7-3.4.1">the integrity-anchor envelope and canonicalization for every
+object it commits;<a href="#section-5.7-3.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.7-2.5">
-            <p id="section-5.7-2.5.1">an audit horizon over the record and its evidence;<a href="#section-5.7-2.5.1" class="pilcrow">¶</a></p>
+          <li id="section-5.7-3.5">
+            <p id="section-5.7-3.5.1">an audit horizon over the record and its evidence;<a href="#section-5.7-3.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.7-2.6">
-            <p id="section-5.7-2.6.1">published key material: the issuer's signing keys, resolvable by
-the verifiers of its signed artifacts; and<a href="#section-5.7-2.6.1" class="pilcrow">¶</a></p>
+          <li id="section-5.7-3.6">
+            <p id="section-5.7-3.6.1">published key material: the issuer's signing keys, resolvable by
+the verifiers of its signed artifacts; and<a href="#section-5.7-3.6.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.7-2.7">
-            <p id="section-5.7-2.7.1">optionally, a Mission-bound credential carrying the <code>mission</code>
+          <li id="section-5.7-3.7">
+            <p id="section-5.7-3.7.1">optionally, a Mission-bound credential carrying the <code>mission</code>
 claim; a substrate that omits it composes as the standalone
-binding does, and the credential-carriage profiles do not apply.<a href="#section-5.7-2.7.1" class="pilcrow">¶</a></p>
+binding does, and the credential-carriage profiles do not apply.<a href="#section-5.7-3.7.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-5.7-3">Individual profiles name further inputs in their Mission Substrate
+<p id="section-5.7-4">Individual profiles name further inputs in their Mission Substrate
 sections: the evidence types and their canonical bytes for audit
 transparency, and the intent submission channel for shaping. The
 per-profile Mission Substrate sections remain the authoritative
 per-consumer statements of this interface; this section consolidates
-them and adds nothing.<a href="#section-5.7-3" class="pilcrow">¶</a></p>
+them and adds nothing.<a href="#section-5.7-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1745,7 +1749,9 @@ complement (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="
 Expansion, widening only via an approved successor
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>); Completion,
 per-entry discharge
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-completion" class="cite xref">I-D.draft-mcguinness-oauth-mission-completion</a>]</span>).<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-completion" class="cite xref">I-D.draft-mcguinness-oauth-mission-completion</a>]</span>); and Management,
+fleet enumeration and bulk lifecycle for operators
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>).<a href="#section-6.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="enforce-each-action">
@@ -2062,6 +2068,13 @@ it because the architecture is substrate-neutral by construction.<a href="#secti
             <td class="text-left" rowspan="1" colspan="1">The AAuth binding: the Person Server as Mission Issuer, the mission blob as the record under AAuth's <code>s256</code> commitment, issuance gating at the token endpoint.</td>
           </tr>
           <tr>
+            <td class="text-left" rowspan="1" colspan="1"> </td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>mission-substrate</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Normative requirements on any further binding of the model; the existing bindings and the core are unchanged by it.</td>
+          </tr>
+          <tr>
             <td class="text-left" rowspan="1" colspan="1">Approval time</td>
             <td class="text-left" rowspan="1" colspan="1">
               <code>mission-shaping</code>
@@ -2116,6 +2129,13 @@ it because the architecture is substrate-neutral by construction.<a href="#secti
               <code>oauth-mission-progressive</code>
 </td>
             <td class="text-left" rowspan="1" colspan="1">Experimental: policy-adjudicated expansion within a pre-consented ceiling.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1"> </td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>oauth-mission-management</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Fleet enumeration and bulk lifecycle operations for operators and incident response; dry-run-first, per-Mission semantics.</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1"> </td>
@@ -2271,6 +2291,10 @@ own Security Considerations remain normative.<a href="#section-10-1" class="pilc
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Intent Shaping"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-shaping</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-shaping">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-shaping</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-substrate</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-substrate">https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-substrate</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission</a>&gt;</span>. </dd>
@@ -2302,6 +2326,10 @@ own Security Considerations remain normative.<a href="#section-10-1" class="pilc
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-expansion</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-management">[I-D.draft-mcguinness-oauth-mission-management]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Management for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-management</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-management">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-management</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
       <dd>

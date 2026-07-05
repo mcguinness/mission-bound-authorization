@@ -542,6 +542,14 @@ Table of Contents
    Exchange, a cross-domain grant issuance, or an introspection request
    fails if the issuer does not support it.
 
+   The smallest useful conforming deployment, noted here informatively,
+   is a Mission Issuer that derives in narrowing mode from the Intent's
+   proposed_authority (Section 5), emits only the Common Constraints of
+   Section 5.2, and implements none of the OPTIONAL capabilities; a
+   scope-only Resource Server still operates at the coarse scope level
+   (Section 8.2).  This note names a starting point and creates no new
+   conformance class.
+
 3.  Overview
 
 3.1.  Principal Model
@@ -634,6 +642,17 @@ Table of Contents
    constraints:  OPTIONAL.  An array of strings.  Human-readable bounds
       on the task (for example, "read only invoices from 2026").  These
       inform derivation and consent rendering.
+
+   proposed_authority:  OPTIONAL.  An array of objects, each shaped as
+      an [RFC9396] authorization_details entry.  The client's concrete
+      authority proposal for the task.  It is untrusted input like the
+      rest of the Intent and is committed by intent_hash with it
+      (Section 6.3).  When present, the AS MUST derive each Authority
+      Set entry as a subset (Section 5.1) of some proposed_authority
+      entry, and the deterministic-reproducibility rule for narrowing-
+      mode derivation applies (Section 5); goal and constraints then
+      serve as rendering and bounding context over the proposed
+      authority.
 
    success_criteria:  OPTIONAL.  An array of strings.  Human-readable
       observable outcomes that indicate the task is complete.  These are
@@ -771,9 +790,12 @@ Table of Contents
    A client MUST NOT submit authorization_details directly together with
    mission_intent; the AS derives authorization details from the Intent
    (Section 5).  A request carrying both MUST be refused with
-   invalid_request.  A client MAY submit scope and resource ([RFC8707])
-   values; the AS treats them as a requested subset and MUST NOT grant
-   authority beyond what the Mission Intent yields.
+   invalid_request.  This prohibition governs the raw [RFC9396] request
+   parameter; a client proposes concrete authority inside the Intent,
+   through proposed_authority (Section 4).  A client MAY submit scope
+   and resource ([RFC8707]) values; the AS treats them as a requested
+   subset and MUST NOT grant authority beyond what the Mission Intent
+   yields.
 
    For a Mission request, the parameters pushed via PAR are
    authoritative.  The AS MUST ignore any mission_intent,
@@ -804,8 +826,11 @@ Table of Contents
    *  Bound every derived entry by the Mission Intent: each derived
       entry's resource MUST be one of the Intent's resources values, and
       the derived authority MUST NOT exceed any machine-actionable
-      context bound.  Fidelity to the Intent's goal and constraints is a
-      SHOULD, auditable through the recorded policy_version.
+      context bound.  When the Intent carries proposed_authority
+      (Section 4), each derived entry MUST additionally be a subset
+      (Section 5.1) of some proposed_authority entry.  Fidelity to the
+      Intent's goal and constraints is a SHOULD, auditable through the
+      recorded policy_version.
 
    *  Record the policy version used for derivation as the Mission's
       policy_version.
@@ -839,8 +864,8 @@ Table of Contents
 
    Two rules keep local derivation accountable rather than opaque.
    First, reproducibility, scoped to how the AS derives.  When the AS
-   derives by narrowing a client-proposed set of authorization_details
-   (below), the same Mission Intent and the same policy_version MUST
+   derives by narrowing the Intent's proposed_authority entries
+   (Section 4), the same Mission Intent and the same policy_version MUST
    yield the same Authority Set at a given AS, so a derivation can be
    re-checked and a divergence detected.  When the AS derives
    generatively, from free text or with model assistance, that
@@ -855,10 +880,10 @@ Table of Contents
    policy itself does not travel.
 
    Where cross-vendor interoperability matters, an AS SHOULD derive the
-   Authority Set by narrowing a client-proposed set of
-   authorization_details to policy, rather than generating one from free
-   text.  Narrowing is governed by the subset rule (Section 5.1), which
-   is interoperable, so the result is verifiable and enforceable in any
+   Authority Set by narrowing the Intent's proposed_authority entries
+   (Section 4) to policy, rather than generating one from free text.
+   Narrowing is governed by the subset rule (Section 5.1), which is
+   interoperable, so the result is verifiable and enforceable in any
    domain even though the policy decision of what to narrow to stays
    local; the Intent's goal and constraints then serve as the human-
    readable consent-rendering layer over that proposed authority.
@@ -900,6 +925,16 @@ Table of Contents
       authorization_details, and this member is distinct from the
       [RFC9396] common locations field.
 
+   resource_match:  OPTIONAL.  A string: exact (the default, and the
+      behavior when the member is absent) or prefix.  Under exact the
+      entry applies to the resource URI alone.  Under prefix the entry
+      authorizes the resource itself and any URI beneath it at a path-
+      segment boundary (the resource followed by / and further path).
+      These two values are the only ones defined; a consumer MUST treat
+      an entry whose resource_match value it does not recognize as
+      unenforceable and fail closed (Section 8.2).  Containment between
+      effective resource sets is compared as defined in Section 5.1.
+
    actions:  REQUIRED.  An array of strings.  Permitted action
       identifiers, each matching [A-Za-z0-9_.:-]+. Like an OAuth scope,
       an action identifier carries meaning only at the resource that
@@ -909,7 +944,13 @@ Table of Contents
       simply not within the authority it can enforce).  An AS SHOULD
       draw action identifiers from a namespace the serving resource
       documents, so the set is interpretable cross-vendor rather than ad
-      hoc.
+      hoc.  A value MAY instead be an *action family*: an action
+      identifier followed by .*, authorizing every action whose dot-
+      separated identifier extends the family name at a segment boundary
+      (invoices.* authorizes invoices.read and invoices.q3.export, not
+      invoicesx.read).  A consent rendering MUST present a family as the
+      breadth it is: all actions under the name, not one action.  An AS
+      SHOULD treat deriving a family as high-risk breadth.
 
    constraints:  OPTIONAL.  An object.  Machine-actionable per-resource
       bounds (for example, max_amount_usd).  A member name defined as a
@@ -965,7 +1006,7 @@ Table of Contents
      { "type": "mission_resource_access",
        "resource": "https://erp.example.com",
        "actions": ["journal-entries.write"],
-       "constraints": { "max_amount_usd": 500 } }
+       "constraints": { "max_amount_usd": "500.00" } }
    ]
 
 5.1.  Subset Rule
@@ -974,9 +1015,20 @@ Table of Contents
    mission_resource_access entry A is a subset of a Mission entry B
    when:
 
-   1.  A.resource equals B.resource.
+   1.  A's effective resource set is contained in B's (resource_match,
+       Section 5): when neither entry sets resource_match: "prefix",
+       A.resource equals B.resource; when B is a prefix entry, A
+       (whether exact or prefix) is contained when A.resource equals
+       B.resource or extends its path at a path-segment boundary; a
+       prefix A is never contained in an exact B.
 
-   2.  A.actions is a subset of B.actions.
+   2.  Every A.actions value is within some B.actions value: a value is
+       within an equal value; a literal action is within a family whose
+       name it extends at a segment boundary (invoices.read is within
+       invoices.*); a family is within a reference family when its own
+       name extends the reference's name at a segment boundary
+       (invoices.q3.* is within invoices.*).  A family is never within a
+       literal action.
 
    3.  For every key K in *B*.constraints, K MUST also be present in
        A.constraints, and A's value MUST be no broader than B's under
@@ -990,15 +1042,20 @@ Table of Contents
    The AS MUST refuse to derive an entry that is not a subset of some
    Mission Authority Set entry.
 
-   This comparison is deliberately flat: resource matches by exact
-   equality and actions by array membership.  It does not yet define
-   resource containment (a path-prefix or hierarchical resource) or
-   action families (an invoices.* hierarchy).  Real hierarchical
-   resources are expected to need both, so an extension defining
-   hierarchical resource and action subset semantics is known near-term
-   work; until then a deployment expresses hierarchy through explicit
-   entries or constraints, and the runtime layer enforces it
-   (Section 15.5).
+   Resource containment under a prefix reference is compared after RFC
+   3986 [RFC3986] syntax-based normalization of both URIs: lowercase the
+   scheme and host, remove a default port, decode percent-encoded octets
+   of unreserved characters, and remove dot-segments.  This
+   normalization applies to comparison only, never to hashing: anchor
+   computation (Section 6.3, Section 6.4) remains byte-exact over the
+   recorded values and is untouched by this rule.
+
+   The default comparison is deliberately flat: resource matches by
+   exact equality and a literal action by array membership.  Hierarchy
+   is opt-in and closed to the two forms above: resource_match: "prefix"
+   for resource containment and .* action families for action
+   containment (Section 5).  A deployment that uses neither retains the
+   flat behavior unchanged.
 
    The delegation member is policy, not authority, and is not part of
    this comparison (Section 11.2).  A derived entry's delegation, when
@@ -1035,9 +1092,11 @@ Table of Contents
 
    This document defines the initial Common Constraints:
 
-   *  max_amount_usd (number): a per-action ceiling, in US dollars, on a
-      monetary amount.  Subset: no broader when less than or equal to
-      the reference value.  Intersection: the minimum of the two values.
+   *  max_amount_usd (string containing a decimal number): a per-action
+      ceiling, in US dollars, on a monetary amount.  Subset: no broader
+      when the value is less than or equal to the reference value,
+      compared in decimal value space.  Intersection: the minimum of the
+      two values.
 
    *  issued_after (string, an RFC 3339 [RFC3339] date-time): the action
       applies only to resources issued at or after this instant.
@@ -1049,21 +1108,37 @@ Table of Contents
       Subset: no broader when less than or equal to the reference.
       Intersection: the earlier instant.
 
+   *  tenant (string): the action applies only to resources of the named
+      tenant.  Subset: no broader when equal to the reference value.
+      Intersection: the common value when the two are equal; otherwise
+      there is no intersection and the combination fails.
+
+   *  recipient_domain (string, a DNS name): the action applies only to
+      recipients within the named domain.  Subset: no broader when equal
+      to the reference or a DNS subdomain of it.  Intersection: the
+      narrower value when one is equal to or a subdomain of the other;
+      otherwise there is no intersection and the combination fails.
+
    These comparisons are in value space, not lexical: max_amount_usd
-   values are compared as decimal numbers, so 500, 500.0, and 5e2 are
-   equal; issued_after and issued_before values are compared as the
-   instants they denote after normalization to UTC, so two RFC 3339
-   representations of the same instant that differ only in timezone
-   offset or trailing subsecond zeros are equal.  A Common Constraint
+   values are compared as the decimal numbers the strings contain, so
+   "500", "500.0", and "500.00" are equal; issued_after and
+   issued_before values are compared as the instants they denote after
+   normalization to UTC, so two RFC 3339 representations of the same
+   instant that differ only in timezone offset or trailing subsecond
+   zeros are equal; recipient_domain values are compared as DNS names,
+   case-insensitively and on whole labels, so mail.example.com is within
+   example.com and notexample.com is not.  A Common Constraint
    definition MUST fix its subset and intersection in value-space terms,
    so that independent deployments compute the same result for the same
    values and the subset rule of Section 5.1 is reproducible.
 
    A numeric constraint value MUST lie within the range JCS [RFC8785]
-   serializes exactly.  A future Common Constraint definition for a
-   monetary value SHOULD use string-decimal syntax (a string containing
-   a decimal number, paired with an ISO 4217 currency code) rather than
-   a JSON number.
+   serializes exactly.  Monetary constraints avoid that hazard with
+   string-decimal syntax: max_amount_usd is a string containing a
+   decimal number, and a future Common Constraint for a monetary value
+   SHOULD likewise use string-decimal (paired with an ISO 4217 currency
+   code where the name does not fix the currency) rather than a JSON
+   number.
 
 5.3.  Other Authorization Details Types
 
@@ -1147,11 +1222,12 @@ Table of Contents
       authority and routing each tool call for authorization.
 
    *  constraints carry machine-actionable bounds on a tool's arguments,
-      for example an amount ceiling or a recipient domain.  Like all
-      constraints, they are committed by authority_hash and carried to
-      the point of use, but they are evaluated against the concrete call
-      arguments by a runtime enforcement layer, not at issuance
-      (Section 15.5).
+      for example an amount ceiling or a recipient domain (the
+      max_amount_usd and recipient_domain Common Constraints,
+      Section 5.2).  Like all constraints, they are committed by
+      authority_hash and carried to the point of use, but they are
+      evaluated against the concrete call arguments by a runtime
+      enforcement layer, not at issuance (Section 15.5).
 
    For example, a Mission authorized to read invoices and post small
    adjustments through a finance MCP server, and to send messages
@@ -1161,7 +1237,7 @@ Table of Contents
      { "type": "mission_resource_access",
        "resource": "https://finance.example.com/mcp",
        "actions": ["query_invoices", "post_adjustment"],
-       "constraints": { "max_amount_usd": 500 } },
+       "constraints": { "max_amount_usd": "500.00" } },
      { "type": "mission_resource_access",
        "resource": "https://mail.example.com/mcp",
        "actions": ["send_message"],
@@ -1235,7 +1311,10 @@ Table of Contents
        surface that renders only the goal, success_criteria, or Mission
        Intent and not the derived Authority Set does not conform.  When
        the Approver is not the Subject, the rendering MUST identify the
-       Subject the authority is granted for.
+       Subject the authority is granted for.  When the Intent carried
+       proposed_authority (Section 4), the rendering MUST distinguish
+       the entries the client proposed from any entry or broadening the
+       AS added.
 
    4.  Compute the integrity anchors (Section 6.3): authority_hash over
        the consented Authority Set and intent_hash over the approved
@@ -1251,10 +1330,22 @@ Table of Contents
    AS-derived Authority Set from client-supplied text, so crafted client
    text cannot pass as derived authority.
 
+   A deployment MUST declare a minimum approval-authentication strength
+   for Missions whose derived Authority Set carries high-risk authority:
+   irreversible, external-commitment, or privileged-administration
+   actions under the deployment's classification, or a consumption bound
+   ([I-D.draft-mcguinness-mission-metering]).  The approval
+   authentication for such a Mission MUST meet that minimum, and
+   context.acr can raise the required strength but never lower it below
+   the floor.  The material notices of the consent-evidence profile
+   identify these same high-risk classes
+   ([I-D.draft-mcguinness-oauth-mission-consent-evidence]).
+
    An Approver who declines, and an Approver whose authentication cannot
-   satisfy context.acr, yield access_denied on the authorization
-   response ([RFC6749]).  A token-endpoint resource value outside the
-   Authority Set yields invalid_target ([RFC8707]).
+   satisfy context.acr or the declared approval-strength floor, yield
+   access_denied on the authorization response ([RFC6749]).  A token-
+   endpoint resource value outside the Authority Set yields
+   invalid_target ([RFC8707]).
 
    Rendering a bound is not the same as enforcing it, and a deployment
    MUST NOT let the rendering imply otherwise.  Which party enforces
@@ -1403,9 +1494,12 @@ Table of Contents
       the canonical form.
 
    *  URI-valued members are compared byte-for-byte unless a member's
-      definition specifies a normalization.  This document defines none,
-      so resource and every other URI MUST match exactly (this governs
-      the resource equality test of Section 5.1).
+      definition specifies a normalization.  The only normalization this
+      document defines is the RFC 3986 [RFC3986] comparison of the
+      resource-containment test (Section 5.1), which applies to that
+      comparison alone: the default resource equality test of
+      Section 5.1 remains an exact match, and anchor computation is
+      always byte-exact over the recorded values.
 
    Test vectors for both anchors are provided in Appendix B.
 
@@ -1504,7 +1598,7 @@ Table of Contents
        { "type": "mission_resource_access",
          "resource": "https://erp.example.com",
          "actions": ["journal-entries.write"],
-         "constraints": { "max_amount_usd": 500 } }
+         "constraints": { "max_amount_usd": "500.00" } }
      ],
      "authority_hash":
        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
@@ -1720,7 +1814,7 @@ Table of Contents
        { "type": "mission_resource_access",
          "resource": "https://erp.example.com",
          "actions": ["journal-entries.write"],
-         "constraints": { "max_amount_usd": 500 } }
+         "constraints": { "max_amount_usd": "500.00" } }
      ],
      "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
      "mission": {
@@ -1784,6 +1878,10 @@ Table of Contents
       member (Section 14).
 
    *  MAY treat the mission claim as audit and correlation context.
+
+   *  SHOULD, when serving Mission-bound requests, log the mission
+      claim's id and the token jti with each served request, so its
+      access logs join to Mission evidence.
 
    *  MAY recompute authority_hash (Section 6.3); recomputation is
       OPTIONAL.  A Resource Server that performs it recomputes the
@@ -2048,7 +2146,7 @@ Table of Contents
        { "type": "mission_resource_access",
          "resource": "https://erp.example.com",
          "actions": ["journal-entries.write"],
-         "constraints": { "max_amount_usd": 500 } }
+         "constraints": { "max_amount_usd": "500.00" } }
      ],
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
@@ -2720,15 +2818,15 @@ Table of Contents
 17.7.  Common Constraints
 
    This document creates no Common Constraints registry.  The Common
-   Constraints it defines (max_amount_usd, issued_after, issued_before)
-   are specified in Section 5.2, and a further Common Constraint is
-   defined by specification: it fixes a name matching ^[A-Za-
-   z0-9_.:-]+$, its JSON [RFC8259] value syntax, its subset rule, and
-   its intersection rule, in value-space terms (Section 5.2).  Names are
-   kept collision-free by the same convention the rest of this document
-   uses: a specification-defined name is coordinated within this
-   document family, and any other name is collision-resistant or remains
-   deployment-defined (Section 5.2).
+   Constraints it defines (max_amount_usd, issued_after, issued_before,
+   tenant, recipient_domain) are specified in Section 5.2, and a further
+   Common Constraint is defined by specification: it fixes a name
+   matching ^[A-Za-z0-9_.:-]+$, its JSON [RFC8259] value syntax, its
+   subset rule, and its intersection rule, in value-space terms
+   (Section 5.2).  Names are kept collision-free by the same convention
+   the rest of this document uses: a specification-defined name is
+   coordinated within this document family, and any other name is
+   collision-resistant or remains deployment-defined (Section 5.2).
 
    Should the set of interoperable Common Constraints grow beyond what
    specification coordination bears, a future revision can create a
@@ -2755,6 +2853,11 @@ Table of Contents
    [RFC3339]  Klyne, G. and C. Newman, "Date and Time on the Internet:
               Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
               <https://www.rfc-editor.org/rfc/rfc3339>.
+
+   [RFC3986]  Berners-Lee, T., Fielding, R., and L. Masinter, "Uniform
+              Resource Identifier (URI): Generic Syntax", STD 66,
+              RFC 3986, DOI 10.17487/RFC3986, January 2005,
+              <https://www.rfc-editor.org/rfc/rfc3986>.
 
    [RFC6234]  Eastlake 3rd, D. and T. Hansen, "US Secure Hash Algorithms
               (SHA and SHA-based HMAC and HKDF)", RFC 6234,
@@ -3027,7 +3130,7 @@ A.2.  Stage 1: Mission Creation
      { "type": "mission_resource_access",
        "resource": "https://erp.example.com",
        "actions": ["journal-entries.write"],
-       "constraints": { "max_amount_usd": 500 } }
+       "constraints": { "max_amount_usd": "500.00" } }
    ]
 
    After approval, the AS records Mission
@@ -3066,7 +3169,7 @@ A.3.  Stage 2: Mission-Bound Token Issuance
        { "type": "mission_resource_access",
          "resource": "https://erp.example.com",
          "actions": ["journal-entries.write"],
-         "constraints": { "max_amount_usd": 500 } }
+         "constraints": { "max_amount_usd": "500.00" } }
      ],
      "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
      "mission": {
@@ -3090,9 +3193,9 @@ A.4.  Stage 3: The Resource Server Enforces
    token.  The Resource Server validates the JWT and the cnf binding and
    enforces the authorization_details whose resource it serves,
    permitting invoices.read within the Q3 issuance window and journal-
-   entries.write up to max_amount_usd: 500 (Section 8.2).  It treats the
-   mission claim as audit and correlation context and makes no call to
-   the AS.
+   entries.write up to max_amount_usd: "500.00" (Section 8.2).  It
+   treats the mission claim as audit and correlation context and makes
+   no call to the AS.
 
    This is stateless enforcement from the token alone. journal-
    entries.write is a consequential write, so where the deployment runs
@@ -3145,7 +3248,7 @@ Appendix B.  Integrity Anchor Test Vectors
      { "type": "mission_resource_access",
        "resource": "https://erp.example.com",
        "actions": ["journal-entries.write"],
-       "constraints": { "max_amount_usd": 500 } }
+       "constraints": { "max_amount_usd": "500.00" } }
    ]
 
    Canonical bytes of the envelope:
@@ -3153,10 +3256,10 @@ Appendix B.  Integrity Anchor Test Vectors
    {"iss":"https://as.example.com","typ":"mission-authority-set","value":[{
    "actions":["invoices.read"],"resource":"https://erp.example.com","type":
    "mission_resource_access"},{"actions":["journal-entries.write"],"constra
-   ints":{"max_amount_usd":500},"resource":"https://erp.example.com","type"
-   :"mission_resource_access"}]}
+   ints":{"max_amount_usd":"500.00"},"resource":"https://erp.example.com","
+   type":"mission_resource_access"}]}
 
-   authority_hash = sha-256:-rBZZJ8tVIyGoR1tBg6BO6QG0kimVvef8vjigpoVuPw
+   authority_hash = sha-256:H3xcKuSglGecACyY2qGQYunTGqIalyeXS1Qr0dCcgjs
 
    An implementation that canonicalizes the same value under the same
    typ and iss, computes SHA-256, and encodes as sha-256: followed by

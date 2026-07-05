@@ -931,12 +931,14 @@ Table of Contents
 
 5.9.  Deferred Lifecycle Capabilities
 
-   This endpoint operates on one Mission at a time.  The following
-   management capabilities are deferred to future work.  Bulk lifecycle
-   operations and Mission enumeration for incident response, such as
-   revoking every Mission for a compromised Subject, client, or tenant,
-   are not defined here.  Approver transfer or re-anchoring, changing
-   the party that anchors a Mission's consent, is not defined here.
+   This endpoint operates on one Mission at a time.  Mission enumeration
+   and bulk lifecycle operations for incident response, such as revoking
+   every Mission for a compromised Subject, client, or tenant, are
+   specified separately by Mission Management
+   [I-D.draft-mcguinness-oauth-mission-management]; this document does
+   not require them.  The following capabilities remain deferred to
+   future work.  Approver transfer or re-anchoring, changing the party
+   that anchors a Mission's consent, is not defined here.
    Administrative monotonic narrowing, such as shortening a Mission's
    mission_expiry or retiring a single Authority Set entry, is not
    defined here.
@@ -1355,6 +1357,13 @@ Informative References
               Progress, Internet-Draft, draft-mcguinness-oauth-mission-
               expansion, 2026, <https://datatracker.ietf.org/doc/html/
               draft-mcguinness-oauth-mission-expansion>.
+
+   [I-D.draft-mcguinness-oauth-mission-management]
+              McGuinness, K., "Mission Management for OAuth 2.0", Work
+              in Progress, Internet-Draft, draft-mcguinness-oauth-
+              mission-management, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-management>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",

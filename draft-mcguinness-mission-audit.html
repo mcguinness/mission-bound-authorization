@@ -1200,6 +1200,9 @@ commit to the evidence by hash rather than carrying it.<a href="#section-abstrac
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2.2.1">
                     <p id="section-toc.1-1.6.2.2.2.1.1"><a href="#section-6.2.1" class="auto internal xref">6.2.1</a>.  <a href="#name-the-lifecycle-transition-ob" class="internal xref">The Lifecycle Transition Object</a></p>
 </li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2.2.2">
+                    <p id="section-toc.1-1.6.2.2.2.2.1"><a href="#section-6.2.2" class="auto internal xref">6.2.2</a>.  <a href="#name-the-derivation-record" class="internal xref">The Derivation Record</a></p>
+</li>
                 </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
@@ -1473,6 +1476,17 @@ record as part of the Mission's feed.<a href="#section-6.2-1" class="pilcrow">¶
 </td>
             </tr>
             <tr>
+              <td class="text-left" rowspan="1" colspan="1">Derivation record</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#derivation-record" class="auto internal xref">Section 6.2.2</a> (JCS)</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>application/mission-derivation-record+json</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>origin</code>
+</td>
+            </tr>
+            <tr>
               <td class="text-left" rowspan="1" colspan="1">Consent evidence</td>
               <td class="text-left" rowspan="1" colspan="1">retained signed object, as issued</td>
               <td class="text-left" rowspan="1" colspan="1">
@@ -1524,13 +1538,15 @@ Statement's <code>iss</code> <span class="bcp14">MUST</span> equal that <code>or
 in the deployment-published key sets the runtime and AuthZEN profiles
 require (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-6.2-4" class="pilcrow">¶</a></p>
-<p id="section-6.2-5">The approval event and the lifecycle-transition object are canonicalized
+<p id="section-6.2-5">The approval event, the lifecycle-transition object, and the
+derivation record are canonicalized
 under the issuance profile's canonicalization rules
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); an already-signed object (the
 consent, decision, and execution evidence, the Signals SET, and the
 Mandate) is
-hashed as issued, not re-canonicalized. The approval-event and
-lifecycle-transition media types are defined by this profile (<a href="#iana" class="auto internal xref">Section 14</a>);
+hashed as issued, not re-canonicalized. The approval-event,
+lifecycle-transition, and derivation-record media types are defined by
+this profile (<a href="#iana" class="auto internal xref">Section 14</a>);
 the consent, decision, and execution evidence types are registered by
 the profiles that define those objects
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>,
@@ -1615,6 +1631,113 @@ protected header (<a href="#hash-commitment" class="auto internal xref">Section 
 </div>
 </section>
 </div>
+<div id="derivation-record">
+<section id="section-6.2.2">
+          <h4 id="name-the-derivation-record">
+<a href="#section-6.2.2" class="section-number selfRef">6.2.2. </a><a href="#name-the-derivation-record" class="section-name selfRef">The Derivation Record</a>
+          </h4>
+<p id="section-6.2.2-1">The family's evidence runs from the approval to the enforced action,
+but the derivation event between them, the <code>origin</code> issuing a token
+under the Mission (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), is
+otherwise visible only in Authorization Server logs no profile
+mandates. A derivation record closes that gap: it commits which token
+was issued, to which audience, carrying which entries, under which
+Mission.<a href="#section-6.2.2-1" class="pilcrow">¶</a></p>
+<p id="section-6.2.2-2">A derivation record is a JSON object with these members,
+JCS-canonicalized <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>:<a href="#section-6.2.2-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.2.2-3.1">
+              <p id="section-6.2.2-3.1.1"><code>mission_id</code> (string, required): the Mission <code>id</code>.<a href="#section-6.2.2-3.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.2.2-3.2">
+              <p id="section-6.2.2-3.2.1"><code>origin</code> (string, required): the Mission <code>origin</code>.<a href="#section-6.2.2-3.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.2.2-3.3">
+              <p id="section-6.2.2-3.3.1"><code>token_digest</code> (string, required): a digest in the issuance
+profile's encoded form (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
+over the UTF-8 bytes of the issued token's JWS Compact
+Serialization, or of the token's <code>jti</code> where the deployment retains
+no token bytes.<a href="#section-6.2.2-3.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.2.2-3.4">
+              <p id="section-6.2.2-3.4.1"><code>aud</code> (string, required): the audience the token was issued for.<a href="#section-6.2.2-3.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.2.2-3.5">
+              <p id="section-6.2.2-3.5.1"><code>entries_digest</code> (string, required): the integrity-anchor envelope
+digest (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) over the issued
+<code>authorization_details</code> array, with <code>typ</code>
+                <code>mission-derivation-entries</code> and <code>iss</code> the <code>origin</code>.<a href="#section-6.2.2-3.5.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.2.2-3.6">
+              <p id="section-6.2.2-3.6.1"><code>actor</code> (string, optional): the delegate's <code>sub</code>, present when the
+derivation was a delegation.<a href="#section-6.2.2-3.6.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.2.2-3.7">
+              <p id="section-6.2.2-3.7.1"><code>issued_at</code> (string, required): an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time at
+which the token was issued.<a href="#section-6.2.2-3.7.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-6.2.2-4">Its media type is <code>application/mission-derivation-record+json</code>
+(<a href="#iana" class="auto internal xref">Section 14</a>), and its authoritative producer is the <code>origin</code>: the Signed
+Statement's <code>iss</code> <span class="bcp14">MUST</span> equal the Mission <code>origin</code>
+(<a href="#evidence-types" class="auto internal xref">Section 6.2</a>).<a href="#section-6.2.2-4" class="pilcrow">¶</a></p>
+<div id="derivation-vector">
+<section id="section-6.2.2.1">
+            <h5 id="name-computed-example-2">
+<a href="#section-6.2.2.1" class="section-number selfRef">6.2.2.1. </a><a href="#name-computed-example-2" class="section-name selfRef">Computed Example</a>
+            </h5>
+<p id="section-6.2.2.1-1">For Mission <code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code>, the origin issues
+a token for audience <code>https://erp.example.com</code>, narrowed to the write
+entry, with <code>jti</code> <code>at_5v9Kq2mR7xW4nP8sL1zT6</code>. The issued
+<code>authorization_details</code>:<a href="#section-6.2.2.1-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-6.2.2.1-2">
+<pre>
+[
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["journal-entries.write"],
+    "constraints": { "max_amount_usd": "500.00" } }
+]
+</pre><a href="#section-6.2.2.1-2" class="pilcrow">¶</a>
+</div>
+<p id="section-6.2.2.1-3"><code>entries_digest</code> is the integrity-anchor envelope digest over that
+array with <code>typ</code> <code>mission-derivation-entries</code> and <code>iss</code>
+              <code>https://as.example.com</code>; <code>token_digest</code> is over the UTF-8 bytes of
+the <code>jti</code>. The derivation was not a delegation, so <code>actor</code> is absent.
+The record:<a href="#section-6.2.2.1-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-6.2.2.1-4">
+<pre>
+{
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "origin": "https://as.example.com",
+  "token_digest":
+    "sha-256:V1Wbh4Z3wK39B_YmzHlvkGr7hEA1rUoJMuj00y0q-eE",
+  "aud": "https://erp.example.com",
+  "entries_digest":
+    "sha-256:z8NZZchM248xmpIbN_nSJ_eH9i3mM5_4xjZzSuoHq-U",
+  "issued_at": "2026-10-15T14:32:12Z"
+}
+</pre><a href="#section-6.2.2.1-4" class="pilcrow">¶</a>
+</div>
+<p id="section-6.2.2.1-5">Its JCS canonical bytes (one line; breaks are for display only):<a href="#section-6.2.2.1-5" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-6.2.2.1-6">
+<pre>
+{"aud":"https://erp.example.com","entries_digest":"sha-256:z8NZZc
+hM248xmpIbN_nSJ_eH9i3mM5_4xjZzSuoHq-U","issued_at":"2026-10-15T14
+:32:12Z","mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","ori
+gin":"https://as.example.com","token_digest":"sha-256:V1Wbh4Z3wK3
+9B_YmzHlvkGr7hEA1rUoJMuj00y0q-eE"}
+</pre><a href="#section-6.2.2.1-6" class="pilcrow">¶</a>
+</div>
+<p id="section-6.2.2.1-7">The committed digest is the SHA-256 of those bytes; its base64url
+form is <code>eg-h1Y4d1qhMb-9OIzXty16A6IXAKU2PiaTnJNz1SxA</code>. The Signed
+Statement carries the digest bytes inline as its payload, with
+<code>preimage-content-type</code> <code>application/mission-derivation-record+json</code>
+and the same <code>iss</code> and <code>sub</code> as <a href="#transition-vector" class="auto internal xref">Section 6.2.1.1</a>.<a href="#section-6.2.2.1-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
 </section>
 </div>
 <div id="registration-policy">
@@ -1688,6 +1811,11 @@ governance-critical records: the approval event and every Mission
 lifecycle transition. It <span class="bcp14">SHOULD</span> also register the runtime decision and
 execution evidence for the action classes it enforces, so the action
 trail is transparent and not only the governance trail.<a href="#section-6.6-1" class="pilcrow">¶</a></p>
+<p id="section-6.6-2">An origin deploying this profile <span class="bcp14">SHOULD</span> register a derivation record
+(<a href="#derivation-record" class="auto internal xref">Section 6.2.2</a>) for each derivation event. The derivation is
+where approval becomes an issued token, and the family's evidence
+otherwise leaves that step to Authorization Server logs no profile
+mandates; registering it closes the approval-to-action gap.<a href="#section-6.6-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1860,7 +1988,9 @@ display string. The Transparency Service appends the statement
 and returns a Receipt, a COSE_Sign1 with an inclusion proof in its
 unprotected header, which the Mission Issuer keeps with the evidence as a
 Transparent Statement.<a href="#section-9-3" class="pilcrow">¶</a></p>
-<p id="section-9-4">As the Mission proceeds, its other producers write to the same <code>sub</code>: the
+<p id="section-9-4">As the Mission proceeds, its other producers write to the same <code>sub</code>:
+the Mission Issuer registers a derivation record when it derives the
+agent's token (<a href="#derivation-record" class="auto internal xref">Section 6.2.2</a>), the
 PDP registers a decision-evidence commitment when it permits the
 <code>journal-entries.write</code>, and the Mission Issuer registers a
 lifecycle-change commitment when <code>alice</code> later completes the Mission.
@@ -1872,8 +2002,9 @@ sub = https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 
   #1  approval-event        iss=as.example.com    t0
   #2  consent-evidence      iss=as.example.com    t0
-  #3  decision-evidence     iss=pdp.example.com   t0+6h
-  #4  lifecycle: completed  iss=as.example.com    t0+6h
+  #3  derivation-record     iss=as.example.com    t0
+  #4  decision-evidence     iss=pdp.example.com   t0+6h
+  #5  lifecycle: completed  iss=as.example.com    t0+6h
 </pre><a href="#section-9-5" class="pilcrow">¶</a>
 </div>
 <p id="section-9-6">A compliance auditor in another domain, holding none of these
@@ -2042,11 +2173,13 @@ gap rather than a silent one.<a href="#section-13-3" class="pilcrow">¶</a></p>
       <h2 id="name-iana-considerations">
 <a href="#section-14" class="section-number selfRef">14. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-14-1">This document defines two media types for the evidence types of
+<p id="section-14-1">This document defines three media types for the evidence types of
 <a href="#evidence-types" class="auto internal xref">Section 6.2</a> that no other profile defines:
 <code>application/mission-approval-record+json</code> for the approval-event record,
-and <code>application/mission-lifecycle-transition+json</code> for the minimal
-lifecycle-transition object (<a href="#transition-object" class="auto internal xref">Section 6.2.1</a>). This document makes
+<code>application/mission-lifecycle-transition+json</code> for the minimal
+lifecycle-transition object (<a href="#transition-object" class="auto internal xref">Section 6.2.1</a>), and
+<code>application/mission-derivation-record+json</code> for the derivation record
+(<a href="#derivation-record" class="auto internal xref">Section 6.2.2</a>). This document makes
 no registration request for them yet; registration is deferred pending a
 demonstrated cross-domain interoperability need, and deployments using
 these media types do so by local agreement until then.<a href="#section-14-1" class="pilcrow">¶</a></p>

@@ -1920,6 +1920,13 @@ for the companion's cross-domain grant issuance. Absent such a signal,
 a capability is discovered out of band or by attempt: a Token
 Exchange, a cross-domain grant issuance, or an introspection request
 fails if the issuer does not support it.<a href="#section-2-10" class="pilcrow">¶</a></p>
+<p id="section-2-11">The smallest useful conforming deployment, noted here informatively,
+is a Mission Issuer that derives in narrowing mode from the Intent's
+<code>proposed_authority</code> (<a href="#authorization-derivation" class="auto internal xref">Section 5</a>), emits only the
+Common Constraints of <a href="#common-constraints" class="auto internal xref">Section 5.2</a>, and implements none of
+the <span class="bcp14">OPTIONAL</span> capabilities; a scope-only Resource Server still operates
+at the coarse scope level (<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>). This note names a
+starting point and creates no new conformance class.<a href="#section-2-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="overview">
@@ -2048,56 +2055,71 @@ inform derivation and consent rendering.<a href="#section-4-3.6.1" class="pilcro
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-3.7">
-<code>success_criteria</code>:</dt>
+<code>proposed_authority</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-4-3.8">
-          <p id="section-4-3.8.1"><span class="bcp14">OPTIONAL</span>. An array of strings. Human-readable
+          <p id="section-4-3.8.1"><span class="bcp14">OPTIONAL</span>. An array of objects, each shaped as an <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>
+            <code>authorization_details</code> entry. The client's concrete authority
+proposal for the task. It is untrusted input like the rest of the
+Intent and is committed by <code>intent_hash</code> with it
+(<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>). When present, the AS <span class="bcp14">MUST</span> derive each
+Authority Set entry as a subset (<a href="#subset" class="auto internal xref">Section 5.1</a>) of some
+<code>proposed_authority</code> entry, and the deterministic-reproducibility
+rule for narrowing-mode derivation applies
+(<a href="#authorization-derivation" class="auto internal xref">Section 5</a>); <code>goal</code> and <code>constraints</code> then serve
+as rendering and bounding context over the proposed authority.<a href="#section-4-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.9">
+<code>success_criteria</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.10">
+          <p id="section-4-3.10.1"><span class="bcp14">OPTIONAL</span>. An array of strings. Human-readable
 observable outcomes that indicate the task is complete. These are
 disclosure and audit material only: they are rendered to the
 Approver and committed by <code>intent_hash</code> (<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>),
 but carry no machine semantics and <span class="bcp14">MUST NOT</span> be used to derive,
-widen, or gate authority.<a href="#section-4-3.8.1" class="pilcrow">¶</a></p>
+widen, or gate authority.<a href="#section-4-3.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-4-3.9">
+<dt id="section-4-3.11">
 <code>purpose</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-4-3.10">
-          <p id="section-4-3.10.1"><span class="bcp14">OPTIONAL</span>. A string. A URI identifying the purpose of the
+        <dd style="margin-left: 1.5em" id="section-4-3.12">
+          <p id="section-4-3.12.1"><span class="bcp14">OPTIONAL</span>. A string. A URI identifying the purpose of the
 task, recorded for disclosure and audit. Its semantics are
 deployment- or registry-defined and opaque to this document; like
 <code>success_criteria</code> it <span class="bcp14">MUST NOT</span> be used to derive, widen, or gate
 authority. A deployment <span class="bcp14">MAY</span> consult it for out-of-band policy or
-logging that does not affect the authority derived here.<a href="#section-4-3.10.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-4-3.11">
-<code>mission_expiry</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-4-3.12">
-          <p id="section-4-3.12.1"><span class="bcp14">REQUIRED</span>. A string. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>
-date-time after which the Mission <span class="bcp14">MUST NOT</span> derive tokens.<a href="#section-4-3.12.1" class="pilcrow">¶</a></p>
+logging that does not affect the authority derived here.<a href="#section-4-3.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-3.13">
-<code>context</code>:</dt>
+<code>mission_expiry</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-4-3.14">
-          <p id="section-4-3.14.1"><span class="bcp14">OPTIONAL</span>. An object of machine-actionable bounds. This
+          <p id="section-4-3.14.1"><span class="bcp14">REQUIRED</span>. A string. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>
+date-time after which the Mission <span class="bcp14">MUST NOT</span> derive tokens.<a href="#section-4-3.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.15">
+<code>context</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.16">
+          <p id="section-4-3.16.1"><span class="bcp14">OPTIONAL</span>. An object of machine-actionable bounds. This
 document defines the members below; others <span class="bcp14">MAY</span> be added by
 deployments or defined by companion profiles (an extension member
 follows the collision-resistant naming and fail-safe rules of
-<a href="#extensibility" class="auto internal xref">Section 12</a>):<a href="#section-4-3.14.1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-4-3.14.2">
-            <dt id="section-4-3.14.2.1">
+<a href="#extensibility" class="auto internal xref">Section 12</a>):<a href="#section-4-3.16.1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4-3.16.2">
+            <dt id="section-4-3.16.2.1">
 <code>acr</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-4-3.14.2.2">
-              <p id="section-4-3.14.2.2.1"><span class="bcp14">OPTIONAL</span>. A string. An authentication context class for the
+            <dd style="margin-left: 1.5em" id="section-4-3.16.2.2">
+              <p id="section-4-3.16.2.2.1"><span class="bcp14">OPTIONAL</span>. A string. An authentication context class for the
 approval event: the approval authentication <span class="bcp14">MUST</span> be one the
 deployment's policy maps as satisfying the named class. No global
-ordering of <code>acr</code> values exists; the mapping is deployment policy.<a href="#section-4-3.14.2.2.1" class="pilcrow">¶</a></p>
+ordering of <code>acr</code> values exists; the mapping is deployment policy.<a href="#section-4-3.16.2.2.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
-<dt id="section-4-3.14.2.3">
+<dt id="section-4-3.16.2.3">
 <code>max_derivations</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-4-3.14.2.4">
-              <p id="section-4-3.14.2.4.1"><span class="bcp14">OPTIONAL</span>. A positive integer. A positive (1 or greater)
+            <dd style="margin-left: 1.5em" id="section-4-3.16.2.4">
+              <p id="section-4-3.16.2.4.1"><span class="bcp14">OPTIONAL</span>. A positive integer. A positive (1 or greater)
 bound on the number of derivations the origin AS performs under the
 Mission, enforced per <a href="#lifecycle" class="auto internal xref">Section 9</a>. A value of 0 is invalid (it
 would forbid even the initial issuance); to stop a Mission, revoke
@@ -2107,7 +2129,7 @@ derivation cap, not an end-to-end credential cap: a cross-domain
 issuance counts as one derivation, and tokens another domain mints
 locally are not counted by the origin, which cannot observe them
 (<a href="#lifecycle" class="auto internal xref">Section 9</a>; detail in
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-4-3.14.2.4.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-4-3.16.2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 </dl>
@@ -2220,7 +2242,10 @@ deployment-defined.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
 <p id="section-4.1-5">A client <span class="bcp14">MUST NOT</span> submit <code>authorization_details</code> directly together
 with <code>mission_intent</code>; the AS derives authorization details from the
 Intent (<a href="#authorization-derivation" class="auto internal xref">Section 5</a>). A request carrying both <span class="bcp14">MUST</span>
-be refused with <code>invalid_request</code>. A client <span class="bcp14">MAY</span> submit <code>scope</code> and
+be refused with <code>invalid_request</code>. This prohibition governs the raw
+<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> request parameter; a client proposes concrete authority
+inside the Intent, through <code>proposed_authority</code>
+(<a href="#mission-intent" class="auto internal xref">Section 4</a>). A client <span class="bcp14">MAY</span> submit <code>scope</code> and
 <code>resource</code> (<span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>) values; the AS treats them as a requested
 subset and <span class="bcp14">MUST NOT</span> grant authority beyond what the Mission Intent
 yields.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
@@ -2259,7 +2284,10 @@ and deployment policy.<a href="#section-5-2.1.1" class="pilcrow">¶</a></p>
           <p id="section-5-2.2.1">Bound every derived entry by the Mission Intent: each derived entry's
 <code>resource</code> <span class="bcp14">MUST</span> be one of the Intent's <code>resources</code> values, and the
 derived authority <span class="bcp14">MUST NOT</span> exceed any machine-actionable <code>context</code>
-bound. Fidelity to the Intent's <code>goal</code> and <code>constraints</code> is a <span class="bcp14">SHOULD</span>,
+bound. When the Intent carries <code>proposed_authority</code>
+(<a href="#mission-intent" class="auto internal xref">Section 4</a>), each derived entry <span class="bcp14">MUST</span> additionally be a
+subset (<a href="#subset" class="auto internal xref">Section 5.1</a>) of some <code>proposed_authority</code> entry. Fidelity to
+the Intent's <code>goal</code> and <code>constraints</code> is a <span class="bcp14">SHOULD</span>,
 auditable through the recorded <code>policy_version</code>.<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-2.3">
@@ -2293,7 +2321,8 @@ domain interprets, enforces, and audits identically. A consumer enforces
 the derived Authority Set, never the Intent.<a href="#section-5-5" class="pilcrow">¶</a></p>
 <p id="section-5-6">Two rules keep local derivation accountable rather than opaque. First,
 reproducibility, scoped to how the AS derives. When the AS derives by
-narrowing a client-proposed set of <code>authorization_details</code> (below), the
+narrowing the Intent's <code>proposed_authority</code> entries
+(<a href="#mission-intent" class="auto internal xref">Section 4</a>), the
 same Mission Intent and the same <code>policy_version</code> <span class="bcp14">MUST</span> yield the same
 Authority Set at a given AS, so a derivation can be re-checked and a
 divergence detected. When the AS derives generatively, from free text or
@@ -2307,8 +2336,8 @@ derives authority. Local policy is thus versioned and reviewable, which
 is what a cross-domain trust decision actually needs, even though the
 policy itself does not travel.<a href="#section-5-6" class="pilcrow">¶</a></p>
 <p id="section-5-7">Where cross-vendor interoperability matters, an AS <span class="bcp14">SHOULD</span> derive the
-Authority Set by narrowing a client-proposed set of
-<code>authorization_details</code> to policy, rather than generating one from free
+Authority Set by narrowing the Intent's <code>proposed_authority</code> entries
+(<a href="#mission-intent" class="auto internal xref">Section 4</a>) to policy, rather than generating one from free
 text. Narrowing is governed by the subset rule (<a href="#subset" class="auto internal xref">Section 5.1</a>), which is
 interoperable, so the result is verifiable and enforceable in any domain
 even though the policy decision of what to narrow to stays local; the
@@ -2360,9 +2389,23 @@ request parameter does not affect how the AS processes
 </dd>
         <dd class="break"></dd>
 <dt id="section-5-10.5">
-<code>actions</code>:</dt>
+<code>resource_match</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-5-10.6">
-          <p id="section-5-10.6.1"><span class="bcp14">REQUIRED</span>. An array of strings. Permitted action
+          <p id="section-5-10.6.1"><span class="bcp14">OPTIONAL</span>. A string: <code>exact</code> (the default, and the behavior when the
+member is absent) or <code>prefix</code>. Under <code>exact</code> the entry applies to the
+<code>resource</code> URI alone. Under <code>prefix</code> the entry authorizes the
+<code>resource</code> itself and any URI beneath it at a path-segment boundary
+(the <code>resource</code> followed by <code>/</code> and further path). These two values
+are the only ones defined; a consumer <span class="bcp14">MUST</span> treat an entry whose
+<code>resource_match</code> value it does not recognize as unenforceable and
+fail closed (<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>). Containment between effective
+resource sets is compared as defined in <a href="#subset" class="auto internal xref">Section 5.1</a>.<a href="#section-5-10.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-10.7">
+<code>actions</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-10.8">
+          <p id="section-5-10.8.1"><span class="bcp14">REQUIRED</span>. An array of strings. Permitted action
 identifiers, each matching <code>[A-Za-z0-9_.:-]+</code>. Like an OAuth scope, an
 action identifier carries meaning only at the <code>resource</code> that defines
 it; a consumer enforces only the actions it recognizes for that
@@ -2370,62 +2413,69 @@ resource and honors no others, so an action a consumer does not
 understand is fail-closed by construction (the action is simply not
 within the authority it can enforce). An AS <span class="bcp14">SHOULD</span> draw action
 identifiers from a namespace the serving resource documents, so the
-set is interpretable cross-vendor rather than ad hoc.<a href="#section-5-10.6.1" class="pilcrow">¶</a></p>
+set is interpretable cross-vendor rather than ad hoc. A value <span class="bcp14">MAY</span>
+instead be an <strong>action family</strong>: an action identifier followed by
+<code>.*</code>, authorizing every action whose dot-separated identifier
+extends the family name at a segment boundary (<code>invoices.*</code>
+authorizes <code>invoices.read</code> and <code>invoices.q3.export</code>, not
+<code>invoicesx.read</code>). A consent rendering <span class="bcp14">MUST</span> present a family as the
+breadth it is: all actions under the name, not one action. An AS
+<span class="bcp14">SHOULD</span> treat deriving a family as high-risk breadth.<a href="#section-5-10.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-5-10.7">
+<dt id="section-5-10.9">
 <code>constraints</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-5-10.8">
-          <p id="section-5-10.8.1"><span class="bcp14">OPTIONAL</span>. An object. Machine-actionable per-resource
+        <dd style="margin-left: 1.5em" id="section-5-10.10">
+          <p id="section-5-10.10.1"><span class="bcp14">OPTIONAL</span>. An object. Machine-actionable per-resource
 bounds (for example, <code>max_amount_usd</code>). A member name defined as a
 Common Constraint (<a href="#common-constraints" class="auto internal xref">Section 5.2</a>) has shared semantics
-across deployments; any other name is deployment-defined.<a href="#section-5-10.8.1" class="pilcrow">¶</a></p>
+across deployments; any other name is deployment-defined.<a href="#section-5-10.10.1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5-10.8.2.1">
-              <p id="section-5-10.8.2.1.1">Because a <code>constraints</code> member narrows authority, a Resource Server
-that cannot enforce one <span class="bcp14">MUST</span> fail closed (<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>).<a href="#section-5-10.8.2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-5-10.10.2.1">
+              <p id="section-5-10.10.2.1.1">Because a <code>constraints</code> member narrows authority, a Resource Server
+that cannot enforce one <span class="bcp14">MUST</span> fail closed (<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>).<a href="#section-5-10.10.2.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-5-10.8.2.2">
-              <p id="section-5-10.8.2.2.1">To avoid that failure mode, the AS <span class="bcp14">SHOULD</span> emit for a given
+            <li class="normal" id="section-5-10.10.2.2">
+              <p id="section-5-10.10.2.2.1">To avoid that failure mode, the AS <span class="bcp14">SHOULD</span> emit for a given
 <code>resource</code> only <code>constraints</code> keys that the Resource Server serving
 it is known (by registration or deployment policy) to understand
-and enforce.<a href="#section-5-10.8.2.2.1" class="pilcrow">¶</a></p>
+and enforce.<a href="#section-5-10.10.2.2.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </dd>
         <dd class="break"></dd>
-<dt id="section-5-10.9">
+<dt id="section-5-10.11">
 <code>delegation</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-5-10.10">
-          <p id="section-5-10.10.1"><span class="bcp14">OPTIONAL</span>. An object. The delegation policy for this
+        <dd style="margin-left: 1.5em" id="section-5-10.12">
+          <p id="section-5-10.12.1"><span class="bcp14">OPTIONAL</span>. An object. The delegation policy for this
 entry (<a href="#delegation-constraints" class="auto internal xref">Section 11.2</a>). When absent, this entry's
 authority is non-delegable: it <span class="bcp14">MUST NOT</span> appear in a delegated
-token. When present, it has these members:<a href="#section-5-10.10.1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-5-10.10.2">
-            <dt id="section-5-10.10.2.1">
+token. When present, it has these members:<a href="#section-5-10.12.1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5-10.12.2">
+            <dt id="section-5-10.12.2.1">
 <code>max_depth</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-5-10.10.2.2">
-              <p id="section-5-10.10.2.2.1"><span class="bcp14">REQUIRED</span>. An integer. The maximum delegation depth at
+            <dd style="margin-left: 1.5em" id="section-5-10.12.2.2">
+              <p id="section-5-10.12.2.2.1"><span class="bcp14">REQUIRED</span>. An integer. The maximum delegation depth at
 which this entry's authority may be exercised
-(<a href="#delegation-constraints" class="auto internal xref">Section 11.2</a>).<a href="#section-5-10.10.2.2.1" class="pilcrow">¶</a></p>
+(<a href="#delegation-constraints" class="auto internal xref">Section 11.2</a>).<a href="#section-5-10.12.2.2.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
-<dt id="section-5-10.10.2.3">
+<dt id="section-5-10.12.2.3">
 <code>allowed_delegates</code>:</dt>
-            <dd style="margin-left: 1.5em" id="section-5-10.10.2.4">
-              <p id="section-5-10.10.2.4.1"><span class="bcp14">OPTIONAL</span>. An array of objects. The permitted
+            <dd style="margin-left: 1.5em" id="section-5-10.12.2.4">
+              <p id="section-5-10.12.2.4.1"><span class="bcp14">OPTIONAL</span>. An array of objects. The permitted
 delegates, each a <code>may_act</code>-style matcher
 (<a href="#delegation-constraints" class="auto internal xref">Section 11.2</a>): <code>{ "sub": "&lt;client_id&gt;" }</code> for a
 specific delegate, or <code>{ "sub_profile": "&lt;actor-type&gt;" }</code> for an
 actor-type class. When absent, any actor is permitted (subject to
-<code>max_depth</code>).<a href="#section-5-10.10.2.4.1" class="pilcrow">¶</a></p>
+<code>max_depth</code>).<a href="#section-5-10.12.2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 </dl>
-<p id="section-5-10.10.3">A companion profile of this document <span class="bcp14">MAY</span> define additional
+<p id="section-5-10.12.3">A companion profile of this document <span class="bcp14">MAY</span> define additional
 <code>delegation</code> members. Such a member is policy, not authority
 (<a href="#delegation-constraints" class="auto internal xref">Section 11.2</a>): a derived entry's value for it <span class="bcp14">MUST NOT</span> be broader than the parent entry's, and a member the AS does not
-understand is carried unchanged.<a href="#section-5-10.10.3" class="pilcrow">¶</a></p>
+understand is carried unchanged.<a href="#section-5-10.12.3" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2451,7 +2501,7 @@ write entry carries no <code>delegation</code> and so is non-delegable, because
   { "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
-    "constraints": { "max_amount_usd": 500 } }
+    "constraints": { "max_amount_usd": "500.00" } }
 ]
 </pre><a href="#section-5-12" class="pilcrow">¶</a>
 </div>
@@ -2465,10 +2515,22 @@ write entry carries no <code>delegation</code> and so is non-delegable, because
 when:<a href="#section-5.1-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-5.1-2">
 <li id="section-5.1-2.1">
-            <p id="section-5.1-2.1.1">A.<code>resource</code> equals B.<code>resource</code>.<a href="#section-5.1-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-5.1-2.1.1">A's effective resource set is contained in B's
+(<code>resource_match</code>, <a href="#authorization-derivation" class="auto internal xref">Section 5</a>): when neither
+entry sets <code>resource_match: "prefix"</code>, A.<code>resource</code> equals
+B.<code>resource</code>; when B is a <code>prefix</code> entry, A (whether <code>exact</code> or
+<code>prefix</code>) is contained when A.<code>resource</code> equals B.<code>resource</code> or
+extends its path at a path-segment boundary; a <code>prefix</code> A is never
+contained in an <code>exact</code> B.<a href="#section-5.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-5.1-2.2">
-            <p id="section-5.1-2.2.1">A.<code>actions</code> is a subset of B.<code>actions</code>.<a href="#section-5.1-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-5.1-2.2.1">Every A.<code>actions</code> value is within some B.<code>actions</code> value: a value
+is within an equal value; a literal action is within a family whose
+name it extends at a segment boundary (<code>invoices.read</code> is within
+<code>invoices.*</code>); a family is within a reference family when its own
+name extends the reference's name at a segment boundary
+(<code>invoices.q3.*</code> is within <code>invoices.*</code>). A family is never within
+a literal action.<a href="#section-5.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-5.1-2.3">
             <p id="section-5.1-2.3.1">For every key K in <strong>B</strong>.<code>constraints</code>, K <span class="bcp14">MUST</span> also be present in
@@ -2483,20 +2545,25 @@ constraints <span class="bcp14">MUST NOT</span> be dropped, only added or tighte
         </ol>
 <p id="section-5.1-3">The AS <span class="bcp14">MUST</span> refuse to derive an entry that is not a subset of some
 Mission Authority Set entry.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
-<p id="section-5.1-4">This comparison is deliberately flat: <code>resource</code> matches by exact
-equality and <code>actions</code> by array membership. It does not yet define
-resource containment (a path-prefix or hierarchical resource) or action
-families (an <code>invoices.*</code> hierarchy). Real hierarchical resources are
-expected to need both, so an extension defining hierarchical resource
-and action subset semantics is known near-term work; until then a
-deployment expresses hierarchy through explicit entries or constraints,
-and the runtime layer enforces it (<a href="#runtime-boundary" class="auto internal xref">Section 15.5</a>).<a href="#section-5.1-4" class="pilcrow">¶</a></p>
-<p id="section-5.1-5">The <code>delegation</code> member is policy, not authority, and is not part of
+<p id="section-5.1-4">Resource containment under a <code>prefix</code> reference is compared after
+RFC 3986 <span>[<a href="#RFC3986" class="cite xref">RFC3986</a>]</span> syntax-based normalization of both URIs: lowercase
+the scheme and host, remove a default port, decode percent-encoded
+octets of unreserved characters, and remove dot-segments. This
+normalization applies to comparison only, never to hashing: anchor
+computation (<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>, <a href="#canonicalization" class="auto internal xref">Section 6.4</a>) remains
+byte-exact over the recorded values and is untouched by this rule.<a href="#section-5.1-4" class="pilcrow">¶</a></p>
+<p id="section-5.1-5">The default comparison is deliberately flat: <code>resource</code> matches by
+exact equality and a literal action by array membership. Hierarchy is
+opt-in and closed to the two forms above: <code>resource_match: "prefix"</code>
+for resource containment and <code>.*</code> action families for action
+containment (<a href="#authorization-derivation" class="auto internal xref">Section 5</a>). A deployment that uses
+neither retains the flat behavior unchanged.<a href="#section-5.1-5" class="pilcrow">¶</a></p>
+<p id="section-5.1-6">The <code>delegation</code> member is policy, not authority, and is not part of
 this comparison (<a href="#delegation-constraints" class="auto internal xref">Section 11.2</a>). A derived entry's
 <code>delegation</code>, when present, <span class="bcp14">MUST NOT</span> be broader than the parent entry's:
 its <code>max_depth</code> <span class="bcp14">MUST</span> be no greater and its <code>allowed_delegates</code> <span class="bcp14">MUST</span> be
 no wider. A derived entry <span class="bcp14">MUST NOT</span> introduce <code>delegation</code> where the
-parent entry has none.<a href="#section-5.1-5" class="pilcrow">¶</a></p>
+parent entry has none.<a href="#section-5.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="common-constraints">
@@ -2535,9 +2602,10 @@ deployment; a consumer that does not recognize it <span class="bcp14">MUST</span
 <p id="section-5.2-5">This document defines the initial Common Constraints:<a href="#section-5.2-5" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-5.2-6.1">
-            <p id="section-5.2-6.1.1"><code>max_amount_usd</code> (number): a per-action ceiling, in US dollars, on a
-monetary amount. Subset: no broader when less than or equal to the
-reference value. Intersection: the minimum of the two values.<a href="#section-5.2-6.1.1" class="pilcrow">¶</a></p>
+            <p id="section-5.2-6.1.1"><code>max_amount_usd</code> (string containing a decimal number): a per-action
+ceiling, in US dollars, on a monetary amount. Subset: no broader when
+the value is less than or equal to the reference value, compared in
+decimal value space. Intersection: the minimum of the two values.<a href="#section-5.2-6.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.2-6.2">
             <p id="section-5.2-6.2.1"><code>issued_after</code> (string, an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time): the
@@ -2551,21 +2619,40 @@ action applies only to resources issued at or before this instant.
 Subset: no broader when less than or equal to the reference.
 Intersection: the earlier instant.<a href="#section-5.2-6.3.1" class="pilcrow">¶</a></p>
 </li>
+          <li class="normal" id="section-5.2-6.4">
+            <p id="section-5.2-6.4.1"><code>tenant</code> (string): the action applies only to resources of the named
+tenant. Subset: no broader when equal to the reference value.
+Intersection: the common value when the two are equal; otherwise
+there is no intersection and the combination fails.<a href="#section-5.2-6.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-6.5">
+            <p id="section-5.2-6.5.1"><code>recipient_domain</code> (string, a DNS name): the action applies only to
+recipients within the named domain. Subset: no broader when equal to
+the reference or a DNS subdomain of it. Intersection: the narrower
+value when one is equal to or a subdomain of the other; otherwise
+there is no intersection and the combination fails.<a href="#section-5.2-6.5.1" class="pilcrow">¶</a></p>
+</li>
         </ul>
 <p id="section-5.2-7">These comparisons are in value space, not lexical: <code>max_amount_usd</code>
-values are compared as decimal numbers, so <code>500</code>, <code>500.0</code>, and <code>5e2</code> are
-equal; <code>issued_after</code> and <code>issued_before</code> values are compared as the
+values are compared as the decimal numbers the strings contain, so
+<code>"500"</code>, <code>"500.0"</code>, and <code>"500.00"</code> are equal; <code>issued_after</code> and
+<code>issued_before</code> values are compared as the
 instants they denote after normalization to UTC, so two RFC 3339
 representations of the same instant that differ only in timezone offset
-or trailing subsecond zeros are equal. A Common Constraint definition
+or trailing subsecond zeros are equal; <code>recipient_domain</code> values are
+compared as DNS names, case-insensitively and on whole labels, so
+<code>mail.example.com</code> is within <code>example.com</code> and <code>notexample.com</code> is
+not. A Common Constraint definition
 <span class="bcp14">MUST</span> fix its subset and intersection in value-space terms, so that
 independent deployments compute the same result for the same values and
 the subset rule of <a href="#subset" class="auto internal xref">Section 5.1</a> is reproducible.<a href="#section-5.2-7" class="pilcrow">¶</a></p>
 <p id="section-5.2-8">A numeric constraint value <span class="bcp14">MUST</span> lie within the range JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>
-serializes exactly. A future Common Constraint definition for a
-monetary value <span class="bcp14">SHOULD</span> use string-decimal syntax (a string containing a
-decimal number, paired with an ISO 4217 currency code) rather than a
-JSON number.<a href="#section-5.2-8" class="pilcrow">¶</a></p>
+serializes exactly. Monetary constraints avoid that hazard with
+string-decimal syntax: <code>max_amount_usd</code> is a string containing a
+decimal number, and a future Common Constraint for a monetary value
+<span class="bcp14">SHOULD</span> likewise use string-decimal (paired with an ISO 4217 currency
+code where the name does not fix the currency) rather than a JSON
+number.<a href="#section-5.2-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="other-types">
@@ -2664,7 +2751,9 @@ authority and routing each tool call for authorization.<a href="#section-5.4-3.2
 </li>
           <li class="normal" id="section-5.4-3.3">
             <p id="section-5.4-3.3.1"><code>constraints</code> carry machine-actionable bounds on a tool's
-arguments, for example an amount ceiling or a recipient domain.
+arguments, for example an amount ceiling or a recipient domain (the
+<code>max_amount_usd</code> and <code>recipient_domain</code> Common Constraints,
+<a href="#common-constraints" class="auto internal xref">Section 5.2</a>).
 Like all <code>constraints</code>, they are committed by <code>authority_hash</code> and
 carried to the point of use, but they are evaluated against the
 concrete call arguments by a runtime enforcement layer, not at
@@ -2680,7 +2769,7 @@ through a messaging MCP server, derives:<a href="#section-5.4-4" class="pilcrow"
   { "type": "mission_resource_access",
     "resource": "https://finance.example.com/mcp",
     "actions": ["query_invoices", "post_adjustment"],
-    "constraints": { "max_amount_usd": 500 } },
+    "constraints": { "max_amount_usd": "500.00" } },
   { "type": "mission_resource_access",
     "resource": "https://mail.example.com/mcp",
     "actions": ["send_message"],
@@ -2766,7 +2855,10 @@ itself <span class="bcp14">MUST</span> be what is rendered and consented. An app
 that renders only the <code>goal</code>, <code>success_criteria</code>, or Mission Intent
 and not the derived Authority Set does not conform. When the Approver
 is not the Subject, the rendering <span class="bcp14">MUST</span> identify the Subject the
-authority is granted for.<a href="#section-6-3.3.1" class="pilcrow">¶</a></p>
+authority is granted for. When the Intent carried
+<code>proposed_authority</code> (<a href="#mission-intent" class="auto internal xref">Section 4</a>), the rendering <span class="bcp14">MUST</span>
+distinguish the entries the client proposed from any entry or
+broadening the AS added.<a href="#section-6-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-6-3.4">
           <p id="section-6-3.4.1">Compute the integrity anchors (<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>):
@@ -2784,16 +2876,27 @@ The AS <span class="bcp14">SHOULD</span> mitigate Unicode direction-override and
 confusable-character presentation in them. The rendering <span class="bcp14">MUST</span> visually
 distinguish the AS-derived Authority Set from client-supplied text, so
 crafted client text cannot pass as derived authority.<a href="#section-6-4" class="pilcrow">¶</a></p>
-<p id="section-6-5">An Approver who declines, and an Approver whose authentication cannot
-satisfy <code>context.acr</code>, yield <code>access_denied</code> on the authorization
+<p id="section-6-5">A deployment <span class="bcp14">MUST</span> declare a minimum approval-authentication strength
+for Missions whose derived Authority Set carries high-risk authority:
+irreversible, external-commitment, or privileged-administration
+actions under the deployment's classification, or a consumption bound
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). The approval
+authentication for such a Mission <span class="bcp14">MUST</span> meet that minimum, and
+<code>context.acr</code> can raise the required strength but never lower it below
+the floor. The material notices of the consent-evidence profile
+identify these same high-risk classes
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-6-5" class="pilcrow">¶</a></p>
+<p id="section-6-6">An Approver who declines, and an Approver whose authentication cannot
+satisfy <code>context.acr</code> or the declared approval-strength floor, yield
+<code>access_denied</code> on the authorization
 response (<span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>). A token-endpoint <code>resource</code> value outside the
-Authority Set yields <code>invalid_target</code> (<span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>).<a href="#section-6-5" class="pilcrow">¶</a></p>
-<p id="section-6-6">Rendering a bound is not the same as enforcing it, and a deployment <span class="bcp14">MUST NOT</span> let the rendering imply otherwise. Which party enforces each bound,
+Authority Set yields <code>invalid_target</code> (<span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>).<a href="#section-6-6" class="pilcrow">¶</a></p>
+<p id="section-6-7">Rendering a bound is not the same as enforcing it, and a deployment <span class="bcp14">MUST NOT</span> let the rendering imply otherwise. Which party enforces each bound,
 and what holds when that enforcer is absent, is summarized in the
 enforcement table (<a href="#mission-intent" class="auto internal xref">Section 4</a>). An AS <span class="bcp14">SHOULD</span> make clear
 to the Approver which rendered bounds its deployment actually enforces,
-so consent is not given to a limit that binds nowhere.<a href="#section-6-6" class="pilcrow">¶</a></p>
-<p id="section-6-7">The <code>authority_hash</code> is the <strong>authority commitment</strong>: it binds, by
+so consent is not given to a limit that binds nowhere.<a href="#section-6-7" class="pilcrow">¶</a></p>
+<p id="section-6-8">The <code>authority_hash</code> is the <strong>authority commitment</strong>: it binds, by
 cryptographic digest, exactly the authority the Approver approved. It
 commits the approved authority, not the way that authority was
 rendered to the Approver; this profile commits no separate consent
@@ -2805,13 +2908,13 @@ Mission carries this value (<a href="#mission-bound-tokens" class="auto internal
 holding the full Authority Set can verify a token's authority against
 what was approved. A party holding only a narrowed subset cannot
 recompute it and treats it as an audit anchor (see
-<a href="#consent-binding" class="auto internal xref">Section 15.1</a>).<a href="#section-6-7" class="pilcrow">¶</a></p>
-<p id="section-6-8">The <code>intent_hash</code> commits the <strong>approved Mission Intent</strong>: the
+<a href="#consent-binding" class="auto internal xref">Section 15.1</a>).<a href="#section-6-8" class="pilcrow">¶</a></p>
+<p id="section-6-9">The <code>intent_hash</code> commits the <strong>approved Mission Intent</strong>: the
 task the Approver consented to, as recorded on the Mission. It makes
 the recorded task tamper-evident: an auditor can verify the Mission's
 <code>mission_intent</code> against <code>intent_hash</code> and detect any later
 alteration. <code>intent_hash</code> commits the task; <code>authority_hash</code>
-commits the authority derived from it.<a href="#section-6-8" class="pilcrow">¶</a></p>
+commits the authority derived from it.<a href="#section-6-9" class="pilcrow">¶</a></p>
 <div id="grant-binding">
 <section id="section-6.1">
         <h3 id="name-binding-the-mission-to-the-">
@@ -2958,9 +3061,12 @@ the canonical form.<a href="#section-6.4-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.4-2.4">
             <p id="section-6.4-2.4.1">URI-valued members are compared byte-for-byte unless a member's
-definition specifies a normalization. This document defines none,
-so <code>resource</code> and every other URI <span class="bcp14">MUST</span> match exactly (this governs
-the <code>resource</code> equality test of <a href="#subset" class="auto internal xref">Section 5.1</a>).<a href="#section-6.4-2.4.1" class="pilcrow">¶</a></p>
+definition specifies a normalization. The only normalization this
+document defines is the RFC 3986 <span>[<a href="#RFC3986" class="cite xref">RFC3986</a>]</span> comparison of the
+resource-containment test (<a href="#subset" class="auto internal xref">Section 5.1</a>), which applies to that
+comparison alone: the default <code>resource</code> equality test of <a href="#subset" class="auto internal xref">Section 5.1</a>
+remains an exact match, and anchor computation is always byte-exact
+over the recorded values.<a href="#section-6.4-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-6.4-3">Test vectors for both anchors are provided in <a href="#test-vectors" class="auto internal xref">Appendix B</a>.<a href="#section-6.4-3" class="pilcrow">¶</a></p>
@@ -3131,7 +3237,7 @@ content. It <span class="bcp14">MUST NOT</span> be reused.<a href="#section-7.1-
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": 500 } }
+      "constraints": { "max_amount_usd": "500.00" } }
   ],
   "authority_hash":
     "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
@@ -3379,7 +3485,7 @@ members above remain authoritative.<a href="#section-8.1-3" class="pilcrow">¶</
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": 500 } }
+      "constraints": { "max_amount_usd": "500.00" } }
   ],
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "mission": {
@@ -3457,23 +3563,28 @@ member (<a href="#protected-resource-metadata" class="auto internal xref">Sectio
             <p id="section-8.2-2.8.1"><span class="bcp14">MAY</span> treat the <code>mission</code> claim as audit and correlation context.<a href="#section-8.2-2.8.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-8.2-2.9">
-            <p id="section-8.2-2.9.1"><span class="bcp14">MAY</span> recompute <code>authority_hash</code> (<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>); recomputation
+            <p id="section-8.2-2.9.1"><span class="bcp14">SHOULD</span>, when serving Mission-bound requests, log the <code>mission</code>
+claim's <code>id</code> and the token <code>jti</code> with each served request, so its
+access logs join to Mission evidence.<a href="#section-8.2-2.9.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-2.10">
+            <p id="section-8.2-2.10.1"><span class="bcp14">MAY</span> recompute <code>authority_hash</code> (<a href="#integrity-anchors" class="auto internal xref">Section 6.3</a>); recomputation
 is <span class="bcp14">OPTIONAL</span>. A Resource Server that performs it recomputes the anchor
 over the full Authority Set it independently holds, compares the
 result to <code>mission.authority_hash</code>, and <span class="bcp14">MUST</span> reject on mismatch. It
 additionally verifies that each carried <code>authorization_details</code> entry
 is a subset (<a href="#subset" class="auto internal xref">Section 5.1</a>) of that held set. A narrowed token matches by
 the subset test, never by hashing its carried entries: the anchor is
-computed only over the full Authority Set, so a Resource Server <span class="bcp14">MUST NOT</span> recompute it from a token's carried subset.<a href="#section-8.2-2.9.1" class="pilcrow">¶</a></p>
+computed only over the full Authority Set, so a Resource Server <span class="bcp14">MUST NOT</span> recompute it from a token's carried subset.<a href="#section-8.2-2.10.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-8.2-2.10">
-            <p id="section-8.2-2.10.1"><span class="bcp14">MAY</span>, where the AS offers it, introspect the token (<a href="#introspection" class="auto internal xref">Section 10</a>)
+          <li class="normal" id="section-8.2-2.11">
+            <p id="section-8.2-2.11.1"><span class="bcp14">MAY</span>, where the AS offers it, introspect the token (<a href="#introspection" class="auto internal xref">Section 10</a>)
 to observe the Mission's current state per request rather than
 relying on the token lifetime to bound revocation latency. An RS that
 introspects <span class="bcp14">MUST</span> still verify the token's sender-constraint (<code>cnf</code>)
 locally and <span class="bcp14">MUST NOT</span> treat an <code>active: true</code> result as proof the
 caller holds the bound key; the AS does not check possession at
-introspection (<a href="#introspection" class="auto internal xref">Section 10</a>).<a href="#section-8.2-2.10.1" class="pilcrow">¶</a></p>
+introspection (<a href="#introspection" class="auto internal xref">Section 10</a>).<a href="#section-8.2-2.11.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-8.2-3">A Mission-unaware Resource Server that authorizes only from <code>scope</code>
@@ -3786,7 +3897,7 @@ canonical Mission Status surface (keyed by <code>mission_id</code>) remains out 
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": 500 } }
+      "constraints": { "max_amount_usd": "500.00" } }
   ],
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
@@ -4642,7 +4753,8 @@ accepts only Mission-bound tokens.<a href="#section-17.6-2.2.1" class="pilcrow">
         </h3>
 <p id="section-17.7-1">This document creates no Common Constraints registry. The Common
 Constraints it defines (<code>max_amount_usd</code>, <code>issued_after</code>,
-<code>issued_before</code>) are specified in <a href="#common-constraints" class="auto internal xref">Section 5.2</a>, and a further
+<code>issued_before</code>, <code>tenant</code>, <code>recipient_domain</code>) are specified in
+<a href="#common-constraints" class="auto internal xref">Section 5.2</a>, and a further
 Common Constraint is defined by specification: it fixes a name matching
 <code>^[A-Za-z0-9_.:-]+$</code>, its JSON <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> value syntax, its subset
 rule, and its intersection rule, in value-space terms
@@ -4682,6 +4794,10 @@ does not create it.<a href="#section-17.7-2" class="pilcrow">¶</a></p>
 <dt id="RFC3339">[RFC3339]</dt>
         <dd>
 <span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC3986">[RFC3986]</dt>
+        <dd>
+<span class="refAuthor">Berners-Lee, T.</span>, <span class="refAuthor">Fielding, R.</span>, and <span class="refAuthor">L. Masinter</span>, <span class="refTitle">"Uniform Resource Identifier (URI): Generic Syntax"</span>, <span class="seriesInfo">STD 66</span>, <span class="seriesInfo">RFC 3986</span>, <span class="seriesInfo">DOI 10.17487/RFC3986</span>, <time datetime="2005-01" class="refDate">January 2005</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3986">https://www.rfc-editor.org/rfc/rfc3986</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC6234">[RFC6234]</dt>
         <dd>
@@ -4924,7 +5040,7 @@ and renders it for <code>alice</code>'s consent:<a href="#appendix-A.2-3" class=
   { "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
-    "constraints": { "max_amount_usd": 500 } }
+    "constraints": { "max_amount_usd": "500.00" } }
 ]
 </pre><a href="#appendix-A.2-4" class="pilcrow">¶</a>
 </div>
@@ -4971,7 +5087,7 @@ token response (<a href="#mission-bound-tokens" class="auto internal xref">Secti
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": 500 } }
+      "constraints": { "max_amount_usd": "500.00" } }
   ],
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "mission": {
@@ -5000,7 +5116,7 @@ this token dies at its own expiry (<a href="#revocation" class="auto internal xr
 token. The Resource Server validates the JWT and the <code>cnf</code> binding and
 enforces the <code>authorization_details</code> whose <code>resource</code> it serves,
 permitting <code>invoices.read</code> within the Q3 issuance window and
-<code>journal-entries.write</code> up to <code>max_amount_usd: 500</code>
+<code>journal-entries.write</code> up to <code>max_amount_usd: "500.00"</code>
 (<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>). It treats the <code>mission</code> claim as audit and
 correlation context and makes no call to the AS.<a href="#appendix-A.4-1" class="pilcrow">¶</a></p>
 <p id="appendix-A.4-2">This is stateless enforcement from the token alone.
@@ -5067,7 +5183,7 @@ intent_hash = sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E
   { "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
-    "constraints": { "max_amount_usd": 500 } }
+    "constraints": { "max_amount_usd": "500.00" } }
 ]
 </pre><a href="#appendix-B-8" class="pilcrow">¶</a>
 </div>
@@ -5077,13 +5193,13 @@ intent_hash = sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E
 {"iss":"https://as.example.com","typ":"mission-authority-set","value":[{
 "actions":["invoices.read"],"resource":"https://erp.example.com","type":
 "mission_resource_access"},{"actions":["journal-entries.write"],"constra
-ints":{"max_amount_usd":500},"resource":"https://erp.example.com","type"
-:"mission_resource_access"}]}
+ints":{"max_amount_usd":"500.00"},"resource":"https://erp.example.com","
+type":"mission_resource_access"}]}
 </pre><a href="#appendix-B-10" class="pilcrow">¶</a>
 </div>
 <div class="lang-text sourcecode" id="appendix-B-11">
 <pre>
-authority_hash = sha-256:-rBZZJ8tVIyGoR1tBg6BO6QG0kimVvef8vjigpoVuPw
+authority_hash = sha-256:H3xcKuSglGecACyY2qGQYunTGqIalyeXS1Qr0dCcgjs
 </pre><a href="#appendix-B-11" class="pilcrow">¶</a>
 </div>
 <p id="appendix-B-12">An implementation that canonicalizes the same <code>value</code> under the same

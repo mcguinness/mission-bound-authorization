@@ -2501,15 +2501,16 @@ lifecycle endpoint is the authoritative Mission state change.<a href="#section-5
         <h3 id="name-deferred-lifecycle-capabili">
 <a href="#section-5.9" class="section-number selfRef">5.9. </a><a href="#name-deferred-lifecycle-capabili" class="section-name selfRef">Deferred Lifecycle Capabilities</a>
         </h3>
-<p id="section-5.9-1">This endpoint operates on one Mission at a time. The following
-management capabilities are deferred to future work. Bulk lifecycle
-operations and Mission enumeration for incident response, such as
-revoking every Mission for a compromised Subject, client, or tenant,
-are not defined here. Approver transfer or re-anchoring, changing the
-party that anchors a Mission's consent, is not defined here.
-Administrative monotonic narrowing, such as shortening a Mission's
-<code>mission_expiry</code> or retiring a single Authority Set entry, is not
-defined here.<a href="#section-5.9-1" class="pilcrow">¶</a></p>
+<p id="section-5.9-1">This endpoint operates on one Mission at a time. Mission enumeration
+and bulk lifecycle operations for incident response, such as revoking
+every Mission for a compromised Subject, client, or tenant, are
+specified separately by Mission Management
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>; this document does
+not require them. The following capabilities remain deferred to future
+work. Approver transfer or re-anchoring, changing the party that
+anchors a Mission's consent, is not defined here. Administrative
+monotonic narrowing, such as shortening a Mission's <code>mission_expiry</code>
+or retiring a single Authority Set entry, is not defined here.<a href="#section-5.9-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3063,6 +3064,10 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-expansion</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-management">[I-D.draft-mcguinness-oauth-mission-management]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Management for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-management</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-management">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-management</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
         <dd>
