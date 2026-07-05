@@ -2043,6 +2043,17 @@ stopped, the harness <span class="bcp14">MUST</span> treat the child as still ru
 closed for any cached access that depends on it, mirroring the
 cancellation rule of the orchestration profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-orchestration" class="cite xref">I-D.draft-mcguinness-mission-orchestration</a>]</span>).<a href="#section-11.1-5" class="pilcrow">¶</a></p>
+<p id="section-11.1-6">Where the deployment authenticates agent instances
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>; for AI
+agents, <span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>), the harness
+<span class="bcp14">SHOULD</span> record the instance identifier (<code>agent_instance_id</code>, or the
+instance <code>sub</code>) in its Mission binding (<a href="#mission-binding" class="auto internal xref">Section 6</a>) and in
+sub-agent termination evidence, giving stop propagation and its
+evidence a which-runtime dimension: which concrete instance was asked
+to stop, and which confirmed. Sub-agent chains under the agent
+instance profile cannot shed identity, which strengthens the
+fail-closed rule above: an unconfirmed stop names the exact instance
+the harness treats as still running.<a href="#section-11.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2723,6 +2734,14 @@ Harness Evidence unless required for audit.<a href="#section-19-1" class="pilcro
 <dt id="I-D.draft-mcguinness-mission-orchestration">[I-D.draft-mcguinness-mission-orchestration]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Orchestration and Unwinding"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-orchestration</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-orchestration.html">https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-orchestration.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-ai-agent-instance">[I-D.draft-mcguinness-oauth-ai-agent-instance]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 AI Agent Instance Profile"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-ai-agent-instance-00</span>, <time datetime="2026-07-04" class="refDate">4 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-ai-agent-instance-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-ai-agent-instance-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-client-instance-assertion">[I-D.draft-mcguinness-oauth-client-instance-assertion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Instance Assertion"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-assertion-01</span>, <time datetime="2026-06-24" class="refDate">24 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
         <dd>

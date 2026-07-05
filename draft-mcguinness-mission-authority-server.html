@@ -2188,6 +2188,16 @@ tokens with no knowledge of Missions (<a href="#limitations" class="auto interna
 each PDP to the MAS with the Mission Join Assertion
 (<a href="#join-assertion" class="auto internal xref">Section 9</a>); that upgrade strengthens who verifies the join,
 not what the join can prove.<a href="#section-8-12" class="pilcrow">¶</a></p>
+<p id="section-8-13">Where the deployment's Authorization Server issues tokens under the
+client-instance-assertion profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>), the acting
+credential identifies a concrete runtime instance: the token's <code>act</code>
+entry carries the instance <code>sub</code> and an instance-specific <code>cnf</code> key.
+The PDP <span class="bcp14">SHOULD</span> include that instance in the join, so the client join
+binds (subject, client, instance) rather than (subject, client). This
+restores per-instance granularity behind a shared gateway <code>client_id</code>:
+the validated instance joins, not every workload in the <code>client_id</code>
+equivalence class.<a href="#section-8-13" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="join-assertion">
@@ -2319,13 +2329,22 @@ lifetime.<a href="#section-9.2-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-9.2-3">The endpoint returns HTTP 200 with a JSON object whose <code>assertion</code>
+<p id="section-9.2-3">When the introspected token carries instance identity
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>), the MAS
+<span class="bcp14">SHOULD</span> include the instance identifier in the <code>token</code> object: the
+<code>act</code> entry's <code>sub</code>, and the <code>agent_instance_id</code> where the agent
+profile (<span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>) is in use.
+Under that profile the <code>cnf</code> key the <code>jkt</code> thumbprint binds is
+instance-specific, never shared across a client's instances, so the
+assertion's token binding is materially stronger: it names one runtime
+instance, not any holder of a client-shared key.<a href="#section-9.2-3" class="pilcrow">¶</a></p>
+<p id="section-9.2-4">The endpoint returns HTTP 200 with a JSON object whose <code>assertion</code>
 member carries the JWT. Each minting is a join evidence event: the MAS
 records the Mission reference, the token digest and thumbprint, the
 authenticated caller, and the validity window, retained for the audit
-horizon.<a href="#section-9.2-3" class="pilcrow">¶</a></p>
-<p id="section-9.2-4">Example claims:<a href="#section-9.2-4" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-9.2-5">
+horizon.<a href="#section-9.2-4" class="pilcrow">¶</a></p>
+<p id="section-9.2-5">Example claims:<a href="#section-9.2-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-9.2-6">
 <pre>
 {
   "iss": "https://mas.example.com",
@@ -2342,7 +2361,7 @@ horizon.<a href="#section-9.2-3" class="pilcrow">¶</a></p>
   "iat": 1797840000,
   "exp": 1797841800
 }
-</pre><a href="#section-9.2-5" class="pilcrow">¶</a>
+</pre><a href="#section-9.2-6" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -2510,8 +2529,12 @@ to one directory subject), any credential in the equivalence class
 joins; a deployment <span class="bcp14">SHOULD</span> keep the mapping one-to-one for subjects
 that hold Missions and <span class="bcp14">MUST</span> document its granularity. The client join
 is coarse the same way where several workloads share one <code>client_id</code>:
-any of them joins. A second residual: two Missions held by the same
-subject and client are distinguished only by the PEP-supplied
+any of them joins. Client instance assertions
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>) are the
+standard fix: the join then binds the validated instance
+(<a href="#mission-join" class="auto internal xref">Section 8</a>), and this residual remains only for deployments
+without instance identity. A second residual: two Missions held by
+the same subject and client are distinguished only by the PEP-supplied
 reference, so a faulty or compromised PEP can attribute work to the
 wrong same-party Mission, bounded by that Mission's authority and
 visible in evidence.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
@@ -2802,6 +2825,14 @@ document requests no IANA action for it.<a href="#section-14.3-1" class="pilcrow
 <dt id="I-D.draft-mcguinness-mission-security-model">[I-D.draft-mcguinness-mission-security-model]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Security Model"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-security-model</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-security-model.html">https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-security-model.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-ai-agent-instance">[I-D.draft-mcguinness-oauth-ai-agent-instance]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 AI Agent Instance Profile"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-ai-agent-instance-00</span>, <time datetime="2026-07-04" class="refDate">4 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-ai-agent-instance-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-ai-agent-instance-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-client-instance-assertion">[I-D.draft-mcguinness-oauth-client-instance-assertion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Instance Assertion"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-assertion-01</span>, <time datetime="2026-06-24" class="refDate">24 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-approval">[I-D.draft-mcguinness-oauth-mission-approval]</dt>
         <dd>

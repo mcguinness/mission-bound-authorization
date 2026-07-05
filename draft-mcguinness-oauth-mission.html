@@ -4024,6 +4024,22 @@ derivation event; the AS <span class="bcp14">MUST</span> refuse it unless the Mi
 <code>active</code> (<a href="#lifecycle" class="auto internal xref">Section 9</a>).<a href="#section-11-4.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
+<p id="section-11-5">Where a deployment authenticates client instances
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>; for AI
+agents, its agent profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>), the delegate
+identified by the outermost <code>act</code> is the concrete instance: <code>act.sub</code>
+is the instance identifier and <code>act.cnf</code> is the instance-specific
+key. This profile's requirement that a delegated token be
+sender-constrained to the delegate's own key then lands on an
+instance-possessed key by construction. An <code>allowed_delegates</code>
+matcher can select instance-grade actors
+(<a href="#delegation-constraints" class="auto internal xref">Section 11.3</a>), for example
+<code>{ "sub_profile": "client_instance" }</code>. The <code>sub_profile</code> values
+used here (<code>ai_agent</code>, <code>client_instance</code>) are drawn from the
+entity-profiles vocabulary those instance profiles use; the Actor
+Profile <span>[<a href="#I-D.draft-mcguinness-oauth-actor-profile" class="cite xref">I-D.draft-mcguinness-oauth-actor-profile</a>]</span> remains the
+structural reference for the actor object.<a href="#section-11-5" class="pilcrow">¶</a></p>
 <div id="client-id-rebinding">
 <section id="section-11.1">
         <h3 id="name-design-alternative-rebindin">
@@ -4113,7 +4129,10 @@ modeled on the RFC 8693 <code>may_act</code> actor object (<span>[<a href="#RFC8
 matchers, generalized to actor-type classes. A <code>{ "sub": ... }</code>
 matcher permits a specific delegate by client identifier; a
 <code>{ "sub_profile": ... }</code> matcher permits any actor of that type (for
-example, <code>ai_agent</code>). A deployment can thus permit a specific client,
+example, <code>ai_agent</code>). An actor's <code>sub_profile</code> <span class="bcp14">MAY</span> carry multiple
+space-separated values; a <code>{ "sub_profile": ... }</code> matcher is
+satisfied when its value is among the actor's values. A deployment
+can thus permit a specific client,
 a class of actors, or both, and a delegate is permitted if it matches
 any entry. The AS <span class="bcp14">MUST</span> authenticate the delegate at the Token Exchange
 and assert the actor's <code>sub</code> and <code>sub_profile</code> itself. A self-asserted
@@ -4954,6 +4973,14 @@ does not create it.<a href="#section-17.7-2" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-runtime</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-ai-agent-instance">[I-D.draft-mcguinness-oauth-ai-agent-instance]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 AI Agent Instance Profile"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-ai-agent-instance-00</span>, <time datetime="2026-07-04" class="refDate">4 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-ai-agent-instance-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-ai-agent-instance-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-client-instance-assertion">[I-D.draft-mcguinness-oauth-client-instance-assertion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Instance Assertion"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-assertion-01</span>, <time datetime="2026-06-24" class="refDate">24 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
         <dd>

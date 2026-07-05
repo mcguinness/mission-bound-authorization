@@ -651,6 +651,18 @@ Table of Contents
    cancellation rule of the orchestration profile
    ([I-D.draft-mcguinness-mission-orchestration]).
 
+   Where the deployment authenticates agent instances
+   ([I-D.draft-mcguinness-oauth-client-instance-assertion]; for AI
+   agents, [I-D.draft-mcguinness-oauth-ai-agent-instance]), the harness
+   SHOULD record the instance identifier (agent_instance_id, or the
+   instance sub) in its Mission binding (Section 6) and in sub-agent
+   termination evidence, giving stop propagation and its evidence a
+   which-runtime dimension: which concrete instance was asked to stop,
+   and which confirmed.  Sub-agent chains under the agent instance
+   profile cannot shed identity, which strengthens the fail-closed rule
+   above: an unconfirmed stop names the exact instance the harness
+   treats as still running.
+
 12.  Harness Execution States
 
    A governed work item is in one of the following harness execution
@@ -1122,6 +1134,20 @@ Table of Contents
               mission-orchestration, 2026,
               <https://mcguinness.github.io/draft-mcguinness-oauth-
               mission/draft-mcguinness-mission-orchestration.html>.
+
+   [I-D.draft-mcguinness-oauth-ai-agent-instance]
+              McGuinness, K., "OAuth 2.0 AI Agent Instance Profile",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              ai-agent-instance-00, 4 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-ai-agent-instance-00>.
+
+   [I-D.draft-mcguinness-oauth-client-instance-assertion]
+              McGuinness, K., "OAuth 2.0 Client Instance Assertion",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              client-instance-assertion-01, 24 June 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-client-instance-assertion-01>.
 
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",

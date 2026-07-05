@@ -198,7 +198,13 @@ Table of Contents
    Agent (client):  Proposes the Mission Intent and executes the task;
       in the OAuth binding it holds derived Mission-bound tokens;
       outside the trusted base and assumed compromisable
-      ([I-D.draft-mcguinness-oauth-mission]).
+      ([I-D.draft-mcguinness-oauth-mission]).  A deployment may
+      authenticate concrete agent instances under the client-instance-
+      assertion profile and its AI-agent profile
+      ([I-D.draft-mcguinness-oauth-client-instance-assertion],
+      [I-D.draft-mcguinness-oauth-ai-agent-instance]), which sharpens
+      delegation chains, joins, and evidence attribution to instance
+      granularity without touching the Mission model.
 
    Subject:  The user or system on whose behalf the Mission is approved,
       an (iss, sub) pair recorded immutably at approval (the core).
@@ -885,6 +891,20 @@ Table of Contents
               substrate, 2026, <https://mcguinness.github.io/draft-
               mcguinness-oauth-mission/draft-mcguinness-mission-
               substrate.html>.
+
+   [I-D.draft-mcguinness-oauth-ai-agent-instance]
+              McGuinness, K., "OAuth 2.0 AI Agent Instance Profile",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              ai-agent-instance-00, 4 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-ai-agent-instance-00>.
+
+   [I-D.draft-mcguinness-oauth-client-instance-assertion]
+              McGuinness, K., "OAuth 2.0 Client Instance Assertion",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              client-instance-assertion-01, 24 June 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-client-instance-assertion-01>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth

@@ -315,6 +315,16 @@ Table of Contents
       Authorization Server fails closed when it cannot determine the
       event status ([I-D.draft-mcguinness-oauth-mission-completion]).
 
+   Instance identity is identity substrate, like agent identity
+   generally.  The instance issuer or agent attester that mints instance
+   assertions ([I-D.draft-mcguinness-oauth-client-instance-assertion],
+   [I-D.draft-mcguinness-oauth-ai-agent-instance]) sits outside this
+   model's trusted base, and its compromise forges actor attribution
+   (who executed) without forging Mission authority (what was approved).
+   A deployment that relies on instance-grade joins or instance-
+   attributed evidence extends its documented trust statement
+   (Section 11) to that issuer.
+
 7.  Cross-Cutting Assumptions
 
    Three assumptions hold across the whole model:
@@ -666,6 +676,20 @@ Table of Contents
               runtime, 2026, <https://mcguinness.github.io/draft-
               mcguinness-oauth-mission/draft-mcguinness-mission-
               runtime.html>.
+
+   [I-D.draft-mcguinness-oauth-ai-agent-instance]
+              McGuinness, K., "OAuth 2.0 AI Agent Instance Profile",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              ai-agent-instance-00, 4 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-ai-agent-instance-00>.
+
+   [I-D.draft-mcguinness-oauth-client-instance-assertion]
+              McGuinness, K., "OAuth 2.0 Client Instance Assertion",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              client-instance-assertion-01, 24 June 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-client-instance-assertion-01>.
 
    [I-D.draft-mcguinness-oauth-mission-approval]
               McGuinness, K., "Mission Deferred Approval for OAuth 2.0",

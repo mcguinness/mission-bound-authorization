@@ -2015,25 +2015,35 @@ holds a usable credential for that class. Mediated execution depends on
 the agent having no unmediated path to the resource; a Mission-aware
 harness establishes that execution environment
 (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-4.6-5" class="pilcrow">¶</a></p>
-<p id="section-4.6-6">This narrows, and does not eliminate, the compromised-agent exposure.
+<p id="section-4.6-6">Where the deployment issues tokens under the client-instance-assertion
+profile (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>),
+the sender-constraint key is instance-specific: that profile forbids a
+key shared across a client's instances. Mediated custody composes with
+that rule in either of two shapes. The mediating PEP holds
+per-instance keys, taking custody of each instance's key rather than
+one shared key; or the mediating PEP is itself the attested instance
+that obtained the token, presenting the instance assertion and holding
+the instance key. In both shapes that profile's no-shared-key rule and
+this section's custody rules are satisfied together.<a href="#section-4.6-6" class="pilcrow">¶</a></p>
+<p id="section-4.6-7">This narrows, and does not eliminate, the compromised-agent exposure.
 The mediating PEP becomes a trusted component whose compromise is
 out of scope here (<a href="#security-considerations" class="auto internal xref">Section 14</a>); a compromised agent can
 still request mediated actions, which are gated, and can still misuse
 any low-consequence authority it legitimately holds directly. The aim is
 that the agent is structurally unable to take a high-consequence action
-unilaterally, not that the agent is trusted.<a href="#section-4.6-6" class="pilcrow">¶</a></p>
-<p id="section-4.6-7">The set of action classes a deployment mediates is the load-bearing
+unilaterally, not that the agent is trusted.<a href="#section-4.6-7" class="pilcrow">¶</a></p>
+<p id="section-4.6-8">The set of action classes a deployment mediates is the load-bearing
 parameter here: a deployment that mediates nothing gains nothing from
 this section, however it labels itself. A deployment that relies on this
 profile to protect against agent compromise therefore <span class="bcp14">MUST</span> include the
 high-consequence classes in its mediated set; the protection is only as
-broad as that set.<a href="#section-4.6-7" class="pilcrow">¶</a></p>
-<p id="section-4.6-8">Custody has a lifecycle. A deployment <span class="bcp14">SHOULD</span> prefer per-class
+broad as that set.<a href="#section-4.6-8" class="pilcrow">¶</a></p>
+<p id="section-4.6-9">Custody has a lifecycle. A deployment <span class="bcp14">SHOULD</span> prefer per-class
 credentials with distinct <code>cnf</code> keys over sharing one key across
 mediating PEPs, so that compromise of one mediating PEP does not expose
 the authority of another. On compromise of a mediating PEP's key, the
 deployment revokes the affected tokens and re-derives. Mediating-PEP
-key rotation follows the deployment's published key set.<a href="#section-4.6-8" class="pilcrow">¶</a></p>
+key rotation follows the deployment's published key set.<a href="#section-4.6-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="compromise-resistant">
@@ -3294,6 +3304,10 @@ any decision-API wire members are defined by the binding
 <dt id="I-D.draft-mcguinness-mission-metering">[I-D.draft-mcguinness-mission-metering]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consumption Metering"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-metering</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-metering.html">https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-metering.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-client-instance-assertion">[I-D.draft-mcguinness-oauth-client-instance-assertion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Instance Assertion"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-assertion-01</span>, <time datetime="2026-06-24" class="refDate">24 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
         <dd>

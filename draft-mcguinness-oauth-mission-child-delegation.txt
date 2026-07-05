@@ -294,6 +294,16 @@ Table of Contents
          example, ai_agent), matched against the parent entry's
          allowed_child_actors (Section 9).
 
+      A child_actor MAY be identified at instance granularity where the
+      deployment authenticates client instances
+      ([I-D.draft-mcguinness-oauth-client-instance-assertion]; for AI
+      agents, [I-D.draft-mcguinness-oauth-ai-agent-instance]): sub
+      carries the instance identifier and sub_profile the space-
+      separated value list (for example, ai_agent client_instance).  The
+      child client-identity rule (Section 6.1), under which child
+      credentials never transit the parent, composes naturally with
+      instance-specific keys.
+
    The Mission Issuer MUST resolve the parent from parent_token, verify
    that it matches parent, verify that the parent is active, and verify
    that the applicable parent Authority Set entry's delegation member
@@ -649,7 +659,10 @@ Table of Contents
          the same form as the core's allowed_delegates
          ([I-D.draft-mcguinness-oauth-mission]), constraining which
          actors or actor classes may receive a Child Mission from this
-         entry.
+         entry.  Matchers are evaluated under the core's
+         allowed_delegates matching rules, including the rule that a {
+         "sub_profile": ... } matcher is satisfied when its value is
+         among the actor's space-separated sub_profile values.
 
       max_child_depth:  OPTIONAL.  A positive integer, default 1.  The
          maximum child-generation depth at which this entry may be
@@ -1121,6 +1134,20 @@ Table of Contents
               harness, 2026, <https://mcguinness.github.io/draft-
               mcguinness-oauth-mission/draft-mcguinness-mission-
               harness.html>.
+
+   [I-D.draft-mcguinness-oauth-ai-agent-instance]
+              McGuinness, K., "OAuth 2.0 AI Agent Instance Profile",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              ai-agent-instance-00, 4 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-ai-agent-instance-00>.
+
+   [I-D.draft-mcguinness-oauth-client-instance-assertion]
+              McGuinness, K., "OAuth 2.0 Client Instance Assertion",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              client-instance-assertion-01, 24 June 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-client-instance-assertion-01>.
 
    [I-D.draft-mcguinness-oauth-mission-attenuation]
               McGuinness, K., "Mission Offline Attenuation for OAuth

@@ -648,6 +648,18 @@ Table of Contents
    resource; a Mission-aware harness establishes that execution
    environment ([I-D.draft-mcguinness-mission-harness]).
 
+   Where the deployment issues tokens under the client-instance-
+   assertion profile
+   ([I-D.draft-mcguinness-oauth-client-instance-assertion]), the sender-
+   constraint key is instance-specific: that profile forbids a key
+   shared across a client's instances.  Mediated custody composes with
+   that rule in either of two shapes.  The mediating PEP holds per-
+   instance keys, taking custody of each instance's key rather than one
+   shared key; or the mediating PEP is itself the attested instance that
+   obtained the token, presenting the instance assertion and holding the
+   instance key.  In both shapes that profile's no-shared-key rule and
+   this section's custody rules are satisfied together.
+
    This narrows, and does not eliminate, the compromised-agent exposure.
    The mediating PEP becomes a trusted component whose compromise is out
    of scope here (Section 14); a compromised agent can still request
@@ -1735,6 +1747,13 @@ Table of Contents
               metering, 2026, <https://mcguinness.github.io/draft-
               mcguinness-oauth-mission/draft-mcguinness-mission-
               metering.html>.
+
+   [I-D.draft-mcguinness-oauth-client-instance-assertion]
+              McGuinness, K., "OAuth 2.0 Client Instance Assertion",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              client-instance-assertion-01, 24 June 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-client-instance-assertion-01>.
 
    [I-D.draft-mcguinness-oauth-mission-consent-evidence]
               McGuinness, K., "Mission Consent Evidence for OAuth 2.0",

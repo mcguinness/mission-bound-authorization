@@ -433,6 +433,16 @@ Table of Contents
    profile, and provenance is recorded in dedicated evidence fields
    where the deployment captures it.
 
+   Where tokens carry instance identity
+   ([I-D.draft-mcguinness-oauth-client-instance-assertion]), the act
+   entry this projection already copies carries the instance identifier
+   and, under the agent profile
+   ([I-D.draft-mcguinness-oauth-ai-agent-instance]), issuer-minted
+   provenance such as agent_instance_id and agent_model.  Fleet
+   deployments therefore get which-instance-acted attribution in
+   Decision Evidence and, through the decision_id link, in Execution
+   Evidence, without new members.
+
 5.4.  Credential Decision Context
 
    The credential member carries token-derived facts the PEP has already
@@ -2014,6 +2024,20 @@ Table of Contents
               metering, 2026, <https://mcguinness.github.io/draft-
               mcguinness-oauth-mission/draft-mcguinness-mission-
               metering.html>.
+
+   [I-D.draft-mcguinness-oauth-ai-agent-instance]
+              McGuinness, K., "OAuth 2.0 AI Agent Instance Profile",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              ai-agent-instance-00, 4 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-ai-agent-instance-00>.
+
+   [I-D.draft-mcguinness-oauth-client-instance-assertion]
+              McGuinness, K., "OAuth 2.0 Client Instance Assertion",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              client-instance-assertion-01, 24 June 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-client-instance-assertion-01>.
 
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", Work in

@@ -2254,6 +2254,22 @@ Table of Contents
       derivation event; the AS MUST refuse it unless the Mission is
       active (Section 9).
 
+   Where a deployment authenticates client instances
+   ([I-D.draft-mcguinness-oauth-client-instance-assertion]; for AI
+   agents, its agent profile
+   [I-D.draft-mcguinness-oauth-ai-agent-instance]), the delegate
+   identified by the outermost act is the concrete instance: act.sub is
+   the instance identifier and act.cnf is the instance-specific key.
+   This profile's requirement that a delegated token be sender-
+   constrained to the delegate's own key then lands on an instance-
+   possessed key by construction.  An allowed_delegates matcher can
+   select instance-grade actors (Section 11.3), for example {
+   "sub_profile": "client_instance" }. The sub_profile values used here
+   (ai_agent, client_instance) are drawn from the entity-profiles
+   vocabulary those instance profiles use; the Actor Profile
+   [I-D.draft-mcguinness-oauth-actor-profile] remains the structural
+   reference for the actor object.
+
 11.1.  Design Alternative: Rebinding client_id to the Delegate
 
    A rejected alternative rebinds client_id to the immediate delegate on
@@ -2331,12 +2347,15 @@ Table of Contents
    matchers, generalized to actor-type classes.  A { "sub": ... }
    matcher permits a specific delegate by client identifier; a {
    "sub_profile": ... } matcher permits any actor of that type (for
-   example, ai_agent).  A deployment can thus permit a specific client,
-   a class of actors, or both, and a delegate is permitted if it matches
-   any entry.  The AS MUST authenticate the delegate at the Token
-   Exchange and assert the actor's sub and sub_profile itself.  A self-
-   asserted sub_profile MUST NOT satisfy a matcher; otherwise a client
-   could claim any actor type to bypass the constraint.
+   example, ai_agent).  An actor's sub_profile MAY carry multiple space-
+   separated values; a { "sub_profile": ... } matcher is satisfied when
+   its value is among the actor's values.  A deployment can thus permit
+   a specific client, a class of actors, or both, and a delegate is
+   permitted if it matches any entry.  The AS MUST authenticate the
+   delegate at the Token Exchange and assert the actor's sub and
+   sub_profile itself.  A self-asserted sub_profile MUST NOT satisfy a
+   matcher; otherwise a client could claim any actor type to bypass the
+   constraint.
 
    A { "sub": ... } matcher is a client identifier in the issuing AS's
    namespace and is not portable across a trust domain; how a Resource
@@ -3035,6 +3054,20 @@ Table of Contents
               runtime, 2026, <https://mcguinness.github.io/draft-
               mcguinness-oauth-mission/draft-mcguinness-mission-
               runtime.html>.
+
+   [I-D.draft-mcguinness-oauth-ai-agent-instance]
+              McGuinness, K., "OAuth 2.0 AI Agent Instance Profile",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              ai-agent-instance-00, 4 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-ai-agent-instance-00>.
+
+   [I-D.draft-mcguinness-oauth-client-instance-assertion]
+              McGuinness, K., "OAuth 2.0 Client Instance Assertion",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              client-instance-assertion-01, 24 June 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-client-instance-assertion-01>.
 
    [I-D.draft-mcguinness-oauth-mission-consent-evidence]
               McGuinness, K., "Mission Consent Evidence for OAuth 2.0",

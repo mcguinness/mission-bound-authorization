@@ -1555,6 +1555,15 @@ own namespace.<a href="#section-6-2.8.2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 </dl>
+<p id="section-6-2.8.3">A <code>child_actor</code> <span class="bcp14">MAY</span> be identified at instance granularity where the
+deployment authenticates client instances
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>; for AI
+agents, <span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>): <code>sub</code>
+carries the instance identifier and <code>sub_profile</code> the
+space-separated value list (for example,
+<code>ai_agent client_instance</code>). The child client-identity rule
+(<a href="#child-client-identity" class="auto internal xref">Section 6.1</a>), under which child credentials never
+transit the parent, composes naturally with instance-specific keys.<a href="#section-6-2.8.3" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2054,7 +2063,10 @@ Mission.<a href="#section-9-2.2.2.2.1" class="pilcrow">¶</a></p>
               <p id="section-9-2.2.2.4.1"><span class="bcp14">OPTIONAL</span>. An array of matcher objects of the same form as the core's
 <code>allowed_delegates</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
 constraining which actors or actor classes may receive a Child
-Mission from this entry.<a href="#section-9-2.2.2.4.1" class="pilcrow">¶</a></p>
+Mission from this entry. Matchers are evaluated under the core's
+<code>allowed_delegates</code> matching rules, including the rule that a
+<code>{ "sub_profile": ... }</code> matcher is satisfied when its value is
+among the actor's space-separated <code>sub_profile</code> values.<a href="#section-9-2.2.2.4.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
 <dt id="section-9-2.2.2.5">
@@ -2700,6 +2712,14 @@ Delegation Denial Reason" registry with a Specification Required
 <dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-harness</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-harness.html">https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-harness.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-ai-agent-instance">[I-D.draft-mcguinness-oauth-ai-agent-instance]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 AI Agent Instance Profile"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-ai-agent-instance-00</span>, <time datetime="2026-07-04" class="refDate">4 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-ai-agent-instance-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-ai-agent-instance-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-client-instance-assertion">[I-D.draft-mcguinness-oauth-client-instance-assertion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Instance Assertion"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-assertion-01</span>, <time datetime="2026-06-24" class="refDate">24 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-attenuation">[I-D.draft-mcguinness-oauth-mission-attenuation]</dt>
         <dd>
