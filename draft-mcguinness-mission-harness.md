@@ -255,9 +255,10 @@ The harness MUST publish an execution-environment scope statement. For
 each mediated action class it states the isolation mechanism that
 confines governed work (for example a container, virtual machine, or
 network egress policy) and names the unmediated paths excluded from the
-claim. Verifying that no unmediated path exists is a deployment audit
-obligation, not a protocol property: this profile fixes what the
-statement declares, not how a deployment proves it.
+claim. The statement also declares the deployment's taint policy
+({{session-taint}}). Verifying that no unmediated path exists is a
+deployment audit obligation, not a protocol property: this profile
+fixes what the statement declares, not how a deployment proves it.
 
 # Mission Binding {#mission-binding}
 
@@ -712,35 +713,57 @@ A prompt-injected agent is constrained at the point of use by the
 runtime layer, which gates each action against the Mission
 ({{I-D.draft-mcguinness-mission-runtime}}). The runtime layer
 evaluates each action in isolation; it does not see the session as a
-whole. The harness does: it already tracks session and task-graph
-history against Mission state. That makes the harness the one layer that
-can apply a session-level rule against the case where untrusted content
-drives an agent to exfiltrate within its authority.
+whole. The harness does: it mediates tool input and output and tracks
+session and task-graph history against Mission state. That makes the
+harness the one layer that can apply a taint rule against the case
+where untrusted content drives an agent to exfiltrate within its
+authority.
 
-A governed session is **tainted** once content the harness did not
-obtain from the Subject, the Approver, or a source the deployment trusts
-enters it: a fetched document, a tool result, an inbound message, or
-similar attacker-influenceable input. A Mission-aware harness SHOULD
-track taint per governed session.
+Taint is classed by source. Content from the Subject or the Approver
+does not taint; the deployment's **content trust list** extends that
+baseline to the sources it vouches for, such as first-party tools, its
+own catalogs, and designated corpora. Content from an unlisted source,
+or from a source the deployment explicitly marks untrusted (web
+fetches, inbound messages, third-party documents), is **tainted**.
 
-Once a session is tainted, before a consequential external-communication
-or external-commitment action, a Mission-aware harness SHOULD either
-require a fresh action-bound approval
-({{I-D.draft-mcguinness-mission-runtime}}) or downgrade that
-authority for the session (suppress the action), rather than let the
-agent egress on the strength of injected content. This is the
-plan-then-execute pattern: untrusted content may inform the agent's
-planning, but it MUST NOT, on its own, drive an egress the Subject did
-not direct.
+The trigger is parameter provenance where the harness can establish
+it. Because the harness mediates tool input and output, it SHOULD
+track at the data plane which tainted source a value derives from. The
+egress rule below then applies when a bound parameter of a
+consequential external-communication or external-commitment action
+derives from tainted content. Session-level taint remains the
+fallback where provenance is unavailable: the harness applies the rule
+to every such action in a governed session that tainted content has
+entered.
 
-This is a coarse session-level control, not information-flow control. It
-does not track which specific datum reached which action, so it cannot
-close within-scope data laundering
+The rule: the harness SHOULD either require a fresh action-bound
+approval ({{I-D.draft-mcguinness-mission-runtime}}) or downgrade that
+authority (suppress the action), rather than let the agent egress on
+the strength of injected content. This is the plan-then-execute
+pattern: untrusted content may inform the agent's planning, but it
+MUST NOT, on its own, drive an egress the Subject did not direct.
+
+The taint policy MUST be declared in the execution-environment scope
+statement ({{mediated-egress}}): the content trust list, the trigger
+granularity (parameter provenance, session-level, or both), and the
+fallback where provenance is unavailable. The claim is then
+inspectable: an auditor reads what taints, what triggers, and what
+happens when tracking runs out.
+
+This remains a coarse control, not information-flow control, though
+source classing and parameter provenance give it discriminating power:
+it gates the egress whose inputs derive from untrusted content and
+leaves trusted-provenance egress ungated, instead of gating every
+egress in any session any content entered. Data-plane provenance does
+not survive model inference, so a value the agent paraphrases rather
+than copies can shed its taint, and the control cannot close
+within-scope data laundering
 ({{I-D.draft-mcguinness-oauth-mission}},
 {{I-D.draft-mcguinness-mission-runtime}}); it raises the bar by
-forcing a human or a fresh approval between untrusted input and egress.
-A harness that applies it records the taint and the resulting downgrade
-or approval in Harness Evidence ({{harness-evidence}}).
+forcing a human or a fresh approval between untrusted input and
+egress. A harness that applies it records the taint source class, the
+provenance where established, and the resulting downgrade or approval
+in Harness Evidence ({{harness-evidence}}).
 
 # Harness Evidence {#harness-evidence}
 
@@ -876,14 +899,20 @@ session was fully recoverable; the authority that justified it was gone,
 and the harness let the Mission, not the session, decide.
 
 Earlier, while still active, the agent fetched a vendor email into its
-working context to extract an invoice number. That email is untrusted
-content, so the session is now tainted ({{session-taint}}). When the
-agent, steered by text in that email, tries to send an external message,
-the harness does not let the egress proceed on the strength of the
-fetched content: it requires a fresh action-bound approval first. The
-runtime layer would gate the call against the Mission regardless; the
-harness adds the session-level rule that untrusted input cannot, by
-itself, drive an egress `alice` never directed.
+working context to extract an invoice number. Inbound mail is not on
+the deployment's content trust list, so the harness marks the fetched
+text tainted and tracks what derives from it ({{session-taint}}). Two
+egress attempts follow. The agent posts a journal entry whose amount
+and invoice reference derive from ERP records; the ERP connector is a
+first-party tool on the trust list, so no bound parameter carries
+taint, and the posting proceeds under the ordinary runtime gate. Then
+the agent, steered by text in the email, tries to send an external
+message whose body derives from that text: the bound parameters carry
+tainted provenance, so the harness requires a fresh action-bound
+approval before the egress. The runtime layer would gate both calls
+against the Mission regardless; the harness adds the rule that
+untrusted input cannot, by itself, drive an egress `alice` never
+directed.
 
 # Conformance {#conformance}
 

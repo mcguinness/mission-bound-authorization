@@ -269,6 +269,7 @@ record as part of the Mission's feed.
 |---|---|---|---|
 | Approval event | Mission record at creation, `state` excluded, canonicalized | `application/mission-approval-record+json` | `origin` |
 | Lifecycle transition | Signals SET as issued; else {{transition-object}} (JCS) | `application/secevent+jwt`, else `application/mission-lifecycle-transition+json` | `origin` |
+| Derivation record | {{derivation-record}} (JCS) | `application/mission-derivation-record+json` | `origin` |
 | Consent evidence | retained signed object, as issued | `application/mission-consent-evidence+json` | `origin` |
 | Decision evidence | Decision Evidence object, as issued | `application/mission-decision-evidence+json` | PDP key |
 | Execution evidence | Execution Evidence object, as issued | `application/mission-execution-evidence+json` | PEP key |
@@ -290,13 +291,15 @@ in the deployment-published key sets the runtime and AuthZEN profiles
 require ({{I-D.draft-mcguinness-mission-runtime}},
 {{I-D.draft-mcguinness-mission-authzen}}).
 
-The approval event and the lifecycle-transition object are canonicalized
+The approval event, the lifecycle-transition object, and the
+derivation record are canonicalized
 under the issuance profile's canonicalization rules
 ({{I-D.draft-mcguinness-oauth-mission}}); an already-signed object (the
 consent, decision, and execution evidence, the Signals SET, and the
 Mandate) is
-hashed as issued, not re-canonicalized. The approval-event and
-lifecycle-transition media types are defined by this profile ({{iana}});
+hashed as issued, not re-canonicalized. The approval-event,
+lifecycle-transition, and derivation-record media types are defined by
+this profile ({{iana}});
 the consent, decision, and execution evidence types are registered by
 the profiles that define those objects
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}},
@@ -363,6 +366,92 @@ protected header ({{hash-commitment}}, {{feed}}):
 }
 ~~~
 
+### The Derivation Record {#derivation-record}
+
+The family's evidence runs from the approval to the enforced action,
+but the derivation event between them, the `origin` issuing a token
+under the Mission ({{I-D.draft-mcguinness-oauth-mission}}), is
+otherwise visible only in Authorization Server logs no profile
+mandates. A derivation record closes that gap: it commits which token
+was issued, to which audience, carrying which entries, under which
+Mission.
+
+A derivation record is a JSON object with these members,
+JCS-canonicalized {{RFC8785}}:
+
+- `mission_id` (string, required): the Mission `id`.
+- `origin` (string, required): the Mission `origin`.
+- `token_digest` (string, required): a digest in the issuance
+  profile's encoded form ({{I-D.draft-mcguinness-oauth-mission}}),
+  over the UTF-8 bytes of the issued token's JWS Compact
+  Serialization, or of the token's `jti` where the deployment retains
+  no token bytes.
+- `aud` (string, required): the audience the token was issued for.
+- `entries_digest` (string, required): the integrity-anchor envelope
+  digest ({{I-D.draft-mcguinness-oauth-mission}}) over the issued
+  `authorization_details` array, with `typ`
+  `mission-derivation-entries` and `iss` the `origin`.
+- `actor` (string, optional): the delegate's `sub`, present when the
+  derivation was a delegation.
+- `issued_at` (string, required): an RFC 3339 {{RFC3339}} date-time at
+  which the token was issued.
+
+Its media type is `application/mission-derivation-record+json`
+({{iana}}), and its authoritative producer is the `origin`: the Signed
+Statement's `iss` MUST equal the Mission `origin`
+({{evidence-types}}).
+
+#### Computed Example {#derivation-vector}
+
+For Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`, the origin issues
+a token for audience `https://erp.example.com`, narrowed to the write
+entry, with `jti` `at_5v9Kq2mR7xW4nP8sL1zT6`. The issued
+`authorization_details`:
+
+~~~ json
+[
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["journal-entries.write"],
+    "constraints": { "max_amount_usd": "500.00" } }
+]
+~~~
+
+`entries_digest` is the integrity-anchor envelope digest over that
+array with `typ` `mission-derivation-entries` and `iss`
+`https://as.example.com`; `token_digest` is over the UTF-8 bytes of
+the `jti`. The derivation was not a delegation, so `actor` is absent.
+The record:
+
+~~~ json
+{
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "origin": "https://as.example.com",
+  "token_digest":
+    "sha-256:V1Wbh4Z3wK39B_YmzHlvkGr7hEA1rUoJMuj00y0q-eE",
+  "aud": "https://erp.example.com",
+  "entries_digest":
+    "sha-256:z8NZZchM248xmpIbN_nSJ_eH9i3mM5_4xjZzSuoHq-U",
+  "issued_at": "2026-10-15T14:32:12Z"
+}
+~~~
+
+Its JCS canonical bytes (one line; breaks are for display only):
+
+~~~ text
+{"aud":"https://erp.example.com","entries_digest":"sha-256:z8NZZc
+hM248xmpIbN_nSJ_eH9i3mM5_4xjZzSuoHq-U","issued_at":"2026-10-15T14
+:32:12Z","mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","ori
+gin":"https://as.example.com","token_digest":"sha-256:V1Wbh4Z3wK3
+9B_YmzHlvkGr7hEA1rUoJMuj00y0q-eE"}
+~~~
+
+The committed digest is the SHA-256 of those bytes; its base64url
+form is `eg-h1Y4d1qhMb-9OIzXty16A6IXAKU2PiaTnJNz1SxA`. The Signed
+Statement carries the digest bytes inline as its payload, with
+`preimage-content-type` `application/mission-derivation-record+json`
+and the same `iss` and `sub` as {{transition-vector}}.
+
 ## Registration Policy and Authoritative Producers {#registration-policy}
 
 Each evidence type has one authoritative producer ({{evidence-types}}).
@@ -423,6 +512,12 @@ governance-critical records: the approval event and every Mission
 lifecycle transition. It SHOULD also register the runtime decision and
 execution evidence for the action classes it enforces, so the action
 trail is transparent and not only the governance trail.
+
+An origin deploying this profile SHOULD register a derivation record
+({{derivation-record}}) for each derivation event. The derivation is
+where approval becomes an issued token, and the family's evidence
+otherwise leaves that step to Authorization Server logs no profile
+mandates; registering it closes the approval-to-action gap.
 
 # The Mission as Subject {#feed}
 
@@ -567,7 +662,9 @@ and returns a Receipt, a COSE_Sign1 with an inclusion proof in its
 unprotected header, which the Mission Issuer keeps with the evidence as a
 Transparent Statement.
 
-As the Mission proceeds, its other producers write to the same `sub`: the
+As the Mission proceeds, its other producers write to the same `sub`:
+the Mission Issuer registers a derivation record when it derives the
+agent's token ({{derivation-record}}), the
 PDP registers a decision-evidence commitment when it permits the
 `journal-entries.write`, and the Mission Issuer registers a
 lifecycle-change commitment when `alice` later completes the Mission.
@@ -579,8 +676,9 @@ sub = https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 
   #1  approval-event        iss=as.example.com    t0
   #2  consent-evidence      iss=as.example.com    t0
-  #3  decision-evidence     iss=pdp.example.com   t0+6h
-  #4  lifecycle: completed  iss=as.example.com    t0+6h
+  #3  derivation-record     iss=as.example.com    t0
+  #4  decision-evidence     iss=pdp.example.com   t0+6h
+  #5  lifecycle: completed  iss=as.example.com    t0+6h
 ~~~
 
 A compliance auditor in another domain, holding none of these
@@ -705,11 +803,13 @@ gap rather than a silent one.
 
 # IANA Considerations {#iana}
 
-This document defines two media types for the evidence types of
+This document defines three media types for the evidence types of
 {{evidence-types}} that no other profile defines:
 `application/mission-approval-record+json` for the approval-event record,
-and `application/mission-lifecycle-transition+json` for the minimal
-lifecycle-transition object ({{transition-object}}). This document makes
+`application/mission-lifecycle-transition+json` for the minimal
+lifecycle-transition object ({{transition-object}}), and
+`application/mission-derivation-record+json` for the derivation record
+({{derivation-record}}). This document makes
 no registration request for them yet; registration is deferred pending a
 demonstrated cross-domain interoperability need, and deployments using
 these media types do so by local agreement until then.

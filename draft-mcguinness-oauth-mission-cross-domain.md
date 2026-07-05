@@ -613,7 +613,7 @@ audience-scoped authority for the ERP:
     { "type": "mission_resource_access",
       "resource": "https://erp.partner.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": 500 } }
+      "constraints": { "max_amount_usd": "500.00" } }
   ],
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
@@ -659,7 +659,7 @@ ID-JAG's `exp`:
     { "type": "mission_resource_access",
       "resource": "https://erp.partner.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": 500 } }
+      "constraints": { "max_amount_usd": "500.00" } }
   ],
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",

@@ -342,7 +342,9 @@ A Consent Disclosure object has these members:
 `approver_actions`:
 : OPTIONAL. An array describing explicit approver interactions required
   by policy, such as checking a high-risk notice or confirming an
-  expansion delta.
+  expansion delta. REQUIRED when `material_notices` carries a notice of
+  a high-risk class ({{material-notices}}); it then carries one
+  acknowledgment action per such notice.
 
 A Consent Disclosure object MUST NOT omit material authority. If the
 Authority Set includes delegation, external commitments, irreversible
@@ -397,6 +399,35 @@ in the proposed Authority Set or Mission context:
 Each notice MUST identify the Authority Set entry or entries it
 describes. A generic warning that "this may be risky" is not sufficient
 for this profile.
+
+Four conditions are the high-risk notice classes: irreversible action,
+external commitment, privileged administration, and a consumption
+bound. For each material notice of a high-risk class,
+`approver_actions` ({{consent-disclosure}}) MUST carry an explicit
+acknowledgment action identifying that notice, and the Mission Issuer
+MUST NOT record an `approved` decision unless the Approver completed
+every acknowledgment the disclosure carries. The acknowledgment is per
+notice and is recorded in the evidence through the committed
+disclosure; a single blanket confirmation does not satisfy it. The same
+classes key the minimum approval-authentication strength the issuance
+profile's deployment floor sets
+({{I-D.draft-mcguinness-oauth-mission}}).
+
+## Layered Rendering {#layered-rendering}
+
+A deployment MAY render the disclosure summary-first, with detail
+behind further interaction, provided that:
+
+- the committed Consent Disclosure object retains the full coverage of
+  {{consent-disclosure}}; layering removes nothing from the object;
+- every material notice, and any acknowledgment it requires
+  ({{material-notices}}), surfaces in the first layer; and
+- the full rendering of `authority_summary` is one interaction away,
+  and the first layer states that it is available.
+
+`consent_rendering_hash` ({{consent-rendering-hash}}) commits the
+disclosure object, not a layer, so layering changes presentation, not
+evidence.
 
 # The Consent Rendering Hash {#consent-rendering-hash}
 
@@ -662,9 +693,9 @@ Example, over the worked disclosure of {{disclosure-vector}}:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com",
     "intent_hash": "sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E",
-    "authority_hash": "sha-256:-rBZZJ8tVIyGoR1tBg6BO6QG0kimVvef8vjigpoVuPw",
+    "authority_hash": "sha-256:H3xcKuSglGecACyY2qGQYunTGqIalyeXS1Qr0dCcgjs",
     "consent_rendering_hash":
-      "sha-256:M7GB0qmwHbdRFw3IJdk14w9VBKwN2lvDkXGRb5fzatQ"
+      "sha-256:UadIff2z6aIb50BR8aytdoi3odBdWvLsRzyLFIC4wwM"
   },
   "approver": {
     "iss": "https://idp.example.com",
@@ -682,7 +713,7 @@ Example, over the worked disclosure of {{disclosure-vector}}:
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:M7GB0qmwHbdRFw3IJdk14w9VBKwN2lvDkXGRb5fzatQ"
+      "sha-256:UadIff2z6aIb50BR8aytdoi3odBdWvLsRzyLFIC4wwM"
   },
   "evidence_envelope": {
     "format": "jws-compact",
@@ -863,7 +894,9 @@ A conforming Consent-Evidence-capable Mission Issuer MUST:
 - compute `consent_rendering_hash`;
 - record Consent Evidence for approval, decline, and narrowed decisions;
 - bind approved Mission records to `consent_rendering_hash`;
-- include material notices for high-risk authority; and
+- include material notices for high-risk authority, with the
+  per-notice acknowledgment the high-risk classes require
+  ({{material-notices}}); and
 - retain evidence for audit reconstruction.
 
 A conforming verifier of Consent Evidence MUST implement the checks in
@@ -997,9 +1030,7 @@ Rung 3, Approver confirmation:
   what-you-see-is-what-you-sign rung, as in authenticator
   transaction-confirmation schemes. A deployment claiming this rung
   SHOULD apply it to a Mission whose Authority Set carries a high-risk
-  material-notice
-  class ({{material-notices}}): irreversible actions, external
-  commitments, privileged administration, or cross-domain disclosure.
+  material-notice class ({{material-notices}}).
 
 Rung 4, Out-of-band confirmation:
 : For the most material actions, confirmation is obtained at execution
@@ -1024,7 +1055,7 @@ for byte. The disclosure is the one the evidence example of
 {{consent-evidence}} records. It renders the Authority Set of the
 issuance profile's test vectors
 ({{I-D.draft-mcguinness-oauth-mission}}): `invoices.read` and
-`journal-entries.write` bounded by `max_amount_usd` 500 on
+`journal-entries.write` bounded by `max_amount_usd` "500.00" on
 `https://erp.example.com`, approved by `alice`
 (`user_3p2q8mN1a0kV7tR`); `source_hashes` carries that profile's
 computed `intent_hash` and `authority_hash`. The `template_hash` value
@@ -1037,7 +1068,7 @@ The Consent Disclosure object:
   "disclosure_id": "disc_4pQ9z",
   "source_hashes": {
     "intent_hash": "sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E",
-    "authority_hash": "sha-256:-rBZZJ8tVIyGoR1tBg6BO6QG0kimVvef8vjigpoVuPw"
+    "authority_hash": "sha-256:H3xcKuSglGecACyY2qGQYunTGqIalyeXS1Qr0dCcgjs"
   },
   "template_id": "mission-consent-standard",
   "template_version": "2026-06",
@@ -1060,9 +1091,9 @@ The Consent Disclosure object:
       "constraints": [
         {
           "constraint": "max_amount_usd",
-          "value": 500,
+          "value": "500.00",
           "rendered":
-            "Each posted journal entry is limited to 500 US dollars."
+            "Each posted journal entry is capped at 500.00 US dollars."
         }
       ]
     }
@@ -1112,7 +1143,17 @@ The Consent Disclosure object:
   "display_context": {
     "channel": "web",
     "rendered_at": "2026-06-30T17:54:30Z"
-  }
+  },
+  "approver_actions": [
+    {
+      "action": "acknowledge_notice",
+      "applies_to": {
+        "resource": "https://erp.example.com",
+        "action": "journal-entries.write"
+      },
+      "condition": "irreversible_action"
+    }
+  ]
 }
 ~~~
 
@@ -1120,8 +1161,10 @@ The read entry carries no constraints, so its element renders none.
 The write entry warrants a material notice and an `irreversibility`
 risk dimension because posted journal entries are not automatically
 reversible; `constraint_provenance` attributes the `max_amount_usd`
-bound to the Subject, who stated it in the task request. The Approver
-is the Subject, so the top-level `subject` member is absent.
+bound to the Subject, who stated it in the task request. The notice is
+of a high-risk class, so `approver_actions` carries its per-notice
+acknowledgment ({{material-notices}}). The Approver is the Subject, so
+the top-level `subject` member is absent.
 
 `consent_rendering_hash` is the prefixed SHA-256 over the JCS
 {{RFC8785}} canonical bytes of the integrity-anchor envelope with
@@ -1137,33 +1180,36 @@ Canonical bytes of the envelope:
 ~~~ text
 {"iss":"https://as.example.com","typ":"mission-consent-disclosure","valu
 e":{"approver":{"display":"alice","iss":"https://idp.example.com","sub":
-"user_3p2q8mN1a0kV7tR"},"authority_summary":[{"actions":["invoices.read"
-],"resource":"https://erp.example.com"},{"actions":["journal-entries.wri
-te"],"constraints":[{"constraint":"max_amount_usd","rendered":"Each post
-ed journal entry is limited to 500 US dollars.","value":500}],"resource"
-:"https://erp.example.com"}],"constraint_provenance":[{"applies_to":{"co
-nstraint":"max_amount_usd","resource":"https://erp.example.com"},"source
-":"subject"}],"disclosure_id":"disc_4pQ9z","display_context":{"channel":
-"web","rendered_at":"2026-06-30T17:54:30Z"},"locale":"en-US","material_n
-otices":[{"applies_to":{"action":"journal-entries.write","resource":"htt
-ps://erp.example.com"},"condition":"irreversible_action","statement":"Po
-sted journal entries are not automatically reversible."}],"mission_summa
-ry":{"approver_display":"alice (user_3p2q8mN1a0kV7tR)","goal":"Reconcil
-e Q3 invoices","mission_expiry":"2026-12-31T23:59:59Z","subject_display"
-:"alice (user_3p2q8mN1a0kV7tR)"},"risk_summary":[{"dimension":"data_acce
-ss","statement":"The agent can read invoices held in the ERP system."},{
-"dimension":"spend","statement":"The agent can post journal entries of u
-p to 500 US dollars."},{"dimension":"irreversibility","statement":"Poste
-d journal entries alter the ledger of record."}],"source_hashes":{"autho
-rity_hash":"sha-256:-rBZZJ8tVIyGoR1tBg6BO6QG0kimVvef8vjigpoVuPw","intent
-_hash":"sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E"},"template_
-hash":"sha-256:50S2DpJfcfNGlzi_vzZJNJbJKkknFX65rhWJWLiMyok","template_id
-":"mission-consent-standard","template_version":"2026-06"}}
+"user_3p2q8mN1a0kV7tR"},"approver_actions":[{"action":"acknowledge_notic
+e","applies_to":{"action":"journal-entries.write","resource":"https://er
+p.example.com"},"condition":"irreversible_action"}],"authority_summary":
+[{"actions":["invoices.read"],"resource":"https://erp.example.com"},{"ac
+tions":["journal-entries.write"],"constraints":[{"constraint":"max_amoun
+t_usd","rendered":"Each posted journal entry is capped at 500.00 US doll
+ars.","value":"500.00"}],"resource":"https://erp.example.com"}],"constra
+int_provenance":[{"applies_to":{"constraint":"max_amount_usd","resource"
+:"https://erp.example.com"},"source":"subject"}],"disclosure_id":"disc_4
+pQ9z","display_context":{"channel":"web","rendered_at":"2026-06-30T17:54
+:30Z"},"locale":"en-US","material_notices":[{"applies_to":{"action":"jou
+rnal-entries.write","resource":"https://erp.example.com"},"condition":"i
+rreversible_action","statement":"Posted journal entries are not automati
+cally reversible."}],"mission_summary":{"approver_display":"alice (user_
+3p2q8mN1a0kV7tR)","goal":"Reconcile Q3 invoices","mission_expiry":"2026-
+12-31T23:59:59Z","subject_display":"alice (user_3p2q8mN1a0kV7tR)"},"risk
+_summary":[{"dimension":"data_access","statement":"The agent can read in
+voices held in the ERP system."},{"dimension":"spend","statement":"The a
+gent can post journal entries of up to 500 US dollars."},{"dimension":"i
+rreversibility","statement":"Posted journal entries alter the ledger o
+f record."}],"source_hashes":{"authority_hash":"sha-256:H3xcKuSglGecACyY
+2qGQYunTGqIalyeXS1Qr0dCcgjs","intent_hash":"sha-256:P38IRTmTaUESJ5RpCw1W
+XmIqfsQmYek7zxiQWERcq-E"},"template_hash":"sha-256:50S2DpJfcfNGlzi_vzZJN
+JbJKkknFX65rhWJWLiMyok","template_id":"mission-consent-standard","templa
+te_version":"2026-06"}}
 ~~~
 
 ~~~ text
 consent_rendering_hash =
-  sha-256:M7GB0qmwHbdRFw3IJdk14w9VBKwN2lvDkXGRb5fzatQ
+  sha-256:UadIff2z6aIb50BR8aytdoi3odBdWvLsRzyLFIC4wwM
 ~~~
 
 An implementation that canonicalizes the same envelope, computes

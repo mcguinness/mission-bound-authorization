@@ -439,7 +439,7 @@ worked disclosure and test vector:
     "intent_hash":
       "sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E",
     "authority_hash":
-      "sha-256:-rBZZJ8tVIyGoR1tBg6BO6QG0kimVvef8vjigpoVuPw"
+      "sha-256:H3xcKuSglGecACyY2qGQYunTGqIalyeXS1Qr0dCcgjs"
   },
   "approver": {
     "iss": "https://idp.example.com",
@@ -459,7 +459,7 @@ worked disclosure and test vector:
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:M7GB0qmwHbdRFw3IJdk14w9VBKwN2lvDkXGRb5fzatQ"
+      "sha-256:UadIff2z6aIb50BR8aytdoi3odBdWvLsRzyLFIC4wwM"
   },
   "evidence_envelope": {
     "format": "jws-compact",
