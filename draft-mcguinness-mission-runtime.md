@@ -50,6 +50,7 @@ normative:
 informative:
   RFC9470:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
+  I-D.draft-mcguinness-oauth-client-instance-assertion:
   I-D.draft-mcguinness-mission-audit:
     title: "Mission Audit Transparency"
     target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-audit.html
@@ -665,6 +666,17 @@ holds a usable credential for that class. Mediated execution depends on
 the agent having no unmediated path to the resource; a Mission-aware
 harness establishes that execution environment
 ({{I-D.draft-mcguinness-mission-harness}}).
+
+Where the deployment issues tokens under the client-instance-assertion
+profile ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}),
+the sender-constraint key is instance-specific: that profile forbids a
+key shared across a client's instances. Mediated custody composes with
+that rule in either of two shapes. The mediating PEP holds
+per-instance keys, taking custody of each instance's key rather than
+one shared key; or the mediating PEP is itself the attested instance
+that obtained the token, presenting the instance assertion and holding
+the instance key. In both shapes that profile's no-shared-key rule and
+this section's custody rules are satisfied together.
 
 This narrows, and does not eliminate, the compromised-agent exposure.
 The mediating PEP becomes a trusted component whose compromise is

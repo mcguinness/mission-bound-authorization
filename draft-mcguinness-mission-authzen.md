@@ -66,6 +66,8 @@ normative:
 informative:
   RFC9457:
   RFC9470:
+  I-D.draft-mcguinness-oauth-client-instance-assertion:
+  I-D.draft-mcguinness-oauth-ai-agent-instance:
   ARAP:
     target: https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html
     title: "AuthZEN Access Request and Approval Profile - Draft 1"
@@ -422,6 +424,16 @@ step, a human approver) MUST NOT be encoded inside the `act` chain;
 the PDP evaluates the `act` chain as defined by the runtime profile,
 and provenance is recorded in dedicated evidence fields where the
 deployment captures it.
+
+Where tokens carry instance identity
+({{I-D.draft-mcguinness-oauth-client-instance-assertion}}), the `act`
+entry this projection already copies carries the instance identifier
+and, under the agent profile
+({{I-D.draft-mcguinness-oauth-ai-agent-instance}}), issuer-minted
+provenance such as `agent_instance_id` and `agent_model`. Fleet
+deployments therefore get which-instance-acted attribution in Decision
+Evidence and, through the `decision_id` link, in Execution Evidence,
+without new members.
 
 ## Credential Decision Context {#context-credential}
 
