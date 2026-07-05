@@ -122,9 +122,10 @@ Table of Contents
      10.3.  Only the Origin Reports Mission State
      10.4.  Examples
    11. Delegation Within a Mission
-     11.1.  Self-Exchange Down-Scoping
-     11.2.  Delegation Constraints
-     11.3.  Worked Example: Delegated Token
+     11.1.  Design Alternative: Rebinding client_id to the Delegate
+     11.2.  Self-Exchange Down-Scoping
+     11.3.  Delegation Constraints
+     11.4.  Worked Example: Delegated Token
    12. Extensibility
    13. Authorization Server Metadata
    14. Protected Resource Metadata
@@ -215,6 +216,16 @@ Table of Contents
    can verify it, and a holder of only a narrowed subset (a downstream
    or cross-domain party) treats it as an audit anchor it cannot
    recompute (Section 15.1).
+
+   This chain is the first of two deliberate security tiers.  It gives
+   task-bound issuance, auditability, and a revocation gate over future
+   derivation, which is sufficient for a low-risk workflow whose
+   exposure is bounded by short token lifetimes and narrow authority.
+   It does not evaluate individual actions: an agent taking
+   consequential autonomous actions needs the second tier, the runtime
+   enforcement layer (Section 15.5), specified separately.  A deployment
+   chooses its tier deliberately, matching the enforcement it runs to
+   the consequence of what its agents do.
 
 1.1.  Why a New Object
 
@@ -460,7 +471,9 @@ Table of Contents
 
    Authority Set:  The set of authorization_details entries the AS
       derives from a Mission Intent and the Approver approves
-      (Section 5).
+      (Section 5).  "Authority Set" names these concrete entries; it
+      does not mean an identity authority, a trust authority, a legal
+      authority, or an issuing authority.
 
    Mission:  The durable, immutable record created at the approval event
       (Section 7), identified by a mission_id.
@@ -760,9 +773,13 @@ Table of Contents
 
    A Mission Intent is closed at the top level: an AS MUST reject with
    invalid_request a Mission Intent containing a top-level member this
-   document does not define.  Deployment extensions belong in context.
-   This closure also keeps issuer-output members, such as a client-
-   planted authority_hash, from entering through the Intent.
+   document does not define.  The top level is closed because its
+   members feed approval rendering and the intent_hash commitment: an
+   undefined member would enter what the Approver reads and what the
+   anchor commits.  Extension data belongs under context, so deployment-
+   defined semantics are explicit and cannot masquerade as core Intent
+   semantics.  This closure also keeps issuer-output members, such as a
+   client-planted authority_hash, from entering through the Intent.
 
    A different case is an Intent that is well-formed but from which the
    AS cannot derive a valid Authority Set (for example, an unsupported
@@ -966,23 +983,23 @@ Table of Contents
          understand and enforce.
 
    delegation:  OPTIONAL.  An object.  The delegation policy for this
-      entry (Section 11.2).  When absent, this entry's authority is non-
+      entry (Section 11.3).  When absent, this entry's authority is non-
       delegable: it MUST NOT appear in a delegated token.  When present,
       it has these members:
 
       max_depth:  REQUIRED.  An integer.  The maximum delegation depth
          at which this entry's authority may be exercised
-         (Section 11.2).
+         (Section 11.3).
 
       allowed_delegates:  OPTIONAL.  An array of objects.  The permitted
-         delegates, each a may_act-style matcher (Section 11.2): {
+         delegates, each a may_act-style matcher (Section 11.3): {
          "sub": "<client_id>" } for a specific delegate, or {
          "sub_profile": "<actor-type>" } for an actor-type class.  When
          absent, any actor is permitted (subject to max_depth).
 
       A companion profile of this document MAY define additional
       delegation members.  Such a member is policy, not authority
-      (Section 11.2): a derived entry's value for it MUST NOT be broader
+      (Section 11.3): a derived entry's value for it MUST NOT be broader
       than the parent entry's, and a member the AS does not understand
       is carried unchanged.
 
@@ -1058,7 +1075,7 @@ Table of Contents
    flat behavior unchanged.
 
    The delegation member is policy, not authority, and is not part of
-   this comparison (Section 11.2).  A derived entry's delegation, when
+   this comparison (Section 11.3).  A derived entry's delegation, when
    present, MUST NOT be broader than the parent entry's: its max_depth
    MUST be no greater and its allowed_delegates MUST be no wider.  A
    derived entry MUST NOT introduce delegation where the parent entry
@@ -1154,7 +1171,7 @@ Table of Contents
       exactly as mission_resource_access entries are;
 
    *  narrowing and delegation use the subset semantics the type defines
-      (Section 5.1, Section 11.2).  A type whose subset and delegation
+      (Section 5.1, Section 11.3).  A type whose subset and delegation
       semantics the AS does not understand MUST NOT be delegated,
       audience-projected to a Resource AS, or narrowed: the AS cannot
       prove a transformed copy is still a subset of what was approved.
@@ -1245,7 +1262,7 @@ Table of Contents
    ]
 
    Delegation to a sub-agent works unchanged: add a delegation member to
-   a tool entry (Section 11.2).  For example, an entry a sub-agent of
+   a tool entry (Section 11.3).  For example, an entry a sub-agent of
    type ai_agent may invoke at depth 1, narrowed to the read tool only:
 
    { "type": "mission_resource_access",
@@ -1265,7 +1282,7 @@ Table of Contents
    ([I-D.draft-niyikiza-oauth-attenuating-agent-tokens], with object
    capability systems such as UCAN as prior art) is a richer primitive
    deferred to future work; it would extend the delegation and subset
-   model of this document (Section 11.2, Section 5.1) rather than
+   model of this document (Section 11.3, Section 5.1) rather than
    introduce a new entry type.
 
 6.  Mission Approval
@@ -2190,7 +2207,7 @@ Table of Contents
       urn:ietf:params:oauth:token-type:access_token.  The delegate is
       identified by an actor_token (with its actor_token_type) or by its
       own client authentication, and the AS asserts the actor itself
-      (Section 11.2); a requested_token_type of
+      (Section 11.3); a requested_token_type of
       urn:ietf:params:oauth:token-type:access_token is used.  The
       response carries the matching issued_token_type and a token_type
       for the issued access token, per [RFC8693] Section 2.2.1.
@@ -2237,7 +2254,26 @@ Table of Contents
       derivation event; the AS MUST refuse it unless the Mission is
       active (Section 9).
 
-11.1.  Self-Exchange Down-Scoping
+11.1.  Design Alternative: Rebinding client_id to the Delegate
+
+   A rejected alternative rebinds client_id to the immediate delegate on
+   each hop, the plain [RFC9068] reading in which client_id names the
+   immediate client.  Rebinding loses the stable approved-agent binding
+   that every consumer of a derived token can verify: each downstream
+   token presents as a new client rather than an actor executing within
+   the approved Mission, and joining who was approved to who executed
+   requires reconstructing the hop history from issuance records rather
+   than reading both from the token.  Rebinding is also safe only where
+   every Resource Server processes act anyway, since the delegation
+   history lives nowhere else; that is exactly the discipline this
+   profile's chosen design requires, so rebinding buys no relaxation.
+   The operational rule of Section 8.2 therefore holds regardless of the
+   binding choice: a Resource Server that authorizes or logs the caller
+   MUST process the act chain, and a deployment SHOULD NOT route
+   delegated tokens to a Resource Server that authorizes or logs on
+   client_id without processing act.
+
+11.2.  Self-Exchange Down-Scoping
 
    An agent MAY present its own Mission-bound access token as the
    subject_token of a Token Exchange ([RFC8693]) with no actor, to
@@ -2248,7 +2284,7 @@ Table of Contents
    active (Section 9).  Because it names no actor, it does not delegate:
    it re-scopes the agent's own authority downward.
 
-11.2.  Delegation Constraints
+11.3.  Delegation Constraints
 
    What may be delegated, how far, and to whom is governed per Authority
    Set entry by the entry's optional delegation member (Section 5).
@@ -2317,7 +2353,7 @@ Table of Contents
    already-narrowed authorization_details and enforces those as usual
    (Section 8).
 
-11.3.  Worked Example: Delegated Token
+11.4.  Worked Example: Delegated Token
 
    Suppose the Mission's Authority Set has two entries on the ERP:
    invoices.read, delegable to ai_agent actors through depth 2; and
@@ -2633,7 +2669,7 @@ Table of Contents
    compromised actor can act only within the authority it was delegated,
    for the lifetime of the token it holds: the exposure of any actor is
    bounded by its narrowed authorization_details times its token
-   lifetime.  The per-entry delegation constraints (Section 11.2) bound
+   lifetime.  The per-entry delegation constraints (Section 11.3) bound
    this exposure at approval time: non-delegable entries never reach a
    delegate at all, max_depth caps how far an entry can propagate, and
    allowed_delegates restricts who may receive it.  Note that max_depth
@@ -2682,6 +2718,14 @@ Table of Contents
    distinguish Missions that share an Authority Set.
 
 16.  Privacy Considerations
+
+   A Mission identifier is a correlation handle.  A deployment should
+   expose stable Mission identifiers only to parties that enforce,
+   audit, or observe that Mission, prefer audience-scoped projections of
+   authority where possible, and minimize status and introspection
+   disclosures to authorized callers.  The subsections that follow and
+   the introspection minimization rules (Section 10.1) give the specific
+   rules.
 
 16.1.  Mission Identifier Correlation
 
