@@ -57,6 +57,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-mandate:
+    title: "Mission Mandate"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   AUTHZEN:
     target: https://openid.net/specs/authorization-api-1_0-final.html
     title: "OpenID AuthZEN Authorization API 1.0"
@@ -1185,8 +1193,8 @@ enforcement evidence record with the available fields and the failure
 condition. This document fixes the minimum record content and local
 integrity requirements. The concrete record schema, any interoperable
 canonical byte representation, separate Decision Evidence and
-Execution Evidence object schemas, and portable cross-domain receipts
-are out of scope ({{deferred}}).
+Execution Evidence object schemas, and the Mission Receipt's portable
+schema ({{mission-receipt}}) are out of scope ({{deferred}}).
 
 ## Required decision evidence
 
@@ -1251,6 +1259,30 @@ detecting orphaned evidence (a decision with no matching
 execution-outcome record within that window) and sequence gaps in a
 Mission's records ({{record-integrity}}), and that component's alerting
 obligation when it detects either.
+
+## Mission Receipt {#mission-receipt}
+
+A **Mission Receipt** is the portable, tamper-evident projection of a
+runtime enforcement evidence record and, for a high-consequence
+action, its execution-outcome record: portable evidence of a material
+action taken under a Mission, as a Mandate
+({{I-D.draft-mcguinness-mission-mandate}}) is portable evidence about
+the Mission itself.
+
+A Mission Receipt MUST identify the Mission the action was authorized
+under: `mission.id` and `mission.issuer`, or a verifiable Mission
+projection such as the cross-domain grant's `mission` claim
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). It SHOULD bind
+the policy decision (the decision identifier and result), the
+executor (the authenticated actor and any `act` chain), the custody
+boundary (whether a mediating PEP held the credential, {{custody}}),
+the downstream target (the resource and audience), the outcome, the
+timestamps, and, where receipt chaining substitutes for a
+transparency feed ({{I-D.draft-mcguinness-mission-audit}}), the
+digest of the previous Mission Receipt. The portable schema and
+canonical byte representation are deferred ({{deferred}}); the
+members above are the minimum a deployment-defined Mission Receipt
+binds.
 
 ## Record integrity and retention {#record-integrity}
 
@@ -1322,8 +1354,10 @@ work and are not required to enforce it:
 - cross-format capability-source binding beyond per-capability
   definition-digest drift (signed capability manifests, cross-catalog
   identity);
-- portable, third-party-verifiable decision receipts (this profile
-  fixes only the local runtime enforcement evidence record);
+- the Mission Receipt's portable schema and canonical byte
+  representation ({{mission-receipt}}: this profile fixes the term,
+  its minimum binding, and the local runtime enforcement evidence
+  record);
 - separate Decision Evidence and Execution Evidence object schemas and
   media types;
 - actor provenance beyond the `act` chain, attestation of the
