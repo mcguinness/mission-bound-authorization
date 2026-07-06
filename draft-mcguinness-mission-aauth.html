@@ -1430,8 +1430,8 @@ reference, and respects the Mission lifecycle (<a href="#conformance" class="aut
           </tr>
         </tbody>
       </table>
-<p id="section-2-2">The AAuth <code>approver</code> URL is the Mission <code>origin</code>: AAuth fixes the
-approver as the PS, so the Mission's <code>origin</code> is the PS's issuer URL.
+<p id="section-2-2">The AAuth <code>approver</code> URL is the Mission <code>issuer</code>: AAuth fixes the
+approver as the PS, so the Mission's <code>issuer</code> is the PS's issuer URL.
 The Approver is the person the PS represents, or a principal the PS's
 policy authorizes to approve on that person's behalf. The Agent
 Provider is out of scope as agent identity is throughout the family:
@@ -1450,9 +1450,9 @@ exact bytes (<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite 
 makes the blob the carrier of the Mission record.<a href="#section-3-1" class="pilcrow">¶</a></p>
 <p id="section-3-2">A Mission-Bound Person Server <span class="bcp14">MUST</span> create a Mission record, as the
 issuance profile's Mission Record section defines it, for every
-mission it approves, with <code>origin</code> equal to the <code>approver</code> URL. The
+mission it approves, with <code>issuer</code> equal to the <code>approver</code> URL. The
 blob <span class="bcp14">MUST</span> include a <code>mission_record</code> member: a JSON object carrying
-the record's immutable members, <code>id</code>, <code>origin</code>,
+the record's immutable members, <code>id</code>, <code>issuer</code>,
 <code>intent</code>, <code>authority_set</code>, <code>authority_hash</code>, <code>intent_hash</code>,
 <code>subject</code>, <code>approver</code>, <code>client_id</code>, <code>policy_version</code>,
 <code>approval_event_id</code>, <code>created_at</code>, and <code>expires_at</code>, each as the
@@ -1466,7 +1466,7 @@ the lifecycle surfaces (<a href="#lifecycle" class="auto internal xref">Section 
 <code>agent</code> member.<a href="#section-3-4.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-3-4.2">
-          <p id="section-3-4.2.1"><code>mission_record.origin</code> <span class="bcp14">MUST</span> equal the blob's <code>approver</code> member.<a href="#section-3-4.2.1" class="pilcrow">¶</a></p>
+          <p id="section-3-4.2.1"><code>mission_record.issuer</code> <span class="bcp14">MUST</span> equal the blob's <code>approver</code> member.<a href="#section-3-4.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-3-4.3">
           <p id="section-3-4.3.1"><code>subject</code> and <code>approver</code> are <code>{iss, sub}</code> objects whose <code>iss</code> is the
@@ -1513,7 +1513,7 @@ commitment substitutes for the other
 <p id="section-3.2-1">The (<code>approver</code>, <code>s256</code>) pair is the AAuth-native Mission reference.
 The <code>AAuth-Mission</code> header is unchanged by this binding: no new
 parameters are defined, and this document gives its existing
-parameters family semantics (<code>approver</code> names the <code>origin</code>, <code>s256</code>
+parameters family semantics (<code>approver</code> names the <code>issuer</code>, <code>s256</code>
 locates the record). A Mission-Bound Person Server <span class="bcp14">MUST</span> resolve <code>s256</code>
 to the Mission record at every PS endpoint that takes a mission
 reference. Per AAuth, a Resource or AS never dereferences the
@@ -1554,7 +1554,7 @@ same Mission, and the record binds them.<a href="#section-3.2-1" class="pilcrow"
   "capabilities": ["interaction"],
   "mission_record": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://ps.example.com",
+    "issuer": "https://ps.example.com",
     "intent": {
       "goal":
         "Reconcile Q3 invoices and post adjustments under $500.",
@@ -1605,7 +1605,7 @@ member order shown, it is:<a href="#section-3.3-3" class="pilcrow">¶</a></p>
 <div class="lang-text sourcecode" id="section-3.3-4">
 <pre>
 AAuth-Mission: approver="https://ps.example.com";
-    s256="uWj7ZoTUlDEougToNuhllbg-qh-L8pHo10Cc2hvdHX4"
+    s256="sN5v0poiLW85zY6tKSlxkR10yPkIr-JUr9ttwhiOc0w"
 </pre><a href="#section-3.3-4" class="pilcrow">¶</a>
 </div>
 </section>
@@ -1876,9 +1876,9 @@ the published key material for its signed artifacts.<a href="#section-6.2-2" cla
         </h3>
 <p id="section-7.1-1">An auth token a Mission-Bound Person Server issues under a Mission
 <span class="bcp14">MUST</span> carry, in its <code>mission</code> claim, the family members <code>id</code>,
-<code>origin</code>, and <code>authority_hash</code> as the issuance profile defines them,
+<code>issuer</code>, and <code>authority_hash</code> as the issuance profile defines them,
 alongside AAuth's native members <code>approver</code> and <code>s256</code>. One object
-carries all five; <code>origin</code> equals <code>approver</code> in this binding, and both
+carries all five; <code>issuer</code> equals <code>approver</code> in this binding, and both
 appear because each specification's consumers read their own members.
 AAuth parties ignore members they do not recognize, and a family
 consumer <span class="bcp14">MUST NOT</span> use any <code>mission</code> member to grant or widen
@@ -1911,7 +1911,7 @@ entry <span class="bcp14">MUST</span> be a subset of a Mission entry under the s
 Resource Server that consumes them enforces per the issuance profile's
 Resource Server enforcement rules, including failing closed on
 constraints it cannot enforce.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
-<p id="section-7.2-3">The subset rule binds the origin PS's own derivations to the recorded
+<p id="section-7.2-3">The subset rule binds the issuer PS's own derivations to the recorded
 Authority Set. It does not impose cross-hop attenuation in AAuth call
 chaining, where AAuth deliberately does not require a downstream grant
 to be a subset of the upstream scope: a downstream hop is governed at
@@ -1980,9 +1980,9 @@ in the PS-asserted mode, narrowed to read-only authority:<a href="#section-7.5-1
   "exp": 1797843600,
   "mission": {
     "approver": "https://ps.example.com",
-    "s256": "uWj7ZoTUlDEougToNuhllbg-qh-L8pHo10Cc2hvdHX4",
+    "s256": "sN5v0poiLW85zY6tKSlxkR10yPkIr-JUr9ttwhiOc0w",
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://ps.example.com",
+    "issuer": "https://ps.example.com",
     "authority_hash":
       "sha-256:mdRUVZfU1BG_Bgla4mrLp6Q9NPVTJ-udnn88F1oXqFc"
   }
@@ -2009,7 +2009,7 @@ binding forgoes. Against the architecture's binding checklist
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>):<a href="#section-8-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-8-2">
 <li id="section-8-2.1">
-          <p id="section-8-2.1.1"><strong>Identifier and origin</strong>: <code>id</code> on the record, <code>origin</code>
+          <p id="section-8-2.1.1"><strong>Identifier and issuer</strong>: <code>id</code> on the record, <code>issuer</code>
 the <code>approver</code> URL; the (<code>approver</code>, <code>s256</code>) pair is the
 wire-native reference to the same Mission (<a href="#reference" class="auto internal xref">Section 3.2</a>).<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
 </li>
@@ -2099,7 +2099,7 @@ Resource therefore verifies from token claims and the
 signature-covered reference, not by recomputing the anchors: it holds
 no Authority Set unless a token carries authorization details. A
 deployment that needs Resource-side <code>authority_hash</code> verification
-uses a Mission Mandate, minted by the PS as the Mission <code>origin</code>,
+uses a Mission Mandate, minted by the PS as the Mission <code>issuer</code>,
 carrying the committed facts under the PS's signature
 (<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>).<a href="#section-9-2" class="pilcrow">¶</a></p>
 <p id="section-9-3"><strong>The PS as trusted component.</strong> The PS concentrates approval,
@@ -2279,7 +2279,7 @@ belong to that specification, and this binding defines no new AAuth
 requirement, capability, or platform values. The members this
 document adds ride inside structures whose extensibility their
 defining specifications state: <code>mission_record</code> in the PS-produced
-blob, and <code>id</code>, <code>origin</code>, and <code>authority_hash</code> inside the <code>mission</code>
+blob, and <code>id</code>, <code>issuer</code>, and <code>authority_hash</code> inside the <code>mission</code>
 claim AAuth registers, whose unrecognized members AAuth consumers
 ignore. Should AAuth establish registries for those members, the
 members this document defines would be registered there.<a href="#section-13-1" class="pilcrow">¶</a></p>

@@ -76,7 +76,7 @@ Table of Contents
    3.  The Mission
    4.  Mission Roles and Components
    5.  The Mission Substrate
-     5.1.  The Mission Identifier and Origin
+     5.1.  The Mission Identifier and Issuer
      5.2.  The Lifecycle State Space
      5.3.  The Authority Set Representation
      5.4.  The Integrity-Anchor Envelope
@@ -302,10 +302,10 @@ Table of Contents
    primitives, each with its normative home and its consumers.  Every
    sentence mirrors a rule the named profile states normatively.
 
-5.1.  The Mission Identifier and Origin
+5.1.  The Mission Identifier and Issuer
 
    An opaque, non-reused Mission Identifier with at least 128 bits of
-   entropy and no semantic content, plus origin, the issuer URL of the
+   entropy and no semantic content, plus issuer, the issuer URL of the
    approving Mission Issuer; together they name exactly one Mission.
    Home: the core's Mission Record and Mission Identifier Format
    sections.  Consumed by every companion: enforcement decisions,
@@ -354,7 +354,7 @@ Table of Contents
 
 5.5.  The Mission-Bound Credential
 
-   A credential carrying the mission claim (id, origin, authority_hash)
+   A credential carrying the mission claim (id, issuer, authority_hash)
    and Mission-derived authorization details, issued only while the
    Mission is active.  Home: the core's Mission-Bound Access Tokens and
    The Mission Claim sections.
@@ -396,7 +396,7 @@ Table of Contents
    Another mission-based protocol hosts the substrate-neutral profiles
    unchanged when it provides:
 
-   1.  a unique, opaque Mission identifier with an authoritative origin;
+   1.  a unique, opaque Mission identifier with an authoritative issuer;
 
    2.  the lifecycle state space with the only-active rule, fail-safe
        unrecognized states, and a freshness source with a staleness

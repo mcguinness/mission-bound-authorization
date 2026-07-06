@@ -1311,7 +1311,7 @@ agent, Authority Set, and Mission state as defined in
 <p id="section-4-1">This model describes the components and trust relationships of the
 Mission model, not of OAuth 2.0 mechanics. Its analysis applies to any
 substrate that provides the Mission primitives the profiles consume:
-the identifier and origin, the state space with its only-active rule,
+the identifier and issuer, the state space with its only-active rule,
 an authority representation with a subset rule, the integrity-anchor
 envelope, and, where the binding provides one, a Mission-bound
 credential; a binding without that credential supplies an externally
@@ -1387,12 +1387,12 @@ This is the strongest trust assumption in the suite
 <dt id="section-6-2.3">Resource Authorization Server (cross-domain):</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.4">
           <p id="section-6-2.4.1">When cross-domain access is used, a resource-side Authorization Server
-mints local Mission-bound tokens that the Mission origin cannot
+mints local Mission-bound tokens that the Mission's issuer cannot
 observe. It must mint only within the audience and lifetime the
 cross-domain grant scopes. Its compromise mints arbitrary authority
 within its own domain under the Mission's name; the damage is bounded
 by audience scoping, short grant lifetimes, and audit, not by the
-origin, which never sees these tokens
+issuer, which never sees these tokens
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -1750,7 +1750,7 @@ layer the deployment enforces for that class.<a href="#section-10-1" class="pilc
           <tr>
             <td class="text-left" rowspan="1" colspan="1">With introspection</td>
             <td class="text-left" rowspan="1" colspan="1">one introspection cycle</td>
-            <td class="text-left" rowspan="1" colspan="1">per-request introspection at the origin</td>
+            <td class="text-left" rowspan="1" colspan="1">per-request introspection at the issuer</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">With Mission Status</td>

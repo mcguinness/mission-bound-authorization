@@ -1428,7 +1428,7 @@ uses:<a href="#section-1.2-3" class="pilcrow">¶</a></p>
           <dd style="margin-left: 1.5em" id="section-1.2-4.2">
             <p id="section-1.2-4.2.1">A service that implements the Mission Issuer role of the issuance
 profile without being an OAuth Authorization Server. It is the
-<code>origin</code> of the Missions it records, and it derives no tokens.<a href="#section-1.2-4.2.1" class="pilcrow">¶</a></p>
+<code>issuer</code> of the Missions it records, and it derives no tokens.<a href="#section-1.2-4.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-1.2-4.3">Mission-joining PDP:</dt>
@@ -1462,7 +1462,7 @@ mechanics. The issuance profile provides all of them. A MAS provides
 these:<a href="#section-2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-2-2.1">
-          <p id="section-2-2.1.1">the Mission identifier and <code>origin</code>;<a href="#section-2-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-2-2.1.1">the Mission identifier and <code>issuer</code>;<a href="#section-2-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-2-2.2">
           <p id="section-2-2.2.1">the lifecycle state space with the only-<code>active</code> rule and its
@@ -1493,7 +1493,7 @@ gated on Mission state.<a href="#section-2-4" class="pilcrow">¶</a></p>
           <p id="section-2-6.1.1">The shaping, consent-evidence, audit-transparency, security-model,
 status, signals, and completion profiles consume only the primitives
 a MAS provides and compose with a MAS unchanged. Where such a
-profile names the Mission Issuer or origin AS, the MAS is that
+profile names the Mission Issuer or the issuer AS, the MAS is that
 party.<a href="#section-2-6.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-2-6.2">
@@ -1832,7 +1832,7 @@ using the issuance profile's envelope with the MAS's issuer URL as
       </ol>
 <p id="section-4-4">Step 5 becomes: create the Mission record in the <code>active</code> state
 atomically with the approval decision. The record is the issuance
-profile's Mission Record, member for member; its <code>origin</code> is the MAS's
+profile's Mission Record, member for member; its <code>issuer</code> is the MAS's
 issuer URL and its <code>approval_event_id</code> is the approval idempotency
 key. There is no authorization code to bind, so the deferred-approval
 profile's re-sequencing of this step
@@ -2251,7 +2251,7 @@ from AS metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>
         <dt id="section-8-2.1">
 <code>issuer</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-8-2.2">
-          <p id="section-8-2.2.1"><span class="bcp14">REQUIRED</span>. A string. The MAS's issuer URL. It equals the <code>origin</code> of
+          <p id="section-8-2.2.1"><span class="bcp14">REQUIRED</span>. A string. The MAS's issuer URL. It equals the <code>issuer</code> of
 every Mission the MAS records and the <code>iss</code> of its integrity-anchor
 envelopes and signed status responses. A consumer <span class="bcp14">MUST</span> verify it
 equals the URL the metadata was resolved from, with the well-known
@@ -2360,7 +2360,7 @@ issuer-signed artifacts, with the signing-key retention rules of
 </pre><a href="#section-8-4" class="pilcrow">¶</a>
 </div>
 <p id="section-8-5">A consumer holding a Mission reference resolves this document from the
-reference's <code>origin</code>; whether a given <code>origin</code> is a MAS or an OAuth AS
+reference's <code>issuer</code>; whether a given <code>issuer</code> is a MAS or an OAuth AS
 is deployment configuration. The submission and lifecycle surfaces
 follow a reference-plus-continuation shape (a request yields an opaque
 reference the client continues against) that parallels the grant
@@ -2383,7 +2383,7 @@ Mission" rests on when no cryptographic binding exists.<a href="#section-9-1" cl
 <ol start="1" type="1" class="normal type-1" id="section-9-3">
 <li id="section-9-3.1">
           <p id="section-9-3.1.1"><strong>The PEP supplies the Mission reference.</strong> For governed work the
-PEP <span class="bcp14">MUST</span> supply the <code>mission_id</code> and <code>origin</code> of the Mission the
+PEP <span class="bcp14">MUST</span> supply the <code>mission_id</code> and <code>issuer</code> of the Mission the
 work is bound to, taken from its Mission binding (a Mission-aware
 harness records exactly this,
 <span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>) or from deployment
@@ -2453,7 +2453,7 @@ Status response, and the other decision inputs per
   "context": {
     "mission": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-      "origin": "https://mas.example.com",
+      "issuer": "https://mas.example.com",
       "authority_hash":
         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
       "state": "active"
@@ -2554,7 +2554,7 @@ submission endpoint (<a href="#mission-submission" class="auto internal xref">Se
 <code>mission_id</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-10.1-2.2">
             <p id="section-10.1-2.2.1"><span class="bcp14">REQUIRED</span>. A string. The Mission the join is asserted against; its
-<code>origin</code> is the MAS.<a href="#section-10.1-2.2.1" class="pilcrow">¶</a></p>
+<code>issuer</code> is the MAS.<a href="#section-10.1-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-10.1-2.3">
@@ -2625,7 +2625,7 @@ claims:<a href="#section-10.2-1" class="pilcrow">¶</a></p>
 <dt id="section-10.2-2.3">
 <code>mission</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-10.2-2.4">
-            <p id="section-10.2-2.4.1"><span class="bcp14">REQUIRED</span>. An object containing <code>id</code>, <code>origin</code>, and
+            <p id="section-10.2-2.4.1"><span class="bcp14">REQUIRED</span>. An object containing <code>id</code>, <code>issuer</code>, and
 <code>authority_hash</code>.<a href="#section-10.2-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
@@ -2678,7 +2678,7 @@ horizon.<a href="#section-10.2-4" class="pilcrow">¶</a></p>
   "iss": "https://mas.example.com",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://mas.example.com",
+    "issuer": "https://mas.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },
@@ -2707,7 +2707,7 @@ mapping checks of <a href="#mission-join" class="auto internal xref">Section 9</
 </li>
           <li class="normal" id="section-10.3-2.2">
             <p id="section-10.3-2.2.1">that <code>iss</code> and the <code>mission</code> claim match the referenced Mission's
-<code>origin</code>, <code>id</code>, and <code>authority_hash</code>;<a href="#section-10.3-2.2.1" class="pilcrow">¶</a></p>
+<code>issuer</code>, <code>id</code>, and <code>authority_hash</code>;<a href="#section-10.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.3-2.3">
             <p id="section-10.3-2.3.1">that <code>exp</code> has not passed and any <code>aud</code> names this PDP; and<a href="#section-10.3-2.3.1" class="pilcrow">¶</a></p>
@@ -3373,7 +3373,7 @@ verifies the subject and client joins (<a href="#mission-join" class="auto inter
   "context": {
     "mission": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-      "origin": "https://mas.example.com",
+      "issuer": "https://mas.example.com",
       "authority_hash":
         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
       "state": "active"

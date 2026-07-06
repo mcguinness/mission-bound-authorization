@@ -1598,7 +1598,7 @@ the child actor redeems its grant directly at the token endpoint.<a href="#secti
         <h3 id="name-cross-issuer-scope">
 <a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-cross-issuer-scope" class="section-name selfRef">Cross-Issuer Scope</a>
         </h3>
-<p id="section-6.2-1">In this profile the Child Mission's issuer <span class="bcp14">MUST</span> equal <code>parent.origin</code>
+<p id="section-6.2-1">In this profile the Child Mission's issuer <span class="bcp14">MUST</span> equal <code>parent.issuer</code>
 (<a href="#parent-member" class="auto internal xref">Section 7</a>): a Child Mission is created and hosted by the same
 Mission Issuer as its parent. Cross-domain child delegation, where the
 child is hosted by a different Mission Issuer than the parent, is
@@ -1753,12 +1753,12 @@ parent. The decoded child access token:<a href="#section-6.6-3" class="pilcrow">
   "cnf": { "jkt": "wZ5nT8qL2xV9rB4mC7sD1yF6jH3kP0aG5uE8oS2iN4w" },
   "mission": {
     "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
     "parent": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-      "origin": "https://as.example.com",
+      "issuer": "https://as.example.com",
       "authority_hash":
         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
       "depth": 1,
@@ -1876,10 +1876,10 @@ the <code>mission</code> claim of tokens derived under the child:<a href="#secti
 </dd>
             <dd class="break"></dd>
 <dt id="section-7-2.2.2.3">
-<code>origin</code>:</dt>
+<code>issuer</code>:</dt>
             <dd style="margin-left: 1.5em" id="section-7-2.2.2.4">
               <p id="section-7-2.2.2.4.1"><span class="bcp14">REQUIRED</span>. The Parent Mission Issuer. The Child Mission's own
-<code>origin</code> <span class="bcp14">MUST</span> equal this value (<a href="#cross-issuer" class="auto internal xref">Section 6.2</a>).<a href="#section-7-2.2.2.4.1" class="pilcrow">¶</a></p>
+<code>issuer</code> <span class="bcp14">MUST</span> equal this value (<a href="#cross-issuer" class="auto internal xref">Section 6.2</a>).<a href="#section-7-2.2.2.4.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
 <dt id="section-7-2.2.2.5">
@@ -1934,12 +1934,12 @@ depth the ancestor entries allowed.<a href="#section-7-4" class="pilcrow">¶</a>
 {
   "mission": {
     "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
     "parent": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-      "origin": "https://as.example.com",
+      "issuer": "https://as.example.com",
       "authority_hash":
         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
       "depth": 1,
@@ -2256,7 +2256,7 @@ Child Mission, both conditions <span class="bcp14">MUST</span> hold:<a href="#se
 </li>
         </ul>
 <p id="section-10.1-5">If either condition fails, the Mission Issuer <span class="bcp14">MUST</span> refuse derivation.<a href="#section-10.1-5" class="pilcrow">¶</a></p>
-<p id="section-10.1-6">While a parent is <code>suspended</code>, the origin <span class="bcp14">MUST</span> report each dependent
+<p id="section-10.1-6">While a parent is <code>suspended</code>, the issuer <span class="bcp14">MUST</span> report each dependent
 child's state as <code>suspended</code> on every state-reporting surface (the
 Mission Status operation and token introspection,
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), and <span class="bcp14">MUST</span> restore the
@@ -2269,7 +2269,7 @@ projection for authorized callers, as additional context:<a href="#section-10.1-
           <dt id="section-10.1-8.1">
 <code>parent</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-10.1-8.2">
-            <p id="section-10.1-8.2.1">Object containing parent <code>id</code>, <code>origin</code>, current parent <code>state</code> when
+            <p id="section-10.1-8.2.1">Object containing parent <code>id</code>, <code>issuer</code>, current parent <code>state</code> when
 known, <code>cascade_mode</code>, and freshness information.<a href="#section-10.1-8.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -2291,10 +2291,10 @@ experimental consumer-verified modes are defined with those modes
 <p id="section-11-1">The Mission Issuer <span class="bcp14">MUST</span> record a child delegation evidence record with:<a href="#section-11-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-11-2.1">
-          <p id="section-11-2.1.1">parent Mission identifier, origin, and authority hash;<a href="#section-11-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.1.1">parent Mission identifier, issuer, and authority hash;<a href="#section-11-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-2.2">
-          <p id="section-11-2.2.1">child Mission identifier, origin, and authority hash;<a href="#section-11-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.2.1">child Mission identifier, issuer, and authority hash;<a href="#section-11-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-2.3">
           <p id="section-11-2.3.1">child actor;<a href="#section-11-2.3.1" class="pilcrow">¶</a></p>
@@ -2395,13 +2395,13 @@ policy.<a href="#section-11.1-2.12.1" class="pilcrow">¶</a></p>
   "evidence_id": "chd_8K2nP4qV",
   "parent": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },
   "child": {
     "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2"
   },

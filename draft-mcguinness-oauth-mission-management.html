@@ -1330,7 +1330,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <p id="section-2-2">This document uses the terms defined in the issuance profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and the status profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, in particular Mission,
-Mission Issuer (the Mission <code>origin</code>: in this document's OAuth binding
+Mission Issuer (the Mission <code>issuer</code>: in this document's OAuth binding
 the Authorization Server; a standalone Mission Issuer, the Mission
 Authority Server <span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>,
 serves this surface with the same semantics), <code>mission_id</code>, the
@@ -2041,10 +2041,10 @@ not how fast any one revocation propagates.<a href="#section-8-3" class="pilcrow
 <p id="section-9-1">Approver transfer, re-anchoring a Mission's consent to a different
 accountable party, is not defined here. Administrative monotonic
 narrowing, such as shortening a Mission's <code>expires_at</code> or retiring
-a single Authority Set entry, is not defined here. Cross-origin
+a single Authority Set entry, is not defined here. Cross-issuer
 enumeration, one query spanning Missions held by multiple Mission
 Issuers, is not defined here; a Management Client queries each
-<code>origin</code> it is authorized for separately.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<code>issuer</code> it is authorized for separately.<a href="#section-9-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="as-metadata">

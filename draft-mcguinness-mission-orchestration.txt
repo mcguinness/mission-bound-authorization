@@ -608,7 +608,7 @@ Table of Contents
    event_id:  REQUIRED.  A unique identifier.
 
    mission:  REQUIRED.  The Mission whose orchestration state changed,
-      as the nested mission object (id, origin, and, when known,
+      as the nested mission object (id, issuer, and, when known,
       authority_hash), the same shape as the mission claim of
       [I-D.draft-mcguinness-oauth-mission] and the Harness Evidence
       object ([I-D.draft-mcguinness-mission-harness]).
@@ -675,7 +675,7 @@ Table of Contents
      "event_id": "orch_4r9SqLm8tY2p",
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-       "origin": "https://as.example.com",
+       "issuer": "https://as.example.com",
        "authority_hash":
          "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
      },
@@ -702,7 +702,7 @@ Table of Contents
      "event_id": "orch_9wK2nR5vXq7t",
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-       "origin": "https://as.example.com",
+       "issuer": "https://as.example.com",
        "authority_hash":
          "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
      },

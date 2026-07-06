@@ -119,7 +119,7 @@ Table of Contents
    10. Mission State via Token Introspection
      10.1.  Caller Authorization and Minimization
      10.2.  Composite Active State
-     10.3.  Only the Origin Reports Mission State
+     10.3.  Only the Issuer Reports Mission State
      10.4.  Examples
    11. Delegation Within a Mission
      11.1.  Design Alternative: Rebinding client_id to the Delegate
@@ -455,7 +455,7 @@ Table of Contents
 
    Mission Issuer (Authorization Server):  The OAuth AS that validates a
       Mission Intent, runs the approval event, records the Mission, and
-      derives tokens.  It is the Mission's origin.  "Mission Issuer",
+      derives tokens.  It is the Mission's issuer.  "Mission Issuer",
       "originating AS", and "AS" are used interchangeably in this
       document.
 
@@ -543,6 +543,15 @@ Table of Contents
    Domain"); each capability's defining section or document states its
    detailed requirements.
 
+   A token carrying a mission claim is not, by itself, Mission-bound
+   authorization.  Conformance as a Mission Issuer requires the gates:
+   authority derived from the approved Intent and committed by the
+   anchors (Section 6), issuance bounded by the subset rule
+   (Section 5.1), and derivation gated on Mission state (Section 9).  An
+   implementation that carries Mission metadata without these gates
+   conforms to no role in this document and MUST NOT be described as
+   implementing it.
+
    The mission_bound_authorization_supported metadata (Section 13)
    advertises Mission Issuer support only.  It makes no assertion about
    any Resource Server, which does not advertise through Authorization
@@ -589,7 +598,7 @@ Table of Contents
    Mission lookup.
 
    Issuer roles obey three invariants: a Mission has exactly one Mission
-   Issuer, its origin; a Resource AS never creates or alters a Mission;
+   Issuer, its issuer; a Resource AS never creates or alters a Mission;
    and a local token minted in another domain preserves the mission
    claim unchanged ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
 
@@ -697,14 +706,14 @@ Table of Contents
          policy.
 
       max_derivations:  OPTIONAL.  A positive integer.  A positive (1 or
-         greater) bound on the number of derivations the origin AS
+         greater) bound on the number of derivations the issuer AS
          performs under the Mission, enforced per Section 9.  A value of
          0 is invalid (it would forbid even the initial issuance); to
          stop a Mission, revoke it (Section 9.2).  An AS MUST reject
          max_derivations below 1 with invalid_request.  This is an
-         origin-AS derivation cap, not an end-to-end credential cap: a
+         issuer-AS derivation cap, not an end-to-end credential cap: a
          cross-domain issuance counts as one derivation, and tokens
-         another domain mints locally are not counted by the origin,
+         another domain mints locally are not counted by the issuer,
          which cannot observe them (Section 9; detail in
          [I-D.draft-mcguinness-oauth-mission-cross-domain]).
 
@@ -730,7 +739,7 @@ Table of Contents
    |               |enforces the key     |                                                   |
    |               |(Section 8.2)        |                                                   |
    +---------------+---------------------+---------------------------------------------------+
-   |max_derivations|the origin AS at each|never absent at the origin; it does not bound      |
+   |max_derivations|the issuer AS at each|never absent at the issuer; it does not bound      |
    |               |derivation           |another domain's local minting                     |
    |               |(Section 9)          |([I-D.draft-mcguinness-oauth-mission-cross-domain])|
    +---------------+---------------------+---------------------------------------------------+
@@ -1062,6 +1071,14 @@ Table of Contents
 
    The AS MUST refuse to derive an entry that is not a subset of some
    Mission Authority Set entry.
+
+   Authority under a Mission MUST NOT widen after the approval event: a
+   request that exceeds the Authority Set on any dimension (a new
+   resource, action, actor, delegation path, longer duration, or
+   constraint relaxation) is refused under this rule, and broader
+   authority requires a fresh approval event, either a new Mission or a
+   successor per the companion
+   [I-D.draft-mcguinness-oauth-mission-expansion].
 
    Resource containment under a prefix reference is compared after RFC
    3986 [RFC3986] syntax-based normalization of both URIs: lowercase the
@@ -1541,12 +1558,16 @@ Table of Contents
    repeat the mission prefix: the record is the Mission, and prefixed
    names belong to surfaces that reference a Mission from outside it,
    such as the mission_intent request parameter and the mission_id
-   response parameter.  Operational issuance bookkeeping, such as the
-   derivation count gated under Section 9, is AS-side state about the
-   Mission, not a member of the immutable record.  Like the mission
-   claim (Section 8.1), the record is open (Section 12): a companion
-   profile of this document MAY record additional members set at
-   creation using short names coordinated with it (for example, a
+   response parameter.  Member names are spelled out (issuer,
+   expires_at, created_at) and spell identically on every surface that
+   carries Mission facts; the compact JWT names (iss, exp, iat) describe
+   a signed artifact's own envelope, or identify a party in an {iss,
+   sub} object, never the Mission.  Operational issuance bookkeeping,
+   such as the derivation count gated under Section 9, is AS-side state
+   about the Mission, not a member of the immutable record.  Like the
+   mission claim (Section 8.1), the record is open (Section 12): a
+   companion profile of this document MAY record additional members set
+   at creation using short names coordinated with it (for example, a
    lineage member linking the Mission to a predecessor or parent); any
    other extension MUST use collision-resistant names.  The members
    below are the ones this profile defines:
@@ -1554,7 +1575,7 @@ Table of Contents
    id:  REQUIRED.  A string.  The canonical Mission Identifier
       (Section 7.1).
 
-   origin:  REQUIRED.  A string.  The issuer URL of the Mission Issuer
+   issuer:  REQUIRED.  A string.  The issuer URL of the Mission Issuer
       that approved the Mission.  Equals the iss of tokens that AS
       derives; for cross-domain tokens it remains the originating AS
       even though the issuing iss differs
@@ -1614,7 +1635,7 @@ Table of Contents
 
    {
      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-     "origin": "https://as.example.com",
+     "issuer": "https://as.example.com",
      "state": "active",
      "intent": { "goal": "Reconcile Q3 invoices ...",
        "resources": ["https://erp.example.com"],
@@ -1811,7 +1832,11 @@ Table of Contents
 
    id:  REQUIRED.  A string.  The Mission Identifier (Section 7.1).
 
-   origin:  REQUIRED.  A string.  The AS issuer URL.
+   issuer:  REQUIRED.  A string.  The Mission's issuer (Section 7).  A
+      credential's iss names the party that minted it; mission.issuer
+      names the party that approved and serves the Mission, and the two
+      deliberately differ for tokens minted in another trust domain
+      ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
 
    authority_hash:  REQUIRED.  A string.  The Mission's authority_hash,
       binding the token to the consented authority.
@@ -1859,7 +1884,7 @@ Table of Contents
      "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-       "origin": "https://as.example.com",
+       "issuer": "https://as.example.com",
        "authority_hash":
          "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
      }
@@ -2006,7 +2031,7 @@ Table of Contents
    When the Mission Intent sets controls.max_derivations, the AS MUST
    maintain a per-Mission count of *derivations* and MUST refuse with
    invalid_grant any derivation that would exceed the bound.  A
-   derivation is one issuance operation the origin AS performs for a
+   derivation is one issuance operation the issuer AS performs for a
    single request: the initial authorization-code exchange, a refresh, a
    Token Exchange, or a cross-domain grant issuance
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]).  Each counts as
@@ -2020,9 +2045,9 @@ Table of Contents
    *  The check and increment MUST be atomic with issuance, so
       concurrent derivations cannot collectively exceed the bound.
 
-   *  The count covers only derivations the origin AS performs.  Tokens
+   *  The count covers only derivations the issuer AS performs.  Tokens
       another domain mints locally under the Mission are not counted by
-      the origin, which cannot observe them; the cross-domain issuance
+      the issuer, which cannot observe them; the cross-domain issuance
       that authorized them was counted once, and the local issuer bounds
       its own minting by its policy
       ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
@@ -2069,6 +2094,13 @@ Table of Contents
    Status [I-D.draft-mcguinness-oauth-mission-status]; this document
    does not require them.
 
+   Token validity and Mission validity are distinct: a token can outlive
+   a transition of its Mission, by at most the token lifetime.  A
+   deployment whose consumers rely on Mission state beyond a token's
+   lifetime SHOULD offer introspection (Section 10) or the Mission
+   Status companion, so an authorized party can determine the Mission's
+   current state rather than inferring it from token validity.
+
 10.  Mission State via Token Introspection
 
    This section is OPTIONAL.  The stateless baseline (Section 8) needs
@@ -2084,13 +2116,13 @@ Table of Contents
    An AS MAY support OAuth 2.0 Token Introspection [RFC7662] for
    Mission-bound access tokens.  When it does, the response for such a
    token carries, in addition to the standard members, a mission member:
-   id, origin, and authority_hash (as in the mission claim, Section 8.1)
-   plus, from the Mission origin, the current lifecycle state (string).
+   id, issuer, and authority_hash (as in the mission claim, Section 8.1)
+   plus, from the Mission issuer, the current lifecycle state (string).
    The core states are active, revoked, and expired (Section 9); a
    deployment that runs a companion profile defining an additional state
    reports that state here, and a consumer applies the forward-
    compatibility rule of Section 9 (only active permits reliance; any
-   other value, recognized or not, is non-active).  Only the origin
+   other value, recognized or not, is non-active).  Only the issuer
    reports state (Section 10.3).
 
    The AS includes the mission member only when it has authenticated the
@@ -2145,11 +2177,11 @@ Table of Contents
    not by itself revoke the token as an individual credential;
    introspection reports the composite authorization as inactive.
 
-10.3.  Only the Origin Reports Mission State
+10.3.  Only the Issuer Reports Mission State
 
    An AS MUST NOT include mission.state in an introspection response
    unless it holds the Mission, that is, unless it is the Mission
-   origin.  Introspection at a non-origin Resource AS, which returns the
+   issuer.  Introspection at a non-issuer Resource AS, which returns the
    claim-shape members only and never state, is specified by the
    companion ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
 
@@ -2162,7 +2194,7 @@ Table of Contents
 
    While the Mission is active, the response is the standard [RFC7662]
    body plus the mission member.  The canonical ERP token (Section 8.1),
-   introspected at the origin AS:
+   introspected at the issuer AS:
 
    {
      "active": true,
@@ -2192,7 +2224,7 @@ Table of Contents
      ],
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-       "origin": "https://as.example.com",
+       "issuer": "https://as.example.com",
        "authority_hash":
          "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
        "state": "active"
@@ -2206,7 +2238,7 @@ Table of Contents
      "active": false,
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-       "origin": "https://as.example.com",
+       "issuer": "https://as.example.com",
        "authority_hash":
          "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
        "state": "revoked"
@@ -2263,7 +2295,7 @@ Table of Contents
       Delegation MUST NOT add authority.
 
    *  *The Mission binding rides unchanged.* The delegated token carries
-      the same mission claim (Section 8.1), its id, origin, and
+      the same mission claim (Section 8.1), its id, issuer, and
       authority_hash, so every actor in the chain operates under the one
       consented authority.
 
@@ -2436,7 +2468,7 @@ Table of Contents
      "cnf": { "jkt": "qVx7y2N0p4Lq9Md3sZJ8b8mZ3rN2xT5pV4lE6sQqYY" },
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-       "origin": "https://as.example.com",
+       "issuer": "https://as.example.com",
        "authority_hash":
          "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
      }
@@ -2457,7 +2489,7 @@ Table of Contents
    below; they MUST NOT redefine it.  An extension MAY rely on these
    remaining stable across revisions of this profile:
 
-   *  the mission claim members id, origin, and authority_hash
+   *  the mission claim members id, issuer, and authority_hash
       (Section 8.1);
 
    *  the mission_resource_access authorization details shape
@@ -2779,7 +2811,7 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]).  Any party that
    observes credentials for the same Mission, whether a Resource Server,
    a Resource AS, or an auditor spanning audiences, can correlate that
-   activity by the Mission Identifier, and mission.origin further
+   activity by the Mission Identifier, and mission.issuer further
    identifies the issuing AS.  This is intentional: a stable,
    correlatable Mission anchor is what lets a Resource Server, a cross-
    domain Resource AS, and an auditor bind credentials and evidence to
@@ -2788,7 +2820,7 @@ Table of Contents
    this profile does not provide cross-audience unlinkability, and that
    is a deliberate non-goal for this version (Section 1.7), not an
    unfinished feature.  Audience-pairwise (or request-pairwise) Mission
-   references, in which the origin projects a distinct opaque identifier
+   references, in which the issuer projects a distinct opaque identifier
    per audience and resolves them server-side, are the fuller mechanism
    for unlinkability; because they work against the stable anchor, they
    are future work rather than a v1 property.  A deployment that carries
@@ -2868,7 +2900,7 @@ Table of Contents
 
    *  Description: The Mission a token was derived under.  Same object
       shape as the mission JWT claim (Section 8.1); a response from the
-      Mission origin additionally carries a state member giving the
+      Mission's issuer additionally carries a state member giving the
       current lifecycle state (Section 10).
 
    *  Change Controller: IETF
@@ -3284,7 +3316,7 @@ A.3.  Stage 2: Mission-Bound Token Issuance
      "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-       "origin": "https://as.example.com",
+       "issuer": "https://as.example.com",
        "authority_hash":
          "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
      }

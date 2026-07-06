@@ -1466,7 +1466,7 @@ approval commits the Mission: the Mission <code>id</code> and lifecycle do not
 yet exist, and the disclosure must commit only to the proposed Intent
 and Authority Set it actually renders. The Consent Evidence object,
 recorded at or after the decision, carries the resolved <code>mission</code>
-container with <code>id</code>, <code>origin</code>, and the same anchors.<a href="#section-4-2.4.1" class="pilcrow">¶</a></p>
+container with <code>id</code>, <code>issuer</code>, and the same anchors.<a href="#section-4-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-2.5">
@@ -1775,7 +1775,7 @@ envelope:<a href="#section-5-1" class="pilcrow">¶</a></p>
 <pre>
 {
   "typ": "mission-consent-disclosure",
-  "iss": &lt;mission.origin&gt;,
+  "iss": &lt;mission.issuer&gt;,
   "value": &lt;Consent Disclosure object&gt;
 }
 </pre><a href="#section-5-2" class="pilcrow">¶</a>
@@ -1901,17 +1901,17 @@ bounded reduction of the rendering trust base.<a href="#section-6-4" class="pilc
           <p id="section-7-2.4.1"><span class="bcp14">REQUIRED</span>. An object binding the evidence to what was approved. Its
 shape depends on <code>decision</code>, because a Mission exists only after an
 approval (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>):
-- When <code>decision</code> is <code>approved</code>, it contains <code>id</code>, <code>origin</code>,
+- When <code>decision</code> is <code>approved</code>, it contains <code>id</code>, <code>issuer</code>,
   <code>intent_hash</code>, <code>authority_hash</code>, and, when this profile records it
   on the Mission, <code>consent_rendering_hash</code>.
 - When <code>decision</code> is <code>declined</code>, no Mission was created
   (<a href="#declined-events" class="auto internal xref">Section 8.1</a>), so there is no <code>id</code>. It instead contains
-  <code>origin</code> and the <code>intent_hash</code> and <code>authority_hash</code> the disclosure
+  <code>issuer</code> and the <code>intent_hash</code> and <code>authority_hash</code> the disclosure
   corresponded to, matching the disclosure object's <code>source_hashes</code>
   (<a href="#consent-disclosure" class="auto internal xref">Section 4</a>). It <span class="bcp14">MUST NOT</span> contain <code>id</code>.
 - When <code>decision</code> is <code>narrowed</code>, the review required a narrowing
   revision and no Mission was created (<a href="#revision-events" class="auto internal xref">Section 8.2</a>). Like a
-  decline, it contains <code>origin</code> and the reviewed disclosure's
+  decline, it contains <code>issuer</code> and the reviewed disclosure's
   <code>intent_hash</code> and <code>authority_hash</code>, matching that disclosure's
   <code>source_hashes</code>, and <span class="bcp14">MUST NOT</span> contain <code>id</code>.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
 <p id="section-7-2.4.2">This descriptor follows the evidence-descriptor convention of the
@@ -2106,7 +2106,7 @@ that resolves in the Mission Issuer's published key material (its
   "evidence_id": "cns_7rP2kL9mQ4",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "intent_hash": "sha-256:6mIFoCz79uCHNzKLfBpBwqFjoFXdpmpuc65486IqimQ",
     "authority_hash": "sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro",
     "consent_rendering_hash":
@@ -2180,7 +2180,7 @@ material or configured trust anchors; and<a href="#section-7.1-2.5.1" class="pil
 <code>mission</code> match the Mission record being audited. When <code>decision</code> is
 <code>declined</code> or <code>narrowed</code> there is no Mission record
 (<a href="#declined-events" class="auto internal xref">Section 8.1</a>, <a href="#revision-events" class="auto internal xref">Section 8.2</a>); the verifier instead
-confirms the <code>mission</code> descriptor carries <code>origin</code> and the two
+confirms the <code>mission</code> descriptor carries <code>issuer</code> and the two
 <code>source_hashes</code> anchors and no <code>id</code>; and<a href="#section-7.1-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-7.1-2.7">

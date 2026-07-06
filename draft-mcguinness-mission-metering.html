@@ -1277,7 +1277,7 @@ is expected to evolve with implementation experience.<a href="#section-2-1" clas
 consumption bounds on its Missions and is fully conformant to the
 issuance and runtime profiles. The issuance profile's
 <code>max_derivations</code> is not a consumption bound: it is enforced by the
-origin Authorization Server at each derivation and needs none of this
+issuing Authorization Server at each derivation and needs none of this
 document (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-2-2" class="pilcrow">¶</a></p>
 <p id="section-2-3">The consent-integrity rule of <a href="#consent" class="auto internal xref">Section 5.1</a> is the boundary that makes
 this safe to omit: a bound is rendered to an Approver only where it is
@@ -1598,7 +1598,7 @@ prior permit expires; the action is not parameter-bound, so no
   "context": {
     "mission": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-      "origin": "https://as.example.com",
+      "issuer": "https://as.example.com",
       "authority_hash":
         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
       "state": "active"

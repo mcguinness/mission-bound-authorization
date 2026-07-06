@@ -151,7 +151,7 @@ Table of Contents
    This model describes the components and trust relationships of the
    Mission model, not of OAuth 2.0 mechanics.  Its analysis applies to
    any substrate that provides the Mission primitives the profiles
-   consume: the identifier and origin, the state space with its only-
+   consume: the identifier and issuer, the state space with its only-
    active rule, an authority representation with a subset rule, the
    integrity-anchor envelope, and, where the binding provides one, a
    Mission-bound credential; a binding without that credential supplies
@@ -213,12 +213,12 @@ Table of Contents
 
    Resource Authorization Server (cross-domain):  When cross-domain
       access is used, a resource-side Authorization Server mints local
-      Mission-bound tokens that the Mission origin cannot observe.  It
+      Mission-bound tokens that the Mission's issuer cannot observe.  It
       must mint only within the audience and lifetime the cross-domain
       grant scopes.  Its compromise mints arbitrary authority within its
       own domain under the Mission's name; the damage is bounded by
       audience scoping, short grant lifetimes, and audit, not by the
-      origin, which never sees these tokens
+      issuer, which never sees these tokens
       ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
 
    Mission Authority Server (standalone binding):  When the standalone
@@ -537,7 +537,7 @@ Table of Contents
    +-----------------+---------------------+---------------------------+
    | With            | one introspection   | per-request               |
    | introspection   | cycle               | introspection             |
-   |                 |                     | at the origin             |
+   |                 |                     | at the issuer             |
    +-----------------+---------------------+---------------------------+
    | With Mission    | the staleness bound | published                 |
    | Status          | of the status view  | status                    |

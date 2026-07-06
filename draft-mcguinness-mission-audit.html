@@ -1369,7 +1369,7 @@ decision and execution evidence
       </h2>
 <p id="section-5-1">This profile is defined against the Mission model rather than against
 OAuth 2.0 mechanics. It consumes these substrate primitives: the
-Mission identifier and origin, from which the statement subject is
+Mission identifier and issuer, from which the statement subject is
 constructed; the evidence types and their canonical bytes; the
 integrity-anchor envelope; and each producer's published key material.
 The issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> is this
@@ -1462,7 +1462,7 @@ record as part of the Mission's feed.<a href="#section-6.2-1" class="pilcrow">¶
                 <code>application/mission-approval-record+json</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>origin</code>
+                <code>issuer</code>
 </td>
             </tr>
             <tr>
@@ -1472,7 +1472,7 @@ record as part of the Mission's feed.<a href="#section-6.2-1" class="pilcrow">¶
                 <code>application/secevent+jwt</code>, else <code>application/mission-lifecycle-transition+json</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>origin</code>
+                <code>issuer</code>
 </td>
             </tr>
             <tr>
@@ -1483,7 +1483,7 @@ record as part of the Mission's feed.<a href="#section-6.2-1" class="pilcrow">¶
                 <code>application/mission-derivation-record+json</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>origin</code>
+                <code>issuer</code>
 </td>
             </tr>
             <tr>
@@ -1493,7 +1493,7 @@ record as part of the Mission's feed.<a href="#section-6.2-1" class="pilcrow">¶
                 <code>application/mission-consent-evidence+json</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>origin</code>
+                <code>issuer</code>
 </td>
             </tr>
             <tr>
@@ -1519,7 +1519,7 @@ record as part of the Mission's feed.<a href="#section-6.2-1" class="pilcrow">¶
                 <code>application/mission-mandate+jwt</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>origin</code>
+                <code>issuer</code>
 </td>
             </tr>
           </tbody>
@@ -1532,8 +1532,8 @@ Mandate profile does for the Mission Mandate
 extension type it implements; it ignores records of a type it does
 not implement, and they are not audit failures.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
 <p id="section-6.2-4">The producer identifiers are principals the suite already names. For
-every record whose producer is the Mission <code>origin</code>, the Signed
-Statement's <code>iss</code> <span class="bcp14">MUST</span> equal that <code>origin</code>
+every record whose producer is the Mission <code>issuer</code>, the Signed
+Statement's <code>iss</code> <span class="bcp14">MUST</span> equal that <code>issuer</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The PDP and PEP keys are those
 in the deployment-published key sets the runtime and AuthZEN profiles
 require (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
@@ -1568,7 +1568,7 @@ transition as a minimal JSON object with these members, JCS-canonicalized
               <p id="section-6.2.1-2.1.1"><code>mission_id</code> (string, required): the Mission <code>id</code>.<a href="#section-6.2.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-6.2.1-2.2">
-              <p id="section-6.2.1-2.2.1"><code>origin</code> (string, required): the Mission <code>origin</code>.<a href="#section-6.2.1-2.2.1" class="pilcrow">¶</a></p>
+              <p id="section-6.2.1-2.2.1"><code>issuer</code> (string, required): the Mission <code>issuer</code>.<a href="#section-6.2.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-6.2.1-2.3">
               <p id="section-6.2.1-2.3.1"><code>state</code> (string, required): the new lifecycle state.<a href="#section-6.2.1-2.3.1" class="pilcrow">¶</a></p>
@@ -1595,7 +1595,7 @@ date-time at which the transition was committed.<a href="#section-6.2.1-2.5.1" c
 <pre>
 {
   "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-  "origin": "https://as.example.com",
+  "issuer": "https://as.example.com",
   "state": "revoked",
   "transitioned_at": "2026-11-02T08:30:00Z"
 }
@@ -1604,13 +1604,13 @@ date-time at which the transition was committed.<a href="#section-6.2.1-2.5.1" c
 <p id="section-6.2.1.1-3">Its JCS canonical bytes (one line; breaks are for display only):<a href="#section-6.2.1.1-3" class="pilcrow">¶</a></p>
 <div class="lang-text sourcecode" id="section-6.2.1.1-4">
 <pre>
-{"mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","origin":"ht
-tps://as.example.com","state":"revoked","transitioned_at":"2026-1
-1-02T08:30:00Z"}
+{"issuer":"https://as.example.com","mission_id":"msn_8RfX2Lqv9TqMv
+4z7sA2bN1k0YpEdHc9-","state":"revoked","transitioned_at":"2026-11-
+02T08:30:00Z"}
 </pre><a href="#section-6.2.1.1-4" class="pilcrow">¶</a>
 </div>
 <p id="section-6.2.1.1-5">The committed digest is the SHA-256 of those bytes; its base64url
-form is <code>BoPjN-2ntPWo_athC5AQY1n1EIHtgQbBVbdRyJ3qSv4</code>. The Signed
+form is <code>9xMd0Ge2W5oh7f_a964mvK66QOOHYOe-kDz3HUYXkd8</code>. The Signed
 Statement carries the digest bytes inline as its payload, with this
 protected header (<a href="#hash-commitment" class="auto internal xref">Section 6.1</a>, <a href="#feed" class="auto internal xref">Section 7</a>):<a href="#section-6.2.1.1-5" class="pilcrow">¶</a></p>
 <div class="lang-cbor-diag sourcecode" id="section-6.2.1.1-6">
@@ -1637,7 +1637,7 @@ protected header (<a href="#hash-commitment" class="auto internal xref">Section 
 <a href="#section-6.2.2" class="section-number selfRef">6.2.2. </a><a href="#name-the-derivation-record" class="section-name selfRef">The Derivation Record</a>
           </h4>
 <p id="section-6.2.2-1">The family's evidence runs from the approval to the enforced action,
-but the derivation event between them, the <code>origin</code> issuing a token
+but the derivation event between them, the <code>issuer</code> issuing a token
 under the Mission (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), is
 otherwise visible only in Authorization Server logs no profile
 mandates. A derivation record closes that gap: it commits which token
@@ -1650,7 +1650,7 @@ JCS-canonicalized <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span
               <p id="section-6.2.2-3.1.1"><code>mission_id</code> (string, required): the Mission <code>id</code>.<a href="#section-6.2.2-3.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-6.2.2-3.2">
-              <p id="section-6.2.2-3.2.1"><code>origin</code> (string, required): the Mission <code>origin</code>.<a href="#section-6.2.2-3.2.1" class="pilcrow">¶</a></p>
+              <p id="section-6.2.2-3.2.1"><code>issuer</code> (string, required): the Mission <code>issuer</code>.<a href="#section-6.2.2-3.2.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-6.2.2-3.3">
               <p id="section-6.2.2-3.3.1"><code>token_digest</code> (string, required): a digest in the issuance
@@ -1666,7 +1666,7 @@ no token bytes.<a href="#section-6.2.2-3.3.1" class="pilcrow">¶</a></p>
               <p id="section-6.2.2-3.5.1"><code>entries_digest</code> (string, required): the integrity-anchor envelope
 digest (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) over the issued
 <code>authorization_details</code> array, with <code>typ</code>
-                <code>mission-derivation-entries</code> and <code>iss</code> the <code>origin</code>.<a href="#section-6.2.2-3.5.1" class="pilcrow">¶</a></p>
+                <code>mission-derivation-entries</code> and <code>iss</code> the <code>issuer</code>.<a href="#section-6.2.2-3.5.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-6.2.2-3.6">
               <p id="section-6.2.2-3.6.1"><code>actor</code> (string, optional): the delegate's <code>sub</code>, present when the
@@ -1678,15 +1678,15 @@ which the token was issued.<a href="#section-6.2.2-3.7.1" class="pilcrow">¶</a>
 </li>
           </ul>
 <p id="section-6.2.2-4">Its media type is <code>application/mission-derivation-record+json</code>
-(<a href="#iana" class="auto internal xref">Section 14</a>), and its authoritative producer is the <code>origin</code>: the Signed
-Statement's <code>iss</code> <span class="bcp14">MUST</span> equal the Mission <code>origin</code>
+(<a href="#iana" class="auto internal xref">Section 14</a>), and its authoritative producer is the <code>issuer</code>: the Signed
+Statement's <code>iss</code> <span class="bcp14">MUST</span> equal the Mission <code>issuer</code>
 (<a href="#evidence-types" class="auto internal xref">Section 6.2</a>).<a href="#section-6.2.2-4" class="pilcrow">¶</a></p>
 <div id="derivation-vector">
 <section id="section-6.2.2.1">
             <h5 id="name-computed-example-2">
 <a href="#section-6.2.2.1" class="section-number selfRef">6.2.2.1. </a><a href="#name-computed-example-2" class="section-name selfRef">Computed Example</a>
             </h5>
-<p id="section-6.2.2.1-1">For Mission <code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code>, the origin issues
+<p id="section-6.2.2.1-1">For Mission <code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code>, the Mission Issuer issues
 a token for audience <code>https://erp.example.com</code>, narrowed to the write
 entry, with <code>jti</code> <code>at_5v9Kq2mR7xW4nP8sL1zT6</code>. The issued
 <code>authorization_details</code>:<a href="#section-6.2.2.1-1" class="pilcrow">¶</a></p>
@@ -1710,7 +1710,7 @@ The record:<a href="#section-6.2.2.1-3" class="pilcrow">¶</a></p>
 <pre>
 {
   "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-  "origin": "https://as.example.com",
+  "issuer": "https://as.example.com",
   "token_digest":
     "sha-256:V1Wbh4Z3wK39B_YmzHlvkGr7hEA1rUoJMuj00y0q-eE",
   "aud": "https://erp.example.com",
@@ -1723,15 +1723,15 @@ The record:<a href="#section-6.2.2.1-3" class="pilcrow">¶</a></p>
 <p id="section-6.2.2.1-5">Its JCS canonical bytes (one line; breaks are for display only):<a href="#section-6.2.2.1-5" class="pilcrow">¶</a></p>
 <div class="lang-text sourcecode" id="section-6.2.2.1-6">
 <pre>
-{"aud":"https://erp.example.com","entries_digest":"sha-256:Hilv4n
-pLEWlcp2y5z7xcACgXxRhx-LO6dqs5AX0xL8o","issued_at":"2026-10-15T14
-:32:12Z","mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","ori
-gin":"https://as.example.com","token_digest":"sha-256:V1Wbh4Z3wK3
-9B_YmzHlvkGr7hEA1rUoJMuj00y0q-eE"}
+{"aud":"https://erp.example.com","entries_digest":"sha-256:Hilv4np
+LEWlcp2y5z7xcACgXxRhx-LO6dqs5AX0xL8o","issued_at":"2026-10-15T14:3
+2:12Z","issuer":"https://as.example.com","mission_id":"msn_8RfX2Lq
+v9TqMv4z7sA2bN1k0YpEdHc9-","token_digest":"sha-256:V1Wbh4Z3wK39B_Y
+mzHlvkGr7hEA1rUoJMuj00y0q-eE"}
 </pre><a href="#section-6.2.2.1-6" class="pilcrow">¶</a>
 </div>
 <p id="section-6.2.2.1-7">The committed digest is the SHA-256 of those bytes; its base64url
-form is <code>IojbCMPM7a14NDoAbw3VoAbbWTauyBTGk55rCGBS6Ek</code>. The Signed
+form is <code>_cM7GYYiV3VI-QrtRWSogl5Wz1-sB90GM4ZHxuPC3j0</code>. The Signed
 Statement carries the digest bytes inline as its payload, with
 <code>preimage-content-type</code> <code>application/mission-derivation-record+json</code>
 and the same <code>iss</code> and <code>sub</code> as <a href="#transition-vector" class="auto internal xref">Section 6.2.1.1</a>.<a href="#section-6.2.2.1-7" class="pilcrow">¶</a></p>
@@ -1756,7 +1756,7 @@ who may register Signed Statements for a Mission subject to those
 authoritative producers, so the log does not accumulate records from
 components that are not entitled to write to a Mission's feed.<a href="#section-6.3-2" class="pilcrow">¶</a></p>
 <p id="section-6.3-3">A relying party discovers a producer's key by the producer's role. The
-<code>origin</code>'s key is resolved through its published key material: the
+<code>issuer</code>'s key is resolved through its published key material: the
 Authorization Server's metadata <code>jwks_uri</code> in the OAuth binding
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), or the Mission Authority
 Server's discovery <code>jwks_uri</code> in the standalone binding
@@ -1812,7 +1812,7 @@ governance-critical records: the approval event and every Mission
 lifecycle transition. It <span class="bcp14">SHOULD</span> also register the runtime decision and
 execution evidence for the action classes it enforces, so the action
 trail is transparent and not only the governance trail.<a href="#section-6.6-1" class="pilcrow">¶</a></p>
-<p id="section-6.6-2">An origin deploying this profile <span class="bcp14">SHOULD</span> register a derivation record
+<p id="section-6.6-2">A Mission Issuer deploying this profile <span class="bcp14">SHOULD</span> register a derivation record
 (<a href="#derivation-record" class="auto internal xref">Section 6.2.2</a>) for each derivation event. The derivation is
 where approval becomes an issued token, and the family's evidence
 otherwise leaves that step to Authorization Server logs no profile
@@ -1827,7 +1827,7 @@ mandates; registering it closes the approval-to-action gap.<a href="#section-6.6
 <a href="#section-7" class="section-number selfRef">7. </a><a href="#name-the-mission-as-subject" class="section-name selfRef">The Mission as Subject</a>
       </h2>
 <p id="section-7-1">The <code>sub</code> of every Signed Statement about a Mission is a stable
-identifier of that Mission, derived from the <code>mission</code> claim's <code>origin</code>
+identifier of that Mission, derived from the <code>mission</code> claim's <code>issuer</code>
 and <code>id</code>. All evidence about one Mission shares one <code>sub</code> and forms one
 Transparency Service feed. Where the deployment provides feed retrieval
 (<a href="#retrieval" class="auto internal xref">Section 6.5</a>), an auditor collects a Mission's complete, ordered,
@@ -1836,13 +1836,13 @@ guarantee means the auditor and the deployment see the same records.<a href="#se
 <p id="section-7-2">For that to hold, every producer <span class="bcp14">MUST</span> compute the identical <code>sub</code>. This
 profile fixes a single construction; a producer <span class="bcp14">MUST</span> use it and <span class="bcp14">MUST NOT</span>
 use any other. The <code>sub</code> is the URI formed by appending the literal path
-segment <code>missions</code> and the Mission <code>id</code> to the <code>origin</code>:<a href="#section-7-2" class="pilcrow">¶</a></p>
+segment <code>missions</code> and the Mission <code>id</code> to the <code>issuer</code>:<a href="#section-7-2" class="pilcrow">¶</a></p>
 <div class="lang-text sourcecode" id="section-7-3">
 <pre>
-&lt;origin&gt;/missions/&lt;id&gt;
+&lt;issuer&gt;/missions/&lt;id&gt;
 </pre><a href="#section-7-3" class="pilcrow">¶</a>
 </div>
-<p id="section-7-4">The <code>origin</code> is used exactly as it appears in the <code>mission</code> claim, with
+<p id="section-7-4">The <code>issuer</code> is used exactly as it appears in the <code>mission</code> claim, with
 any single trailing slash removed, and the <code>id</code> is appended without
 transformation; the issuance profile constrains the Mission Identifier
 to the URL-safe characters <code>[A-Za-z0-9_-]</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
@@ -1853,13 +1853,13 @@ feed.<a href="#section-7-4" class="pilcrow">¶</a></p>
 <p id="section-7-5">The <code>sub</code> is a correlator, not a credential; presenting it authorizes
 nothing (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7-5" class="pilcrow">¶</a></p>
 <p id="section-7-6">A Child Mission (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>)
-is its own Mission with its own <code>id</code> and <code>origin</code>, so its evidence forms
+is its own Mission with its own <code>id</code> and <code>issuer</code>, so its evidence forms
 its own feed; its lifecycle events, including a <code>cascaded</code> transition,
 appear in that feed. The event that triggered the cascade is in the
 parent's feed, and the child's lineage to the parent is the <code>parent</code>
 member of its <code>mission</code> claim, which an auditor follows to the parent's
 <code>sub</code> to see that trigger.<a href="#section-7-6" class="pilcrow">¶</a></p>
-<p id="section-7-7">Across trust domains a Mission's <code>origin</code> and <code>id</code> are unchanged
+<p id="section-7-7">Across trust domains a Mission's <code>issuer</code> and <code>id</code> are unchanged
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), so every producer in every
 domain computes the same <code>sub</code>. They share one feed only when they
 register with the same Transparency Service. Where domains register with
@@ -1966,7 +1966,7 @@ Consent Evidence and registers it. It does not put the disclosure in the
 log; it signs a Signed Statement whose payload is the hash of the Consent
 Evidence, carried inline, with the hash algorithm and the evidence media
 type in the protected header (<a href="#hash-commitment" class="auto internal xref">Section 6.1</a>). The <code>sub</code> is the
-Mission feed, derived from the Mission <code>origin</code> and <code>id</code>; the <code>iss</code> is
+Mission feed, derived from the Mission <code>issuer</code> and <code>id</code>; the <code>iss</code> is
 the Mission Issuer. Protected header, in COSE EDN (<span>[<a href="#RFC9052" class="cite xref">RFC9052</a>]</span>):<a href="#section-9-1" class="pilcrow">¶</a></p>
 <div class="lang-cbor-diag sourcecode" id="section-9-2">
 <pre>
@@ -2148,7 +2148,7 @@ construction is fixed (<a href="#feed" class="auto internal xref">Section 7</a>)
 directly, so the concern is not Subject leakage but that the Mission's
 durable identifier, its existence, and its registration cadence are
 visible in the log. A deployment <span class="bcp14">SHOULD</span> weigh whether those are
-sensitive, and whether the <code>origin</code> and <code>id</code> that compose the <code>sub</code>
+sensitive, and whether the <code>issuer</code> and <code>id</code> that compose the <code>sub</code>
 reveal more than intended, before registering a Mission's evidence in a
 shared or widely readable log.<a href="#section-13-1" class="pilcrow">¶</a></p>
 <p id="section-13-2">Evidence whose canonical bytes are low-entropy or drawn from an

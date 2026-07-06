@@ -1497,7 +1497,7 @@ action-class names (consequential read, consequential write,
 irreversible action, external commitment, and privileged
 administration) are used as defined in
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>. The Mission claim
-(<code>id</code>, <code>origin</code>, <code>authority_hash</code>), the integrity anchors
+(<code>id</code>, <code>issuer</code>, <code>authority_hash</code>), the integrity anchors
 (<code>intent_hash</code>, <code>authority_hash</code>), and <code>authorization_details</code>
 entries of type <code>mission_resource_access</code> are used as defined in
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-2-3" class="pilcrow">¶</a></p>
@@ -1693,9 +1693,9 @@ materialized view:<a href="#section-5.2-1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.2-2.3">
-<code>origin</code>:</dt>
+<code>issuer</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.2-2.4">
-            <p id="section-5.2-2.4.1"><span class="bcp14">REQUIRED</span>. A string containing a URI. the Mission's <code>origin</code>.<a href="#section-5.2-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-5.2-2.4.1"><span class="bcp14">REQUIRED</span>. A string containing a URI. the Mission's <code>issuer</code>.<a href="#section-5.2-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.2-2.5">
@@ -1723,7 +1723,7 @@ approval event. It is a Mission-record field
 <code>mission</code> claim or the introspection projection, so a PEP that is not
 co-located with the Mission record may not have it; such a PEP omits
 it and relies on <code>policy_view_id</code> for view correlation. A PEP that can
-obtain it (for example, co-located with the origin) includes it.<a href="#section-5.2-2.10.1" class="pilcrow">¶</a></p>
+obtain it (for example, co-located with the issuer) includes it.<a href="#section-5.2-2.10.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.2-2.11">
@@ -1964,7 +1964,7 @@ Authorization: ...
   "context": {
     "mission": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-      "origin": "https://as.example.com",
+      "issuer": "https://as.example.com",
       "authority_hash":
         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
       "state": "active",
@@ -2122,7 +2122,7 @@ Authorization: ...
       "context": {
         "mission": {
           "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-          "origin": "https://as.example.com",
+          "issuer": "https://as.example.com",
           "authority_hash":
             "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
           "state": "active"
@@ -2154,7 +2154,7 @@ Authorization: ...
       "context": {
         "mission": {
           "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-          "origin": "https://as.example.com",
+          "issuer": "https://as.example.com",
           "authority_hash":
             "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
           "state": "active"
@@ -2250,11 +2250,11 @@ canonicalization, and integrity envelope an AuthZEN deployment emits.<a href="#s
 <code>mission</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.1-1.4">
             <p id="section-6.1-1.4.1"><span class="bcp14">REQUIRED</span>. An object. the PDP request's <code>context.mission</code>
-object (<code>id</code>, <code>origin</code>, <code>authority_hash</code>, and, when known,
+object (<code>id</code>, <code>issuer</code>, <code>authority_hash</code>, and, when known,
 <code>policy_version</code> and <code>policy_view_id</code>), extended with <code>intent_hash</code>
 and, when known, a consent-disclosure commitment, so the evidence
 chains back to the exact approved Mission. Within <code>mission</code>, <code>id</code>,
-<code>origin</code>, and <code>authority_hash</code> are <span class="bcp14">REQUIRED</span>; <code>intent_hash</code> is <span class="bcp14">OPTIONAL</span>
+<code>issuer</code>, and <code>authority_hash</code> are <span class="bcp14">REQUIRED</span>; <code>intent_hash</code> is <span class="bcp14">OPTIONAL</span>
 (it is carried in neither the <code>mission</code> claim nor introspection, so
 only a PDP with direct Mission-record access can record it), and the
 remaining members are <span class="bcp14">OPTIONAL</span>. These hashes are the issuing AS's
@@ -2513,7 +2513,7 @@ envelopes with unsupported formats.<a href="#section-6.3-5" class="pilcrow">¶</
   "decision_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "intent_hash":

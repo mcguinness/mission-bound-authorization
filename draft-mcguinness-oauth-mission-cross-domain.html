@@ -1270,11 +1270,11 @@ specifies <strong>cross-domain projection</strong>: the originating Mission Issu
 projects a Mission's authority, audience-scoped and
 integrity-anchored, to an Authorization Server in another trust
 domain, which honors it by minting local tokens for its own resources.
-The projection is a single hop, origin to Resource AS; chaining a
+The projection is a single hop, issuer to Resource AS; chaining a
 Mission across more than one trust-domain boundary remains future work
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Non-Goals").<a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">Two roles carry the model. The <strong>Mission Issuer</strong> (the Mission's
-<code>origin</code>) remains the only party that creates, holds, and gates the
+<code>issuer</code>) remains the only party that creates, holds, and gates the
 Mission. A <strong>Resource AS</strong> honors a Mission it did not issue: it
 validates the projected grant, applies its own local policy, and mints
 its own tokens, preserving the Mission binding unchanged. A Resource
@@ -1312,7 +1312,7 @@ described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</s
 appear in all capitals, as shown here.<a href="#section-3-1" class="pilcrow">¶</a></p>
 <p id="section-3-2">This document uses the terms of the base profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>: Mission, Mission Issuer (the
-Mission's <code>origin</code>), Mission Intent, Authority Set, Subject, <code>mission</code>
+Mission's <code>issuer</code>), Mission Intent, Authority Set, Subject, <code>mission</code>
 claim, derived token, derivation, the subset rule, and lifecycle
 gating. Authority Set entries are <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> <code>authorization_details</code>
 objects. All JSON shown in this document is non-normative and
@@ -1349,12 +1349,12 @@ cross-domain grant (<a href="#validation-at-resource-as" class="auto internal xr
       <h2 id="name-cross-domain-projection">
 <a href="#section-4" class="section-number selfRef">4. </a><a href="#name-cross-domain-projection" class="section-name selfRef">Cross-Domain Projection</a>
       </h2>
-<p id="section-4-1">A Mission is approved and held by one Mission Issuer (its <code>origin</code>).
+<p id="section-4-1">A Mission is approved and held by one Mission Issuer (its <code>issuer</code>).
 This document lets a single Mission be honored by Authorization
 Servers in other trust domains, so a Mission can span more than one
 AS, using the cross-domain authorization grant of the OAuth identity
 chaining architecture <span>[<a href="#I-D.draft-ietf-oauth-identity-chaining" class="cite xref">I-D.draft-ietf-oauth-identity-chaining</a>]</span>: the
-origin AS issues, through an <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token exchange, a short-lived
+issuer AS issues, through an <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token exchange, a short-lived
 JWT authorization grant audienced to the target Authorization Server,
 which the client redeems there with the <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> JWT-bearer grant.<a href="#section-4-1" class="pilcrow">¶</a></p>
 <p id="section-4-2">This document calls that artifact the <strong>cross-domain grant</strong> and
@@ -1379,7 +1379,7 @@ them. The two added requirements are a floor: the cross-domain grant is
 the highest-authority credential crossing a trust boundary, and its
 profile does not by itself guarantee them.<a href="#section-4-3" class="pilcrow">¶</a></p>
 <p id="section-4-4">In this model there is exactly one Mission Issuer per Mission (the
-<code>origin</code>) and one or more <strong>Resource ASes</strong> in other domains that
+<code>issuer</code>) and one or more <strong>Resource ASes</strong> in other domains that
 mint their own tokens for their resources. A Resource AS is never the
 Mission Issuer and <span class="bcp14">MUST NOT</span> create or alter a Mission.<a href="#section-4-4" class="pilcrow">¶</a></p>
 </section>
@@ -1407,7 +1407,7 @@ any other derivation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class
 <ul class="normal">
 <li class="normal" id="section-6-2.1">
           <p id="section-6-2.1.1"><span class="bcp14">MUST</span> be a JWT authorization grant issued and signed by the Mission
-<code>origin</code>, redeemable at the target Resource AS through the
+<code>issuer</code>, redeemable at the target Resource AS through the
 <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> JWT-bearer grant;<a href="#section-6-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-2.2">
@@ -1443,7 +1443,7 @@ replay it within its lifetime (<a href="#validation-at-resource-as" class="auto 
         <li class="normal" id="section-6-2.6">
           <p id="section-6-2.6.1"><span class="bcp14">MUST</span> carry the <code>mission</code> claim
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "The Mission
-Claim") with <code>id</code>, <code>origin</code>, and <code>authority_hash</code> unchanged from the
+Claim") with <code>id</code>, <code>issuer</code>, and <code>authority_hash</code> unchanged from the
 Mission, and the audience-scoped <code>authorization_details</code>
 (<a href="#audience-scope" class="auto internal xref">Section 5</a>); and<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
 </li>
@@ -1532,7 +1532,7 @@ underlying grant provides no replay backstop of its own.<a href="#section-6-11" 
 <ul class="normal">
 <li class="normal" id="section-7-2.1">
           <p id="section-7-2.1.1"><span class="bcp14">MUST</span> establish issuer trust in the originating AS by local policy
-or issuer metadata before accepting any Mission reference. It <span class="bcp14">MUST NOT</span> trust a <code>mission.origin</code> merely because it appears inside a
+or issuer metadata before accepting any Mission reference. It <span class="bcp14">MUST NOT</span> trust a <code>mission.issuer</code> merely because it appears inside a
 signed assertion.<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.2">
@@ -1572,9 +1572,9 @@ cannot be replayed even by the party it is bound to.<a href="#section-7-2.4.1" c
           <p id="section-7-2.5.1">When issuing local access tokens for its resources, the Resource AS
 uses the subject-resolution rules of the underlying cross-domain
 grant and identity chaining specifications. The local token preserves
-the <code>mission</code> claim (<code>id</code>, <code>origin</code>, and <code>authority_hash</code>) unchanged
+the <code>mission</code> claim (<code>id</code>, <code>issuer</code>, and <code>authority_hash</code>) unchanged
 from the cross-domain grant. The issuing <code>iss</code> is the Resource AS;
-<code>mission.origin</code> remains the originating AS. Such a local token:<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
+<code>mission.issuer</code> remains the originating AS. Such a local token:<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-2.5.2.1">
               <p id="section-7-2.5.2.1.1">has an <code>exp</code> that <span class="bcp14">MUST NOT</span> exceed the grant's <code>exp</code>. The Resource
@@ -1587,7 +1587,7 @@ token is bounded transitively;<a href="#section-7-2.5.2.1.1" class="pilcrow">¶<
 from, and <span class="bcp14">MUST NOT</span> be issued as a bearer token; and<a href="#section-7-2.5.2.2.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-7-2.5.2.3">
-              <p id="section-7-2.5.2.3.1">if it preserves the origin <code>client_id</code>, does so only as an audit
+              <p id="section-7-2.5.2.3.1">if it preserves the issuer's <code>client_id</code>, does so only as an audit
 reference, not a local identity: that value is in the originating
 AS's namespace, and a partner Resource Server <span class="bcp14">MUST NOT</span> resolve or
 authorize on it as a local client, for the same portability reason
@@ -1635,7 +1635,7 @@ of any local token according to the cross-domain grant profile in use
 (the Identity Assertion Authorization Grant profile in the recommended
 case), the OAuth identity chaining architecture, and its local trust
 and account-linking policy. This document only requires that the
-Mission binding (<code>mission.id</code>, <code>mission.origin</code>, and <code>authority_hash</code>)
+Mission binding (<code>mission.id</code>, <code>mission.issuer</code>, and <code>authority_hash</code>)
 and the audience-scoped <code>authorization_details</code> remain bounded as
 described here.<a href="#section-7-4" class="pilcrow">¶</a></p>
 <p id="section-7-5">Downstream, <code>authority_hash</code> is an immutable audit and correlation
@@ -1655,18 +1655,18 @@ document does not require to be exposed.<a href="#section-7-5" class="pilcrow">�
 <a href="#section-8" class="section-number selfRef">8. </a><a href="#name-introspection-at-a-resource" class="section-name selfRef">Introspection at a Resource AS</a>
       </h2>
 <p id="section-8-1">The base profile's <span class="bcp14">OPTIONAL</span> token introspection (<span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>) reports
-a <code>mission</code> response member, and only the Mission <code>origin</code> reports the
+a <code>mission</code> response member, and only the Mission <code>issuer</code> reports the
 Mission's lifecycle <code>state</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
 Section "Mission State via Token Introspection"). This section
-specifies the non-origin half of that rule.<a href="#section-8-1" class="pilcrow">¶</a></p>
+specifies the non-issuer half of that rule.<a href="#section-8-1" class="pilcrow">¶</a></p>
 <p id="section-8-2">A Resource AS that supports introspection for a local token it minted
 from a cross-domain grant returns the claim-shape members only: <code>id</code>,
-<code>origin</code>, and <code>authority_hash</code>. It holds the token, not the Mission:
+<code>issuer</code>, and <code>authority_hash</code>. It holds the token, not the Mission:
 it knows the Mission state only as of grant validation and has no
-query to the origin keyed by <code>mission_id</code> (neither this document nor
+query to the issuer keyed by <code>mission_id</code> (neither this document nor
 the base profile defines one). It <span class="bcp14">MUST</span> omit <code>mission.state</code> rather
 than report a stale value as current. <code>authority_hash</code>, when included,
-is the origin's commitment carried through the grant, not a value the
+is the issuer's commitment carried through the grant, not a value the
 Resource AS recomputes from its audience-scoped subset
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Consent Binding").<a href="#section-8-2" class="pilcrow">¶</a></p>
 </section>
@@ -1698,7 +1698,7 @@ originating AS bounds grant lifetimes by the 300-second cap of
 new downstream tokens for long.
 The base profile's token introspection closes the revocation gap only
 single-domain: it requires the introspecting AS to hold the Mission,
-and a Resource AS has no query to the origin keyed by <code>mission_id</code>
+and a Resource AS has no query to the issuer keyed by <code>mission_id</code>
 (<a href="#introspection-at-resource-as" class="auto internal xref">Section 8</a>), so short downstream lifetimes
 remain the only cross-domain control. Deployments needing tighter
 cross-domain revocation can add the status or event-distribution
@@ -1718,11 +1718,11 @@ chain and the only one that crosses a trust boundary. The requirements
 of <a href="#cross-domain-grant" class="auto internal xref">Section 6</a> and <a href="#validation-at-resource-as" class="auto internal xref">Section 7</a> follow
 from that position: issuer trust is established by local policy or
 metadata, never inferred from a signed assertion's own
-<code>mission.origin</code>; the grant is sender-constrained and one-time-use,
+<code>mission.issuer</code>; the grant is sender-constrained and one-time-use,
 because the underlying grant profile provides no replay backstop of
 its own; and everything the Resource AS honors is bounded by the
 audience-scoped entries the grant conveyed, interpreted fail-closed.
-Downstream of the origin, <code>authority_hash</code> is an audit and correlation
+Downstream of the issuer, <code>authority_hash</code> is an audit and correlation
 anchor, not a recomputable proof: its integrity rests on the signature
 chain (<a href="#validation-at-resource-as" class="auto internal xref">Section 7</a>).<a href="#section-9.2-1" class="pilcrow">¶</a></p>
 </section>
@@ -1735,9 +1735,9 @@ chain (<a href="#validation-at-resource-as" class="auto internal xref">Section 7
 <a href="#section-10" class="section-number selfRef">10. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
 <p id="section-10-1">The cross-domain grant and every local token minted from it carry the
-canonical <code>mission_id</code>, <code>mission.origin</code>, and <code>authority_hash</code>
+canonical <code>mission_id</code>, <code>mission.issuer</code>, and <code>authority_hash</code>
 unchanged, so a Resource AS and its Resource Servers can correlate a
-Mission's activity across domains, and <code>mission.origin</code> identifies the
+Mission's activity across domains, and <code>mission.issuer</code> identifies the
 issuing AS to the partner domain. This is the deliberate correlation
 property of the base profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission Identifier
@@ -1892,11 +1892,11 @@ from the partner's Resource Server through its internal services.<a href="#appen
 </li>
       </ul>
 <p id="appendix-A-4">The Mission is the durable anchor across both: <code>mission.id</code>,
-<code>mission.origin</code>, and <code>authority_hash</code> ride unchanged through every
+<code>mission.issuer</code>, and <code>authority_hash</code> ride unchanged through every
 hop. OAuth authority is audience-scoped by the Mission Issuer and
 Resource AS; deployment-local transaction context then narrows the
 operation for internal services. In this baseline walkthrough no hop
-calls back to <code>mission.origin</code> for state; each enforces from the
+calls back to <code>mission.issuer</code> for state; each enforces from the
 credential it holds. The <span class="bcp14">OPTIONAL</span> companion profiles layer on this
 baseline, and the stages note where: Stage 4 gains a runtime
 point-of-use check, and Stage 3 gains prompt cross-domain revocation
@@ -1957,7 +1957,7 @@ audience-scoped authority for the ERP:<a href="#appendix-A.1-1" class="pilcrow">
   ],
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   }
@@ -2008,14 +2008,14 @@ ID-JAG's <code>exp</code>:<a href="#appendix-A.2-1" class="pilcrow">¶</a></p>
   ],
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   }
 }
 </pre><a href="#appendix-A.2-2" class="pilcrow">¶</a>
 </div>
-<p id="appendix-A.2-3">The issuing <code>iss</code> is now the Resource AS, but <code>mission.origin</code> remains
+<p id="appendix-A.2-3">The issuing <code>iss</code> is now the Resource AS, but <code>mission.issuer</code> remains
 the home AS. The token's <code>exp</code> (1797840290) is below the ID-JAG's
 (1797840300) and far below the Mission's <code>expires_at</code>. The Resource
 AS-local <code>sub</code> is illustrative; its value is determined by the
@@ -2095,7 +2095,7 @@ operation:<a href="#appendix-A.4-2" class="pilcrow">¶</a></p>
   },
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   }
@@ -2119,7 +2119,7 @@ partner-domain policy, reads the Mission context and local transaction
 authorization, and enforces them for the internal operation. Like
 every consumer downstream of the home AS, it treats <code>authority_hash</code>
 as an audit and correlation anchor it cannot recompute, and it makes
-no call to <code>mission.origin</code>.<a href="#appendix-A.5-1" class="pilcrow">¶</a></p>
+no call to <code>mission.issuer</code>.<a href="#appendix-A.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="what-rode-through-and-what-narrowed">
@@ -2158,7 +2158,7 @@ no call to <code>mission.origin</code>.<a href="#appendix-A.5-1" class="pilcrow"
             </tr>
           </tbody>
         </table>
-<p id="appendix-A.6-2">The Mission anchor (<code>id</code>, <code>origin</code>, <code>authority_hash</code>) is constant end
+<p id="appendix-A.6-2">The Mission anchor (<code>id</code>, <code>issuer</code>, <code>authority_hash</code>) is constant end
 to end. OAuth authority is preserved or narrowed at the cross-domain
 boundary, and local transaction context narrows the internal operation
 inside the partner domain. The lifetime shrinks at every hop and never

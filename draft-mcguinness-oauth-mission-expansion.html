@@ -1443,7 +1443,7 @@ active (<a href="#replacement" class="auto internal xref">Section 8</a>);<a href
 </li>
           <li class="normal" id="section-1.4-4.4">
             <p id="section-1.4-4.4.1">multi-hop or cross-domain expansion; an expansion is adjudicated by
-the predecessor's Mission Issuer (its <code>origin</code>); or<a href="#section-1.4-4.4.1" class="pilcrow">¶</a></p>
+the predecessor's Mission Issuer (its <code>issuer</code>); or<a href="#section-1.4-4.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.4-4.5">
             <p id="section-1.4-4.5.1">policy-adjudicated expansion within a pre-consented authority
@@ -1782,7 +1782,7 @@ longer-lived Mission past the originally approved horizon.<a href="#section-5.1-
 <code>predecessor</code> member, both on the successor's <code>mission</code> claim and on
 the successor's Mission record.<a href="#section-6-1" class="pilcrow">¶</a></p>
 <p id="section-6-2">The issuance profile's <code>mission</code> claim is an open object: additional
-members <span class="bcp14">MAY</span> appear alongside <code>id</code>, <code>origin</code>, and <code>authority_hash</code>, each
+members <span class="bcp14">MAY</span> appear alongside <code>id</code>, <code>issuer</code>, and <code>authority_hash</code>, each
 defined by the profile that introduces it, and a consumer <span class="bcp14">MUST</span> ignore
 members it does not understand and <span class="bcp14">MUST NOT</span> use any additional member
 to grant or widen authority (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).
@@ -1840,9 +1840,9 @@ in the superseded lifecycle event
 <p id="section-6-7"><code>predecessor</code>, <code>related_to</code>, and <code>successor</code> are each a bare Mission
 Identifier string, not an object like the <code>parent</code> member of a Child
 Mission
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>): same-origin
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>): same-issuer
 succession needs only the identifier to resolve the linked Mission at the
-shared <code>origin</code>, whereas parentage carries cascade semantics and
+shared <code>issuer</code>, whereas parentage carries cascade semantics and
 cross-object integrity that require a structured member.<a href="#section-6-7" class="pilcrow">¶</a></p>
 <p id="section-6-8">Properties:<a href="#section-6-8" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -1858,9 +1858,9 @@ except for its <code>state</code> and the one-time <code>successor</code> link a
 sets on the predecessor (<a href="#superseded-state" class="auto internal xref">Section 7</a>).<a href="#section-6-9.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-9.3">
-          <p id="section-6-9.3.1"><strong>Origin.</strong> The predecessor and successor share an <code>origin</code>: an
+          <p id="section-6-9.3.1"><strong>Origin.</strong> The predecessor and successor share an <code>issuer</code>: an
 expansion is adjudicated by the predecessor's Mission Issuer. A
-consumer correlating a chain resolves each link at that origin.<a href="#section-6-9.3.1" class="pilcrow">¶</a></p>
+consumer correlating a chain resolves each link at that issuer.<a href="#section-6-9.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-6-10">Example successor <code>mission</code> claim on a derived token (non-normative;
@@ -1870,7 +1870,7 @@ other token claims omitted):<a href="#section-6-10" class="pilcrow">¶</a></p>
 {
   "mission": {
     "id": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
     "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
@@ -1958,13 +1958,13 @@ derivation governed by the successor's Authority Set.<a href="#section-7-6.3.1" 
           <p id="section-7-6.4.1"><strong>Reported as non-active.</strong> A <code>superseded</code> predecessor is reported
 through the same mechanisms that report a <code>revoked</code> or <code>expired</code>
 Mission. Where the issuance profile's optional token introspection is
-offered, the composite <code>active</code> is <code>false</code> and, from the origin, the
+offered, the composite <code>active</code> is <code>false</code> and, from the issuer, the
 <code>mission.state</code> member gives <code>superseded</code>. Where the Mission Status
 profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> is deployed, the
 dedicated Status operation reports <code>superseded</code> among the terminal
 states and the Status Response <code>mission.state</code> gives <code>superseded</code>. A
 deployment that offers either surface and this document <span class="bcp14">MUST</span> include
-<code>superseded</code> among the lifecycle states its origin may report.
+<code>superseded</code> among the lifecycle states its issuer may report.
 Consumers rely on the issuance profile's forward-compatibility rule:
 <code>superseded</code>, like any non-<code>active</code> state, is non-deriving.<a href="#section-7-6.4.1" class="pilcrow">¶</a></p>
 </li>
@@ -2196,7 +2196,7 @@ member:<a href="#section-11-3" class="pilcrow">¶</a></p>
 {
   "mission": {
     "id": "msn_3vK9pLqT2mX7wR4nB1sZ8YfC",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
     "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
@@ -2296,7 +2296,7 @@ grant for the named predecessor cannot expand it.<a href="#section-13.1-3.1.1" c
             <p id="section-13.1-3.2.1">The issuance profile's integrity anchors are issuer-bound, so a
 Mission's governance state cannot be transplanted across Mission
 Issuers; an expansion is adjudicated only at the predecessor's own
-<code>origin</code>.<a href="#section-13.1-3.2.1" class="pilcrow">¶</a></p>
+<code>issuer</code>.<a href="#section-13.1-3.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>

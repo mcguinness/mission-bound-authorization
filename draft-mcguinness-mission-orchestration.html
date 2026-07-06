@@ -2052,7 +2052,7 @@ members:<a href="#section-11-1" class="pilcrow">¶</a></p>
 <code>mission</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-2.4">
           <p id="section-11-2.4.1"><span class="bcp14">REQUIRED</span>. The Mission whose orchestration state changed, as the
-nested <code>mission</code> object (<code>id</code>, <code>origin</code>, and, when known,
+nested <code>mission</code> object (<code>id</code>, <code>issuer</code>, and, when known,
 <code>authority_hash</code>), the same shape as the <code>mission</code> claim of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and the Harness Evidence object
 (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-11-2.4.1" class="pilcrow">¶</a></p>
@@ -2178,7 +2178,7 @@ header <span class="bcp14">MUST</span> carry <code>iss</code> and <code>kid</cod
   "event_id": "orch_4r9SqLm8tY2p",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },
@@ -2208,7 +2208,7 @@ the step's first record:<a href="#section-11-5" class="pilcrow">¶</a></p>
   "event_id": "orch_9wK2nR5vXq7t",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },

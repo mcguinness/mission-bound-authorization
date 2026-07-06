@@ -1177,7 +1177,7 @@ profiles.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.2.1"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-mission-substrate-requireme" class="internal xref">Mission Substrate Requirements</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.1">
-                <p id="section-toc.1-1.2.2.1.1"><a href="#section-2.1" class="auto internal xref">2.1</a>.  <a href="#name-mission-identifier-and-orig" class="internal xref">Mission Identifier and Origin</a></p>
+                <p id="section-toc.1-1.2.2.1.1"><a href="#section-2.1" class="auto internal xref">2.1</a>.  <a href="#name-mission-identifier-and-issu" class="internal xref">Mission Identifier and Issuer</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.2">
                 <p id="section-toc.1-1.2.2.2.1"><a href="#section-2.2" class="auto internal xref">2.2</a>.  <a href="#name-mission-lifecycle-states" class="internal xref">Mission Lifecycle States</a></p>
@@ -1306,7 +1306,7 @@ and the core appear to differ, the core governs.<a href="#section-1.1-1" class="
 described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
 appear in all capitals, as shown here.<a href="#section-1.2-1" class="pilcrow">¶</a></p>
 <p id="section-1.2-2">This document uses Mission, Mission Intent, Mission Issuer, Authority
-Set, Approver, Subject, the Mission Identifier, <code>origin</code>, the
+Set, Approver, Subject, the Mission Identifier, <code>issuer</code>, the
 <code>mission</code> claim, the integrity anchors (<code>intent_hash</code> and
 <code>authority_hash</code>), the subset rule, Common Constraints, the
 only-<code>active</code> rule, and the audit horizon as defined by the core. It uses Policy Enforcement Point
@@ -1345,12 +1345,12 @@ normative definition (a section of the core), and the consuming
 profiles; a summary here never overrides its home.<a href="#section-2-1" class="pilcrow">¶</a></p>
 <div id="identifier">
 <section id="section-2.1">
-        <h3 id="name-mission-identifier-and-orig">
-<a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-mission-identifier-and-orig" class="section-name selfRef">Mission Identifier and Origin</a>
+        <h3 id="name-mission-identifier-and-issu">
+<a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-mission-identifier-and-issu" class="section-name selfRef">Mission Identifier and Issuer</a>
         </h3>
 <p id="section-2.1-1">A binding <span class="bcp14">MUST</span> provide a Mission identifier that is opaque, carries no
 semantic content, has at least 128 bits of entropy, and is never
-reused, together with an <code>origin</code>: an issuer identifier naming the
+reused, together with an <code>issuer</code>: an issuer identifier naming the
 approving Mission Issuer, from which consumers resolve the binding's
 state and key surfaces; together they name exactly one Mission.<a href="#section-2.1-1" class="pilcrow">¶</a></p>
 <p id="section-2.1-2">A binding <span class="bcp14">MAY</span> define a substrate-native reference to the same Mission,
@@ -1444,7 +1444,7 @@ form), and audit transparency (the committed evidence types).<a href="#section-2
         </h3>
 <p id="section-2.5-1">This primitive is <span class="bcp14">OPTIONAL</span>, and it is where provision levels split.<a href="#section-2.5-1" class="pilcrow">¶</a></p>
 <p id="section-2.5-2">Under full provision, the binding issues a credential carrying the
-<code>mission</code> claim (<code>id</code>, <code>origin</code>, <code>authority_hash</code>) under its own
+<code>mission</code> claim (<code>id</code>, <code>issuer</code>, <code>authority_hash</code>) under its own
 proof-of-possession discipline, and only while the referenced Mission
 is <code>active</code>: credential issuance is gated on Mission state.<a href="#section-2.5-2" class="pilcrow">¶</a></p>
 <p id="section-2.5-3">Under partial provision, the binding issues no such credential. It
@@ -1471,7 +1471,7 @@ binding establishment section of the runtime profile
 <a href="#section-2.6" class="section-number selfRef">2.6. </a><a href="#name-mission-key-material" class="section-name selfRef">Mission Key Material</a>
         </h3>
 <p id="section-2.6-1">A binding <span class="bcp14">MUST</span> publish the Mission Issuer's signing keys, resolvable
-from the <code>origin</code> by verifiers of its signed artifacts. Across a
+from the <code>issuer</code> by verifiers of its signed artifacts. Across a
 rotation, the verification key for each key identifier <span class="bcp14">SHOULD</span> remain
 resolvable while artifacts signed under it remain within the audit
 horizon (<a href="#audit-horizon" class="auto internal xref">Section 2.7</a>).<a href="#section-2.6-1" class="pilcrow">¶</a></p>
@@ -1690,7 +1690,7 @@ binding's own conformance clauses.<a href="#section-4-1" class="pilcrow">¶</a><
 <p id="section-4-2">A <strong>Mission Substrate Binding</strong>:<a href="#section-4-2" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-4-3">
 <li id="section-4-3.1">
-          <p id="section-4-3.1.1">provides the Mission identifier and <code>origin</code> (<a href="#identifier" class="auto internal xref">Section 2.1</a>);<a href="#section-4-3.1.1" class="pilcrow">¶</a></p>
+          <p id="section-4-3.1.1">provides the Mission identifier and <code>issuer</code> (<a href="#identifier" class="auto internal xref">Section 2.1</a>);<a href="#section-4-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-4-3.2">
           <p id="section-4-3.2.1">provides the lifecycle state space with the only-<code>active</code> rule,

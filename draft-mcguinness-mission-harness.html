@@ -1767,7 +1767,7 @@ Mission state cache using
 Mission <span class="bcp14">MUST</span> contain:<a href="#section-8-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-8-2.1">
-          <p id="section-8-2.1.1">Mission identifier and origin;<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.1.1">Mission identifier and issuer;<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.2">
           <p id="section-8-2.2.1">last observed state;<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
@@ -1947,7 +1947,7 @@ permit obtained before that interval.<a href="#section-10-5" class="pilcrow">¶<
 governed work <span class="bcp14">MUST</span> be keyed by at least:<a href="#section-10.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-10.1-2.1">
-            <p id="section-10.1-2.1.1">Mission identifier and origin;<a href="#section-10.1-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-10.1-2.1.1">Mission identifier and issuer;<a href="#section-10.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.1-2.2">
             <p id="section-10.1-2.2.1">audience or protected resource;<a href="#section-10.1-2.2.1" class="pilcrow">¶</a></p>
@@ -1968,7 +1968,7 @@ separately authorized under the target Mission. A warm connection to a
 tool server is not a permit to call a tool.<a href="#section-10.1-3" class="pilcrow">¶</a></p>
 <p id="section-10.1-4">A workspace or artifact handle bound to a Mission is subject to the
 same rules as a cached connection: it <span class="bcp14">MUST</span> be keyed by the Mission
-identifier and origin, and the harness <span class="bcp14">MUST</span> mark it unusable for
+identifier and issuer, and the harness <span class="bcp14">MUST</span> mark it unusable for
 governed work on the stop events of this section. A retained workspace
 is not a basis to resume governed work under a Mission that is no
 longer active.<a href="#section-10.1-4" class="pilcrow">¶</a></p>
@@ -2340,7 +2340,7 @@ non-normative summary of what a record carries:<a href="#section-15-2" class="pi
           <p id="section-15-3.1.1"><code>event_id</code>;<a href="#section-15-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-3.2">
-          <p id="section-15-3.2.1">the <code>mission</code> object (<code>id</code>, <code>origin</code>, and, when known,
+          <p id="section-15-3.2.1">the <code>mission</code> object (<code>id</code>, <code>issuer</code>, and, when known,
 <code>authority_hash</code>), the same shape as the <code>mission</code> claim of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>;<a href="#section-15-3.2.1" class="pilcrow">¶</a></p>
 </li>
@@ -2405,7 +2405,7 @@ records the outcome, so the two are orthogonal.<a href="#section-15.1-2.4.1" cla
 <dt id="section-15.1-2.5">
 <code>mission</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.6">
-            <p id="section-15.1-2.6.1"><span class="bcp14">REQUIRED</span>. Object containing <code>id</code>, <code>origin</code>, and, when known,
+            <p id="section-15.1-2.6.1"><span class="bcp14">REQUIRED</span>. Object containing <code>id</code>, <code>issuer</code>, and, when known,
 <code>authority_hash</code>.<a href="#section-15.1-2.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
@@ -2485,7 +2485,7 @@ decision, each a value from the harness execution states of
   "event_type": "resume_suppressed",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },

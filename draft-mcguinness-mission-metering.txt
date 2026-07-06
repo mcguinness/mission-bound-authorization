@@ -125,8 +125,8 @@ Table of Contents
    consumption bounds on its Missions and is fully conformant to the
    issuance and runtime profiles.  The issuance profile's
    max_derivations is not a consumption bound: it is enforced by the
-   origin Authorization Server at each derivation and needs none of this
-   document ([I-D.draft-mcguinness-oauth-mission]).
+   issuing Authorization Server at each derivation and needs none of
+   this document ([I-D.draft-mcguinness-oauth-mission]).
 
    The consent-integrity rule of Section 5.1 is the boundary that makes
    this safe to omit: a bound is rendered to an Approver only where it
@@ -361,7 +361,7 @@ Table of Contents
      "context": {
        "mission": {
          "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-         "origin": "https://as.example.com",
+         "issuer": "https://as.example.com",
          "authority_hash":
            "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
          "state": "active"

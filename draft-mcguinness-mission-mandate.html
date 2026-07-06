@@ -1360,7 +1360,7 @@ uses:<a href="#section-3-3" class="pilcrow">¶</a></p>
         <dt id="section-3-4.1">Mission Issuer:</dt>
         <dd style="margin-left: 1.5em" id="section-3-4.2">
           <p id="section-3-4.2.1">The component that approved and holds the Mission, identified by the
-Mission's <code>origin</code>: the OAuth Authorization Server under the
+Mission's <code>issuer</code>: the OAuth Authorization Server under the
 issuance profile, or a Mission Authority Server
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>) under the
 standalone binding.<a href="#section-3-4.2.1" class="pilcrow">¶</a></p>
@@ -1375,7 +1375,7 @@ by the Mission Issuer (<a href="#mandate" class="auto internal xref">Section 5</
 <dt id="section-3-4.5">Mandate Issuer, Mandate Verifier:</dt>
         <dd style="margin-left: 1.5em" id="section-3-4.6">
           <p id="section-3-4.6.1">The conformance roles of <a href="#conformance" class="auto internal xref">Section 10</a>: the Mission Issuer acting
-as the minter of Mandates (always the Mission <code>origin</code>), and a party
+as the minter of Mandates (always the Mission <code>issuer</code>), and a party
 that validates a Mandate (<a href="#verification" class="auto internal xref">Section 7</a>) and relies on it as
 evidence.<a href="#section-3-4.6.1" class="pilcrow">¶</a></p>
 </dd>
@@ -1451,7 +1451,7 @@ published key material (<a href="#mission-substrate" class="auto internal xref">
           <dt id="section-5.2-1.1">
 <code>iss</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.2-1.2">
-            <p id="section-5.2-1.2.1"><span class="bcp14">REQUIRED</span>. A string. The Mission <code>origin</code>.<a href="#section-5.2-1.2.1" class="pilcrow">¶</a></p>
+            <p id="section-5.2-1.2.1"><span class="bcp14">REQUIRED</span>. A string. The Mission <code>issuer</code>.<a href="#section-5.2-1.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.2-1.3">
@@ -1470,9 +1470,9 @@ published key material (<a href="#mission-substrate" class="auto internal xref">
 <code>mission</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.2-1.8">
             <p id="section-5.2-1.8.1"><span class="bcp14">REQUIRED</span>. An object in the <code>mission</code> claim shape of the issuance
-profile, extended per its extensibility rules: <code>id</code>, <code>origin</code>, and
+profile, extended per its extensibility rules: <code>id</code>, <code>issuer</code>, and
 <code>authority_hash</code>, plus <code>intent_hash</code> committing the approved Mission
-Intent. All four members are <span class="bcp14">REQUIRED</span> here. <code>mission.origin</code> <span class="bcp14">MUST</span>
+Intent. All four members are <span class="bcp14">REQUIRED</span> here. <code>mission.issuer</code> <span class="bcp14">MUST</span>
 equal <code>iss</code>.<a href="#section-5.2-1.8.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
@@ -1562,7 +1562,7 @@ token introspection where the verifier holds a Mission-bound token
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A verifier whose reliance
 requires the Mission to be active <span class="bcp14">MUST</span> obtain current state from a
 source its deployment trusts, within a freshness bound its policy
-sets; where the origin advertises a propagation bound, the freshness
+sets; where the issuer advertises a propagation bound, the freshness
 bound <span class="bcp14">SHOULD</span> be no looser
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). Reliance that needs
 no active Mission, such as auditing a completed one, needs no check.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
@@ -1613,7 +1613,7 @@ from the displayed JSON.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
   "jti": "mnd_4Xq7vB2kR9sT1mZ6pL3n",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "intent_hash":
@@ -1760,21 +1760,21 @@ value.<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
         <li id="section-7-2.2">
           <p id="section-7-2.2.1"><strong>Signature.</strong> Resolve the <span class="bcp14">REQUIRED</span> <code>kid</code> in the Mission Issuer's
 published key material (<a href="#mission-substrate" class="auto internal xref">Section 4</a>) and verify the JWS
-signature. Confirm <code>mission.origin</code> equals <code>iss</code>.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+signature. Confirm <code>mission.issuer</code> equals <code>iss</code>.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-7-2.3">
           <p id="section-7-2.3.1"><strong>Issuer trust.</strong> Decide by local policy or configured trust
-anchors whether the <code>iss</code> origin is trusted. A verifier <span class="bcp14">MUST NOT</span>
-trust an origin merely because it appears inside a signed artifact,
+anchors whether the <code>iss</code> value names a trusted issuer. A verifier <span class="bcp14">MUST NOT</span>
+trust an issuer merely because it appears inside a signed artifact,
 mirroring the issuer-trust rule of the cross-domain projection
 profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>). A
-Mandate from an untrusted origin proves nothing.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+Mandate from an untrusted issuer proves nothing.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-7-2.4">
           <p id="section-7-2.4.1"><strong>Anchor recomputation.</strong> When <code>authority_set</code> is present in full,
 the verifier <span class="bcp14">MAY</span> recompute <code>authority_hash</code> over it per the
 issuance profile's integrity-anchor rules (the
-<code>mission-authority-set</code> envelope with <code>iss</code> set to the origin) and
+<code>mission-authority-set</code> envelope with <code>iss</code> set to <code>mission.issuer</code>) and
 <span class="bcp14">MUST</span> reject the Mandate on mismatch. It <span class="bcp14">MAY</span> likewise verify
 <code>intent_hash</code> against a Mission Intent it holds.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
 </li>
@@ -1803,7 +1803,7 @@ distinguish them:<a href="#section-7.1-1" class="pilcrow">¶</a></p>
           <dt id="section-7.1-2.1">Invalid:</dt>
           <dd style="margin-left: 1.5em" id="section-7.1-2.2">
             <p id="section-7.1-2.2.1">The artifact fails as an artifact: signature, <code>typ</code>, required-claim
-structure, <code>iss</code>/<code>origin</code> mismatch, anchor mismatch under step 4, or
+structure, <code>iss</code>/<code>issuer</code> mismatch, anchor mismatch under step 4, or
 an unrecognized hash prefix under step 6. The Mandate <span class="bcp14">MUST</span> be
 rejected and <span class="bcp14">MUST NOT</span> be relied on for anything.<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
 </dd>
@@ -1812,7 +1812,7 @@ rejected and <span class="bcp14">MUST NOT</span> be relied on for anything.<a hr
           <dd style="margin-left: 1.5em" id="section-7.1-2.4">
             <p id="section-7.1-2.4.1">Verification cannot complete: the issuer's key material is
 unreachable, the <code>kid</code> does not resolve, or no trust anchor covers
-the origin. This is not evidence of tampering, mirroring the audit
+the Mission's issuer. This is not evidence of tampering, mirroring the audit
 profile's classification (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>);
 the verifier <span class="bcp14">MUST NOT</span> treat the Mandate as verified and <span class="bcp14">MUST NOT</span>
 treat the failure as proof the artifact is false.<a href="#section-7.1-2.4.1" class="pilcrow">¶</a></p>
@@ -1890,9 +1890,9 @@ as-is (an already-signed object is not re-canonicalized).<a href="#section-8.3-2
 (<a href="#iana" class="auto internal xref">Section 13</a>).<a href="#section-8.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-8.3-2.3">
-            <p id="section-8.3-2.3.1"><strong>Authoritative producer</strong>: the Mission <code>origin</code>; the registering
+            <p id="section-8.3-2.3.1"><strong>Authoritative producer</strong>: the Mission <code>issuer</code>; the registering
 <code>iss</code> <span class="bcp14">MUST</span> equal it, which holds by construction since a Mandate's
-<code>iss</code> is the origin (<a href="#conformance" class="auto internal xref">Section 10</a>).<a href="#section-8.3-2.3.1" class="pilcrow">¶</a></p>
+<code>iss</code> is <code>mission.issuer</code> (<a href="#conformance" class="auto internal xref">Section 10</a>).<a href="#section-8.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-8.3-3">Registration gives a Mandate an independent existence proof, which
@@ -1937,7 +1937,7 @@ artifact's evidence lifetime, and no revocation list is defined.<a href="#sectio
 <p id="section-10-1">A <strong>Mandate Issuer</strong> <span class="bcp14">MUST</span>:<a href="#section-10-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-10-2.1">
-          <p id="section-10-2.1.1">be the Mission <code>origin</code> and set <code>iss</code> to it;<a href="#section-10-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-10-2.1.1">be the Mission <code>issuer</code> and set <code>iss</code> to it;<a href="#section-10-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-2.2">
           <p id="section-10-2.2.1">mint only over an existing Mission record, populating every claim

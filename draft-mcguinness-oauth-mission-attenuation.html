@@ -1375,7 +1375,7 @@ are distinct.<a href="#section-4-3" class="pilcrow">¶</a></p>
 (<span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>, <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>).
 The Mission Issuer derives that authority from the Mission's Authority
 Set by the mapping of <a href="#root-mapping" class="auto internal xref">Section 5.1</a>. The root carries the <code>mission</code>
-claim (<code>id</code>, <code>origin</code>, <code>authority_hash</code>) and the holder's confirmation
+claim (<code>id</code>, <code>issuer</code>, <code>authority_hash</code>) and the holder's confirmation
 key, as both profiles require. It <span class="bcp14">MUST</span> carry <code>aud</code> per the issuance
 profile's token rules (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
 identifying the Resource Server(s) authorized to consume its authority.<a href="#section-5-1" class="pilcrow">¶</a></p>
@@ -1477,7 +1477,7 @@ Mission Issuer caps the root's <code>exp</code> at the Mission's <code>expires_a
 the whole chain transitively: no descendant outlives the root, hence
 none outlives the Mission.<a href="#section-7-3" class="pilcrow">¶</a></p>
 <p id="section-7-4">The <code>mission</code> claim rides the chain unchanged: every token in the chain
-carries the same <code>id</code>, <code>origin</code>, and <code>authority_hash</code> as the root. The
+carries the same <code>id</code>, <code>issuer</code>, and <code>authority_hash</code> as the root. The
 child's narrowing is governed entirely by the attenuation substrate's
 capability monotonicity, which is the subset relation a consumer checks;
 because the child carries the parent chain, a consumer holding only the
@@ -1506,7 +1506,7 @@ substrate's chain verification, a consumer <span class="bcp14">MUST</span>:<a hr
 <ul class="normal">
 <li class="normal" id="section-8-2.1">
           <p id="section-8-2.1.1">reject the chain unless every token in it carries a <code>mission</code> claim
-and every claim carries the same <code>id</code>, <code>origin</code>, and <code>authority_hash</code>
+and every claim carries the same <code>id</code>, <code>issuer</code>, and <code>authority_hash</code>
 as the root. A child cannot re-bind to a different Mission or change
 the lineage anchor; a link whose <code>mission</code> claim differs from the
 root's, or that omits it, <span class="bcp14">MUST</span> cause the whole chain to be refused,
@@ -1611,7 +1611,7 @@ levels of offline narrowing. Decoded root token:<a href="#section-11-1" class="p
   "del_max_depth": 2,
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },
@@ -1652,7 +1652,7 @@ root's <code>cnf</code> binds, sets <code>iss</code> to that key's thumbprint, i
   "del_max_depth": 2,
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },
@@ -1776,7 +1776,7 @@ for offline-attenuated actions.<a href="#section-13-2.6.1" class="pilcrow">¶</a
       <h2 id="name-privacy-considerations">
 <a href="#section-14" class="section-number selfRef">14. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
-<p id="section-14-1">The <code>mission</code> claim (<code>id</code>, <code>origin</code>, <code>authority_hash</code>) rides every token
+<p id="section-14-1">The <code>mission</code> claim (<code>id</code>, <code>issuer</code>, <code>authority_hash</code>) rides every token
 in an attenuation chain unchanged (<a href="#attenuation" class="auto internal xref">Section 7</a>), so every consumer
 of any child sees the same durable Mission correlator and lineage
 anchor. The chain is therefore a correlation surface across the
