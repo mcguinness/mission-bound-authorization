@@ -1277,7 +1277,9 @@ A Mission Receipt MUST identify the Mission the action was authorized
 under: `mission.id` and `mission.issuer`, or a verifiable Mission
 projection such as the cross-domain grant's `mission` claim
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). It SHOULD bind
-the policy decision (the decision identifier and result), the
+the policy decision (the decision identifier and result), the policy
+state it was decided under (the PDP's policy-view version and the
+Mission's `policy_version`), the
 executor (the authenticated actor and any `act` chain), the custody
 boundary (whether a mediating PEP held the credential, {{custody}}),
 the downstream target (the resource and audience), the outcome, the

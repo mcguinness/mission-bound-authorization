@@ -423,6 +423,50 @@ regardless of binding:
           Resource Server
 ~~~
 
+## The Actor Chain {#actor-chain}
+
+One material action splits across these roles, and the family keeps
+each distinct and attributable rather than collapsing them into one
+"agent" identity:
+
+Principal:
+: the Subject, the token `sub` (the core).
+
+Accountable approver:
+: the Approver, committed at the approval event (the core).
+
+Intent generator:
+: the shaper, with Shaping Evidence recording what it emitted
+  ({{I-D.draft-mcguinness-mission-shaping}}).
+
+Authorizer:
+: the Mission Issuer at issuance (the core); the PDP per action
+  ({{I-D.draft-mcguinness-mission-runtime}}).
+
+Approved agent:
+: the OAuth client, `client_id` on every derived token (the core).
+
+Executing delegate:
+: the outermost `act` actor (the core's Delegation section).
+
+Credential holder:
+: the mediating PEP under mediated custody
+  ({{I-D.draft-mcguinness-mission-runtime}}).
+
+Capability executor:
+: the `executor` of the capability source binding
+  ({{I-D.draft-mcguinness-mission-authzen}}).
+
+Downstream identity:
+: the audience-scoped token and the cross-domain local subject
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+
+Attribution survives because no role is inferred from another: each
+is carried by its own construct, and the evidence layer records them
+together, in runtime evidence and the Mission Receipt
+({{I-D.draft-mcguinness-mission-runtime}}), Consent Evidence, and
+the audit feed.
+
 # The Mission Substrate {#substrate}
 
 The companion profiles named without "oauth" are defined against the

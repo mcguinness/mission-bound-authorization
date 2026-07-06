@@ -456,6 +456,17 @@ Response), which those substrates own. {{adversary-model}} gives the
 per-adversary-move detail: what addresses each move, and the residual it
 leaves.
 
+"On behalf of" is not treated as a permission model. The family
+splits what that phrase conflates: the Mission carries the approved
+task the agent pursues for the Subject; a derived token presents
+delegated authority without identity collapse, since `sub` remains
+the Subject, `client_id` remains the approved agent, and the `act`
+chain names who executed; and personal sanction is carried only by
+approval events (the approval event, action-bound approval), never
+inferred from token possession. Authority derived down this chain
+never exceeds its source (the subset rule), so broad "acting as"
+standing cannot be laundered out of a narrow approval.
+
 # Adversary Model and Coverage {#adversary-model}
 
 The trusted base ({{trusted-base}}) is the component view; this is the
