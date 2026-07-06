@@ -348,7 +348,11 @@ The members are:
 
 - The signed JWT envelope `iss`, `aud`, `sub`, `nonce`, `iat`, `exp`.
   The `aud` is the response's audience binding and the `nonce` its
-  request binding. `exp` bounds the validity of the signed response
+  request binding. When the request omitted `audience`
+  ({{mission-status-request}}), the response is state-only and the AS
+  MUST set `aud` to the authenticated requester's identifier, as the
+  Lifecycle endpoint does ({{mission-lifecycle-endpoint}}); the
+  consumer's `aud` verification below then checks that identifier. `exp` bounds the validity of the signed response
   itself; how long the consumer MAY rely on the reported `state` is
   given separately by `mission.fresh_until` below.
 - `mission`: the `mission` object, the same shape as the `mission`
@@ -408,7 +412,8 @@ A consumer MUST verify, before honoring a response:
 
 ## Caching {#mission-status-caching}
 
-Consumers SHOULD cache a response keyed on (`mission_id`, audience)
+Consumers SHOULD cache a response keyed on (`mission_id`, audience),
+or on (`mission_id`, requester identifier) for a state-only response,
 until `mission.fresh_until`. Consumers MUST NOT use a cached response
 after `mission.fresh_until`. When comparing the current time to
 `mission.fresh_until`, a consumer MAY allow up to 30 seconds of
