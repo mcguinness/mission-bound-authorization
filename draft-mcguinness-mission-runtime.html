@@ -2871,7 +2871,9 @@ the Mission itself.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
 under: <code>mission.id</code> and <code>mission.issuer</code>, or a verifiable Mission
 projection such as the cross-domain grant's <code>mission</code> claim
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>). It <span class="bcp14">SHOULD</span> bind
-the policy decision (the decision identifier and result), the
+the policy decision (the decision identifier and result), the policy
+state it was decided under (the PDP's policy-view version and the
+Mission's <code>policy_version</code>), the
 executor (the authenticated actor and any <code>act</code> chain), the custody
 boundary (whether a mediating PEP held the credential, <a href="#custody" class="auto internal xref">Section 4.6</a>),
 the downstream target (the resource and audience), the outcome, the
@@ -3445,7 +3447,8 @@ bytes are a single line with sorted member names and no whitespace:<a href="#app
 </div>
 <div class="lang-text sourcecode" id="appendix-A-6">
 <pre>
-parameter_digest = sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI
+parameter_digest =
+  sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI
 </pre><a href="#appendix-A-6" class="pilcrow">¶</a>
 </div>
 <p id="appendix-A-7">The PDP binds its permit to this value, and the executing PEP recomputes

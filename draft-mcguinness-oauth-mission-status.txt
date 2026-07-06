@@ -717,50 +717,49 @@ Table of Contents
    operations of Section 5.2.  Only active permits derivation; every
    other state is non-deriving.
 
-   +=========+=============+=======================================================+==========+
-   |From     |Event        |Event source                                           |To        |
-   +=========+=============+=======================================================+==========+
-   |(none)   |approval     |issuance profile                                       |active    |
-   |         |event        |                                                       |          |
-   +---------+-------------+-------------------------------------------------------+----------+
-   |active   |revoke       |lifecycle endpoint                                     |revoked   |
-   +---------+-------------+-------------------------------------------------------+----------+
-   |suspended|revoke       |lifecycle endpoint                                     |revoked   |
-   +---------+-------------+-------------------------------------------------------+----------+
-   |active   |suspend      |lifecycle endpoint                                     |suspended |
-   +---------+-------------+-------------------------------------------------------+----------+
-   |suspended|resume       |lifecycle endpoint                                     |active    |
-   +---------+-------------+-------------------------------------------------------+----------+
-   |active   |complete     |lifecycle endpoint                                     |completed |
-   +---------+-------------+-------------------------------------------------------+----------+
-   |suspended|complete     |lifecycle endpoint                                     |completed |
-   +---------+-------------+-------------------------------------------------------+----------+
-   |active   |expires_at   |expiry clock                                           |expired   |
-   |         |reached      |                                                       |          |
-   +---------+-------------+-------------------------------------------------------+----------+
-   |suspended|expires_at   |expiry clock                                           |expired   |
-   |         |reached      |                                                       |          |
-   +---------+-------------+-------------------------------------------------------+----------+
-   |suspended|suspend_until|expiry clock                                           |active    |
-   |         |reached,     |                                                       |          |
-   |         |on_expiry =  |                                                       |          |
-   |         |resume       |                                                       |          |
-   +---------+-------------+-------------------------------------------------------+----------+
-   |suspended|suspend_until|expiry clock                                           |revoked   |
-   |         |reached,     |                                                       |          |
-   |         |on_expiry =  |                                                       |          |
-   |         |revoke       |                                                       |          |
-   +---------+-------------+-------------------------------------------------------+----------+
-   |active   |successor    |companion adjudication                                 |superseded|
-   |         |activates    |([I-D.draft-mcguinness-oauth-mission-expansion])       |          |
-   +---------+-------------+-------------------------------------------------------+----------+
-   |active   |parent       |companion adjudication                                 |cascaded  |
-   |         |reaches a    |([I-D.draft-mcguinness-oauth-mission-child-delegation])|          |
-   |         |terminal     |                                                       |          |
-   |         |state        |                                                       |          |
-   +---------+-------------+-------------------------------------------------------+----------+
+    +===========+====================+==================+============+
+    | From      | Event              | Event source     | To         |
+    +===========+====================+==================+============+
+    | (none)    | approval event     | issuance profile | active     |
+    +-----------+--------------------+------------------+------------+
+    | active    | revoke             | lifecycle        | revoked    |
+    |           |                    | endpoint         |            |
+    +-----------+--------------------+------------------+------------+
+    | suspended | revoke             | lifecycle        | revoked    |
+    |           |                    | endpoint         |            |
+    +-----------+--------------------+------------------+------------+
+    | active    | suspend            | lifecycle        | suspended  |
+    |           |                    | endpoint         |            |
+    +-----------+--------------------+------------------+------------+
+    | suspended | resume             | lifecycle        | active     |
+    |           |                    | endpoint         |            |
+    +-----------+--------------------+------------------+------------+
+    | active    | complete           | lifecycle        | completed  |
+    |           |                    | endpoint         |            |
+    +-----------+--------------------+------------------+------------+
+    | suspended | complete           | lifecycle        | completed  |
+    |           |                    | endpoint         |            |
+    +-----------+--------------------+------------------+------------+
+    | active    | expires_at reached | expiry clock     | expired    |
+    +-----------+--------------------+------------------+------------+
+    | suspended | expires_at reached | expiry clock     | expired    |
+    +-----------+--------------------+------------------+------------+
+    | suspended | suspend_until      | expiry clock     | active     |
+    |           | reached, on_expiry |                  |            |
+    |           | = resume           |                  |            |
+    +-----------+--------------------+------------------+------------+
+    | suspended | suspend_until      | expiry clock     | revoked    |
+    |           | reached, on_expiry |                  |            |
+    |           | = revoke           |                  |            |
+    +-----------+--------------------+------------------+------------+
+    | active    | successor          | expansion        | superseded |
+    |           | activates          | profile          |            |
+    +-----------+--------------------+------------------+------------+
+    | active    | parent reaches a   | child-delegation | cascaded   |
+    |           | terminal state     | profile          |            |
+    +-----------+--------------------+------------------+------------+
 
-                                  Table 4
+                                 Table 4
 
    revoke and the Mission's expires_at both apply in suspended as well
    as active, so a suspended Mission can still be terminated or expire.

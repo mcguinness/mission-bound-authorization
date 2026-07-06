@@ -1591,6 +1591,16 @@ inherits the threat models of the substrates the companions profile
 Response), which those substrates own. <a href="#adversary-model" class="auto internal xref">Section 9</a> gives the
 per-adversary-move detail: what addresses each move, and the residual it
 leaves.<a href="#section-8-2" class="pilcrow">¶</a></p>
+<p id="section-8-3">"On behalf of" is not treated as a permission model. The family
+splits what that phrase conflates: the Mission carries the approved
+task the agent pursues for the Subject; a derived token presents
+delegated authority without identity collapse, since <code>sub</code> remains
+the Subject, <code>client_id</code> remains the approved agent, and the <code>act</code>
+chain names who executed; and personal sanction is carried only by
+approval events (the approval event, action-bound approval), never
+inferred from token possession. Authority derived down this chain
+never exceeds its source (the subset rule), so broad "acting as"
+standing cannot be laundered out of a narrow approval.<a href="#section-8-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="adversary-model">

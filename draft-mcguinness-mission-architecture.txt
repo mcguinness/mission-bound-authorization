@@ -75,6 +75,7 @@ Table of Contents
    2.  Status: An Informational Architecture
    3.  The Mission
    4.  Mission Roles and Components
+     4.1.  The Actor Chain
    5.  The Mission Substrate
      5.1.  The Mission Identifier and Issuer
      5.2.  The Lifecycle State Space
@@ -292,6 +293,44 @@ Table of Contents
      (harness,      |  <- permit -
      orchestrator)  v
              Resource Server
+
+4.1.  The Actor Chain
+
+   One material action splits across these roles, and the family keeps
+   each distinct and attributable rather than collapsing them into one
+   "agent" identity:
+
+   Principal:  the Subject, the token sub (the core).
+
+   Accountable approver:  the Approver, committed at the approval event
+      (the core).
+
+   Intent generator:  the shaper, with Shaping Evidence recording what
+      it emitted ([I-D.draft-mcguinness-mission-shaping]).
+
+   Authorizer:  the Mission Issuer at issuance (the core); the PDP per
+      action ([I-D.draft-mcguinness-mission-runtime]).
+
+   Approved agent:  the OAuth client, client_id on every derived token
+      (the core).
+
+   Executing delegate:  the outermost act actor (the core's Delegation
+      section).
+
+   Credential holder:  the mediating PEP under mediated custody
+      ([I-D.draft-mcguinness-mission-runtime]).
+
+   Capability executor:  the executor of the capability source binding
+      ([I-D.draft-mcguinness-mission-authzen]).
+
+   Downstream identity:  the audience-scoped token and the cross-domain
+      local subject ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
+
+   Attribution survives because no role is inferred from another: each
+   is carried by its own construct, and the evidence layer records them
+   together, in runtime evidence and the Mission Receipt
+   ([I-D.draft-mcguinness-mission-runtime]), Consent Evidence, and the
+   audit feed.
 
 5.  The Mission Substrate
 
@@ -703,107 +742,99 @@ Table of Contents
    of Section 5 are named without it.  This document is named without it
    because the architecture is substrate-neutral by construction.
 
-   +===========+=============+====================================================+
-   |Group      |Document     |Defines                                             |
-   +===========+=============+====================================================+
-   |The model  |oauth-mission|The core issuance profile: the Mission, the approval|
-   |and its    |             |event and anchors, the mission claim, the subset    |
-   |bindings   |             |rule, state-gated issuance.                         |
-   +-----------+-------------+----------------------------------------------------+
-   |           |mission-     |The standalone Mission Issuer and the PDP join of   |
-   |           |authority-   |ordinary credentials to Missions.                   |
-   |           |server       |                                                    |
-   +-----------+-------------+----------------------------------------------------+
-   |           |mission-aauth|The AAuth binding: the Person Server as Mission     |
-   |           |             |Issuer, the mission blob as the record under AAuth's|
-   |           |             |s256 commitment, issuance gating at the token       |
-   |           |             |endpoint.                                           |
-   +-----------+-------------+----------------------------------------------------+
-   |           |mission-     |Normative requirements on any further binding of the|
-   |           |substrate    |model; the existing bindings and the core are       |
-   |           |             |unchanged by it.                                    |
-   +-----------+-------------+----------------------------------------------------+
-   |Approval   |mission-     |Client-side shaping of a user's request into a      |
-   |time       |shaping      |candidate Mission Intent, as untrusted proposal.    |
-   +-----------+-------------+----------------------------------------------------+
-   |           |oauth-       |The consent_rendering_hash anchor and signed        |
-   |           |mission-     |evidence of what the Approver was shown.            |
-   |           |consent-     |                                                    |
-   |           |evidence     |                                                    |
-   +-----------+-------------+----------------------------------------------------+
-   |           |oauth-       |Asynchronous approval over the deferred substrate.  |
-   |           |mission-     |                                                    |
-   |           |approval     |                                                    |
-   +-----------+-------------+----------------------------------------------------+
-   |           |oauth-       |Experimental: in-review narrowing revision of a     |
-   |           |mission-     |deferred proposal.                                  |
-   |           |approval-    |                                                    |
-   |           |revision     |                                                    |
-   +-----------+-------------+----------------------------------------------------+
-   |Lifecycle  |oauth-       |The signed pull surface and the lifecycle endpoint, |
-   |           |mission-     |with suspended and completed.                       |
-   |           |status       |                                                    |
-   +-----------+-------------+----------------------------------------------------+
-   |           |oauth-       |Experimental: a signed event per lifecycle          |
-   |           |mission-     |transition, push or poll.                           |
-   |           |signals      |                                                    |
-   +-----------+-------------+----------------------------------------------------+
-   |           |oauth-       |Widening through an approved successor Mission.     |
-   |           |mission-     |                                                    |
-   |           |expansion    |                                                    |
-   +-----------+-------------+----------------------------------------------------+
-   |           |oauth-       |Experimental: policy-adjudicated expansion within a |
-   |           |mission-     |pre-consented ceiling.                              |
-   |           |progressive  |                                                    |
-   +-----------+-------------+----------------------------------------------------+
-   |           |oauth-       |Fleet enumeration and bulk lifecycle operations for |
-   |           |mission-     |operators and incident response; dry-run-first, per-|
-   |           |management   |Mission semantics.                                  |
-   +-----------+-------------+----------------------------------------------------+
-   |           |oauth-       |Per-entry discharge via the terminal_when           |
-   |           |mission-     |constraint.                                         |
-   |           |completion   |                                                    |
-   +-----------+-------------+----------------------------------------------------+
-   |           |oauth-       |Single-hop projection of a Mission to another trust |
-   |           |mission-     |domain via the cross-domain grant                   |
-   |           |cross-domain |([I-D.draft-mcguinness-oauth-mission-cross-domain]).|
-   +-----------+-------------+----------------------------------------------------+
-   |Runtime    |mission-     |The per-action decision contract: parameter binding,|
-   |enforcement|runtime      |custody, fail-closed behavior.                      |
-   +-----------+-------------+----------------------------------------------------+
-   |           |mission-     |The concrete decision-API binding and its Decision  |
-   |           |authzen      |and Execution Evidence objects.                     |
-   +-----------+-------------+----------------------------------------------------+
-   |           |mission-     |Experimental: cumulative consumption bounds and the |
-   |           |metering     |metering that enforces them.                        |
-   +-----------+-------------+----------------------------------------------------+
-   |Agent      |mission-     |Binding sessions, queues, and sub-agent handles to  |
-   |runtime    |harness      |Mission state; the mediated environment.            |
-   +-----------+-------------+----------------------------------------------------+
-   |           |mission-     |Reversibility classes, unwind plans, and            |
-   |           |orchestration|compensation after a stop.                          |
-   +-----------+-------------+----------------------------------------------------+
-   |Sub-agents |oauth-       |Child Missions with lineage, strict-subset          |
-   |           |mission-     |authority, cascade revocation.                      |
-   |           |child-       |                                                    |
-   |           |delegation   |                                                    |
-   +-----------+-------------+----------------------------------------------------+
-   |           |oauth-       |Narrower Mission-bound tokens minted offline; the   |
-   |           |mission-     |kill switch preserved by runtime re-check.          |
-   |           |attenuation  |                                                    |
-   +-----------+-------------+----------------------------------------------------+
-   |Proof and  |mission-     |A signed, portable statement of a Mission's         |
-   |portability|mandate      |committed facts; evidence, not a credential.        |
-   +-----------+-------------+----------------------------------------------------+
-   |           |mission-audit|Registration of Mission evidence in a SCITT         |
-   |           |             |Transparency Service; receipts verifiable offline.  |
-   +-----------+-------------+----------------------------------------------------+
-   |Security   |mission-     |The trusted base in one view: what each component   |
-   |model      |security-    |must achieve and what its compromise costs.         |
-   |           |model        |                                                    |
-   +-----------+-------------+----------------------------------------------------+
+   *The model and its bindings:*
 
-                                  Table 1
+   oauth-mission:  The core issuance profile: the Mission, the approval
+      event and anchors, the mission claim, the subset rule, state-gated
+      issuance.
+
+   mission-authority-server:  The standalone Mission Issuer and the PDP
+      join of ordinary credentials to Missions.
+
+   mission-aauth:  The AAuth binding: the Person Server as Mission
+      Issuer, the mission blob as the record under AAuth's s256
+      commitment, issuance gating at the token endpoint.
+
+   mission-substrate:  Normative requirements on any further binding of
+      the model; the existing bindings and the core are unchanged by it.
+
+   *Approval time:*
+
+   mission-shaping:  Client-side shaping of a user's request into a
+      candidate Mission Intent, as untrusted proposal.
+
+   oauth-mission-consent-evidence:  The consent_rendering_hash anchor
+      and signed evidence of what the Approver was shown.
+
+   oauth-mission-approval:  Asynchronous approval over the deferred
+      substrate.
+
+   oauth-mission-approval-revision:  Experimental: in-review narrowing
+      revision of a deferred proposal.
+
+   *Lifecycle:*
+
+   oauth-mission-status:  The signed pull surface and the lifecycle
+      endpoint, with suspended and completed.
+
+   oauth-mission-signals:  Experimental: a signed event per lifecycle
+      transition, push or poll.
+
+   oauth-mission-expansion:  Widening through an approved successor
+      Mission.
+
+   oauth-mission-progressive:  Experimental: policy-adjudicated
+      expansion within a pre-consented ceiling.
+
+   oauth-mission-management:  Fleet enumeration and bulk lifecycle
+      operations for operators and incident response; dry-run-first,
+      per-Mission semantics.
+
+   oauth-mission-completion:  Per-entry discharge via the terminal_when
+      constraint.
+
+   oauth-mission-cross-domain:  Single-hop projection of a Mission to
+      another trust domain via the cross-domain grant.
+
+   *Runtime enforcement:*
+
+   mission-runtime:  The per-action decision contract: parameter
+      binding, custody, fail-closed behavior.
+
+   mission-authzen:  The concrete decision-API binding and its Decision
+      and Execution Evidence objects.
+
+   mission-metering:  Experimental: cumulative consumption bounds and
+      the metering that enforces them.
+
+   *Agent runtime:*
+
+   mission-harness:  Binding sessions, queues, and sub-agent handles to
+      Mission state; the mediated environment.
+
+   mission-orchestration:  Reversibility classes, unwind plans, and
+      compensation after a stop.
+
+   *Sub-agents:*
+
+   oauth-mission-child-delegation:  Child Missions with lineage, strict-
+      subset authority, cascade revocation.
+
+   oauth-mission-attenuation:  Narrower Mission-bound tokens minted
+      offline; the kill switch preserved by runtime re-check.
+
+   *Proof and portability:*
+
+   mission-mandate:  A signed, portable statement of a Mission's
+      committed facts; evidence, not a credential.
+
+   mission-audit:  Registration of Mission evidence in a SCITT
+      Transparency Service; receipts verifiable offline.
+
+   *Security model:*
+
+   mission-security-model:  The trusted base in one view: what each
+      component must achieve and what its compromise costs.
 
 10.  Security Considerations
 

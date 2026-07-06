@@ -1388,15 +1388,17 @@ Table of Contents
    under: mission.id and mission.issuer, or a verifiable Mission
    projection such as the cross-domain grant's mission claim
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]).  It SHOULD bind
-   the policy decision (the decision identifier and result), the
-   executor (the authenticated actor and any act chain), the custody
-   boundary (whether a mediating PEP held the credential, Section 4.6),
-   the downstream target (the resource and audience), the outcome, the
-   timestamps, and, where receipt chaining substitutes for a
-   transparency feed ([I-D.draft-mcguinness-mission-audit]), the digest
-   of the previous Mission Receipt.  The portable schema and canonical
-   byte representation are deferred (Section 13); the members above are
-   the minimum a deployment-defined Mission Receipt binds.
+   the policy decision (the decision identifier and result), the policy
+   state it was decided under (the PDP's policy-view version and the
+   Mission's policy_version), the executor (the authenticated actor and
+   any act chain), the custody boundary (whether a mediating PEP held
+   the credential, Section 4.6), the downstream target (the resource and
+   audience), the outcome, the timestamps, and, where receipt chaining
+   substitutes for a transparency feed
+   ([I-D.draft-mcguinness-mission-audit]), the digest of the previous
+   Mission Receipt.  The portable schema and canonical byte
+   representation are deferred (Section 13); the members above are the
+   minimum a deployment-defined Mission Receipt binds.
 
 11.4.  Record integrity and retention
 
@@ -1873,7 +1875,8 @@ Appendix A.  Parameter Digest Worked Example
 
    {"amount_usd":"423.50","source_invoice_id":"inv_2026Q3_842"}
 
-   parameter_digest = sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI
+   parameter_digest =
+     sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI
 
    The PDP binds its permit to this value, and the executing PEP
    recomputes it over the parameters it is about to use immediately

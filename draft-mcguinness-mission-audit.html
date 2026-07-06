@@ -1627,11 +1627,13 @@ protected header (<a href="#hash-commitment" class="auto internal xref">Section 
 {
   / alg /                    1: -7,   / ES256 /
   / payload-hash-alg /     258: -16,  / SHA-256 /
-  / preimage-content-type / 259: "application/mission-lifecycle-transition+json",
+  / preimage-content-type / 259:
+      "application/mission-lifecycle-transition+json",
   / kid /                    4: h'61732d6b65792d323032362d7133',
   / CWT Claims /            15: {
     / iss / 1: "https://as.example.com",
-    / sub / 2: "https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+    / sub / 2: "https://as.example.com/missions/
+                msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
   }
 }
 </pre><a href="#section-6.2.1.1-6" class="pilcrow">¶</a>
@@ -1982,11 +1984,13 @@ the Mission Issuer. Protected header, in COSE EDN (<span>[<a href="#RFC9052" cla
 {
   / alg /                    1: -7,   / ES256 /
   / payload-hash-alg /     258: -16,  / SHA-256 /
-  / preimage-content-type / 259: "application/mission-consent-evidence+json",
+  / preimage-content-type / 259:
+      "application/mission-consent-evidence+json",
   / kid /                    4: h'61732d6b65792d323032362d7133',
   / CWT Claims /            15: {
     / iss / 1: "https://as.example.com",
-    / sub / 2: "https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+    / sub / 2: "https://as.example.com/missions/
+                msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
   }
 }
 </pre><a href="#section-9-2" class="pilcrow">¶</a>
@@ -2008,7 +2012,8 @@ Collecting the records registered under that one <code>sub</code> (<a href="#ret
 gives the Mission's whole history, in order, append-only:<a href="#section-9-4" class="pilcrow">¶</a></p>
 <div class="lang-text sourcecode" id="section-9-5">
 <pre>
-sub = https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
+sub =
+https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 
   #1  approval-event        iss=as.example.com    t0
   #2  consent-evidence      iss=as.example.com    t0

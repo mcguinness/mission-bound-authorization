@@ -1619,9 +1619,11 @@ levels of offline narrowing. Decoded root token:<a href="#section-11-1" class="p
     { "type": "attenuating_agent_token",
       "tools": {
         "erp.invoices.read": {
-          "period": { "constraint_type": "exact", "value": "2026-Q3" } },
+          "period":
+            { "constraint_type": "exact", "value": "2026-Q3" } },
         "erp.journal-entries.write": {
-          "amount_usd": { "constraint_type": "range", "max": 500 } } } }
+          "amount_usd":
+            { "constraint_type": "range", "max": 500 } } } }
   ]
 }
 </pre><a href="#section-11-2" class="pilcrow">¶</a>
@@ -1635,12 +1637,14 @@ names that Resource Server.<a href="#section-11-3" class="pilcrow">¶</a></p>
 Authorization Server contact, mints a child that drops the write tool
 and keeps only the Q3 invoice read. It signs the child with the key the
 root's <code>cnf</code> binds, sets <code>iss</code> to that key's thumbprint, increments
-<code>del_depth</code>, and commits the parent by <code>par_hash</code>:<a href="#section-11-4" class="pilcrow">¶</a></p>
+<code>del_depth</code>, and commits the parent by <code>par_hash</code> (the <code>iss</code> value
+is one line, wrapped here for display):<a href="#section-11-4" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-11-5">
 <pre>
 {
   "iss":
-    "urn:ietf:params:oauth:jwk-thumbprint:sha-256:0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I",
+    "urn:ietf:params:oauth:jwk-thumbprint:sha-256:0ZcOCORZNYy-
+     DWpqq30jZyJGHTN0d2HglBV3uiguA4I",
   "sub": "user_3p2q8mN1a0kV7tR",
   "aud": "https://erp.example.com",
   "iat": 1797840030,
@@ -1660,7 +1664,8 @@ root's <code>cnf</code> binds, sets <code>iss</code> to that key's thumbprint, i
     { "type": "attenuating_agent_token",
       "tools": {
         "erp.invoices.read": {
-          "period": { "constraint_type": "exact", "value": "2026-Q3" } } } }
+          "period":
+            { "constraint_type": "exact", "value": "2026-Q3" } } } }
   ]
 }
 </pre><a href="#section-11-5" class="pilcrow">¶</a>

@@ -1174,6 +1174,11 @@ every mechanism it names is defined by the profile it points to.<a href="#sectio
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
             <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-mission-roles-and-component" class="internal xref">Mission Roles and Components</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-the-actor-chain" class="internal xref">The Actor Chain</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
             <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-the-mission-substrate" class="internal xref">The Mission Substrate</a></p>
@@ -1500,6 +1505,73 @@ regardless of binding:<a href="#section-4-3" class="pilcrow">¶</a></p>
   orchestrator)  v
           Resource Server
 </pre><a href="#section-4-4" class="pilcrow">¶</a>
+</div>
+<div id="actor-chain">
+<section id="section-4.1">
+        <h3 id="name-the-actor-chain">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-the-actor-chain" class="section-name selfRef">The Actor Chain</a>
+        </h3>
+<p id="section-4.1-1">One material action splits across these roles, and the family keeps
+each distinct and attributable rather than collapsing them into one
+"agent" identity:<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4.1-2">
+          <dt id="section-4.1-2.1">Principal:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-2.2">
+            <p id="section-4.1-2.2.1">the Subject, the token <code>sub</code> (the core).<a href="#section-4.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-2.3">Accountable approver:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-2.4">
+            <p id="section-4.1-2.4.1">the Approver, committed at the approval event (the core).<a href="#section-4.1-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-2.5">Intent generator:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-2.6">
+            <p id="section-4.1-2.6.1">the shaper, with Shaping Evidence recording what it emitted
+(<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>).<a href="#section-4.1-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-2.7">Authorizer:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-2.8">
+            <p id="section-4.1-2.8.1">the Mission Issuer at issuance (the core); the PDP per action
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-4.1-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-2.9">Approved agent:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-2.10">
+            <p id="section-4.1-2.10.1">the OAuth client, <code>client_id</code> on every derived token (the core).<a href="#section-4.1-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-2.11">Executing delegate:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-2.12">
+            <p id="section-4.1-2.12.1">the outermost <code>act</code> actor (the core's Delegation section).<a href="#section-4.1-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-2.13">Credential holder:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-2.14">
+            <p id="section-4.1-2.14.1">the mediating PEP under mediated custody
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-4.1-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-2.15">Capability executor:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-2.16">
+            <p id="section-4.1-2.16.1">the <code>executor</code> of the capability source binding
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-4.1-2.16.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.1-2.17">Downstream identity:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.1-2.18">
+            <p id="section-4.1-2.18.1">the audience-scoped token and the cross-domain local subject
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-4.1-2.18.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-4.1-3">Attribution survives because no role is inferred from another: each
+is carried by its own construct, and the evidence layer records them
+together, in runtime evidence and the Mission Receipt
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), Consent Evidence, and
+the audit feed.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+</section>
 </div>
 </section>
 </div>
@@ -2044,193 +2116,202 @@ boundary: profiles extending the Authorization Server's own surfaces
 keep "oauth" in their names; profiles defined against the substrate
 of <a href="#substrate" class="auto internal xref">Section 5</a> are named without it. This document is named without
 it because the architecture is substrate-neutral by construction.<a href="#section-9-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-1">
-        <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
-<thead>
-          <tr>
-            <th class="text-left" rowspan="1" colspan="1">Group</th>
-            <th class="text-left" rowspan="1" colspan="1">Document</th>
-            <th class="text-left" rowspan="1" colspan="1">Defines</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">The model and its bindings</td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>oauth-mission</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">The core issuance profile: the Mission, the approval event and anchors, the <code>mission</code> claim, the subset rule, state-gated issuance.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1"> </td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>mission-authority-server</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">The standalone Mission Issuer and the PDP join of ordinary credentials to Missions.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1"> </td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>mission-aauth</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">The AAuth binding: the Person Server as Mission Issuer, the mission blob as the record under AAuth's <code>s256</code> commitment, issuance gating at the token endpoint.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1"> </td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>mission-substrate</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Normative requirements on any further binding of the model; the existing bindings and the core are unchanged by it.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Approval time</td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>mission-shaping</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Client-side shaping of a user's request into a candidate Mission Intent, as untrusted proposal.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1"> </td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>oauth-mission-consent-evidence</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">The <code>consent_rendering_hash</code> anchor and signed evidence of what the Approver was shown.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1"> </td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>oauth-mission-approval</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Asynchronous approval over the deferred substrate.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1"> </td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>oauth-mission-approval-revision</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Experimental: in-review narrowing revision of a deferred proposal.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Lifecycle</td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>oauth-mission-status</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">The signed pull surface and the lifecycle endpoint, with <code>suspended</code> and <code>completed</code>.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1"> </td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>oauth-mission-signals</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Experimental: a signed event per lifecycle transition, push or poll.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1"> </td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>oauth-mission-expansion</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Widening through an approved successor Mission.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1"> </td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>oauth-mission-progressive</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Experimental: policy-adjudicated expansion within a pre-consented ceiling.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1"> </td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>oauth-mission-management</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Fleet enumeration and bulk lifecycle operations for operators and incident response; dry-run-first, per-Mission semantics.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1"> </td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>oauth-mission-completion</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Per-entry discharge via the <code>terminal_when</code> constraint.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1"> </td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>oauth-mission-cross-domain</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Single-hop projection of a Mission to another trust domain via the cross-domain grant (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Runtime enforcement</td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>mission-runtime</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">The per-action decision contract: parameter binding, custody, fail-closed behavior.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1"> </td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>mission-authzen</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">The concrete decision-API binding and its Decision and Execution Evidence objects.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1"> </td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>mission-metering</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Experimental: cumulative consumption bounds and the metering that enforces them.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Agent runtime</td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>mission-harness</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Binding sessions, queues, and sub-agent handles to Mission state; the mediated environment.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1"> </td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>mission-orchestration</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Reversibility classes, unwind plans, and compensation after a stop.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Sub-agents</td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>oauth-mission-child-delegation</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Child Missions with lineage, strict-subset authority, cascade revocation.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1"> </td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>oauth-mission-attenuation</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Narrower Mission-bound tokens minted offline; the kill switch preserved by runtime re-check.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Proof and portability</td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>mission-mandate</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">A signed, portable statement of a Mission's committed facts; evidence, not a credential.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1"> </td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>mission-audit</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Registration of Mission evidence in a SCITT Transparency Service; receipts verifiable offline.</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Security model</td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>mission-security-model</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">The trusted base in one view: what each component must achieve and what its compromise costs.</td>
-          </tr>
-        </tbody>
-      </table>
+<p id="section-9-2"><strong>The model and its bindings:</strong><a href="#section-9-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9-3">
+        <dt id="section-9-3.1">
+<code>oauth-mission</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.2">
+          <p id="section-9-3.2.1">The core issuance profile: the Mission, the approval event and
+anchors, the <code>mission</code> claim, the subset rule, state-gated
+issuance.<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.3">
+<code>mission-authority-server</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.4">
+          <p id="section-9-3.4.1">The standalone Mission Issuer and the PDP join of ordinary
+credentials to Missions.<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.5">
+<code>mission-aauth</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.6">
+          <p id="section-9-3.6.1">The AAuth binding: the Person Server as Mission Issuer, the mission
+blob as the record under AAuth's <code>s256</code> commitment, issuance gating
+at the token endpoint.<a href="#section-9-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.7">
+<code>mission-substrate</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.8">
+          <p id="section-9-3.8.1">Normative requirements on any further binding of the model; the
+existing bindings and the core are unchanged by it.<a href="#section-9-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-9-4"><strong>Approval time:</strong><a href="#section-9-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9-5">
+        <dt id="section-9-5.1">
+<code>mission-shaping</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-5.2">
+          <p id="section-9-5.2.1">Client-side shaping of a user's request into a candidate Mission
+Intent, as untrusted proposal.<a href="#section-9-5.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-5.3">
+<code>oauth-mission-consent-evidence</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-5.4">
+          <p id="section-9-5.4.1">The <code>consent_rendering_hash</code> anchor and signed evidence of what the
+Approver was shown.<a href="#section-9-5.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-5.5">
+<code>oauth-mission-approval</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-5.6">
+          <p id="section-9-5.6.1">Asynchronous approval over the deferred substrate.<a href="#section-9-5.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-5.7">
+<code>oauth-mission-approval-revision</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-5.8">
+          <p id="section-9-5.8.1">Experimental: in-review narrowing revision of a deferred proposal.<a href="#section-9-5.8.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-9-6"><strong>Lifecycle:</strong><a href="#section-9-6" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9-7">
+        <dt id="section-9-7.1">
+<code>oauth-mission-status</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-7.2">
+          <p id="section-9-7.2.1">The signed pull surface and the lifecycle endpoint, with
+<code>suspended</code> and <code>completed</code>.<a href="#section-9-7.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-7.3">
+<code>oauth-mission-signals</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-7.4">
+          <p id="section-9-7.4.1">Experimental: a signed event per lifecycle transition, push or
+poll.<a href="#section-9-7.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-7.5">
+<code>oauth-mission-expansion</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-7.6">
+          <p id="section-9-7.6.1">Widening through an approved successor Mission.<a href="#section-9-7.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-7.7">
+<code>oauth-mission-progressive</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-7.8">
+          <p id="section-9-7.8.1">Experimental: policy-adjudicated expansion within a pre-consented
+ceiling.<a href="#section-9-7.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-7.9">
+<code>oauth-mission-management</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-7.10">
+          <p id="section-9-7.10.1">Fleet enumeration and bulk lifecycle operations for operators and
+incident response; dry-run-first, per-Mission semantics.<a href="#section-9-7.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-7.11">
+<code>oauth-mission-completion</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-7.12">
+          <p id="section-9-7.12.1">Per-entry discharge via the <code>terminal_when</code> constraint.<a href="#section-9-7.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-7.13">
+<code>oauth-mission-cross-domain</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-7.14">
+          <p id="section-9-7.14.1">Single-hop projection of a Mission to another trust domain via the
+cross-domain grant.<a href="#section-9-7.14.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-9-8"><strong>Runtime enforcement:</strong><a href="#section-9-8" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9-9">
+        <dt id="section-9-9.1">
+<code>mission-runtime</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-9.2">
+          <p id="section-9-9.2.1">The per-action decision contract: parameter binding, custody,
+fail-closed behavior.<a href="#section-9-9.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-9.3">
+<code>mission-authzen</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-9.4">
+          <p id="section-9-9.4.1">The concrete decision-API binding and its Decision and Execution
+Evidence objects.<a href="#section-9-9.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-9.5">
+<code>mission-metering</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-9.6">
+          <p id="section-9-9.6.1">Experimental: cumulative consumption bounds and the metering that
+enforces them.<a href="#section-9-9.6.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-9-10"><strong>Agent runtime:</strong><a href="#section-9-10" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9-11">
+        <dt id="section-9-11.1">
+<code>mission-harness</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-11.2">
+          <p id="section-9-11.2.1">Binding sessions, queues, and sub-agent handles to Mission state;
+the mediated environment.<a href="#section-9-11.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-11.3">
+<code>mission-orchestration</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-11.4">
+          <p id="section-9-11.4.1">Reversibility classes, unwind plans, and compensation after a stop.<a href="#section-9-11.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-9-12"><strong>Sub-agents:</strong><a href="#section-9-12" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9-13">
+        <dt id="section-9-13.1">
+<code>oauth-mission-child-delegation</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-13.2">
+          <p id="section-9-13.2.1">Child Missions with lineage, strict-subset authority, cascade
+revocation.<a href="#section-9-13.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-13.3">
+<code>oauth-mission-attenuation</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-13.4">
+          <p id="section-9-13.4.1">Narrower Mission-bound tokens minted offline; the kill switch
+preserved by runtime re-check.<a href="#section-9-13.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-9-14"><strong>Proof and portability:</strong><a href="#section-9-14" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9-15">
+        <dt id="section-9-15.1">
+<code>mission-mandate</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-15.2">
+          <p id="section-9-15.2.1">A signed, portable statement of a Mission's committed facts;
+evidence, not a credential.<a href="#section-9-15.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-15.3">
+<code>mission-audit</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-15.4">
+          <p id="section-9-15.4.1">Registration of Mission evidence in a SCITT Transparency Service;
+receipts verifiable offline.<a href="#section-9-15.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-9-16"><strong>Security model:</strong><a href="#section-9-16" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9-17">
+        <dt id="section-9-17.1">
+<code>mission-security-model</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-17.2">
+          <p id="section-9-17.2.1">The trusted base in one view: what each component must achieve and
+what its compromise costs.<a href="#section-9-17.2.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
 </section>
 </div>
 <div id="security-considerations">

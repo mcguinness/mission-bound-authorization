@@ -226,7 +226,7 @@ Table of Contents
    approval event that activates a Mission.  The event type URI, defined
    in this document and described in Section 13, is:
 
-   https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change
+   https://schemas.karlmcguinness.com/mission/lifecycle-change
 
    This URI is the registered event-type identifier; mission.lifecycle-
    change is the short name this document uses for it in prose.
@@ -310,7 +310,7 @@ Table of Contents
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
      },
      "events": {
-       "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
+       "https://schemas.karlmcguinness.com/mission/lifecycle-change": {
          "mission": {
            "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
            "issuer": "https://as.example.com"
@@ -337,7 +337,7 @@ Table of Contents
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
      },
      "events": {
-       "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
+       "https://schemas.karlmcguinness.com/mission/lifecycle-change": {
          "mission": {
            "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
            "issuer": "https://as.example.com"
@@ -361,7 +361,7 @@ Table of Contents
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
      },
      "events": {
-       "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
+       "https://schemas.karlmcguinness.com/mission/lifecycle-change": {
          "mission": {
            "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
            "issuer": "https://as.example.com"
@@ -467,7 +467,7 @@ Table of Contents
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
      },
      "events": {
-       "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
+       "https://schemas.karlmcguinness.com/mission/lifecycle-change": {
          "mission": {
            "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
            "issuer": "https://as.example.com"
@@ -578,14 +578,13 @@ Table of Contents
 
    IANA is not requested to create a registry.  This document defines
    the following Security Event Token (SET) [RFC8417] event type URI
-   under the author-controlled schemas.karlmcguinness.com/secevent
-   namespace:
+   under the author-controlled schemas.karlmcguinness.com namespace:
 
-   *  https://schemas.karlmcguinness.com/secevent/mission/lifecycle-
-      change: emitted on any Mission lifecycle transition or the
-      approval-event emission from a Mission Issuer.  The SET subject is
-      a sub_id Subject Identifier [RFC9493] of format opaque whose id is
-      the mission_id, per [OIDC-SSF] conventions.  Required event-body
+   *  https://schemas.karlmcguinness.com/mission/lifecycle-change:
+      emitted on any Mission lifecycle transition or the approval-event
+      emission from a Mission Issuer.  The SET subject is a sub_id
+      Subject Identifier [RFC9493] of format opaque whose id is the
+      mission_id, per [OIDC-SSF] conventions.  Required event-body
       claims: mission (carrying id and issuer), state, version,
       committed_at.  Conditional event-body claim: prior_state (required
       on transition emissions, absent on the approval-event emission).

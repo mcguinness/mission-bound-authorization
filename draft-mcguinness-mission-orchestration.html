@@ -1744,18 +1744,19 @@ canonical form.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
 <p id="section-6.2-3">Canonical bytes of the envelope:<a href="#section-6.2-3" class="pilcrow">¶</a></p>
 <div class="lang-text sourcecode" id="section-6.2-4">
 <pre>
-{"iss":"https://as.example.com","typ":"mission-unwind-plan","value":{"ev
-idence_policy":{"link_runtime_evidence":true,"retain_for":"mission_audit
-_horizon"},"in_flight_behavior":"wait_then_review","mission_id":"msn_8Rf
-X2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","post_completion_behavior":"human_review"
-,"pre_start_behavior":"human_review","reversibility":"external_commitmen
-t","review_queue":"finance-control-review","step_id":"post_journal_entry
-"}}
+{"iss":"https://as.example.com","typ":"mission-unwind-plan","value
+":{"evidence_policy":{"link_runtime_evidence":true,"retain_for":"m
+ission_audit_horizon"},"in_flight_behavior":"wait_then_review","mi
+ssion_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","post_completion_
+behavior":"human_review","pre_start_behavior":"human_review","reve
+rsibility":"external_commitment","review_queue":"finance-control-r
+eview","step_id":"post_journal_entry"}}
 </pre><a href="#section-6.2-4" class="pilcrow">¶</a>
 </div>
 <div class="lang-text sourcecode" id="section-6.2-5">
 <pre>
-unwind_plan_hash = sha-256:Qf-0Xqo8QPMN0D3xMOSi2j4qTvaU2U8ne1g8UEBrAIc
+unwind_plan_hash =
+  sha-256:Qf-0Xqo8QPMN0D3xMOSi2j4qTvaU2U8ne1g8UEBrAIc
 </pre><a href="#section-6.2-5" class="pilcrow">¶</a>
 </div>
 <p id="section-6.2-6">The evidence example of <a href="#orchestration-evidence" class="auto internal xref">Section 11</a> carries this value.<a href="#section-6.2-6" class="pilcrow">¶</a></p>
