@@ -374,7 +374,8 @@ Payload:
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": "500.00" } }
+      "constraints":
+        { "max_amount": { "amount": "500.00", "currency": "USD" } } }
   ]
 }
 ~~~
@@ -412,7 +413,7 @@ p7Im1heF9kZXB0aCI6MiwiYWxsb3dlZF9kZWxlZ2F0ZXMiOlt7InN1Yl9wcm9maWxl
 IjoiYWlfYWdlbnQifV19fSx7InR5cGUiOiJtaXNzaW9uX3Jlc291cmNlX2FjY2Vzcy
 IsInJlc291cmNlIjoiaHR0cHM6Ly9lcnAuZXhhbXBsZS5jb20iLCJhY3Rpb25zIjpb
 ImpvdXJuYWwtZW50cmllcy53cml0ZSJdLCJjb25zdHJhaW50cyI6eyJtYXhfYW1vdW
-50X3VzZCI6IjUwMC4wMCJ9fV19
+50Ijp7ImFtb3VudCI6IjUwMC4wMCIsImN1cnJlbmN5IjoiVVNEIn19fV19
 ~~~
 
 JWS signing input, the two segments joined by `.`:
@@ -438,7 +439,8 @@ hZCJdLCJkZWxlZ2F0aW9uIjp7Im1heF9kZXB0aCI6MiwiYWxsb3dlZF9kZWxlZ2F0Z
 XMiOlt7InN1Yl9wcm9maWxlIjoiYWlfYWdlbnQifV19fSx7InR5cGUiOiJtaXNzaW9
 uX3Jlc291cmNlX2FjY2VzcyIsInJlc291cmNlIjoiaHR0cHM6Ly9lcnAuZXhhbXBsZ
 S5jb20iLCJhY3Rpb25zIjpbImpvdXJuYWwtZW50cmllcy53cml0ZSJdLCJjb25zdHJ
-haW50cyI6eyJtYXhfYW1vdW50X3VzZCI6IjUwMC4wMCJ9fV19
+haW50cyI6eyJtYXhfYW1vdW50Ijp7ImFtb3VudCI6IjUwMC4wMCIsImN1cnJlbmN5I
+joiVVNEIn19fV19
 ~~~
 
 The Mandate's JWS Compact Serialization appends `.` and the signature

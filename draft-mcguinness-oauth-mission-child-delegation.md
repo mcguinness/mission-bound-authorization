@@ -437,8 +437,8 @@ parent. The decoded child access token:
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
       "constraints": {
-        "issued_after": "2026-07-01T00:00:00Z",
-        "issued_before": "2026-09-30T23:59:59Z"
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
       } }
   ],
   "cnf": { "jkt": "wZ5nT8qL2xV9rB4mC7sD1yF6jH3kP0aG5uE8oS2iN4w" },
@@ -507,7 +507,8 @@ on the front channel with `parent_token` MUST be rejected with
 `invalid_request` ({{child-creation}}).
 
 For example, a child Mission Intent that drops the parent entry's
-`issued_before` constraint proposes a relaxation, not a subset. The
+`resource_issued_before` constraint proposes a relaxation, not a
+subset. The
 Mission Issuer refuses it ({{strict-subset}}) with:
 
 ~~~ json

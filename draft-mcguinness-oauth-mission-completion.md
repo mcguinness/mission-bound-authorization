@@ -341,7 +341,7 @@ element of the Intent becomes:
 The third case is what this profile adds. A bound that holds throughout
 the task is an ordinary constraint; an event that ends the task is a
 `terminal_when` condition. For example, "only invoices under 500 USD" is
-a `max_amount_usd` constraint, while "until the Q3 close is finalized" is
+a `max_amount` constraint, while "until the Q3 close is finalized" is
 a completion condition.
 
 # Relationship to Runtime Enforcement {#runtime}
@@ -373,7 +373,7 @@ bounded to under 500 USD and discharged when the Q3 close is finalized:
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
     "constraints": {
-      "max_amount_usd": "500.00",
+      "max_amount": { "amount": "500.00", "currency": "USD" },
       "terminal_when": [
         { "event_type": "accounting-period-closed",
           "event_source": "https://erp.example.com/periods/2026-Q3",
