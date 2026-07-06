@@ -346,8 +346,8 @@ Decoded JWS payload:
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "state": "active",
-    "expires_at":     "2026-11-02T08:15:00Z",
-    "mission_expiry": "2026-12-31T23:59:59Z"
+    "expires_at":  "2026-12-31T23:59:59Z",
+    "fresh_until": "2026-11-02T08:15:00Z"
   },
   "authorization_details": [
     { "type": "mission_resource_access",
@@ -363,7 +363,7 @@ The members are:
   The `aud` is the response's audience binding and the `nonce` its
   request binding. `exp` bounds the validity of the signed response
   itself; how long the consumer MAY rely on the reported `state` is
-  given separately by `mission.expires_at` below.
+  given separately by `mission.fresh_until` below.
 - `mission`: the `mission` object, the same shape as the `mission`
   claim of {{I-D.draft-mcguinness-oauth-mission}} (Section "The
   Mission Claim") with status members added. It carries:
@@ -384,15 +384,15 @@ The members are:
     ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})). A consumer applies the issuance
     profile's forward-compatibility rule: only `active` permits reliance,
     and every other value, recognized or not, is non-active.
-  - `expires_at`: an RFC 3339 {{RFC3339}} date-time giving the point
+  - `expires_at`: the point at which the Mission itself expires, the
+    Mission record's `expires_at`
+    ({{I-D.draft-mcguinness-oauth-mission}}).
+  - `fresh_until`: an RFC 3339 {{RFC3339}} date-time giving the point
     until which the consumer MAY rely on the reported `state` without
     re-checking, governing caching ({{mission-status-caching}}). It is
     report-freshness metadata, carried in `mission` so it travels with
     `state` even on the introspection projection, which has no signed
     envelope to carry it ({{introspection-projection}}).
-  - `mission_expiry`: the point at which the Mission itself expires,
-    mirroring the Mission record's `expires_at`
-    ({{I-D.draft-mcguinness-oauth-mission}}).
   - `successor`: OPTIONAL. A string, the successor `mission_id`. Present
     only when `state` is `superseded`, giving the successor that
     replaced this Mission, set atomically at supersession on the
@@ -422,9 +422,9 @@ A consumer MUST verify, before honoring a response:
 ## Caching {#mission-status-caching}
 
 Consumers SHOULD cache a response keyed on (`mission_id`, audience)
-until `mission.expires_at`. Consumers MUST NOT use a cached response
-after `mission.expires_at`. When comparing the current time to
-`mission.expires_at`, a consumer MAY allow up to 30 seconds of
+until `mission.fresh_until`. Consumers MUST NOT use a cached response
+after `mission.fresh_until`. When comparing the current time to
+`mission.fresh_until`, a consumer MAY allow up to 30 seconds of
 tolerance for the `active` state only, and no tolerance for any other
 state. This tolerance is a clock-skew allowance on the reliance path,
 bounding the disagreement between the AS's and the consumer's clocks,
@@ -432,7 +432,7 @@ not a property of state reversibility; it MUST NOT exceed the AS's
 advertised `mission_max_stale_seconds` ({{as-metadata}}). A suspended
 Mission may be resumed to `active`, so a consumer MUST NOT extend
 reliance on a cached `suspended` (or any non-`active`) response beyond
-`mission.expires_at`.
+`mission.fresh_until`.
 
 ## Anti-Oracle Property {#mission-status-anti-oracle}
 
@@ -540,10 +540,10 @@ This extension adds the following to that projection:
   through the standard `introspection_signing_alg_values_supported`
   metadata {{RFC8414}}.
 - When the responding AS is the Mission origin, the projection MAY
-  additionally carry `expires_at`, an RFC 3339 {{RFC3339}} date-time
+  additionally carry `fresh_until`, an RFC 3339 {{RFC3339}} date-time
   giving the point until which the consumer MAY rely on the reported
   `state` without re-checking, governed by the caching rule of
-  {{mission-status-caching}}. When `expires_at` is absent (for example
+  {{mission-status-caching}}. When `fresh_until` is absent (for example
   a non-origin projection), the consumer MUST NOT cache the reported
   `state` across requests and re-checks per use or relies on the
   token's own lifetime.
@@ -552,8 +552,8 @@ This projection and the dedicated Mission Status Response
 ({{mission-status-response}}) carry Mission facts in a `mission` object
 of the same shape: the open `mission` claim object of
 {{I-D.draft-mcguinness-oauth-mission}} (Section "The Mission Claim")
-with status members (`state`, `expires_at`, and, on the dedicated
-response, `mission_expiry`) added. This
+with status members (`state`, `fresh_until`, and, on the dedicated
+response, `expires_at`) added. This
 projection populates the subset a token-holding consumer needs; the
 dedicated response populates more. Either way a consumer reads the
 same fact from the same place.
@@ -577,7 +577,7 @@ for a token whose Mission is `active`:
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "state":   "active",
-    "expires_at": "2026-11-02T08:15:00Z"
+    "fresh_until": "2026-11-02T08:15:00Z"
   }
 }
 ~~~
@@ -812,8 +812,8 @@ Decoded JWS payload:
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "state": "revoked",
-    "expires_at":     "2026-11-02T09:11:40Z",
-    "mission_expiry": "2026-12-31T23:59:59Z"
+    "expires_at":  "2026-12-31T23:59:59Z",
+    "fresh_until": "2026-11-02T09:11:40Z"
   }
 }
 ~~~
@@ -859,8 +859,8 @@ and `on_expiry` in `mission` alongside `state`. Decoded JWS payload:
     "state": "suspended",
     "suspend_until": "2026-11-09T08:15:00Z",
     "on_expiry": "revoke",
-    "expires_at":     "2026-11-02T08:35:00Z",
-    "mission_expiry": "2026-12-31T23:59:59Z"
+    "expires_at":  "2026-12-31T23:59:59Z",
+    "fresh_until": "2026-11-02T08:35:00Z"
   }
 }
 ~~~
@@ -1053,12 +1053,12 @@ space to enumeration.
 
 A Mission Status Response is bound to (caller `sub`, audience,
 `nonce`, issuance time). Replay against a different caller or audience,
-or beyond `mission.expires_at`, is detectable by signature
+or beyond `mission.fresh_until`, is detectable by signature
 verification and by verifying the bindings; a consumer MUST verify all
 six checks of {{mission-status-response}} before honoring a response. A
 response cached and replayed by the same caller within
-`mission.expires_at` is equivalent to a fresh response; a consumer MUST
-NOT use a cached response after `mission.expires_at`, with the skew
+`mission.fresh_until` is equivalent to a fresh response; a consumer MUST
+NOT use a cached response after `mission.fresh_until`, with the skew
 tolerance of {{mission-status-caching}}.
 
 ## Mission Status Denial of Service
