@@ -37,8 +37,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-latest
 
 informative:
   I-D.draft-mcguinness-oauth-mission-approval-revision:
@@ -49,8 +47,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-approval-revision-latest
   I-D.draft-mcguinness-mission-shaping:
     title: "Mission Intent Shaping"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html
@@ -59,8 +55,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-shaping-latest
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -69,8 +63,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-authority-server-latest
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
     title: "Mission Consent Evidence for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
@@ -79,8 +71,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-consent-evidence-latest
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
@@ -89,8 +79,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
 
 --- abstract
 

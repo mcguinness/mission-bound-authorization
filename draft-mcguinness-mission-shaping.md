@@ -37,8 +37,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-latest
 
 informative:
   RFC6749:
@@ -51,8 +49,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-authority-server-latest
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -61,8 +57,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-runtime-latest
 
 --- abstract
 

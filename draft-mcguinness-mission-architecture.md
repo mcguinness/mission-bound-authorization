@@ -39,8 +39,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-cross-domain-latest
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -49,8 +47,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-latest
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -59,8 +55,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-authority-server-latest
   I-D.draft-mcguinness-mission-aauth:
     title: "Mission-Bound Authorization for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
@@ -69,8 +63,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-aauth-latest
   I-D.draft-mcguinness-mission-substrate:
     title: "Mission Substrate Requirements"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
@@ -79,8 +71,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-substrate-latest
   I-D.draft-mcguinness-oauth-mission-management:
     title: "Mission Management for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-management.html
@@ -89,8 +79,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-management-latest
   I-D.draft-mcguinness-mission-shaping:
     title: "Mission Intent Shaping"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html
@@ -99,8 +87,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-shaping-latest
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
     title: "Mission Consent Evidence for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
@@ -109,8 +95,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-consent-evidence-latest
   I-D.draft-mcguinness-oauth-mission-approval:
     title: "Mission Deferred Approval for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html
@@ -119,8 +103,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-approval-latest
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
@@ -129,8 +111,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-status-latest
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
@@ -139,8 +119,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
@@ -149,8 +127,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
   I-D.draft-mcguinness-oauth-mission-completion:
     title: "Mission Completion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-completion.html
@@ -159,8 +135,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-completion-latest
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -169,8 +143,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-runtime-latest
   I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
@@ -179,8 +151,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-authzen-latest
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
@@ -189,8 +159,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-harness-latest
   I-D.draft-mcguinness-mission-orchestration:
     title: "Mission Orchestration and Unwinding"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html
@@ -199,8 +167,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-orchestration-latest
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
@@ -209,8 +175,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
   I-D.draft-mcguinness-oauth-mission-attenuation:
     title: "Mission Offline Attenuation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-attenuation.html
@@ -219,8 +183,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-attenuation-latest
   I-D.draft-mcguinness-mission-mandate:
     title: "Mission Mandate"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
@@ -229,8 +191,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-mandate-latest
   I-D.draft-mcguinness-mission-audit:
     title: "Mission Audit Transparency"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
@@ -239,8 +199,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-audit-latest
   I-D.draft-mcguinness-mission-security-model:
     title: "Mission Security Model"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html
@@ -249,8 +207,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-security-model-latest
 
 --- abstract
 
