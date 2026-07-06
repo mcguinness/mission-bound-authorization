@@ -400,9 +400,11 @@ levels of offline narrowing. Decoded root token:
     { "type": "attenuating_agent_token",
       "tools": {
         "erp.invoices.read": {
-          "period": { "constraint_type": "exact", "value": "2026-Q3" } },
+          "period":
+            { "constraint_type": "exact", "value": "2026-Q3" } },
         "erp.journal-entries.write": {
-          "amount_usd": { "constraint_type": "range", "max": 500 } } } }
+          "amount_usd":
+            { "constraint_type": "range", "max": 500 } } } }
   ]
 }
 ~~~
@@ -417,12 +419,14 @@ The orchestrator spawns a read-only extraction sub-agent and, with no
 Authorization Server contact, mints a child that drops the write tool
 and keeps only the Q3 invoice read. It signs the child with the key the
 root's `cnf` binds, sets `iss` to that key's thumbprint, increments
-`del_depth`, and commits the parent by `par_hash`:
+`del_depth`, and commits the parent by `par_hash` (the `iss` value
+is one line, wrapped here for display):
 
 ~~~ json
 {
   "iss":
-    "urn:ietf:params:oauth:jwk-thumbprint:sha-256:0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I",
+    "urn:ietf:params:oauth:jwk-thumbprint:sha-256:0ZcOCORZNYy-
+     DWpqq30jZyJGHTN0d2HglBV3uiguA4I",
   "sub": "user_3p2q8mN1a0kV7tR",
   "aud": "https://erp.example.com",
   "iat": 1797840030,
@@ -442,7 +446,8 @@ root's `cnf` binds, sets `iss` to that key's thumbprint, increments
     { "type": "attenuating_agent_token",
       "tools": {
         "erp.invoices.read": {
-          "period": { "constraint_type": "exact", "value": "2026-Q3" } } } }
+          "period":
+            { "constraint_type": "exact", "value": "2026-Q3" } } } }
   ]
 }
 ~~~

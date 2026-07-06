@@ -779,7 +779,7 @@ POST /par HTTP/1.1
 Host: as.example.com
 Content-Type: application/x-www-form-urlencoded
 
-mission_intent=%7B...raise%20journal-entries%20cap%20to%20%242000...%7D&
+mission_intent=%7B...journal-entries%20cap%20%242000...%7D&
 predecessor=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-&
 predecessor_token=<refresh%20token%20bound%20to%20the%20predecessor>&
 client_id=s6BhdRkqt3

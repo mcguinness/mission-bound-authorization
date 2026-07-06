@@ -1619,7 +1619,8 @@ bytes are a single line with sorted member names and no whitespace:
 ~~~
 
 ~~~ text
-parameter_digest = sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI
+parameter_digest =
+  sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI
 ~~~
 
 The PDP binds its permit to this value, and the executing PEP recomputes

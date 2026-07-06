@@ -393,17 +393,18 @@ canonical form.
 Canonical bytes of the envelope:
 
 ~~~ text
-{"iss":"https://as.example.com","typ":"mission-unwind-plan","value":{"ev
-idence_policy":{"link_runtime_evidence":true,"retain_for":"mission_audit
-_horizon"},"in_flight_behavior":"wait_then_review","mission_id":"msn_8Rf
-X2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","post_completion_behavior":"human_review"
-,"pre_start_behavior":"human_review","reversibility":"external_commitmen
-t","review_queue":"finance-control-review","step_id":"post_journal_entry
-"}}
+{"iss":"https://as.example.com","typ":"mission-unwind-plan","value
+":{"evidence_policy":{"link_runtime_evidence":true,"retain_for":"m
+ission_audit_horizon"},"in_flight_behavior":"wait_then_review","mi
+ssion_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","post_completion_
+behavior":"human_review","pre_start_behavior":"human_review","reve
+rsibility":"external_commitment","review_queue":"finance-control-r
+eview","step_id":"post_journal_entry"}}
 ~~~
 
 ~~~ text
-unwind_plan_hash = sha-256:Qf-0Xqo8QPMN0D3xMOSi2j4qTvaU2U8ne1g8UEBrAIc
+unwind_plan_hash =
+  sha-256:Qf-0Xqo8QPMN0D3xMOSi2j4qTvaU2U8ne1g8UEBrAIc
 ~~~
 
 The evidence example of {{orchestration-evidence}} carries this value.

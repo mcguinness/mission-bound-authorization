@@ -862,33 +862,118 @@ keep "oauth" in their names; profiles defined against the substrate
 of {{substrate}} are named without it. This document is named without
 it because the architecture is substrate-neutral by construction.
 
-| Group | Document | Defines |
-|---|---|---|
-| The model and its bindings | `oauth-mission` | The core issuance profile: the Mission, the approval event and anchors, the `mission` claim, the subset rule, state-gated issuance. |
-| | `mission-authority-server` | The standalone Mission Issuer and the PDP join of ordinary credentials to Missions. |
-| | `mission-aauth` | The AAuth binding: the Person Server as Mission Issuer, the mission blob as the record under AAuth's `s256` commitment, issuance gating at the token endpoint. |
-| | `mission-substrate` | Normative requirements on any further binding of the model; the existing bindings and the core are unchanged by it. |
-| Approval time | `mission-shaping` | Client-side shaping of a user's request into a candidate Mission Intent, as untrusted proposal. |
-| | `oauth-mission-consent-evidence` | The `consent_rendering_hash` anchor and signed evidence of what the Approver was shown. |
-| | `oauth-mission-approval` | Asynchronous approval over the deferred substrate. |
-| | `oauth-mission-approval-revision` | Experimental: in-review narrowing revision of a deferred proposal. |
-| Lifecycle | `oauth-mission-status` | The signed pull surface and the lifecycle endpoint, with `suspended` and `completed`. |
-| | `oauth-mission-signals` | Experimental: a signed event per lifecycle transition, push or poll. |
-| | `oauth-mission-expansion` | Widening through an approved successor Mission. |
-| | `oauth-mission-progressive` | Experimental: policy-adjudicated expansion within a pre-consented ceiling. |
-| | `oauth-mission-management` | Fleet enumeration and bulk lifecycle operations for operators and incident response; dry-run-first, per-Mission semantics. |
-| | `oauth-mission-completion` | Per-entry discharge via the `terminal_when` constraint. |
-| | `oauth-mission-cross-domain` | Single-hop projection of a Mission to another trust domain via the cross-domain grant ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). |
-| Runtime enforcement | `mission-runtime` | The per-action decision contract: parameter binding, custody, fail-closed behavior. |
-| | `mission-authzen` | The concrete decision-API binding and its Decision and Execution Evidence objects. |
-| | `mission-metering` | Experimental: cumulative consumption bounds and the metering that enforces them. |
-| Agent runtime | `mission-harness` | Binding sessions, queues, and sub-agent handles to Mission state; the mediated environment. |
-| | `mission-orchestration` | Reversibility classes, unwind plans, and compensation after a stop. |
-| Sub-agents | `oauth-mission-child-delegation` | Child Missions with lineage, strict-subset authority, cascade revocation. |
-| | `oauth-mission-attenuation` | Narrower Mission-bound tokens minted offline; the kill switch preserved by runtime re-check. |
-| Proof and portability | `mission-mandate` | A signed, portable statement of a Mission's committed facts; evidence, not a credential. |
-| | `mission-audit` | Registration of Mission evidence in a SCITT Transparency Service; receipts verifiable offline. |
-| Security model | `mission-security-model` | The trusted base in one view: what each component must achieve and what its compromise costs. |
+**The model and its bindings:**
+
+`oauth-mission`:
+: The core issuance profile: the Mission, the approval event and
+  anchors, the `mission` claim, the subset rule, state-gated
+  issuance.
+
+`mission-authority-server`:
+: The standalone Mission Issuer and the PDP join of ordinary
+  credentials to Missions.
+
+`mission-aauth`:
+: The AAuth binding: the Person Server as Mission Issuer, the mission
+  blob as the record under AAuth's `s256` commitment, issuance gating
+  at the token endpoint.
+
+`mission-substrate`:
+: Normative requirements on any further binding of the model; the
+  existing bindings and the core are unchanged by it.
+
+**Approval time:**
+
+`mission-shaping`:
+: Client-side shaping of a user's request into a candidate Mission
+  Intent, as untrusted proposal.
+
+`oauth-mission-consent-evidence`:
+: The `consent_rendering_hash` anchor and signed evidence of what the
+  Approver was shown.
+
+`oauth-mission-approval`:
+: Asynchronous approval over the deferred substrate.
+
+`oauth-mission-approval-revision`:
+: Experimental: in-review narrowing revision of a deferred proposal.
+
+**Lifecycle:**
+
+`oauth-mission-status`:
+: The signed pull surface and the lifecycle endpoint, with
+  `suspended` and `completed`.
+
+`oauth-mission-signals`:
+: Experimental: a signed event per lifecycle transition, push or
+  poll.
+
+`oauth-mission-expansion`:
+: Widening through an approved successor Mission.
+
+`oauth-mission-progressive`:
+: Experimental: policy-adjudicated expansion within a pre-consented
+  ceiling.
+
+`oauth-mission-management`:
+: Fleet enumeration and bulk lifecycle operations for operators and
+  incident response; dry-run-first, per-Mission semantics.
+
+`oauth-mission-completion`:
+: Per-entry discharge via the `terminal_when` constraint.
+
+`oauth-mission-cross-domain`:
+: Single-hop projection of a Mission to another trust domain via the
+  cross-domain grant.
+
+**Runtime enforcement:**
+
+`mission-runtime`:
+: The per-action decision contract: parameter binding, custody,
+  fail-closed behavior.
+
+`mission-authzen`:
+: The concrete decision-API binding and its Decision and Execution
+  Evidence objects.
+
+`mission-metering`:
+: Experimental: cumulative consumption bounds and the metering that
+  enforces them.
+
+**Agent runtime:**
+
+`mission-harness`:
+: Binding sessions, queues, and sub-agent handles to Mission state;
+  the mediated environment.
+
+`mission-orchestration`:
+: Reversibility classes, unwind plans, and compensation after a stop.
+
+**Sub-agents:**
+
+`oauth-mission-child-delegation`:
+: Child Missions with lineage, strict-subset authority, cascade
+  revocation.
+
+`oauth-mission-attenuation`:
+: Narrower Mission-bound tokens minted offline; the kill switch
+  preserved by runtime re-check.
+
+**Proof and portability:**
+
+`mission-mandate`:
+: A signed, portable statement of a Mission's committed facts;
+  evidence, not a credential.
+
+`mission-audit`:
+: Registration of Mission evidence in a SCITT Transparency Service;
+  receipts verifiable offline.
+
+**Security model:**
+
+`mission-security-model`:
+: The trusted base in one view: what each component must achieve and
+  what its compromise costs.
 
 # Security Considerations {#security-considerations}
 
