@@ -38,8 +38,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-latest
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -48,8 +46,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-runtime-latest
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
@@ -58,8 +54,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-status-latest
 
 informative:
   I-D.draft-mcguinness-mission-authzen:
@@ -70,8 +64,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-authzen-latest
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
@@ -80,8 +72,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-harness-latest
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
@@ -90,8 +80,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
@@ -100,8 +88,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
 
 --- abstract
 

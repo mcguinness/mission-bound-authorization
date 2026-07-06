@@ -38,8 +38,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-latest
 
 informative:
   RFC8126:
@@ -52,8 +50,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-status-latest
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -62,8 +58,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-mission-runtime-latest
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
@@ -72,8 +66,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
@@ -82,8 +74,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
   I-D.draft-mcguinness-oauth-mission-progressive:
     title: "Mission Progressive Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
@@ -92,8 +82,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-progressive-latest
 
 --- abstract
 
