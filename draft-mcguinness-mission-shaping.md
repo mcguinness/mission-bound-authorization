@@ -607,7 +607,7 @@ can cite how the proposal was produced. When it does:
   object in this suite, the Shaping Evidence object is committed inside
   that profile's domain-separated `{typ, iss, value}` envelope, with
   `typ` of `mission-shaping-evidence`, `iss` the Mission Issuer
-  `origin`, and `value` the Shaping Evidence object; the anchor is the
+  `issuer`, and `value` the Shaping Evidence object; the anchor is the
   prefixed digest of the JCS {{RFC8785}} canonical bytes of that
   envelope. Hashing the bare object would omit the `typ` domain
   separation and `iss` binding the integrity-anchor construction exists

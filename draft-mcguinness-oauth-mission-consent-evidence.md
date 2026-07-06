@@ -241,7 +241,7 @@ A Consent Disclosure object has these members:
   yet exist, and the disclosure must commit only to the proposed Intent
   and Authority Set it actually renders. The Consent Evidence object,
   recorded at or after the decision, carries the resolved `mission`
-  container with `id`, `origin`, and the same anchors.
+  container with `id`, `issuer`, and the same anchors.
 
 `template_id`:
 : REQUIRED. A string identifying the disclosure template.
@@ -445,7 +445,7 @@ envelope:
 ~~~
 {
   "typ": "mission-consent-disclosure",
-  "iss": <mission.origin>,
+  "iss": <mission.issuer>,
   "value": <Consent Disclosure object>
 }
 ~~~
@@ -551,17 +551,17 @@ A Consent Evidence object has these members:
 : REQUIRED. An object binding the evidence to what was approved. Its
   shape depends on `decision`, because a Mission exists only after an
   approval ({{I-D.draft-mcguinness-oauth-mission}}):
-  - When `decision` is `approved`, it contains `id`, `origin`,
+  - When `decision` is `approved`, it contains `id`, `issuer`,
     `intent_hash`, `authority_hash`, and, when this profile records it
     on the Mission, `consent_rendering_hash`.
   - When `decision` is `declined`, no Mission was created
     ({{declined-events}}), so there is no `id`. It instead contains
-    `origin` and the `intent_hash` and `authority_hash` the disclosure
+    `issuer` and the `intent_hash` and `authority_hash` the disclosure
     corresponded to, matching the disclosure object's `source_hashes`
     ({{consent-disclosure}}). It MUST NOT contain `id`.
   - When `decision` is `narrowed`, the review required a narrowing
     revision and no Mission was created ({{revision-events}}). Like a
-    decline, it contains `origin` and the reviewed disclosure's
+    decline, it contains `issuer` and the reviewed disclosure's
     `intent_hash` and `authority_hash`, matching that disclosure's
     `source_hashes`, and MUST NOT contain `id`.
 
@@ -698,7 +698,7 @@ Example, over the worked disclosure of {{disclosure-vector}}:
   "evidence_id": "cns_7rP2kL9mQ4",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "intent_hash": "sha-256:6mIFoCz79uCHNzKLfBpBwqFjoFXdpmpuc65486IqimQ",
     "authority_hash": "sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro",
     "consent_rendering_hash":
@@ -758,7 +758,7 @@ service authorized by the Mission Issuer. A verifier:
    `mission` match the Mission record being audited. When `decision` is
    `declined` or `narrowed` there is no Mission record
    ({{declined-events}}, {{revision-events}}); the verifier instead
-   confirms the `mission` descriptor carries `origin` and the two
+   confirms the `mission` descriptor carries `issuer` and the two
    `source_hashes` anchors and no `id`; and
 7. when `rendering_confirmation` is present
    ({{experimental-rungs}}), verifies it against the recorded

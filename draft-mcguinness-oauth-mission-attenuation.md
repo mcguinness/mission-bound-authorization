@@ -210,7 +210,7 @@ A Mission-bound attenuation root is a Mission-bound token
 ({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}, {{RFC9396}}).
 The Mission Issuer derives that authority from the Mission's Authority
 Set by the mapping of {{root-mapping}}. The root carries the `mission`
-claim (`id`, `origin`, `authority_hash`) and the holder's confirmation
+claim (`id`, `issuer`, `authority_hash`) and the holder's confirmation
 key, as both profiles require. It MUST carry `aud` per the issuance
 profile's token rules ({{I-D.draft-mcguinness-oauth-mission}}),
 identifying the Resource Server(s) authorized to consume its authority.
@@ -289,7 +289,7 @@ the whole chain transitively: no descendant outlives the root, hence
 none outlives the Mission.
 
 The `mission` claim rides the chain unchanged: every token in the chain
-carries the same `id`, `origin`, and `authority_hash` as the root. The
+carries the same `id`, `issuer`, and `authority_hash` as the root. The
 child's narrowing is governed entirely by the attenuation substrate's
 capability monotonicity, which is the subset relation a consumer checks;
 because the child carries the parent chain, a consumer holding only the
@@ -314,7 +314,7 @@ because it has no concept of the Mission binding. In addition to the
 substrate's chain verification, a consumer MUST:
 
 - reject the chain unless every token in it carries a `mission` claim
-  and every claim carries the same `id`, `origin`, and `authority_hash`
+  and every claim carries the same `id`, `issuer`, and `authority_hash`
   as the root. A child cannot re-bind to a different Mission or change
   the lineage anchor; a link whose `mission` claim differs from the
   root's, or that omits it, MUST cause the whole chain to be refused,
@@ -401,7 +401,7 @@ levels of offline narrowing. Decoded root token:
   "del_max_depth": 2,
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },
@@ -443,7 +443,7 @@ root's `cnf` binds, sets `iss` to that key's thumbprint, increments
   "del_max_depth": 2,
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },
@@ -546,7 +546,7 @@ profile, and the attenuation substrate apply. This profile adds:
 
 # Privacy Considerations {#privacy-considerations}
 
-The `mission` claim (`id`, `origin`, `authority_hash`) rides every token
+The `mission` claim (`id`, `issuer`, `authority_hash`) rides every token
 in an attenuation chain unchanged ({{attenuation}}), so every consumer
 of any child sees the same durable Mission correlator and lineage
 anchor. The chain is therefore a correlation surface across the

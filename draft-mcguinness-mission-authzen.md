@@ -233,7 +233,7 @@ action-class names (consequential read, consequential write,
 irreversible action, external commitment, and privileged
 administration) are used as defined in
 {{I-D.draft-mcguinness-mission-runtime}}. The Mission claim
-(`id`, `origin`, `authority_hash`), the integrity anchors
+(`id`, `issuer`, `authority_hash`), the integrity anchors
 (`intent_hash`, `authority_hash`), and `authorization_details`
 entries of type `mission_resource_access` are used as defined in
 {{I-D.draft-mcguinness-oauth-mission}}.
@@ -371,8 +371,8 @@ materialized view:
 `id`:
 : REQUIRED. A string. the Mission's `id`.
 
-`origin`:
-: REQUIRED. A string containing a URI. the Mission's `origin`.
+`issuer`:
+: REQUIRED. A string containing a URI. the Mission's `issuer`.
 
 `authority_hash`:
 : REQUIRED. A string. the Authority Set integrity
@@ -391,7 +391,7 @@ materialized view:
   `mission` claim or the introspection projection, so a PEP that is not
   co-located with the Mission record may not have it; such a PEP omits
   it and relies on `policy_view_id` for view correlation. A PEP that can
-  obtain it (for example, co-located with the origin) includes it.
+  obtain it (for example, co-located with the issuer) includes it.
 
 `policy_view_id`:
 : OPTIONAL. A string. the materialized view identifier
@@ -553,7 +553,7 @@ Authorization: ...
   "context": {
     "mission": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-      "origin": "https://as.example.com",
+      "issuer": "https://as.example.com",
       "authority_hash":
         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
       "state": "active",
@@ -690,7 +690,7 @@ Authorization: ...
       "context": {
         "mission": {
           "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-          "origin": "https://as.example.com",
+          "issuer": "https://as.example.com",
           "authority_hash":
             "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
           "state": "active"
@@ -722,7 +722,7 @@ Authorization: ...
       "context": {
         "mission": {
           "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-          "origin": "https://as.example.com",
+          "issuer": "https://as.example.com",
           "authority_hash":
             "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
           "state": "active"
@@ -803,11 +803,11 @@ canonicalization, and integrity envelope an AuthZEN deployment emits.
 
 `mission`:
 : REQUIRED. An object. the PDP request's `context.mission`
-  object (`id`, `origin`, `authority_hash`, and, when known,
+  object (`id`, `issuer`, `authority_hash`, and, when known,
   `policy_version` and `policy_view_id`), extended with `intent_hash`
   and, when known, a consent-disclosure commitment, so the evidence
   chains back to the exact approved Mission. Within `mission`, `id`,
-  `origin`, and `authority_hash` are REQUIRED; `intent_hash` is OPTIONAL
+  `issuer`, and `authority_hash` are REQUIRED; `intent_hash` is OPTIONAL
   (it is carried in neither the `mission` claim nor introspection, so
   only a PDP with direct Mission-record access can record it), and the
   remaining members are OPTIONAL. These hashes are the issuing AS's
@@ -992,7 +992,7 @@ envelopes with unsupported formats.
   "decision_id": "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "intent_hash":
