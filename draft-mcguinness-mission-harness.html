@@ -1528,6 +1528,15 @@ claim. The statement also declares the deployment's taint policy
 (<a href="#session-taint" class="auto internal xref">Section 14</a>). Verifying that no unmediated path exists is a
 deployment audit obligation, not a protocol property: this profile
 fixes what the statement declares, not how a deployment proves it.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-4">Mediation governs the agent's outputs; the same duty applies to its
+inputs. A Mission-aware harness <span class="bcp14">SHOULD</span> surface to the agent only the
+context the active Mission needs: the tool catalog and schemas scoped
+to the Mission's Authority Set, memory and retrieved content admitted
+per the taint policy (<a href="#session-taint" class="auto internal xref">Section 14</a>), and cached credentials and
+connections keyed per <a href="#cache-keys" class="auto internal xref">Section 10.1</a>. This applies the runtime
+profile's least-exposure rule
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) at the harness, the layer
+that assembles the agent's context.<a href="#section-5-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-binding">

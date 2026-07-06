@@ -93,7 +93,8 @@ Table of Contents
      4.4.  Action-bound approval
      4.5.  PEP placement
      4.6.  Credential custody and mediated execution
-     4.7.  Agent-compromise-resistant enforcement
+     4.7.  Least exposure
+     4.8.  Agent-compromise-resistant enforcement
    5.  Resource Server runtime profile
    6.  Token presentation and validation
    7.  The decision
@@ -106,7 +107,8 @@ Table of Contents
    11. Runtime enforcement evidence
      11.1.  Required decision evidence
      11.2.  Execution-outcome evidence
-     11.3.  Record integrity and retention
+     11.3.  Mission Receipt
+     11.4.  Record integrity and retention
    12. Decision API binding
    13. Out of scope
    14. Security Considerations
@@ -165,7 +167,7 @@ Table of Contents
    approval (Section 4.4), credential custody in the mediating
    enforcement point rather than the agent (Section 4.6), and the named
    agent-compromise-resistant enforcement claim those mechanisms compose
-   into (Section 4.7).
+   into (Section 4.8).
 
    The model is a Policy Enforcement Point (PEP) at each consequential
    execution boundary that, before the action runs, obtains a decision
@@ -683,7 +685,30 @@ Table of Contents
    Mediating-PEP key rotation follows the deployment's published key
    set.
 
-4.7.  Agent-compromise-resistant enforcement
+4.7.  Least exposure
+
+   Mission containment applies to exposure as well as authority.  An
+   agent exceeds the Mission envelope by invoking an action outside the
+   Authority Set, but also by being exposed to inputs the approved task
+   does not need: tools, data, memories, prompts, schemas, credentials,
+   or downstream responses.  Authority bounds what execution can do;
+   exposure bounds what reasoning can see, and unnecessary context is
+   the raw material of prompt injection and within-scope laundering.
+
+   A Mission-aware runtime SHOULD minimize exposure of prompts,
+   retrieved documents, memory, tool catalogs, schemas, credentials, and
+   downstream responses to what the active Mission needs.  Where
+   mediated custody is the deployment's declared control for an action
+   class (Section 4.6), credential material and the sender-constraint
+   private key MUST NOT be exposed to the agent component: exposure
+   reduces mediation to advice.
+
+   Least exposure narrows what injection can read and what within-scope
+   laundering can draw from; it is not information-flow control, and an
+   exposure filter, like a tool-catalog filter (Section 4.3), never
+   replaces per-action authorization.
+
+4.8.  Agent-compromise-resistant enforcement
 
    "Protects against agent compromise" is a verifiable claim, not a
    label.  A deployment claims *agent-compromise-resistant enforcement*
@@ -1269,8 +1294,9 @@ Table of Contents
    condition.  This document fixes the minimum record content and local
    integrity requirements.  The concrete record schema, any
    interoperable canonical byte representation, separate Decision
-   Evidence and Execution Evidence object schemas, and portable cross-
-   domain receipts are out of scope (Section 13).
+   Evidence and Execution Evidence object schemas, and the Mission
+   Receipt's portable schema (Section 11.3) are out of scope
+   (Section 13).
 
 11.1.  Required decision evidence
 
@@ -1342,10 +1368,33 @@ Table of Contents
    record is expected for each decision, and MUST name the component
    responsible for detecting orphaned evidence (a decision with no
    matching execution-outcome record within that window) and sequence
-   gaps in a Mission's records (Section 11.3), and that component's
+   gaps in a Mission's records (Section 11.4), and that component's
    alerting obligation when it detects either.
 
-11.3.  Record integrity and retention
+11.3.  Mission Receipt
+
+   A *Mission Receipt* is the portable, tamper-evident projection of a
+   runtime enforcement evidence record and, for a high-consequence
+   action, its execution-outcome record: portable evidence of a material
+   action taken under a Mission, as a Mandate
+   ([I-D.draft-mcguinness-mission-mandate]) is portable evidence about
+   the Mission itself.
+
+   A Mission Receipt MUST identify the Mission the action was authorized
+   under: mission.id and mission.issuer, or a verifiable Mission
+   projection such as the cross-domain grant's mission claim
+   ([I-D.draft-mcguinness-oauth-mission-cross-domain]).  It SHOULD bind
+   the policy decision (the decision identifier and result), the
+   executor (the authenticated actor and any act chain), the custody
+   boundary (whether a mediating PEP held the credential, Section 4.6),
+   the downstream target (the resource and audience), the outcome, the
+   timestamps, and, where receipt chaining substitutes for a
+   transparency feed ([I-D.draft-mcguinness-mission-audit]), the digest
+   of the previous Mission Receipt.  The portable schema and canonical
+   byte representation are deferred (Section 13); the members above are
+   the minimum a deployment-defined Mission Receipt binds.
+
+11.4.  Record integrity and retention
 
    The following requirements apply to every record:
 
@@ -1421,8 +1470,10 @@ Table of Contents
       definition-digest drift (signed capability manifests, cross-
       catalog identity);
 
-   *  portable, third-party-verifiable decision receipts (this profile
-      fixes only the local runtime enforcement evidence record);
+   *  the Mission Receipt's portable schema and canonical byte
+      representation (Section 11.3: this profile fixes the term, its
+      minimum binding, and the local runtime enforcement evidence
+      record);
 
    *  separate Decision Evidence and Execution Evidence object schemas
       and media types;
@@ -1489,7 +1540,10 @@ Table of Contents
    execution, Section 4.6) made unreachable to an agent that does not
    hold the egress credential.  This is the architectural defense, gate
    the exfiltration against an authority the injection cannot widen,
-   rather than make the agent injection-proof.
+   rather than make the agent injection-proof.  Least exposure
+   (Section 4.7) is the input-side complement: it shrinks what an
+   injected agent can read and what within-scope laundering can draw
+   from, without changing the limits below.
 
    Two limits are inherent and a deployment MUST NOT overstate the
    guarantee.  First, it is exactly as strong as PEP-placement
@@ -1734,6 +1788,11 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-harness.html>.
 
+   [I-D.draft-mcguinness-mission-mandate]
+              McGuinness, K., "Mission Mandate", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-mandate.html>.
+
    [I-D.draft-mcguinness-mission-metering]
               McGuinness, K., "Mission Consumption Metering", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -1855,7 +1914,7 @@ Appendix C.  Runtime Evidence Worked Examples
    These non-normative records illustrate the minimum record content of
    Section 11 for the operation of Appendix A.  They show substrate-
    level record content only: the concrete schema, serialization, and
-   integrity mechanism are the deployment's (Section 11.3), and a
+   integrity mechanism are the deployment's (Section 11.4), and a
    decision-API binding defines concrete evidence objects
    ([I-D.draft-mcguinness-mission-authzen]).  In this deployment, the
    Resource Server runtime profile classifies journal-entries.write as

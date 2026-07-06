@@ -3125,9 +3125,9 @@ Table of Contents
               Kasselman, P., Lombardo, J., Rosomakho, Y., Campbell, B.,
               Steele, N., and A. Parecki, "AI Agent Authentication and
               Authorization", Work in Progress, Internet-Draft, draft-
-              klrc-aiagent-auth-02, 1 June 2026,
+              klrc-aiagent-auth-03, 6 July 2026,
               <https://datatracker.ietf.org/doc/html/draft-klrc-aiagent-
-              auth-02>.
+              auth-03>.
 
    [I-D.draft-mcguinness-mission-metering]
               McGuinness, K., "Mission Consumption Metering", 2026,

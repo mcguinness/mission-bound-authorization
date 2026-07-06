@@ -394,101 +394,109 @@ Table of Contents
    addresses it and to what is explicitly not stopped.  The residual
    column is the honest part: it is what a deploying party still owns.
 
-   +==============+===========================+========================+
-   | Adversary    | Addressed by              | Residual: not          |
-   | move         |                           | stopped                |
-   +==============+===========================+========================+
-   | Compromised  | Authority fixed at the    | Misuse within the      |
-   | or injected  | approval event            | approved scope;        |
-   | agent acts   | (issuance); per-action    | low-consequence        |
-   | beyond its   | PDP check (runtime)       | authority the          |
-   | task         |                           | agent legitimately     |
-   |              |                           | holds                  |
-   +--------------+---------------------------+------------------------+
-   | Prompt       | Inert intent: goal,       | Injected text can      |
-   | injection    | purpose, success_criteria | still drive            |
-   | tries to     | never derive, widen, or   | actions already in     |
-   | widen        | gate authority            | scope                  |
-   | authority    |                           |                        |
-   +--------------+---------------------------+------------------------+
-   | Stolen or    | Sender-constraint (proof- | A token stolen         |
-   | exfiltrated  | of-possession); the high- | together with its      |
-   | token        | consequence key is held   | key; soundness of      |
-   |              | by the PEP, not the agent | the PoP mechanism      |
-   |              | (mediated execution)      |                        |
-   +--------------+---------------------------+------------------------+
-   | Token        | Permit bound to audience, | Correct binding        |
-   | replayed at  | resource, sub, client_id, | configuration is       |
-   | another      | and action; cross-domain  | the deployment's       |
-   | resource     | grant single-use and      |                        |
-   | (confused    | audienced                 |                        |
-   | deputy)      |                           |                        |
-   +--------------+---------------------------+------------------------+
-   | Parameters   | Parameter binding; the    | The PEP must sit       |
-   | change       | digest is reverified at   | at the last            |
-   | between      | the executing PEP         | controllable           |
-   | decision and | immediately before acting | boundary               |
-   | use (TOCTOU) |                           |                        |
-   +--------------+---------------------------+------------------------+
-   | Active       | Per-action runtime        | An issuance-only       |
-   | Mission used | enforcement, state re-    | deployment gets        |
-   | as ambient   | check, fail-closed on     | audit, not action-     |
-   | standing     | stale state               | time defense           |
-   | authority    |                           |                        |
-   +--------------+---------------------------+------------------------+
-   | Revoked or   | Issuance gating; runtime  | A window up to the     |
-   | expired      | state re-check within the | staleness bound or     |
-   | Mission      | staleness bound; short    | token TTL; a           |
-   | still acts   | token lifetimes           | spoofed state          |
-   | (kill        |                           | source (a trusted      |
-   | switch)      |                           | component)             |
-   +--------------+---------------------------+------------------------+
-   | Approver     | The rendered disclosure   | Comprehension: no      |
-   | approves     | is committed; rendering-  | server-side            |
-   | more than    | assurance ladder up to an | commitment proves      |
-   | was shown    | authenticator-signed      | what a human           |
-   |              | commitment                | perceived or           |
-   |              |                           | understood             |
-   +--------------+---------------------------+------------------------+
-   | Exfiltration | External communication is | PEP-placement          |
-   | of private   | a gated consequential     | completeness; no       |
-   | data (the    | action; harness leaves no | information-flow       |
-   | third leg of | unmediated path; session  | control, so a          |
-   | the lethal   | taint downgrades egress   | sequence of in-        |
-   | trifecta)    | after untrusted input     | scope steps can        |
-   |              | (optional; recommended,   | launder data           |
-   |              | not required)             |                        |
-   +--------------+---------------------------+------------------------+
-   | Offline sub- | Capability monotonicity   | Fan-out breadth is     |
-   | agent fan-   | (narrow-only) and the     | unobserved by the      |
-   | out abuse    | runtime kill-switch re-   | issuer; bounded by     |
-   |              | check on the carried      | depth and policy,      |
-   |              | chain                     | not by the issuer      |
-   +--------------+---------------------------+------------------------+
-   | Audit        | Transparency: append-only | Single-service         |
-   | tampered,    | log, inclusion receipts,  | equivocation (per-     |
-   | dropped, or  | non-equivocation          | service only;          |
-   | reordered    |                           | register with          |
-   |              |                           | several); a            |
-   |              |                           | producer can still     |
-   |              |                           | log a false record     |
-   |              |                           | (accountability,       |
-   |              |                           | not prevention)        |
-   +--------------+---------------------------+------------------------+
-   | Agent        | Not addressed             | Full: semantic and     |
-   | fabricates   |                           | grounding              |
-   | results or   |                           | verification are a     |
-   | acts on      |                           | non-goal; pair         |
-   | false data   |                           | with a grounding       |
-   |              |                           | layer if needed        |
-   +--------------+---------------------------+------------------------+
-   | A trusted-   | Not addressed; evidence   | Not prevented;         |
-   | base         | detects it after the fact | degrades the           |
-   | component is |                           | specific guarantee     |
-   | compromised  |                           | per Section 6          |
-   +--------------+---------------------------+------------------------+
+   +==============+================================+==================+
+   | Adversary    | Addressed by                   | Residual: not    |
+   | move         |                                | stopped          |
+   +==============+================================+==================+
+   | Compromised  | Authority fixed at the         | Misuse within    |
+   | or injected  | approval event (issuance);     | the approved     |
+   | agent acts   | per-action PDP check (runtime) | scope; low-      |
+   | beyond its   |                                | consequence      |
+   | task         |                                | authority the    |
+   |              |                                | agent            |
+   |              |                                | legitimately     |
+   |              |                                | holds            |
+   +--------------+--------------------------------+------------------+
+   | Prompt       | Inert intent: goal, purpose,   | Injected text    |
+   | injection    | success_criteria never derive, | can still drive  |
+   | tries to     | widen, or gate authority       | actions already  |
+   | widen        |                                | in scope         |
+   | authority    |                                |                  |
+   +--------------+--------------------------------+------------------+
+   | Stolen or    | Sender-constraint (proof-of-   | A token stolen   |
+   | exfiltrated  | possession); the high-         | together with    |
+   | token        | consequence key is held by the | its key;         |
+   |              | PEP, not the agent (mediated   | soundness of the |
+   |              | execution)                     | PoP mechanism    |
+   +--------------+--------------------------------+------------------+
+   | Token        | Permit bound to audience,      | Correct binding  |
+   | replayed at  | resource, sub, client_id, and  | configuration is |
+   | another      | action; cross-domain grant     | the deployment's |
+   | resource     | single-use and audienced       |                  |
+   | (confused    |                                |                  |
+   | deputy)      |                                |                  |
+   +--------------+--------------------------------+------------------+
+   | Parameters   | Parameter binding; the digest  | The PEP must sit |
+   | change       | is reverified at the executing | at the last      |
+   | between      | PEP immediately before acting  | controllable     |
+   | decision and |                                | boundary         |
+   | use (TOCTOU) |                                |                  |
+   +--------------+--------------------------------+------------------+
+   | Active       | Per-action runtime             | An issuance-only |
+   | Mission used | enforcement, state re-check,   | deployment gets  |
+   | as ambient   | fail-closed on stale state     | audit, not       |
+   | standing     |                                | action-time      |
+   | authority    |                                | defense          |
+   +--------------+--------------------------------+------------------+
+   | Revoked or   | Issuance gating; runtime state | A window up to   |
+   | expired      | re-check within the staleness  | the staleness    |
+   | Mission      | bound; short token lifetimes   | bound or token   |
+   | still acts   |                                | TTL; a spoofed   |
+   | (kill        |                                | state source (a  |
+   | switch)      |                                | trusted          |
+   |              |                                | component)       |
+   +--------------+--------------------------------+------------------+
+   | Approver     | The rendered disclosure is     | Comprehension:   |
+   | approves     | committed; rendering-assurance | no server-side   |
+   | more than    | ladder up to an authenticator- | commitment       |
+   | was shown    | signed commitment              | proves what a    |
+   |              |                                | human perceived  |
+   |              |                                | or understood    |
+   +--------------+--------------------------------+------------------+
+   | Exfiltration | External communication is a    | PEP-placement    |
+   | of private   | gated consequential action;    | completeness; no |
+   | data (the    | harness leaves no unmediated   | information-flow |
+   | third leg of | path; session taint downgrades | control, so a    |
+   | the lethal   | egress after untrusted input   | sequence of in-  |
+   | trifecta)    | (optional; recommended, not    | scope steps can  |
+   |              | required); least-exposure      | launder data     |
+   |              | context minimization narrows   |                  |
+   |              | what an injected agent sees    |                  |
+   |              | (runtime, harness)             |                  |
+   +--------------+--------------------------------+------------------+
+   | Offline sub- | Capability monotonicity        | Fan-out breadth  |
+   | agent fan-   | (narrow-only) and the runtime  | is unobserved by |
+   | out abuse    | kill-switch re-check on the    | the issuer;      |
+   |              | carried chain                  | bounded by depth |
+   |              |                                | and policy, not  |
+   |              |                                | by the issuer    |
+   +--------------+--------------------------------+------------------+
+   | Audit        | Transparency: append-only log, | Single-service   |
+   | tampered,    | inclusion receipts, non-       | equivocation     |
+   | dropped, or  | equivocation                   | (per-service     |
+   | reordered    |                                | only; register   |
+   |              |                                | with several); a |
+   |              |                                | producer can     |
+   |              |                                | still log a      |
+   |              |                                | false record     |
+   |              |                                | (accountability, |
+   |              |                                | not prevention)  |
+   +--------------+--------------------------------+------------------+
+   | Agent        | Not addressed                  | Full: semantic   |
+   | fabricates   |                                | and grounding    |
+   | results or   |                                | verification are |
+   | acts on      |                                | a non-goal; pair |
+   | false data   |                                | with a grounding |
+   |              |                                | layer if needed  |
+   +--------------+--------------------------------+------------------+
+   | A trusted-   | Not addressed; evidence        | Not prevented;   |
+   | base         | detects it after the fact      | degrades the     |
+   | component is |                                | specific         |
+   | compromised  |                                | guarantee per    |
+   |              |                                | Section 6        |
+   +--------------+--------------------------------+------------------+
 
-                                  Table 1
+                                 Table 1
 
    Four residuals are worth stating on their own, because they are the
    limits most likely to matter and most often overstated away

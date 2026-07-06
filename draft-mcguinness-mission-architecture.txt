@@ -536,7 +536,9 @@ Table of Contents
    time; the verifier holds no session with the issuer.  Owners: Consent
    Evidence ([I-D.draft-mcguinness-oauth-mission-consent-evidence]); the
    Mandate, a signed, portable statement that authorizes nothing
-   ([I-D.draft-mcguinness-mission-mandate]); Audit Transparency, the
+   ([I-D.draft-mcguinness-mission-mandate]); the Mission Receipt,
+   portable evidence of an action taken under a Mission
+   ([I-D.draft-mcguinness-mission-runtime]); Audit Transparency, the
    append-only evidence log ([I-D.draft-mcguinness-mission-audit]).
 
 6.8.  Analyze
