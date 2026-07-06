@@ -529,7 +529,7 @@ The approval event executes steps 1 through 4 of the issuance
 profile's approval event unchanged
 ({{I-D.draft-mcguinness-oauth-mission}}):
 
-1. Authenticate the Approver; when the Intent's `context.acr` is
+1. Authenticate the Approver; when the Intent's `controls.acr` is
    present, the authentication MUST be one the deployment's policy
    maps as satisfying the named class (the issuance profile's `acr`
    mapping rule).
@@ -589,7 +589,9 @@ Cache-Control: no-store
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["invoices.read", "journal-entries.write"],
-      "constraints": { "max_amount_usd": "500.00" } }
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" }
+      } }
   ]
 }
 ~~~
@@ -1590,7 +1592,9 @@ Cache-Control: no-store
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["invoices.read", "journal-entries.write"],
-      "constraints": { "max_amount_usd": "500.00" } }
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" }
+      } }
   ]
 }
 ~~~

@@ -131,7 +131,7 @@ actually metered.
 
 This document depends normatively on the issuance profile and the
 runtime profile and is not implementable alone. It defines its
-consumption bounds as members of the Mission Intent `context` object,
+consumption bounds as members of the Mission Intent `controls` object,
 using the extension seam the issuance profile provides; they are
 carried on the Mission and committed by `intent_hash` exactly as any
 other Intent member. Metering is performed by the runtime profile's
@@ -150,12 +150,15 @@ Consumption bound:
 
 # Consumption Bounds {#bounds}
 
-A Mission Intent `context` object
+A Mission Intent `controls` object
 ({{I-D.draft-mcguinness-oauth-mission}}) MAY carry these members:
 
 `max_budget`:
 : OPTIONAL. An object. A hard cap on cumulative monetary
-  spend under the Mission. Has the members:
+  spend under the Mission. It carries the same `{amount, currency}`
+  shape as the `max_amount` Common Constraint the issuance profile
+  seeds, so the per-action cap and this cumulative cap read alike.
+  Has the members:
 
   `amount`:
   : REQUIRED. A string. A decimal number.
@@ -193,12 +196,12 @@ The bounds are carried on the Mission and committed by `intent_hash`.
 They are not enforced by the Authorization Server at issuance; they are
 enforced by the runtime layer at the point of use ({{metering}}).
 
-Example Mission Intent `context` carrying all three bounds alongside
+Example Mission Intent `controls` carrying all three bounds alongside
 the issuance profile's members:
 
 ~~~ json
 {
-  "context": {
+  "controls": {
     "acr": "urn:example:acr:mfa",
     "max_derivations": 200,
     "max_budget": { "amount": "5000.00", "currency": "USD" },
@@ -251,7 +254,7 @@ Consumption bounds are enforced by the runtime profile's PDP
 
 A per-entry `constraints` value that expresses a cumulative consumption
 bound is metered the same way. When an applicable entry or the
-Mission's `context` carries such a bound, the PDP MUST meter use
+Mission's `controls` carries such a bound, the PDP MUST meter use
 against it and MUST refuse a consequential action that would exceed it.
 The runtime profile's fail-closed rule stands beneath all of this: an
 unmetered or unrecognized consumption bound MUST cause refusal rather
@@ -436,8 +439,8 @@ responses only as refusals, not as remaining-balance oracles.
 # IANA Considerations {#iana}
 
 This document has no IANA actions. `max_budget`, `max_calls`, and
-`max_duration` are Mission Intent `context` members defined by this
-profile under the issuance profile's context extension seam;
+`max_duration` are Mission Intent `controls` members defined by this
+profile under the issuance profile's controls extension seam;
 `context.prior_decision_id` and `measured_duration` are AuthZEN
 extension data carried per the AuthZEN profile's conventions
 ({{I-D.draft-mcguinness-mission-authzen}}).

@@ -578,7 +578,8 @@ Mission Intent's `resources` also names the partner ERP
 `https://erp.partner.example.com`, so the approved Authority Set
 additionally carries, for that resource, an `invoices.read` entry
 (delegable to `ai_agent` actors at depth 1) and a
-`journal-entries.write` entry capped at `max_amount_usd: 500`. The
+`journal-entries.write` entry capped at a `max_amount` of 500.00
+USD. The
 Mission was recorded `active` with `authority_hash`
 `sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ` and
 `intent_hash`
@@ -617,7 +618,8 @@ audience-scoped authority for the ERP:
     { "type": "mission_resource_access",
       "resource": "https://erp.partner.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": "500.00" } }
+      "constraints": { "max_amount":
+        { "amount": "500.00", "currency": "USD" } } }
   ],
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
@@ -663,7 +665,8 @@ ID-JAG's `exp`:
     { "type": "mission_resource_access",
       "resource": "https://erp.partner.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": "500.00" } }
+      "constraints": { "max_amount":
+        { "amount": "500.00", "currency": "USD" } } }
   ],
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
@@ -705,7 +708,8 @@ The agent calls the ERP Resource Server (`erp.partner.example.com`)
 with that token. The Resource Server validates the JWT and the `cnf`
 binding and enforces the `authorization_details` whose `resource` it
 serves, permitting `invoices.read` and `journal-entries.write` up to
-`max_amount_usd: 500` ({{I-D.draft-mcguinness-oauth-mission}}, Section
+a `max_amount` of 500.00 USD
+({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Resource Server Enforcement"). It treats the
 `mission` claim as an audit anchor; holding only this audience's
 subset of the Authority Set, it does not recompute `authority_hash`.
@@ -716,7 +720,7 @@ deploys the runtime profile
 ({{I-D.draft-mcguinness-mission-runtime}}) it also obtains a
 point-of-use PDP permit against current Mission state before executing.
 The baseline bounds the write only by token lifetime and
-`max_amount_usd`.
+`max_amount`.
 
 ## Stage 5: Internal Call Context via Transaction Tokens
 
