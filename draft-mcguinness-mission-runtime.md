@@ -1140,7 +1140,7 @@ experimental companion ({{I-D.draft-mcguinness-mission-metering}}).
 What this document fixes is the failure posture. As with all
 constraints, an unmetered or unrecognized consumption bound MUST cause
 refusal rather than silent pass-through: when an applicable entry's
-`constraints`, or the Mission's `context`, carries a bound that
+`constraints`, or the Mission's `controls`, carries a bound that
 expresses cumulative consumption and the deployment does not meter it,
 the PDP MUST refuse a consequential action governed by it. A deployment
 MUST NOT advertise consumption enforcement it does not perform.
@@ -1547,7 +1547,7 @@ implementations can confirm they normalize and digest the same way.
 
 Consider a `journal-entries.write` operation under an ERP
 reconciliation Mission (`msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`) whose
-applicable entry carries a `max_amount_usd` ceiling of "500.00". The
+applicable entry carries a `max_amount` ceiling of 500.00 USD. The
 operation profile fixes the parameter set and normalization: the
 members are `amount_usd` and `source_invoice_id`; `amount_usd` is a
 decimal string with exactly two fractional digits; no defaults are
@@ -1655,7 +1655,8 @@ A permit decision record:
     "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
-    "constraints": { "max_amount_usd": "500.00" }
+    "constraints": { "max_amount":
+      { "amount": "500.00", "currency": "USD" } }
   },
   "parameter_digest":
     "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",

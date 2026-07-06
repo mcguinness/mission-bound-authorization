@@ -319,7 +319,7 @@ submits a Mission Intent through a Pushed Authorization Request
 ({{RFC9126}}) using the `mission_intent` request parameter, per
 {{I-D.draft-mcguinness-oauth-mission}}. The Mission Intent describes
 the broadened task: it carries the `goal`, `resources`, `constraints`,
-and `context` the successor needs, including the authority the denied
+and `controls` the successor needs, including the authority the denied
 action required. The Mission Issuer derives the successor's Authority
 Set from this Intent and bounds it by policy exactly as for any
 Mission; this document adds no authority-derivation rule.
@@ -448,7 +448,7 @@ expansion-specific steps noted:
    retain the predecessor's authority expresses that authority in the
    expansion Mission Intent so the derivation reproduces it.
 3. Authenticate the Approver and obtain fresh consent for the derived
-   Authority Set, satisfying any `context.acr`, and render the Subject
+   Authority Set, satisfying any `controls.acr`, and render the Subject
    when the Approver is not the Subject, per the issuance profile's
    approval event. The consent disclosure MUST reflect the successor's
    authority being adjudicated. (The experimental progressive

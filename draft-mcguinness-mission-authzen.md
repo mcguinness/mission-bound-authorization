@@ -662,7 +662,7 @@ enforcement semantics.
 
 A batch request for two journal-entry writes under the ERP
 reconciliation Mission, where the second exceeds the entry's
-`max_amount_usd` ceiling of "500.00". The shared `subject` is hoisted
+`max_amount` ceiling of 500.00 USD. The shared `subject` is hoisted
 to the request's default members per {{AUTHZEN}}; each item carries its
 complete `context`:
 
@@ -751,7 +751,7 @@ Authorization: ...
 
 The response returns one decision per item, in request order; the
 first is a permit and the second a `parameter_violation` deny, whose
-failing `max_amount_usd` key is listed in that item's Decision
+failing `max_amount` key is listed in that item's Decision
 Evidence `contributing_constraints`:
 
 ~~~ json
@@ -1034,7 +1034,7 @@ envelopes with unsupported formats.
   "class_source": "deployment",
   "decision": "permit",
   "contributing_constraints": [
-    "mission_resource_access", "max_amount_usd"
+    "mission_resource_access", "max_amount"
   ],
   "sequence": 42,
   "evaluated_at": "2026-11-02T08:14:03Z",

@@ -364,7 +364,7 @@ A binding's approval surface MUST realize the core's approval-event
 steps, whatever its native ceremony:
 
 1. authenticate the Approver, at the deployment's authentication floor
-   and satisfying the Intent's `context.acr` where present;
+   and satisfying the Intent's `controls.acr` where present;
 2. establish the Subject, never from unauthenticated client input;
 3. derive the Authority Set and render the derived authority for
    consent, not the goal or the Intent, with the core's display
