@@ -37,6 +37,8 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-id-assertion-framework:
+  I-D.draft-mcguinness-oauth-domain-authorized-issuer:
   I-D.draft-mcguinness-oauth-client-instance-assertion:
   I-D.draft-mcguinness-oauth-ai-agent-instance:
   I-D.draft-mcguinness-oauth-mission-cross-domain:
@@ -440,7 +442,11 @@ Five assumptions hold across the whole model:
   inferred from being named inside a signed artifact
   ({{I-D.draft-mcguinness-mission-audit}},
   {{I-D.draft-mcguinness-mission-mandate}},
-  {{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+  {{I-D.draft-mcguinness-oauth-mission-cross-domain}}). The
+  identity-assertion trust framework and its domain-authorized-issuer
+  method ({{I-D.draft-mcguinness-oauth-id-assertion-framework}},
+  {{I-D.draft-mcguinness-oauth-domain-authorized-issuer}}) are
+  concrete publication and evaluation mechanisms for such policy.
 - **Authority does not move on inert input.** Intent that the agent or
   attacker-reachable content can influence (`goal`, `purpose`,
   `success_criteria`, and disclosure-only audit material) is inert and
