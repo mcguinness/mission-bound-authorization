@@ -36,13 +36,13 @@ About This Document
    This note is to be removed before publishing as an RFC.
 
    The latest revision of this draft can be found at
-   https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-
+   https://mcguinness.github.io/mission-bound-authorization/draft-
    mcguinness-mission-authzen.html.  Status information for this
    document may be found at https://datatracker.ietf.org/doc/draft-
    mcguinness-mission-authzen/.
 
    Source for this draft and an issue tracker can be found at
-   https://github.com/mcguinness/draft-mcguinness-oauth-mission.
+   https://github.com/mcguinness/mission-bound-authorization.
 
 Status of This Memo
 
@@ -1945,15 +1945,15 @@ Table of Contents
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", Work
               in Progress, Internet-Draft, draft-mcguinness-mission-
-              runtime, 2026, <https://mcguinness.github.io/draft-
-              mcguinness-oauth-mission/draft-mcguinness-mission-
+              runtime, 2026, <https://mcguinness.github.io/mission-
+              bound-authorization/draft-mcguinness-mission-
               runtime.html>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission, 2026, <https://mcguinness.github.io/draft-
-              mcguinness-oauth-mission/draft-mcguinness-oauth-
+              oauth-mission, 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-oauth-
               mission.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
@@ -2021,8 +2021,8 @@ Table of Contents
    [I-D.draft-mcguinness-mission-metering]
               McGuinness, K., "Mission Consumption Metering", Work in
               Progress, Internet-Draft, draft-mcguinness-mission-
-              metering, 2026, <https://mcguinness.github.io/draft-
-              mcguinness-oauth-mission/draft-mcguinness-mission-
+              metering, 2026, <https://mcguinness.github.io/mission-
+              bound-authorization/draft-mcguinness-mission-
               metering.html>.
 
    [I-D.draft-mcguinness-oauth-ai-agent-instance]
@@ -2042,16 +2042,16 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", Work in
               Progress, Internet-Draft, draft-mcguinness-oauth-mission-
-              expansion, 2026, <https://mcguinness.github.io/draft-
-              mcguinness-oauth-mission/draft-mcguinness-oauth-mission-
+              expansion, 2026, <https://mcguinness.github.io/mission-
+              bound-authorization/draft-mcguinness-oauth-mission-
               expansion.html>.
 
    [I-D.draft-mcguinness-oauth-mission-progressive]
               McGuinness, K., "Mission Progressive Authorization for
               OAuth 2.0", Work in Progress, Internet-Draft, draft-
               mcguinness-oauth-mission-progressive, 2026,
-              <https://mcguinness.github.io/draft-mcguinness-oauth-
-              mission/draft-mcguinness-oauth-mission-progressive.html>.
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-progressive.html>.
 
    [RFC9457]  Nottingham, M., Wilde, E., and S. Dalal, "Problem Details
               for HTTP APIs", RFC 9457, DOI 10.17487/RFC9457, July 2023,

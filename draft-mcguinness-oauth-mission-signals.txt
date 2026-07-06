@@ -30,13 +30,13 @@ About This Document
    This note is to be removed before publishing as an RFC.
 
    The latest revision of this draft can be found at
-   https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-
+   https://mcguinness.github.io/mission-bound-authorization/draft-
    mcguinness-oauth-mission-signals.html.  Status information for this
    document may be found at https://datatracker.ietf.org/doc/draft-
    mcguinness-oauth-mission-signals/.
 
    Source for this draft and an issue tracker can be found at
-   https://github.com/mcguinness/draft-mcguinness-oauth-mission.
+   https://github.com/mcguinness/mission-bound-authorization.
 
 Status of This Memo
 
@@ -616,15 +616,15 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission, 2026, <https://mcguinness.github.io/draft-
-              mcguinness-oauth-mission/draft-mcguinness-oauth-
+              oauth-mission, 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-oauth-
               mission.html>.
 
    [I-D.draft-mcguinness-oauth-mission-status]
               McGuinness, K., "Mission Status and Lifecycle for OAuth
               2.0", Work in Progress, Internet-Draft, draft-mcguinness-
               oauth-mission-status, 2026, <https://mcguinness.github.io/
-              draft-mcguinness-oauth-mission/draft-mcguinness-oauth-
+              mission-bound-authorization/draft-mcguinness-oauth-
               mission-status.html>.
 
    [OIDC-SSF] OpenID Foundation, "OpenID Shared Signals Framework
@@ -685,22 +685,21 @@ Table of Contents
               McGuinness, K., "Mission Authority Server", Work in
               Progress, Internet-Draft, draft-mcguinness-mission-
               authority-server, 2026, <https://mcguinness.github.io/
-              draft-mcguinness-oauth-mission/draft-mcguinness-mission-
+              mission-bound-authorization/draft-mcguinness-mission-
               authority-server.html>.
 
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",
               Work in Progress, Internet-Draft, draft-mcguinness-oauth-
               mission-child-delegation, 2026,
-              <https://mcguinness.github.io/draft-mcguinness-oauth-
-              mission/draft-mcguinness-oauth-mission-child-
-              delegation.html>.
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-child-delegation.html>.
 
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", Work in
               Progress, Internet-Draft, draft-mcguinness-oauth-mission-
-              expansion, 2026, <https://mcguinness.github.io/draft-
-              mcguinness-oauth-mission/draft-mcguinness-oauth-mission-
+              expansion, 2026, <https://mcguinness.github.io/mission-
+              bound-authorization/draft-mcguinness-oauth-mission-
               expansion.html>.
 
    [OIDC-CAEP]
