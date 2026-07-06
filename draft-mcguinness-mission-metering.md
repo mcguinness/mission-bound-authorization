@@ -46,6 +46,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
@@ -70,8 +78,9 @@ by resources, actions, and constraints, and its runtime enforcement
 profile evaluates each consequential action at the point of use.
 Neither bounds how much of an approved authority a Mission may consume.
 This document defines an experimental consumption-metering extension:
-three cumulative consumption bounds a Mission Intent may carry
-(`max_budget`, `max_calls`, and `max_duration`), the runtime metering
+four cumulative consumption bounds a Mission Intent may carry
+(`max_budget`, `max_calls`, `max_duration`, and `max_egress_volume`),
+the runtime metering
 semantics that enforce them (atomic check-and-decrement, reserve and
 commit postures, duration leases, and settlement), and the AuthZEN wire
 binding for lease renewal and settlement. A consumption bound is
@@ -139,6 +148,20 @@ Consumption bound:
 : A cumulative bound on Mission activity that depletes as the Mission
   is used, as distinct from a per-action constraint that is evaluated
   independently on each action.
+
+# Mission Substrate {#mission-substrate}
+
+This profile is defined against the Mission model rather than against
+OAuth 2.0 mechanics. It consumes these substrate primitives
+({{I-D.draft-mcguinness-mission-substrate}}): the Mission Identifier
+and issuer, which key every consumption counter; the Authority Set
+representation, from which a `call_class` SHOULD be drawn
+({{bounds}}); and the integrity-anchor envelope, through which the
+bounds are committed by `intent_hash` as Mission Intent `controls`
+members. It defines no binding of its own: enforcement composes
+through the runtime profile's Mission binding establishment step
+({{I-D.draft-mcguinness-mission-runtime}}), and metering adds
+counters to the runtime decision.
 
 # Consumption Bounds {#bounds}
 
@@ -446,8 +469,9 @@ responses only as refusals, not as remaining-balance oracles.
 
 # IANA Considerations {#iana}
 
-This document has no IANA actions. `max_budget`, `max_calls`, and
-`max_duration` are Mission Intent `controls` members defined by this
+This document has no IANA actions. `max_budget`, `max_calls`,
+`max_duration`, and `max_egress_volume` are Mission Intent `controls`
+members defined by this
 profile under the issuance profile's controls extension seam;
 `context.prior_decision_id` and `measured_duration` are AuthZEN
 extension data carried per the AuthZEN profile's conventions

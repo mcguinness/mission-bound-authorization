@@ -384,10 +384,15 @@ provision); `.` not consumed. Notes follow the table.
 | Consent Evidence | X | . | X | X | . | . | X | X |
 | Mandate | X | X | X | X | . | X | . | . |
 | Audit Transparency | X | . | . | X | . | X | X | . |
+| Consumption Metering | X | . | X | X | . | . | . | . |
 {: title="Primitives consumed per substrate-neutral profile"}
 
 - The credential column is the split. Under partial provision, every
   `B` composes through the join and no other cell changes.
+- Consumption Metering defines no binding of its own: its counters key
+  on the identifier, its `call_class` draws on the Authority Set
+  representation, and its bounds are committed through the anchor
+  envelope; enforcement composes through the runtime row's binding.
 - The security model is not a row: it is informational, analyzes every
   primitive, and applies to any binding
   ({{I-D.draft-mcguinness-mission-security-model}}).

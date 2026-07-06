@@ -576,7 +576,8 @@ the core remains the model's definitional home.
 #### Mission Consumption Metering
 
 Experimental. Defines the cumulative consumption bounds a Mission
-Intent may carry (`max_budget`, `max_calls`, `max_duration`), the
+Intent may carry (`max_budget`, `max_calls`, `max_duration`,
+`max_egress_volume`), the
 runtime metering that enforces them (atomic check-and-decrement,
 reserve/commit postures, duration leases, settlement), and the AuthZEN
 wire binding for lease renewal and settlement. Without it, Missions
@@ -742,3 +743,10 @@ $ make
 
 Command line usage requires that you have the necessary software installed.  See
 [the instructions](https://github.com/martinthomson/i-d-template/blob/main/doc/SETUP.md).
+
+On macOS, building also requires GNU sed on `PATH` (`brew install
+gnu-sed`, then prepend `/opt/homebrew/opt/gnu-sed/libexec/gnubin`):
+the template's draft-name substitution exceeds BSD sed's per-expression
+buffer once a repository carries this many drafts, failing with
+`sed: unterminated substitute pattern`. CI uses GNU sed and is
+unaffected.
