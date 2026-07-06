@@ -521,10 +521,10 @@ profile ({{I-D.draft-mcguinness-mission-runtime}}); the
 The OPTIONAL `taint` member carries the harness's untrusted-content
 determination ({{I-D.draft-mcguinness-mission-harness}}) for the
 requested action, when the deployment routes taint enforcement
-through the PDP:
+through the PDP, as the value of `context.taint`:
 
 ~~~ json
-"taint": {
+{
   "tainted": true,
   "granularity": "parameter",
   "source_class": "web_fetch"
