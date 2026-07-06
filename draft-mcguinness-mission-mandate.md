@@ -73,6 +73,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -122,6 +130,12 @@ callback for the facts themselves. Only currency is external: a
 Mandate proves what was committed as of its `iat`, and a verifier that
 relies on the Mission being active checks current state separately
 ({{state-at-issuance}}).
+
+The family distinguishes three artifacts: the Mission is the
+governed task object; a Mandate is portable evidence about the
+Mission and its committed authority; a Mission Receipt is portable
+evidence about an action taken under it
+({{I-D.draft-mcguinness-mission-runtime}}).
 
 A Mandate is evidence, not a credential. The issuance profile makes
 `mission_id` an informational reference: presenting it authorizes

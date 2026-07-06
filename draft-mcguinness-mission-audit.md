@@ -182,7 +182,16 @@ Signed Statement, Receipt, Transparent Statement, and subject (feed)
 constructs and COSE_Sign1 {{RFC9052}} format. It uses Mission, Mission
 Issuer, and the evidence objects as the suite defines them, and
 Transparency Service, Signed Statement, Receipt, and Transparent
-Statement as the transparency substrate defines them.
+Statement as the transparency substrate defines them. The
+transparency substrate's Receipt, the Transparency Service's proof of
+inclusion, is distinct from the runtime profile's Mission Receipt,
+portable evidence of an action taken under a Mission
+({{I-D.draft-mcguinness-mission-runtime}}); this document uses
+Receipt in the SCITT sense only. Registering a Mission Receipt's
+underlying evidence on the Mission's feed provides tamper-evident
+ordering and inclusion; the receipt-chaining alternative, each
+Mission Receipt binding its predecessor's digest, is for a deployment
+without a Transparency Service.
 
 # Conventions and Terminology {#conventions}
 
