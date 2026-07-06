@@ -2296,7 +2296,11 @@ by itself refuse; where the deployment also recorded a whole-source
 digest, that digest's stricter semantics apply and any source change
 refuses. The recorded digests are part of the derived authority and
 are covered by <code>authority_hash</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Cross-format
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The identity of the
+executing component that serves a capability (for example, an MCP
+server instance) is a request-time fact the decision-API binding <span class="bcp14">MAY</span>
+carry (<a href="#authzen" class="auto internal xref">Section 12</a>); Resource policy <span class="bcp14">MAY</span> refuse an executor outside
+the deployment's trusted set. Cross-format
 canonicalization, signed capability manifests, and cross-catalog
 identity remain out of scope (<a href="#deferred" class="auto internal xref">Section 13</a>).<a href="#section-7-3.1.1" class="pilcrow">¶</a></p>
 </li>

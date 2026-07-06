@@ -3262,6 +3262,16 @@ any change to the retrieved source refuses, whether or not it touches
 the capability. A deployment records it where the whole catalog is
 the trust unit.<a href="#section-9-5.10.1" class="pilcrow">¶</a></p>
 </dd>
+        <dd class="break"></dd>
+<dt id="section-9-5.11">
+<code>executor</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-5.12">
+          <p id="section-9-5.12.1"><span class="bcp14">OPTIONAL</span>. A string. An identifier for the executing component that
+serves the capability at request time (for example, an MCP server
+instance), asserted by the PEP that authenticates it. It is a
+request-time fact, not part of the derived authority recorded at
+derivation, and is recorded in Decision Evidence when present.<a href="#section-9-5.12.1" class="pilcrow">¶</a></p>
+</dd>
       <dd class="break"></dd>
 </dl>
 <p id="section-9-6">Rules:<a href="#section-9-6" class="pilcrow">¶</a></p>
@@ -3292,9 +3302,16 @@ refusal is carried as <code>capability_drift</code>
 own.<a href="#section-9-7.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-7.3">
-          <p id="section-9-7.3.1">Actions not sourced from a discovered catalog (deployment-registered
+          <p id="section-9-7.3.1">Resource policy <span class="bcp14">MAY</span> refuse a catalog-sourced action whose
+<code>source_uri</code> or <code>executor</code> is outside the deployment's trusted set.
+Such a refusal is a Resource-policy condition, carried as
+<code>resource_policy</code> (<a href="#runtime-denial-classification" class="auto internal xref">Section 8</a>), not a drift
+refusal.<a href="#section-9-7.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-7.4">
+          <p id="section-9-7.4.1">Actions not sourced from a discovered catalog (deployment-registered
 <code>authorization_details</code> types, first-party operations with stable
-identity) do not require this binding.<a href="#section-9-7.3.1" class="pilcrow">¶</a></p>
+identity) do not require this binding.<a href="#section-9-7.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <div id="capability-extraction">
