@@ -49,6 +49,9 @@ informative:
   RFC9470:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   I-D.draft-mcguinness-oauth-client-instance-assertion:
+  I-D.draft-mcguinness-oauth-ai-agent-instance:
+  I-D.draft-mcguinness-oauth-actor-receipts:
+  I-D.draft-mcguinness-oauth-actor-proofs:
   I-D.draft-mcguinness-mission-audit:
     title: "Mission Audit Transparency"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
@@ -911,7 +914,13 @@ decision. Runtime enforcement MUST evaluate:
   documents them as runtime Resource policy, but a deployment MAY apply
   additional actor-sensitive Resource policy ({{decision}}). When an
   `act` chain is present, the PDP MUST NOT treat `client_id` alone as
-  the immediate actor.
+  the immediate actor. Token claims the AS verified under an
+  attested-instance profile, such as `agent_instance_id` and
+  `agent_model`
+  ({{I-D.draft-mcguinness-oauth-ai-agent-instance}}), are verified
+  actor context a deployment's Resource policy MAY evaluate; unlike a
+  self-asserted model or instance label, they are attester-backed
+  facts.
 - **Time.** The PDP MUST refuse if the decision context indicates the
   token is expired. The issuance profile caps a derived token's `exp`
   at the Mission's `expires_at`, so the `exp` check enforces the
@@ -1406,8 +1415,15 @@ work and are not required to enforce it:
   record);
 - separate Decision Evidence and Execution Evidence object schemas and
   media types;
-- actor provenance beyond the `act` chain, attestation of the
-  execution environment, and a purpose registry;
+- actor provenance beyond the `act` chain and attestation of the
+  execution environment: actor-signed hop proofs
+  ({{I-D.draft-mcguinness-oauth-actor-proofs}}), issuer-signed hop
+  receipts ({{I-D.draft-mcguinness-oauth-actor-receipts}}), and
+  attested agent-instance identity
+  ({{I-D.draft-mcguinness-oauth-ai-agent-instance}}) specify these,
+  and this profile consumes their results as token-derived facts
+  where present;
+- a purpose registry;
 - compilation of the Mission into an engine-native policy artifact
   (Cedar, OpenFGA, or equivalent) and standardization of PDP
   deployment modes;

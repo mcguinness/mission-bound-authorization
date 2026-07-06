@@ -48,6 +48,9 @@ normative:
 
 informative:
   I-D.draft-ietf-oauth-transaction-tokens:
+  I-D.draft-mcguinness-oauth-id-assertion-framework:
+  I-D.draft-mcguinness-oauth-domain-authorized-issuer:
+  I-D.draft-mcguinness-oauth-actor-receipts:
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
@@ -491,6 +494,17 @@ audience-scoped entries the grant conveyed, interpreted fail-closed.
 Downstream of the issuer, `authority_hash` is an audit and correlation
 anchor, not a recomputable proof: its integrity rests on the signature
 chain ({{validation-at-resource-as}}).
+
+Two companion mechanisms compose here. The identity-assertion trust
+framework and its domain-authorized-issuer method
+({{I-D.draft-mcguinness-oauth-id-assertion-framework}},
+{{I-D.draft-mcguinness-oauth-domain-authorized-issuer}}) are concrete
+ways a deployment publishes and evaluates the issuer policy this
+section requires, instead of a hand-maintained list. And a consumer
+that needs independently verifiable provenance of the delegation hops
+upstream of the re-mint, rather than trust in the minting domain's
+assertion of them, MAY require issuer-signed hop receipts
+({{I-D.draft-mcguinness-oauth-actor-receipts}}).
 
 # Privacy Considerations
 

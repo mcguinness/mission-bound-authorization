@@ -1627,6 +1627,12 @@ and presented by the executing component at request time in
   instance), asserted by the PEP that authenticates it. It is a
   request-time fact, not part of the derived authority recorded at
   derivation, and is recorded in Decision Evidence when present.
+  Where the executing component authenticates under an
+  attested-instance profile
+  ({{I-D.draft-mcguinness-oauth-client-instance-assertion}},
+  {{I-D.draft-mcguinness-oauth-ai-agent-instance}}), the deployment
+  SHOULD carry the attested instance identifier here rather than a
+  self-chosen label.
 
 Rules:
 
