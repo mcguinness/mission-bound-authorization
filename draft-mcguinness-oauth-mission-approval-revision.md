@@ -5,6 +5,7 @@ category: std
 
 docname: draft-mcguinness-oauth-mission-approval-revision-latest
 submissiontype: IETF
+workgroup: Web Authorization Protocol
 number:
 date:
 consensus: true
