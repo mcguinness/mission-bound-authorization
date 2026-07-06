@@ -124,9 +124,9 @@ Table of Contents
    evaluation, not as a stable interface.  Push delivery is a
    propagation latency optimization over correctly sized pull: a
    consumer that polls the Status profile's surfaces within the
-   deployment's published staleness bound, and fails safe on
-   mission_expiry, already meets the suite's revocation-propagation
-   model without this channel
+   deployment's published staleness bound, and fails safe on the
+   Mission's expires_at, already meets the suite's revocation-
+   propagation model without this channel
    ([I-D.draft-mcguinness-oauth-mission-status]).  Deploy this profile
    where polling per Mission does not scale or the staleness bound must
    shrink below a practical polling interval.
@@ -295,7 +295,7 @@ Table of Contents
    request, a Mission Issuer emits the expired event at or after the
    Mission's expires_at, when it observes the transition.  A consumer
    does not depend on prompt emission: it already fails safe on the
-   mission_expiry carried with cached Mission status
+   Mission's expires_at carried with cached Mission status
    ([I-D.draft-mcguinness-oauth-mission-status]).
 
    Example SET (decoded), for a revocation:

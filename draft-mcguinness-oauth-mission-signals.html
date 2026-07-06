@@ -1281,8 +1281,8 @@ from <code>mission_event_stream_endpoint</code> (<a href="#as-metadata" class="a
 evaluation, not as a stable interface. Push delivery is a propagation
 latency optimization over correctly sized pull: a consumer that polls
 the Status profile's surfaces within the deployment's published
-staleness bound, and fails safe on <code>mission_expiry</code>, already meets the
-suite's revocation-propagation model without this channel
+staleness bound, and fails safe on the Mission's <code>expires_at</code>, already
+meets the suite's revocation-propagation model without this channel
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). Deploy this profile
 where polling per Mission does not scale or the staleness bound must
 shrink below a practical polling interval.<a href="#section-1-3" class="pilcrow">¶</a></p>
@@ -1466,7 +1466,7 @@ the clock reaching the Mission's <code>expires_at</code> rather than an explicit
 request, a Mission Issuer emits the <code>expired</code> event at or after the
 Mission's <code>expires_at</code>, when it observes the transition. A consumer
 does not depend on prompt emission: it already fails safe on the
-<code>mission_expiry</code> carried with cached Mission status
+Mission's <code>expires_at</code> carried with cached Mission status
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-4-7" class="pilcrow">¶</a></p>
 <p id="section-4-8">Example SET (decoded), for a revocation:<a href="#section-4-8" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-4-9">

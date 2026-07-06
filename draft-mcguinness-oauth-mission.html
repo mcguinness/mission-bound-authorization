@@ -1742,8 +1742,9 @@ approved-task artifact those identities act within, not the
 identities themselves.<a href="#section-1.7-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.7-2.7">
-            <p id="section-1.7-2.7.1"><strong>Cross-audience unlinkability.</strong> A single canonical <code>mission_id</code>, and
-the <code>authority_hash</code> it shares, deliberately let any party correlate a
+            <p id="section-1.7-2.7.1"><strong>Cross-audience unlinkability.</strong> A single canonical Mission
+Identifier, and the <code>authority_hash</code> it shares, deliberately let any
+party correlate a
 Mission's activity across audiences and resources. This is a design
 choice, not an omission: a stable, correlatable anchor is what lets a
 Resource Server, a cross-domain Resource AS, and an auditor bind
@@ -4612,14 +4613,14 @@ reproduced. General OAuth security guidance <span>[<a href="#RFC9700" class="cit
 Two distinct Missions that approve byte-identical authority carry the
 same <code>authority_hash</code>: a successor Mission that re-approves the same
 Authority Set, or an unrelated Mission with the same derived authority,
-differs in its <code>intent_hash</code>, <code>approver</code>, and <code>mission_id</code> while
-sharing the <code>authority_hash</code>. It is therefore not globally unique to a
-Mission and <span class="bcp14">MUST NOT</span> be used as a Mission identifier or as a replay or
-idempotency key for a Mission. The canonical <code>mission_id</code> identifies
-the Mission; <code>authority_hash</code> identifies the authority the Mission
+differs in its <code>intent_hash</code>, <code>approver</code>, and <code>id</code> while sharing the
+<code>authority_hash</code>. It is therefore not globally unique to a Mission and
+<span class="bcp14">MUST NOT</span> be used as a Mission identifier or as a replay or idempotency
+key for a Mission. The canonical Mission Identifier identifies the
+Mission; <code>authority_hash</code> identifies the authority the Mission
 approved. A consumer that needs to bind to or correlate a specific
-Mission uses <code>mission_id</code>, and <code>intent_hash</code> and <code>approver</code> distinguish
-Missions that share an Authority Set.<a href="#section-15.10-1" class="pilcrow">¶</a></p>
+Mission uses the Mission Identifier, and <code>intent_hash</code> and <code>approver</code>
+distinguish Missions that share an Authority Set.<a href="#section-15.10-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -4641,14 +4642,15 @@ introspection minimization rules
         <h3 id="name-mission-identifier-correlat">
 <a href="#section-16.1" class="section-number selfRef">16.1. </a><a href="#name-mission-identifier-correlat" class="section-name selfRef">Mission Identifier Correlation</a>
         </h3>
-<p id="section-16.1-1">This document carries a single canonical <code>mission_id</code> on every
+<p id="section-16.1-1">This document carries a single canonical Mission Identifier on every
 derived token; the companion's cross-domain projection carries it
 across trust domains unchanged
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>). Any party that
 observes credentials for the
 same Mission, whether a Resource Server, a Resource AS, or an auditor
-spanning audiences, can correlate that activity by <code>mission_id</code>, and
-<code>mission.origin</code> further identifies the issuing AS. This is intentional:
+spanning audiences, can correlate that activity by the Mission
+Identifier, and <code>mission.origin</code> further identifies the issuing AS.
+This is intentional:
 a stable, correlatable Mission anchor is what lets a Resource Server, a
 cross-domain Resource AS, and an auditor bind credentials and evidence
 to one approved Mission, which the governance and audit properties of
@@ -4660,8 +4662,8 @@ version (<a href="#non-goals" class="auto internal xref">Section 1.7</a>), not a
 distinct opaque identifier per audience and resolves them server-side,
 are the fuller mechanism for unlinkability; because they work against
 the stable anchor, they are future work rather than a v1 property. A
-deployment that carries the canonical <code>mission_id</code> on the wire <span class="bcp14">SHOULD</span>
-document this correlation property.<a href="#section-16.1-1" class="pilcrow">¶</a></p>
+deployment that carries the canonical Mission Identifier on the wire
+<span class="bcp14">SHOULD</span> document this correlation property.<a href="#section-16.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="token-payload-disclosure">

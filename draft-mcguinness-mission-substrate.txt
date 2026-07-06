@@ -149,7 +149,7 @@ Table of Contents
    capitals, as shown here.
 
    This document uses Mission, Mission Intent, Mission Issuer, Authority
-   Set, Approver, Subject, the Mission identifier, origin, the mission
+   Set, Approver, Subject, the Mission Identifier, origin, the mission
    claim, the integrity anchors (intent_hash and authority_hash), the
    subset rule, Common Constraints, the only-active rule, and the audit
    horizon as defined by the core.  It uses Policy Enforcement Point
