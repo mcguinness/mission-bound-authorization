@@ -255,6 +255,16 @@ claim. The statement also declares the deployment's taint policy
 deployment audit obligation, not a protocol property: this profile
 fixes what the statement declares, not how a deployment proves it.
 
+Mediation governs the agent's outputs; the same duty applies to its
+inputs. A Mission-aware harness SHOULD surface to the agent only the
+context the active Mission needs: the tool catalog and schemas scoped
+to the Mission's Authority Set, memory and retrieved content admitted
+per the taint policy ({{session-taint}}), and cached credentials and
+connections keyed per {{cache-keys}}. This applies the runtime
+profile's least-exposure rule
+({{I-D.draft-mcguinness-mission-runtime}}) at the harness, the layer
+that assembles the agent's context.
+
 # Mission Binding {#mission-binding}
 
 A Mission-aware harness MUST bind every governed session and governed
