@@ -93,7 +93,7 @@ Set, how an Approver consents, and how issued tokens are bound to the
 approved Mission. It does not standardize how a deployment turns an
 open-ended task request, such as "resolve this billing dispute," into a
 Mission Intent with a goal, resources, free-text constraints, success
-criteria, purpose, context, and expiry.
+criteria, purpose, controls, and expiry.
 
 This document describes that missing shaping step. A **Mission Shaper**
 is a client-side component that produces a candidate Mission Intent
@@ -339,7 +339,7 @@ issuance profile's `mission_intent` object
 ({{I-D.draft-mcguinness-oauth-mission}}): a `goal`, `resources` (each an
 absolute URI), optional free-text `constraints`, optional
 `success_criteria`, an optional `purpose`, a `mission_expiry`, and an
-optional `context` object. The shaper proposes the resources and
+optional `controls` object. The shaper proposes the resources and
 describes the desired bounds in free-text `constraints` and
 `success_criteria`; it does not author actions, structured constraints,
 or delegation. The Mission Issuer derives the actions, structured
@@ -349,7 +349,7 @@ bounded enough for the Mission Issuer to derive an Authority Set without
 interpreting natural language as authority.
 
 The proposal MUST NOT carry an Authority Set or its derived members:
-`actions`, structured (object) constraints such as `max_amount_usd`, or
+`actions`, structured (object) constraints such as `max_amount`, or
 `delegation`. Those are products of the Mission Issuer's derivation, not
 inputs from the shaper. A shaper that has resolved such facts (for
 example, the actions a resource supports, or that the task implies
@@ -442,7 +442,7 @@ Mission Issuer derives the Authority Set from them.
 | `success_criteria` | Free-text observable outcomes that indicate the task is complete, phrased for the Approver. Disclosure and audit material only. | SHOULD NOT encode authority here; `success_criteria` carries no machine semantics in the issuance profile. |
 | `mission_expiry` | The smallest ceiling that lets the task complete; if the prompt names no bound, apply a conservative deployment default. | Don't request the maximum the Mission Issuer allows; the Issuer MAY narrow further. |
 | `purpose` | If the client has registered purposes, select the closest registered URI. | SHOULD NOT invent a new `purpose` URI. |
-| `context` | Emit `context` keys the deployment recognizes; a deployment MAY add further keys it defines. | SHOULD NOT emit a key the specific deployment does not recognize; an unrecognized key risks rejection of the Intent. |
+| `controls` | Emit `controls` keys the deployment recognizes; a deployment MAY add further keys it defines. | SHOULD NOT emit a key the specific deployment does not recognize; an unrecognized key risks rejection of the Intent. |
 
 # Ambiguity Handling {#ambiguity}
 
@@ -680,7 +680,7 @@ shaper, validates it, narrows it to policy, and derives the concrete
 Authority Set the agent will be bound to: a `mission_resource_access`
 entry for `https://erp.example.com` with `invoices.read` constrained to
 the 2026-Q3 period and the acme-corp tenant, and `journal-entries.write`
-constrained to `max_amount_usd: 500`. The shaper's free-text
+constrained to a `max_amount` of 500.00 USD. The shaper's free-text
 `constraints` informed that derivation but granted nothing; the
 invariants (period, amount, tenant) are what bound an open-ended task
 whose individual invoices were unknown when the goal was written. Had
@@ -869,7 +869,7 @@ becomes structured artifacts. The privacy surface follows
 from where that content flows.
 
 The shaper copies or paraphrases prompt content into `goal`,
-`resources`, `constraints`, and `context`, which the Mission Issuer
+`resources`, `constraints`, and `controls`, which the Mission Issuer
 renders in a consent disclosure the Approver reads and which may be
 retained in the Mission record. A shaper SHOULD carry into these fields
 only the content needed to describe the task, SHOULD NOT widen

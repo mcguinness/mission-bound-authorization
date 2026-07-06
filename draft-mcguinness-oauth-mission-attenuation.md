@@ -419,7 +419,7 @@ levels of offline narrowing. Decoded root token:
 The root's `erp.invoices.read` and `erp.journal-entries.write` tools map
 to the `invoices.read` and `journal-entries.write` actions on
 `https://erp.example.com`, and the `amount_usd` argument maps to the
-Mission Common Constraint `max_amount_usd` ({{root-mapping}}); its `aud`
+Mission Common Constraint `max_amount` ({{root-mapping}}); its `aud`
 names that Resource Server.
 
 The orchestrator spawns a read-only extraction sub-agent and, with no

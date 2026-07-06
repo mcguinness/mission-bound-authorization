@@ -421,7 +421,8 @@ entry, with `jti` `at_5v9Kq2mR7xW4nP8sL1zT6`. The issued
   { "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
-    "constraints": { "max_amount_usd": "500.00" } }
+    "constraints":
+      { "max_amount": { "amount": "500.00", "currency": "USD" } } }
 ]
 ~~~
 
@@ -439,7 +440,7 @@ The record:
     "sha-256:V1Wbh4Z3wK39B_YmzHlvkGr7hEA1rUoJMuj00y0q-eE",
   "aud": "https://erp.example.com",
   "entries_digest":
-    "sha-256:z8NZZchM248xmpIbN_nSJ_eH9i3mM5_4xjZzSuoHq-U",
+    "sha-256:Hilv4npLEWlcp2y5z7xcACgXxRhx-LO6dqs5AX0xL8o",
   "issued_at": "2026-10-15T14:32:12Z"
 }
 ~~~
@@ -447,15 +448,15 @@ The record:
 Its JCS canonical bytes (one line; breaks are for display only):
 
 ~~~ text
-{"aud":"https://erp.example.com","entries_digest":"sha-256:z8NZZc
-hM248xmpIbN_nSJ_eH9i3mM5_4xjZzSuoHq-U","issued_at":"2026-10-15T14
+{"aud":"https://erp.example.com","entries_digest":"sha-256:Hilv4n
+pLEWlcp2y5z7xcACgXxRhx-LO6dqs5AX0xL8o","issued_at":"2026-10-15T14
 :32:12Z","mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","ori
 gin":"https://as.example.com","token_digest":"sha-256:V1Wbh4Z3wK3
 9B_YmzHlvkGr7hEA1rUoJMuj00y0q-eE"}
 ~~~
 
 The committed digest is the SHA-256 of those bytes; its base64url
-form is `eg-h1Y4d1qhMb-9OIzXty16A6IXAKU2PiaTnJNz1SxA`. The Signed
+form is `IojbCMPM7a14NDoAbw3VoAbbWTauyBTGk55rCGBS6Ek`. The Signed
 Statement carries the digest bytes inline as its payload, with
 `preimage-content-type` `application/mission-derivation-record+json`
 and the same `iss` and `sub` as {{transition-vector}}.

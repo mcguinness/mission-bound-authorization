@@ -432,16 +432,18 @@ The approved mission blob for a reconciliation Mission at
         "resource": "https://erp.example.com",
         "actions": ["invoices.read"],
         "constraints": {
-          "issued_after": "2026-07-01T00:00:00Z",
-          "issued_before": "2026-09-30T23:59:59Z"
+          "resource_issued_after": "2026-07-01T00:00:00Z",
+          "resource_issued_before": "2026-09-30T23:59:59Z"
         } },
       { "type": "mission_resource_access",
         "resource": "https://erp.example.com",
         "actions": ["journal-entries.write"],
-        "constraints": { "max_amount_usd": "500.00" } }
+        "constraints": {
+          "max_amount": { "amount": "500.00", "currency": "USD" }
+        } }
     ],
     "authority_hash":
-      "sha-256:8E_S7bQywIgdnBoenwp18sXp2v1PWQ7VRzQylzfQCFI",
+      "sha-256:mdRUVZfU1BG_Bgla4mrLp6Q9NPVTJ-udnn88F1oXqFc",
     "intent_hash":
       "sha-256:9wNdxTWMa1fLT4be0wf2FJUMRbVBSYAe9yrRhTqdbVA",
     "subject": { "iss": "https://ps.example.com", "sub": "alice" },
@@ -465,7 +467,7 @@ member order shown, it is:
 
 ~~~ text
 AAuth-Mission: approver="https://ps.example.com";
-    s256="delTEXHXFuXePfECaHw4E8hNp2UtHAMf9XAP3eo6Pc4"
+    s256="YQcSiDyTLRLlhR-ETk4HPLJZf4CqZNMYU_Jue8SQgLQ"
 ~~~
 
 # Mission Intent {#mission-intent}
@@ -527,7 +529,7 @@ issuance profile's approval steps, mapped onto the interaction:
 
 1. Authenticate the Approver: the person the PS represents, or a
    principal the PS's policy authorizes to approve for that person.
-   When a structured Intent carries `context.acr`, the authentication
+   When a structured Intent carries `controls.acr`, the authentication
    MUST be one the deployment's policy maps as satisfying the named
    class.
 2. Establish the Subject: the PS MUST itself establish the Subject's
@@ -744,11 +746,11 @@ in the PS-asserted mode, narrowed to read-only authority:
   "exp": 1797843600,
   "mission": {
     "approver": "https://ps.example.com",
-    "s256": "delTEXHXFuXePfECaHw4E8hNp2UtHAMf9XAP3eo6Pc4",
+    "s256": "YQcSiDyTLRLlhR-ETk4HPLJZf4CqZNMYU_Jue8SQgLQ",
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://ps.example.com",
     "authority_hash":
-      "sha-256:8E_S7bQywIgdnBoenwp18sXp2v1PWQ7VRzQylzfQCFI"
+      "sha-256:mdRUVZfU1BG_Bgla4mrLp6Q9NPVTJ-udnn88F1oXqFc"
   }
 }
 ~~~
