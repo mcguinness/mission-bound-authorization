@@ -285,8 +285,8 @@ task graph node to a Mission reference:
 `mission_id`:
 : REQUIRED. The Mission identifier.
 
-`mission_origin`:
-: REQUIRED. The Mission Issuer.
+`issuer`:
+: REQUIRED. The Mission's `issuer`, the Mission Issuer's issuer URL.
 
 `authority_hash`:
 : REQUIRED when known. The Authority Set commitment from the Mission
@@ -511,7 +511,7 @@ because the posting is in a high-consequence action class:
   "queue_item_id": "queue_journal_post_7",
   "mission_binding": {
     "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "mission_origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "status_checked_at": "2026-11-01T22:00:00Z",
@@ -825,7 +825,7 @@ non-normative summary of what a record carries:
 
 A Harness Evidence record carries the Mission as the nested `mission`
 object, mirroring the `mission` claim; the flat `mission_id` and
-`mission_origin` of Mission Binding ({{mission-binding}}) are a binding
+`issuer` of Mission Binding ({{mission-binding}}) are a binding
 key, whereas the evidence record mirrors the claim shape.
 
 Harness Evidence complements runtime enforcement evidence

@@ -1445,7 +1445,7 @@ Structured per-argument attenuation of tool grants
 ({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}) is a related
 issuance/delegation-layer primitive, not part of this runtime profile.
 
-# Security Considerations
+# Security Considerations {#security-considerations}
 
 ## What this layer adds, and its limits
 
