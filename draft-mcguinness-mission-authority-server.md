@@ -444,7 +444,7 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 {
   "goal": "Reconcile Q3 invoices and post adjustments under $500.",
   "resources": ["https://erp.example.com"],
-  "mission_expiry": "2026-12-31T23:59:59Z"
+  "expires_at": "2026-12-31T23:59:59Z"
 }
 ~~~
 
@@ -844,7 +844,7 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 {
   "goal": "Reconcile Q3 invoices and post adjustments under $2,000.",
   "resources": ["https://erp.example.com"],
-  "mission_expiry": "2026-12-31T23:59:59Z",
+  "expires_at": "2026-12-31T23:59:59Z",
   "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
 }
 ~~~
@@ -1241,7 +1241,7 @@ mapping checks of {{mission-join}} steps 3 and 4:
 - the signature, under a key from the MAS's `jwks_uri`, and the
   `mission-join+jwt` header `typ`;
 - that `iss` and the `mission` claim match the referenced Mission's
-  `origin`, `mission_id`, and `authority_hash`;
+  `origin`, `id`, and `authority_hash`;
 - that `exp` has not passed and any `aud` names this PDP; and
 - the token binding: the presented credential's digest equals
   `token.sha256` and its `cnf` key's thumbprint equals `token.jkt`.
@@ -1555,7 +1555,7 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 {
   "goal": "Reconcile Q3 invoices and post adjustments under $500.",
   "resources": ["https://erp.example.com"],
-  "mission_expiry": "2026-12-31T23:59:59Z"
+  "expires_at": "2026-12-31T23:59:59Z"
 }
 ~~~
 

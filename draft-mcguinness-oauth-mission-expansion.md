@@ -468,12 +468,12 @@ no successor is created and the predecessor is untouched
 
 ## Successor expiry {#successor-expiry}
 
-The successor's `mission_expiry` MUST NOT exceed the predecessor's
-`mission_expiry` unless the Mission Issuer's policy explicitly permits
+The successor's `expires_at` MUST NOT exceed the predecessor's
+`expires_at` unless the Mission Issuer's policy explicitly permits
 extension and the extension is disclosed to the Approver at the
 expansion consent event. Expansion is an authority-addition mechanism,
 not a lifetime-extension mechanism. The issuance profile caps every
-derived credential's `exp` at `mission_expiry`; a successor that
+derived credential's `exp` at the Mission's `expires_at`; a successor that
 silently outlived its predecessor would let expansion launder a
 longer-lived Mission past the originally approved horizon.
 
@@ -898,7 +898,7 @@ Mitigations:
   commits exactly that set ({{adjudication}}). The `predecessor` member
   carries no authority and MUST NOT widen the successor
   ({{predecessor-member}}).
-- The successor's `mission_expiry` MUST NOT silently exceed the
+- The successor's `expires_at` MUST NOT silently exceed the
   predecessor's ({{successor-expiry}}), so expansion cannot launder a
   longer lifetime past the originally approved horizon.
 

@@ -230,7 +230,7 @@ any other derivation ({{I-D.draft-mcguinness-oauth-mission}}, Section
   lifetime exceeding 300 seconds (a short lifetime bounds cross-domain
   revocation latency; see {{cross-domain-revocation}});
 - MUST have an `exp` that does not exceed the Mission's
-  `mission_expiry`, per the base profile's expiry rule
+  `expires_at`, per the base profile's expiry rule
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission-Bound
   Access Tokens");
 - MUST be sender-constrained ({{RFC7800}}) to the presenting client by
@@ -373,8 +373,8 @@ A Resource AS consuming a Mission-bound cross-domain grant:
   from the cross-domain grant. The issuing `iss` is the Resource AS;
   `mission.origin` remains the originating AS. Such a local token:
   - has an `exp` that MUST NOT exceed the grant's `exp`. The Resource
-    AS does not hold `mission_expiry`; because the grant's own `exp`
-    is bounded by `mission_expiry` ({{cross-domain-grant}}), the local
+    AS does not hold the Mission's `expires_at`; because the grant's
+    own `exp` is bounded by it ({{cross-domain-grant}}), the local
     token is bounded transitively;
   - MUST be sender-constrained ({{RFC7800}}), like the grant it derives
     from, and MUST NOT be issued as a bearer token; and
@@ -631,7 +631,7 @@ audience-scoped authority for the ERP:
 ~~~
 
 The ID-JAG is short-lived (300 s) and sender-constrained to the
-agent. Its `exp` does not exceed `mission_expiry`
+agent. Its `exp` does not exceed the Mission's `expires_at`
 ({{cross-domain-grant}}).
 
 ## Stage 3: The Resource AS Issues a Local Access Token
@@ -679,8 +679,8 @@ ID-JAG's `exp`:
 
 The issuing `iss` is now the Resource AS, but `mission.origin` remains
 the home AS. The token's `exp` (1797840290) is below the ID-JAG's
-(1797840300) and far below `mission_expiry`. The Resource AS-local
-`sub` is illustrative; its value is determined by the
+(1797840300) and far below the Mission's `expires_at`. The Resource
+AS-local `sub` is illustrative; its value is determined by the
 subject-resolution rules of the ID-JAG and identity chaining profiles,
 not by this document.
 
@@ -787,6 +787,6 @@ The Mission anchor (`id`, `origin`, `authority_hash`) is constant end
 to end. OAuth authority is preserved or narrowed at the cross-domain
 boundary, and local transaction context narrows the internal operation
 inside the partner domain. The lifetime shrinks at every hop and never
-exceeds `mission_expiry`. The ID-JAG carried identity *between* trust
-domains; the Transaction Token carried context *within* one. The
-Mission bound both.
+exceeds the Mission's `expires_at`. The ID-JAG carried identity
+*between* trust domains; the Transaction Token carried context
+*within* one. The Mission bound both.

@@ -299,11 +299,12 @@ claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
   the Mission ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
 The `expired` event MAY be emitted lazily. Because expiry is driven by
-the `mission_expiry` clock rather than an explicit request, a Mission
-Issuer emits the `expired` event at or after `mission_expiry`, when it
-observes the transition. A consumer does not depend on prompt emission:
-it already fails safe on the `mission_expiry` carried with cached Mission
-status ({{I-D.draft-mcguinness-oauth-mission-status}}).
+the clock reaching the Mission's `expires_at` rather than an explicit
+request, a Mission Issuer emits the `expired` event at or after the
+Mission's `expires_at`, when it observes the transition. A consumer
+does not depend on prompt emission: it already fails safe on the
+`mission_expiry` carried with cached Mission status
+({{I-D.draft-mcguinness-oauth-mission-status}}).
 
 Example SET (decoded), for a revocation:
 

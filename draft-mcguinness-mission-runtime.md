@@ -898,12 +898,12 @@ decision. Runtime enforcement MUST evaluate:
   `act` chain is present, the PDP MUST NOT treat `client_id` alone as
   the immediate actor.
 - **Time.** The PDP MUST refuse if the decision context indicates the
-  token is expired. The issuance profile caps a derived token's
-  `exp` at `mission_expiry`, so the `exp` check enforces the Mission's
-  expiry transitively. The standard `mission` claim and introspection
-  do not surface `mission_expiry`; where a Mission state source does
-  expose it (or reports the Mission `expired`), the PDP MUST refuse on
-  it independent of the token's own `exp`. The PDP sets the permit's
+  token is expired. The issuance profile caps a derived token's `exp`
+  at the Mission's `expires_at`, so the `exp` check enforces the
+  Mission's expiry transitively. The standard `mission` claim and
+  introspection do not surface `expires_at`; where a Mission state
+  source does expose it (or reports the Mission `expired`), the PDP
+  MUST refuse on it independent of the token's own `exp`. The PDP sets the permit's
   validity window from these inputs; that the action actually executes
   within that window is the executing PEP's reverification, not a
   decision input ({{parameter-binding}}).
@@ -1160,7 +1160,7 @@ refusal.
 | Mission state cannot be established within the staleness bound | Fail closed for consequential actions |
 | PDP unreachable | Fail closed for consequential actions; do not proceed on cached permits past the window |
 | Mission not `active` | Refuse |
-| `mission_expiry` passed, when known from the Mission state source | Refuse |
+| The Mission's `expires_at` passed, when known from the Mission state source | Refuse |
 | Unsupported `authorization_details` type for the action | Refuse |
 | Unknown or unmetered constraint on the applicable entry | Refuse |
 | Consumption bound would be exceeded | Refuse |

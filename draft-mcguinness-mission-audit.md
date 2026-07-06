@@ -549,8 +549,8 @@ segment `missions` and the Mission `id` to the `origin`:
 
 The `origin` is used exactly as it appears in the `mission` claim, with
 any single trailing slash removed, and the `id` is appended without
-transformation; the issuance profile constrains `mission_id` to the
-URL-safe characters `[A-Za-z0-9_-]` ({{I-D.draft-mcguinness-oauth-mission}}),
+transformation; the issuance profile constrains the Mission Identifier
+to the URL-safe characters `[A-Za-z0-9_-]` ({{I-D.draft-mcguinness-oauth-mission}}),
 so no percent-encoding is required. Because the construction is fixed,
 independent producers writing evidence about the same Mission (the
 Mission Issuer, a PDP, a harness) compute the same `sub` and write to one
