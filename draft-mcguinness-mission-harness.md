@@ -422,7 +422,7 @@ Mission state cache using
 {{I-D.draft-mcguinness-oauth-mission-signals}}. The cache entry for a
 Mission MUST contain:
 
-- Mission identifier and origin;
+- Mission identifier and issuer;
 - last observed state;
 - event identifier or sequence when available;
 - event issuance time;
@@ -554,7 +554,7 @@ permit obtained before that interval.
 A cached credential, tool connection, or connector handle used for
 governed work MUST be keyed by at least:
 
-- Mission identifier and origin;
+- Mission identifier and issuer;
 - audience or protected resource;
 - client or actor identity;
 - sender-constraint key when applicable; and
@@ -567,7 +567,7 @@ tool server is not a permit to call a tool.
 
 A workspace or artifact handle bound to a Mission is subject to the
 same rules as a cached connection: it MUST be keyed by the Mission
-identifier and origin, and the harness MUST mark it unusable for
+identifier and issuer, and the harness MUST mark it unusable for
 governed work on the stop events of this section. A retained workspace
 is not a basis to resume governed work under a Mission that is no
 longer active.
@@ -800,7 +800,7 @@ authoritative definition of the record's members. The following is a
 non-normative summary of what a record carries:
 
 - `event_id`;
-- the `mission` object (`id`, `origin`, and, when known,
+- the `mission` object (`id`, `issuer`, and, when known,
   `authority_hash`), the same shape as the `mission` claim of
   {{I-D.draft-mcguinness-oauth-mission}};
 - `session_id`;
@@ -842,7 +842,7 @@ A Harness Evidence object is a JSON object {{RFC8259}} with:
   records the outcome, so the two are orthogonal.
 
 `mission`:
-: REQUIRED. Object containing `id`, `origin`, and, when known,
+: REQUIRED. Object containing `id`, `issuer`, and, when known,
   `authority_hash`.
 
 `session_id`:
@@ -890,7 +890,7 @@ Example:
   "event_type": "resume_suppressed",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },

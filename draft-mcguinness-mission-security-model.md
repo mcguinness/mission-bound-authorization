@@ -256,7 +256,7 @@ agent, Authority Set, and Mission state as defined in
 This model describes the components and trust relationships of the
 Mission model, not of OAuth 2.0 mechanics. Its analysis applies to any
 substrate that provides the Mission primitives the profiles consume:
-the identifier and origin, the state space with its only-active rule,
+the identifier and issuer, the state space with its only-active rule,
 an authority representation with a subset rule, the integrity-anchor
 envelope, and, where the binding provides one, a Mission-bound
 credential; a binding without that credential supplies an externally
@@ -317,12 +317,12 @@ Authorization Server (Mission Issuer):
 
 Resource Authorization Server (cross-domain):
 : When cross-domain access is used, a resource-side Authorization Server
-  mints local Mission-bound tokens that the Mission origin cannot
+  mints local Mission-bound tokens that the Mission's issuer cannot
   observe. It must mint only within the audience and lifetime the
   cross-domain grant scopes. Its compromise mints arbitrary authority
   within its own domain under the Mission's name; the damage is bounded
   by audience scoping, short grant lifetimes, and audit, not by the
-  origin, which never sees these tokens
+  issuer, which never sees these tokens
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
 Mission Authority Server (standalone binding):
@@ -552,7 +552,7 @@ layer the deployment enforces for that class.
 | Configuration | Worst-case window | Governing parameter |
 |---|---|---|
 | Baseline (token lifetime only) | until the token expires | access-token `exp` |
-| With introspection | one introspection cycle | per-request introspection at the origin |
+| With introspection | one introspection cycle | per-request introspection at the issuer |
 | With Mission Status | the staleness bound of the status view | published status staleness bound |
 | With Mission Lifecycle Signals | event delivery latency, bounded by the poll fallback | signal delivery latency plus poll interval |
 | With runtime enforcement | the per-class freshness bound | published per-class staleness bound |

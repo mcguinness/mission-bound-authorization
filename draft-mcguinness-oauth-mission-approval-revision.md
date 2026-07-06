@@ -440,7 +440,7 @@ worked disclosure and test vector:
 {
   "evidence_id": "cns_5tN8wQ2rD6",
   "mission": {
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "intent_hash":
       "sha-256:6mIFoCz79uCHNzKLfBpBwqFjoFXdpmpuc65486IqimQ",
     "authority_hash":
