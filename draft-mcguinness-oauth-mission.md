@@ -413,8 +413,9 @@ considered and where it belongs, not that it was overlooked.
   identity efforts such as WIMSE); this profile governs the
   approved-task artifact those identities act within, not the
   identities themselves.
-- **Cross-audience unlinkability.** A single canonical `mission_id`, and
-  the `authority_hash` it shares, deliberately let any party correlate a
+- **Cross-audience unlinkability.** A single canonical Mission
+  Identifier, and the `authority_hash` it shares, deliberately let any
+  party correlate a
   Mission's activity across audiences and resources. This is a design
   choice, not an omission: a stable, correlatable anchor is what lets a
   Resource Server, a cross-domain Resource AS, and an auditor bind
@@ -2742,14 +2743,14 @@ reproduced. General OAuth security guidance {{RFC9700}} applies.
 Two distinct Missions that approve byte-identical authority carry the
 same `authority_hash`: a successor Mission that re-approves the same
 Authority Set, or an unrelated Mission with the same derived authority,
-differs in its `intent_hash`, `approver`, and `mission_id` while
-sharing the `authority_hash`. It is therefore not globally unique to a
-Mission and MUST NOT be used as a Mission identifier or as a replay or
-idempotency key for a Mission. The canonical `mission_id` identifies
-the Mission; `authority_hash` identifies the authority the Mission
+differs in its `intent_hash`, `approver`, and `id` while sharing the
+`authority_hash`. It is therefore not globally unique to a Mission and
+MUST NOT be used as a Mission identifier or as a replay or idempotency
+key for a Mission. The canonical Mission Identifier identifies the
+Mission; `authority_hash` identifies the authority the Mission
 approved. A consumer that needs to bind to or correlate a specific
-Mission uses `mission_id`, and `intent_hash` and `approver` distinguish
-Missions that share an Authority Set.
+Mission uses the Mission Identifier, and `intent_hash` and `approver`
+distinguish Missions that share an Authority Set.
 
 # Privacy Considerations
 
@@ -2763,14 +2764,15 @@ introspection minimization rules
 
 ## Mission Identifier Correlation {#mission-identifier-correlation}
 
-This document carries a single canonical `mission_id` on every
+This document carries a single canonical Mission Identifier on every
 derived token; the companion's cross-domain projection carries it
 across trust domains unchanged
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). Any party that
 observes credentials for the
 same Mission, whether a Resource Server, a Resource AS, or an auditor
-spanning audiences, can correlate that activity by `mission_id`, and
-`mission.origin` further identifies the issuing AS. This is intentional:
+spanning audiences, can correlate that activity by the Mission
+Identifier, and `mission.origin` further identifies the issuing AS.
+This is intentional:
 a stable, correlatable Mission anchor is what lets a Resource Server, a
 cross-domain Resource AS, and an auditor bind credentials and evidence
 to one approved Mission, which the governance and audit properties of
@@ -2782,8 +2784,8 @@ version ({{non-goals}}), not an unfinished feature. Audience-pairwise
 distinct opaque identifier per audience and resolves them server-side,
 are the fuller mechanism for unlinkability; because they work against
 the stable anchor, they are future work rather than a v1 property. A
-deployment that carries the canonical `mission_id` on the wire SHOULD
-document this correlation property.
+deployment that carries the canonical Mission Identifier on the wire
+SHOULD document this correlation property.
 
 ## Token Payload Disclosure
 
