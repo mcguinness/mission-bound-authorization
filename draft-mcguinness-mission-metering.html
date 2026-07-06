@@ -1391,6 +1391,19 @@ example, <code>PT8H</code>), matching the <code>duration</code> rule in Appendix
 under the Mission. It is distinct from the Mission's <code>expires_at</code>,
 which bounds issuance rather than activity.<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
 </dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.7">
+<code>max_egress_volume</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.8">
+          <p id="section-5-2.8.1"><span class="bcp14">OPTIONAL</span>. An object with one or both members <code>bytes</code> and
+<code>messages</code>, each an integer, 1 or greater: hard caps on cumulative
+egress under the Mission across consequential
+external-communication and external-commitment actions
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), as the total size in
+bytes of those actions' bound payload parameters and the count of
+such actions. It bounds the volume of within-scope laundering; it
+does not detect it.<a href="#section-5-2.8.1" class="pilcrow">¶</a></p>
+</dd>
       <dd class="break"></dd>
 </dl>
 <p id="section-5-3">The bounds are carried on the Mission and committed by <code>intent_hash</code>.
@@ -1453,7 +1466,15 @@ insufficient.<a href="#section-6-2.1.1" class="pilcrow">¶</a></p>
 counter for the named <code>call_class</code> and <span class="bcp14">MUST</span> refuse a call past <code>count</code>.<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-2.3">
-          <p id="section-6-2.3.1"><code>max_duration</code>: the PDP
+          <p id="section-6-2.3.1"><code>max_egress_volume</code>: the PDP adds the action's bound payload size
+and increments the action count atomically with the permit and <span class="bcp14">MUST</span>
+refuse an action that would exceed either cap. Payload size is
+measured over the parameter bytes committed by <code>parameter_digest</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); the operation profile
+defines the measurement so PDPs accumulate consistently.<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.4">
+          <p id="section-6-2.4.1"><code>max_duration</code>: the PDP
 accumulates the duration of consequential activity it reserves,
 commits, or permits and <span class="bcp14">MUST</span> refuse once that total would exceed the
 bound. For an action whose duration is not known before execution,
@@ -1463,7 +1484,7 @@ action or obtain a new permit before the reservation or lease is
 exhausted. After execution, the PEP <span class="bcp14">MUST</span> report the measured
 duration so the PDP can commit actual use and release any unused
 reservation. The operation profile defines how a single action's
-duration is measured so that PDPs accumulate consistently.<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
+duration is measured so that PDPs accumulate consistently.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-6-3">A per-entry <code>constraints</code> value that expresses a cumulative consumption

@@ -327,7 +327,7 @@ Table of Contents
 
 7.  Cross-Cutting Assumptions
 
-   Three assumptions hold across the whole model:
+   Five assumptions hold across the whole model:
 
    *  *Sender-constrained credentials.* Mission-bound tokens are sender-
       constrained ([I-D.draft-mcguinness-oauth-mission]); a token
@@ -335,11 +335,30 @@ Table of Contents
       model assumes the proof-of-possession mechanism is sound and keys
       are protected by their holder.
 
-   *  *Fail-closed on uncertainty.* Wherever a trusted component cannot
-      establish the fact it needs (Mission state, a completion event, a
-      verifiable decision), the relying component refuses rather than
-      proceeds.  A deployment that fails open at any such point forfeits
-      the guarantee that point protects.
+   *  *Fail-closed on authority, fail-safe on inert evidence.* Wherever
+      a trusted component cannot establish an authority-relevant fact it
+      needs (Mission state, a completion event, a verifiable decision),
+      the relying component refuses rather than proceeds; a deployment
+      that fails open at any such point forfeits the guarantee that
+      point protects.  Unavailability of inert evidence (a consent-
+      evidence retrieval, the transparency feed, a Mandate) is recorded
+      and is never by itself grounds for refusal
+      ([I-D.draft-mcguinness-mission-audit]); tampered inert evidence is
+      an integrity failure, handled by the profile that defines the
+      artifact.
+
+   *  *Role-scoped trust anchors.* A party trusted in one role (Mission
+      issuer, evidence producer for one evidence type, SET transmitter,
+      Transparency Service) is not thereby trusted in any other, and
+      issuer trust is established by local policy or metadata, never
+      inferred from being named inside a signed artifact
+      ([I-D.draft-mcguinness-mission-audit],
+      [I-D.draft-mcguinness-mission-mandate],
+      [I-D.draft-mcguinness-oauth-mission-cross-domain]).  The identity-
+      assertion trust framework and its domain-authorized-issuer method
+      ([I-D.draft-mcguinness-oauth-id-assertion-framework],
+      [I-D.draft-mcguinness-oauth-domain-authorized-issuer]) are
+      concrete publication and evaluation mechanisms for such policy.
 
    *  *Authority does not move on inert input.* Intent that the agent or
       attacker-reachable content can influence (goal, purpose,
@@ -366,7 +385,11 @@ Table of Contents
    recommendations does not obtain it.  This matches the suite's front-
    door framing: adopting the profiles does not by itself make a
    deployment resistant to a compromised agent.  The model makes misuse
-   bounded and, where evidence is produced, attributable.
+   bounded and, where evidence is produced, attributable.  A deployment
+   that additionally claims the runtime profile's trifecta containment
+   enforces least exposure and the harness taint rule as MUSTs, so an
+   injected agent cannot egress on the strength of untrusted content
+   alone.
 
    It does not make a compromised trusted component safe.  The
    compromise of each component degrades a specific guarantee, as listed
@@ -473,7 +496,9 @@ Table of Contents
    |              | required); least-exposure      | launder data     |
    |              | context minimization narrows   |                  |
    |              | what an injected agent sees    |                  |
-   |              | (runtime, harness)             |                  |
+   |              | (runtime, harness); the        |                  |
+   |              | composite is claimable as      |                  |
+   |              | trifecta containment (runtime) |                  |
    +--------------+--------------------------------+------------------+
    | Offline sub- | Capability monotonicity        | Fan-out breadth  |
    | agent fan-   | (narrow-only) and the runtime  | is unobserved by |
@@ -674,6 +699,11 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-harness.html>.
 
+   [I-D.draft-mcguinness-mission-mandate]
+              McGuinness, K., "Mission Mandate", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-mandate.html>.
+
    [I-D.draft-mcguinness-mission-orchestration]
               McGuinness, K., "Mission Orchestration and Unwinding",
               2026, <https://mcguinness.github.io/mission-bound-
@@ -698,6 +728,20 @@ Table of Contents
               client-instance-assertion-01, 24 June 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-client-instance-assertion-01>.
+
+   [I-D.draft-mcguinness-oauth-domain-authorized-issuer]
+              McGuinness, K., "OAuth Domain-Authorized Issuer Trust
+              Method", Work in Progress, Internet-Draft, draft-
+              mcguinness-oauth-domain-authorized-issuer-00, 5 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-domain-authorized-issuer-00>.
+
+   [I-D.draft-mcguinness-oauth-id-assertion-framework]
+              McGuinness, K., "OAuth Identity Assertion Trust
+              Framework", Work in Progress, Internet-Draft, draft-
+              mcguinness-oauth-id-assertion-framework-00, 5 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-id-assertion-framework-00>.
 
    [I-D.draft-mcguinness-oauth-mission-approval]
               McGuinness, K., "Mission Deferred Approval for OAuth 2.0",

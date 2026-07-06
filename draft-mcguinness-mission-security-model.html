@@ -1533,7 +1533,7 @@ that issuer.<a href="#section-6-3" class="pilcrow">¶</a></p>
       <h2 id="name-cross-cutting-assumptions">
 <a href="#section-7" class="section-number selfRef">7. </a><a href="#name-cross-cutting-assumptions" class="section-name selfRef">Cross-Cutting Assumptions</a>
       </h2>
-<p id="section-7-1">Three assumptions hold across the whole model:<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-1">Five assumptions hold across the whole model:<a href="#section-7-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-2.1">
           <p id="section-7-2.1.1"><strong>Sender-constrained credentials.</strong> Mission-bound tokens are
@@ -1543,18 +1543,38 @@ assumes the proof-of-possession mechanism is sound and keys are
 protected by their holder.<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.2">
-          <p id="section-7-2.2.1"><strong>Fail-closed on uncertainty.</strong> Wherever a trusted component cannot
-establish the fact it needs (Mission state, a completion event, a
-verifiable decision), the relying component refuses rather than
-proceeds. A deployment that fails open at any such point forfeits the
-guarantee that point protects.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.2.1"><strong>Fail-closed on authority, fail-safe on inert evidence.</strong> Wherever
+a trusted component cannot establish an authority-relevant fact it
+needs (Mission state, a completion event, a verifiable decision),
+the relying component refuses rather than proceeds; a deployment
+that fails open at any such point forfeits the guarantee that point
+protects. Unavailability of inert evidence (a consent-evidence
+retrieval, the transparency feed, a Mandate) is recorded and is
+never by itself grounds for refusal
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>); tampered inert evidence
+is an integrity failure, handled by the profile that defines the
+artifact.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.3">
-          <p id="section-7-2.3.1"><strong>Authority does not move on inert input.</strong> Intent that the agent or
+          <p id="section-7-2.3.1"><strong>Role-scoped trust anchors.</strong> A party trusted in one role (Mission
+issuer, evidence producer for one evidence type, SET transmitter,
+Transparency Service) is not thereby trusted in any other, and
+issuer trust is established by local policy or metadata, never
+inferred from being named inside a signed artifact
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>). The
+identity-assertion trust framework and its domain-authorized-issuer
+method (<span>[<a href="#I-D.draft-mcguinness-oauth-id-assertion-framework" class="cite xref">I-D.draft-mcguinness-oauth-id-assertion-framework</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-domain-authorized-issuer" class="cite xref">I-D.draft-mcguinness-oauth-domain-authorized-issuer</a>]</span>) are
+concrete publication and evaluation mechanisms for such policy.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.4">
+          <p id="section-7-2.4.1"><strong>Authority does not move on inert input.</strong> Intent that the agent or
 attacker-reachable content can influence (<code>goal</code>, <code>purpose</code>,
 <code>success_criteria</code>, and disclosure-only audit material) is inert and
 cannot derive, widen, or gate authority
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -1580,7 +1600,11 @@ active-freshness state source) are recommendations, not requirements, and
 a deployment that leaves them as recommendations does not obtain it. This
 matches the suite's front-door framing: adopting the profiles does not by
 itself make a deployment resistant to a compromised agent. The model
-makes misuse bounded and, where evidence is produced, attributable.<a href="#section-8-1" class="pilcrow">¶</a></p>
+makes misuse bounded and, where evidence is produced, attributable. A
+deployment that additionally claims the runtime profile's trifecta
+containment enforces least exposure and the harness taint rule as
+MUSTs, so an injected agent cannot egress on the strength of
+untrusted content alone.<a href="#section-8-1" class="pilcrow">¶</a></p>
 <p id="section-8-2">It does not make a compromised trusted component safe. The compromise of
 each component degrades a specific guarantee, as listed in
 <a href="#trusted-base" class="auto internal xref">Section 6</a>. It does not verify the agent's reasoning or the
@@ -1671,7 +1695,7 @@ honest part: it is what a deploying party still owns.<a href="#section-9-2" clas
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Exfiltration of private data (the third leg of the lethal trifecta)</td>
-            <td class="text-left" rowspan="1" colspan="1">External communication is a gated consequential action; harness leaves no unmediated path; session taint downgrades egress after untrusted input (optional; recommended, not required); least-exposure context minimization narrows what an injected agent sees (runtime, harness)</td>
+            <td class="text-left" rowspan="1" colspan="1">External communication is a gated consequential action; harness leaves no unmediated path; session taint downgrades egress after untrusted input (optional; recommended, not required); least-exposure context minimization narrows what an injected agent sees (runtime, harness); the composite is claimable as trifecta containment (runtime)</td>
             <td class="text-left" rowspan="1" colspan="1">PEP-placement completeness; no information-flow control, so a sequence of in-scope steps can launder data</td>
           </tr>
           <tr>
@@ -1907,6 +1931,10 @@ handles.<a href="#section-14-1" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-mandate">[I-D.draft-mcguinness-mission-mandate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Mandate"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-orchestration">[I-D.draft-mcguinness-mission-orchestration]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Orchestration and Unwinding"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html</a>&gt;</span>. </dd>
@@ -1922,6 +1950,14 @@ handles.<a href="#section-14-1" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-oauth-client-instance-assertion">[I-D.draft-mcguinness-oauth-client-instance-assertion]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Instance Assertion"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-assertion-01</span>, <time datetime="2026-06-24" class="refDate">24 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-domain-authorized-issuer">[I-D.draft-mcguinness-oauth-domain-authorized-issuer]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth Domain-Authorized Issuer Trust Method"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-domain-authorized-issuer-00</span>, <time datetime="2026-07-05" class="refDate">5 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-domain-authorized-issuer-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-domain-authorized-issuer-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-id-assertion-framework">[I-D.draft-mcguinness-oauth-id-assertion-framework]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth Identity Assertion Trust Framework"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-id-assertion-framework-00</span>, <time datetime="2026-07-05" class="refDate">5 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-assertion-framework-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-assertion-framework-00</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-approval">[I-D.draft-mcguinness-oauth-mission-approval]</dt>
         <dd>

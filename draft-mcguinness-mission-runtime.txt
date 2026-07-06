@@ -98,9 +98,10 @@ Table of Contents
    5.  Resource Server runtime profile
    6.  Token presentation and validation
    7.  The decision
-     7.1.  Mission binding establishment
-     7.2.  Mission state and freshness
-     7.3.  Materialized policy view
+     7.1.  Trifecta containment
+     7.2.  Mission binding establishment
+     7.3.  Mission state and freshness
+     7.4.  Materialized policy view
    8.  Parameter binding and time-of-check to time-of-use
    9.  Consumption Bounds Fail Closed
    10. Failure modes
@@ -177,7 +178,7 @@ Table of Contents
    consequential effects occur.  A deployment whose acting tokens carry
    no mission claim can still bind each decision to a Mission: the
    Mission Substrate (Section 3) admits an externally established
-   Mission reference (Section 7.1).
+   Mission reference (Section 7.2).
 
    This profile specifies enforcement invariants, not a wire protocol:
    it does not standardize a PDP decision API, an enforcement-scope
@@ -199,7 +200,7 @@ Table of Contents
    This document depends normatively on the issuance profile and is not
    implementable alone: it consumes the Mission-bound access tokens that
    profile defines, or access tokens joined to an externally established
-   Mission under Section 7.1.  It does not place any new requirement
+   Mission under Section 7.2.  It does not place any new requirement
    back on the issuance profile; it reads only fields that profile
    already defines:
 
@@ -278,7 +279,7 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission]); this document does not
       interpret it beyond correlation, and defines no portable policy-
       version registry.  The materialized policy view and its content-
-      addressed policy_view_id are defined in Section 7.3.
+      addressed policy_view_id are defined in Section 7.4.
 
    Runtime enforcement evidence:  The record a consequential action
       produces for a PDP decision or a PEP refusal path (Section 11).
@@ -301,7 +302,7 @@ Table of Contents
 
    Mission state source:  A deployment-trusted source from which the PDP
       establishes the Mission lifecycle state or the freshness of that
-      state (Section 7.2).
+      state (Section 7.3).
 
    Mission-bound token:  An access token issued under a Mission per
       [I-D.draft-mcguinness-oauth-mission], carrying
@@ -319,7 +320,7 @@ Table of Contents
    Mission's audit horizon.  The Mission-bound credential primitive is
    binding-dependent: a binding that does not provide it supplies an
    externally established Mission reference instead, under the binding-
-   establishment step of Section 7.1.  The issuance profile
+   establishment step of Section 7.2.  The issuance profile
    [I-D.draft-mcguinness-oauth-mission] is this version's normative
    substrate: it defines each primitive for OAuth 2.0, and every OAuth
    artifact named in this document enters through it.  Another
@@ -379,7 +380,7 @@ Table of Contents
       (Section 5);
 
    *  the Mission state source and maximum staleness bound used for each
-      action class (Section 7.2);
+      action class (Section 7.3);
 
    *  the runtime enforcement evidence mechanism and retention window
       (Section 11);
@@ -480,7 +481,7 @@ Table of Contents
    as consequential and gated.  These three are the *high-consequence
    classes*, to which this profile's strictest requirements attach
    (action-bound approval (Section 4.4), mediated custody (Section 4.6),
-   active-state freshness (Section 7.2), and execution-outcome evidence
+   active-state freshness (Section 7.3), and execution-outcome evidence
    (Section 11), each as specified in its own section).  A Mission's
    purpose, or deployment policy, MAY raise an action to a stricter
    class; it MUST NOT lower an action below any minimum classification
@@ -716,7 +717,7 @@ Table of Contents
    hold.  Each condition below is MUST under this claim regardless of
    its base-profile level: active-state freshness for the high-
    consequence classes is already MUST in the base profile
-   (Section 7.2); the harness condition makes MUST the base profile's
+   (Section 7.3); the harness condition makes MUST the base profile's
    requirement that mediated classes have no unmediated path
    (Section 4.5); mediated custody and action-bound approval are SHOULD
    in the base profile (Section 4.6, Section 4.4) and MUST here.
@@ -733,7 +734,7 @@ Table of Contents
       and
 
    *  the Mission state source for those classes is an active freshness
-      mechanism, not token-lifetime expiry (Section 7.2).
+      mechanism, not token-lifetime expiry (Section 7.3).
 
    A deployment that leaves any of these unmet MUST NOT claim agent-
    compromise-resistant enforcement; it may still claim base runtime
@@ -839,7 +840,7 @@ Table of Contents
    runtime Mission evaluation.  If the deployment requires Mission
    governance for the protected operation and the token lacks a mission
    claim, the PEP MUST likewise refuse, unless the deployment
-   establishes the Mission binding externally (Section 7.1); in that
+   establishes the Mission binding externally (Section 7.2); in that
    case the absence of the claim is not a refusal condition, and the
    join's verification of the supplied Mission reference applies
    instead.  When the PEP is an OAuth Resource Server, it uses the
@@ -864,7 +865,7 @@ Table of Contents
 
    Before a consequential action runs, its PEP MUST obtain a permit from
    a PDP that evaluates the action against the established Mission
-   (Section 7.1).  This is the normative contract.  The decision API
+   (Section 7.2).  This is the normative contract.  The decision API
    wire format is a deployment choice; a binding maps this contract onto
    a concrete API (Section 12).
 
@@ -932,7 +933,13 @@ Table of Contents
       the deployment documents them as runtime Resource policy, but a
       deployment MAY apply additional actor-sensitive Resource policy
       (Section 7).  When an act chain is present, the PDP MUST NOT treat
-      client_id alone as the immediate actor.
+      client_id alone as the immediate actor.  Token claims the AS
+      verified under an attested-instance profile, such as
+      agent_instance_id and agent_model
+      ([I-D.draft-mcguinness-oauth-ai-agent-instance]), are verified
+      actor context a deployment's Resource policy MAY evaluate; unlike
+      a self-asserted model or instance label, they are attester-backed
+      facts.
 
    *  *Time.* The PDP MUST refuse if the decision context indicates the
       token is expired.  The issuance profile caps a derived token's exp
@@ -946,7 +953,7 @@ Table of Contents
       reverification, not a decision input (Section 8).
 
    *  *State.* The PDP MUST refuse unless the Mission is active
-      (Section 7.2).
+      (Section 7.3).
 
    On a deny, the PEP MUST refuse the action; a deny is terminal for the
    attempted action.  A deny need not end the task, however: a decision-
@@ -964,7 +971,47 @@ Table of Contents
    The requirement is only that a PEP at each consequential boundary can
    reach an applicable PDP.
 
-7.1.  Mission binding establishment
+7.1.  Trifecta containment
+
+   An agent that holds private-data authority, is exposed to untrusted
+   content, and can communicate externally combines the three
+   ingredients of injection-driven exfiltration (Section 14.3).  The
+   profiles gate each ingredient separately; this claim names the
+   composite.  A deployment claims *trifecta containment* for a
+   Mission's governed work only when all of the following hold, each
+   MUST under this claim regardless of its base-profile level:
+
+   *  *Private-data exposure.* Least exposure (Section 4.7) is applied:
+      the context surfaced to the agent is scoped to the active Mission,
+      and credential material stays out of the agent for every mediated
+      class (Section 4.6).
+
+   *  *Untrusted content.* The harness taint policy
+      ([I-D.draft-mcguinness-mission-harness]) is in force and its
+      egress rule is enforced, not advisory: a consequential external-
+      communication or external-commitment action whose bound parameters
+      derive from tainted content (or, under session-level taint, any
+      such action in a tainted session) obtains a fresh action-bound
+      approval (Section 4.4) or is refused.  Where the decision-API
+      binding carries taint context
+      ([I-D.draft-mcguinness-mission-authzen]), the PDP enforces the
+      rule; otherwise the harness does, and the scope statement says
+      which.
+
+   *  *External communication.* The external-communication and external-
+      commitment classes are mediated: no unmediated path, the scope
+      statement's egress-channel enumeration covers them
+      ([I-D.draft-mcguinness-mission-harness]), and the sender-
+      constraint keys are held by the mediating PEP (Section 4.6).
+
+   The claim is published with the enforcement-scope conformance
+   statement (Section 4.2).  It is containment, not immunity: the limits
+   of Section 14.3 stand, in particular within-scope laundering, bounded
+   quantitatively where an egress-volume bound is metered
+   ([I-D.draft-mcguinness-mission-metering]), and PEP-placement
+   completeness.
+
+7.2.  Mission binding establishment
 
    Every decision evaluates one Mission: the *established Mission*. A
    deployment establishes it in one of two modes:
@@ -988,7 +1035,7 @@ Table of Contents
    parameters, actor, time, state) is evaluated against, and the Mission
    reference the permit and the evidence record bind.
 
-7.2.  Mission state and freshness
+7.3.  Mission state and freshness
 
    A Mission-aware decision needs the Mission's current state, which a
    token alone does not convey.  A runtime deployment MUST define the
@@ -1065,7 +1112,7 @@ Table of Contents
 
                                  Table 3
 
-7.3.  Materialized policy view
+7.4.  Materialized policy view
 
    A PDP evaluates a Mission against an action through a *materialized
    policy view*: the reproducible, evaluable form of the Mission's
@@ -1142,7 +1189,7 @@ Table of Contents
       action, resource, the authorizing authorization_details entry or
       an entry digest, the PDP's policy-view version, and a permit
       lifetime control bounded by the Mission state freshness
-      requirement (Section 7.2).  For a reversible consequential write,
+      requirement (Section 7.3).  For a reversible consequential write,
       the control MUST be either a single-use decision identifier or a
       short validity window combined with an idempotency key that
       prevents repeat execution of the same normalized action.  For an
@@ -1229,7 +1276,7 @@ Table of Contents
    | Mission governance is   | Refuse before runtime Mission           |
    | required but the token  | evaluation, unless the                  |
    | lacks a mission claim   | Mission binding is externally           |
-   |                         | established (Section 7.1)               |
+   |                         | established (Section 7.2)               |
    +-------------------------+-----------------------------------------+
    | PEP-PDP channel         | Fail closed                             |
    | authentication or       |                                         |
@@ -1484,8 +1531,16 @@ Table of Contents
    *  separate Decision Evidence and Execution Evidence object schemas
       and media types;
 
-   *  actor provenance beyond the act chain, attestation of the
-      execution environment, and a purpose registry;
+   *  actor provenance beyond the act chain and attestation of the
+      execution environment: actor-signed hop proofs
+      ([I-D.draft-mcguinness-oauth-actor-proofs]), issuer-signed hop
+      receipts ([I-D.draft-mcguinness-oauth-actor-receipts]), and
+      attested agent-instance identity
+      ([I-D.draft-mcguinness-oauth-ai-agent-instance]) specify these,
+      and this profile consumes their results as token-derived facts
+      where present;
+
+   *  a purpose registry;
 
    *  compilation of the Mission into an engine-native policy artifact
       (Cedar, OpenFGA, or equivalent) and standardization of PDP
@@ -1624,7 +1679,7 @@ Table of Contents
 
    A permit is a lease, not a standing grant: stale Mission state MUST
    fail closed for consequential actions within the published bound
-   (Section 7.2).  A deployment MUST NOT advertise consumption
+   (Section 7.3).  A deployment MUST NOT advertise consumption
    enforcement it does not perform (Section 9); where cumulative bounds
    are metered, the exactness and consistency claims of the metering
    companion apply ([I-D.draft-mcguinness-mission-metering]).
@@ -1804,6 +1859,27 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-metering.html>.
 
+   [I-D.draft-mcguinness-oauth-actor-proofs]
+              McGuinness, K., "OAuth Actor-Signed Hop Proofs", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-actor-
+              proofs-00, 4 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-actor-proofs-00>.
+
+   [I-D.draft-mcguinness-oauth-actor-receipts]
+              McGuinness, K., "OAuth Actor Receipts for Delegation
+              Provenance", Work in Progress, Internet-Draft, draft-
+              mcguinness-oauth-actor-receipts-00, 4 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-actor-receipts-00>.
+
+   [I-D.draft-mcguinness-oauth-ai-agent-instance]
+              McGuinness, K., "OAuth 2.0 AI Agent Instance Profile",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              ai-agent-instance-00, 4 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-ai-agent-instance-00>.
+
    [I-D.draft-mcguinness-oauth-client-instance-assertion]
               McGuinness, K., "OAuth 2.0 Client Instance Assertion",
               Work in Progress, Internet-Draft, draft-mcguinness-oauth-
@@ -1886,7 +1962,7 @@ Appendix A.  Parameter Digest Worked Example
 Appendix B.  Policy View Worked Example
 
    This non-normative example shows the policy_view_id computation of
-   Section 7.3 over a minimal materialized-view envelope for the same
+   Section 7.4 over a minimal materialized-view envelope for the same
    Mission.  The payload here is reduced to the two members the
    committed view is required to bind, mission_id and authority_hash; a
    deployment's payload also carries its evaluable materialized form,
@@ -1914,7 +1990,7 @@ Appendix B.  Policy View Worked Example
    policy_view_id = sha-256:fuMqn6Nb5LfyziflJuYj8VgHHH1bskZ0SrMDxdQ8CaA
 
    Because the identifier is a content hash, any change to the payload
-   yields a different policy_view_id (Section 7.3).
+   yields a different policy_view_id (Section 7.4).
 
 Appendix C.  Runtime Evidence Worked Examples
 

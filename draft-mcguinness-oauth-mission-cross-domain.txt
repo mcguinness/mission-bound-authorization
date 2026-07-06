@@ -518,6 +518,17 @@ Table of Contents
    authority_hash is an audit and correlation anchor, not a recomputable
    proof: its integrity rests on the signature chain (Section 7).
 
+   Two companion mechanisms compose here.  The identity-assertion trust
+   framework and its domain-authorized-issuer method
+   ([I-D.draft-mcguinness-oauth-id-assertion-framework],
+   [I-D.draft-mcguinness-oauth-domain-authorized-issuer]) are concrete
+   ways a deployment publishes and evaluates the issuer policy this
+   section requires, instead of a hand-maintained list.  And a consumer
+   that needs independently verifiable provenance of the delegation hops
+   upstream of the re-mint, rather than trust in the minting domain's
+   assertion of them, MAY require issuer-signed hop receipts
+   ([I-D.draft-mcguinness-oauth-actor-receipts]).
+
 10.  Privacy Considerations
 
    The cross-domain grant and every local token minted from it carry the
@@ -636,6 +647,27 @@ Table of Contents
               McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-runtime.html>.
+
+   [I-D.draft-mcguinness-oauth-actor-receipts]
+              McGuinness, K., "OAuth Actor Receipts for Delegation
+              Provenance", Work in Progress, Internet-Draft, draft-
+              mcguinness-oauth-actor-receipts-00, 4 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-actor-receipts-00>.
+
+   [I-D.draft-mcguinness-oauth-domain-authorized-issuer]
+              McGuinness, K., "OAuth Domain-Authorized Issuer Trust
+              Method", Work in Progress, Internet-Draft, draft-
+              mcguinness-oauth-domain-authorized-issuer-00, 5 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-domain-authorized-issuer-00>.
+
+   [I-D.draft-mcguinness-oauth-id-assertion-framework]
+              McGuinness, K., "OAuth Identity Assertion Trust
+              Framework", Work in Progress, Internet-Draft, draft-
+              mcguinness-oauth-id-assertion-framework-00, 5 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-id-assertion-framework-00>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",

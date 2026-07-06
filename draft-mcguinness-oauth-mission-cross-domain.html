@@ -1725,6 +1725,16 @@ audience-scoped entries the grant conveyed, interpreted fail-closed.
 Downstream of the issuer, <code>authority_hash</code> is an audit and correlation
 anchor, not a recomputable proof: its integrity rests on the signature
 chain (<a href="#validation-at-resource-as" class="auto internal xref">Section 7</a>).<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+<p id="section-9.2-2">Two companion mechanisms compose here. The identity-assertion trust
+framework and its domain-authorized-issuer method
+(<span>[<a href="#I-D.draft-mcguinness-oauth-id-assertion-framework" class="cite xref">I-D.draft-mcguinness-oauth-id-assertion-framework</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-domain-authorized-issuer" class="cite xref">I-D.draft-mcguinness-oauth-domain-authorized-issuer</a>]</span>) are concrete
+ways a deployment publishes and evaluates the issuer policy this
+section requires, instead of a hand-maintained list. And a consumer
+that needs independently verifiable provenance of the delegation hops
+upstream of the re-mint, rather than trust in the minting domain's
+assertion of them, <span class="bcp14">MAY</span> require issuer-signed hop receipts
+(<span>[<a href="#I-D.draft-mcguinness-oauth-actor-receipts" class="cite xref">I-D.draft-mcguinness-oauth-actor-receipts</a>]</span>).<a href="#section-9.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1851,6 +1861,18 @@ registered by the base profile <span>[<a href="#I-D.draft-mcguinness-oauth-missi
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-actor-receipts">[I-D.draft-mcguinness-oauth-actor-receipts]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth Actor Receipts for Delegation Provenance"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-actor-receipts-00</span>, <time datetime="2026-07-04" class="refDate">4 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-receipts-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-receipts-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-domain-authorized-issuer">[I-D.draft-mcguinness-oauth-domain-authorized-issuer]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth Domain-Authorized Issuer Trust Method"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-domain-authorized-issuer-00</span>, <time datetime="2026-07-05" class="refDate">5 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-domain-authorized-issuer-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-domain-authorized-issuer-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-id-assertion-framework">[I-D.draft-mcguinness-oauth-id-assertion-framework]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth Identity Assertion Trust Framework"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-id-assertion-framework-00</span>, <time datetime="2026-07-05" class="refDate">5 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-assertion-framework-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-assertion-framework-00</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
         <dd>

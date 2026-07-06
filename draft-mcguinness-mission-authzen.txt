@@ -89,10 +89,11 @@ Table of Contents
      5.4.  Credential Decision Context
      5.5.  Action Parameters and Parameter Digest
      5.6.  Audience and Freshness Context
-     5.7.  Capability Source Context
-     5.8.  Worked PDP request
-     5.9.  PDP-side consistency checks
-     5.10. Batch evaluations
+     5.7.  Taint Context
+     5.8.  Capability Source Context
+     5.9.  Worked PDP request
+     5.10. PDP-side consistency checks
+     5.11. Batch evaluations
    6.  Decision Evidence Object
      6.1.  Members
      6.2.  Pre-decision refusal records
@@ -164,7 +165,7 @@ Table of Contents
       and the PDP-side consistency checks (Section 5);
 
    *  batch evaluations over the AuthZEN evaluations endpoint
-      (Section 5.10);
+      (Section 5.11);
 
    *  the Decision Evidence and Execution Evidence objects, their
       integrity, and worked examples (Section 6, Section 7);
@@ -518,13 +519,48 @@ Table of Contents
    profile ([I-D.draft-mcguinness-mission-runtime]); the freshness
    object is only their wire representation.
 
-5.7.  Capability Source Context
+5.7.  Taint Context
+
+   The OPTIONAL taint member carries the harness's untrusted-content
+   determination ([I-D.draft-mcguinness-mission-harness]) for the
+   requested action, when the deployment routes taint enforcement
+   through the PDP:
+
+   "taint": {
+     "tainted": true,
+     "granularity": "parameter",
+     "source_class": "web_fetch"
+   }
+
+   tainted:  REQUIRED when taint is present.  A boolean.  Whether a
+      bound parameter of the action derives from tainted content (under
+      granularity parameter) or tainted content has entered the governed
+      session (under granularity session).
+
+   granularity:  REQUIRED when taint is present.  A string, parameter or
+      session: the trigger granularity the harness established.
+
+   source_class:  OPTIONAL.  A string.  The deployment-defined class of
+      the tainting source (for example, web_fetch, inbound_message,
+      third_party_document), for policy and evidence.
+
+   Absence of taint means the harness did not route the determination
+   through the decision request, not that the action is untainted; the
+   harness's own egress rule then applies.  When taint is present with
+   tainted true on a consequential external-communication or external-
+   commitment action, the PDP MUST deny or return
+   action_approval_required (Section 8) unless a fresh action-bound
+   approval bound to the action's parameters is present in the decision
+   context.  The PDP MUST record the presented taint context in Decision
+   Evidence.
+
+5.8.  Capability Source Context
 
    For catalog-sourced actions, the PEP supplies the capability-source
    binding in context.capability_source using the object defined in
    Section 9.  For non-catalog actions, this member is absent.
 
-5.8.  Worked PDP request
+5.9.  Worked PDP request
 
    For the ERP reconciliation Mission:
 
@@ -589,7 +625,7 @@ Table of Contents
      }
    }
 
-5.9.  PDP-side consistency checks
+5.10.  PDP-side consistency checks
 
    In addition to evaluating the decision inputs the runtime profile
    requires, the PDP MUST verify that the AuthZEN-carried envelope is
@@ -649,7 +685,7 @@ Table of Contents
        from the materialized policy view, not from the PEP's request;
        where no source binding was recorded, this check does not apply.
 
-5.10.  Batch evaluations
+5.11.  Batch evaluations
 
    The AuthZEN evaluations (boxcar) endpoint MAY be used to submit
    several Mission-bound decisions in one request.  Each item is
@@ -1541,7 +1577,12 @@ Table of Contents
       an MCP server instance), asserted by the PEP that authenticates
       it.  It is a request-time fact, not part of the derived authority
       recorded at derivation, and is recorded in Decision Evidence when
-      present.
+      present.  Where the executing component authenticates under an
+      attested-instance profile
+      ([I-D.draft-mcguinness-oauth-client-instance-assertion],
+      [I-D.draft-mcguinness-oauth-ai-agent-instance]), the deployment
+      SHOULD carry the attested instance identifier here rather than a
+      self-chosen label.
 
    Rules:
 
@@ -2025,6 +2066,11 @@ Table of Contents
               Protocol Tool Authorization - Draft 1", 2026,
               <https://openid.github.io/authzen/authzen-mcp-profile-
               1_0.html>.
+
+   [I-D.draft-mcguinness-mission-harness]
+              McGuinness, K., "Mission-Aware Agent Harness", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-harness.html>.
 
    [I-D.draft-mcguinness-mission-metering]
               McGuinness, K., "Mission Consumption Metering", 2026,
