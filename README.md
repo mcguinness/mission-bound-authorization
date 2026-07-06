@@ -313,10 +313,10 @@ the layers, deployment patterns, the requirements the family answers,
 and the document map. Informational; it defines no mechanism, and the
 profiles remain authoritative. Read this first.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-architecture.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-architecture)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-architecture)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-architecture.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.diff)
 
 ### The core
 
@@ -328,10 +328,10 @@ Mission Intent and Authority Set, the approval event and its
 claim, the subset rule, and state-gated issuance. Every other document
 builds on this one.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.diff)
 
 ### Approval time
 
@@ -343,10 +343,10 @@ output is untrusted input until the Mission Issuer validates, narrows,
 and derives authority from it. OPTIONAL Shaping Evidence records how
 the proposal was produced. (Informational.)
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-shaping.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-shaping.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-shaping)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-shaping)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-shaping.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-shaping.diff)
 
 #### Mission Consent Evidence for OAuth 2.0
 
@@ -356,10 +356,10 @@ Evidence object, so an auditor can reconstruct the recorded approval
 surface. It commits what the Authorization Server recorded, not the
 pixels presented or the Approver's comprehension.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-consent-evidence.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-consent-evidence.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-consent-evidence)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-consent-evidence)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-consent-evidence.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-consent-evidence.diff)
 
 #### Mission Deferred Approval for OAuth 2.0
 
@@ -369,10 +369,10 @@ polled; the Mission record is created atomically with the asynchronous
 decision. A proposal the reviewer will grant only in narrowed form
 resolves to a denial, and the client resubmits a narrower Intent.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-approval.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-approval.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-approval)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-approval)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-approval.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-approval.diff)
 
 #### Mission Approval Revision for OAuth 2.0
 
@@ -383,10 +383,10 @@ the client to push a narrowing revision, continuing the same deferred
 approval instead of starting over. Narrowing only; deny-and-resubmit
 under Deferred Approval alone is the stable path.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-approval-revision.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-approval-revision.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-approval-revision)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-approval-revision)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-approval-revision.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-approval-revision.diff)
 
 ### Lifecycle
 
@@ -398,10 +398,10 @@ lifecycle endpoint for explicit `revoke`, `suspend`, `resume`, and
 lets a consumer holding only a `mission_id` ask the origin for current
 Mission state, and an authorized party change it.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-status.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-status)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-status)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-status.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.diff)
 
 #### Mission Lifecycle Signals for OAuth 2.0
 
@@ -413,10 +413,10 @@ revocation, expiry, or other transition promptly without polling. It is
 the push complement to the pull-based Status surface, a latency
 optimization for deployments where per-Mission polling does not scale.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-signals.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-signals.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-signals)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-signals)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-signals.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-signals.diff)
 
 #### Mission Expansion for OAuth 2.0
 
@@ -426,10 +426,10 @@ successor Mission, which supersedes its predecessor. Expansion is a
 governance operation and is deliberately distinct from authentication
 step-up.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-expansion.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-expansion.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-expansion)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-expansion)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-expansion.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-expansion.diff)
 
 #### Mission Progressive Authorization for OAuth 2.0
 
@@ -440,10 +440,10 @@ within the ceiling by policy instead of a fresh human approval.
 High-consequence and cross-domain authority always require the human.
 Under Expansion alone, every widening is human-approved.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-progressive.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-progressive.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-progressive)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-progressive)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-progressive.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-progressive.diff)
 
 #### Mission Completion for OAuth 2.0
 
@@ -456,10 +456,10 @@ an injected agent; it lets a multi-resource Mission complete one entry
 at a time; and it is the enforceable counterpart of the inert
 `success_criteria`.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-completion.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-completion.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-completion)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-completion)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-completion.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-completion.diff)
 
 #### Mission Management for OAuth 2.0
 
@@ -472,10 +472,10 @@ transition applies the status profile's per-Mission semantics and
 emits its per-Mission events. The highest-blast-radius surface in the
 family, and documented as such.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-management.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-management.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-management)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-management)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-management.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-management.diff)
 
 ### Runtime enforcement
 
@@ -495,10 +495,10 @@ an action-bound approval for the highest-consequence classes. The
 decision-API wire format is a deployment choice, so the contract does
 not mandate one.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-runtime.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-runtime)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-runtime)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-runtime.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime.diff)
 
 #### Mission-Bound Runtime Enforcement: AuthZEN Profile
 
@@ -509,10 +509,10 @@ and Execution Evidence objects, and specifies how runtime denials are
 carried in an AuthZEN decision. It binds the contract; it does not
 restate the enforcement semantics the runtime profile owns.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-authzen.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authzen.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-authzen)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authzen)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-authzen.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authzen.diff)
 
 ### Alternate bindings and the substrate
 
@@ -532,10 +532,10 @@ governing across many Authorization Servers, which can make it the
 right long-term shape rather than only a bridge. The upgrade path to
 Mission-bound tokens is the issuance profile.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-authority-server.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authority-server.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-authority-server)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authority-server)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-authority-server.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authority-server.diff)
 
 #### Mission-Bound Authorization for AAuth
 
@@ -552,10 +552,10 @@ gates every AAuth auth token, this binding provides true issuance
 gating, and the auth token is a Mission-bound credential, so runtime
 enforcement composes credential-carried.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-aauth.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-aauth)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-aauth)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-aauth.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.diff)
 
 #### Mission Substrate Requirements
 
@@ -568,10 +568,10 @@ Mission-bound credential or a defined join). Changes nothing for the
 three existing bindings, which remain authoritative for themselves;
 the core remains the model's definitional home.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-substrate.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-substrate)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-substrate)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-substrate.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.diff)
 
 #### Mission Consumption Metering
 
@@ -583,10 +583,10 @@ wire binding for lease renewal and settlement. Without it, Missions
 carry no cumulative bounds; the runtime profile's fail-closed rule
 covers any bound a deployment cannot meter.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-metering.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-metering.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-metering)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-metering)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-metering.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-metering.diff)
 
 ### Agent runtime
 
@@ -600,10 +600,10 @@ execution environment the runtime profile relies on: for mediated action
 classes, governed work runs with no unmediated path to the resource. The
 core principle: session continuity is not authority.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-harness.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-harness.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-harness)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-harness)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-harness.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-harness.diff)
 
 #### Mission Orchestration and Unwinding
 
@@ -613,10 +613,10 @@ in-flight work safely when a Mission stops, including compensation after
 termination. It governs how workflow state is unwound once continuation
 is stopped.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-orchestration.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-orchestration.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-orchestration)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-orchestration)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-orchestration.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-orchestration.diff)
 
 ### Sub-agents
 
@@ -627,10 +627,10 @@ explicit parent lineage, strict-subset authority, expiry no later than
 the parent, fan-out controls, and cascade revocation when the parent is
 no longer active. A child is never created by session ancestry alone.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-child-delegation.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-child-delegation.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-child-delegation)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-child-delegation.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-child-delegation.diff)
 
 #### Mission Offline Attenuation for OAuth 2.0
 
@@ -643,10 +643,10 @@ Mission state, so a revoked Mission stops the whole chain. A capability
 for deployments running the runtime enforcement profile, offered
 alongside Authorization-Server-mediated delegation.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-attenuation.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-attenuation.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-attenuation)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-attenuation)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-attenuation.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-attenuation.diff)
 
 ### Cross-domain projection
 
@@ -660,10 +660,10 @@ Mission-bound tokens from it, preserving the `mission` claim unchanged.
 One hop; the single-domain core is complete without it. Extracted from
 the core so the mandatory profile carries no cross-domain dependencies.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-cross-domain.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-domain.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-cross-domain)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-cross-domain)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-oauth-mission-cross-domain.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-cross-domain.diff)
 
 ### Proof and portability
 
@@ -684,10 +684,10 @@ mandate, or an auditor know what was approved without a token exchange;
 current state still comes from Status or Signals. OPTIONAL selective
 disclosure via SD-JWT.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-mandate.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-mandate.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-mandate)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-mandate)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-mandate.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-mandate.diff)
 
 #### Mission Audit Transparency
 
@@ -700,10 +700,10 @@ so any party, in any domain, can verify inclusion offline. Statements
 commit to evidence by hash, so sensitive task data stays out of the log.
 Layers onto any bundle.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-audit.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-audit.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-audit)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-audit)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-audit.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-audit.diff)
 
 ### Security model
 
@@ -719,15 +719,15 @@ the others, and how its compromise degrades the guarantees. It defines
 no new mechanism and points to the profiles' normative security
 considerations.
 
-* [Editor's Copy](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-security-model.html)
+* [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-security-model.html)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-mission-security-model)
 * [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-security-model)
-* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/draft-mcguinness-oauth-mission/#go.draft-mcguinness-mission-security-model.diff)
+* [Compare Editor's Copy to Individual Draft](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-security-model.diff)
 
 ## Contributing
 
 See the
-[guidelines for contributions](https://github.com/mcguinness/draft-mcguinness-oauth-mission/blob/main/CONTRIBUTING.md).
+[guidelines for contributions](https://github.com/mcguinness/mission-bound-authorization/blob/main/CONTRIBUTING.md).
 
 The contributing file also has tips on how to make contributions, if you
 don't already know how to do that.

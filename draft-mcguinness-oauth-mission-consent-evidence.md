@@ -16,8 +16,8 @@ keyword:
  - authorization
  - evidence
 venue:
-  github: "mcguinness/draft-mcguinness-oauth-mission"
-  latest: "https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-consent-evidence.html"
+  github: "mcguinness/mission-bound-authorization"
+  latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html"
 
 author:
  -
@@ -34,7 +34,7 @@ normative:
   RFC8785:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
     author:
       -
         ins: K. McGuinness
@@ -46,7 +46,7 @@ normative:
 informative:
   I-D.draft-mcguinness-mission-shaping:
     title: "Mission Intent Shaping"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-shaping.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html
     author:
       -
         ins: K. McGuinness
@@ -56,7 +56,7 @@ informative:
       Internet-Draft: draft-mcguinness-mission-shaping-latest
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-authority-server.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
     author:
       -
         ins: K. McGuinness
@@ -66,7 +66,7 @@ informative:
       Internet-Draft: draft-mcguinness-mission-authority-server-latest
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-expansion.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
     author:
       -
         ins: K. McGuinness
@@ -76,7 +76,7 @@ informative:
       Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
   I-D.draft-mcguinness-oauth-mission-approval:
     title: "Mission Deferred Approval for OAuth 2.0"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-approval.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html
     author:
       -
         ins: K. McGuinness
@@ -86,7 +86,7 @@ informative:
       Internet-Draft: draft-mcguinness-oauth-mission-approval-latest
   I-D.draft-mcguinness-oauth-mission-approval-revision:
     title: "Mission Approval Revision for OAuth 2.0"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-approval-revision.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval-revision.html
     author:
       -
         ins: K. McGuinness
@@ -96,7 +96,7 @@ informative:
       Internet-Draft: draft-mcguinness-oauth-mission-approval-revision-latest
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-runtime.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
     author:
       -
         ins: K. McGuinness

@@ -17,8 +17,8 @@ keyword:
  - approval
  - revision
 venue:
-  github: "mcguinness/draft-mcguinness-oauth-mission"
-  latest: "https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-approval-revision.html"
+  github: "mcguinness/mission-bound-authorization"
+  latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval-revision.html"
 
 author:
  -
@@ -33,7 +33,7 @@ normative:
   I-D.draft-gerber-oauth-deferred-token-response:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
     author:
       -
         ins: K. McGuinness
@@ -43,7 +43,7 @@ normative:
       Internet-Draft: draft-mcguinness-oauth-mission-latest
   I-D.draft-mcguinness-oauth-mission-approval:
     title: "Mission Deferred Approval for OAuth 2.0"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-approval.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html
     author:
       -
         ins: K. McGuinness
@@ -55,7 +55,7 @@ normative:
 informative:
   I-D.draft-mcguinness-mission-shaping:
     title: "Mission Intent Shaping"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-shaping.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html
     author:
       -
         ins: K. McGuinness
@@ -65,7 +65,7 @@ informative:
       Internet-Draft: draft-mcguinness-mission-shaping-latest
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
     title: "Mission Consent Evidence for OAuth 2.0"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-consent-evidence.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
     author:
       -
         ins: K. McGuinness
@@ -75,7 +75,7 @@ informative:
       Internet-Draft: draft-mcguinness-oauth-mission-consent-evidence-latest
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-expansion.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
     author:
       -
         ins: K. McGuinness

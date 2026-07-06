@@ -17,8 +17,8 @@ keyword:
  - transparency
  - scitt
 venue:
-  github: "mcguinness/draft-mcguinness-oauth-mission"
-  latest: "https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-audit.html"
+  github: "mcguinness/mission-bound-authorization"
+  latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html"
 
 author:
  -
@@ -35,7 +35,7 @@ normative:
   I-D.draft-ietf-cose-hash-envelope:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
     author:
       -
         ins: K. McGuinness
@@ -48,7 +48,7 @@ informative:
   I-D.draft-ietf-scitt-scrapi:
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
     title: "Mission Consent Evidence for OAuth 2.0"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-consent-evidence.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
     author:
       -
         ins: K. McGuinness
@@ -58,7 +58,7 @@ informative:
       Internet-Draft: draft-mcguinness-oauth-mission-consent-evidence-latest
   I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-authzen.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
     author:
       -
         ins: K. McGuinness
@@ -68,7 +68,7 @@ informative:
       Internet-Draft: draft-mcguinness-mission-authzen-latest
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-signals.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
     author:
       -
         ins: K. McGuinness
@@ -78,7 +78,7 @@ informative:
       Internet-Draft: draft-mcguinness-oauth-mission-signals-latest
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-runtime.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
     author:
       -
         ins: K. McGuinness
@@ -88,7 +88,7 @@ informative:
       Internet-Draft: draft-mcguinness-mission-runtime-latest
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-child-delegation.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
     author:
       -
         ins: K. McGuinness
@@ -98,7 +98,7 @@ informative:
       Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
   I-D.draft-mcguinness-mission-mandate:
     title: "Mission Mandate"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-mandate.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
     author:
       -
         ins: K. McGuinness
@@ -108,7 +108,7 @@ informative:
       Internet-Draft: draft-mcguinness-mission-mandate-latest
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-authority-server.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
     author:
       -
         ins: K. McGuinness
