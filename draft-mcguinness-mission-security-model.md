@@ -612,8 +612,8 @@ the profile governs.
 The trusted components see Mission data: the Authorization Server and PDP
 see the Authority Set, the consent rendering layer and Approver see the
 disclosed authority, and the Transparency Service and state sources see
-the Mission identifier and its activity over time. The single canonical
-`mission_id` is a durable cross-audience correlator the suite
+the Mission Identifier and its activity over time. The single canonical
+Mission Identifier is a durable cross-audience correlator the suite
 acknowledges and does not yet narrow
 ({{I-D.draft-mcguinness-oauth-mission}}); unlinkable or per-audience
 presentation of Mission-bound authority is out of scope across the suite.

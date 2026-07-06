@@ -184,7 +184,7 @@ and the core appear to differ, the core governs.
 {::boilerplate bcp14-tagged}
 
 This document uses Mission, Mission Intent, Mission Issuer, Authority
-Set, Approver, Subject, the Mission identifier, `origin`, the
+Set, Approver, Subject, the Mission Identifier, `origin`, the
 `mission` claim, the integrity anchors (`intent_hash` and
 `authority_hash`), the subset rule, Common Constraints, the
 only-`active` rule, and the audit horizon as defined by the core. It uses Policy Enforcement Point
