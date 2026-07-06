@@ -2,7 +2,7 @@
 
 
 
-Network Working Group                                      K. McGuinness
+Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
 Intended status: Standards Track                             6 July 2026
 Expires: 7 January 2027

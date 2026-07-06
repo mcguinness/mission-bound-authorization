@@ -2,7 +2,7 @@
 
 
 
-Network Working Group                                      K. McGuinness
+Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
 Intended status: Standards Track                             6 July 2026
 Expires: 7 January 2027
@@ -970,22 +970,23 @@ Table of Contents
       unenforceable and fail closed (Section 8.2).  Containment between
       effective resource sets is compared as defined in Section 5.1.
 
-   actions:  REQUIRED.  An array of strings.  Permitted action
-      identifiers, each matching [A-Za-z0-9_.:-]+. Like an OAuth scope,
-      an action identifier carries meaning only at the resource that
-      defines it; a consumer enforces only the actions it recognizes for
-      that resource and honors no others, so an action a consumer does
-      not understand is fail-closed by construction (the action is
-      simply not within the authority it can enforce).  An AS SHOULD
-      draw action identifiers from a namespace the serving resource
-      documents, so the set is interpretable cross-vendor rather than ad
-      hoc.  A value MAY instead be an *action family*: an action
-      identifier followed by .*, authorizing every action whose dot-
-      separated identifier extends the family name at a segment boundary
-      (invoices.* authorizes invoices.read and invoices.q3.export, not
-      invoicesx.read).  A consent rendering MUST present a family as the
-      breadth it is: all actions under the name, not one action.  An AS
-      SHOULD treat deriving a family as high-risk breadth.
+   actions:  REQUIRED.  An array of strings.  Permitted action values.
+      Each value is either an action identifier matching [A-Za-
+      z0-9_.:-]+ or an action family: an action identifier followed by
+      .*. Like an OAuth scope, an action value carries meaning only at
+      the resource that defines it; a consumer enforces only the actions
+      it recognizes for that resource and honors no others, so an action
+      a consumer does not understand is fail-closed by construction (the
+      action is simply not within the authority it can enforce).  An AS
+      SHOULD draw action identifiers from a namespace the serving
+      resource documents, so the set is interpretable cross-vendor
+      rather than ad hoc.  An action family authorizes every action
+      whose dot-separated identifier extends the family name at a
+      segment boundary (invoices.* authorizes invoices.read and
+      invoices.q3.export, not invoicesx.read).  A consent rendering MUST
+      present a family as the breadth it is: all actions under the name,
+      not one action.  An AS SHOULD treat deriving a family as high-risk
+      breadth.
 
    constraints:  OPTIONAL.  An object.  Machine-actionable per-resource
       bounds (for example, max_amount).  A member name defined as a
@@ -1180,7 +1181,7 @@ Table of Contents
    the same instant that differ only in timezone offset or trailing
    subsecond zeros are equal; recipient_domain values are compared as
    DNS names, case-insensitively and on whole labels, so
-   mail.example.com is within example.com and notexample.com is not.  A
+   mail.example.com is within example.com and not-example.net is not.  A
    Common Constraint definition MUST fix its subset and intersection in
    value-space terms, so that independent deployments compute the same
    result for the same values and the subset rule of Section 5.1 is
@@ -1249,10 +1250,11 @@ Table of Contents
    Both entries are committed by the one authority_hash and bound to the
    Mission.  The Cedar entry is evaluated by the finance audience's PDP;
    the mission_resource_access entry is enforced as in Section 8.
-   Because the Cedar profile defines no subset rule over policy sets,
-   the AS carries the Cedar entry as approved rather than narrowing it;
-   the per-entry delegation controls still bound who may delegate it and
-   how far.
+   Because the Cedar profile defines no subset or delegation rule over
+   policy sets, the AS carries the Cedar entry as approved rather than
+   narrowing it, and it MUST NOT appear in a delegated token or cross-
+   domain grant.  Delegation controls on other entries, such as the
+   mission_resource_access entry, apply to those entries only.
 
 5.4.  Modeling Tools and Function Calls
 
@@ -3115,9 +3117,9 @@ Table of Contents
    [I-D.draft-ietf-oauth-transaction-tokens]
               Tulshibagwale, A., Fletcher, G., and P. Kasselman,
               "Transaction Tokens", Work in Progress, Internet-Draft,
-              draft-ietf-oauth-transaction-tokens-08, 2 March 2026,
+              draft-ietf-oauth-transaction-tokens-09, 6 July 2026,
               <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
-              transaction-tokens-08>.
+              transaction-tokens-09>.
 
    [I-D.draft-klrc-aiagent-auth]
               Kasselman, P., Lombardo, J., Rosomakho, Y., Campbell, B.,
