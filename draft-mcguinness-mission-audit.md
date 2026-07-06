@@ -358,11 +358,13 @@ protected header ({{hash-commitment}}, {{feed}}):
 {
   / alg /                    1: -7,   / ES256 /
   / payload-hash-alg /     258: -16,  / SHA-256 /
-  / preimage-content-type / 259: "application/mission-lifecycle-transition+json",
+  / preimage-content-type / 259:
+      "application/mission-lifecycle-transition+json",
   / kid /                    4: h'61732d6b65792d323032362d7133',
   / CWT Claims /            15: {
     / iss / 1: "https://as.example.com",
-    / sub / 2: "https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+    / sub / 2: "https://as.example.com/missions/
+                msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
   }
 }
 ~~~
@@ -647,11 +649,13 @@ the Mission Issuer. Protected header, in COSE EDN ({{RFC9052}}):
 {
   / alg /                    1: -7,   / ES256 /
   / payload-hash-alg /     258: -16,  / SHA-256 /
-  / preimage-content-type / 259: "application/mission-consent-evidence+json",
+  / preimage-content-type / 259:
+      "application/mission-consent-evidence+json",
   / kid /                    4: h'61732d6b65792d323032362d7133',
   / CWT Claims /            15: {
     / iss / 1: "https://as.example.com",
-    / sub / 2: "https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+    / sub / 2: "https://as.example.com/missions/
+                msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
   }
 }
 ~~~
@@ -674,7 +678,8 @@ Collecting the records registered under that one `sub` ({{retrieval}})
 gives the Mission's whole history, in order, append-only:
 
 ~~~ text
-sub = https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
+sub =
+https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 
   #1  approval-event        iss=as.example.com    t0
   #2  consent-evidence      iss=as.example.com    t0

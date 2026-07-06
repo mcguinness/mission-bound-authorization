@@ -704,8 +704,8 @@ every other state is non-deriving.
 | `suspended` | `expires_at` reached | expiry clock | `expired` |
 | `suspended` | `suspend_until` reached, `on_expiry` = `resume` | expiry clock | `active` |
 | `suspended` | `suspend_until` reached, `on_expiry` = `revoke` | expiry clock | `revoked` |
-| `active` | successor activates | companion adjudication ({{I-D.draft-mcguinness-oauth-mission-expansion}}) | `superseded` |
-| `active` | parent reaches a terminal state | companion adjudication ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) | `cascaded` |
+| `active` | successor activates | expansion profile | `superseded` |
+| `active` | parent reaches a terminal state | child-delegation profile | `cascaded` |
 
 `revoke` and the Mission's `expires_at` both apply in `suspended` as
 well as `active`, so a suspended Mission can still be terminated or

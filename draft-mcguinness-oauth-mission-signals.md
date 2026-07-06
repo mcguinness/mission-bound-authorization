@@ -233,7 +233,7 @@ the Security Event Token shape of the Shared Signals Framework
 approval event that activates a Mission. The event type URI, defined in
 this document and described in {{iana}}, is:
 
-`https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change`
+`https://schemas.karlmcguinness.com/mission/lifecycle-change`
 
 This URI is the registered event-type identifier; `mission.lifecycle-change`
 is the short name this document uses for it in prose.
@@ -310,7 +310,7 @@ Example SET (decoded), for a revocation:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
   },
   "events": {
-    "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
+    "https://schemas.karlmcguinness.com/mission/lifecycle-change": {
       "mission": {
         "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
         "issuer": "https://as.example.com"
@@ -339,7 +339,7 @@ Mission (`version` 1, no `prior_state`):
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
   },
   "events": {
-    "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
+    "https://schemas.karlmcguinness.com/mission/lifecycle-change": {
       "mission": {
         "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
         "issuer": "https://as.example.com"
@@ -365,7 +365,7 @@ Example SET (decoded), for a supersession, carrying `successor`:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
   },
   "events": {
-    "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
+    "https://schemas.karlmcguinness.com/mission/lifecycle-change": {
       "mission": {
         "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
         "issuer": "https://as.example.com"
@@ -471,7 +471,7 @@ consumer's receiver ({{RFC8935}}). Decoded SET:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
   },
   "events": {
-    "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
+    "https://schemas.karlmcguinness.com/mission/lifecycle-change": {
       "mission": {
         "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
         "issuer": "https://as.example.com"
@@ -584,9 +584,9 @@ issuance profile {{I-D.draft-mcguinness-oauth-mission}}.
 
 IANA is not requested to create a registry. This document defines the
 following Security Event Token (SET) {{RFC8417}} event type URI under
-the author-controlled `schemas.karlmcguinness.com/secevent` namespace:
+the author-controlled `schemas.karlmcguinness.com` namespace:
 
-- `https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change`:
+- `https://schemas.karlmcguinness.com/mission/lifecycle-change`:
   emitted on any Mission lifecycle transition or the approval-event
   emission from a Mission Issuer. The SET subject is a `sub_id` Subject
   Identifier {{RFC9493}} of format `opaque` whose `id` is the
