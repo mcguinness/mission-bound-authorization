@@ -539,6 +539,15 @@ A conforming implementation names the optional capabilities it supports
 capability's defining section or document states its detailed
 requirements.
 
+A token carrying a `mission` claim is not, by itself, Mission-bound
+authorization. Conformance as a Mission Issuer requires the gates:
+authority derived from the approved Intent and committed by the
+anchors ({{approval-event}}), issuance bounded by the subset rule
+({{subset}}), and derivation gated on Mission state ({{lifecycle}}).
+An implementation that carries Mission metadata without these gates
+conforms to no role in this document and MUST NOT be described as
+implementing it.
+
 The `mission_bound_authorization_supported` metadata ({{discovery}})
 advertises Mission Issuer support only. It makes no assertion about any
 Resource Server, which does not advertise through Authorization Server
@@ -1063,6 +1072,14 @@ when:
 
 The AS MUST refuse to derive an entry that is not a subset of some
 Mission Authority Set entry.
+
+Authority under a Mission MUST NOT widen after the approval event: a
+request that exceeds the Authority Set on any dimension (a new
+resource, action, actor, delegation path, longer duration, or
+constraint relaxation) is refused under this rule, and broader
+authority requires a fresh approval event, either a new Mission or a
+successor per the companion
+{{I-D.draft-mcguinness-oauth-mission-expansion}}.
 
 Resource containment under a `prefix` reference is compared after
 RFC 3986 {{RFC3986}} syntax-based normalization of both URIs: lowercase
@@ -2071,6 +2088,13 @@ token lifetime. A canonical Mission Status surface (keyed by
 an OPTIONAL companion profile by Mission Status
 {{I-D.draft-mcguinness-oauth-mission-status}}; this document does not
 require them.
+
+Token validity and Mission validity are distinct: a token can outlive
+a transition of its Mission, by at most the token lifetime. A
+deployment whose consumers rely on Mission state beyond a token's
+lifetime SHOULD offer introspection ({{introspection}}) or the Mission
+Status companion, so an authorized party can determine the Mission's
+current state rather than inferring it from token validity.
 
 # Mission State via Token Introspection {#introspection}
 
