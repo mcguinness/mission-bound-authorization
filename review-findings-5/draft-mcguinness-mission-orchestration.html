@@ -1,0 +1,2503 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission Orchestration and Unwinding</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       Mission runtime enforcement can refuse the next consequential action,
+but Mission termination can occur while an agent workflow is already in
+flight. This document defines an optional orchestration profile for
+Mission-governed workflows. It classifies actions by reversibility,
+requires an unwind plan before execution, defines behavior when a
+Mission is revoked, expired, suspended, completed, or superseded, and
+specifies Orchestration Evidence for pause, cancel, compensation, and
+human-review decisions. The profile turns Mission termination from a
+simple access-control denial into governed handling of execution state,
+with compensation authorized only by resource policy or a separate
+active Mission, never the terminated Mission. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="oauth" name="keyword">
+<meta content="mission" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="orchestration" name="keyword">
+<meta content="compensation" name="keyword">
+<meta content="draft-mcguinness-mission-orchestration-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.10.0
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.2
+-->
+<link href="draft-mcguinness-mission-orchestration.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Mission Orchestration</td>
+<td class="right">July 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 7 January 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-mission-orchestration-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-07-06" class="published">6 July 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-01-07">7 January 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission Orchestration and Unwinding</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">Mission runtime enforcement can refuse the next consequential action,
+but Mission termination can occur while an agent workflow is already in
+flight. This document defines an optional orchestration profile for
+Mission-governed workflows. It classifies actions by reversibility,
+requires an unwind plan before execution, defines behavior when a
+Mission is revoked, expired, suspended, completed, or superseded, and
+specifies Orchestration Evidence for pause, cancel, compensation, and
+human-review decisions. The profile turns Mission termination from a
+simple access-control denial into governed handling of execution state,
+with compensation authorized only by resource policy or a separate
+active Mission, never the terminated Mission.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-mission-orchestration/">https://datatracker.ietf.org/doc/draft-mcguinness-mission-orchestration/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 7 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-scope" class="internal xref">Scope</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.1">
+                <p id="section-toc.1-1.2.2.1.1" class="keepWithNext"><a href="#section-2.1" class="auto internal xref">2.1</a>.  <a href="#name-orchestration-profile" class="internal xref">Orchestration Profile</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-mission-substrate" class="internal xref">Mission Substrate</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-reversibility-classes" class="internal xref">Reversibility Classes</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-action-class-source" class="internal xref">Action-Class Source</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-unwind-plan" class="internal xref">Unwind Plan</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-unwind-plan-integrity" class="internal xref">Unwind Plan Integrity</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-worked-unwind-plan" class="internal xref">Worked Unwind Plan</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-state-change-behavior" class="internal xref">State-Change Behavior</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-trigger-sources" class="internal xref">Trigger Sources</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-in-flight-requests" class="internal xref">In-Flight Requests</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-cancellation-attempt" class="internal xref">Cancellation Attempt</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-compensation" class="internal xref">Compensation</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-compensation-authority-basi" class="internal xref">Compensation Authority Basis</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-unwind-ordering-and-partial" class="internal xref">Unwind Ordering and Partial Failure</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-human-review" class="internal xref">Human Review</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-orchestration-evidence" class="internal xref">Orchestration Evidence</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-record-integrity-and-retent" class="internal xref">Record Integrity and Retention</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-evidence-ordering" class="internal xref">Evidence Ordering</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-relationship-to-harness-and" class="internal xref">Relationship to Harness and Runtime Profiles</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
+                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-compensation-is-authority-b" class="internal xref">Compensation Is Authority-Bearing</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2">
+                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-unknown-outcomes" class="internal xref">Unknown Outcomes</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.3">
+                <p id="section-toc.1-1.14.2.3.1"><a href="#section-14.3" class="auto internal xref">14.3</a>.  <a href="#name-reversibility-misclassifica" class="internal xref">Reversibility Misclassification</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.4">
+                <p id="section-toc.1-1.14.2.4.1"><a href="#section-14.4" class="auto internal xref">14.4</a>.  <a href="#name-compensation-loops" class="internal xref">Compensation Loops</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.5">
+                <p id="section-toc.1-1.14.2.5.1"><a href="#section-14.5" class="auto internal xref">14.5</a>.  <a href="#name-race-with-runtime-permits" class="internal xref">Race With Runtime Permits</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref">16</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#section-17" class="auto internal xref">17</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.1">
+                <p id="section-toc.1-1.17.2.1.1"><a href="#section-17.1" class="auto internal xref">17.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.2">
+                <p id="section-toc.1-1.17.2.2.1"><a href="#section-17.2" class="auto internal xref">17.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
+            <p id="section-toc.1-1.18.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19">
+            <p id="section-toc.1-1.19.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">Mission-Bound Authorization for OAuth 2.0
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile") gives a
+task an approved authority and lifecycle. The runtime profile
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span> checks each
+consequential action before it executes. These are necessary but not
+complete for long-running workflows. A Mission can terminate after some
+steps have completed and before others run. Some completed steps can be
+compensated. Some cannot. Some in-flight requests can be canceled. Some
+must be escalated to a human.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">This document defines the orchestration layer that handles those cases.
+Before governed execution begins, the orchestrator records an unwind
+plan for each consequential step. When Mission state becomes non-active
+or cannot be established, the orchestrator stops new governed work and
+executes the plan: cancel, compensate, suppress, pause, or hand off to
+human review.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">The boundary with the harness profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>) is the question each
+answers. The harness answers "may this unit of work continue." This
+document answers "how is in-flight state unwound once continuation is
+stopped." The runtime profile still gates each action. The checks
+compose; none replaces the others (<a href="#relationship" class="auto internal xref">Section 12</a>).<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">This is a newer profile than the rest of the Mission-Bound
+Authorization family and is not part of the recommended v1 deployment
+bundles. The unwind, compensation, and reversibility model it defines is
+less exercised than the issuance core and the runtime layer, and
+compensation is inherently domain-specific. Its details may change;
+treat it as a direction, not yet as a stable interface.<a href="#section-1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="scope">
+<section id="section-2">
+      <h2 id="name-scope">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-scope" class="section-name selfRef">Scope</a>
+      </h2>
+<p id="section-2-1">This document is <strong>experimental</strong>: adopt it for evaluation, not as a
+stable interface. Safe unwinding of in-flight agent work is the least
+settled layer of the suite, and this profile is expected to change with
+implementation experience.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">This document defines:<a href="#section-2-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-2-3.1">
+          <p id="section-2-3.1.1">action reversibility classes (<a href="#reversibility" class="auto internal xref">Section 5</a>);<a href="#section-2-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-2-3.2">
+          <p id="section-2-3.2.1">unwind plans (<a href="#unwind-plan" class="auto internal xref">Section 6</a>);<a href="#section-2-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-2-3.3">
+          <p id="section-2-3.3.1">behavior on Mission state changes (<a href="#state-change-behavior" class="auto internal xref">Section 7</a>);<a href="#section-2-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-2-3.4">
+          <p id="section-2-3.4.1">in-flight request handling (<a href="#in-flight" class="auto internal xref">Section 8</a>);<a href="#section-2-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-2-3.5">
+          <p id="section-2-3.5.1">compensation and human review evidence (<a href="#orchestration-evidence" class="auto internal xref">Section 11</a>);
+and<a href="#section-2-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-2-3.6">
+          <p id="section-2-3.6.1">conformance for a Mission-aware orchestrator (<a href="#conformance" class="auto internal xref">Section 13</a>).<a href="#section-2-3.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-2-4">This document does not define a workflow language, a compensation API,
+or a replacement for runtime PEP enforcement. Its object shapes (the
+unwind plan and the evidence record) bind what a deployment records and
+proves, not how an orchestrator is internally structured.<a href="#section-2-4" class="pilcrow">¶</a></p>
+<div id="orchestration-profile">
+<section id="section-2.1">
+        <h3 id="name-orchestration-profile">
+<a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-orchestration-profile" class="section-name selfRef">Orchestration Profile</a>
+        </h3>
+<p id="section-2.1-1">A deployment claiming this profile <span class="bcp14">MUST</span> publish or otherwise make
+available an orchestration profile for governed workflows. The profile
+<span class="bcp14">MUST</span> define:<a href="#section-2.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-2.1-2.1">
+            <p id="section-2.1-2.1.1">workflow classes in scope;<a href="#section-2.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.1-2.2">
+            <p id="section-2.1-2.2.1">action-class mapping for workflow steps;<a href="#section-2.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.1-2.3">
+            <p id="section-2.1-2.3.1">the source of Mission state used by the orchestrator;<a href="#section-2.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.1-2.4">
+            <p id="section-2.1-2.4.1">a staleness bound per action class, calibrated against the runtime
+profile's non-normative freshness table
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>);<a href="#section-2.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.1-2.5">
+            <p id="section-2.1-2.5.1">minimum reversibility class per operation;<a href="#section-2.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.1-2.6">
+            <p id="section-2.1-2.6.1">permitted compensation authorities;<a href="#section-2.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.1-2.7">
+            <p id="section-2.1-2.7.1">review queues or escalation targets; and<a href="#section-2.1-2.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.1-2.8">
+            <p id="section-2.1-2.8.1">evidence retention.<a href="#section-2.1-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-2.1-3">The orchestration profile is deployment documentation. It is not an
+OAuth Authorization Server metadata extension and does not alter token
+format.<a href="#section-2.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="conventions">
+<section id="section-3">
+      <h2 id="name-conventions-and-terminology">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+      </h2>
+<p id="section-3-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">This document uses the terms Mission, Mission state, and consequential
+action from <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; and PEP, PDP, and
+runtime enforcement evidence from
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>. Where a deployment
+uses the AuthZEN profile (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>),
+its Decision Evidence and Execution Evidence objects are examples of
+the runtime enforcement evidence records this document links.<a href="#section-3-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-3-3">
+        <dt id="section-3-3.1">Orchestrator:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.2">
+          <p id="section-3-3.2.1">The component that schedules, sequences, retries, or coordinates
+governed actions in a Mission.<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-3.3">Unwind plan:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.4">
+          <p id="section-3-3.4.1">The per-step plan describing what the orchestrator does if Mission
+authority ends or cannot be established before or during that step.<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-3.5">Compensation:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.6">
+          <p id="section-3-3.6.1">A deployment-defined action intended to offset or reverse a prior
+action's effect. Compensation is not guaranteed reversal.<a href="#section-3-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-3.7">Safe point:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.8">
+          <p id="section-3-3.8.1">A workflow point at which the orchestrator can stop without starting
+another consequential action and with all prior outcomes recorded.<a href="#section-3-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="mission-substrate">
+<section id="section-4">
+      <h2 id="name-mission-substrate">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-mission-substrate" class="section-name selfRef">Mission Substrate</a>
+      </h2>
+<p id="section-4-1">This profile is defined against the Mission model rather than against
+OAuth 2.0 mechanics. It consumes these substrate primitives: the
+Mission identifier; the lifecycle state space with its
+only-<code>active</code>-permits rule; the runtime enforcement evidence its
+records link; the integrity-anchor envelope, used for
+<code>unwind_plan_hash</code>; and the substrate's Mission state, against which
+a compensation authority basis resolves (<a href="#compensation-authority" class="auto internal xref">Section 9.1</a>):
+a <code>separate_mission</code> basis requires a Mission that is <code>active</code> under
+the binding in use, and a <code>resource_policy</code> basis lies outside Mission
+authority entirely. The issuance profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> is this version's normative
+substrate; another substrate that provides the same primitives can
+host this profile unchanged.<a href="#section-4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="reversibility">
+<section id="section-5">
+      <h2 id="name-reversibility-classes">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-reversibility-classes" class="section-name selfRef">Reversibility Classes</a>
+      </h2>
+<p id="section-5-1">Each consequential step in a governed workflow <span class="bcp14">MUST</span> be assigned one of
+these reversibility classes before execution:<a href="#section-5-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5-2">
+        <dt id="section-5-2.1">
+<code>read_only</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.2">
+          <p id="section-5-2.2.1">The step observes data and has no external side effect. Suppression
+prevents future exposure, but prior disclosure cannot be undone.<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.3">
+<code>reversible_write</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.4">
+          <p id="section-5-2.4.1">The step changes state and has a known compensation action that can
+restore or materially offset the change.<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.5">
+<code>irreversible_action</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.6">
+          <p id="section-5-2.6.1">The step cannot be reliably undone once completed.<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.7">
+<code>external_commitment</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.8">
+          <p id="section-5-2.8.1">The step commits to an external party, sends communication, starts a
+payment, signs, files, orders, or otherwise creates an external
+reliance interest.<a href="#section-5-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.9">
+<code>privileged_administration</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.10">
+          <p id="section-5-2.10.1">The step changes policy, access, configuration, or security posture.<a href="#section-5-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-5-3"><code>irreversible_action</code>, <code>external_commitment</code>, and
+<code>privileged_administration</code> are the identically-named action classes of
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span> (Section
+"Action classification"). A step's reversibility class <span class="bcp14">MUST</span> be at least
+the minimum this table maps from the runtime action class the runtime
+profile assigns the same operation:<a href="#section-5-3" class="pilcrow">¶</a></p>
+<table class="center" id="table-1">
+        <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Runtime action class</th>
+            <th class="text-left" rowspan="1" colspan="1">Minimum reversibility class</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Non-consequential</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>read_only</code>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Consequential read</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>read_only</code>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Consequential write</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>reversible_write</code>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Irreversible action</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>irreversible_action</code>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">External commitment</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>external_commitment</code>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Privileged administration</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>privileged_administration</code>
+</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-5-5"><code>read_only</code> and <code>reversible_write</code> are a reversibility refinement this
+profile adds that the runtime classification does not separately track.<a href="#section-5-5" class="pilcrow">¶</a></p>
+<p id="section-5-6">The class <span class="bcp14">MAY</span> be raised by Resource policy or operation profile. As
+with the runtime classification floor
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), it <span class="bcp14">MUST NOT</span> be lowered
+by the orchestrator at runtime to avoid review or compensation
+requirements.<a href="#section-5-6" class="pilcrow">¶</a></p>
+<div id="action-class-source">
+<section id="section-5.1">
+        <h3 id="name-action-class-source">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-action-class-source" class="section-name selfRef">Action-Class Source</a>
+        </h3>
+<p id="section-5.1-1">The orchestrator <span class="bcp14">MUST</span> derive reversibility class from a trusted source:<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.1-2.1">
+            <p id="section-5.1-2.1.1">Resource Server runtime profile;<a href="#section-5.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.1-2.2">
+            <p id="section-5.1-2.2.1">operation profile;<a href="#section-5.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.1-2.3">
+            <p id="section-5.1-2.3.1">workflow definition reviewed under deployment policy; or<a href="#section-5.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.1-2.4">
+            <p id="section-5.1-2.4.1">Resource policy response.<a href="#section-5.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.1-3">An agent plan, model output, or tool description <span class="bcp14">MAY</span> suggest a class
+but <span class="bcp14">MUST NOT</span> be the sole authority for lowering class. If sources
+conflict, the orchestrator <span class="bcp14">MUST</span> use the class that is at least the
+minimum the mapping table of <a href="#reversibility" class="auto internal xref">Section 5</a> requires for the
+operation's runtime action class.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="unwind-plan">
+<section id="section-6">
+      <h2 id="name-unwind-plan">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-unwind-plan" class="section-name selfRef">Unwind Plan</a>
+      </h2>
+<p id="section-6-1">Before dispatching a consequential step, the orchestrator <span class="bcp14">MUST</span> have an
+unwind plan. The plan is deployment documentation committed for audit
+(<a href="#unwind-plan-integrity" class="auto internal xref">Section 6.1</a>), not a wire format; the members below are
+the information it <span class="bcp14">MUST</span> record, in whatever representation the
+deployment commits. The plan has these members:<a href="#section-6-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6-2">
+        <dt id="section-6-2.1">
+<code>step_id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.2">
+          <p id="section-6-2.2.1"><span class="bcp14">REQUIRED</span>. A string identifying the workflow step.<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.3">
+<code>mission_id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.4">
+          <p id="section-6-2.4.1"><span class="bcp14">REQUIRED</span>. The Mission governing the step.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.5">
+<code>reversibility</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.6">
+          <p id="section-6-2.6.1"><span class="bcp14">REQUIRED</span>. One of the classes in <a href="#reversibility" class="auto internal xref">Section 5</a>.<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.7">
+<code>pre_start_behavior</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.8">
+          <p id="section-6-2.8.1"><span class="bcp14">REQUIRED</span>. Behavior when Mission state is non-active before the step
+starts. One of <code>suppress</code>, <code>pause</code>, <code>cancel_workflow</code>, or
+<code>human_review</code>.<a href="#section-6-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.9">
+<code>in_flight_behavior</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.10">
+          <p id="section-6-2.10.1"><span class="bcp14">REQUIRED</span>. Behavior when Mission state changes while the step is in
+flight. One of <code>cancel_if_possible</code>, <code>wait_then_review</code>,
+<code>continue_to_safe_point</code>, or <code>human_review</code>.<a href="#section-6-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.11">
+<code>post_completion_behavior</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.12">
+          <p id="section-6-2.12.1"><span class="bcp14">REQUIRED</span> for <code>reversible_write</code>, <code>irreversible_action</code>,
+<code>external_commitment</code>, and <code>privileged_administration</code>. One of
+<code>compensate</code>, <code>record_only</code>, or <code>human_review</code>.<a href="#section-6-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.13">
+<code>compensation_action</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.14">
+          <p id="section-6-2.14.1"><span class="bcp14">REQUIRED</span> when <code>post_completion_behavior</code> is <code>compensate</code>. A
+deployment-defined action reference.<a href="#section-6-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.15">
+<code>review_queue</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.16">
+          <p id="section-6-2.16.1"><span class="bcp14">REQUIRED</span> when any behavior is <code>human_review</code>. A deployment-defined
+queue or escalation target.<a href="#section-6-2.16.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.17">
+<code>safe_point</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.18">
+          <p id="section-6-2.18.1"><span class="bcp14">OPTIONAL</span>. A deployment-defined workflow point to which
+<code>continue_to_safe_point</code> may proceed.<a href="#section-6-2.18.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.19">
+<code>evidence_policy</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.20">
+          <p id="section-6-2.20.1"><span class="bcp14">OPTIONAL</span>. Deployment-defined instructions for linking runtime
+enforcement evidence (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>),
+Harness Evidence, and Orchestration Evidence. Its members, including
+any retention token such as the
+example's <code>mission_audit_horizon</code>, are deployment-defined; the
+retention horizon aligns with the runtime profile's record-retention
+guidance (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.20.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-6-3">The unwind plan does not authorize compensation by itself. A
+compensation action that is consequential <span class="bcp14">MUST</span> itself be authorized
+under one of the compensation authority bases (<a href="#compensation-authority" class="auto internal xref">Section 9.1</a>):
+resource policy or a separate active Mission, never the terminated
+Mission.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<div id="unwind-plan-integrity">
+<section id="section-6.1">
+        <h3 id="name-unwind-plan-integrity">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-unwind-plan-integrity" class="section-name selfRef">Unwind Plan Integrity</a>
+        </h3>
+<p id="section-6.1-1">The step's first Orchestration Evidence record (<a href="#orchestration-evidence" class="auto internal xref">Section 11</a>)
+<span class="bcp14">MUST</span> carry an <code>unwind_plan_hash</code> over the step's unwind plan. It is
+computed with the integrity-anchor envelope of the issuance profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) under a new <code>typ</code> value
+<code>mission-unwind-plan</code>, where <code>value</code> is the unwind plan object. This
+lets an auditor detect any later alteration of the plan a step ran
+under.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<p id="section-6.1-2">Every unwind-plan member <span class="bcp14">MUST</span> derive from a trusted source. The
+compensation action, review queue, and safe point, like the
+reversibility class (<a href="#action-class-source" class="auto internal xref">Section 5.1</a>), <span class="bcp14">MUST</span> derive from a
+reviewed workflow definition or operation profile. Model output <span class="bcp14">MUST NOT</span> define them.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="worked-unwind-plan">
+<section id="section-6.2">
+        <h3 id="name-worked-unwind-plan">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-worked-unwind-plan" class="section-name selfRef">Worked Unwind Plan</a>
+        </h3>
+<div class="lang-json sourcecode" id="section-6.2-1">
+<pre>
+{
+  "step_id": "post_journal_entry",
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "reversibility": "external_commitment",
+  "pre_start_behavior": "human_review",
+  "in_flight_behavior": "wait_then_review",
+  "post_completion_behavior": "human_review",
+  "review_queue": "finance-control-review",
+  "evidence_policy": {
+    "link_runtime_evidence": true,
+    "retain_for": "mission_audit_horizon"
+  }
+}
+</pre><a href="#section-6.2-1" class="pilcrow">¶</a>
+</div>
+<p id="section-6.2-2">Its <code>unwind_plan_hash</code> is computed with the integrity-anchor envelope
+(<a href="#unwind-plan-integrity" class="auto internal xref">Section 6.1</a>): <code>typ</code> <code>mission-unwind-plan</code>, <code>iss</code>
+          <code>https://as.example.com</code>, and this plan as the envelope <code>value</code>. The
+canonical-bytes block is the exact JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> output, a single
+line of UTF-8 with no whitespace, shown wrapped only for layout;
+remove the layout line breaks, adding no characters, to recover the
+canonical form.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
+<p id="section-6.2-3">Canonical bytes of the envelope:<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-6.2-4">
+<pre>
+{"iss":"https://as.example.com","typ":"mission-unwind-plan","value
+":{"evidence_policy":{"link_runtime_evidence":true,"retain_for":"m
+ission_audit_horizon"},"in_flight_behavior":"wait_then_review","mi
+ssion_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","post_completion_
+behavior":"human_review","pre_start_behavior":"human_review","reve
+rsibility":"external_commitment","review_queue":"finance-control-r
+eview","step_id":"post_journal_entry"}}
+</pre><a href="#section-6.2-4" class="pilcrow">¶</a>
+</div>
+<div class="lang-text sourcecode" id="section-6.2-5">
+<pre>
+unwind_plan_hash =
+  sha-256:Qf-0Xqo8QPMN0D3xMOSi2j4qTvaU2U8ne1g8UEBrAIc
+</pre><a href="#section-6.2-5" class="pilcrow">¶</a>
+</div>
+<p id="section-6.2-6">The evidence example of <a href="#orchestration-evidence" class="auto internal xref">Section 11</a> carries this value.<a href="#section-6.2-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="state-change-behavior">
+<section id="section-7">
+      <h2 id="name-state-change-behavior">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-state-change-behavior" class="section-name selfRef">State-Change Behavior</a>
+      </h2>
+<p id="section-7-1">When an orchestrator learns that a Mission is no longer <code>active</code>, or
+cannot establish active state within the deployment's staleness bound,
+it <span class="bcp14">MUST</span>:<a href="#section-7-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-7-2">
+<li id="section-7-2.1">
+          <p id="section-7-2.1.1">stop dispatching new governed steps for that Mission;<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-7-2.2">
+          <p id="section-7-2.2.1">suppress or pause queued work;<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-7-2.3">
+          <p id="section-7-2.3.1">evaluate every in-flight step under <a href="#in-flight" class="auto internal xref">Section 8</a>;<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-7-2.4">
+          <p id="section-7-2.4.1">execute or schedule post-completion behavior for completed steps
+whose unwind plan requires it; and<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-7-2.5">
+          <p id="section-7-2.5.1">emit Orchestration Evidence under <a href="#orchestration-evidence" class="auto internal xref">Section 11</a>.<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-7-3">The states <code>revoked</code> and <code>expired</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
+<code>suspended</code> and <code>completed</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>),
+and <code>superseded</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>) are
+all non-active. The orchestrator needs none of those companion profiles
+to be conformant: per the issuance profile's forward-compatibility rule
+it treats any state other than <code>active</code> as non-active. A deployment <span class="bcp14">MAY</span>
+define different operator handling for each state, but none allows new
+governed execution without a fresh authority path. In particular, a
+<code>superseded</code> Mission's continued work <span class="bcp14">SHOULD</span> proceed under the successor
+Mission through a fresh derivation from the successor's grant, not by
+rebinding the predecessor's authority; the successor carries its own
+Authority Set (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-7-3" class="pilcrow">¶</a></p>
+<div id="trigger-sources">
+<section id="section-7.1">
+        <h3 id="name-trigger-sources">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-trigger-sources" class="section-name selfRef">Trigger Sources</a>
+        </h3>
+<p id="section-7.1-1">An orchestrator can learn of Mission state change from:<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.1-2.1">
+            <p id="section-7.1-2.1.1">Mission Status polling (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>);<a href="#section-7.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.2">
+            <p id="section-7.1-2.2.1">Mission lifecycle signals
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>);<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.3">
+            <p id="section-7.1-2.3.1">a runtime PDP denial
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>);<a href="#section-7.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.4">
+            <p id="section-7.1-2.4.1">a harness stop decision
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>);<a href="#section-7.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.5">
+            <p id="section-7.1-2.5.1">operator action; or<a href="#section-7.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.1-2.6">
+            <p id="section-7.1-2.6.1">a deployment-specific governance event.<a href="#section-7.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-7.1-3">The orchestrator <span class="bcp14">MUST</span> record the trigger source in Orchestration
+Evidence. If two trigger sources disagree, the orchestrator <span class="bcp14">MUST</span> use
+the safer state until it can reconcile. For example, a signed <code>revoked</code>
+signal overrides a stale local <code>active</code> cache.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="in-flight">
+<section id="section-8">
+      <h2 id="name-in-flight-requests">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-in-flight-requests" class="section-name selfRef">In-Flight Requests</a>
+      </h2>
+<p id="section-8-1">An in-flight step moves through these outcome classes:<a href="#section-8-1" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-8-2">
+<pre>
+ not_dispatched --&gt; dispatched_not_committed --&gt; committed
+                              |
+                              +-------------------&gt; unknown
+</pre><a href="#section-8-2" class="pilcrow">¶</a>
+</div>
+<p id="section-8-3">For in-flight requests, the orchestrator <span class="bcp14">MUST</span> distinguish:<a href="#section-8-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-8-4">
+        <dt id="section-8-4.1">
+<code>not_dispatched</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-8-4.2">
+          <p id="section-8-4.2.1">The step has not reached the PEP or external system. The orchestrator
+<span class="bcp14">MUST</span> suppress or pause it.<a href="#section-8-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-8-4.3">
+<code>dispatched_not_committed</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-8-4.4">
+          <p id="section-8-4.4.1">The request was sent, but the deployment can still cancel or prevent
+commit. The orchestrator <span class="bcp14">MUST</span> attempt cancellation when the unwind
+plan says <code>cancel_if_possible</code>.<a href="#section-8-4.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-8-4.5">
+<code>committed</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-8-4.6">
+          <p id="section-8-4.6.1">The action's effect occurred or the deployment cannot prove it did
+not occur. The orchestrator <span class="bcp14">MUST</span> apply post-completion behavior.<a href="#section-8-4.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-8-4.7">
+<code>unknown</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-8-4.8">
+          <p id="section-8-4.8.1">The orchestrator cannot determine whether the action committed. The
+orchestrator <span class="bcp14">MUST</span> treat the outcome as requiring human review unless
+deployment policy defines a stricter default.<a href="#section-8-4.8.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-8-5">For irreversible actions, external commitments, and privileged
+administration, an <code>unknown</code> outcome <span class="bcp14">MUST NOT</span> be treated as success or
+as harmless suppression.<a href="#section-8-5" class="pilcrow">¶</a></p>
+<div id="cancellation">
+<section id="section-8.1">
+        <h3 id="name-cancellation-attempt">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-cancellation-attempt" class="section-name selfRef">Cancellation Attempt</a>
+        </h3>
+<p id="section-8.1-1">When the unwind plan requires cancellation, the orchestrator <span class="bcp14">MUST</span>:<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-8.1-2">
+<li id="section-8.1-2.1">
+            <p id="section-8.1-2.1.1">invoke the deployment-defined cancellation mechanism, if any;<a href="#section-8.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-8.1-2.2">
+            <p id="section-8.1-2.2.1">record whether cancellation was accepted, rejected, unavailable, or
+unknown;<a href="#section-8.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-8.1-2.3">
+            <p id="section-8.1-2.3.1">continue to classify the outcome as <code>unknown</code> until it has evidence
+that the action did not commit; and<a href="#section-8.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-8.1-2.4">
+            <p id="section-8.1-2.4.1">emit Orchestration Evidence.<a href="#section-8.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-8.1-3">Cancellation acceptance by an upstream queue is not proof that an
+external action did not occur.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="compensation">
+<section id="section-9">
+      <h2 id="name-compensation">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-compensation" class="section-name selfRef">Compensation</a>
+      </h2>
+<p id="section-9-1">Compensation is governed work. After a Mission becomes non-active, a
+compensation action <span class="bcp14">MUST NOT</span> be performed by presenting that Mission's
+authority. It proceeds only under one of the bases of
+<a href="#compensation-authority" class="auto internal xref">Section 9.1</a>: <code>resource_policy</code> or <code>separate_mission</code>.
+If neither applies, the orchestrator <span class="bcp14">MUST</span> escalate to human review.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">The compensation record is an Orchestration Evidence record
+(<a href="#orchestration-evidence" class="auto internal xref">Section 11</a>) with <code>orchestration_decision</code> set to
+<code>compensate</code>. In that case its <code>authority_basis</code>, <code>linked_evidence</code>,
+<code>compensation_action</code>, and <code>compensation_outcome</code> members are <span class="bcp14">REQUIRED</span>.
+Through those members the record links:<a href="#section-9-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9-3.1">
+          <p id="section-9-3.1.1">the original Mission (the record's <code>mission</code>);<a href="#section-9-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-3.2">
+          <p id="section-9-3.2.1">the original runtime enforcement evidence when available
+(<code>linked_evidence</code>);<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-3.3">
+          <p id="section-9-3.3.1">the state transition that triggered compensation (<code>mission_state</code>
+and <code>reason</code>);<a href="#section-9-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-3.4">
+          <p id="section-9-3.4.1">the compensation action (<code>compensation_action</code>);<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-3.5">
+          <p id="section-9-3.5.1">the authority basis for compensation (<code>authority_basis</code>); and<a href="#section-9-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-3.6">
+          <p id="section-9-3.6.1">the outcome (<code>compensation_outcome</code>).<a href="#section-9-3.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<div id="compensation-authority">
+<section id="section-9.1">
+        <h3 id="name-compensation-authority-basi">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-compensation-authority-basi" class="section-name selfRef">Compensation Authority Basis</a>
+        </h3>
+<p id="section-9.1-1">Compensation after a non-active transition <span class="bcp14">MUST NOT</span> proceed by
+presenting the terminated Mission's authority. The authority basis for
+compensation is one of:<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9.1-2">
+          <dt id="section-9.1-2.1">
+<code>resource_policy</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-2.2">
+            <p id="section-9.1-2.2.1">The action is authorized by the resource's or the PDP's own policy,
+independent of Mission-bound authority. The orchestrator presents no
+Mission-bound credential; the resource permits the rollback under its
+own local policy.<a href="#section-9.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.1-2.3">
+<code>separate_mission</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-2.4">
+            <p id="section-9.1-2.4.1">A narrow, pre-provisioned remedial Mission that is <code>active</code>
+authorizes the compensation. It is a distinct Mission, not the
+terminated one, and it carries its own Authority Set.<a href="#section-9.1-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-9.1-3">An operator may gate either basis, but operator approval is not itself
+an authority basis: it does not create authority a PEP would enforce
+over a terminated Mission. If neither basis applies, the orchestrator
+<span class="bcp14">MUST NOT</span> compensate and <span class="bcp14">MUST</span> record a <code>human_review</code> decision.<a href="#section-9.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="unwind-ordering">
+<section id="section-9.2">
+        <h3 id="name-unwind-ordering-and-partial">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-unwind-ordering-and-partial" class="section-name selfRef">Unwind Ordering and Partial Failure</a>
+        </h3>
+<p id="section-9.2-1">When compensation spans dependent steps, the orchestrator <span class="bcp14">MUST</span> run the
+compensations in reverse dependency order unless the unwind plan states
+another order.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+<p id="section-9.2-2">Compensation can complete for some steps and not others. When it does
+not complete for every step that required it, the workflow's terminal
+state is <code>compensation_incomplete</code>. The orchestrator <span class="bcp14">MUST</span> enumerate the
+steps whose compensation outcome is unknown or failed in Orchestration
+Evidence, so an auditor can see which effects were not offset.<a href="#section-9.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="human-review">
+<section id="section-10">
+      <h2 id="name-human-review">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-human-review" class="section-name selfRef">Human Review</a>
+      </h2>
+<p id="section-10-1">When the orchestrator routes a step to human review (<code>human_review</code>),
+the review concludes with one of three outcomes:<a href="#section-10-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10-2">
+        <dt id="section-10-2.1">
+<code>approve</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.2">
+          <p id="section-10-2.2.1">The reviewer permits the work to continue.<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.3">
+<code>reject</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.4">
+          <p id="section-10-2.4.1">The reviewer refuses the work.<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.5">
+<code>expire</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.6">
+          <p id="section-10-2.6.1">The item reached its parked maximum age without a review decision.<a href="#section-10-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-10-3">A parked item <span class="bcp14">MUST</span> carry a deployment maximum age. The orchestrator
+<span class="bcp14">MUST</span> record the outcome and its authority basis in Orchestration
+Evidence.<a href="#section-10-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="orchestration-evidence">
+<section id="section-11">
+      <h2 id="name-orchestration-evidence">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-orchestration-evidence" class="section-name selfRef">Orchestration Evidence</a>
+      </h2>
+<p id="section-11-1">An Orchestration Evidence record is a JSON object <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> with these
+members:<a href="#section-11-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-11-2">
+        <dt id="section-11-2.1">
+<code>event_id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.2">
+          <p id="section-11-2.2.1"><span class="bcp14">REQUIRED</span>. A unique identifier.<a href="#section-11-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.3">
+<code>mission</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.4">
+          <p id="section-11-2.4.1"><span class="bcp14">REQUIRED</span>. The Mission whose orchestration state changed, as the
+nested <code>mission</code> object (<code>id</code>, <code>issuer</code>, and, when known,
+<code>authority_hash</code>), the same shape as the <code>mission</code> claim of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and the Harness Evidence object
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-11-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.5">
+<code>workflow_id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.6">
+          <p id="section-11-2.6.1"><span class="bcp14">REQUIRED</span>. The workflow or task graph identifier.<a href="#section-11-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.7">
+<code>step_id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.8">
+          <p id="section-11-2.8.1"><span class="bcp14">OPTIONAL</span>. The step affected.<a href="#section-11-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.9">
+<code>mission_state</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.10">
+          <p id="section-11-2.10.1"><span class="bcp14">REQUIRED</span>. The state observed.<a href="#section-11-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.11">
+<code>state_source</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.12">
+          <p id="section-11-2.12.1"><span class="bcp14">REQUIRED</span>. A value from the shared <code>state_source</code> value space defined
+by the Harness profile (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>):
+<code>status</code>, <code>signal</code>, <code>runtime_decision</code>, <code>harness</code>, <code>operator</code>, or a
+deployment-defined source. This profile does not define its own; a
+trigger source from <a href="#trigger-sources" class="auto internal xref">Section 7.1</a> maps to the corresponding
+value (a harness stop decision to <code>harness</code>, an operator action to
+<code>operator</code>).<a href="#section-11-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.13">
+<code>orchestration_decision</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.14">
+          <p id="section-11-2.14.1"><span class="bcp14">REQUIRED</span>. One of <code>suppress</code>, <code>pause</code>, <code>cancel</code>,
+<code>continue_to_safe_point</code>, <code>compensate</code>, <code>human_review</code>, or
+<code>record_only</code>. An unwind plan's
+<code>pre_start_behavior</code>/<code>in_flight_behavior</code> values map to these: both
+<code>cancel_workflow</code> and <code>cancel_if_possible</code> record as <code>cancel</code>,
+<code>continue_to_safe_point</code> carries through unchanged,
+<code>wait_then_review</code> and a review queue record as <code>human_review</code>, and
+<code>suppress</code>/<code>pause</code> carry through unchanged.<a href="#section-11-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.15">
+<code>reason</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.16">
+          <p id="section-11-2.16.1"><span class="bcp14">REQUIRED</span>. A string naming the condition.<a href="#section-11-2.16.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.17">
+<code>occurred_at</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.18">
+          <p id="section-11-2.18.1"><span class="bcp14">REQUIRED</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-11-2.18.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.19">
+<code>linked_evidence</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.20">
+          <p id="section-11-2.20.1"><span class="bcp14">OPTIONAL</span>. An array of runtime enforcement evidence records
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), Harness Evidence,
+or prior Orchestration Evidence identifiers. <span class="bcp14">REQUIRED</span> when
+<code>orchestration_decision</code> is <code>compensate</code>.<a href="#section-11-2.20.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.21">
+<code>outcome_state</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.22">
+          <p id="section-11-2.22.1"><span class="bcp14">OPTIONAL</span>. One of <code>not_dispatched</code>, <code>dispatched_not_committed</code>,
+<code>committed</code>, or <code>unknown</code>.<a href="#section-11-2.22.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.23">
+<code>unwind_plan_hash</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.24">
+          <p id="section-11-2.24.1"><span class="bcp14">REQUIRED</span> on the step's first Orchestration Evidence record. The
+integrity anchor over the step's unwind plan
+(<a href="#unwind-plan-integrity" class="auto internal xref">Section 6.1</a>).<a href="#section-11-2.24.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.25">
+<code>authority_basis</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.26">
+          <p id="section-11-2.26.1"><span class="bcp14">REQUIRED</span> when <code>orchestration_decision</code> is <code>compensate</code>; otherwise
+absent. One of <code>resource_policy</code> or <code>separate_mission</code>
+(<a href="#compensation-authority" class="auto internal xref">Section 9.1</a>).<a href="#section-11-2.26.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.27">
+<code>compensation_action</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.28">
+          <p id="section-11-2.28.1"><span class="bcp14">REQUIRED</span> when <code>orchestration_decision</code> is <code>compensate</code>. The
+deployment-defined compensation action reference.<a href="#section-11-2.28.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.29">
+<code>compensation_outcome</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.30">
+          <p id="section-11-2.30.1"><span class="bcp14">REQUIRED</span> when <code>orchestration_decision</code> is <code>compensate</code>. The outcome
+of the compensation action.<a href="#section-11-2.30.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.31">
+<code>evidence_envelope</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.32">
+          <p id="section-11-2.32.1"><span class="bcp14">OPTIONAL</span>. Integrity protection over the Orchestration Evidence
+object. When present with <code>format</code> <code>jws-compact</code>, it is a JWS
+<span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> Compact Serialization whose payload is the JCS
+<span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical bytes of the object with <code>evidence_envelope</code>
+removed. When present, it <span class="bcp14">MUST</span> identify the signer: the JWS protected
+header <span class="bcp14">MUST</span> carry <code>iss</code> and <code>kid</code> resolvable under deployment policy.<a href="#section-11-2.32.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-11-3">Example:<a href="#section-11-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-11-4">
+<pre>
+{
+  "event_id": "orch_4r9SqLm8tY2p",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "issuer": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
+  "workflow_id": "wf_invoice_recon_2026q3",
+  "step_id": "post_journal_entry",
+  "mission_state": "suspended",
+  "state_source": "status",
+  "orchestration_decision": "human_review",
+  "reason": "external_commitment_dispatched_unknown",
+  "outcome_state": "unknown",
+  "unwind_plan_hash":
+    "sha-256:Qf-0Xqo8QPMN0D3xMOSi2j4qTvaU2U8ne1g8UEBrAIc",
+  "occurred_at": "2026-11-02T08:16:00Z"
+}
+</pre><a href="#section-11-4" class="pilcrow">¶</a>
+</div>
+<p id="section-11-5">A later record for the same step carries the compensate decision.
+Review confirmed that the posting committed before the Mission was
+revoked; a pre-provisioned remedial Mission that is <code>active</code>
+authorizes the reversing entry (<a href="#compensation-authority" class="auto internal xref">Section 9.1</a>). The
+record links the review record above and the original runtime
+enforcement evidence, and omits <code>unwind_plan_hash</code> because it is not
+the step's first record:<a href="#section-11-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-11-6">
+<pre>
+{
+  "event_id": "orch_9wK2nR5vXq7t",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "issuer": "https://as.example.com",
+    "authority_hash":
+      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+  },
+  "workflow_id": "wf_invoice_recon_2026q3",
+  "step_id": "post_journal_entry",
+  "mission_state": "revoked",
+  "state_source": "status",
+  "orchestration_decision": "compensate",
+  "reason": "committed_step_reversed_after_review",
+  "outcome_state": "committed",
+  "linked_evidence": [
+    "orch_4r9SqLm8tY2p",
+    "dec_8K2nP4qV9rL3tY6sB1zN0eF7jB"
+  ],
+  "authority_basis": "separate_mission",
+  "compensation_action": "erp.journal_entry.reverse",
+  "compensation_outcome": "completed",
+  "occurred_at": "2026-11-02T09:03:00Z"
+}
+</pre><a href="#section-11-6" class="pilcrow">¶</a>
+</div>
+<div id="evidence-integrity">
+<section id="section-11.1">
+        <h3 id="name-record-integrity-and-retent">
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-record-integrity-and-retent" class="section-name selfRef">Record Integrity and Retention</a>
+        </h3>
+<p id="section-11.1-1">Orchestration Evidence records are subject to the record integrity and
+retention requirements of the runtime profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), imported here by
+reference: append-only integrity protection under a named mechanism, a
+per-Mission sequence indicator, no raw parameters in the record, and a
+retention window no shorter than the Mission's audit horizon.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="evidence-ordering">
+<section id="section-11.2">
+        <h3 id="name-evidence-ordering">
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-evidence-ordering" class="section-name selfRef">Evidence Ordering</a>
+        </h3>
+<p id="section-11.2-1">An orchestrator <span class="bcp14">MUST</span> include a deployment-defined sequence number or
+otherwise order evidence records when multiple steps are affected by
+the same state transition, matching the runtime profile's per-Mission
+sequencing requirement (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).
+Ordering lets an auditor reconstruct whether the orchestrator stopped
+before or after a given step committed.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="relationship">
+<section id="section-12">
+      <h2 id="name-relationship-to-harness-and">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-relationship-to-harness-and" class="section-name selfRef">Relationship to Harness and Runtime Profiles</a>
+      </h2>
+<p id="section-12-1">The two execution profiles share, rather than duplicate, their common
+machinery: the <code>state_source</code> value space is defined once by the
+Harness profile (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>) and reused
+here (<a href="#orchestration-evidence" class="auto internal xref">Section 11</a>), and the Orchestration Evidence
+<code>mission</code> descriptor is the same shape as the Harness Evidence
+descriptor. A deployment that needs both records emits each at its own
+decision point; neither subsumes the other. The runtime profile
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span> still governs each
+consequential action at the last controllable boundary, whichever
+execution profile stops or unwinds the work.<a href="#section-12-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conformance">
+<section id="section-13">
+      <h2 id="name-conformance">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+      </h2>
+<p id="section-13-1">A conforming Mission-aware orchestrator <span class="bcp14">MUST</span>:<a href="#section-13-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13-2.1">
+          <p id="section-13-2.1.1">assign a reversibility class to each consequential step;<a href="#section-13-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.2">
+          <p id="section-13-2.2.1">record an unwind plan before dispatch;<a href="#section-13-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.3">
+          <p id="section-13-2.3.1">stop new governed work when Mission state is non-active or stale;<a href="#section-13-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.4">
+          <p id="section-13-2.4.1">classify in-flight steps under <a href="#in-flight" class="auto internal xref">Section 8</a>;<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.5">
+          <p id="section-13-2.5.1">apply post-completion behavior for committed or unknown outcomes;<a href="#section-13-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.6">
+          <p id="section-13-2.6.1">emit Orchestration Evidence; and<a href="#section-13-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.7">
+          <p id="section-13-2.7.1">document the policy basis for compensation after Mission termination.<a href="#section-13-2.7.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-13-3">A deployment <span class="bcp14">MAY</span> claim this profile for only some workflows, but it
+<span class="bcp14">MUST</span> identify workflows and paths outside the claim.<a href="#section-13-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-14">
+      <h2 id="name-security-considerations">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<div id="compensation-is-authority-bearing">
+<section id="section-14.1">
+        <h3 id="name-compensation-is-authority-b">
+<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-compensation-is-authority-b" class="section-name selfRef">Compensation Is Authority-Bearing</a>
+        </h3>
+<p id="section-14.1-1">Compensation can itself be consequential. A deployment <span class="bcp14">MUST NOT</span> perform
+compensation by presenting a terminated Mission's authority. It acts
+only under resource policy or a separate active Mission
+(<a href="#compensation-authority" class="auto internal xref">Section 9.1</a>). Otherwise termination could become a path
+to unauthorized remedial actions.<a href="#section-14.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="unknown-outcomes">
+<section id="section-14.2">
+        <h3 id="name-unknown-outcomes">
+<a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-unknown-outcomes" class="section-name selfRef">Unknown Outcomes</a>
+        </h3>
+<p id="section-14.2-1">Distributed systems often cannot prove whether an in-flight action
+committed. Treating unknown as harmless creates audit gaps. This
+profile requires unknown outcomes for high-risk classes to be reviewed
+or handled under stricter policy.<a href="#section-14.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="reversibility-misclassification">
+<section id="section-14.3">
+        <h3 id="name-reversibility-misclassifica">
+<a href="#section-14.3" class="section-number selfRef">14.3. </a><a href="#name-reversibility-misclassifica" class="section-name selfRef">Reversibility Misclassification</a>
+        </h3>
+<p id="section-14.3-1">An orchestrator can evade review by classifying a step as reversible
+when it is not. Resource policy and operation profiles <span class="bcp14">SHOULD</span> define
+minimum reversibility classes for protected operations, and
+orchestrators <span class="bcp14">MUST NOT</span> lower them.<a href="#section-14.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="compensation-loops">
+<section id="section-14.4">
+        <h3 id="name-compensation-loops">
+<a href="#section-14.4" class="section-number selfRef">14.4. </a><a href="#name-compensation-loops" class="section-name selfRef">Compensation Loops</a>
+        </h3>
+<p id="section-14.4-1">Compensation actions can fail and trigger further compensation. A
+deployment <span class="bcp14">SHOULD</span> cap compensation chains and escalate to human review
+when repeated compensation would create additional external effects.<a href="#section-14.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="race-with-runtime-permits">
+<section id="section-14.5">
+        <h3 id="name-race-with-runtime-permits">
+<a href="#section-14.5" class="section-number selfRef">14.5. </a><a href="#name-race-with-runtime-permits" class="section-name selfRef">Race With Runtime Permits</a>
+        </h3>
+<p id="section-14.5-1">A runtime permit obtained before revocation might still be presented
+after the orchestrator learns the Mission is non-active. The
+orchestrator <span class="bcp14">MUST</span> stop dispatching such work, and the runtime PEP <span class="bcp14">MUST</span>
+still enforce its own permit freshness and Mission-state checks.<a href="#section-14.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-15">
+      <h2 id="name-privacy-considerations">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-15-1">Orchestration Evidence can expose workflow structure, business
+milestones, resource names, and failure conditions. Deployments <span class="bcp14">SHOULD</span>
+limit evidence access to audit and operations roles with a need to know
+and avoid recording raw user content when identifiers are sufficient.<a href="#section-15-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana">
+<section id="section-16">
+      <h2 id="name-iana-considerations">
+<a href="#section-16" class="section-number selfRef">16. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-16-1">This document makes no IANA request.<a href="#section-16-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-17">
+      <h2 id="name-references">
+<a href="#section-17" class="section-number selfRef">17. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-17.1">
+        <h3 id="name-normative-references">
+<a href="#section-17.1" class="section-number selfRef">17.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC3339">[RFC3339]</dt>
+        <dd>
+<span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7515">[RFC7515]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Signature (JWS)"</span>, <span class="seriesInfo">RFC 7515</span>, <span class="seriesInfo">DOI 10.17487/RFC7515</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7515">https://www.rfc-editor.org/rfc/rfc7515</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8259">[RFC8259]</dt>
+        <dd>
+<span class="refAuthor">Bray, T., Ed.</span>, <span class="refTitle">"The JavaScript Object Notation (JSON) Data Interchange Format"</span>, <span class="seriesInfo">STD 90</span>, <span class="seriesInfo">RFC 8259</span>, <span class="seriesInfo">DOI 10.17487/RFC8259</span>, <time datetime="2017-12" class="refDate">December 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8259">https://www.rfc-editor.org/rfc/rfc8259</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8785">[RFC8785]</dt>
+      <dd>
+<span class="refAuthor">Rundgren, A.</span>, <span class="refAuthor">Jordan, B.</span>, and <span class="refAuthor">S. Erdtman</span>, <span class="refTitle">"JSON Canonicalization Scheme (JCS)"</span>, <span class="seriesInfo">RFC 8785</span>, <span class="seriesInfo">DOI 10.17487/RFC8785</span>, <time datetime="2020-06" class="refDate">June 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8785">https://www.rfc-editor.org/rfc/rfc8785</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-17.2">
+        <h3 id="name-informative-references">
+<a href="#section-17.2" class="section-number selfRef">17.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-A">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-A-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
+set and defines how Mission termination affects in-flight workflows.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
