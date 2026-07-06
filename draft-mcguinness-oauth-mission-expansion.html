@@ -1583,7 +1583,7 @@ submits a Mission Intent through a Pushed Authorization Request
 (<span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>) using the <code>mission_intent</code> request parameter, per
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. The Mission Intent describes
 the broadened task: it carries the <code>goal</code>, <code>resources</code>, <code>constraints</code>,
-and <code>context</code> the successor needs, including the authority the denied
+and <code>controls</code> the successor needs, including the authority the denied
 action required. The Mission Issuer derives the successor's Authority
 Set from this Intent and bounds it by policy exactly as for any
 Mission; this document adds no authority-derivation rule.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
@@ -1736,7 +1736,7 @@ expansion Mission Intent so the derivation reproduces it.<a href="#section-5-2.2
 </li>
         <li id="section-5-2.3">
           <p id="section-5-2.3.1">Authenticate the Approver and obtain fresh consent for the derived
-Authority Set, satisfying any <code>context.acr</code>, and render the Subject
+Authority Set, satisfying any <code>controls.acr</code>, and render the Subject
 when the Approver is not the Subject, per the issuance profile's
 approval event. The consent disclosure <span class="bcp14">MUST</span> reflect the successor's
 authority being adjudicated. (The experimental progressive

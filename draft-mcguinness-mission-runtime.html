@@ -2618,7 +2618,7 @@ experimental companion (<span>[<a href="#I-D.draft-mcguinness-mission-metering" 
 <p id="section-9-2">What this document fixes is the failure posture. As with all
 constraints, an unmetered or unrecognized consumption bound <span class="bcp14">MUST</span> cause
 refusal rather than silent pass-through: when an applicable entry's
-<code>constraints</code>, or the Mission's <code>context</code>, carries a bound that
+<code>constraints</code>, or the Mission's <code>controls</code>, carries a bound that
 expresses cumulative consumption and the deployment does not meter it,
 the PDP <span class="bcp14">MUST</span> refuse a consequential action governed by it. A deployment
 <span class="bcp14">MUST NOT</span> advertise consumption enforcement it does not perform.<a href="#section-9-2" class="pilcrow">¶</a></p>
@@ -3348,7 +3348,7 @@ any decision-API wire members are defined by the binding
 implementations can confirm they normalize and digest the same way.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <p id="appendix-A-2">Consider a <code>journal-entries.write</code> operation under an ERP
 reconciliation Mission (<code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code>) whose
-applicable entry carries a <code>max_amount_usd</code> ceiling of "500.00". The
+applicable entry carries a <code>max_amount</code> ceiling of 500.00 USD. The
 operation profile fixes the parameter set and normalization: the
 members are <code>amount_usd</code> and <code>source_invoice_id</code>; <code>amount_usd</code> is a
 decimal string with exactly two fractional digits; no defaults are
@@ -3465,7 +3465,8 @@ cites the view of <a href="#policy-view-example" class="auto internal xref">Appe
     "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
-    "constraints": { "max_amount_usd": "500.00" }
+    "constraints": { "max_amount":
+      { "amount": "500.00", "currency": "USD" } }
   },
   "parameter_digest":
     "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",

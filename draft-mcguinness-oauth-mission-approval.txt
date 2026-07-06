@@ -201,8 +201,8 @@ Table of Contents
 
    3.  The approval event executes on the asynchronous review surface.
        That surface MUST authenticate the Approver and MUST satisfy the
-       Mission Intent's context.acr, exactly as the synchronous approval
-       event requires ([I-D.draft-mcguinness-oauth-mission]).
+       Mission Intent's controls.acr, exactly as the synchronous
+       approval event requires ([I-D.draft-mcguinness-oauth-mission]).
 
    4.  The Mission record is created in the active state atomically with
        the approval decision, preserving the issuance profile's
@@ -347,7 +347,7 @@ Table of Contents
 
    The asynchronous review surface is part of the consent path.  It MUST
    meet the approval event's authentication requirements, authenticating
-   the Approver and satisfying the Mission Intent's context.acr
+   the Approver and satisfying the Mission Intent's controls.acr
    (Section 5.1); deferring an approval does not lower the bar the
    synchronous event sets.  Approver routing and notification, how a
    proposed Mission reaches a reviewer and how the reviewer is alerted,

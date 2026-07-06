@@ -447,8 +447,8 @@ Table of Contents
          "resource": "https://erp.example.com",
          "actions": ["invoices.read"],
          "constraints": {
-           "issued_after": "2026-07-01T00:00:00Z",
-           "issued_before": "2026-09-30T23:59:59Z"
+           "resource_issued_after": "2026-07-01T00:00:00Z",
+           "resource_issued_before": "2026-09-30T23:59:59Z"
          } }
      ],
      "cnf": { "jkt": "wZ5nT8qL2xV9rB4mC7sD1yF6jH3kP0aG5uE8oS2iN4w" },
@@ -509,8 +509,8 @@ Table of Contents
    (Section 6).
 
    For example, a child Mission Intent that drops the parent entry's
-   issued_before constraint proposes a relaxation, not a subset.  The
-   Mission Issuer refuses it (Section 8.1) with:
+   resource_issued_before constraint proposes a relaxation, not a
+   subset.  The Mission Issuer refuses it (Section 8.1) with:
 
    {
      "error": "invalid_request",

@@ -126,7 +126,7 @@ Table of Contents
    bound to the approved Mission.  It does not standardize how a
    deployment turns an open-ended task request, such as "resolve this
    billing dispute," into a Mission Intent with a goal, resources, free-
-   text constraints, success criteria, purpose, context, and expiry.
+   text constraints, success criteria, purpose, controls, and expiry.
 
    This document describes that missing shaping step.  A *Mission
    Shaper* is a client-side component that produces a candidate Mission
@@ -387,7 +387,7 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission]): a goal, resources (each an
    absolute URI), optional free-text constraints, optional
    success_criteria, an optional purpose, a mission_expiry, and an
-   optional context object.  The shaper proposes the resources and
+   optional controls object.  The shaper proposes the resources and
    describes the desired bounds in free-text constraints and
    success_criteria; it does not author actions, structured constraints,
    or delegation.  The Mission Issuer derives the actions, structured
@@ -397,7 +397,7 @@ Table of Contents
    Set without interpreting natural language as authority.
 
    The proposal MUST NOT carry an Authority Set or its derived members:
-   actions, structured (object) constraints such as max_amount_usd, or
+   actions, structured (object) constraints such as max_amount, or
    delegation.  Those are products of the Mission Issuer's derivation,
    not inputs from the shaper.  A shaper that has resolved such facts
    (for example, the actions a resource supports, or that the task
@@ -535,7 +535,7 @@ Table of Contents
      |                  | select the closest      | purpose URI.     |
      |                  | registered URI.         |                  |
      +------------------+-------------------------+------------------+
-     | context          | Emit context keys the   | SHOULD NOT emit  |
+     | controls         | Emit controls keys the  | SHOULD NOT emit  |
      |                  | deployment recognizes;  | a key the        |
      |                  | a deployment MAY add    | specific         |
      |                  | further keys it         | deployment does  |
@@ -779,12 +779,13 @@ Table of Contents
    Authority Set the agent will be bound to: a mission_resource_access
    entry for https://erp.example.com with invoices.read constrained to
    the 2026-Q3 period and the acme-corp tenant, and journal-
-   entries.write constrained to max_amount_usd: 500.  The shaper's free-
-   text constraints informed that derivation but granted nothing; the
-   invariants (period, amount, tenant) are what bound an open-ended task
-   whose individual invoices were unknown when the goal was written.
-   Had the request been ambiguous about which entity's invoices, the
-   shaper would have asked alice rather than guess (Section 8.1).
+   entries.write constrained to a max_amount of 500.00 USD.  The
+   shaper's free-text constraints informed that derivation but granted
+   nothing; the invariants (period, amount, tenant) are what bound an
+   open-ended task whose individual invoices were unknown when the goal
+   was written.  Had the request been ambiguous about which entity's
+   invoices, the shaper would have asked alice rather than guess
+   (Section 8.1).
 
 12.  Mission Issuer Handling
 
@@ -977,7 +978,7 @@ Table of Contents
    follows from where that content flows.
 
    The shaper copies or paraphrases prompt content into goal, resources,
-   constraints, and context, which the Mission Issuer renders in a
+   constraints, and controls, which the Mission Issuer renders in a
    consent disclosure the Approver reads and which may be retained in
    the Mission record.  A shaper SHOULD carry into these fields only the
    content needed to describe the task, SHOULD NOT widen resources or

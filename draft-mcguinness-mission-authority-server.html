@@ -1807,7 +1807,7 @@ profile's approval event unchanged
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>):<a href="#section-4-2" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-4-3">
 <li id="section-4-3.1">
-          <p id="section-4-3.1.1">Authenticate the Approver; when the Intent's <code>context.acr</code> is
+          <p id="section-4-3.1.1">Authenticate the Approver; when the Intent's <code>controls.acr</code> is
 present, the authentication <span class="bcp14">MUST</span> be one the deployment's policy
 maps as satisfying the named class (the issuance profile's <code>acr</code>
 mapping rule).<a href="#section-4-3.1.1" class="pilcrow">¶</a></p>
@@ -1884,7 +1884,9 @@ Cache-Control: no-store
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["invoices.read", "journal-entries.write"],
-      "constraints": { "max_amount_usd": "500.00" } }
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" }
+      } }
   ]
 }
 </pre><a href="#section-5-4" class="pilcrow">¶</a>
@@ -3339,7 +3341,9 @@ Cache-Control: no-store
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["invoices.read", "journal-entries.write"],
-      "constraints": { "max_amount_usd": "500.00" } }
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" }
+      } }
   ]
 }
 </pre><a href="#appendix-A.2-2" class="pilcrow">¶</a>

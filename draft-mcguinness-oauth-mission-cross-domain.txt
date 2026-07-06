@@ -696,8 +696,8 @@ Appendix A.  End-to-End Example (Non-Normative)
    https://erp.partner.example.com, so the approved Authority Set
    additionally carries, for that resource, an invoices.read entry
    (delegable to ai_agent actors at depth 1) and a journal-entries.write
-   entry capped at max_amount_usd: 500.  The Mission was recorded active
-   with authority_hash sha-
+   entry capped at a max_amount of 500.00 USD.  The Mission was recorded
+   active with authority_hash sha-
    256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ and intent_hash sha-
    256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY.  The partner ERP is
    behind the Resource AS ras.partner.example.com, so the agent's next
@@ -733,7 +733,8 @@ A.1.  Stage 2: Cross-Domain Projection via ID-JAG (Between Domains)
        { "type": "mission_resource_access",
          "resource": "https://erp.partner.example.com",
          "actions": ["journal-entries.write"],
-         "constraints": { "max_amount_usd": "500.00" } }
+         "constraints": { "max_amount":
+           { "amount": "500.00", "currency": "USD" } } }
      ],
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
@@ -775,7 +776,8 @@ A.2.  Stage 3: The Resource AS Issues a Local Access Token
        { "type": "mission_resource_access",
          "resource": "https://erp.partner.example.com",
          "actions": ["journal-entries.write"],
-         "constraints": { "max_amount_usd": "500.00" } }
+         "constraints": { "max_amount":
+           { "amount": "500.00", "currency": "USD" } } }
      ],
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
@@ -816,8 +818,8 @@ A.3.  Stage 4: The Resource Server Enforces
    The agent calls the ERP Resource Server (erp.partner.example.com)
    with that token.  The Resource Server validates the JWT and the cnf
    binding and enforces the authorization_details whose resource it
-   serves, permitting invoices.read and journal-entries.write up to
-   max_amount_usd: 500 ([I-D.draft-mcguinness-oauth-mission],
+   serves, permitting invoices.read and journal-entries.write up to a
+   max_amount of 500.00 USD ([I-D.draft-mcguinness-oauth-mission],
    Section "Resource Server Enforcement").  It treats the mission claim
    as an audit anchor; holding only this audience's subset of the
    Authority Set, it does not recompute authority_hash.
@@ -827,7 +829,7 @@ A.3.  Stage 4: The Resource Server Enforces
    the runtime profile ([I-D.draft-mcguinness-mission-runtime]) it also
    obtains a point-of-use PDP permit against current Mission state
    before executing.  The baseline bounds the write only by token
-   lifetime and max_amount_usd.
+   lifetime and max_amount.
 
 A.4.  Stage 5: Internal Call Context via Transaction Tokens
 

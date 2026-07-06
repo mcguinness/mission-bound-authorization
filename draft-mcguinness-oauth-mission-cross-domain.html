@@ -1910,7 +1910,8 @@ Mission Intent's <code>resources</code> also names the partner ERP
 <code>https://erp.partner.example.com</code>, so the approved Authority Set
 additionally carries, for that resource, an <code>invoices.read</code> entry
 (delegable to <code>ai_agent</code> actors at depth 1) and a
-<code>journal-entries.write</code> entry capped at <code>max_amount_usd: 500</code>. The
+<code>journal-entries.write</code> entry capped at a <code>max_amount</code> of 500.00
+USD. The
 Mission was recorded <code>active</code> with <code>authority_hash</code>
         <code>sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ</code> and
 <code>intent_hash</code>
@@ -1951,7 +1952,8 @@ audience-scoped authority for the ERP:<a href="#appendix-A.1-1" class="pilcrow">
     { "type": "mission_resource_access",
       "resource": "https://erp.partner.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": "500.00" } }
+      "constraints": { "max_amount":
+        { "amount": "500.00", "currency": "USD" } } }
   ],
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
@@ -2001,7 +2003,8 @@ ID-JAG's <code>exp</code>:<a href="#appendix-A.2-1" class="pilcrow">¶</a></p>
     { "type": "mission_resource_access",
       "resource": "https://erp.partner.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": "500.00" } }
+      "constraints": { "max_amount":
+        { "amount": "500.00", "currency": "USD" } } }
   ],
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
@@ -2045,7 +2048,8 @@ it was minted from, and check its authority is a subset of that grant.<a href="#
 with that token. The Resource Server validates the JWT and the <code>cnf</code>
 binding and enforces the <code>authorization_details</code> whose <code>resource</code> it
 serves, permitting <code>invoices.read</code> and <code>journal-entries.write</code> up to
-<code>max_amount_usd: 500</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+a <code>max_amount</code> of 500.00 USD
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
 "Resource Server Enforcement"). It treats the
 <code>mission</code> claim as an audit anchor; holding only this audience's
 subset of the Authority Set, it does not recompute <code>authority_hash</code>.<a href="#appendix-A.3-1" class="pilcrow">¶</a></p>
@@ -2055,7 +2059,7 @@ deploys the runtime profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) it also obtains a
 point-of-use PDP permit against current Mission state before executing.
 The baseline bounds the write only by token lifetime and
-<code>max_amount_usd</code>.<a href="#appendix-A.3-2" class="pilcrow">¶</a></p>
+<code>max_amount</code>.<a href="#appendix-A.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="stage-5-internal-call-context-via-transaction-tokens">

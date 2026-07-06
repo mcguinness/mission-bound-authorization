@@ -684,7 +684,7 @@ Table of Contents
    mission_expiry:  REQUIRED.  A string.  An RFC 3339 [RFC3339] date-
       time after which the Mission MUST NOT derive tokens.
 
-   context:  OPTIONAL.  An object of machine-actionable bounds.  This
+   controls:  OPTIONAL.  An object of machine-actionable bounds.  This
       document defines the members below; others MAY be added by
       deployments or defined by companion profiles (an extension member
       follows the collision-resistant naming and fail-safe rules of
@@ -712,7 +712,7 @@ Table of Contents
    a budget, call-count, or activity-duration cap): every bound this
    document defines is enforced by a party this document names.  An
    experimental companion defines cumulative consumption bounds as
-   context extension members together with the runtime metering that
+   controls extension members together with the runtime metering that
    enforces them ([I-D.draft-mcguinness-mission-metering]).  The
    following table summarizes which party enforces each bound a Mission
    carries and what holds when that enforcer is absent:
@@ -752,7 +752,7 @@ Table of Contents
      ],
      "purpose": "urn:example:purpose:reconcile",
      "mission_expiry": "2026-12-31T23:59:59Z",
-     "context": {
+     "controls": {
        "acr": "urn:example:acr:mfa",
        "max_derivations": 200
      }
@@ -776,10 +776,11 @@ Table of Contents
    document does not define.  The top level is closed because its
    members feed approval rendering and the intent_hash commitment: an
    undefined member would enter what the Approver reads and what the
-   anchor commits.  Extension data belongs under context, so deployment-
-   defined semantics are explicit and cannot masquerade as core Intent
-   semantics.  This closure also keeps issuer-output members, such as a
-   client-planted authority_hash, from entering through the Intent.
+   anchor commits.  Extension data belongs under controls, so
+   deployment-defined semantics are explicit and cannot masquerade as
+   core Intent semantics.  This closure also keeps issuer-output
+   members, such as a client-planted authority_hash, from entering
+   through the Intent.
 
    A different case is an Intent that is well-formed but from which the
    AS cannot derive a valid Authority Set (for example, an unsupported
@@ -843,7 +844,7 @@ Table of Contents
    *  Bound every derived entry by the Mission Intent: each derived
       entry's resource MUST be one of the Intent's resources values, and
       the derived authority MUST NOT exceed any machine-actionable
-      context bound.  When the Intent carries proposed_authority
+      controls bound.  When the Intent carries proposed_authority
       (Section 4), each derived entry MUST additionally be a subset
       (Section 5.1) of some proposed_authority entry.  Fidelity to the
       Intent's goal and constraints is a SHOULD, auditable through the
@@ -970,7 +971,7 @@ Table of Contents
       SHOULD treat deriving a family as high-risk breadth.
 
    constraints:  OPTIONAL.  An object.  Machine-actionable per-resource
-      bounds (for example, max_amount_usd).  A member name defined as a
+      bounds (for example, max_amount).  A member name defined as a
       Common Constraint (Section 5.2) has shared semantics across
       deployments; any other name is deployment-defined.
 
@@ -1004,17 +1005,18 @@ Table of Contents
       is carried unchanged.
 
    Example Authority Set (the read entry is delegable to depth 2 and
-   bounded to a Q3 issuance window by the issued_after and issued_before
-   Common Constraints (Section 5.2); the write entry carries no
-   delegation and so is non-delegable, because delegation is per entry):
+   bounded to a Q3 issuance window by the resource_issued_after and
+   resource_issued_before Common Constraints (Section 5.2); the write
+   entry carries no delegation and so is non-delegable, because
+   delegation is per entry):
 
    [
      { "type": "mission_resource_access",
        "resource": "https://erp.example.com",
        "actions": ["invoices.read"],
        "constraints": {
-         "issued_after": "2026-07-01T00:00:00Z",
-         "issued_before": "2026-09-30T23:59:59Z"
+         "resource_issued_after": "2026-07-01T00:00:00Z",
+         "resource_issued_before": "2026-09-30T23:59:59Z"
        },
        "delegation": {
          "max_depth": 2,
@@ -1023,7 +1025,9 @@ Table of Contents
      { "type": "mission_resource_access",
        "resource": "https://erp.example.com",
        "actions": ["journal-entries.write"],
-       "constraints": { "max_amount_usd": "500.00" } }
+       "constraints": {
+         "max_amount": { "amount": "500.00", "currency": "USD" }
+       } }
    ]
 
 5.1.  Subset Rule
@@ -1109,21 +1113,28 @@ Table of Contents
 
    This document defines the initial Common Constraints:
 
-   *  max_amount_usd (string containing a decimal number): a per-action
-      ceiling, in US dollars, on a monetary amount.  Subset: no broader
-      when the value is less than or equal to the reference value,
-      compared in decimal value space.  Intersection: the minimum of the
-      two values.
+   *  max_amount (object): a per-action ceiling on a monetary amount.
+      The value is an object with two members: amount (REQUIRED, a
+      string containing a decimal number) and currency (REQUIRED, an ISO
+      4217 currency code).  Subset: no broader when the currency values
+      are equal and the candidate amount is less than or equal to the
+      reference amount, compared in decimal value space; differing
+      currencies fail the comparison (no conversion is defined).
+      Intersection: when the currency values are equal, the value with
+      the smaller amount; differing currencies have no intersection and
+      the combination fails.
 
-   *  issued_after (string, an RFC 3339 [RFC3339] date-time): the action
-      applies only to resources issued at or after this instant.
-      Subset: no broader when greater than or equal to the reference.
-      Intersection: the later instant.
+   *  resource_issued_after (string, an RFC 3339 [RFC3339] date-time):
+      the action applies only to resources issued at or after this
+      instant.  Subset: no broader when greater than or equal to the
+      reference.  Intersection: the later instant.
 
-   *  issued_before (string, an RFC 3339 [RFC3339] date-time): the
-      action applies only to resources issued at or before this instant.
-      Subset: no broader when less than or equal to the reference.
-      Intersection: the earlier instant.
+   *  resource_issued_before (string, an RFC 3339 [RFC3339] date-time):
+      the action applies only to resources issued at or before this
+      instant.  Subset: no broader when less than or equal to the
+      reference.  Intersection: the earlier instant.  The resource_
+      qualifier in both names marks that the window bounds resource
+      issuance, not token issuance.
 
    *  tenant (string): the action applies only to resources of the named
       tenant.  Subset: no broader when equal to the reference value.
@@ -1136,26 +1147,26 @@ Table of Contents
       narrower value when one is equal to or a subdomain of the other;
       otherwise there is no intersection and the combination fails.
 
-   These comparisons are in value space, not lexical: max_amount_usd
-   values are compared as the decimal numbers the strings contain, so
-   "500", "500.0", and "500.00" are equal; issued_after and
-   issued_before values are compared as the instants they denote after
-   normalization to UTC, so two RFC 3339 representations of the same
-   instant that differ only in timezone offset or trailing subsecond
-   zeros are equal; recipient_domain values are compared as DNS names,
-   case-insensitively and on whole labels, so mail.example.com is within
-   example.com and notexample.com is not.  A Common Constraint
-   definition MUST fix its subset and intersection in value-space terms,
-   so that independent deployments compute the same result for the same
-   values and the subset rule of Section 5.1 is reproducible.
+   These comparisons are in value space, not lexical: max_amount amount
+   members are compared as the decimal numbers the strings contain, so
+   "500", "500.0", and "500.00" are equal; resource_issued_after and
+   resource_issued_before values are compared as the instants they
+   denote after normalization to UTC, so two RFC 3339 representations of
+   the same instant that differ only in timezone offset or trailing
+   subsecond zeros are equal; recipient_domain values are compared as
+   DNS names, case-insensitively and on whole labels, so
+   mail.example.com is within example.com and notexample.com is not.  A
+   Common Constraint definition MUST fix its subset and intersection in
+   value-space terms, so that independent deployments compute the same
+   result for the same values and the subset rule of Section 5.1 is
+   reproducible.
 
    A numeric constraint value MUST lie within the range JCS [RFC8785]
-   serializes exactly.  Monetary constraints avoid that hazard with
-   string-decimal syntax: max_amount_usd is a string containing a
-   decimal number, and a future Common Constraint for a monetary value
-   SHOULD likewise use string-decimal (paired with an ISO 4217 currency
-   code where the name does not fix the currency) rather than a JSON
-   number.
+   serializes exactly.  Monetary amounts avoid that hazard by
+   construction: max_amount carries its amount as a string containing a
+   decimal number, paired with an ISO 4217 currency code, and a future
+   Common Constraint for a monetary value SHOULD reuse this shape rather
+   than a JSON number.
 
 5.3.  Other Authorization Details Types
 
@@ -1240,11 +1251,11 @@ Table of Contents
 
    *  constraints carry machine-actionable bounds on a tool's arguments,
       for example an amount ceiling or a recipient domain (the
-      max_amount_usd and recipient_domain Common Constraints,
-      Section 5.2).  Like all constraints, they are committed by
-      authority_hash and carried to the point of use, but they are
-      evaluated against the concrete call arguments by a runtime
-      enforcement layer, not at issuance (Section 15.5).
+      max_amount and recipient_domain Common Constraints, Section 5.2).
+      Like all constraints, they are committed by authority_hash and
+      carried to the point of use, but they are evaluated against the
+      concrete call arguments by a runtime enforcement layer, not at
+      issuance (Section 15.5).
 
    For example, a Mission authorized to read invoices and post small
    adjustments through a finance MCP server, and to send messages
@@ -1254,7 +1265,9 @@ Table of Contents
      { "type": "mission_resource_access",
        "resource": "https://finance.example.com/mcp",
        "actions": ["query_invoices", "post_adjustment"],
-       "constraints": { "max_amount_usd": "500.00" } },
+       "constraints": {
+         "max_amount": { "amount": "500.00", "currency": "USD" }
+       } },
      { "type": "mission_resource_access",
        "resource": "https://mail.example.com/mcp",
        "actions": ["send_message"],
@@ -1301,7 +1314,7 @@ Table of Contents
 
    At the approval event the AS MUST, in order:
 
-   1.  Authenticate the Approver.  If the Mission Intent's context.acr
+   1.  Authenticate the Approver.  If the Mission Intent's controls.acr
        is present, the authentication MUST satisfy it.
 
    2.  Establish the Subject: the principal the task is for, recorded as
@@ -1319,7 +1332,7 @@ Table of Contents
 
    3.  Render for consent the derived Authority Set in human-meaningful
        terms, with the goal, constraints, mission_expiry, and any
-       context bounds (notably max_derivations) as context.  The object
+       controls bounds (notably max_derivations) as context.  The object
        the Approver consents to is the *derived Authority Set*, what the
        agent may actually do, not the goal or Mission Intent: derivation
        is local policy, and nothing commits that the derived authority
@@ -1353,13 +1366,13 @@ Table of Contents
    actions under the deployment's classification, or a consumption bound
    ([I-D.draft-mcguinness-mission-metering]).  The approval
    authentication for such a Mission MUST meet that minimum, and
-   context.acr can raise the required strength but never lower it below
+   controls.acr can raise the required strength but never lower it below
    the floor.  The material notices of the consent-evidence profile
    identify these same high-risk classes
    ([I-D.draft-mcguinness-oauth-mission-consent-evidence]).
 
    An Approver who declines, and an Approver whose authentication cannot
-   satisfy context.acr or the declared approval-strength floor, yield
+   satisfy controls.acr or the declared approval-strength floor, yield
    access_denied on the authorization response ([RFC6749]).  A token-
    endpoint resource value outside the Authority Set yields
    invalid_target ([RFC8707]).
@@ -1605,8 +1618,8 @@ Table of Contents
          "resource": "https://erp.example.com",
          "actions": ["invoices.read"],
          "constraints": {
-           "issued_after": "2026-07-01T00:00:00Z",
-           "issued_before": "2026-09-30T23:59:59Z"
+           "resource_issued_after": "2026-07-01T00:00:00Z",
+           "resource_issued_before": "2026-09-30T23:59:59Z"
          },
          "delegation": {
            "max_depth": 2,
@@ -1615,7 +1628,9 @@ Table of Contents
        { "type": "mission_resource_access",
          "resource": "https://erp.example.com",
          "actions": ["journal-entries.write"],
-         "constraints": { "max_amount_usd": "500.00" } }
+         "constraints": {
+           "max_amount": { "amount": "500.00", "currency": "USD" }
+         } }
      ],
      "authority_hash":
        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
@@ -1738,8 +1753,8 @@ Table of Contents
          "resource": "https://erp.example.com",
          "actions": ["invoices.read"],
          "constraints": {
-           "issued_after": "2026-07-01T00:00:00Z",
-           "issued_before": "2026-09-30T23:59:59Z"
+           "resource_issued_after": "2026-07-01T00:00:00Z",
+           "resource_issued_before": "2026-09-30T23:59:59Z"
          },
          "delegation": {
            "max_depth": 2,
@@ -1754,7 +1769,7 @@ Table of Contents
    time but not while the Mission is still active.  This requirement
    matches the refresh-token guidance of [RFC9700] Section 2.2.2.
 
-   The authentication context of the approval event (context.acr,
+   The authentication context of the approval event (controls.acr,
    Section 4) describes the Approver at approval time and is recorded on
    the Mission, not on derived tokens; a derived token's authority comes
    from the Mission, not from a fresh authentication, so this document
@@ -1821,8 +1836,8 @@ Table of Contents
          "resource": "https://erp.example.com",
          "actions": ["invoices.read"],
          "constraints": {
-           "issued_after": "2026-07-01T00:00:00Z",
-           "issued_before": "2026-09-30T23:59:59Z"
+           "resource_issued_after": "2026-07-01T00:00:00Z",
+           "resource_issued_before": "2026-09-30T23:59:59Z"
          },
          "delegation": {
            "max_depth": 2,
@@ -1831,7 +1846,9 @@ Table of Contents
        { "type": "mission_resource_access",
          "resource": "https://erp.example.com",
          "actions": ["journal-entries.write"],
-         "constraints": { "max_amount_usd": "500.00" } }
+         "constraints": {
+           "max_amount": { "amount": "500.00", "currency": "USD" }
+         } }
      ],
      "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
      "mission": {
@@ -1980,7 +1997,7 @@ Table of Contents
    so a revocation serialized before an issuance is honored by that
    issuance.
 
-   When the Mission Intent sets context.max_derivations, the AS MUST
+   When the Mission Intent sets controls.max_derivations, the AS MUST
    maintain a per-Mission count of *derivations* and MUST refuse with
    invalid_grant any derivation that would exceed the bound.  A
    derivation is one issuance operation the origin AS performs for a
@@ -2153,8 +2170,8 @@ Table of Contents
          "resource": "https://erp.example.com",
          "actions": ["invoices.read"],
          "constraints": {
-           "issued_after": "2026-07-01T00:00:00Z",
-           "issued_before": "2026-09-30T23:59:59Z"
+           "resource_issued_after": "2026-07-01T00:00:00Z",
+           "resource_issued_before": "2026-09-30T23:59:59Z"
          },
          "delegation": {
            "max_depth": 2,
@@ -2163,7 +2180,9 @@ Table of Contents
        { "type": "mission_resource_access",
          "resource": "https://erp.example.com",
          "actions": ["journal-entries.write"],
-         "constraints": { "max_amount_usd": "500.00" } }
+         "constraints": {
+           "max_amount": { "amount": "500.00", "currency": "USD" }
+         } }
      ],
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
@@ -2395,8 +2414,8 @@ Table of Contents
          "resource": "https://erp.example.com",
          "actions": ["invoices.read"],
          "constraints": {
-           "issued_after": "2026-07-01T00:00:00Z",
-           "issued_before": "2026-09-30T23:59:59Z"
+           "resource_issued_after": "2026-07-01T00:00:00Z",
+           "resource_issued_before": "2026-09-30T23:59:59Z"
          },
          "delegation": {
            "max_depth": 2,
@@ -2881,15 +2900,16 @@ Table of Contents
 17.7.  Common Constraints
 
    This document creates no Common Constraints registry.  The Common
-   Constraints it defines (max_amount_usd, issued_after, issued_before,
-   tenant, recipient_domain) are specified in Section 5.2, and a further
-   Common Constraint is defined by specification: it fixes a name
-   matching ^[A-Za-z0-9_.:-]+$, its JSON [RFC8259] value syntax, its
-   subset rule, and its intersection rule, in value-space terms
-   (Section 5.2).  Names are kept collision-free by the same convention
-   the rest of this document uses: a specification-defined name is
-   coordinated within this document family, and any other name is
-   collision-resistant or remains deployment-defined (Section 5.2).
+   Constraints it defines (max_amount, resource_issued_after,
+   resource_issued_before, tenant, recipient_domain) are specified in
+   Section 5.2, and a further Common Constraint is defined by
+   specification: it fixes a name matching ^[A-Za-z0-9_.:-]+$, its JSON
+   [RFC8259] value syntax, its subset rule, and its intersection rule,
+   in value-space terms (Section 5.2).  Names are kept collision-free by
+   the same convention the rest of this document uses: a specification-
+   defined name is coordinated within this document family, and any
+   other name is collision-resistant or remains deployment-defined
+   (Section 5.2).
 
    Should the set of interoperable Common Constraints grow beyond what
    specification coordination bears, a future revision can create a
@@ -3187,7 +3207,7 @@ A.2.  Stage 1: Mission Creation
      ],
      "purpose": "urn:example:purpose:reconcile",
      "mission_expiry": "2026-12-31T23:59:59Z",
-     "context": {
+     "controls": {
        "acr": "urn:example:acr:mfa",
        "max_derivations": 200
      }
@@ -3201,8 +3221,8 @@ A.2.  Stage 1: Mission Creation
        "resource": "https://erp.example.com",
        "actions": ["invoices.read"],
        "constraints": {
-         "issued_after": "2026-07-01T00:00:00Z",
-         "issued_before": "2026-09-30T23:59:59Z"
+         "resource_issued_after": "2026-07-01T00:00:00Z",
+         "resource_issued_before": "2026-09-30T23:59:59Z"
        },
        "delegation": {
          "max_depth": 2,
@@ -3211,7 +3231,9 @@ A.2.  Stage 1: Mission Creation
      { "type": "mission_resource_access",
        "resource": "https://erp.example.com",
        "actions": ["journal-entries.write"],
-       "constraints": { "max_amount_usd": "500.00" } }
+       "constraints": {
+         "max_amount": { "amount": "500.00", "currency": "USD" }
+       } }
    ]
 
    After approval, the AS records Mission
@@ -3240,8 +3262,8 @@ A.3.  Stage 2: Mission-Bound Token Issuance
          "resource": "https://erp.example.com",
          "actions": ["invoices.read"],
          "constraints": {
-           "issued_after": "2026-07-01T00:00:00Z",
-           "issued_before": "2026-09-30T23:59:59Z"
+           "resource_issued_after": "2026-07-01T00:00:00Z",
+           "resource_issued_before": "2026-09-30T23:59:59Z"
          },
          "delegation": {
            "max_depth": 2,
@@ -3250,7 +3272,9 @@ A.3.  Stage 2: Mission-Bound Token Issuance
        { "type": "mission_resource_access",
          "resource": "https://erp.example.com",
          "actions": ["journal-entries.write"],
-         "constraints": { "max_amount_usd": "500.00" } }
+         "constraints": {
+           "max_amount": { "amount": "500.00", "currency": "USD" }
+         } }
      ],
      "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
      "mission": {
@@ -3274,9 +3298,9 @@ A.4.  Stage 3: The Resource Server Enforces
    token.  The Resource Server validates the JWT and the cnf binding and
    enforces the authorization_details whose resource it serves,
    permitting invoices.read within the Q3 issuance window and journal-
-   entries.write up to max_amount_usd: "500.00" (Section 8.2).  It
-   treats the mission claim as audit and correlation context and makes
-   no call to the AS.
+   entries.write up to the max_amount ceiling of 500.00 USD
+   (Section 8.2).  It treats the mission claim as audit and correlation
+   context and makes no call to the AS.
 
    This is stateless enforcement from the token alone. journal-
    entries.write is a consequential write, so where the deployment runs
@@ -3298,9 +3322,10 @@ Appendix B.  Integrity Anchor Test Vectors
    exact JCS [RFC8785] output: a single line, UTF-8, no whitespace.  It
    is shown here wrapped only for layout; remove the layout line breaks,
    adding no characters, to recover the canonical form.  Note that JCS
-   sorts object member names (so iss precedes typ precedes value, and
-   within an entry actions precedes constraints precedes resource
-   precedes type) and preserves array order.
+   sorts object member names (so iss precedes typ precedes value, within
+   an entry actions precedes constraints precedes resource precedes
+   type, and within max_amount amount precedes currency) and preserves
+   array order.
 
    intent_hash, over this Mission Intent as the envelope value with typ
    mission-intent:
@@ -3329,7 +3354,9 @@ Appendix B.  Integrity Anchor Test Vectors
      { "type": "mission_resource_access",
        "resource": "https://erp.example.com",
        "actions": ["journal-entries.write"],
-       "constraints": { "max_amount_usd": "500.00" } }
+       "constraints": {
+         "max_amount": { "amount": "500.00", "currency": "USD" }
+       } }
    ]
 
    Canonical bytes of the envelope:
@@ -3337,10 +3364,10 @@ Appendix B.  Integrity Anchor Test Vectors
    {"iss":"https://as.example.com","typ":"mission-authority-set","value":[{
    "actions":["invoices.read"],"resource":"https://erp.example.com","type":
    "mission_resource_access"},{"actions":["journal-entries.write"],"constra
-   ints":{"max_amount_usd":"500.00"},"resource":"https://erp.example.com","
-   type":"mission_resource_access"}]}
+   ints":{"max_amount":{"amount":"500.00","currency":"USD"}},"resource":"ht
+   tps://erp.example.com","type":"mission_resource_access"}]}
 
-   authority_hash = sha-256:H3xcKuSglGecACyY2qGQYunTGqIalyeXS1Qr0dCcgjs
+   authority_hash = sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro
 
    An implementation that canonicalizes the same value under the same
    typ and iss, computes SHA-256, and encodes as sha-256: followed by

@@ -1696,7 +1696,8 @@ entry, with <code>jti</code> <code>at_5v9Kq2mR7xW4nP8sL1zT6</code>. The issued
   { "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
-    "constraints": { "max_amount_usd": "500.00" } }
+    "constraints":
+      { "max_amount": { "amount": "500.00", "currency": "USD" } } }
 ]
 </pre><a href="#section-6.2.2.1-2" class="pilcrow">¶</a>
 </div>
@@ -1714,7 +1715,7 @@ The record:<a href="#section-6.2.2.1-3" class="pilcrow">¶</a></p>
     "sha-256:V1Wbh4Z3wK39B_YmzHlvkGr7hEA1rUoJMuj00y0q-eE",
   "aud": "https://erp.example.com",
   "entries_digest":
-    "sha-256:z8NZZchM248xmpIbN_nSJ_eH9i3mM5_4xjZzSuoHq-U",
+    "sha-256:Hilv4npLEWlcp2y5z7xcACgXxRhx-LO6dqs5AX0xL8o",
   "issued_at": "2026-10-15T14:32:12Z"
 }
 </pre><a href="#section-6.2.2.1-4" class="pilcrow">¶</a>
@@ -1722,15 +1723,15 @@ The record:<a href="#section-6.2.2.1-3" class="pilcrow">¶</a></p>
 <p id="section-6.2.2.1-5">Its JCS canonical bytes (one line; breaks are for display only):<a href="#section-6.2.2.1-5" class="pilcrow">¶</a></p>
 <div class="lang-text sourcecode" id="section-6.2.2.1-6">
 <pre>
-{"aud":"https://erp.example.com","entries_digest":"sha-256:z8NZZc
-hM248xmpIbN_nSJ_eH9i3mM5_4xjZzSuoHq-U","issued_at":"2026-10-15T14
+{"aud":"https://erp.example.com","entries_digest":"sha-256:Hilv4n
+pLEWlcp2y5z7xcACgXxRhx-LO6dqs5AX0xL8o","issued_at":"2026-10-15T14
 :32:12Z","mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","ori
 gin":"https://as.example.com","token_digest":"sha-256:V1Wbh4Z3wK3
 9B_YmzHlvkGr7hEA1rUoJMuj00y0q-eE"}
 </pre><a href="#section-6.2.2.1-6" class="pilcrow">¶</a>
 </div>
 <p id="section-6.2.2.1-7">The committed digest is the SHA-256 of those bytes; its base64url
-form is <code>eg-h1Y4d1qhMb-9OIzXty16A6IXAKU2PiaTnJNz1SxA</code>. The Signed
+form is <code>IojbCMPM7a14NDoAbw3VoAbbWTauyBTGk55rCGBS6Ek</code>. The Signed
 Statement carries the digest bytes inline as its payload, with
 <code>preimage-content-type</code> <code>application/mission-derivation-record+json</code>
 and the same <code>iss</code> and <code>sub</code> as <a href="#transition-vector" class="auto internal xref">Section 6.2.1.1</a>.<a href="#section-6.2.2.1-7" class="pilcrow">¶</a></p>

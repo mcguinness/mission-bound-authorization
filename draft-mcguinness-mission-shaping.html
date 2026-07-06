@@ -1326,7 +1326,7 @@ Set, how an Approver consents, and how issued tokens are bound to the
 approved Mission. It does not standardize how a deployment turns an
 open-ended task request, such as "resolve this billing dispute," into a
 Mission Intent with a goal, resources, free-text constraints, success
-criteria, purpose, context, and expiry.<a href="#section-1-1" class="pilcrow">¶</a></p>
+criteria, purpose, controls, and expiry.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">This document describes that missing shaping step. A <strong>Mission Shaper</strong>
 is a client-side component that produces a candidate Mission Intent
 before the issuance profile's approval flow begins. The shaper can be a
@@ -1655,7 +1655,7 @@ issuance profile's <code>mission_intent</code> object
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): a <code>goal</code>, <code>resources</code> (each an
 absolute URI), optional free-text <code>constraints</code>, optional
 <code>success_criteria</code>, an optional <code>purpose</code>, a <code>mission_expiry</code>, and an
-optional <code>context</code> object. The shaper proposes the resources and
+optional <code>controls</code> object. The shaper proposes the resources and
 describes the desired bounds in free-text <code>constraints</code> and
 <code>success_criteria</code>; it does not author actions, structured constraints,
 or delegation. The Mission Issuer derives the actions, structured
@@ -1664,7 +1664,7 @@ computes (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref"
 bounded enough for the Mission Issuer to derive an Authority Set without
 interpreting natural language as authority.<a href="#section-7-1" class="pilcrow">¶</a></p>
 <p id="section-7-2">The proposal <span class="bcp14">MUST NOT</span> carry an Authority Set or its derived members:
-<code>actions</code>, structured (object) constraints such as <code>max_amount_usd</code>, or
+<code>actions</code>, structured (object) constraints such as <code>max_amount</code>, or
 <code>delegation</code>. Those are products of the Mission Issuer's derivation, not
 inputs from the shaper. A shaper that has resolved such facts (for
 example, the actions a resource supports, or that the task implies
@@ -1812,9 +1812,9 @@ Mission Issuer derives the Authority Set from them.<a href="#section-7.3-1" clas
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>context</code>
+                <code>controls</code>
 </td>
-              <td class="text-left" rowspan="1" colspan="1">Emit <code>context</code> keys the deployment recognizes; a deployment <span class="bcp14">MAY</span> add further keys it defines.</td>
+              <td class="text-left" rowspan="1" colspan="1">Emit <code>controls</code> keys the deployment recognizes; a deployment <span class="bcp14">MAY</span> add further keys it defines.</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <span class="bcp14">SHOULD NOT</span> emit a key the specific deployment does not recognize; an unrecognized key risks rejection of the Intent.</td>
             </tr>
@@ -2155,7 +2155,7 @@ shaper, validates it, narrows it to policy, and derives the concrete
 Authority Set the agent will be bound to: a <code>mission_resource_access</code>
 entry for <code>https://erp.example.com</code> with <code>invoices.read</code> constrained to
 the 2026-Q3 period and the acme-corp tenant, and <code>journal-entries.write</code>
-constrained to <code>max_amount_usd: 500</code>. The shaper's free-text
+constrained to a <code>max_amount</code> of 500.00 USD. The shaper's free-text
 <code>constraints</code> informed that derivation but granted nothing; the
 invariants (period, amount, tenant) are what bound an open-ended task
 whose individual invoices were unknown when the goal was written. Had
@@ -2401,7 +2401,7 @@ personal data, business-confidential content, or free-form expression,
 becomes structured artifacts. The privacy surface follows
 from where that content flows.<a href="#section-16-1" class="pilcrow">¶</a></p>
 <p id="section-16-2">The shaper copies or paraphrases prompt content into <code>goal</code>,
-<code>resources</code>, <code>constraints</code>, and <code>context</code>, which the Mission Issuer
+<code>resources</code>, <code>constraints</code>, and <code>controls</code>, which the Mission Issuer
 renders in a consent disclosure the Approver reads and which may be
 retained in the Mission record. A shaper <span class="bcp14">SHOULD</span> carry into these fields
 only the content needed to describe the task, <span class="bcp14">SHOULD NOT</span> widen

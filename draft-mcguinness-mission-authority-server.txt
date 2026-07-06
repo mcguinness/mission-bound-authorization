@@ -456,7 +456,7 @@ Table of Contents
    profile's approval event unchanged
    ([I-D.draft-mcguinness-oauth-mission]):
 
-   1.  Authenticate the Approver; when the Intent's context.acr is
+   1.  Authenticate the Approver; when the Intent's controls.acr is
        present, the authentication MUST be one the deployment's policy
        maps as satisfying the named class (the issuance profile's acr
        mapping rule).
@@ -516,7 +516,9 @@ Table of Contents
        { "type": "mission_resource_access",
          "resource": "https://erp.example.com",
          "actions": ["invoices.read", "journal-entries.write"],
-         "constraints": { "max_amount_usd": "500.00" } }
+         "constraints": {
+           "max_amount": { "amount": "500.00", "currency": "USD" }
+         } }
      ]
    }
 
@@ -1704,7 +1706,9 @@ A.2.  Poll to Approved
        { "type": "mission_resource_access",
          "resource": "https://erp.example.com",
          "actions": ["invoices.read", "journal-entries.write"],
-         "constraints": { "max_amount_usd": "500.00" } }
+         "constraints": {
+           "max_amount": { "amount": "500.00", "currency": "USD" }
+         } }
      ]
    }
 

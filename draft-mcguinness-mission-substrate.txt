@@ -328,7 +328,7 @@ Table of Contents
    steps, whatever its native ceremony:
 
    1.  authenticate the Approver, at the deployment's authentication
-       floor and satisfying the Intent's context.acr where present;
+       floor and satisfying the Intent's controls.acr where present;
 
    2.  establish the Subject, never from unauthenticated client input;
 

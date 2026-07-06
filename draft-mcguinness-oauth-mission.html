@@ -2113,7 +2113,7 @@ date-time after which the Mission <span class="bcp14">MUST NOT</span> derive tok
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-3.15">
-<code>context</code>:</dt>
+<code>controls</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-4-3.16">
           <p id="section-4-3.16.1"><span class="bcp14">OPTIONAL</span>. An object of machine-actionable bounds. This
 document defines the members below; others <span class="bcp14">MAY</span> be added by
@@ -2154,7 +2154,7 @@ locally are not counted by the origin, which cannot observe them
 budget, call-count, or activity-duration cap): every bound this
 document defines is enforced by a party this document names. An
 experimental companion defines cumulative consumption bounds as
-<code>context</code> extension members together with the runtime metering that
+<code>controls</code> extension members together with the runtime metering that
 enforces them (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). The
 following table summarizes which party enforces each bound a Mission
 carries and what holds when that enforcer is absent:<a href="#section-4-4" class="pilcrow">¶</a></p>
@@ -2206,7 +2206,7 @@ carries and what holds when that enforcer is absent:<a href="#section-4-4" class
   ],
   "purpose": "urn:example:purpose:reconcile",
   "mission_expiry": "2026-12-31T23:59:59Z",
-  "context": {
+  "controls": {
     "acr": "urn:example:acr:mfa",
     "max_derivations": 200
   }
@@ -2233,7 +2233,7 @@ member definitions, <span class="bcp14">MUST</span> refuse the request with <cod
 document does not define. The top level is closed because its members
 feed approval rendering and the <code>intent_hash</code> commitment: an undefined
 member would enter what the Approver reads and what the anchor
-commits. Extension data belongs under <code>context</code>, so deployment-defined
+commits. Extension data belongs under <code>controls</code>, so deployment-defined
 semantics are explicit and cannot masquerade as core Intent semantics.
 This closure also keeps issuer-output members, such as a client-planted
 <code>authority_hash</code>, from entering through the Intent.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
@@ -2301,7 +2301,7 @@ and deployment policy.<a href="#section-5-2.1.1" class="pilcrow">¶</a></p>
         <li class="normal" id="section-5-2.2">
           <p id="section-5-2.2.1">Bound every derived entry by the Mission Intent: each derived entry's
 <code>resource</code> <span class="bcp14">MUST</span> be one of the Intent's <code>resources</code> values, and the
-derived authority <span class="bcp14">MUST NOT</span> exceed any machine-actionable <code>context</code>
+derived authority <span class="bcp14">MUST NOT</span> exceed any machine-actionable <code>controls</code>
 bound. When the Intent carries <code>proposed_authority</code>
 (<a href="#mission-intent" class="auto internal xref">Section 4</a>), each derived entry <span class="bcp14">MUST</span> additionally be a
 subset (<a href="#subset" class="auto internal xref">Section 5.1</a>) of some <code>proposed_authority</code> entry. Fidelity to
@@ -2445,7 +2445,7 @@ breadth it is: all actions under the name, not one action. An AS
 <code>constraints</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-5-10.10">
           <p id="section-5-10.10.1"><span class="bcp14">OPTIONAL</span>. An object. Machine-actionable per-resource
-bounds (for example, <code>max_amount_usd</code>). A member name defined as a
+bounds (for example, <code>max_amount</code>). A member name defined as a
 Common Constraint (<a href="#common-constraints" class="auto internal xref">Section 5.2</a>) has shared semantics
 across deployments; any other name is deployment-defined.<a href="#section-5-10.10.1" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -2498,9 +2498,9 @@ understand is carried unchanged.<a href="#section-5-10.12.3" class="pilcrow">¶<
       <dd class="break"></dd>
 </dl>
 <p id="section-5-11">Example Authority Set (the read entry is delegable to depth 2 and
-bounded to a Q3 issuance window by the <code>issued_after</code> and
-<code>issued_before</code> Common Constraints (<a href="#common-constraints" class="auto internal xref">Section 5.2</a>); the
-write entry carries no <code>delegation</code> and so is non-delegable, because
+bounded to a Q3 issuance window by the <code>resource_issued_after</code> and
+<code>resource_issued_before</code> Common Constraints (<a href="#common-constraints" class="auto internal xref">Section 5.2</a>);
+the write entry carries no <code>delegation</code> and so is non-delegable, because
 <code>delegation</code> is per entry):<a href="#section-5-11" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-5-12">
 <pre>
@@ -2509,8 +2509,8 @@ write entry carries no <code>delegation</code> and so is non-delegable, because
     "resource": "https://erp.example.com",
     "actions": ["invoices.read"],
     "constraints": {
-      "issued_after": "2026-07-01T00:00:00Z",
-      "issued_before": "2026-09-30T23:59:59Z"
+      "resource_issued_after": "2026-07-01T00:00:00Z",
+      "resource_issued_before": "2026-09-30T23:59:59Z"
     },
     "delegation": {
       "max_depth": 2,
@@ -2519,7 +2519,9 @@ write entry carries no <code>delegation</code> and so is non-delegable, because
   { "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
-    "constraints": { "max_amount_usd": "500.00" } }
+    "constraints": {
+      "max_amount": { "amount": "500.00", "currency": "USD" }
+    } }
 ]
 </pre><a href="#section-5-12" class="pilcrow">¶</a>
 </div>
@@ -2620,22 +2622,30 @@ deployment; a consumer that does not recognize it <span class="bcp14">MUST</span
 <p id="section-5.2-5">This document defines the initial Common Constraints:<a href="#section-5.2-5" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-5.2-6.1">
-            <p id="section-5.2-6.1.1"><code>max_amount_usd</code> (string containing a decimal number): a per-action
-ceiling, in US dollars, on a monetary amount. Subset: no broader when
-the value is less than or equal to the reference value, compared in
-decimal value space. Intersection: the minimum of the two values.<a href="#section-5.2-6.1.1" class="pilcrow">¶</a></p>
+            <p id="section-5.2-6.1.1"><code>max_amount</code> (object): a per-action ceiling on a monetary amount.
+The value is an object with two members: <code>amount</code> (<span class="bcp14">REQUIRED</span>, a
+string containing a decimal number) and <code>currency</code> (<span class="bcp14">REQUIRED</span>, an
+ISO 4217 currency code). Subset: no broader when the <code>currency</code>
+values are equal and the candidate <code>amount</code> is less than or equal
+to the reference <code>amount</code>, compared in decimal value space;
+differing currencies fail the comparison (no conversion is
+defined). Intersection: when the <code>currency</code> values are equal, the
+value with the smaller <code>amount</code>; differing currencies have no
+intersection and the combination fails.<a href="#section-5.2-6.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.2-6.2">
-            <p id="section-5.2-6.2.1"><code>issued_after</code> (string, an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time): the
-action applies only to resources issued at or after this instant.
+            <p id="section-5.2-6.2.1"><code>resource_issued_after</code> (string, an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time):
+the action applies only to resources issued at or after this instant.
 Subset: no broader when greater than or equal to the reference.
 Intersection: the later instant.<a href="#section-5.2-6.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.2-6.3">
-            <p id="section-5.2-6.3.1"><code>issued_before</code> (string, an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time): the
-action applies only to resources issued at or before this instant.
-Subset: no broader when less than or equal to the reference.
-Intersection: the earlier instant.<a href="#section-5.2-6.3.1" class="pilcrow">¶</a></p>
+            <p id="section-5.2-6.3.1"><code>resource_issued_before</code> (string, an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time):
+the action applies only to resources issued at or before this
+instant. Subset: no broader when less than or equal to the reference.
+Intersection: the earlier instant. The <code>resource_</code> qualifier in both
+names marks that the window bounds resource issuance, not token
+issuance.<a href="#section-5.2-6.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.2-6.4">
             <p id="section-5.2-6.4.1"><code>tenant</code> (string): the action applies only to resources of the named
@@ -2651,10 +2661,11 @@ value when one is equal to or a subdomain of the other; otherwise
 there is no intersection and the combination fails.<a href="#section-5.2-6.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.2-7">These comparisons are in value space, not lexical: <code>max_amount_usd</code>
-values are compared as the decimal numbers the strings contain, so
-<code>"500"</code>, <code>"500.0"</code>, and <code>"500.00"</code> are equal; <code>issued_after</code> and
-<code>issued_before</code> values are compared as the
+<p id="section-5.2-7">These comparisons are in value space, not lexical: <code>max_amount</code>
+          <code>amount</code> members are compared as the decimal numbers the strings
+contain, so <code>"500"</code>, <code>"500.0"</code>, and <code>"500.00"</code> are equal;
+<code>resource_issued_after</code> and <code>resource_issued_before</code> values are
+compared as the
 instants they denote after normalization to UTC, so two RFC 3339
 representations of the same instant that differ only in timezone offset
 or trailing subsecond zeros are equal; <code>recipient_domain</code> values are
@@ -2665,12 +2676,11 @@ not. A Common Constraint definition
 independent deployments compute the same result for the same values and
 the subset rule of <a href="#subset" class="auto internal xref">Section 5.1</a> is reproducible.<a href="#section-5.2-7" class="pilcrow">¶</a></p>
 <p id="section-5.2-8">A numeric constraint value <span class="bcp14">MUST</span> lie within the range JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>
-serializes exactly. Monetary constraints avoid that hazard with
-string-decimal syntax: <code>max_amount_usd</code> is a string containing a
-decimal number, and a future Common Constraint for a monetary value
-<span class="bcp14">SHOULD</span> likewise use string-decimal (paired with an ISO 4217 currency
-code where the name does not fix the currency) rather than a JSON
-number.<a href="#section-5.2-8" class="pilcrow">¶</a></p>
+serializes exactly. Monetary amounts avoid that hazard by
+construction: <code>max_amount</code> carries its <code>amount</code> as a string containing
+a decimal number, paired with an ISO 4217 <code>currency</code> code, and a
+future Common Constraint for a monetary value <span class="bcp14">SHOULD</span> reuse this shape
+rather than a JSON number.<a href="#section-5.2-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="other-types">
@@ -2770,7 +2780,7 @@ authority and routing each tool call for authorization.<a href="#section-5.4-3.2
           <li class="normal" id="section-5.4-3.3">
             <p id="section-5.4-3.3.1"><code>constraints</code> carry machine-actionable bounds on a tool's
 arguments, for example an amount ceiling or a recipient domain (the
-<code>max_amount_usd</code> and <code>recipient_domain</code> Common Constraints,
+<code>max_amount</code> and <code>recipient_domain</code> Common Constraints,
 <a href="#common-constraints" class="auto internal xref">Section 5.2</a>).
 Like all <code>constraints</code>, they are committed by <code>authority_hash</code> and
 carried to the point of use, but they are evaluated against the
@@ -2787,7 +2797,9 @@ through a messaging MCP server, derives:<a href="#section-5.4-4" class="pilcrow"
   { "type": "mission_resource_access",
     "resource": "https://finance.example.com/mcp",
     "actions": ["query_invoices", "post_adjustment"],
-    "constraints": { "max_amount_usd": "500.00" } },
+    "constraints": {
+      "max_amount": { "amount": "500.00", "currency": "USD" }
+    } },
   { "type": "mission_resource_access",
     "resource": "https://mail.example.com/mcp",
     "actions": ["send_message"],
@@ -2845,7 +2857,7 @@ authorization-code injection from yielding the Mission grant.<a href="#section-6
 <ol start="1" type="1" class="normal type-1" id="section-6-3">
 <li id="section-6-3.1">
           <p id="section-6-3.1.1">Authenticate the Approver. If the Mission Intent's
-<code>context.acr</code> is present, the authentication <span class="bcp14">MUST</span> satisfy it.<a href="#section-6-3.1.1" class="pilcrow">¶</a></p>
+<code>controls.acr</code> is present, the authentication <span class="bcp14">MUST</span> satisfy it.<a href="#section-6-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-6-3.2">
           <p id="section-6-3.2.1">Establish the Subject: the principal the task is for, recorded as
@@ -2864,7 +2876,7 @@ is a deployment matter.<a href="#section-6-3.2.1" class="pilcrow">¶</a></p>
         <li id="section-6-3.3">
           <p id="section-6-3.3.1">Render for consent the derived Authority Set in human-meaningful
 terms, with the <code>goal</code>, <code>constraints</code>, <code>mission_expiry</code>, and any
-<code>context</code> bounds (notably <code>max_derivations</code>) as context. The object
+<code>controls</code> bounds (notably <code>max_derivations</code>) as context. The object
 the Approver consents to is the <strong>derived Authority Set</strong>, what the
 agent may actually do, not the <code>goal</code> or Mission Intent: derivation
 is local policy, and nothing commits that the derived authority
@@ -2900,12 +2912,12 @@ irreversible, external-commitment, or privileged-administration
 actions under the deployment's classification, or a consumption bound
 (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). The approval
 authentication for such a Mission <span class="bcp14">MUST</span> meet that minimum, and
-<code>context.acr</code> can raise the required strength but never lower it below
+<code>controls.acr</code> can raise the required strength but never lower it below
 the floor. The material notices of the consent-evidence profile
 identify these same high-risk classes
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-6-5" class="pilcrow">¶</a></p>
 <p id="section-6-6">An Approver who declines, and an Approver whose authentication cannot
-satisfy <code>context.acr</code> or the declared approval-strength floor, yield
+satisfy <code>controls.acr</code> or the declared approval-strength floor, yield
 <code>access_denied</code> on the authorization
 response (<span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>). A token-endpoint <code>resource</code> value outside the
 Authority Set yields <code>invalid_target</code> (<span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>).<a href="#section-6-6" class="pilcrow">¶</a></p>
@@ -3245,8 +3257,8 @@ content. It <span class="bcp14">MUST NOT</span> be reused.<a href="#section-7.1-
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
       "constraints": {
-        "issued_after": "2026-07-01T00:00:00Z",
-        "issued_before": "2026-09-30T23:59:59Z"
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
       },
       "delegation": {
         "max_depth": 2,
@@ -3255,7 +3267,9 @@ content. It <span class="bcp14">MUST NOT</span> be reused.<a href="#section-7.1-
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": "500.00" } }
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" }
+      } }
   ],
   "authority_hash":
     "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
@@ -3393,8 +3407,8 @@ carried intact:<a href="#section-8-9" class="pilcrow">¶</a></p>
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
       "constraints": {
-        "issued_after": "2026-07-01T00:00:00Z",
-        "issued_before": "2026-09-30T23:59:59Z"
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
       },
       "delegation": {
         "max_depth": 2,
@@ -3409,7 +3423,7 @@ token rotation, especially for a public client, since Mission-state
 gating bounds a stolen refresh token's usefulness over time but not
 while the Mission is still <code>active</code>. This requirement matches the
 refresh-token guidance of <span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span> Section 2.2.2.<a href="#section-8-11" class="pilcrow">¶</a></p>
-<p id="section-8-12">The authentication context of the approval event (<code>context.acr</code>,
+<p id="section-8-12">The authentication context of the approval event (<code>controls.acr</code>,
 <a href="#mission-intent" class="auto internal xref">Section 4</a>) describes the Approver at approval time and is
 recorded on the Mission, not on derived tokens; a derived token's
 authority comes from the Mission, not from a fresh authentication, so
@@ -3493,8 +3507,8 @@ members above remain authoritative.<a href="#section-8.1-3" class="pilcrow">¶</
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
       "constraints": {
-        "issued_after": "2026-07-01T00:00:00Z",
-        "issued_before": "2026-09-30T23:59:59Z"
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
       },
       "delegation": {
         "max_depth": 2,
@@ -3503,7 +3517,9 @@ members above remain authoritative.<a href="#section-8.1-3" class="pilcrow">¶</
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": "500.00" } }
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" }
+      } }
   ],
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "mission": {
@@ -3702,7 +3718,7 @@ further authority for the task, including refresh. The <code>active</code> check
 <span class="bcp14">MUST</span> be evaluated atomically with issuance, as the derivation-count
 check already is, so a revocation serialized before an issuance is
 honored by that issuance.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
-<p id="section-9.1-2">When the Mission Intent sets <code>context.max_derivations</code>, the AS <span class="bcp14">MUST</span>
+<p id="section-9.1-2">When the Mission Intent sets <code>controls.max_derivations</code>, the AS <span class="bcp14">MUST</span>
 maintain a per-Mission count of <strong>derivations</strong> and <span class="bcp14">MUST</span> refuse with
 <code>invalid_grant</code> any derivation that would exceed the bound. A
 derivation is one issuance operation the origin AS performs for a
@@ -3905,8 +3921,8 @@ canonical Mission Status surface (keyed by <code>mission_id</code>) remains out 
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
       "constraints": {
-        "issued_after": "2026-07-01T00:00:00Z",
-        "issued_before": "2026-09-30T23:59:59Z"
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
       },
       "delegation": {
         "max_depth": 2,
@@ -3915,7 +3931,9 @@ canonical Mission Status surface (keyed by <code>mission_id</code>) remains out 
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": "500.00" } }
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" }
+      } }
   ],
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
@@ -4179,8 +4197,8 @@ narrows out. The decoded delegated access token:<a href="#section-11.4-1" class=
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
       "constraints": {
-        "issued_after": "2026-07-01T00:00:00Z",
-        "issued_before": "2026-09-30T23:59:59Z"
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
       },
       "delegation": {
         "max_depth": 2,
@@ -4818,8 +4836,8 @@ accepts only Mission-bound tokens.<a href="#section-17.6-2.2.1" class="pilcrow">
 <a href="#section-17.7" class="section-number selfRef">17.7. </a><a href="#name-common-constraints-2" class="section-name selfRef">Common Constraints</a>
         </h3>
 <p id="section-17.7-1">This document creates no Common Constraints registry. The Common
-Constraints it defines (<code>max_amount_usd</code>, <code>issued_after</code>,
-<code>issued_before</code>, <code>tenant</code>, <code>recipient_domain</code>) are specified in
+Constraints it defines (<code>max_amount</code>, <code>resource_issued_after</code>,
+<code>resource_issued_before</code>, <code>tenant</code>, <code>recipient_domain</code>) are specified in
 <a href="#common-constraints" class="auto internal xref">Section 5.2</a>, and a further
 Common Constraint is defined by specification: it fixes a name matching
 <code>^[A-Za-z0-9_.:-]+$</code>, its JSON <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> value syntax, its subset
@@ -5088,7 +5106,7 @@ that identity; Stage 0 is otherwise unchanged from that specification.<a href="#
   ],
   "purpose": "urn:example:purpose:reconcile",
   "mission_expiry": "2026-12-31T23:59:59Z",
-  "context": {
+  "controls": {
     "acr": "urn:example:acr:mfa",
     "max_derivations": 200
   }
@@ -5104,8 +5122,8 @@ and renders it for <code>alice</code>'s consent:<a href="#appendix-A.2-3" class=
     "resource": "https://erp.example.com",
     "actions": ["invoices.read"],
     "constraints": {
-      "issued_after": "2026-07-01T00:00:00Z",
-      "issued_before": "2026-09-30T23:59:59Z"
+      "resource_issued_after": "2026-07-01T00:00:00Z",
+      "resource_issued_before": "2026-09-30T23:59:59Z"
     },
     "delegation": {
       "max_depth": 2,
@@ -5114,7 +5132,9 @@ and renders it for <code>alice</code>'s consent:<a href="#appendix-A.2-3" class=
   { "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
-    "constraints": { "max_amount_usd": "500.00" } }
+    "constraints": {
+      "max_amount": { "amount": "500.00", "currency": "USD" }
+    } }
 ]
 </pre><a href="#appendix-A.2-4" class="pilcrow">¶</a>
 </div>
@@ -5151,8 +5171,8 @@ token response (<a href="#mission-bound-tokens" class="auto internal xref">Secti
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
       "constraints": {
-        "issued_after": "2026-07-01T00:00:00Z",
-        "issued_before": "2026-09-30T23:59:59Z"
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
       },
       "delegation": {
         "max_depth": 2,
@@ -5161,7 +5181,9 @@ token response (<a href="#mission-bound-tokens" class="auto internal xref">Secti
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["journal-entries.write"],
-      "constraints": { "max_amount_usd": "500.00" } }
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" }
+      } }
   ],
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "mission": {
@@ -5190,7 +5212,7 @@ this token dies at its own expiry (<a href="#revocation" class="auto internal xr
 token. The Resource Server validates the JWT and the <code>cnf</code> binding and
 enforces the <code>authorization_details</code> whose <code>resource</code> it serves,
 permitting <code>invoices.read</code> within the Q3 issuance window and
-<code>journal-entries.write</code> up to <code>max_amount_usd: "500.00"</code>
+<code>journal-entries.write</code> up to the <code>max_amount</code> ceiling of 500.00 USD
 (<a href="#rs-enforcement" class="auto internal xref">Section 8.2</a>). It treats the <code>mission</code> claim as audit and
 correlation context and makes no call to the AS.<a href="#appendix-A.4-1" class="pilcrow">¶</a></p>
 <p id="appendix-A.4-2">This is stateless enforcement from the token alone.
@@ -5219,9 +5241,10 @@ Both use the issuer <code>https://as.example.com</code>. Each canonical-bytes bl
 is the exact JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> output: a single line, UTF-8, no whitespace.
 It is shown here wrapped only for layout; remove the layout line breaks,
 adding no characters, to recover the canonical form. Note that JCS sorts
-object member names (so <code>iss</code> precedes <code>typ</code> precedes <code>value</code>, and within
+object member names (so <code>iss</code> precedes <code>typ</code> precedes <code>value</code>, within
 an entry <code>actions</code> precedes <code>constraints</code> precedes <code>resource</code> precedes
-<code>type</code>) and preserves array order.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<code>type</code>, and within <code>max_amount</code> <code>amount</code> precedes <code>currency</code>) and
+preserves array order.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <p id="appendix-B-2"><code>intent_hash</code>, over this Mission Intent as the envelope <code>value</code> with
 <code>typ</code> <code>mission-intent</code>:<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="appendix-B-3">
@@ -5257,7 +5280,9 @@ intent_hash = sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E
   { "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
-    "constraints": { "max_amount_usd": "500.00" } }
+    "constraints": {
+      "max_amount": { "amount": "500.00", "currency": "USD" }
+    } }
 ]
 </pre><a href="#appendix-B-8" class="pilcrow">¶</a>
 </div>
@@ -5267,13 +5292,13 @@ intent_hash = sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E
 {"iss":"https://as.example.com","typ":"mission-authority-set","value":[{
 "actions":["invoices.read"],"resource":"https://erp.example.com","type":
 "mission_resource_access"},{"actions":["journal-entries.write"],"constra
-ints":{"max_amount_usd":"500.00"},"resource":"https://erp.example.com","
-type":"mission_resource_access"}]}
+ints":{"max_amount":{"amount":"500.00","currency":"USD"}},"resource":"ht
+tps://erp.example.com","type":"mission_resource_access"}]}
 </pre><a href="#appendix-B-10" class="pilcrow">¶</a>
 </div>
 <div class="lang-text sourcecode" id="appendix-B-11">
 <pre>
-authority_hash = sha-256:H3xcKuSglGecACyY2qGQYunTGqIalyeXS1Qr0dCcgjs
+authority_hash = sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro
 </pre><a href="#appendix-B-11" class="pilcrow">¶</a>
 </div>
 <p id="appendix-B-12">An implementation that canonicalizes the same <code>value</code> under the same

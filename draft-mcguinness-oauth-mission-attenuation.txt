@@ -421,7 +421,7 @@ Table of Contents
    The root's erp.invoices.read and erp.journal-entries.write tools map
    to the invoices.read and journal-entries.write actions on
    https://erp.example.com, and the amount_usd argument maps to the
-   Mission Common Constraint max_amount_usd (Section 5.1); its aud names
+   Mission Common Constraint max_amount (Section 5.1); its aud names
    that Resource Server.
 
    The orchestrator spawns a read-only extraction sub-agent and, with no

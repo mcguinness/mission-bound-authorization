@@ -1570,16 +1570,18 @@ same Mission, and the record binds them.<a href="#section-3.2-1" class="pilcrow"
         "resource": "https://erp.example.com",
         "actions": ["invoices.read"],
         "constraints": {
-          "issued_after": "2026-07-01T00:00:00Z",
-          "issued_before": "2026-09-30T23:59:59Z"
+          "resource_issued_after": "2026-07-01T00:00:00Z",
+          "resource_issued_before": "2026-09-30T23:59:59Z"
         } },
       { "type": "mission_resource_access",
         "resource": "https://erp.example.com",
         "actions": ["journal-entries.write"],
-        "constraints": { "max_amount_usd": "500.00" } }
+        "constraints": {
+          "max_amount": { "amount": "500.00", "currency": "USD" }
+        } }
     ],
     "authority_hash":
-      "sha-256:8E_S7bQywIgdnBoenwp18sXp2v1PWQ7VRzQylzfQCFI",
+      "sha-256:mdRUVZfU1BG_Bgla4mrLp6Q9NPVTJ-udnn88F1oXqFc",
     "intent_hash":
       "sha-256:9wNdxTWMa1fLT4be0wf2FJUMRbVBSYAe9yrRhTqdbVA",
     "subject": { "iss": "https://ps.example.com", "sub": "alice" },
@@ -1603,7 +1605,7 @@ member order shown, it is:<a href="#section-3.3-3" class="pilcrow">¶</a></p>
 <div class="lang-text sourcecode" id="section-3.3-4">
 <pre>
 AAuth-Mission: approver="https://ps.example.com";
-    s256="delTEXHXFuXePfECaHw4E8hNp2UtHAMf9XAP3eo6Pc4"
+    s256="YQcSiDyTLRLlhR-ETk4HPLJZf4CqZNMYU_Jue8SQgLQ"
 </pre><a href="#section-3.3-4" class="pilcrow">¶</a>
 </div>
 </section>
@@ -1682,7 +1684,7 @@ issuance profile's approval steps, mapped onto the interaction:<a href="#section
 <li id="section-5-2.1">
           <p id="section-5-2.1.1">Authenticate the Approver: the person the PS represents, or a
 principal the PS's policy authorizes to approve for that person.
-When a structured Intent carries <code>context.acr</code>, the authentication
+When a structured Intent carries <code>controls.acr</code>, the authentication
 <span class="bcp14">MUST</span> be one the deployment's policy maps as satisfying the named
 class.<a href="#section-5-2.1.1" class="pilcrow">¶</a></p>
 </li>
@@ -1977,11 +1979,11 @@ in the PS-asserted mode, narrowed to read-only authority:<a href="#section-7.5-1
   "exp": 1797843600,
   "mission": {
     "approver": "https://ps.example.com",
-    "s256": "delTEXHXFuXePfECaHw4E8hNp2UtHAMf9XAP3eo6Pc4",
+    "s256": "YQcSiDyTLRLlhR-ETk4HPLJZf4CqZNMYU_Jue8SQgLQ",
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://ps.example.com",
     "authority_hash":
-      "sha-256:8E_S7bQywIgdnBoenwp18sXp2v1PWQ7VRzQylzfQCFI"
+      "sha-256:mdRUVZfU1BG_Bgla4mrLp6Q9NPVTJ-udnn88F1oXqFc"
   }
 }
 </pre><a href="#section-7.5-2" class="pilcrow">¶</a>

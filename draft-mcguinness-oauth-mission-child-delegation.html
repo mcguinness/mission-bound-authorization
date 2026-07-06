@@ -1746,8 +1746,8 @@ parent. The decoded child access token:<a href="#section-6.6-3" class="pilcrow">
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
       "constraints": {
-        "issued_after": "2026-07-01T00:00:00Z",
-        "issued_before": "2026-09-30T23:59:59Z"
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
       } }
   ],
   "cnf": { "jkt": "wZ5nT8qL2xV9rB4mC7sD1yF6jH3kP0aG5uE8oS2iN4w" },
@@ -1841,7 +1841,8 @@ alongside the OAuth <code>error</code> member. A child creation request presente
 on the front channel with <code>parent_token</code> <span class="bcp14">MUST</span> be rejected with
 <code>invalid_request</code> (<a href="#child-creation" class="auto internal xref">Section 6</a>).<a href="#section-6.7-3" class="pilcrow">¶</a></p>
 <p id="section-6.7-4">For example, a child Mission Intent that drops the parent entry's
-<code>issued_before</code> constraint proposes a relaxation, not a subset. The
+<code>resource_issued_before</code> constraint proposes a relaxation, not a
+subset. The
 Mission Issuer refuses it (<a href="#strict-subset" class="auto internal xref">Section 8.1</a>) with:<a href="#section-6.7-4" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-6.7-5">
 <pre>

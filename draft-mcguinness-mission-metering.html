@@ -1291,7 +1291,7 @@ actually metered.<a href="#section-2-3" class="pilcrow">¶</a></p>
       </h2>
 <p id="section-3-1">This document depends normatively on the issuance profile and the
 runtime profile and is not implementable alone. It defines its
-consumption bounds as members of the Mission Intent <code>context</code> object,
+consumption bounds as members of the Mission Intent <code>controls</code> object,
 using the extension seam the issuance profile provides; they are
 carried on the Mission and committed by <code>intent_hash</code> exactly as any
 other Intent member. Metering is performed by the runtime profile's
@@ -1325,14 +1325,17 @@ independently on each action.<a href="#section-4-2.2.1" class="pilcrow">¶</a></
       <h2 id="name-consumption-bounds">
 <a href="#section-5" class="section-number selfRef">5. </a><a href="#name-consumption-bounds" class="section-name selfRef">Consumption Bounds</a>
       </h2>
-<p id="section-5-1">A Mission Intent <code>context</code> object
+<p id="section-5-1">A Mission Intent <code>controls</code> object
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) <span class="bcp14">MAY</span> carry these members:<a href="#section-5-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-5-2">
         <dt id="section-5-2.1">
 <code>max_budget</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-5-2.2">
           <p id="section-5-2.2.1"><span class="bcp14">OPTIONAL</span>. An object. A hard cap on cumulative monetary
-spend under the Mission. Has the members:<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
+spend under the Mission. It carries the same <code>{amount, currency}</code>
+shape as the <code>max_amount</code> Common Constraint the issuance profile
+seeds, so the per-action cap and this cumulative cap read alike.
+Has the members:<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-5-2.2.2">
             <dt id="section-5-2.2.2.1">
 <code>amount</code>:</dt>
@@ -1393,12 +1396,12 @@ bounds issuance rather than activity.<a href="#section-5-2.6.1" class="pilcrow">
 <p id="section-5-3">The bounds are carried on the Mission and committed by <code>intent_hash</code>.
 They are not enforced by the Authorization Server at issuance; they are
 enforced by the runtime layer at the point of use (<a href="#metering" class="auto internal xref">Section 6</a>).<a href="#section-5-3" class="pilcrow">¶</a></p>
-<p id="section-5-4">Example Mission Intent <code>context</code> carrying all three bounds alongside
+<p id="section-5-4">Example Mission Intent <code>controls</code> carrying all three bounds alongside
 the issuance profile's members:<a href="#section-5-4" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-5-5">
 <pre>
 {
-  "context": {
+  "controls": {
     "acr": "urn:example:acr:mfa",
     "max_derivations": 200,
     "max_budget": { "amount": "5000.00", "currency": "USD" },
@@ -1465,7 +1468,7 @@ duration is measured so that PDPs accumulate consistently.<a href="#section-6-2.
       </ul>
 <p id="section-6-3">A per-entry <code>constraints</code> value that expresses a cumulative consumption
 bound is metered the same way. When an applicable entry or the
-Mission's <code>context</code> carries such a bound, the PDP <span class="bcp14">MUST</span> meter use
+Mission's <code>controls</code> carries such a bound, the PDP <span class="bcp14">MUST</span> meter use
 against it and <span class="bcp14">MUST</span> refuse a consequential action that would exceed it.
 The runtime profile's fail-closed rule stands beneath all of this: an
 unmetered or unrecognized consumption bound <span class="bcp14">MUST</span> cause refusal rather
@@ -1711,8 +1714,8 @@ responses only as refusals, not as remaining-balance oracles.<a href="#section-1
 <a href="#section-11" class="section-number selfRef">11. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
 <p id="section-11-1">This document has no IANA actions. <code>max_budget</code>, <code>max_calls</code>, and
-<code>max_duration</code> are Mission Intent <code>context</code> members defined by this
-profile under the issuance profile's context extension seam;
+<code>max_duration</code> are Mission Intent <code>controls</code> members defined by this
+profile under the issuance profile's controls extension seam;
 <code>context.prior_decision_id</code> and <code>measured_duration</code> are AuthZEN
 extension data carried per the AuthZEN profile's conventions
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-11-1" class="pilcrow">¶</a></p>

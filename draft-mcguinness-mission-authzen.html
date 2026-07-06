@@ -2094,7 +2094,7 @@ Batching is a transport optimization and changes none of the per-item
 enforcement semantics.<a href="#section-5.10-1" class="pilcrow">¶</a></p>
 <p id="section-5.10-2">A batch request for two journal-entry writes under the ERP
 reconciliation Mission, where the second exceeds the entry's
-<code>max_amount_usd</code> ceiling of "500.00". The shared <code>subject</code> is hoisted
+<code>max_amount</code> ceiling of 500.00 USD. The shared <code>subject</code> is hoisted
 to the request's default members per <span>[<a href="#AUTHZEN" class="cite xref">AUTHZEN</a>]</span>; each item carries its
 complete <code>context</code>:<a href="#section-5.10-2" class="pilcrow">¶</a></p>
 <div class="breakable lang-http-message sourcecode" id="section-5.10-3">
@@ -2183,7 +2183,7 @@ Authorization: ...
 </div>
 <p id="section-5.10-4">The response returns one decision per item, in request order; the
 first is a permit and the second a <code>parameter_violation</code> deny, whose
-failing <code>max_amount_usd</code> key is listed in that item's Decision
+failing <code>max_amount</code> key is listed in that item's Decision
 Evidence <code>contributing_constraints</code>:<a href="#section-5.10-4" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-5.10-5">
 <pre>
@@ -2555,7 +2555,7 @@ envelopes with unsupported formats.<a href="#section-6.3-5" class="pilcrow">¶</
   "class_source": "deployment",
   "decision": "permit",
   "contributing_constraints": [
-    "mission_resource_access", "max_amount_usd"
+    "mission_resource_access", "max_amount"
   ],
   "sequence": 42,
   "evaluated_at": "2026-11-02T08:14:03Z",

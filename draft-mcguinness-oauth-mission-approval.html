@@ -1359,7 +1359,7 @@ pending-request state, not a grant.<a href="#section-5.1-2.2.1" class="pilcrow">
           <li id="section-5.1-2.3">
             <p id="section-5.1-2.3.1">The approval event executes on the asynchronous review surface. That
 surface <span class="bcp14">MUST</span> authenticate the Approver and <span class="bcp14">MUST</span> satisfy the Mission
-Intent's <code>context.acr</code>, exactly as the synchronous approval event
+Intent's <code>controls.acr</code>, exactly as the synchronous approval event
 requires (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-5.1-2.4">
@@ -1560,7 +1560,7 @@ including deferral-code entropy, sender-constraint continuity,
 cancellation, and oracle resistance.<a href="#section-9-1" class="pilcrow">¶</a></p>
 <p id="section-9-2">The asynchronous review surface is part of the consent path. It <span class="bcp14">MUST</span>
 meet the approval event's authentication requirements, authenticating
-the Approver and satisfying the Mission Intent's <code>context.acr</code>
+the Approver and satisfying the Mission Intent's <code>controls.acr</code>
 (<a href="#deferred-sequencing" class="auto internal xref">Section 5.1</a>); deferring an approval does not lower the bar
 the synchronous event sets. Approver routing and notification, how a
 proposed Mission reaches a reviewer and how the reviewer is alerted, are
