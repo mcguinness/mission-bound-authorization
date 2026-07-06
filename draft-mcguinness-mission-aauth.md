@@ -314,8 +314,8 @@ Mission-Bound Agent:
 | Access Server | Resource-side token issuer behind the PS gate; a PDP analog for resource policy |
 | Agent Provider | Out of scope: the agent identity substrate |
 
-The AAuth `approver` URL is the Mission `origin`: AAuth fixes the
-approver as the PS, so the Mission's `origin` is the PS's issuer URL.
+The AAuth `approver` URL is the Mission `issuer`: AAuth fixes the
+approver as the PS, so the Mission's `issuer` is the PS's issuer URL.
 The Approver is the person the PS represents, or a principal the PS's
 policy authorizes to approve on that person's behalf. The Agent
 Provider is out of scope as agent identity is throughout the family:
@@ -331,9 +331,9 @@ makes the blob the carrier of the Mission record.
 
 A Mission-Bound Person Server MUST create a Mission record, as the
 issuance profile's Mission Record section defines it, for every
-mission it approves, with `origin` equal to the `approver` URL. The
+mission it approves, with `issuer` equal to the `approver` URL. The
 blob MUST include a `mission_record` member: a JSON object carrying
-the record's immutable members, `id`, `origin`,
+the record's immutable members, `id`, `issuer`,
 `intent`, `authority_set`, `authority_hash`, `intent_hash`,
 `subject`, `approver`, `client_id`, `policy_version`,
 `approval_event_id`, `created_at`, and `expires_at`, each as the
@@ -345,7 +345,7 @@ The mapping into AAuth's vocabulary is fixed as follows:
 
 - `client_id` is the AAuth agent identifier and MUST equal the blob's
   `agent` member.
-- `mission_record.origin` MUST equal the blob's `approver` member.
+- `mission_record.issuer` MUST equal the blob's `approver` member.
 - `subject` and `approver` are `{iss, sub}` objects whose `iss` is the
   PS's issuer URL: in AAuth the PS is the party that asserts user
   identity.
@@ -379,7 +379,7 @@ commitment substitutes for the other
 The (`approver`, `s256`) pair is the AAuth-native Mission reference.
 The `AAuth-Mission` header is unchanged by this binding: no new
 parameters are defined, and this document gives its existing
-parameters family semantics (`approver` names the `origin`, `s256`
+parameters family semantics (`approver` names the `issuer`, `s256`
 locates the record). A Mission-Bound Person Server MUST resolve `s256`
 to the Mission record at every PS endpoint that takes a mission
 reference. Per AAuth, a Resource or AS never dereferences the
@@ -416,7 +416,7 @@ The approved mission blob for a reconciliation Mission at
   "capabilities": ["interaction"],
   "mission_record": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://ps.example.com",
+    "issuer": "https://ps.example.com",
     "intent": {
       "goal":
         "Reconcile Q3 invoices and post adjustments under $500.",
@@ -467,7 +467,7 @@ member order shown, it is:
 
 ~~~ text
 AAuth-Mission: approver="https://ps.example.com";
-    s256="uWj7ZoTUlDEougToNuhllbg-qh-L8pHo10Cc2hvdHX4"
+    s256="sN5v0poiLW85zY6tKSlxkR10yPkIr-JUr9ttwhiOc0w"
 ~~~
 
 # Mission Intent {#mission-intent}
@@ -655,9 +655,9 @@ The AAuth auth token is this binding's Mission-bound credential.
 
 An auth token a Mission-Bound Person Server issues under a Mission
 MUST carry, in its `mission` claim, the family members `id`,
-`origin`, and `authority_hash` as the issuance profile defines them,
+`issuer`, and `authority_hash` as the issuance profile defines them,
 alongside AAuth's native members `approver` and `s256`. One object
-carries all five; `origin` equals `approver` in this binding, and both
+carries all five; `issuer` equals `approver` in this binding, and both
 appear because each specification's consumers read their own members.
 AAuth parties ignore members they do not recognize, and a family
 consumer MUST NOT use any `mission` member to grant or widen
@@ -689,7 +689,7 @@ Resource Server that consumes them enforces per the issuance profile's
 Resource Server enforcement rules, including failing closed on
 constraints it cannot enforce.
 
-The subset rule binds the origin PS's own derivations to the recorded
+The subset rule binds the issuer PS's own derivations to the recorded
 Authority Set. It does not impose cross-hop attenuation in AAuth call
 chaining, where AAuth deliberately does not require a downstream grant
 to be a subset of the upstream scope: a downstream hop is governed at
@@ -747,9 +747,9 @@ in the PS-asserted mode, narrowed to read-only authority:
   "exp": 1797843600,
   "mission": {
     "approver": "https://ps.example.com",
-    "s256": "uWj7ZoTUlDEougToNuhllbg-qh-L8pHo10Cc2hvdHX4",
+    "s256": "sN5v0poiLW85zY6tKSlxkR10yPkIr-JUr9ttwhiOc0w",
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://ps.example.com",
+    "issuer": "https://ps.example.com",
     "authority_hash":
       "sha-256:mdRUVZfU1BG_Bgla4mrLp6Q9NPVTJ-udnn88F1oXqFc"
   }
@@ -769,7 +769,7 @@ Mission-bound credential and issuance gating, the two the standalone
 binding forgoes. Against the architecture's binding checklist
 ({{I-D.draft-mcguinness-mission-architecture}}):
 
-1. **Identifier and origin**: `id` on the record, `origin`
+1. **Identifier and issuer**: `id` on the record, `issuer`
    the `approver` URL; the (`approver`, `s256`) pair is the
    wire-native reference to the same Mission ({{reference}}).
 2. **Lifecycle state space**: the issuance profile's states with the
@@ -830,7 +830,7 @@ Resource therefore verifies from token claims and the
 signature-covered reference, not by recomputing the anchors: it holds
 no Authority Set unless a token carries authorization details. A
 deployment that needs Resource-side `authority_hash` verification
-uses a Mission Mandate, minted by the PS as the Mission `origin`,
+uses a Mission Mandate, minted by the PS as the Mission `issuer`,
 carrying the committed facts under the PS's signature
 ({{I-D.draft-mcguinness-mission-mandate}}).
 
@@ -959,7 +959,7 @@ belong to that specification, and this binding defines no new AAuth
 requirement, capability, or platform values. The members this
 document adds ride inside structures whose extensibility their
 defining specifications state: `mission_record` in the PS-produced
-blob, and `id`, `origin`, and `authority_hash` inside the `mission`
+blob, and `id`, `issuer`, and `authority_hash` inside the `mission`
 claim AAuth registers, whose unrecognized members AAuth consumers
 ignore. Should AAuth establish registries for those members, the
 members this document defines would be registered there.

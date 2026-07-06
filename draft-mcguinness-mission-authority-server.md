@@ -305,7 +305,7 @@ uses:
 Mission Authority Server (MAS):
 : A service that implements the Mission Issuer role of the issuance
   profile without being an OAuth Authorization Server. It is the
-  `origin` of the Missions it records, and it derives no tokens.
+  `issuer` of the Missions it records, and it derives no tokens.
 
 Mission-joining PDP:
 : A PDP that resolves Missions at a MAS and verifies the join between
@@ -325,7 +325,7 @@ Mission model's substrate primitives rather than against OAuth
 mechanics. The issuance profile provides all of them. A MAS provides
 these:
 
-- the Mission identifier and `origin`;
+- the Mission identifier and `issuer`;
 - the lifecycle state space with the only-`active` rule and its
   forward-compatibility treatment of unrecognized states;
 - the Authority Set representation, with the subset rule and Common
@@ -348,7 +348,7 @@ The composition consequences follow from that split:
 - The shaping, consent-evidence, audit-transparency, security-model,
   status, signals, and completion profiles consume only the primitives
   a MAS provides and compose with a MAS unchanged. Where such a
-  profile names the Mission Issuer or origin AS, the MAS is that
+  profile names the Mission Issuer or the issuer AS, the MAS is that
   party.
 - The runtime profile and its AuthZEN binding, the harness, and
   orchestration compose through the runtime profile's Mission binding
@@ -547,7 +547,7 @@ profile's approval event unchanged
 
 Step 5 becomes: create the Mission record in the `active` state
 atomically with the approval decision. The record is the issuance
-profile's Mission Record, member for member; its `origin` is the MAS's
+profile's Mission Record, member for member; its `issuer` is the MAS's
 issuer URL and its `approval_event_id` is the approval idempotency
 key. There is no authorization code to bind, so the deferred-approval
 profile's re-sequencing of this step
@@ -883,7 +883,7 @@ applicable, so a consumer reads the same member names it would read
 from AS metadata {{RFC8414}}, resolved from this document instead:
 
 `issuer`:
-: REQUIRED. A string. The MAS's issuer URL. It equals the `origin` of
+: REQUIRED. A string. The MAS's issuer URL. It equals the `issuer` of
   every Mission the MAS records and the `iss` of its integrity-anchor
   envelopes and signed status responses. A consumer MUST verify it
   equals the URL the metadata was resolved from, with the well-known
@@ -963,7 +963,7 @@ Example:
 ~~~
 
 A consumer holding a Mission reference resolves this document from the
-reference's `origin`; whether a given `origin` is a MAS or an OAuth AS
+reference's `issuer`; whether a given `issuer` is a MAS or an OAuth AS
 is deployment configuration. The submission and lifecycle surfaces
 follow a reference-plus-continuation shape (a request yields an opaque
 reference the client continues against) that parallels the grant
@@ -982,7 +982,7 @@ Mission" rests on when no cryptographic binding exists.
 A Mission-joining PDP and its PEPs MUST observe the following:
 
 1. **The PEP supplies the Mission reference.** For governed work the
-   PEP MUST supply the `mission_id` and `origin` of the Mission the
+   PEP MUST supply the `mission_id` and `issuer` of the Mission the
    work is bound to, taken from its Mission binding (a Mission-aware
    harness records exactly this,
    {{I-D.draft-mcguinness-mission-harness}}) or from deployment
@@ -1041,7 +1041,7 @@ Status response, and the other decision inputs per
   "context": {
     "mission": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-      "origin": "https://mas.example.com",
+      "issuer": "https://mas.example.com",
       "authority_hash":
         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
       "state": "active"
@@ -1131,7 +1131,7 @@ The PEP, or the client acting for it, POSTs a JSON object:
 
 `mission_id`:
 : REQUIRED. A string. The Mission the join is asserted against; its
-  `origin` is the MAS.
+  `issuer` is the MAS.
 
 `access_token`:
 : A string. The acting access token. REQUIRED unless the digest pair
@@ -1179,7 +1179,7 @@ claims:
 : REQUIRED. The MAS's issuer URL.
 
 `mission`:
-: REQUIRED. An object containing `id`, `origin`, and
+: REQUIRED. An object containing `id`, `issuer`, and
   `authority_hash`.
 
 `token`:
@@ -1220,7 +1220,7 @@ Example claims:
   "iss": "https://mas.example.com",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://mas.example.com",
+    "issuer": "https://mas.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },
@@ -1241,7 +1241,7 @@ mapping checks of {{mission-join}} steps 3 and 4:
 - the signature, under a key from the MAS's `jwks_uri`, and the
   `mission-join+jwt` header `typ`;
 - that `iss` and the `mission` claim match the referenced Mission's
-  `origin`, `id`, and `authority_hash`;
+  `issuer`, `id`, and `authority_hash`;
 - that `exp` has not passed and any `aud` names this PDP; and
 - the token binding: the presented credential's digest equals
   `token.sha256` and its `cnf` key's thumbprint equals `token.jkt`.
@@ -1619,7 +1619,7 @@ verifies the subject and client joins ({{mission-join}}).
   "context": {
     "mission": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-      "origin": "https://mas.example.com",
+      "issuer": "https://mas.example.com",
       "authority_hash":
         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
       "state": "active"

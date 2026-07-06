@@ -186,7 +186,7 @@ are the companion profiles of the same names).
 | Bundle | Drafts | What you get |
 |---|---|---|
 | **Baseline issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Enforced bundle). Audit, not action-time defense. |
-| **Enforced agent** | mission + runtime + authzen + a freshness source (status or origin token introspection; signals, experimental, adds push) | Per-action enforcement at the point of use, and prompt revocation (pull via status or introspection; the experimental signals profile adds push). The minimum for an agent that takes consequential actions. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
+| **Enforced agent** | mission + runtime + authzen + a freshness source (status or issuer token introspection; signals, experimental, adds push) | Per-action enforcement at the point of use, and prompt revocation (pull via status or introspection; the experimental signals profile adds push). The minimum for an agent that takes consequential actions. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
 | **Governed agent (recommended for AI agents)** | Enforced agent + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. For protection against a compromised agent, claim runtime's named agent-compromise-resistant enforcement (see the note below the table). Add child-delegation for sub-agents and expansion for mid-task growth, and orchestration (experimental) for safe unwinding of in-flight work. |
 | **Standalone governance (AS-optional)** | authority-server (experimental) + runtime + authzen (+ consent-evidence and harness for the Governed equivalents) | Mission governance and per-action enforcement with an unmodified OAuth Authorization Server; the authority server serves the status and lifecycle surfaces itself and is the freshness source. No Mission-bound tokens and no issuance gating: revoking a Mission stops nothing at the token layer, so enforcement rests entirely on PEP coverage. Expansion and sub-agent (Child Mission) creation ride the authority server's own submission surface, with an authenticated-client binding in place of the OAuth wire's token possession. A peer binding chosen for governance-issuance separation, and the adoption bridge toward the Enforced and Governed bundles. |
 
@@ -395,7 +395,7 @@ under Deferred Approval alone is the stable path.
 A `mission_id`-keyed status surface with signed responses, plus a
 lifecycle endpoint for explicit `revoke`, `suspend`, `resume`, and
 `complete` transitions and the `suspended` and `completed` states. It
-lets a consumer holding only a `mission_id` ask the origin for current
+lets a consumer holding only a `mission_id` ask the issuer for current
 Mission state, and an authorized party change it.
 
 * [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.html)
@@ -561,7 +561,7 @@ enforcement composes credential-carried.
 
 For authors of new bindings. Consolidates, normatively, what any
 further binding of the Mission model must provide (identifier and
-origin, the lifecycle state space with the only-`active` rule, the
+issuer, the lifecycle state space with the only-`active` rule, the
 Authority Set with the subset rule, the integrity anchors, key
 material, the audit horizon, approval-event fidelity, and either a
 Mission-bound credential or a defined join). Changes nothing for the

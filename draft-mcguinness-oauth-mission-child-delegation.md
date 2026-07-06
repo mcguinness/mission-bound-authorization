@@ -328,7 +328,7 @@ the child actor redeems its grant directly at the token endpoint.
 
 ## Cross-Issuer Scope {#cross-issuer}
 
-In this profile the Child Mission's issuer MUST equal `parent.origin`
+In this profile the Child Mission's issuer MUST equal `parent.issuer`
 ({{parent-member}}): a Child Mission is created and hosted by the same
 Mission Issuer as its parent. Cross-domain child delegation, where the
 child is hosted by a different Mission Issuer than the parent, is
@@ -444,12 +444,12 @@ parent. The decoded child access token:
   "cnf": { "jkt": "wZ5nT8qL2xV9rB4mC7sD1yF6jH3kP0aG5uE8oS2iN4w" },
   "mission": {
     "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
     "parent": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-      "origin": "https://as.example.com",
+      "issuer": "https://as.example.com",
       "authority_hash":
         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
       "depth": 1,
@@ -529,9 +529,9 @@ the `mission` claim of tokens derived under the child:
   `id`:
   : REQUIRED. The Parent Mission identifier.
 
-  `origin`:
+  `issuer`:
   : REQUIRED. The Parent Mission Issuer. The Child Mission's own
-    `origin` MUST equal this value ({{cross-issuer}}).
+    `issuer` MUST equal this value ({{cross-issuer}}).
 
   `authority_hash`:
   : REQUIRED. The Parent Mission authority commitment the child was
@@ -568,12 +568,12 @@ Example:
 {
   "mission": {
     "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
     "parent": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-      "origin": "https://as.example.com",
+      "issuer": "https://as.example.com",
       "authority_hash":
         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
       "depth": 1,
@@ -805,7 +805,7 @@ Child Mission, both conditions MUST hold:
 
 If either condition fails, the Mission Issuer MUST refuse derivation.
 
-While a parent is `suspended`, the origin MUST report each dependent
+While a parent is `suspended`, the issuer MUST report each dependent
 child's state as `suspended` on every state-reporting surface (the
 Mission Status operation and token introspection,
 {{I-D.draft-mcguinness-oauth-mission-status}}), and MUST restore the
@@ -817,7 +817,7 @@ Mission Status for a Child Mission SHOULD also include a parent
 projection for authorized callers, as additional context:
 
 `parent`:
-: Object containing parent `id`, `origin`, current parent `state` when
+: Object containing parent `id`, `issuer`, current parent `state` when
   known, `cascade_mode`, and freshness information.
 
 Under `immediate` cascade a consumer needs no parent-state check of its
@@ -830,8 +830,8 @@ experimental consumer-verified modes are defined with those modes
 
 The Mission Issuer MUST record a child delegation evidence record with:
 
-- parent Mission identifier, origin, and authority hash;
-- child Mission identifier, origin, and authority hash;
+- parent Mission identifier, issuer, and authority hash;
+- child Mission identifier, issuer, and authority hash;
 - child actor;
 - requested and approved child authority;
 - attenuation checks performed;
@@ -884,13 +884,13 @@ Example:
   "evidence_id": "chd_8K2nP4qV",
   "parent": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },
   "child": {
     "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2"
   },

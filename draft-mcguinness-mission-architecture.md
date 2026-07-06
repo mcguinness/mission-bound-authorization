@@ -476,10 +476,10 @@ of its own. This section consolidates that interface: six primitives,
 each with its normative home and its consumers. Every sentence
 mirrors a rule the named profile states normatively.
 
-## The Mission Identifier and Origin
+## The Mission Identifier and Issuer
 
 An opaque, non-reused Mission Identifier with at least 128 bits of
-entropy and no semantic content, plus `origin`, the issuer URL of the
+entropy and no semantic content, plus `issuer`, the issuer URL of the
 approving Mission Issuer; together they name exactly one Mission.
 Home: the core's Mission Record and Mission Identifier Format
 sections. Consumed by every companion: enforcement decisions,
@@ -528,7 +528,7 @@ committed evidence types it registers).
 
 ## The Mission-Bound Credential
 
-A credential carrying the `mission` claim (`id`, `origin`,
+A credential carrying the `mission` claim (`id`, `issuer`,
 `authority_hash`) and Mission-derived authorization details, issued
 only while the Mission is `active`. Home: the core's Mission-Bound
 Access Tokens and The Mission Claim sections.
@@ -570,7 +570,7 @@ bindings remain authoritative for themselves.
 Another mission-based protocol hosts the substrate-neutral profiles
 unchanged when it provides:
 
-1. a unique, opaque Mission identifier with an authoritative origin;
+1. a unique, opaque Mission identifier with an authoritative issuer;
 2. the lifecycle state space with the only-`active` rule, fail-safe
    unrecognized states, and a freshness source with a staleness bound;
 3. an Authority Set representation with a subset rule and a shared

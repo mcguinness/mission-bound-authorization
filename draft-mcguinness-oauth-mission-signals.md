@@ -171,7 +171,7 @@ unaffected by this document.
 This document uses the terms defined in the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}} and the Status profile
 {{I-D.draft-mcguinness-oauth-mission-status}}, in particular Mission,
-Mission Issuer (the Mission `origin`: in this document's OAuth binding
+Mission Issuer (the Mission `issuer`: in this document's OAuth binding
 the Authorization Server; a standalone Mission Issuer, the Mission
 Authority Server {{I-D.draft-mcguinness-mission-authority-server}},
 transmits these events with the same semantics), `mission_id`,
@@ -260,7 +260,7 @@ claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
 - `mission` (object, required): the Mission identity, the same
   identity members as the `mission` object of
   {{I-D.draft-mcguinness-oauth-mission-status}}, carrying `id` (the
-  canonical `mission_id`) and `origin` (the Mission Issuer (`origin`)
+  canonical Mission Identifier) and `issuer` (the Mission Issuer's
   issuer URL).
 - `state` (string, required): the new lifecycle state. The value space
   is the Mission lifecycle state space defined by the issuance profile
@@ -322,7 +322,7 @@ Example SET (decoded), for a revocation:
     "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
       "mission": {
         "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-        "origin": "https://as.example.com"
+        "issuer": "https://as.example.com"
       },
       "prior_state": "active",
       "state": "revoked",
@@ -351,7 +351,7 @@ Mission (`version` 1, no `prior_state`):
     "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
       "mission": {
         "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-        "origin": "https://as.example.com"
+        "issuer": "https://as.example.com"
       },
       "state": "active",
       "version": 1,
@@ -377,7 +377,7 @@ Example SET (decoded), for a supersession, carrying `successor`:
     "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
       "mission": {
         "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-        "origin": "https://as.example.com"
+        "issuer": "https://as.example.com"
       },
       "prior_state": "active",
       "state": "superseded",
@@ -397,8 +397,8 @@ with a Mission Issuer key resolvable in the issuer's `jwks_uri`, with a
 consumer MUST verify the signature against the Mission Issuer's
 published keys and MUST refuse a SET whose `iss` does not match the
 Mission Issuer it registered with. Because this profile is
-single-issuer, the SET `iss` equals the event's `mission.origin`; a
-consumer MAY treat a mismatch as a verification failure. (`mission.origin`
+single-issuer, the SET `iss` equals the event's `mission.issuer`; a
+consumer MAY treat a mismatch as a verification failure. (`mission.issuer`
 is carried in the event for cross-substrate deployments where the two
 can differ.)
 
@@ -483,7 +483,7 @@ consumer's receiver ({{RFC8935}}). Decoded SET:
     "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
       "mission": {
         "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-        "origin": "https://as.example.com"
+        "issuer": "https://as.example.com"
       },
       "state": "revoked",
       "prior_state": "active",
@@ -600,7 +600,7 @@ the author-controlled `schemas.karlmcguinness.com/secevent` namespace:
   emission from a Mission Issuer. The SET subject is a `sub_id` Subject
   Identifier {{RFC9493}} of format `opaque` whose `id` is the
   `mission_id`, per {{OIDC-SSF}} conventions. Required event-body
-  claims: `mission` (carrying `id` and `origin`), `state`, `version`,
+  claims: `mission` (carrying `id` and `issuer`), `state`, `version`,
   `committed_at`. Conditional event-body claim: `prior_state` (required
   on transition emissions, absent on the approval-event emission).
   Optional event-body claims: `tenant`, `reason`, `successor`
