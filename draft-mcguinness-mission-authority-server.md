@@ -74,6 +74,26 @@ normative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-mission-authzen-latest
+  I-D.draft-mcguinness-oauth-mission-expansion:
+    title: "Mission Expansion for OAuth 2.0"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-expansion.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
+  I-D.draft-mcguinness-oauth-mission-child-delegation:
+    title: "Mission Child Delegation for OAuth 2.0"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-child-delegation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
 
 informative:
   RFC6749:
@@ -132,26 +152,16 @@ informative:
     date: 2026
     seriesinfo:
       Internet-Draft: draft-mcguinness-oauth-mission-approval-latest
-  I-D.draft-mcguinness-oauth-mission-expansion:
-    title: "Mission Expansion for OAuth 2.0"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-expansion.html
+  I-D.draft-mcguinness-oauth-mission-progressive:
+    title: "Mission Progressive Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-progressive.html
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
     seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
-  I-D.draft-mcguinness-oauth-mission-child-delegation:
-    title: "Mission Child Delegation for OAuth 2.0"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-child-delegation.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-    seriesinfo:
-      Internet-Draft: draft-mcguinness-oauth-mission-child-delegation-latest
+      Internet-Draft: draft-mcguinness-oauth-mission-progressive-latest
   I-D.draft-mcguinness-oauth-mission-attenuation:
     title: "Mission Offline Attenuation for OAuth 2.0"
     target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-attenuation.html
@@ -355,11 +365,12 @@ The composition consequences follow from that split:
 - Mission Expansion ({{I-D.draft-mcguinness-oauth-mission-expansion}})
   and Mission Child Delegation
   ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) define
-  their request wire over OAuth Pushed Authorization Requests, so
-  their models (supersession, lineage, cascade) apply to MAS-held
-  Missions but their wire does not. A MAS-native expansion request
-  surface is deferred to future work. A MAS-native child-creation
-  surface is likewise deferred.
+  their request wire over OAuth Pushed Authorization Requests; their
+  MAS-native wire is defined by {{native-surfaces}}, which carries
+  both operations on the mission submission endpoint with an
+  authenticated-client binding in place of the OAuth wire's token
+  possession. Their models (supersession, lineage, cascade) apply to
+  MAS-held Missions unchanged.
 
 # Mission Submission {#mission-submission}
 
@@ -615,6 +626,250 @@ The MAS publishes the corresponding metadata members
 signals are supported, `mission_event_stream_endpoint`) in its
 discovery document ({{discovery}}) with the semantics those profiles
 define for the members of the same names.
+
+# Mission Expansion and Child Creation {#native-surfaces}
+
+Mission Expansion ({{I-D.draft-mcguinness-oauth-mission-expansion}})
+and Mission Child Delegation
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) define their
+request wire over OAuth Pushed Authorization Requests, bound to the
+predecessor or parent by token possession (`predecessor_token`,
+`parent_token`). A MAS issues no tokens, so that binding has no
+carrier here. This section defines the MAS-native wire for both
+operations: carriage on the mission submission endpoint
+({{native-carriage}}) and an authenticated-client binding in place of
+token possession ({{native-binding}}). It defines carriage and binding
+only; every mechanism (supersession, reconciliation, lineage, strict
+subset, fan-out, cascade, and the closed code sets) remains owned by
+its profile and applies here by reference ({{native-expansion}},
+{{native-child}}). The capability is OPTIONAL ({{conformance}}).
+
+## Submission Carriage {#native-carriage}
+
+The mission submission endpoint carries both operations as intent
+submissions ({{intent-submission}}) with additional top-level members
+of the request body:
+
+`predecessor`:
+: A string. The `mission_id` of the predecessor Mission this
+  submission expands; semantics per the expansion profile. Its
+  presence marks the submission as an expansion request.
+
+`parent`:
+: A string. The `mission_id` of the Parent Mission; semantics per the
+  child-delegation profile.
+
+`child_actor`:
+: An object identifying the child actor, in the form the
+  child-delegation profile defines. The presence of `parent` and
+  `child_actor` together marks the submission as a child-creation
+  request.
+
+These are submission members, not Mission Intent members: a MAS that
+implements this capability MUST remove them before applying the
+issuance profile's Intent validation, and the remainder of the body is
+the Mission Intent, validated unchanged ({{intent-submission}}). On a
+MAS that does not implement this capability they are undefined
+top-level members and the submission is refused with
+`invalid_mission_intent`, the correct refusal for an unsupported
+operation.
+
+A submission carrying both `predecessor` and either child member MUST
+be refused with `invalid_mission_intent`: the operations do not
+combine. A submission carrying `parent` without `child_actor`, or
+`child_actor` without `parent`, MUST be refused the same way.
+
+The `predecessor_token` and `parent_token` parameters of the OAuth
+wire do not exist on this surface; the binding of {{native-binding}}
+replaces them.
+
+The referenced profiles' OAuth error outcomes map onto this endpoint's
+error surface as the issuance profile's do ({{intent-submission}}):
+`invalid_request` outcomes map to `invalid_mission_intent`, and
+authority-derivation failures to `invalid_authority`. Two rules cover
+the outcomes those profiles express as `invalid_grant`:
+
+- A `predecessor` or `parent` the binding does not resolve, whether
+  the Mission does not exist or is recorded under another client, MUST
+  be refused with `not_found`, with a response identical in both
+  cases, preserving the anti-oracle property of {{submission-status}}.
+- A reference the binding resolves whose state or serialization
+  refuses the operation (the expansion profile's predecessor-active
+  and reconciliation rules; the child-delegation profile's
+  parent-active rule) MUST be refused with `conflict`, returned with
+  HTTP 409. `conflict` extends the error code set of
+  {{submission-errors}} and is used only by this section's operations.
+
+The profile-defined machine-readable code rides the MAS error surface
+in the member its profile defines, `mission_expansion_status` for
+expansion ({{I-D.draft-mcguinness-oauth-mission-expansion}}) and
+`mission_denial_reason` for child creation
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), carried as
+a member of the error response body ({{submission-errors}}) or, for a
+denial at adjudication, of the `denied` submission-status response
+({{submission-status}}).
+
+## Request Binding {#native-binding}
+
+The OAuth wire resolves the predecessor or parent from a presented
+grant and cross-checks it against the named identifier. A MAS holds no
+grants, so the named identifier is itself the reference, and the MAS
+binds the request to it as follows:
+
+- The MAS MUST verify that the authenticated submitting client is the
+  client recorded as the predecessor Mission's `client_id` (for
+  expansion) or the Parent Mission's `client_id` (for child creation).
+  Both identifiers live in the MAS's own client namespace
+  ({{mission-submission}}), so the comparison is ordinarily
+  byte-equality; where a deployment maps client identities it MUST
+  document the mapping, exactly as the client join requires
+  ({{mission-join}}).
+- For an expansion, the MAS MUST verify at the approval event that the
+  Subject it establishes ({{mission-approval}}) equals the predecessor
+  Mission's `subject`; a successor MUST NOT be created for a different
+  Subject.
+
+This is an authentication-based binding, not a possession-based one:
+it proves the requester is the same registered client the predecessor
+or parent was recorded for, not that it holds that Mission's grant.
+The delta from the OAuth wire is exactly that: a party able to
+authenticate as the registered client can request these operations for
+any of that client's Missions, where token possession would limit it
+to the grants it actually holds ({{sec-native-binding}}).
+
+Where the deployment authenticates client instances
+({{I-D.draft-mcguinness-oauth-client-instance-assertion}}), the MAS
+SHOULD bind at instance granularity rather than at the bare
+`client_id`, and a Mission Join Assertion for the predecessor or
+parent ({{join-assertion}}), presented with the submission,
+strengthens the proof to a named runtime instance holding a
+sender-constrained credential that verifiably joins to that Mission.
+
+## Expansion Semantics {#native-expansion}
+
+An expansion submission is adjudicated under the expansion profile's
+rules ({{I-D.draft-mcguinness-oauth-mission-expansion}}), applied by
+reference:
+
+- **Predecessor active.** The predecessor MUST be `active` when the
+  submission is accepted, per that profile's predecessor-active rule.
+- **Reconciliation.** Concurrent expansions against the same
+  predecessor are serialized under that profile's compare-and-set
+  reconciliation, and its closed reconciliation-status set applies: a
+  refusal at submission carries the code per {{native-carriage}}, and
+  a pending submission overtaken by a concurrent expansion resolves to
+  `denied` with the code in the status response.
+- **Supersession atomicity.** In one atomic operation on the MAS's
+  records, the successor activates with its `predecessor` member set,
+  and the predecessor transitions to `superseded` with its `successor`
+  member set. The `successor` and `related_to` members carry that
+  profile's semantics and surface through the MAS's Mission Status
+  responses; `superseded` enters the state space the MAS reports
+  ({{lifecycle-and-state}}).
+- **Denial reasons.** That profile's closed denial-reason set applies;
+  the code rides in `mission_expansion_status` per
+  {{native-carriage}}.
+
+Approval of the successor is this document's native asynchronous
+approval event ({{mission-approval}}): fresh consent for the
+successor's derived Authority Set, with no authorization-code leg to
+re-sequence. On approval the client's poll delivers the successor's
+`mission_id` and consented authority ({{mission-reference}}). The
+successor-expiry rule and every other expansion rule that does not
+name the OAuth wire apply unchanged. Progressive authorization is out
+of scope here exactly as it is out of the expansion profile's base:
+every expansion on this surface is adjudicated by a fresh approval,
+and the policy-adjudicated variant remains the experimental
+companion's ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
+
+## Child-Creation Semantics {#native-child}
+
+A child-creation submission is adjudicated under the child-delegation
+profile's rules
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), applied by
+reference:
+
+- **On-switch.** Child creation is permitted only where the applicable
+  Parent Mission Authority Set entry's `delegation` member carries a
+  `children` object; an entry without one permits no child.
+- **Strict subset.** The child Authority Set MUST satisfy that
+  profile's strict-subset evaluation against the parent, with no
+  relaxation.
+- **Fan-out.** Fan-out accounting and its serialization apply
+  unchanged: the MAS counts non-terminal Child Missions against
+  `max_children` and serializes creation against the same parent entry
+  and fan-out bucket.
+- **Parent member.** The Child Mission record carries the `parent`
+  object constructed per that profile, including `depth`; with no
+  token carrier, it surfaces through the record and the MAS's Mission
+  Status responses.
+- **Cascade.** Cascade applies with one simplification: the MAS owns
+  its state store, so cascade transitions are native lifecycle
+  transitions on its own records. The MAS implements that profile's
+  `immediate` mode, and the `cascaded` state surfaces through Mission
+  Status ({{lifecycle-and-state}}).
+- **Denial reasons.** That profile's closed denial-reason set applies;
+  the code rides in `mission_denial_reason` per {{native-carriage}}.
+  The `parent_mismatch` reason has no analog on this surface: with no
+  `parent_token` to cross-check, a binding failure is refused per
+  {{native-carriage}}.
+
+The child client identity rules hold unchanged: the child actor is the
+Child Mission's client, recorded as its `client_id`; it authenticates
+itself to the MAS for its own submissions, status, and lifecycle
+operations; and child credentials MUST NOT transit the parent. The
+creating client learns the Child Mission's `mission_id` from its own
+submission status; `mission_id` is a reference, never a capability, so
+conveying it to the child actor moves no authority. At the point of
+use, the Mission Join ({{mission-join}}) binds the child's ordinary
+OAuth credentials to the Child Mission through the child's own
+`client_id`, never the parent's.
+
+## Expansion Example {#native-example}
+
+Mid-task, the agent behind the Q3 reconciliation Mission finds a
+$1,200 adjustment, outside its approved $500 cap. It submits an
+expansion: a Mission Intent for the broadened task whose body names
+the predecessor:
+
+~~~ http-message
+POST /mas/mission/submit HTTP/1.1
+Host: mas.example.com
+Content-Type: application/json
+Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+
+{
+  "goal": "Reconcile Q3 invoices and post adjustments under $2,000.",
+  "resources": ["https://erp.example.com"],
+  "mission_expiry": "2026-12-31T23:59:59Z",
+  "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+}
+~~~
+
+The MAS authenticates the client, verifies it is the predecessor's
+recorded `client_id`, verifies the predecessor is `active`, strips
+`predecessor`, validates the remaining Mission Intent, derives the
+successor's Authority Set, and accepts:
+
+~~~ http-message
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "submission_id": "sub_7bD1eF4jB0K9wT2xM5nQ8rL3vZ",
+  "status": "pending",
+  "expires_at": "2026-10-16T15:07:42Z"
+}
+~~~
+
+Adjudication proceeds per {{mission-approval}}: the Approver consents
+to the widened cap, the MAS verifies the established Subject equals
+the predecessor's `subject`, and one atomic operation creates the
+successor `active` and supersedes the predecessor. The client's next
+poll returns `approved` with the successor's `mission_id`
+({{mission-reference}}).
 
 # Mission Discovery {#discovery}
 
@@ -1033,14 +1288,16 @@ runtime profile's agent-compromise-resistant tier. A token exercised
 outside PEP coverage is ungoverned: its use is bounded by ordinary
 OAuth alone, and no Mission property applies to it.
 
-**No delegation or widening surface.** This mode currently has no
-specified way to delegate to a sub-agent or to widen authority
-mid-task: Mission Expansion and Child Delegation define their request
-wire over OAuth Pushed Authorization Requests, and offline attenuation
-requires the Mission-bound credential ({{mission-substrate}}).
-MAS-native expansion and child creation remain deferred work, so a
-standalone deployment whose agents must spawn sub-agents or widen
-authority mid-task needs the issuance profile today.
+**Weaker expansion and child-creation binding.** Mission Expansion
+and Child Delegation are carried natively in this mode
+({{native-surfaces}}), so a standalone deployment can widen authority
+and delegate to sub-agents; what the mode does not provide is the
+OAuth wire's possession binding. Requests are bound to the predecessor
+or parent by authenticated client identity ({{native-binding}}), which
+proves the same registered client, not a held grant
+({{sec-native-binding}}). Offline attenuation remains inapplicable in
+this mode because it requires the Mission-bound credential
+({{mission-substrate}}).
 
 **Upgrade path.** Implementing the issuance profile at the AS restores
 what this mode lacks: Mission-bound credentials and issuance gating.
@@ -1070,6 +1327,27 @@ A **Mission Authority Server**:
   REQUIRED member; and
 - issues no token and no artifact that grants access by possession:
   `submission_id` and `mission_id` are references.
+
+**Expansion and Child Creation** ({{native-surfaces}}) is a named
+OPTIONAL capability of the Mission Authority Server role. A MAS
+claiming it additionally:
+
+- accepts the `predecessor`, `parent`, and `child_actor` submission
+  members, with the dispatch and refusal rules of {{native-carriage}};
+- verifies the binding of {{native-binding}} before adjudicating: the
+  authenticated submitting client equals the predecessor's or parent's
+  recorded `client_id`, and, for expansion, the established Subject
+  equals the predecessor's `subject`;
+- applies the expansion profile's rules by reference: predecessor
+  active, reconciliation serialization, supersession atomicity, and
+  the lineage members ({{native-expansion}});
+- applies the child-delegation profile's rules by reference: the
+  `children` on-switch, strict subset, fan-out accounting, `parent`
+  construction, cascade, and child client identity ({{native-child}});
+  and
+- carries the profiles' closed code sets in `mission_expansion_status`
+  and `mission_denial_reason` on its error and submission-status
+  surfaces ({{native-carriage}}).
 
 A **Mission-joining PDP**:
 
@@ -1130,6 +1408,27 @@ concentration: the subject and client mappings are evaluated at one
 audited point under one documented policy, instead of configured
 independently at N PDPs, where one drifted table is a silent join
 widening.
+
+## Expansion and Child-Creation Binding {#sec-native-binding}
+
+The native surfaces of {{native-surfaces}} bind a request to its
+predecessor or parent by authenticated client identity, not by grant
+possession, and the residual is exactly that difference: a compromised
+or impersonated registered client can request expansion or child
+creation for any Mission recorded under its `client_id`, where token
+possession would have limited it to the grants it actually holds. The
+mitigations: instance-grade binding
+({{I-D.draft-mcguinness-oauth-client-instance-assertion}}) shrinks the
+`client_id` equivalence class to one runtime instance, and a Mission
+Join Assertion presented with the submission makes that instance a
+verified, token-bound party ({{native-binding}}); the expansion
+profile's fresh-approval requirement means no widening activates
+without the Approver, so a forged expansion request yields an approval
+prompt, not authority; the child-delegation profile's fan-out controls
+bound what child creation can amplify; and the binding failure surface
+is anti-oracle ({{native-carriage}}), so a request against a Mission
+the client is not bound to is indistinguishable from one against a
+Mission that does not exist.
 
 ## Ambient Authority of Ungated Tokens
 
