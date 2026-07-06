@@ -215,7 +215,7 @@ Mission evidence:
 
 This profile is defined against the Mission model rather than against
 OAuth 2.0 mechanics. It consumes these substrate primitives: the
-Mission identifier and origin, from which the statement subject is
+Mission identifier and issuer, from which the statement subject is
 constructed; the evidence types and their canonical bytes; the
 integrity-anchor envelope; and each producer's published key material.
 The issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
@@ -275,13 +275,13 @@ record as part of the Mission's feed.
 
 | Evidence type | Canonical bytes (hashed) | `preimage-content-type` | Producer |
 |---|---|---|---|
-| Approval event | Mission record at creation, `state` excluded, canonicalized | `application/mission-approval-record+json` | `origin` |
-| Lifecycle transition | Signals SET as issued; else {{transition-object}} (JCS) | `application/secevent+jwt`, else `application/mission-lifecycle-transition+json` | `origin` |
-| Derivation record | {{derivation-record}} (JCS) | `application/mission-derivation-record+json` | `origin` |
-| Consent evidence | retained signed object, as issued | `application/mission-consent-evidence+json` | `origin` |
+| Approval event | Mission record at creation, `state` excluded, canonicalized | `application/mission-approval-record+json` | `issuer` |
+| Lifecycle transition | Signals SET as issued; else {{transition-object}} (JCS) | `application/secevent+jwt`, else `application/mission-lifecycle-transition+json` | `issuer` |
+| Derivation record | {{derivation-record}} (JCS) | `application/mission-derivation-record+json` | `issuer` |
+| Consent evidence | retained signed object, as issued | `application/mission-consent-evidence+json` | `issuer` |
 | Decision evidence | Decision Evidence object, as issued | `application/mission-decision-evidence+json` | PDP key |
 | Execution evidence | Execution Evidence object, as issued | `application/mission-execution-evidence+json` | PEP key |
-| Mission Mandate | JWS Compact Serialization, as issued | `application/mission-mandate+jwt` | `origin` |
+| Mission Mandate | JWS Compact Serialization, as issued | `application/mission-mandate+jwt` | `issuer` |
 
 The table is extensible by specification: a profile MAY define an
 additional evidence type by fixing its canonical bytes, its
@@ -292,8 +292,8 @@ extension type it implements; it ignores records of a type it does
 not implement, and they are not audit failures.
 
 The producer identifiers are principals the suite already names. For
-every record whose producer is the Mission `origin`, the Signed
-Statement's `iss` MUST equal that `origin`
+every record whose producer is the Mission `issuer`, the Signed
+Statement's `iss` MUST equal that `issuer`
 ({{I-D.draft-mcguinness-oauth-mission}}). The PDP and PEP keys are those
 in the deployment-published key sets the runtime and AuthZEN profiles
 require ({{I-D.draft-mcguinness-mission-runtime}},
@@ -324,7 +324,7 @@ transition as a minimal JSON object with these members, JCS-canonicalized
 {{RFC8785}}:
 
 - `mission_id` (string, required): the Mission `id`.
-- `origin` (string, required): the Mission `origin`.
+- `issuer` (string, required): the Mission `issuer`.
 - `state` (string, required): the new lifecycle state.
 - `prior_state` (string, optional): the state immediately before the
   transition.
@@ -342,7 +342,7 @@ A minimal transition object recording the revocation of Mission
 ~~~ json
 {
   "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-  "origin": "https://as.example.com",
+  "issuer": "https://as.example.com",
   "state": "revoked",
   "transitioned_at": "2026-11-02T08:30:00Z"
 }
@@ -351,13 +351,13 @@ A minimal transition object recording the revocation of Mission
 Its JCS canonical bytes (one line; breaks are for display only):
 
 ~~~ text
-{"mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","origin":"ht
-tps://as.example.com","state":"revoked","transitioned_at":"2026-1
-1-02T08:30:00Z"}
+{"issuer":"https://as.example.com","mission_id":"msn_8RfX2Lqv9TqMv
+4z7sA2bN1k0YpEdHc9-","state":"revoked","transitioned_at":"2026-11-
+02T08:30:00Z"}
 ~~~
 
 The committed digest is the SHA-256 of those bytes; its base64url
-form is `BoPjN-2ntPWo_athC5AQY1n1EIHtgQbBVbdRyJ3qSv4`. The Signed
+form is `9xMd0Ge2W5oh7f_a964mvK66QOOHYOe-kDz3HUYXkd8`. The Signed
 Statement carries the digest bytes inline as its payload, with this
 protected header ({{hash-commitment}}, {{feed}}):
 
@@ -377,7 +377,7 @@ protected header ({{hash-commitment}}, {{feed}}):
 ### The Derivation Record {#derivation-record}
 
 The family's evidence runs from the approval to the enforced action,
-but the derivation event between them, the `origin` issuing a token
+but the derivation event between them, the `issuer` issuing a token
 under the Mission ({{I-D.draft-mcguinness-oauth-mission}}), is
 otherwise visible only in Authorization Server logs no profile
 mandates. A derivation record closes that gap: it commits which token
@@ -388,7 +388,7 @@ A derivation record is a JSON object with these members,
 JCS-canonicalized {{RFC8785}}:
 
 - `mission_id` (string, required): the Mission `id`.
-- `origin` (string, required): the Mission `origin`.
+- `issuer` (string, required): the Mission `issuer`.
 - `token_digest` (string, required): a digest in the issuance
   profile's encoded form ({{I-D.draft-mcguinness-oauth-mission}}),
   over the UTF-8 bytes of the issued token's JWS Compact
@@ -398,20 +398,20 @@ JCS-canonicalized {{RFC8785}}:
 - `entries_digest` (string, required): the integrity-anchor envelope
   digest ({{I-D.draft-mcguinness-oauth-mission}}) over the issued
   `authorization_details` array, with `typ`
-  `mission-derivation-entries` and `iss` the `origin`.
+  `mission-derivation-entries` and `iss` the `issuer`.
 - `actor` (string, optional): the delegate's `sub`, present when the
   derivation was a delegation.
 - `issued_at` (string, required): an RFC 3339 {{RFC3339}} date-time at
   which the token was issued.
 
 Its media type is `application/mission-derivation-record+json`
-({{iana}}), and its authoritative producer is the `origin`: the Signed
-Statement's `iss` MUST equal the Mission `origin`
+({{iana}}), and its authoritative producer is the `issuer`: the Signed
+Statement's `iss` MUST equal the Mission `issuer`
 ({{evidence-types}}).
 
 #### Computed Example {#derivation-vector}
 
-For Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`, the origin issues
+For Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`, the Mission Issuer issues
 a token for audience `https://erp.example.com`, narrowed to the write
 entry, with `jti` `at_5v9Kq2mR7xW4nP8sL1zT6`. The issued
 `authorization_details`:
@@ -435,7 +435,7 @@ The record:
 ~~~ json
 {
   "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-  "origin": "https://as.example.com",
+  "issuer": "https://as.example.com",
   "token_digest":
     "sha-256:V1Wbh4Z3wK39B_YmzHlvkGr7hEA1rUoJMuj00y0q-eE",
   "aud": "https://erp.example.com",
@@ -448,15 +448,15 @@ The record:
 Its JCS canonical bytes (one line; breaks are for display only):
 
 ~~~ text
-{"aud":"https://erp.example.com","entries_digest":"sha-256:Hilv4n
-pLEWlcp2y5z7xcACgXxRhx-LO6dqs5AX0xL8o","issued_at":"2026-10-15T14
-:32:12Z","mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","ori
-gin":"https://as.example.com","token_digest":"sha-256:V1Wbh4Z3wK3
-9B_YmzHlvkGr7hEA1rUoJMuj00y0q-eE"}
+{"aud":"https://erp.example.com","entries_digest":"sha-256:Hilv4np
+LEWlcp2y5z7xcACgXxRhx-LO6dqs5AX0xL8o","issued_at":"2026-10-15T14:3
+2:12Z","issuer":"https://as.example.com","mission_id":"msn_8RfX2Lq
+v9TqMv4z7sA2bN1k0YpEdHc9-","token_digest":"sha-256:V1Wbh4Z3wK39B_Y
+mzHlvkGr7hEA1rUoJMuj00y0q-eE"}
 ~~~
 
 The committed digest is the SHA-256 of those bytes; its base64url
-form is `IojbCMPM7a14NDoAbw3VoAbbWTauyBTGk55rCGBS6Ek`. The Signed
+form is `_cM7GYYiV3VI-QrtRWSogl5Wz1-sB90GM4ZHxuPC3j0`. The Signed
 Statement carries the digest bytes inline as its payload, with
 `preimage-content-type` `application/mission-derivation-record+json`
 and the same `iss` and `sub` as {{transition-vector}}.
@@ -475,7 +475,7 @@ authoritative producers, so the log does not accumulate records from
 components that are not entitled to write to a Mission's feed.
 
 A relying party discovers a producer's key by the producer's role. The
-`origin`'s key is resolved through its published key material: the
+`issuer`'s key is resolved through its published key material: the
 Authorization Server's metadata `jwks_uri` in the OAuth binding
 ({{I-D.draft-mcguinness-oauth-mission}}), or the Mission Authority
 Server's discovery `jwks_uri` in the standalone binding
@@ -522,7 +522,7 @@ lifecycle transition. It SHOULD also register the runtime decision and
 execution evidence for the action classes it enforces, so the action
 trail is transparent and not only the governance trail.
 
-An origin deploying this profile SHOULD register a derivation record
+A Mission Issuer deploying this profile SHOULD register a derivation record
 ({{derivation-record}}) for each derivation event. The derivation is
 where approval becomes an issued token, and the family's evidence
 otherwise leaves that step to Authorization Server logs no profile
@@ -531,7 +531,7 @@ mandates; registering it closes the approval-to-action gap.
 # The Mission as Subject {#feed}
 
 The `sub` of every Signed Statement about a Mission is a stable
-identifier of that Mission, derived from the `mission` claim's `origin`
+identifier of that Mission, derived from the `mission` claim's `issuer`
 and `id`. All evidence about one Mission shares one `sub` and forms one
 Transparency Service feed. Where the deployment provides feed retrieval
 ({{retrieval}}), an auditor collects a Mission's complete, ordered,
@@ -541,13 +541,13 @@ guarantee means the auditor and the deployment see the same records.
 For that to hold, every producer MUST compute the identical `sub`. This
 profile fixes a single construction; a producer MUST use it and MUST NOT
 use any other. The `sub` is the URI formed by appending the literal path
-segment `missions` and the Mission `id` to the `origin`:
+segment `missions` and the Mission `id` to the `issuer`:
 
 ~~~ text
-<origin>/missions/<id>
+<issuer>/missions/<id>
 ~~~
 
-The `origin` is used exactly as it appears in the `mission` claim, with
+The `issuer` is used exactly as it appears in the `mission` claim, with
 any single trailing slash removed, and the `id` is appended without
 transformation; the issuance profile constrains the Mission Identifier
 to the URL-safe characters `[A-Za-z0-9_-]` ({{I-D.draft-mcguinness-oauth-mission}}),
@@ -560,14 +560,14 @@ The `sub` is a correlator, not a credential; presenting it authorizes
 nothing ({{I-D.draft-mcguinness-oauth-mission}}).
 
 A Child Mission ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
-is its own Mission with its own `id` and `origin`, so its evidence forms
+is its own Mission with its own `id` and `issuer`, so its evidence forms
 its own feed; its lifecycle events, including a `cascaded` transition,
 appear in that feed. The event that triggered the cascade is in the
 parent's feed, and the child's lineage to the parent is the `parent`
 member of its `mission` claim, which an auditor follows to the parent's
 `sub` to see that trigger.
 
-Across trust domains a Mission's `origin` and `id` are unchanged
+Across trust domains a Mission's `issuer` and `id` are unchanged
 ({{I-D.draft-mcguinness-oauth-mission}}), so every producer in every
 domain computes the same `sub`. They share one feed only when they
 register with the same Transparency Service. Where domains register with
@@ -647,7 +647,7 @@ Consent Evidence and registers it. It does not put the disclosure in the
 log; it signs a Signed Statement whose payload is the hash of the Consent
 Evidence, carried inline, with the hash algorithm and the evidence media
 type in the protected header ({{hash-commitment}}). The `sub` is the
-Mission feed, derived from the Mission `origin` and `id`; the `iss` is
+Mission feed, derived from the Mission `issuer` and `id`; the `iss` is
 the Mission Issuer. Protected header, in COSE EDN ({{RFC9052}}):
 
 ~~~ cbor-diag
@@ -788,7 +788,7 @@ construction is fixed ({{feed}}) and does not expose the Subject
 directly, so the concern is not Subject leakage but that the Mission's
 durable identifier, its existence, and its registration cadence are
 visible in the log. A deployment SHOULD weigh whether those are
-sensitive, and whether the `origin` and `id` that compose the `sub`
+sensitive, and whether the `issuer` and `id` that compose the `sub`
 reveal more than intended, before registering a Mission's evidence in a
 shared or widely readable log.
 

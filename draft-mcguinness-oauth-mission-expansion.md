@@ -217,7 +217,7 @@ This document does NOT define:
 - branch expansion, in which predecessor and successor both remain
   active ({{replacement}});
 - multi-hop or cross-domain expansion; an expansion is adjudicated by
-  the predecessor's Mission Issuer (its `origin`); or
+  the predecessor's Mission Issuer (its `issuer`); or
 - policy-adjudicated expansion within a pre-consented authority
   ceiling; that is progressive authorization, defined by an
   experimental companion
@@ -484,7 +484,7 @@ The successor records a lineage link to the predecessor as a
 the successor's Mission record.
 
 The issuance profile's `mission` claim is an open object: additional
-members MAY appear alongside `id`, `origin`, and `authority_hash`, each
+members MAY appear alongside `id`, `issuer`, and `authority_hash`, each
 defined by the profile that introduces it, and a consumer MUST ignore
 members it does not understand and MUST NOT use any additional member
 to grant or widen authority ({{I-D.draft-mcguinness-oauth-mission}}).
@@ -532,9 +532,9 @@ This document defines two further lineage members:
 `predecessor`, `related_to`, and `successor` are each a bare Mission
 Identifier string, not an object like the `parent` member of a Child
 Mission
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}): same-origin
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}): same-issuer
 succession needs only the identifier to resolve the linked Mission at the
-shared `origin`, whereas parentage carries cascade semantics and
+shared `issuer`, whereas parentage carries cascade semantics and
 cross-object integrity that require a structured member.
 
 Properties:
@@ -546,9 +546,9 @@ Properties:
   event and MUST NOT change thereafter. The Mission record is immutable
   except for its `state` and the one-time `successor` link a supersession
   sets on the predecessor ({{superseded-state}}).
-- **Origin.** The predecessor and successor share an `origin`: an
+- **Origin.** The predecessor and successor share an `issuer`: an
   expansion is adjudicated by the predecessor's Mission Issuer. A
-  consumer correlating a chain resolves each link at that origin.
+  consumer correlating a chain resolves each link at that issuer.
 
 Example successor `mission` claim on a derived token (non-normative;
 other token claims omitted):
@@ -557,7 +557,7 @@ other token claims omitted):
 {
   "mission": {
     "id": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
     "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
@@ -613,13 +613,13 @@ The transition has these requirements:
 - **Reported as non-active.** A `superseded` predecessor is reported
   through the same mechanisms that report a `revoked` or `expired`
   Mission. Where the issuance profile's optional token introspection is
-  offered, the composite `active` is `false` and, from the origin, the
+  offered, the composite `active` is `false` and, from the issuer, the
   `mission.state` member gives `superseded`. Where the Mission Status
   profile {{I-D.draft-mcguinness-oauth-mission-status}} is deployed, the
   dedicated Status operation reports `superseded` among the terminal
   states and the Status Response `mission.state` gives `superseded`. A
   deployment that offers either surface and this document MUST include
-  `superseded` among the lifecycle states its origin may report.
+  `superseded` among the lifecycle states its issuer may report.
   Consumers rely on the issuance profile's forward-compatibility rule:
   `superseded`, like any non-`active` state, is non-deriving.
 
@@ -807,7 +807,7 @@ member:
 {
   "mission": {
     "id": "msn_3vK9pLqT2mX7wR4nB1sZ8YfC",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
     "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
@@ -884,7 +884,7 @@ Mitigations:
 - The issuance profile's integrity anchors are issuer-bound, so a
   Mission's governance state cannot be transplanted across Mission
   Issuers; an expansion is adjudicated only at the predecessor's own
-  `origin`.
+  `issuer`.
 
 ## Authority comes only from new consent {#new-consent}
 

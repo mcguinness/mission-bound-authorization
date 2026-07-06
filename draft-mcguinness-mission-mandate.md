@@ -173,7 +173,7 @@ uses:
 
 Mission Issuer:
 : The component that approved and holds the Mission, identified by the
-  Mission's `origin`: the OAuth Authorization Server under the
+  Mission's `issuer`: the OAuth Authorization Server under the
   issuance profile, or a Mission Authority Server
   ({{I-D.draft-mcguinness-mission-authority-server}}) under the
   standalone binding.
@@ -184,7 +184,7 @@ Mission Mandate (Mandate):
 
 Mandate Issuer, Mandate Verifier:
 : The conformance roles of {{conformance}}: the Mission Issuer acting
-  as the minter of Mandates (always the Mission `origin`), and a party
+  as the minter of Mandates (always the Mission `issuer`), and a party
   that validates a Mandate ({{verification}}) and relies on it as
   evidence.
 
@@ -229,7 +229,7 @@ The protected header MUST carry:
 ## Mandate Claims {#claims}
 
 `iss`:
-: REQUIRED. A string. The Mission `origin`.
+: REQUIRED. A string. The Mission `issuer`.
 
 `iat`:
 : REQUIRED. A NumericDate {{RFC7519}}. When the Mandate was minted.
@@ -240,9 +240,9 @@ The protected header MUST carry:
 
 `mission`:
 : REQUIRED. An object in the `mission` claim shape of the issuance
-  profile, extended per its extensibility rules: `id`, `origin`, and
+  profile, extended per its extensibility rules: `id`, `issuer`, and
   `authority_hash`, plus `intent_hash` committing the approved Mission
-  Intent. All four members are REQUIRED here. `mission.origin` MUST
+  Intent. All four members are REQUIRED here. `mission.issuer` MUST
   equal `iss`.
 
 `subject`:
@@ -303,7 +303,7 @@ token introspection where the verifier holds a Mission-bound token
 ({{I-D.draft-mcguinness-oauth-mission}}). A verifier whose reliance
 requires the Mission to be active MUST obtain current state from a
 source its deployment trusts, within a freshness bound its policy
-sets; where the origin advertises a propagation bound, the freshness
+sets; where the issuer advertises a propagation bound, the freshness
 bound SHOULD be no looser
 ({{I-D.draft-mcguinness-oauth-mission-status}}). Reliance that needs
 no active Mission, such as auditing a completed one, needs no check.
@@ -348,7 +348,7 @@ Payload:
   "jti": "mnd_4Xq7vB2kR9sT1mZ6pL3n",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "intent_hash":
@@ -486,17 +486,17 @@ Mandate:
    value.
 2. **Signature.** Resolve the REQUIRED `kid` in the Mission Issuer's
    published key material ({{mission-substrate}}) and verify the JWS
-   signature. Confirm `mission.origin` equals `iss`.
+   signature. Confirm `mission.issuer` equals `iss`.
 3. **Issuer trust.** Decide by local policy or configured trust
-   anchors whether the `iss` origin is trusted. A verifier MUST NOT
-   trust an origin merely because it appears inside a signed artifact,
+   anchors whether the `iss` value names a trusted issuer. A verifier MUST NOT
+   trust an issuer merely because it appears inside a signed artifact,
    mirroring the issuer-trust rule of the cross-domain projection
    profile ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). A
-   Mandate from an untrusted origin proves nothing.
+   Mandate from an untrusted issuer proves nothing.
 4. **Anchor recomputation.** When `authority_set` is present in full,
    the verifier MAY recompute `authority_hash` over it per the
    issuance profile's integrity-anchor rules (the
-   `mission-authority-set` envelope with `iss` set to the origin) and
+   `mission-authority-set` envelope with `iss` set to `mission.issuer`) and
    MUST reject the Mandate on mismatch. It MAY likewise verify
    `intent_hash` against a Mission Intent it holds.
 5. **Freshness.** When reliance requires an active Mission, obtain
@@ -517,14 +517,14 @@ distinguish them:
 
 Invalid:
 : The artifact fails as an artifact: signature, `typ`, required-claim
-  structure, `iss`/`origin` mismatch, anchor mismatch under step 4, or
+  structure, `iss`/`issuer` mismatch, anchor mismatch under step 4, or
   an unrecognized hash prefix under step 6. The Mandate MUST be
   rejected and MUST NOT be relied on for anything.
 
 Unverifiable:
 : Verification cannot complete: the issuer's key material is
   unreachable, the `kid` does not resolve, or no trust anchor covers
-  the origin. This is not evidence of tampering, mirroring the audit
+  the Mission's issuer. This is not evidence of tampering, mirroring the audit
   profile's classification ({{I-D.draft-mcguinness-mission-audit}});
   the verifier MUST NOT treat the Mandate as verified and MUST NOT
   treat the failure as proof the artifact is false.
@@ -576,9 +576,9 @@ the Mandate slots into its evidence-type pattern with these values:
   as-is (an already-signed object is not re-canonicalized).
 - **`preimage-content-type`**: `application/mission-mandate+jwt`
   ({{iana}}).
-- **Authoritative producer**: the Mission `origin`; the registering
+- **Authoritative producer**: the Mission `issuer`; the registering
   `iss` MUST equal it, which holds by construction since a Mandate's
-  `iss` is the origin ({{conformance}}).
+  `iss` is `mission.issuer` ({{conformance}}).
 
 Registration gives a Mandate an independent existence proof, which
 bounds a later issuer key compromise ({{security-considerations}}).
@@ -601,7 +601,7 @@ bounds a later issuer key compromise ({{security-considerations}}).
 
 A **Mandate Issuer** MUST:
 
-- be the Mission `origin` and set `iss` to it;
+- be the Mission `issuer` and set `iss` to it;
 - mint only over an existing Mission record, populating every claim
   from its committed members ({{minting}});
 - set `state_at_issuance` to the Mission's lifecycle state at `iat`;

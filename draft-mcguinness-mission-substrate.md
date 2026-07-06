@@ -184,7 +184,7 @@ and the core appear to differ, the core governs.
 {::boilerplate bcp14-tagged}
 
 This document uses Mission, Mission Intent, Mission Issuer, Authority
-Set, Approver, Subject, the Mission Identifier, `origin`, the
+Set, Approver, Subject, the Mission Identifier, `issuer`, the
 `mission` claim, the integrity anchors (`intent_hash` and
 `authority_hash`), the subset rule, Common Constraints, the
 only-`active` rule, and the audit horizon as defined by the core. It uses Policy Enforcement Point
@@ -210,11 +210,11 @@ Each subsection states the requirement on the binding, the home of the
 normative definition (a section of the core), and the consuming
 profiles; a summary here never overrides its home.
 
-## Mission Identifier and Origin {#identifier}
+## Mission Identifier and Issuer {#identifier}
 
 A binding MUST provide a Mission identifier that is opaque, carries no
 semantic content, has at least 128 bits of entropy, and is never
-reused, together with an `origin`: an issuer identifier naming the
+reused, together with an `issuer`: an issuer identifier naming the
 approving Mission Issuer, from which consumers resolve the binding's
 state and key surfaces; together they name exactly one Mission.
 
@@ -304,7 +304,7 @@ form), and audit transparency (the committed evidence types).
 This primitive is OPTIONAL, and it is where provision levels split.
 
 Under full provision, the binding issues a credential carrying the
-`mission` claim (`id`, `origin`, `authority_hash`) under its own
+`mission` claim (`id`, `issuer`, `authority_hash`) under its own
 proof-of-possession discipline, and only while the referenced Mission
 is `active`: credential issuance is gated on Mission state.
 
@@ -330,7 +330,7 @@ binding establishment section of the runtime profile
 ## Mission Key Material {#keys}
 
 A binding MUST publish the Mission Issuer's signing keys, resolvable
-from the `origin` by verifiers of its signed artifacts. Across a
+from the `issuer` by verifiers of its signed artifacts. Across a
 rotation, the verification key for each key identifier SHOULD remain
 resolvable while artifacts signed under it remain within the audit
 horizon ({{audit-horizon}}).
@@ -430,7 +430,7 @@ binding's own conformance clauses.
 
 A **Mission Substrate Binding**:
 
-1. provides the Mission identifier and `origin` ({{identifier}});
+1. provides the Mission identifier and `issuer` ({{identifier}});
 2. provides the lifecycle state space with the only-`active` rule,
    fail-safe treatment of unrecognized states, verbatim extension
    states, and a state source with a stated staleness bound

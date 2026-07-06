@@ -186,7 +186,7 @@ re-specified, here.
 
 This document uses the terms defined in the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}}, in particular Mission,
-Mission Issuer (the Mission `origin`: in this document's OAuth binding
+Mission Issuer (the Mission `issuer`: in this document's OAuth binding
 the Authorization Server; a standalone Mission Issuer, the Mission
 Authority Server {{I-D.draft-mcguinness-mission-authority-server}},
 serves these surfaces with the same semantics), Authority Set, the
@@ -228,7 +228,7 @@ issued.
 The Mission Issuer publishes its Mission Status endpoint URL in
 Authorization Server metadata ({{as-metadata}}) as
 `mission_status_endpoint`, which a consumer resolves from a
-credential's `mission.origin`. The endpoint MUST be served over TLS
+credential's `mission.issuer`. The endpoint MUST be served over TLS
 1.2 or later (TLS 1.3 RECOMMENDED), following the recommendations of
 {{RFC9325}}.
 
@@ -342,7 +342,7 @@ Decoded JWS payload:
   "exp": 1797840060,
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "state": "active",
@@ -367,7 +367,7 @@ The members are:
 - `mission`: the `mission` object, the same shape as the `mission`
   claim of {{I-D.draft-mcguinness-oauth-mission}} (Section "The
   Mission Claim") with status members added. It carries:
-  - `id`, `origin`: the subject Mission's identifier and origin.
+  - `id`, `issuer`: the subject Mission's identifier and issuer.
   - `authority_hash`: the issuance profile's consent commitment over
     the Authority Set ({{I-D.draft-mcguinness-oauth-mission}}, Section
     "Integrity Anchors").
@@ -411,7 +411,7 @@ The members are:
 A consumer MUST verify, before honoring a response:
 
 1. the JWS signature against a current `jwks_uri` entry for the
-   `origin` AS;
+   `issuer` AS;
 2. `iss` equals the expected AS issuer URL;
 3. `aud` equals the consumer's own audience identifier;
 4. `sub` equals the requesting client's identifier;
@@ -523,9 +523,9 @@ Introspection {{RFC7662}} projection of
 {{I-D.draft-mcguinness-oauth-mission}} (Section "Mission State via
 Token Introspection"). That section already
 defines a `mission` member on the introspection response carrying
-`id`, `origin`, `authority_hash`, and (from the Mission origin) the
+`id`, `issuer`, `authority_hash`, and (from the Mission's issuer) the
 lifecycle `state`, together with the caller-authorization,
-minimization, and origin-only-reports-state rules. This document does
+minimization, and issuer-only-reports-state rules. This document does
 not restate those rules.
 
 This extension adds the following to that projection:
@@ -533,18 +533,18 @@ This extension adds the following to that projection:
 - An introspection response that carries a Mission projection is
   protected by TLS, as for token introspection generally
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission State via
-  Token Introspection"). Where the projection's integrity and origin
+  Token Introspection"). Where the projection's integrity and provenance
   need to be verifiable independently of the transport (for example
   when the response transits intermediaries or is retained for audit),
   the AS SHOULD return it as a {{RFC9701}}-signed response, advertised
   through the standard `introspection_signing_alg_values_supported`
   metadata {{RFC8414}}.
-- When the responding AS is the Mission origin, the projection MAY
+- When the responding AS is the Mission's issuer, the projection MAY
   additionally carry `fresh_until`, an RFC 3339 {{RFC3339}} date-time
   giving the point until which the consumer MAY rely on the reported
   `state` without re-checking, governed by the caching rule of
   {{mission-status-caching}}. When `fresh_until` is absent (for example
-  a non-origin projection), the consumer MUST NOT cache the reported
+  a non-issuer projection), the consumer MUST NOT cache the reported
   `state` across requests and re-checks per use or relies on the
   token's own lifetime.
 
@@ -573,7 +573,7 @@ for a token whose Mission is `active`:
   "scope":   "openid",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "state":   "active",
@@ -808,7 +808,7 @@ Decoded JWS payload:
   "exp": 1797843260,
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "state": "revoked",
@@ -853,7 +853,7 @@ and `on_expiry` in `mission` alongside `state`. Decoded JWS payload:
   "exp": 1797841260,
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "state": "suspended",

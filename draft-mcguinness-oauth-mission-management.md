@@ -176,7 +176,7 @@ deployment that does not adopt it is unaffected.
 This document uses the terms defined in the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}} and the status profile
 {{I-D.draft-mcguinness-oauth-mission-status}}, in particular Mission,
-Mission Issuer (the Mission `origin`: in this document's OAuth binding
+Mission Issuer (the Mission `issuer`: in this document's OAuth binding
 the Authorization Server; a standalone Mission Issuer, the Mission
 Authority Server {{I-D.draft-mcguinness-mission-authority-server}},
 serves this surface with the same semantics), `mission_id`, the
@@ -668,10 +668,10 @@ not how fast any one revocation propagates.
 Approver transfer, re-anchoring a Mission's consent to a different
 accountable party, is not defined here. Administrative monotonic
 narrowing, such as shortening a Mission's `expires_at` or retiring
-a single Authority Set entry, is not defined here. Cross-origin
+a single Authority Set entry, is not defined here. Cross-issuer
 enumeration, one query spanning Missions held by multiple Mission
 Issuers, is not defined here; a Management Client queries each
-`origin` it is authorized for separately.
+`issuer` it is authorized for separately.
 
 # Authorization Server Metadata {#as-metadata}
 

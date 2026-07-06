@@ -242,7 +242,7 @@ Mission under {{mission-binding}}. It does not place any new
 requirement back on the issuance profile; it reads only fields that
 profile already defines:
 
-- the `mission` claim (`id`, `origin`, `authority_hash`);
+- the `mission` claim (`id`, `issuer`, `authority_hash`);
 - the token's `authorization_details`, including entries of type
   `mission_resource_access` (`resource`, `actions`, `constraints`,
   and any `delegation` member) and any other entry type the deployment
@@ -352,7 +352,7 @@ Mission-bound token:
 
 This profile is defined against the Mission model rather than against
 OAuth 2.0 mechanics. It consumes these substrate primitives: the
-Mission identifier and origin; the lifecycle state space with its
+Mission identifier and issuer; the lifecycle state space with its
 only-`active`-permits rule and a freshness source; the Authority Set
 representation with its subset rule and Common Constraints; the
 Mission-bound credential carrying the `mission` claim, consumed when
@@ -921,7 +921,7 @@ request, to the decision-API binding and the issuance profile's
 expansion mechanism.
 
 The PDP's placement is a deployment choice (co-located with the
-Mission's `origin`, embedded in the Resource Server, a tenant-scoped
+Mission's `issuer`, embedded in the Resource Server, a tenant-scoped
 service, or a shared service); this document does not mandate one. The
 requirement is only that a PEP at each consequential boundary can
 reach an applicable PDP.
@@ -954,8 +954,8 @@ reference the permit and the evidence record bind.
 A Mission-aware decision needs the Mission's current state, which a
 token alone does not convey. A runtime deployment MUST define the
 Mission state source it trusts for each enforcement scope. Examples
-include origin AS token introspection, a local Mission database, an
-authenticated status or event feed from the Mission `origin`, a
+include issuer AS token introspection, a local Mission database, an
+authenticated status or event feed from the Mission `issuer`, a
 materialized policy view, or a short-lived cross-domain credential
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) whose lifetime
 is the deployment's accepted state lease.
@@ -970,11 +970,11 @@ is the deployment's accepted state lease.
   applicable freshness time or lease interval.
 - When the credential issuer also holds the Mission, the PDP can learn
   state through token introspection ({{RFC7662}}) at the issuer per
-  {{I-D.draft-mcguinness-oauth-mission}}. A non-origin Resource AS
+  {{I-D.draft-mcguinness-oauth-mission}}. A non-issuer Resource AS
   introspecting a local token
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) cannot report
   current Mission state; it can establish local token validity, but not
-  origin Mission freshness.
+  issuer-side Mission freshness.
 - This document defines no cross-issuer by-Mission status query.
   Deployments that need tighter freshness than the token or
   cross-domain grant
@@ -988,7 +988,7 @@ is the deployment's accepted state lease.
   universal value.
 - For the high-consequence classes, the state source MUST be an active
   freshness mechanism that can reflect a revocation within the staleness
-  bound: origin token introspection ({{RFC7662}}), the Mission Status
+  bound: token introspection at the issuer ({{RFC7662}}), the Mission Status
   profile ({{I-D.draft-mcguinness-oauth-mission-status}}), or Mission
   Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}).
   Token-lifetime expiry alone is not an acceptable state source for
@@ -1041,7 +1041,7 @@ issuer-bound integrity-anchor envelope with `typ` `mission-policy-view`:
 ~~~
 SHA-256(JCS({
   "typ":   "mission-policy-view",
-  "iss":   <mission.origin>,
+  "iss":   <mission.issuer>,
   "value": <materialized view payload>
 }))
 ~~~
@@ -1198,7 +1198,7 @@ A record MUST contain:
 A record MUST also contain the following fields when they are available
 and trusted for the refusal or decision path:
 
-- the Mission reference (`mission.id`, `mission.origin`) and the
+- the Mission reference (`mission.id`, `mission.issuer`) and the
   `authority_hash` (and `intent_hash` when known: it is carried in
   neither the `mission` claim nor introspection, so it is available only
   to a PDP with direct Mission-record access, and most deployments
@@ -1641,7 +1641,7 @@ A permit decision record:
   "request_time": "2026-11-02T09:03:12Z",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },
@@ -1677,7 +1677,7 @@ keyed to the permit's decision identifier ({{evidence}}):
   "decision_id": "dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com"
+    "issuer": "https://as.example.com"
   },
   "parameter_digest":
     "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
@@ -1702,7 +1702,7 @@ record carries the recomputed digest:
   "request_time": "2026-11-02T09:03:29Z",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },

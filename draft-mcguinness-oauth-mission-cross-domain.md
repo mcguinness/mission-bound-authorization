@@ -113,12 +113,12 @@ specifies **cross-domain projection**: the originating Mission Issuer
 projects a Mission's authority, audience-scoped and
 integrity-anchored, to an Authorization Server in another trust
 domain, which honors it by minting local tokens for its own resources.
-The projection is a single hop, origin to Resource AS; chaining a
+The projection is a single hop, issuer to Resource AS; chaining a
 Mission across more than one trust-domain boundary remains future work
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Non-Goals").
 
 Two roles carry the model. The **Mission Issuer** (the Mission's
-`origin`) remains the only party that creates, holds, and gates the
+`issuer`) remains the only party that creates, holds, and gates the
 Mission. A **Resource AS** honors a Mission it did not issue: it
 validates the projected grant, applies its own local policy, and mints
 its own tokens, preserving the Mission binding unchanged. A Resource
@@ -147,7 +147,7 @@ in-progress cross-domain dependencies.
 
 This document uses the terms of the base profile
 {{I-D.draft-mcguinness-oauth-mission}}: Mission, Mission Issuer (the
-Mission's `origin`), Mission Intent, Authority Set, Subject, `mission`
+Mission's `issuer`), Mission Intent, Authority Set, Subject, `mission`
 claim, derived token, derivation, the subset rule, and lifecycle
 gating. Authority Set entries are {{RFC9396}} `authorization_details`
 objects. All JSON shown in this document is non-normative and
@@ -172,12 +172,12 @@ Local token:
 
 # Cross-Domain Projection {#model}
 
-A Mission is approved and held by one Mission Issuer (its `origin`).
+A Mission is approved and held by one Mission Issuer (its `issuer`).
 This document lets a single Mission be honored by Authorization
 Servers in other trust domains, so a Mission can span more than one
 AS, using the cross-domain authorization grant of the OAuth identity
 chaining architecture {{I-D.draft-ietf-oauth-identity-chaining}}: the
-origin AS issues, through an {{RFC8693}} token exchange, a short-lived
+issuer AS issues, through an {{RFC8693}} token exchange, a short-lived
 JWT authorization grant audienced to the target Authorization Server,
 which the client redeems there with the {{RFC7523}} JWT-bearer grant.
 
@@ -205,7 +205,7 @@ the highest-authority credential crossing a trust boundary, and its
 profile does not by itself guarantee them.
 
 In this model there is exactly one Mission Issuer per Mission (the
-`origin`) and one or more **Resource ASes** in other domains that
+`issuer`) and one or more **Resource ASes** in other domains that
 mint their own tokens for their resources. A Resource AS is never the
 Mission Issuer and MUST NOT create or alter a Mission.
 
@@ -224,7 +224,7 @@ any other derivation ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Mission Lifecycle and Gating"). A Mission-bound cross-domain grant:
 
 - MUST be a JWT authorization grant issued and signed by the Mission
-  `origin`, redeemable at the target Resource AS through the
+  `issuer`, redeemable at the target Resource AS through the
   {{RFC7523}} JWT-bearer grant;
 - MUST be audienced to the target Resource AS, and MUST NOT have a
   lifetime exceeding 300 seconds (a short lifetime bounds cross-domain
@@ -250,7 +250,7 @@ any other derivation ({{I-D.draft-mcguinness-oauth-mission}}, Section
   {{RFC7523}} Section 3);
 - MUST carry the `mission` claim
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "The Mission
-  Claim") with `id`, `origin`, and `authority_hash` unchanged from the
+  Claim") with `id`, `issuer`, and `authority_hash` unchanged from the
   Mission, and the audience-scoped `authorization_details`
   ({{audience-scope}}); and
 - MUST convey the Mission's Subject in the form the identity chaining
@@ -340,7 +340,7 @@ A Resource AS consuming a Mission-bound cross-domain grant:
 
 - MUST establish issuer trust in the originating AS by local policy
   or issuer metadata before accepting any Mission reference. It MUST
-  NOT trust a `mission.origin` merely because it appears inside a
+  NOT trust a `mission.issuer` merely because it appears inside a
   signed assertion.
 - MUST validate the grant's signature and expiry, and verify its
   `aud` is the Resource AS's own identifier, rejecting a grant
@@ -369,16 +369,16 @@ A Resource AS consuming a Mission-bound cross-domain grant:
 - When issuing local access tokens for its resources, the Resource AS
   uses the subject-resolution rules of the underlying cross-domain
   grant and identity chaining specifications. The local token preserves
-  the `mission` claim (`id`, `origin`, and `authority_hash`) unchanged
+  the `mission` claim (`id`, `issuer`, and `authority_hash`) unchanged
   from the cross-domain grant. The issuing `iss` is the Resource AS;
-  `mission.origin` remains the originating AS. Such a local token:
+  `mission.issuer` remains the originating AS. Such a local token:
   - has an `exp` that MUST NOT exceed the grant's `exp`. The Resource
     AS does not hold the Mission's `expires_at`; because the grant's
     own `exp` is bounded by it ({{cross-domain-grant}}), the local
     token is bounded transitively;
   - MUST be sender-constrained ({{RFC7800}}), like the grant it derives
     from, and MUST NOT be issued as a bearer token; and
-  - if it preserves the origin `client_id`, does so only as an audit
+  - if it preserves the issuer's `client_id`, does so only as an audit
     reference, not a local identity: that value is in the originating
     AS's namespace, and a partner Resource Server MUST NOT resolve or
     authorize on it as a local client, for the same portability reason
@@ -420,7 +420,7 @@ of any local token according to the cross-domain grant profile in use
 (the Identity Assertion Authorization Grant profile in the recommended
 case), the OAuth identity chaining architecture, and its local trust
 and account-linking policy. This document only requires that the
-Mission binding (`mission.id`, `mission.origin`, and `authority_hash`)
+Mission binding (`mission.id`, `mission.issuer`, and `authority_hash`)
 and the audience-scoped `authorization_details` remain bounded as
 described here.
 
@@ -437,19 +437,19 @@ document does not require to be exposed.
 # Introspection at a Resource AS {#introspection-at-resource-as}
 
 The base profile's OPTIONAL token introspection ({{RFC7662}}) reports
-a `mission` response member, and only the Mission `origin` reports the
+a `mission` response member, and only the Mission `issuer` reports the
 Mission's lifecycle `state` ({{I-D.draft-mcguinness-oauth-mission}},
 Section "Mission State via Token Introspection"). This section
-specifies the non-origin half of that rule.
+specifies the non-issuer half of that rule.
 
 A Resource AS that supports introspection for a local token it minted
 from a cross-domain grant returns the claim-shape members only: `id`,
-`origin`, and `authority_hash`. It holds the token, not the Mission:
+`issuer`, and `authority_hash`. It holds the token, not the Mission:
 it knows the Mission state only as of grant validation and has no
-query to the origin keyed by `mission_id` (neither this document nor
+query to the issuer keyed by `mission_id` (neither this document nor
 the base profile defines one). It MUST omit `mission.state` rather
 than report a stale value as current. `authority_hash`, when included,
-is the origin's commitment carried through the grant, not a value the
+is the issuer's commitment carried through the grant, not a value the
 Resource AS recomputes from its audience-scoped subset
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Consent Binding").
 
@@ -475,7 +475,7 @@ originating AS bounds grant lifetimes by the 300-second cap of
 new downstream tokens for long.
 The base profile's token introspection closes the revocation gap only
 single-domain: it requires the introspecting AS to hold the Mission,
-and a Resource AS has no query to the origin keyed by `mission_id`
+and a Resource AS has no query to the issuer keyed by `mission_id`
 ({{introspection-at-resource-as}}), so short downstream lifetimes
 remain the only cross-domain control. Deployments needing tighter
 cross-domain revocation can add the status or event-distribution
@@ -491,20 +491,20 @@ chain and the only one that crosses a trust boundary. The requirements
 of {{cross-domain-grant}} and {{validation-at-resource-as}} follow
 from that position: issuer trust is established by local policy or
 metadata, never inferred from a signed assertion's own
-`mission.origin`; the grant is sender-constrained and one-time-use,
+`mission.issuer`; the grant is sender-constrained and one-time-use,
 because the underlying grant profile provides no replay backstop of
 its own; and everything the Resource AS honors is bounded by the
 audience-scoped entries the grant conveyed, interpreted fail-closed.
-Downstream of the origin, `authority_hash` is an audit and correlation
+Downstream of the issuer, `authority_hash` is an audit and correlation
 anchor, not a recomputable proof: its integrity rests on the signature
 chain ({{validation-at-resource-as}}).
 
 # Privacy Considerations
 
 The cross-domain grant and every local token minted from it carry the
-canonical `mission_id`, `mission.origin`, and `authority_hash`
+canonical `mission_id`, `mission.issuer`, and `authority_hash`
 unchanged, so a Resource AS and its Resource Servers can correlate a
-Mission's activity across domains, and `mission.origin` identifies the
+Mission's activity across domains, and `mission.issuer` identifies the
 issuing AS to the partner domain. This is the deliberate correlation
 property of the base profile
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Identifier
@@ -559,11 +559,11 @@ the point of the example:
   from the partner's Resource Server through its internal services.
 
 The Mission is the durable anchor across both: `mission.id`,
-`mission.origin`, and `authority_hash` ride unchanged through every
+`mission.issuer`, and `authority_hash` ride unchanged through every
 hop. OAuth authority is audience-scoped by the Mission Issuer and
 Resource AS; deployment-local transaction context then narrows the
 operation for internal services. In this baseline walkthrough no hop
-calls back to `mission.origin` for state; each enforces from the
+calls back to `mission.issuer` for state; each enforces from the
 credential it holds. The OPTIONAL companion profiles layer on this
 baseline, and the stages note where: Stage 4 gains a runtime
 point-of-use check, and Stage 3 gains prompt cross-domain revocation
@@ -623,7 +623,7 @@ audience-scoped authority for the ERP:
   ],
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   }
@@ -670,14 +670,14 @@ ID-JAG's `exp`:
   ],
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   }
 }
 ~~~
 
-The issuing `iss` is now the Resource AS, but `mission.origin` remains
+The issuing `iss` is now the Resource AS, but `mission.issuer` remains
 the home AS. The token's `exp` (1797840290) is below the ID-JAG's
 (1797840300) and far below the Mission's `expires_at`. The Resource
 AS-local `sub` is illustrative; its value is determined by the
@@ -753,7 +753,7 @@ operation:
   },
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   }
@@ -773,7 +773,7 @@ partner-domain policy, reads the Mission context and local transaction
 authorization, and enforces them for the internal operation. Like
 every consumer downstream of the home AS, it treats `authority_hash`
 as an audit and correlation anchor it cannot recompute, and it makes
-no call to `mission.origin`.
+no call to `mission.issuer`.
 
 ## What Rode Through, and What Narrowed
 
@@ -783,7 +783,7 @@ no call to `mission.origin`.
 | Resource AS token | unchanged | ERP: read + write | 1797840290 |
 | Txn Token (within domain) | unchanged | one ledger lookup | 1797840120 |
 
-The Mission anchor (`id`, `origin`, `authority_hash`) is constant end
+The Mission anchor (`id`, `issuer`, `authority_hash`) is constant end
 to end. OAuth authority is preserved or narrowed at the cross-domain
 boundary, and local transaction context narrows the internal operation
 inside the partner domain. The lifetime shrinks at every hop and never
