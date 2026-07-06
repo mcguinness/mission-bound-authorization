@@ -735,10 +735,8 @@ Table of Contents
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
-              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission, 2026, <https://mcguinness.github.io/
-              mission-bound-authorization/draft-mcguinness-oauth-
-              mission.html>.
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -774,38 +772,31 @@ Table of Contents
 14.2.  Informative References
 
    [I-D.draft-mcguinness-mission-audit]
-              McGuinness, K., "Mission Audit Transparency", Work in
-              Progress, Internet-Draft, draft-mcguinness-mission-audit,
-              2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-mission-audit.html>.
+              McGuinness, K., "Mission Audit Transparency", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-audit.html>.
 
    [I-D.draft-mcguinness-mission-authority-server]
-              McGuinness, K., "Mission Authority Server", Work in
-              Progress, Internet-Draft, draft-mcguinness-mission-
-              authority-server, 2026, <https://mcguinness.github.io/
-              mission-bound-authorization/draft-mcguinness-mission-
-              authority-server.html>.
+              McGuinness, K., "Mission Authority Server", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-authority-server.html>.
 
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
               McGuinness, K., "Mission Cross-Domain Projection for OAuth
-              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission-cross-domain, 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-oauth-mission-cross-domain.html>.
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-cross-
+              domain.html>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              mission-signals, 2026, <https://mcguinness.github.io/
-              mission-bound-authorization/draft-mcguinness-oauth-
-              mission-signals.html>.
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-
+              signals.html>.
 
    [I-D.draft-mcguinness-oauth-mission-status]
               McGuinness, K., "Mission Status and Lifecycle for OAuth
-              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission-status, 2026, <https://mcguinness.github.io/
-              mission-bound-authorization/draft-mcguinness-oauth-
-              mission-status.html>.
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-status.html>.
 
 Acknowledgments
 

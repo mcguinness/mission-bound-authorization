@@ -395,17 +395,13 @@ Table of Contents
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
-              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission, 2026, <https://mcguinness.github.io/
-              mission-bound-authorization/draft-mcguinness-oauth-
-              mission.html>.
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission.html>.
 
    [I-D.draft-mcguinness-oauth-mission-expansion]
-              McGuinness, K., "Mission Expansion for OAuth 2.0", Work in
-              Progress, Internet-Draft, draft-mcguinness-oauth-mission-
-              expansion, 2026, <https://mcguinness.github.io/mission-
-              bound-authorization/draft-mcguinness-oauth-mission-
-              expansion.html>.
+              McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-expansion.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -419,25 +415,21 @@ Table of Contents
 12.2.  Informative References
 
    [I-D.draft-mcguinness-mission-runtime]
-              McGuinness, K., "Mission-Bound Runtime Enforcement", Work
-              in Progress, Internet-Draft, draft-mcguinness-mission-
-              runtime, 2026, <https://mcguinness.github.io/mission-
-              bound-authorization/draft-mcguinness-mission-
-              runtime.html>.
+              McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-runtime.html>.
 
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              mission-child-delegation, 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-oauth-mission-child-delegation.html>.
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-child-
+              delegation.html>.
 
    [I-D.draft-mcguinness-oauth-mission-consent-evidence]
               McGuinness, K., "Mission Consent Evidence for OAuth 2.0",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              mission-consent-evidence, 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-oauth-mission-consent-evidence.html>.
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-consent-
+              evidence.html>.
 
 Acknowledgments
 

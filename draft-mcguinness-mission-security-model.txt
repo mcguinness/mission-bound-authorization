@@ -629,53 +629,42 @@ Table of Contents
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
-              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission, 2026, <https://mcguinness.github.io/
-              mission-bound-authorization/draft-mcguinness-oauth-
-              mission.html>.
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission.html>.
 
 16.2.  Informative References
 
    [I-D.draft-mcguinness-mission-audit]
-              McGuinness, K., "Mission Audit Transparency", Work in
-              Progress, Internet-Draft, draft-mcguinness-mission-audit,
-              2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-mission-audit.html>.
+              McGuinness, K., "Mission Audit Transparency", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-audit.html>.
 
    [I-D.draft-mcguinness-mission-authority-server]
-              McGuinness, K., "Mission Authority Server", Work in
-              Progress, Internet-Draft, draft-mcguinness-mission-
-              authority-server, 2026, <https://mcguinness.github.io/
-              mission-bound-authorization/draft-mcguinness-mission-
-              authority-server.html>.
+              McGuinness, K., "Mission Authority Server", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-authority-server.html>.
 
    [I-D.draft-mcguinness-mission-authzen]
               McGuinness, K., "Mission-Bound Runtime Enforcement:
-              AuthZEN Profile", Work in Progress, Internet-Draft, draft-
-              mcguinness-mission-authzen, 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-mission-authzen.html>.
+              AuthZEN Profile", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-mission-
+              authzen.html>.
 
    [I-D.draft-mcguinness-mission-harness]
-              McGuinness, K., "Mission-Aware Agent Harnesses", Work in
-              Progress, Internet-Draft, draft-mcguinness-mission-
-              harness, 2026, <https://mcguinness.github.io/mission-
-              bound-authorization/draft-mcguinness-mission-
-              harness.html>.
+              McGuinness, K., "Mission-Aware Agent Harnesses", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-harness.html>.
 
    [I-D.draft-mcguinness-mission-orchestration]
               McGuinness, K., "Mission Orchestration and Unwinding",
-              Work in Progress, Internet-Draft, draft-mcguinness-
-              mission-orchestration, 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-mission-orchestration.html>.
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-mission-
+              orchestration.html>.
 
    [I-D.draft-mcguinness-mission-runtime]
-              McGuinness, K., "Mission-Bound Runtime Enforcement", Work
-              in Progress, Internet-Draft, draft-mcguinness-mission-
-              runtime, 2026, <https://mcguinness.github.io/mission-
-              bound-authorization/draft-mcguinness-mission-
-              runtime.html>.
+              McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-runtime.html>.
 
    [I-D.draft-mcguinness-oauth-ai-agent-instance]
               McGuinness, K., "OAuth 2.0 AI Agent Instance Profile",
@@ -693,59 +682,48 @@ Table of Contents
 
    [I-D.draft-mcguinness-oauth-mission-approval]
               McGuinness, K., "Mission Deferred Approval for OAuth 2.0",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              mission-approval, 2026, <https://mcguinness.github.io/
-              mission-bound-authorization/draft-mcguinness-oauth-
-              mission-approval.html>.
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-
+              approval.html>.
 
    [I-D.draft-mcguinness-oauth-mission-attenuation]
               McGuinness, K., "Mission Offline Attenuation for OAuth
-              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission-attenuation, 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-oauth-mission-attenuation.html>.
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-
+              attenuation.html>.
 
    [I-D.draft-mcguinness-oauth-mission-completion]
-              McGuinness, K., "Mission Completion for OAuth 2.0", Work
-              in Progress, Internet-Draft, draft-mcguinness-oauth-
-              mission-completion, 2026, <https://mcguinness.github.io/
-              mission-bound-authorization/draft-mcguinness-oauth-
-              mission-completion.html>.
+              McGuinness, K., "Mission Completion for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-completion.html>.
 
    [I-D.draft-mcguinness-oauth-mission-consent-evidence]
               McGuinness, K., "Mission Consent Evidence for OAuth 2.0",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              mission-consent-evidence, 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-oauth-mission-consent-evidence.html>.
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-consent-
+              evidence.html>.
 
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
               McGuinness, K., "Mission Cross-Domain Projection for OAuth
-              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission-cross-domain, 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-oauth-mission-cross-domain.html>.
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-cross-
+              domain.html>.
 
    [I-D.draft-mcguinness-oauth-mission-expansion]
-              McGuinness, K., "Mission Expansion for OAuth 2.0", Work in
-              Progress, Internet-Draft, draft-mcguinness-oauth-mission-
-              expansion, 2026, <https://mcguinness.github.io/mission-
-              bound-authorization/draft-mcguinness-oauth-mission-
-              expansion.html>.
+              McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-expansion.html>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              mission-signals, 2026, <https://mcguinness.github.io/
-              mission-bound-authorization/draft-mcguinness-oauth-
-              mission-signals.html>.
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-
+              signals.html>.
 
    [I-D.draft-mcguinness-oauth-mission-status]
               McGuinness, K., "Mission Status and Lifecycle for OAuth
-              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission-status, 2026, <https://mcguinness.github.io/
-              mission-bound-authorization/draft-mcguinness-oauth-
-              mission-status.html>.
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-status.html>.
 
 Acknowledgments
 
