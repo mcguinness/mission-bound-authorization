@@ -87,6 +87,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-mandate:
+    title: "Mission Mandate"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-completion:
     title: "Mission Completion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-completion.html
@@ -407,18 +415,32 @@ that issuer.
 
 # Cross-Cutting Assumptions {#cross-cutting}
 
-Three assumptions hold across the whole model:
+Five assumptions hold across the whole model:
 
 - **Sender-constrained credentials.** Mission-bound tokens are
   sender-constrained ({{I-D.draft-mcguinness-oauth-mission}}); a token
   exfiltrated without its proof-of-possession key is unusable. The model
   assumes the proof-of-possession mechanism is sound and keys are
   protected by their holder.
-- **Fail-closed on uncertainty.** Wherever a trusted component cannot
-  establish the fact it needs (Mission state, a completion event, a
-  verifiable decision), the relying component refuses rather than
-  proceeds. A deployment that fails open at any such point forfeits the
-  guarantee that point protects.
+- **Fail-closed on authority, fail-safe on inert evidence.** Wherever
+  a trusted component cannot establish an authority-relevant fact it
+  needs (Mission state, a completion event, a verifiable decision),
+  the relying component refuses rather than proceeds; a deployment
+  that fails open at any such point forfeits the guarantee that point
+  protects. Unavailability of inert evidence (a consent-evidence
+  retrieval, the transparency feed, a Mandate) is recorded and is
+  never by itself grounds for refusal
+  ({{I-D.draft-mcguinness-mission-audit}}); tampered inert evidence
+  is an integrity failure, handled by the profile that defines the
+  artifact.
+- **Role-scoped trust anchors.** A party trusted in one role (Mission
+  issuer, evidence producer for one evidence type, SET transmitter,
+  Transparency Service) is not thereby trusted in any other, and
+  issuer trust is established by local policy or metadata, never
+  inferred from being named inside a signed artifact
+  ({{I-D.draft-mcguinness-mission-audit}},
+  {{I-D.draft-mcguinness-mission-mandate}},
+  {{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 - **Authority does not move on inert input.** Intent that the agent or
   attacker-reachable content can influence (`goal`, `purpose`,
   `success_criteria`, and disclosure-only audit material) is inert and
