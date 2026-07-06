@@ -1573,6 +1573,13 @@ and presented by the executing component at request time in
   the capability. A deployment records it where the whole catalog is
   the trust unit.
 
+`executor`:
+: OPTIONAL. A string. An identifier for the executing component that
+  serves the capability at request time (for example, an MCP server
+  instance), asserted by the PEP that authenticates it. It is a
+  request-time fact, not part of the derived authority recorded at
+  derivation, and is recorded in Decision Evidence when present.
+
 Rules:
 
 - The validating server records `tool_id`, `source_uri`,
@@ -1596,6 +1603,11 @@ Rules:
   refusal is carried as `capability_drift`
   ({{runtime-denial-classification}}). It defines no drift rule of its
   own.
+- Resource policy MAY refuse a catalog-sourced action whose
+  `source_uri` or `executor` is outside the deployment's trusted set.
+  Such a refusal is a Resource-policy condition, carried as
+  `resource_policy` ({{runtime-denial-classification}}), not a drift
+  refusal.
 - Actions not sourced from a discovered catalog (deployment-registered
   `authorization_details` types, first-party operations with stable
   identity) do not require this binding.

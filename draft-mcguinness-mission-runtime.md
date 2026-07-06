@@ -879,7 +879,11 @@ decision. Runtime enforcement MUST evaluate:
   digest, that digest's stricter semantics apply and any source change
   refuses. The recorded digests are part of the derived authority and
   are covered by `authority_hash`
-  ({{I-D.draft-mcguinness-oauth-mission}}). Cross-format
+  ({{I-D.draft-mcguinness-oauth-mission}}). The identity of the
+  executing component that serves a capability (for example, an MCP
+  server instance) is a request-time fact the decision-API binding MAY
+  carry ({{authzen}}); Resource policy MAY refuse an executor outside
+  the deployment's trusted set. Cross-format
   canonicalization, signed capability manifests, and cross-catalog
   identity remain out of scope ({{deferred}}).
 - **Resource policy.** The runtime decision MUST include any
