@@ -529,8 +529,9 @@ This document defines two further lineage members:
   in the superseded lifecycle event
   ({{I-D.draft-mcguinness-oauth-mission-signals}}).
 
-`predecessor`, `related_to`, and `successor` are each a bare `mission_id`
-string, not an object like the `parent` member of a Child Mission
+`predecessor`, `related_to`, and `successor` are each a bare Mission
+Identifier string, not an object like the `parent` member of a Child
+Mission
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}): same-origin
 succession needs only the identifier to resolve the linked Mission at the
 shared `origin`, whereas parentage carries cascade semantics and
@@ -978,8 +979,8 @@ Mission discloses. This is intrinsic to the governance value of
 expansion. Deployments SHOULD scope read access to the `predecessor`
 member, and to any Mission-state surface that exposes it, to parties
 with a governance need, rather than exposing the chain to every
-credential audience. The issuance profile's `mission_id` correlation
-considerations apply to each Mission in the chain.
+credential audience. The issuance profile's Mission Identifier
+correlation considerations apply to each Mission in the chain.
 
 ## Disclosure of the broadened task {#broadened-task}
 
