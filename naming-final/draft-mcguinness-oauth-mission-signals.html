@@ -1,0 +1,1995 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission Lifecycle Signals for OAuth 2.0</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       The Mission Status and Lifecycle profile names event-driven propagation
+(Mission state changes reaching consumers over a Shared Signals stream)
+as one way to bound revocation latency, but leaves
+the channel itself unspecified. This document
+specifies it: a profile
+of the OpenID Shared Signals Framework in which a Mission Issuer emits
+a Mission lifecycle-change Security Event Token when it commits a state
+transition, delivered by push or poll, so a consumer learns of a
+revocation, expiry, or other transition promptly without polling
+Mission Status per Mission. It is
+optional and builds on Mission-Bound Authorization for OAuth 2.0, the
+issuance profile; a deployment that does not adopt it is unaffected. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="oauth" name="keyword">
+<meta content="mission" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="shared signals" name="keyword">
+<meta content="caep" name="keyword">
+<meta content="revocation" name="keyword">
+<meta content="draft-mcguinness-oauth-mission-signals-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.10.0
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.2
+-->
+<link href="draft-mcguinness-oauth-mission-signals.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">OAuth Mission Signals</td>
+<td class="right">July 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 7 January 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-oauth-mission-signals-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-07-06" class="published">6 July 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-01-07">7 January 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission Lifecycle Signals for OAuth 2.0</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">The Mission Status and Lifecycle profile names event-driven propagation
+(Mission state changes reaching consumers over a Shared Signals stream)
+as one way to bound revocation latency, but leaves
+the channel itself unspecified. This document
+specifies it: a profile
+of the OpenID Shared Signals Framework in which a Mission Issuer emits
+a Mission lifecycle-change Security Event Token when it commits a state
+transition, delivered by push or poll, so a consumer learns of a
+revocation, expiry, or other transition promptly without polling
+Mission Status per Mission. It is
+optional and builds on Mission-Bound Authorization for OAuth 2.0, the
+issuance profile; a deployment that does not adopt it is unaffected.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-signals.html">https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-signals.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-signals/">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-signals/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/draft-mcguinness-oauth-mission">https://github.com/mcguinness/draft-mcguinness-oauth-mission</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 7 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-mission-lifecycle-event-str" class="internal xref">Mission Lifecycle Event Stream</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
+                <p id="section-toc.1-1.3.2.1.1" class="keepWithNext"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-stream-scoping" class="internal xref">Stream Scoping</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-the-mission-lifecycle-chang" class="internal xref">The Mission Lifecycle Change Event</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-set-protection" class="internal xref">SET Protection</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-consumer-behavior-on-receip" class="internal xref">Consumer Behavior on Receipt</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-relationship-to-revocation-" class="internal xref">Relationship to Revocation Propagation</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-worked-example" class="internal xref">Worked Example</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-authorization-server-metada" class="internal xref">Authorization Server Metadata</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-forged-or-replayed-events" class="internal xref">Forged or Replayed Events</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-missed-events-are-not-fail-" class="internal xref">Missed Events Are Not Fail-Open</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
+                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-general-oauth-security" class="internal xref">General OAuth Security</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-security-event-token-type" class="internal xref">Security Event Token Type</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
+                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-oauth-authorization-server-" class="internal xref">OAuth Authorization Server Metadata Registration</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
+                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2">
+                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">Mission-Bound Authorization for OAuth 2.0
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile") gates
+derivation on Mission state and bounds outstanding self-contained
+tokens by their lifetime. The Mission Status and Lifecycle profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> adds surfaces for
+observing and changing state, and points to event-driven propagation
+for deployments that need Mission state changes to reach consumers
+promptly, without each consumer polling Mission Status per Mission. It
+does not define the channel.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">This document defines the channel. When a Mission Issuer commits a
+Mission lifecycle transition (a revocation, expiry, suspension,
+completion, or the approval event that activates a Mission), it emits
+a <strong>Mission lifecycle-change Security Event Token</strong> (<a href="#lifecycle-event" class="auto internal xref">Section 4</a>)
+over a profile of the OpenID Shared Signals Framework <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span>: pushed
+to a consumer's receiver <span>[<a href="#RFC8935" class="cite xref">RFC8935</a>]</span> or made available for the consumer
+to poll <span>[<a href="#RFC8936" class="cite xref">RFC8936</a>]</span>, as a Security Event Token (SET) <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>. A
+consumer that receives a non-<code>active</code> transition stops honoring the
+Mission (<a href="#consumer-behavior" class="auto internal xref">Section 6</a>). A deployment offers this channel by
+publishing the event stream (<a href="#event-stream" class="auto internal xref">Section 3</a>); consumers discover it
+from <code>mission_event_stream_endpoint</code> (<a href="#as-metadata" class="auto internal xref">Section 9</a>).<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">This document is <span class="bcp14">OPTIONAL</span> and <strong>experimental</strong>: adopt it for
+evaluation, not as a stable interface. Push delivery is a propagation
+latency optimization over correctly sized pull: a consumer that polls
+the Status profile's surfaces within the deployment's published
+staleness bound, and fails safe on <code>mission_expiry</code>, already meets the
+suite's revocation-propagation model without this channel
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). Deploy this profile
+where polling per Mission does not scale or the staleness bound must
+shrink below a practical polling interval.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">This document defines no new Mission semantics: the
+Mission, its lifecycle states, and the <code>mission</code> claim are defined in
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. The states this event reports
+are the issuance profile's lifecycle state space
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> as extended by whichever
+lifecycle profiles the deployment runs
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> and any companion
+profile it adopts). A deployment that does not stand up an event stream
+uses the polling surfaces of the Status profile instead and is
+unaffected by this document.<a href="#section-1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conventions-and-terminology">
+<section id="section-2">
+      <h2 id="name-conventions-and-terminology">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+      </h2>
+<p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">This document uses the terms defined in the issuance profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and the Status profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, in particular Mission,
+Mission Issuer (the Mission <code>origin</code>: in this document's OAuth binding
+the Authorization Server; a standalone Mission Issuer, the Mission
+Authority Server <span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>,
+transmits these events with the same semantics), <code>mission_id</code>,
+and the Mission lifecycle states. It additionally uses <strong>Security Event
+Token (SET)</strong> <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> and the <strong>Shared Signals Framework (SSF)</strong>
+        <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span> transmitter, receiver, and stream terminology.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">A <strong>consumer</strong> here is an SSF receiver that relies on Mission state,
+typically a Resource Server or an Authorization Server acting on a
+Mission it did not issue.<a href="#section-2-3" class="pilcrow">¶</a></p>
+<p id="section-2-4">All JSON shown in this document is non-normative and illustrative; the
+member definitions in the surrounding text are authoritative. JWT and
+SET examples are shown as decoded JSON; on the wire the JWS Compact
+Serialization <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> applies.<a href="#section-2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="event-stream">
+<section id="section-3">
+      <h2 id="name-mission-lifecycle-event-str">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-mission-lifecycle-event-str" class="section-name selfRef">Mission Lifecycle Event Stream</a>
+      </h2>
+<p id="section-3-1">This section is <span class="bcp14">OPTIONAL</span>. A Mission Issuer that does not emit lifecycle
+events, and a consumer that does not receive them, are unaffected; they
+rely on token lifetime and the polling surfaces of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">A Mission Issuer that emits lifecycle events publishes a Shared Signals
+Framework <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span> stream and advertises it in Authorization Server
+metadata (<a href="#as-metadata" class="auto internal xref">Section 9</a>) as <code>mission_event_stream_endpoint</code>. The
+endpoint and its configuration follow <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span>; this document
+profiles only the event carried, its protection, and the consumer's
+duty on receipt. The stream <span class="bcp14">MUST</span> be served over TLS 1.2 or later (TLS
+1.3 <span class="bcp14">RECOMMENDED</span>), following the recommendations of <span>[<a href="#RFC9325" class="cite xref">RFC9325</a>]</span>.<a href="#section-3-2" class="pilcrow">¶</a></p>
+<p id="section-3-3">Delivery uses the Shared Signals Framework delivery methods, advertised
+in the SSF stream configuration's <code>delivery_methods_supported</code>
+        <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span>:<a href="#section-3-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-4.1">
+          <p id="section-3-4.1.1">push-based delivery, SET delivery method <code>urn:ietf:rfc:8935</code>
+            <span>[<a href="#RFC8935" class="cite xref">RFC8935</a>]</span>: the Mission Issuer pushes SETs <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> to a
+consumer's registered receiver endpoint.<a href="#section-3-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-4.2">
+          <p id="section-3-4.2.1">poll-based delivery, SET delivery method <code>urn:ietf:rfc:8936</code>
+            <span>[<a href="#RFC8936" class="cite xref">RFC8936</a>]</span>: the Mission Issuer makes SETs available for the consumer
+to poll.<a href="#section-3-4.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-3-5">A Mission Issuer that emits events <span class="bcp14">MUST</span> support at least one method,
+and a consumer discovers the supported methods from the SSF stream
+configuration rather than from a separate Authorization Server metadata
+member. The consumer's stream configuration declares the method it
+uses; the Mission Issuer <span class="bcp14">MUST</span> respect it and <span class="bcp14">MUST NOT</span> silently fall
+back to a less-timely method.<a href="#section-3-5" class="pilcrow">¶</a></p>
+<div id="stream-scoping">
+<section id="section-3.1">
+        <h3 id="name-stream-scoping">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-stream-scoping" class="section-name selfRef">Stream Scoping</a>
+        </h3>
+<p id="section-3.1-1">Streams are configured per <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span>. A receiver adds a Mission to
+its stream with the SSF add-subject operation, using the Mission subject
+identifier (<a href="#lifecycle-event" class="auto internal xref">Section 4</a>). The transmitter <span class="bcp14">MUST</span> accept an
+add-subject only for a Mission the receiver is authorized for under
+deployment policy, for example a receiver whose audience is an audience
+of the Mission's authority. Absent explicit subjects, a deployment <span class="bcp14">MAY</span>
+provision an authorization-derived default stream (delivering the events
+for the Missions a receiver is authorized for) and <span class="bcp14">MUST</span> document that
+stream's scope.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="lifecycle-event">
+<section id="section-4">
+      <h2 id="name-the-mission-lifecycle-chang">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-the-mission-lifecycle-chang" class="section-name selfRef">The Mission Lifecycle Change Event</a>
+      </h2>
+<p id="section-4-1">A Mission Issuer emits a <code>mission.lifecycle-change</code> event, carried in
+the Security Event Token shape of the Shared Signals Framework
+<span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span> and informed by the Continuous Access Evaluation Profile
+<span>[<a href="#OIDC-CAEP" class="cite xref">OIDC-CAEP</a>]</span>, when it commits any Mission lifecycle transition or the
+approval event that activates a Mission. The event type URI, defined in
+this document and described in <a href="#iana" class="auto internal xref">Section 13</a>, is:<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2"><code>https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change</code><a href="#section-4-2" class="pilcrow">¶</a></p>
+<p id="section-4-3">This URI is the registered event-type identifier; <code>mission.lifecycle-change</code>
+is the short name this document uses for it in prose.<a href="#section-4-3" class="pilcrow">¶</a></p>
+<p id="section-4-4">The SET subject is the Mission, identified by a <code>sub_id</code> Subject
+Identifier <span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span> of format <code>opaque</code> whose <code>id</code> is the canonical
+<code>mission_id</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), carried per Shared
+Signals Framework <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span> conventions. A receiver adds a Mission to
+its stream using this same subject identifier (<a href="#event-stream" class="auto internal xref">Section 3</a>).<a href="#section-4-4" class="pilcrow">¶</a></p>
+<p id="section-4-5">The event is carried as the event-type-keyed value of the <code>events</code>
+claim of a SET <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>, alongside the SET's own <code>iss</code>, <code>aud</code>,
+<code>iat</code>, <code>jti</code>, and <code>sub_id</code>. Its claims are:<a href="#section-4-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4-6.1">
+          <p id="section-4-6.1.1"><code>mission</code> (object, required): the Mission identity, the same
+identity members as the <code>mission</code> object of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, carrying <code>id</code> (the
+canonical <code>mission_id</code>) and <code>origin</code> (the Mission Issuer (<code>origin</code>)
+issuer URL).<a href="#section-4-6.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-6.2">
+          <p id="section-4-6.2.1"><code>state</code> (string, required): the new lifecycle state. The value space
+is the Mission lifecycle state space defined by the issuance profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (<code>active</code>, <code>revoked</code>,
+<code>expired</code>), as extended by whichever lifecycle profiles a deployment
+also runs: <code>suspended</code> and <code>completed</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), <code>superseded</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), and <code>cascaded</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). Following
+the issuance profile's forward-compatibility rule, an event consumer
+<span class="bcp14">MUST</span> treat every value other than <code>active</code> as non-deriving, including
+a value it does not recognize. A Mission Issuer that runs a profile
+defining an additional state emits that state here on the
+corresponding transition (for example, <code>superseded</code> when a
+predecessor is superseded by an expansion successor).<a href="#section-4-6.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-6.3">
+          <p id="section-4-6.3.1"><code>prior_state</code> (string, conditional): the state immediately before the
+transition, drawn from the same value space. <span class="bcp14">REQUIRED</span> on a transition
+emission; absent only on the approval-event emission, where there is
+no prior state. A supersede transition emits <code>prior_state</code> of <code>active</code>
+and <code>state</code> of <code>superseded</code>.<a href="#section-4-6.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-6.4">
+          <p id="section-4-6.4.1"><code>version</code> (integer, required): a strictly monotonic per-Mission
+counter the Mission Issuer maintains and increments on each committed
+lifecycle transition (the approval-event emission is version 1),
+letting a consumer order events and detect gaps. This profile defines
+the counter here; it is not surfaced by the issuance or status
+profiles.<a href="#section-4-6.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-6.5">
+          <p id="section-4-6.5.1"><code>committed_at</code> (string, required): an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time
+at which the Mission Issuer committed the transition.<a href="#section-4-6.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-6.6">
+          <p id="section-4-6.6.1"><code>tenant</code> (string, optional): the Mission's deployment tenant. This
+profile defines no tenant model and does not use it; it is present so
+the event type is shared, unchanged, with multi-tenant and
+cross-substrate deployments that do.<a href="#section-4-6.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-6.7">
+          <p id="section-4-6.7.1"><code>reason</code> (string, optional): a human-readable reason, for audit.<a href="#section-4-6.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-6.8">
+          <p id="section-4-6.8.1"><code>successor</code> (string, optional): the successor <code>mission_id</code>. Present
+only when <code>state</code> is <code>superseded</code>, giving the successor that replaced
+the Mission (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-4-6.8.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-4-7">The <code>expired</code> event <span class="bcp14">MAY</span> be emitted lazily. Because expiry is driven by
+the <code>mission_expiry</code> clock rather than an explicit request, a Mission
+Issuer emits the <code>expired</code> event at or after <code>mission_expiry</code>, when it
+observes the transition. A consumer does not depend on prompt emission:
+it already fails safe on the <code>mission_expiry</code> carried with cached Mission
+status (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-4-7" class="pilcrow">¶</a></p>
+<p id="section-4-8">Example SET (decoded), for a revocation:<a href="#section-4-8" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4-9">
+<pre>
+{
+  "iss": "https://as.example.com",
+  "aud": "https://erp.example.com",
+  "iat": 1797843200,
+  "jti": "set_9Kp2vN7sR1tY8mZ3qX5b",
+  "sub_id": {
+    "format": "opaque",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  },
+  "events": {
+    "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
+      "mission": {
+        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+        "origin": "https://as.example.com"
+      },
+      "prior_state": "active",
+      "state": "revoked",
+      "version": 2,
+      "committed_at": "2026-11-02T09:06:40Z",
+      "reason": "Quarterly reconcile completed early"
+    }
+  }
+}
+</pre><a href="#section-4-9" class="pilcrow">¶</a>
+</div>
+<p id="section-4-10">Example SET (decoded), for the approval event that activates the
+Mission (<code>version</code> 1, no <code>prior_state</code>):<a href="#section-4-10" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4-11">
+<pre>
+{
+  "iss": "https://as.example.com",
+  "aud": "https://erp.example.com",
+  "iat": 1797836400,
+  "jti": "set_3Fw7bJ4nQ9xD2kM6vL1c",
+  "sub_id": {
+    "format": "opaque",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  },
+  "events": {
+    "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
+      "mission": {
+        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+        "origin": "https://as.example.com"
+      },
+      "state": "active",
+      "version": 1,
+      "committed_at": "2026-11-02T07:00:00Z"
+    }
+  }
+}
+</pre><a href="#section-4-11" class="pilcrow">¶</a>
+</div>
+<p id="section-4-12">Example SET (decoded), for a supersession, carrying <code>successor</code>:<a href="#section-4-12" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4-13">
+<pre>
+{
+  "iss": "https://as.example.com",
+  "aud": "https://erp.example.com",
+  "iat": 1797846000,
+  "jti": "set_6Tn4rW8pB3zK7qC2mV5j",
+  "sub_id": {
+    "format": "opaque",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  },
+  "events": {
+    "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
+      "mission": {
+        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+        "origin": "https://as.example.com"
+      },
+      "prior_state": "active",
+      "state": "superseded",
+      "version": 2,
+      "committed_at": "2026-11-02T09:40:00Z",
+      "successor": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX"
+    }
+  }
+}
+</pre><a href="#section-4-13" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="set-protection">
+<section id="section-5">
+      <h2 id="name-set-protection">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-set-protection" class="section-name selfRef">SET Protection</a>
+      </h2>
+<p id="section-5-1">Each SET <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> is a JWS Compact Serialization <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> signed
+with a Mission Issuer key resolvable in the issuer's <code>jwks_uri</code>, with a
+<code>typ</code> of <code>secevent+jwt</code> and a <code>kid</code> identifying the signing key. A
+consumer <span class="bcp14">MUST</span> verify the signature against the Mission Issuer's
+published keys and <span class="bcp14">MUST</span> refuse a SET whose <code>iss</code> does not match the
+Mission Issuer it registered with. Because this profile is
+single-issuer, the SET <code>iss</code> equals the event's <code>mission.origin</code>; a
+consumer <span class="bcp14">MAY</span> treat a mismatch as a verification failure. (<code>mission.origin</code>
+is carried in the event for cross-substrate deployments where the two
+can differ.)<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">The SET <code>aud</code> <span class="bcp14">MUST</span> be the receiving consumer's registered audience
+identifier; a consumer <span class="bcp14">MUST</span> refuse a SET whose <code>aud</code> is not its own. A
+consumer <span class="bcp14">MUST</span> treat <code>jti</code> as a one-time identifier and reject a replayed
+<code>jti</code>, tracking each <code>jti</code> for a deployment-defined replay window
+measured from the SET's <code>iat</code>. Following <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>, this profile does
+not require an <code>exp</code> on the SET; a consumer <span class="bcp14">MAY</span> reject a SET whose <code>iat</code>
+is implausibly old.<a href="#section-5-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="consumer-behavior">
+<section id="section-6">
+      <h2 id="name-consumer-behavior-on-receip">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-consumer-behavior-on-receip" class="section-name selfRef">Consumer Behavior on Receipt</a>
+      </h2>
+<p id="section-6-1">On receiving and verifying (<a href="#set-protection" class="auto internal xref">Section 5</a>) a
+<code>mission.lifecycle-change</code> event, a consumer <span class="bcp14">MUST</span>:<a href="#section-6-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6-2.1">
+          <p id="section-6-2.1.1">Stop honoring the affected Mission for any new consequential use when
+<code>state</code> is anything other than <code>active</code>: refuse to act on, and refuse
+to derive further authority from, tokens bound to that Mission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), to the extent of the
+consumer's enforcement role.<a href="#section-6-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.2">
+          <p id="section-6-2.2.1">Resume honoring the Mission on a verified event whose <code>state</code> is
+<code>active</code> and whose <code>version</code> is greater than the last applied for
+that <code>mission.id</code>, subject to the same gating the issuance profile
+applies. This covers a reversible transition (for example a
+<code>suspended</code> Mission that is later resumed to <code>active</code>).<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.3">
+          <p id="section-6-2.3.1">Apply the transition idempotently: a repeated or out-of-order event
+carrying a <code>version</code> not greater than the last applied for that
+<code>mission.id</code> <span class="bcp14">MUST NOT</span> regress the consumer's view of the state.<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.4">
+          <p id="section-6-2.4.1">Acknowledge the event per the SSF delivery method in use.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-6-3">A consumer <span class="bcp14">MUST NOT</span> treat the event as authority to change Mission
+state at the Mission Issuer; the Mission Issuer is authoritative
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). A consumer that
+believes the reported state is wrong re-checks through Mission Status
+rather than inventing a state.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-4">A consumer anchors stream liveness to the Shared Signals Framework
+<span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span> stream verification event. A consumer that cannot verify
+its stream, or that was down and may have missed events, <span class="bcp14">SHOULD</span> treat
+its cached Mission state as stale once it exceeds the Mission Issuer's
+advertised <code>mission_max_stale_seconds</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) and <span class="bcp14">SHOULD</span> fall back to
+the Mission Status operation rather than continue on possibly stale
+state.<a href="#section-6-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="event-driven">
+<section id="section-7">
+      <h2 id="name-relationship-to-revocation-">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-relationship-to-revocation-" class="section-name selfRef">Relationship to Revocation Propagation</a>
+      </h2>
+<p id="section-7-1">This document is the event-driven mechanism the Status profile's
+revocation-propagation guidance points to
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>): a Mission Issuer that
+offers it emits <code>mission.lifecycle-change</code> events (<a href="#lifecycle-event" class="auto internal xref">Section 4</a>)
+over the stream (<a href="#event-stream" class="auto internal xref">Section 3</a>), and consumers subscribe and apply
+<a href="#consumer-behavior" class="auto internal xref">Section 6</a>. A deployment that offers event-driven
+propagation <span class="bcp14">MUST</span> advertise <code>mission_event_stream_endpoint</code>
+(<a href="#as-metadata" class="auto internal xref">Section 9</a>) and support at least one SSF delivery method
+(<a href="#event-stream" class="auto internal xref">Section 3</a>), so consumers discover it.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2">This document neither requires nor presumes event-driven propagation;
+a Mission Issuer <span class="bcp14">MAY</span> emit lifecycle events for audit or operational
+purposes independent of any consumer's enforcement posture.<a href="#section-7-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="example">
+<section id="section-8">
+      <h2 id="name-worked-example">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-worked-example" class="section-name selfRef">Worked Example</a>
+      </h2>
+<p id="section-8-1">A partner ERP (<code>erp.partner.example.com</code>) consumes Mission lifecycle
+signals so it can stop honoring a Mission promptly rather than wait out
+token lifetimes. <code>alice</code> cancels her Q3 reconciliation Mission. The
+Mission Issuer commits the <code>revoked</code> transition and pushes a SET to the
+consumer's receiver (<span>[<a href="#RFC8935" class="cite xref">RFC8935</a>]</span>). Decoded SET:<a href="#section-8-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-8-2">
+<pre>
+{
+  "iss": "https://as.example.com",
+  "aud": "https://erp.partner.example.com",
+  "iat": 1797843600,
+  "jti": "set_5kQ8mP2vR9nT",
+  "sub_id": {
+    "format": "opaque",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  },
+  "events": {
+    "https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change": {
+      "mission": {
+        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+        "origin": "https://as.example.com"
+      },
+      "state": "revoked",
+      "prior_state": "active",
+      "version": 7,
+      "committed_at": "2026-11-02T09:00:00Z",
+      "reason": "user_cancelled"
+    }
+  }
+}
+</pre><a href="#section-8-2" class="pilcrow">¶</a>
+</div>
+<p id="section-8-3">The consumer verifies the SET signature, <code>iss</code>, <code>aud</code>, and <code>jti</code>, sees
+<code>version</code> 7 is newer than any state it holds, and records the Mission as
+<code>revoked</code>. Because <code>revoked</code> is non-<code>active</code>, the consumer stops relying
+on the Mission: the next attempt to use a token bound to
+<code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code> is refused, seconds after the
+cancellation, well inside the token's remaining lifetime. Had a stale
+<code>active</code> event for an earlier <code>version</code> arrived afterward, the
+<code>version</code> counter would cause the consumer to ignore it rather than
+revive the Mission.<a href="#section-8-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="as-metadata">
+<section id="section-9">
+      <h2 id="name-authorization-server-metada">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-authorization-server-metada" class="section-name selfRef">Authorization Server Metadata</a>
+      </h2>
+<p id="section-9-1">A Mission Issuer that emits lifecycle events advertises the following in
+its Authorization Server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, in addition to the
+issuance-profile and Status-profile members it already publishes:<a href="#section-9-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9-2">
+        <dt id="section-9-2.1">
+<code>mission_event_stream_endpoint</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-2.2">
+          <p id="section-9-2.2.1"><span class="bcp14">OPTIONAL</span>. A string containing a URL. The Shared Signals Framework
+<span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span> stream endpoint for Mission lifecycle events
+(<a href="#event-stream" class="auto internal xref">Section 3</a>). Present when the Mission Issuer emits events. The
+supported delivery methods are discovered from the SSF stream
+configuration's <code>delivery_methods_supported</code>, not from a separate
+metadata member.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-10">
+      <h2 id="name-security-considerations">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-10-1">The security considerations of the issuance profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and the Status profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> apply. This section
+covers threats specific to event propagation.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<div id="forged-or-replayed-events">
+<section id="section-10.1">
+        <h3 id="name-forged-or-replayed-events">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-forged-or-replayed-events" class="section-name selfRef">Forged or Replayed Events</a>
+        </h3>
+<p id="section-10.1-1">A forged event could suppress a Mission (a spurious <code>revoked</code>) or, more
+dangerously, mask a revocation (a spurious <code>active</code>). SET signing
+(<a href="#set-protection" class="auto internal xref">Section 5</a>) binds each event to the Mission Issuer; a consumer
+<span class="bcp14">MUST</span> verify the signature, the <code>iss</code>, and its own <code>aud</code>, and <span class="bcp14">MUST</span>
+reject a replayed <code>jti</code>. The <code>version</code> ordering rule
+(<a href="#consumer-behavior" class="auto internal xref">Section 6</a>) prevents an old <code>active</code> event from overriding
+a newer <code>revoked</code> one.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="missed-events-are-not-fail-open">
+<section id="section-10.2">
+        <h3 id="name-missed-events-are-not-fail-">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-missed-events-are-not-fail-" class="section-name selfRef">Missed Events Are Not Fail-Open</a>
+        </h3>
+<p id="section-10.2-1">Event delivery is best-effort; a consumer that treats "no event" as
+"still active" indefinitely defeats the purpose. A consumer <span class="bcp14">MUST</span> bound
+its reliance on event freshness and fall back to polling Mission Status
+(<a href="#consumer-behavior" class="auto internal xref">Section 6</a>) so a dropped revocation event does not leave a
+Mission honored past the deployment's advertised staleness bound.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="general-oauth-security">
+<section id="section-10.3">
+        <h3 id="name-general-oauth-security">
+<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-general-oauth-security" class="section-name selfRef">General OAuth Security</a>
+        </h3>
+<p id="section-10.3-1">This document inherits OAuth 2.0 Best Current Practice <span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span> for
+the OAuth surfaces it composes with; implementers <span class="bcp14">MUST</span> follow current
+OAuth security guidance.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-11">
+      <h2 id="name-privacy-considerations">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-11-1">A <code>mission.lifecycle-change</code> event discloses a Mission's identifier,
+state transitions, and timing to its receivers. A Mission Issuer <span class="bcp14">MUST</span>
+deliver events only to consumers authorized for the Mission and <span class="bcp14">MUST</span>
+scope each SET to a single consumer audience (<a href="#set-protection" class="auto internal xref">Section 5</a>), so a
+consumer never learns of Missions it is not party to. Event streams and
+their delivery logs record <code>mission_id</code> and consumer identity over
+time; deployments <span class="bcp14">MUST</span> treat them as Mission information-disclosure
+surfaces with the privacy posture of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-11-2">The <span class="bcp14">OPTIONAL</span> <code>reason</code> (<a href="#lifecycle-event" class="auto internal xref">Section 4</a>) is useful operational
+context, but the reason for a transition can be more sensitive than the
+fact of it. Because each SET is audience-scoped to a single authorized
+consumer (<a href="#set-protection" class="auto internal xref">Section 5</a>), <code>reason</code> is disclosed only to a party
+already authorized for the Mission, not broadcast. Even so, a Mission
+Issuer <span class="bcp14">SHOULD</span> include in <code>reason</code> only what that consumer needs, keep
+sensitive specifics in its own audit log rather than in the event, and
+<span class="bcp14">MAY</span> omit <code>reason</code> entirely when even a minimal reason would disclose
+more than the consumer requires.<a href="#section-11-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conformance">
+<section id="section-12">
+      <h2 id="name-conformance">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+      </h2>
+<p id="section-12-1">This document is <span class="bcp14">OPTIONAL</span>. An implementation that claims it:<a href="#section-12-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12-2.1">
+          <p id="section-12-2.1.1">as a <strong>Mission Issuer</strong>, emits a signed <code>mission.lifecycle-change</code>
+SET (<a href="#lifecycle-event" class="auto internal xref">Section 4</a>, <a href="#set-protection" class="auto internal xref">Section 5</a>) on every committed
+Mission lifecycle transition, supports at least one SSF delivery
+method (<a href="#event-stream" class="auto internal xref">Section 3</a>), and advertises
+<code>mission_event_stream_endpoint</code> (<a href="#as-metadata" class="auto internal xref">Section 9</a>);<a href="#section-12-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.2">
+          <p id="section-12-2.2.1">as a <strong>consumer</strong>, verifies and applies received events per
+<a href="#set-protection" class="auto internal xref">Section 5</a> and <a href="#consumer-behavior" class="auto internal xref">Section 6</a>.<a href="#section-12-2.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-12-3">An implementation that supports neither role is still a conforming
+issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-12-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana">
+<section id="section-13">
+      <h2 id="name-iana-considerations">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<div id="security-event-token-type">
+<section id="section-13.1">
+        <h3 id="name-security-event-token-type">
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-security-event-token-type" class="section-name selfRef">Security Event Token Type</a>
+        </h3>
+<p id="section-13.1-1">IANA is not requested to create a registry. This document defines the
+following Security Event Token (SET) <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> event type URI under
+the author-controlled <code>schemas.karlmcguinness.com/secevent</code> namespace:<a href="#section-13.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13.1-2.1">
+            <p id="section-13.1-2.1.1"><code>https://schemas.karlmcguinness.com/secevent/mission/lifecycle-change</code>:
+emitted on any Mission lifecycle transition or the approval-event
+emission from a Mission Issuer. The SET subject is a <code>sub_id</code> Subject
+Identifier <span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span> of format <code>opaque</code> whose <code>id</code> is the
+<code>mission_id</code>, per <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span> conventions. Required event-body
+claims: <code>mission</code> (carrying <code>id</code> and <code>origin</code>), <code>state</code>, <code>version</code>,
+<code>committed_at</code>. Conditional event-body claim: <code>prior_state</code> (required
+on transition emissions, absent on the approval-event emission).
+Optional event-body claims: <code>tenant</code>, <code>reason</code>, <code>successor</code>
+(<code>successor</code> present only on a <code>superseded</code> transition). See
+<a href="#lifecycle-event" class="auto internal xref">Section 4</a> for the schema.<a href="#section-13.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-13.1-3">This event type uses the OpenID Shared Signals Framework <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span>
+SET shape. The standalone Mission Issuer binding
+<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span> emits this event
+type unchanged and imposes no tenant requirement; <code>tenant</code> remains
+<span class="bcp14">OPTIONAL</span>. A consumer <span class="bcp14">MUST</span> ignore members it does not understand and
+<span class="bcp14">MUST NOT</span> reject an event solely for a missing <span class="bcp14">OPTIONAL</span> member (notably
+<code>tenant</code>).<a href="#section-13.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="oauth-authorization-server-metadata-registration">
+<section id="section-13.2">
+        <h3 id="name-oauth-authorization-server-">
+<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-oauth-authorization-server-" class="section-name selfRef">OAuth Authorization Server Metadata Registration</a>
+        </h3>
+<p id="section-13.2-1">IANA is requested to register the following in the "OAuth Authorization
+Server Metadata" registry <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. For each: Change Controller
+IETF; Reference this document, <a href="#as-metadata" class="auto internal xref">Section 9</a>.<a href="#section-13.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13.2-2.1">
+            <p id="section-13.2-2.1.1"><code>mission_event_stream_endpoint</code><a href="#section-13.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-14">
+      <h2 id="name-references">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-14.1">
+        <h3 id="name-normative-references">
+<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-status</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="OIDC-SSF">[OIDC-SSF]</dt>
+        <dd>
+<span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"OpenID Shared Signals Framework Specification 1.0"</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://openid.net/specs/openid-sharedsignals-framework-1_0.html">https://openid.net/specs/openid-sharedsignals-framework-1_0.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC3339">[RFC3339]</dt>
+        <dd>
+<span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7515">[RFC7515]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Signature (JWS)"</span>, <span class="seriesInfo">RFC 7515</span>, <span class="seriesInfo">DOI 10.17487/RFC7515</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7515">https://www.rfc-editor.org/rfc/rfc7515</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8414">[RFC8414]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8414">https://www.rfc-editor.org/rfc/rfc8414</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8417">[RFC8417]</dt>
+        <dd>
+<span class="refAuthor">Hunt, P., Ed.</span>, <span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Denniss, W.</span>, and <span class="refAuthor">M. Ansari</span>, <span class="refTitle">"Security Event Token (SET)"</span>, <span class="seriesInfo">RFC 8417</span>, <span class="seriesInfo">DOI 10.17487/RFC8417</span>, <time datetime="2018-07" class="refDate">July 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8417">https://www.rfc-editor.org/rfc/rfc8417</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8935">[RFC8935]</dt>
+        <dd>
+<span class="refAuthor">Backman, A., Ed.</span>, <span class="refAuthor">Jones, M., Ed.</span>, <span class="refAuthor">Scurtescu, M.</span>, <span class="refAuthor">Ansari, M.</span>, and <span class="refAuthor">A. Nadalin</span>, <span class="refTitle">"Push-Based Security Event Token (SET) Delivery Using HTTP"</span>, <span class="seriesInfo">RFC 8935</span>, <span class="seriesInfo">DOI 10.17487/RFC8935</span>, <time datetime="2020-11" class="refDate">November 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8935">https://www.rfc-editor.org/rfc/rfc8935</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8936">[RFC8936]</dt>
+        <dd>
+<span class="refAuthor">Backman, A., Ed.</span>, <span class="refAuthor">Jones, M., Ed.</span>, <span class="refAuthor">Scurtescu, M.</span>, <span class="refAuthor">Ansari, M.</span>, and <span class="refAuthor">A. Nadalin</span>, <span class="refTitle">"Poll-Based Security Event Token (SET) Delivery Using HTTP"</span>, <span class="seriesInfo">RFC 8936</span>, <span class="seriesInfo">DOI 10.17487/RFC8936</span>, <time datetime="2020-11" class="refDate">November 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8936">https://www.rfc-editor.org/rfc/rfc8936</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9325">[RFC9325]</dt>
+        <dd>
+<span class="refAuthor">Sheffer, Y.</span>, <span class="refAuthor">Saint-Andre, P.</span>, and <span class="refAuthor">T. Fossati</span>, <span class="refTitle">"Recommendations for Secure Use of Transport Layer Security (TLS) and Datagram Transport Layer Security (DTLS)"</span>, <span class="seriesInfo">BCP 195</span>, <span class="seriesInfo">RFC 9325</span>, <span class="seriesInfo">DOI 10.17487/RFC9325</span>, <time datetime="2022-11" class="refDate">November 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9325">https://www.rfc-editor.org/rfc/rfc9325</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9493">[RFC9493]</dt>
+      <dd>
+<span class="refAuthor">Backman, A., Ed.</span>, <span class="refAuthor">Scurtescu, M.</span>, and <span class="refAuthor">P. Jain</span>, <span class="refTitle">"Subject Identifiers for Security Event Tokens"</span>, <span class="seriesInfo">RFC 9493</span>, <span class="seriesInfo">DOI 10.17487/RFC9493</span>, <time datetime="2023-12" class="refDate">December 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9493">https://www.rfc-editor.org/rfc/rfc9493</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-14.2">
+        <h3 id="name-informative-references">
+<a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-mission-authority-server</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-authority-server.html">https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-authority-server.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Child Delegation for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-child-delegation</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-child-delegation.html">https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-child-delegation.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-expansion</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-expansion.html">https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-expansion.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="OIDC-CAEP">[OIDC-CAEP]</dt>
+        <dd>
+<span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"OpenID Continuous Access Evaluation Profile 1.0"</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://openid.net/specs/openid-caep-1_0.html">https://openid.net/specs/openid-caep-1_0.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9700">[RFC9700]</dt>
+      <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Labunets, A.</span>, and <span class="refAuthor">D. Fett</span>, <span class="refTitle">"Best Current Practice for OAuth 2.0 Security"</span>, <span class="seriesInfo">BCP 240</span>, <span class="seriesInfo">RFC 9700</span>, <span class="seriesInfo">DOI 10.17487/RFC9700</span>, <time datetime="2025-01" class="refDate">January 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9700">https://www.rfc-editor.org/rfc/rfc9700</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-A">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-A-1">The author thanks the implementers and reviewers of the Mission-Bound
+Authorization work, and the OpenID Shared Signals and CAEP communities,
+for the foundations this profile builds on.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
