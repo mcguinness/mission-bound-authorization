@@ -475,7 +475,8 @@ Authority Set:
 
 Mission:
 : The durable, immutable record created at the approval event
-  ({{mission-record}}), identified by a `mission_id`.
+  ({{mission-record}}), identified by a Mission Identifier
+  ({{mission-id}}).
 
 Derived token:
 : An access token issued under a Mission, carrying its Mission-derived
@@ -616,7 +617,7 @@ layered in future versions and are not required here.
 The flow then leaves the AS: (4) the agent calls the Resource Server
 with the token; the RS enforces the `authorization_details`
 statelessly and MAY check the `mission` claim, with no callback to the
-AS required. (5) A management revoke or `mission_expiry` moves the
+AS required. (5) A management revoke or `expires_at` moves the
 Mission to `revoked` or `expired`, after which the AS refuses further
 issuance and refresh; a deployment MAY additionally compose RFC 7009
 {{RFC7009}} refresh-token revocation ({{revocation}}).
@@ -683,7 +684,7 @@ following members:
   authority. A deployment MAY consult it for out-of-band policy or
   logging that does not affect the authority derived here.
 
-`mission_expiry`:
+`expires_at`:
 : REQUIRED. A string. An RFC 3339 {{RFC3339}}
   date-time after which the Mission MUST NOT derive tokens.
 
@@ -743,7 +744,7 @@ Example Mission Intent:
     "Each posted adjustment references a source invoice."
   ],
   "purpose": "urn:example:purpose:reconcile",
-  "mission_expiry": "2026-12-31T23:59:59Z",
+  "expires_at": "2026-12-31T23:59:59Z",
   "controls": {
     "acr": "urn:example:acr:mfa",
     "max_derivations": 200
@@ -1329,7 +1330,7 @@ At the approval event the AS MUST, in order:
    (administrative selection, a directory, an authenticated reference)
    is a deployment matter.
 3. Render for consent the derived Authority Set in human-meaningful
-   terms, with the `goal`, `constraints`, `mission_expiry`, and any
+   terms, with the `goal`, `constraints`, `expires_at`, and any
    `controls` bounds (notably `max_derivations`) as context. The object
    the Approver consents to is the **derived Authority Set**, what the
    agent may actually do, not the `goal` or Mission Intent: derivation
@@ -1397,7 +1398,7 @@ recompute it and treats it as an audit anchor (see
 The `intent_hash` commits the **approved Mission Intent**: the
 task the Approver consented to, as recorded on the Mission. It makes
 the recorded task tamper-evident: an auditor can verify the Mission's
-`mission_intent` against `intent_hash` and detect any later
+`intent` against `intent_hash` and detect any later
 alteration. `intent_hash` commits the task; `authority_hash`
 commits the authority derived from it.
 
@@ -1422,7 +1423,7 @@ the Mission; the AS SHOULD revoke the Mission or allow it to expire.
 A client learns its `mission_id` from the `mission` claim's `id` on
 each issued token ({{mission-claim}}) or from the token response. This
 document defines `mission_id` as an OPTIONAL token-endpoint response
-parameter: a string carrying the Mission's `mission_id`, returned
+parameter: a string carrying the Mission Identifier, returned
 alongside the issued token. It is an informational reference only:
 presenting it authorizes nothing ({{lifecycle}}), and a client MUST
 NOT derive authority from it.
@@ -1507,7 +1508,7 @@ every byte. The following rules close the remaining gaps; they apply
 to computing an anchor and to comparing committed values:
 
 - The committed `value` is exactly the object the AS recorded on the
-  Mission: the approved `mission_intent` for `intent_hash`, the
+  Mission: the approved `intent` for `intent_hash`, the
   `authority_set` for `authority_hash`. An auditor reproduces a
   digest from the record alone.
 - The AS MUST reject an input object containing duplicate JSON member
@@ -1530,7 +1531,11 @@ Test vectors for both anchors are provided in {{test-vectors}}.
 
 A Mission is the durable record created at the approval event. Its
 members are immutable after creation except for its `state`, and it is
-identified by a `mission_id`. Operational issuance bookkeeping, such as
+identified by a Mission Identifier ({{mission-id}}). Its members do
+not repeat the `mission` prefix: the record is the Mission, and
+prefixed names belong to surfaces that reference a Mission from
+outside it, such as the `mission_intent` request parameter and the
+`mission_id` response parameter. Operational issuance bookkeeping, such as
 the derivation count gated under {{lifecycle}}, is AS-side state about
 the Mission, not a member of the immutable record. Like the `mission`
 claim ({{mission-claim}}), the record is open ({{extensibility}}): a
@@ -1540,8 +1545,8 @@ member linking the Mission to a predecessor or parent); any other
 extension MUST use collision-resistant names. The members below are the
 ones this profile defines:
 
-`mission_id`:
-: REQUIRED. A string. The canonical Mission identifier
+`id`:
+: REQUIRED. A string. The canonical Mission Identifier
   ({{mission-id}}).
 
 `origin`:
@@ -1557,7 +1562,7 @@ ones this profile defines:
   companion profile, subject to the forward-compatibility rule of
   {{lifecycle}}.
 
-`mission_intent`:
+`intent`:
 : REQUIRED. An object. The approved Mission Intent.
 
 `authority_set`:
@@ -1595,9 +1600,9 @@ ones this profile defines:
 `created_at`:
 : REQUIRED. A string. RFC 3339 timestamp of creation.
 
-`mission_expiry`:
+`expires_at`:
 : REQUIRED. A string. Mirrors
-  `mission_intent.mission_expiry`.
+  `intent.expires_at`.
 
 The **audit horizon** is the deployment-declared retention window for
 the Mission record and its evidence: at least the Mission's lifetime
@@ -1607,20 +1612,23 @@ for the audit horizon.
 
 ## Mission Identifier Format {#mission-id}
 
-`mission_id` is an opaque URL-safe ASCII string of `[A-Za-z0-9_-]`
-characters, at least 128 bits of entropy, carrying no semantic
-content. It MUST NOT be reused.
+A Mission Identifier is an opaque URL-safe ASCII string of
+`[A-Za-z0-9_-]` characters, at least 128 bits of entropy, carrying no
+semantic content. It MUST NOT be reused. The record and the `mission`
+claim carry it as `id`; a surface that references a Mission from
+outside carries it as `mission_id`, as in the token-response parameter
+({{grant-binding}}).
 
 ## Worked Example
 
 ~~~ json
 {
-  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "origin": "https://as.example.com",
   "state": "active",
-  "mission_intent": { "goal": "Reconcile Q3 invoices ...",
+  "intent": { "goal": "Reconcile Q3 invoices ...",
     "resources": ["https://erp.example.com"],
-    "mission_expiry": "2026-12-31T23:59:59Z" },
+    "expires_at": "2026-12-31T23:59:59Z" },
   "authority_set": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
@@ -1652,7 +1660,7 @@ content. It MUST NOT be reused.
   "policy_version": "deploy-policy:v17",
   "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",
   "created_at": "2026-10-15T14:32:11Z",
-  "mission_expiry": "2026-12-31T23:59:59Z"
+  "expires_at": "2026-12-31T23:59:59Z"
 }
 ~~~
 
@@ -1800,7 +1808,7 @@ authoritative form of the Mission's authority. The AS MUST NOT issue a
 Mission-bound token whose `scope` exceeds the Authority Set.
 
 A credential the Mission Issuer derives MUST have an `exp` that does
-not exceed the Mission's `mission_expiry`, so no credential outlives
+not exceed the Mission's `expires_at`, so no credential outlives
 the approved Mission, not only that none is issued after expiry. How
 this bound extends transitively to tokens minted in another trust
 domain is specified by the companion
@@ -1811,7 +1819,7 @@ domain is specified by the companion
 The `mission` claim is a JSON object:
 
 `id`:
-: REQUIRED. A string. The Mission's `mission_id`.
+: REQUIRED. A string. The Mission Identifier ({{mission-id}}).
 
 `origin`:
 : REQUIRED. A string. The AS issuer URL.
@@ -1953,7 +1961,7 @@ A Mission is in one of three states:
   proceeds.
 - `revoked`: terminated by the Subject, Approver, or
   policy. Terminal.
-- `expired`: `mission_expiry` has passed. Terminal.
+- `expired`: `expires_at` has passed. Terminal.
 
 The transitions are:
 
@@ -1961,7 +1969,7 @@ The transitions are:
 |---|---|---|
 | (none) | approval event | `active` |
 | `active` | revoke | `revoked` |
-| `active` | `mission_expiry` reached | `expired` |
+| `active` | `expires_at` reached | `expired` |
 
 These three states are the mandatory core of the Mission lifecycle
 state space. This profile owns that state space; an OPTIONAL companion
@@ -2935,7 +2943,7 @@ The agent submits this Mission Intent through PAR ({{mission-intent}}):
     "Each posted adjustment references a source invoice."
   ],
   "purpose": "urn:example:purpose:reconcile",
-  "mission_expiry": "2026-12-31T23:59:59Z",
+  "expires_at": "2026-12-31T23:59:59Z",
   "controls": {
     "acr": "urn:example:acr:mfa",
     "max_derivations": 200
@@ -3025,7 +3033,7 @@ Everything enforcement needs is in the token: the audience, the
 sender-constraint (`cnf`), the authority with its constraints, and the
 `mission` claim carrying the `authority_hash` consent anchor. The
 token is short-lived (300 s) and its `exp` is far below
-`mission_expiry`; revoking the Mission stops further derivation, and
+`expires_at`; revoking the Mission stops further derivation, and
 this token dies at its own expiry ({{revocation}}).
 
 ## Stage 3: The Resource Server Enforces
@@ -3071,20 +3079,20 @@ preserves array order.
 {
   "goal": "Reconcile Q3 invoices",
   "resources": ["https://erp.example.com"],
-  "mission_expiry": "2026-12-31T23:59:59Z"
+  "expires_at": "2026-12-31T23:59:59Z"
 }
 ~~~
 
 Canonical bytes of the envelope:
 
 ~~~ text
-{"iss":"https://as.example.com","typ":"mission-intent","value":{"goal":
-"Reconcile Q3 invoices","mission_expiry":"2026-12-31T23:59:59Z","resourc
-es":["https://erp.example.com"]}}
+{"iss":"https://as.example.com","typ":"mission-intent","value":{"expires
+_at":"2026-12-31T23:59:59Z","goal":"Reconcile Q3 invoices","resources":[
+"https://erp.example.com"]}}
 ~~~
 
 ~~~ text
-intent_hash = sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E
+intent_hash = sha-256:6mIFoCz79uCHNzKLfBpBwqFjoFXdpmpuc65486IqimQ
 ~~~
 
 `authority_hash`, over this Authority Set as the envelope `value` with

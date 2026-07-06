@@ -283,7 +283,7 @@ parent token's JWS Signing Input.
 
 The child's `aud` MUST equal its parent's `aud` or be a subset of it,
 and the child's `exp` MUST NOT exceed its parent's `exp`. Because the
-Mission Issuer caps the root's `exp` at the Mission's `mission_expiry`
+Mission Issuer caps the root's `exp` at the Mission's `expires_at`
 ({{I-D.draft-mcguinness-oauth-mission}}), the per-hop `exp` rule bounds
 the whole chain transitively: no descendant outlives the root, hence
 none outlives the Mission.
