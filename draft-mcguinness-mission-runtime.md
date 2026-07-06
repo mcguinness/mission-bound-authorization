@@ -680,6 +680,29 @@ the authority of another. On compromise of a mediating PEP's key, the
 deployment revokes the affected tokens and re-derives. Mediating-PEP
 key rotation follows the deployment's published key set.
 
+## Least exposure {#least-exposure}
+
+Mission containment applies to exposure as well as authority. An
+agent exceeds the Mission envelope by invoking an action outside the
+Authority Set, but also by being exposed to inputs the approved task
+does not need: tools, data, memories, prompts, schemas, credentials,
+or downstream responses. Authority bounds what execution can do;
+exposure bounds what reasoning can see, and unnecessary context is
+the raw material of prompt injection and within-scope laundering.
+
+A Mission-aware runtime SHOULD minimize exposure of prompts,
+retrieved documents, memory, tool catalogs, schemas, credentials, and
+downstream responses to what the active Mission needs. Where mediated
+custody is the deployment's declared control for an action class
+({{custody}}), credential material and the sender-constraint private
+key MUST NOT be exposed to the agent component: exposure reduces
+mediation to advice.
+
+Least exposure narrows what injection can read and what within-scope
+laundering can draw from; it is not information-flow control, and an
+exposure filter, like a tool-catalog filter ({{classification}}),
+never replaces per-action authorization.
+
 ## Agent-compromise-resistant enforcement {#compromise-resistant}
 
 "Protects against agent compromise" is a verifiable claim, not a label.
@@ -1361,6 +1384,9 @@ parameters, metered, and (with mediated execution, {{custody}}) made
 unreachable to an agent that does not hold the egress credential. This
 is the architectural defense, gate the exfiltration against an authority
 the injection cannot widen, rather than make the agent injection-proof.
+Least exposure ({{least-exposure}}) is the input-side complement: it
+shrinks what an injected agent can read and what within-scope
+laundering can draw from, without changing the limits below.
 
 Two limits are inherent and a deployment MUST NOT overstate the
 guarantee. First, it is exactly as strong as PEP-placement completeness:
