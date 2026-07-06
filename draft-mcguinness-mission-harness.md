@@ -88,6 +88,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-authzen:
+    title: "Mission Runtime Enforcement with AuthZEN"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -250,7 +258,11 @@ The harness MUST publish an execution-environment scope statement. For
 each mediated action class it states the isolation mechanism that
 confines governed work (for example a container, virtual machine, or
 network egress policy) and names the unmediated paths excluded from the
-claim. The statement also declares the deployment's taint policy
+claim. For each mediated class the statement MUST also enumerate the
+secondary egress channel classes the environment offers, at minimum
+DNS resolution, log and error output, and shared stores another
+process reads, stating for each whether it is mediated, excluded by
+the isolation mechanism, or outside the claim. The statement also declares the deployment's taint policy
 ({{session-taint}}). Verifying that no unmediated path exists is a
 deployment audit obligation, not a protocol property: this profile
 fixes what the statement declares, not how a deployment proves it.
@@ -758,7 +770,11 @@ approval ({{I-D.draft-mcguinness-mission-runtime}}) or downgrade that
 authority (suppress the action), rather than let the agent egress on
 the strength of injected content. This is the plan-then-execute
 pattern: untrusted content may inform the agent's planning, but it
-MUST NOT, on its own, drive an egress the Subject did not direct.
+MUST NOT, on its own, drive an egress the Subject did not direct. A
+deployment MAY instead route the taint determination through the
+decision request where the binding carries it
+({{I-D.draft-mcguinness-mission-authzen}}); the PDP then enforces
+this rule and records the taint context in Decision Evidence.
 
 The taint policy MUST be declared in the execution-environment scope
 statement ({{mediated-egress}}): the content trust list, the trigger

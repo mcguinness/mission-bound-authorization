@@ -941,6 +941,46 @@ service, or a shared service); this document does not mandate one. The
 requirement is only that a PEP at each consequential boundary can
 reach an applicable PDP.
 
+## Trifecta containment {#trifecta-containment}
+
+An agent that holds private-data authority, is exposed to untrusted
+content, and can communicate externally combines the three
+ingredients of injection-driven exfiltration
+({{prompt-injection-exfiltration}}). The profiles gate each
+ingredient separately; this claim names the composite. A deployment
+claims **trifecta containment** for a Mission's governed work only
+when all of the following hold, each MUST under this claim regardless
+of its base-profile level:
+
+- **Private-data exposure.** Least exposure ({{least-exposure}}) is
+  applied: the context surfaced to the agent is scoped to the active
+  Mission, and credential material stays out of the agent for every
+  mediated class ({{custody}}).
+- **Untrusted content.** The harness taint policy
+  ({{I-D.draft-mcguinness-mission-harness}}) is in force and its
+  egress rule is enforced, not advisory: a consequential
+  external-communication or external-commitment action whose bound
+  parameters derive from tainted content (or, under session-level
+  taint, any such action in a tainted session) obtains a fresh
+  action-bound approval ({{action-approval}}) or is refused. Where
+  the decision-API binding carries taint context
+  ({{I-D.draft-mcguinness-mission-authzen}}), the PDP enforces the
+  rule; otherwise the harness does, and the scope statement says
+  which.
+- **External communication.** The external-communication and
+  external-commitment classes are mediated: no unmediated path, the
+  scope statement's egress-channel enumeration covers them
+  ({{I-D.draft-mcguinness-mission-harness}}), and the
+  sender-constraint keys are held by the mediating PEP ({{custody}}).
+
+The claim is published with the enforcement-scope conformance
+statement ({{runtime-conformance}}). It is containment, not immunity:
+the limits of {{prompt-injection-exfiltration}} stand, in particular
+within-scope laundering, bounded quantitatively where an
+egress-volume bound is metered
+({{I-D.draft-mcguinness-mission-metering}}), and PEP-placement
+completeness.
+
 ## Mission binding establishment {#mission-binding}
 
 Every decision evaluates one Mission: the **established Mission**. A
@@ -1414,7 +1454,7 @@ controllable boundary, or if an unmediated path can reach the action
 ({{pep-placement}}). A deployment's claim is only as strong as the set
 of execution paths it actually mediates; it MUST name that set.
 
-## Prompt injection and exfiltration
+## Prompt injection and exfiltration {#prompt-injection-exfiltration}
 
 This profile assumes the agent can be prompt-injected and does not try
 to prevent that. It constrains what an injected agent can do by gating

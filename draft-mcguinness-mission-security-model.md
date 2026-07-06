@@ -443,7 +443,11 @@ active-freshness state source) are recommendations, not requirements, and
 a deployment that leaves them as recommendations does not obtain it. This
 matches the suite's front-door framing: adopting the profiles does not by
 itself make a deployment resistant to a compromised agent. The model
-makes misuse bounded and, where evidence is produced, attributable.
+makes misuse bounded and, where evidence is produced, attributable. A
+deployment that additionally claims the runtime profile's trifecta
+containment enforces least exposure and the harness taint rule as
+MUSTs, so an injected agent cannot egress on the strength of
+untrusted content alone.
 
 It does not make a compromised trusted component safe. The compromise of
 each component degrades a specific guarantee, as listed in
@@ -492,7 +496,7 @@ honest part: it is what a deploying party still owns.
 | Active Mission used as ambient standing authority | Per-action runtime enforcement, state re-check, fail-closed on stale state | An issuance-only deployment gets audit, not action-time defense |
 | Revoked or expired Mission still acts (kill switch) | Issuance gating; runtime state re-check within the staleness bound; short token lifetimes | A window up to the staleness bound or token TTL; a spoofed state source (a trusted component) |
 | Approver approves more than was shown | The rendered disclosure is committed; rendering-assurance ladder up to an authenticator-signed commitment | Comprehension: no server-side commitment proves what a human perceived or understood |
-| Exfiltration of private data (the third leg of the lethal trifecta) | External communication is a gated consequential action; harness leaves no unmediated path; session taint downgrades egress after untrusted input (optional; recommended, not required); least-exposure context minimization narrows what an injected agent sees (runtime, harness) | PEP-placement completeness; no information-flow control, so a sequence of in-scope steps can launder data |
+| Exfiltration of private data (the third leg of the lethal trifecta) | External communication is a gated consequential action; harness leaves no unmediated path; session taint downgrades egress after untrusted input (optional; recommended, not required); least-exposure context minimization narrows what an injected agent sees (runtime, harness); the composite is claimable as trifecta containment (runtime) | PEP-placement completeness; no information-flow control, so a sequence of in-scope steps can launder data |
 | Offline sub-agent fan-out abuse | Capability monotonicity (narrow-only) and the runtime kill-switch re-check on the carried chain | Fan-out breadth is unobserved by the issuer; bounded by depth and policy, not by the issuer |
 | Audit tampered, dropped, or reordered | Transparency: append-only log, inclusion receipts, non-equivocation | Single-service equivocation (per-service only; register with several); a producer can still log a false record (accountability, not prevention) |
 | Agent fabricates results or acts on false data | Not addressed | Full: semantic and grounding verification are a non-goal; pair with a grounding layer if needed |
