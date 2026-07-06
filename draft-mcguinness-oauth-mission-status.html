@@ -1653,7 +1653,8 @@ report-freshness metadata, carried in <code>mission</code> so it travels with
 envelope to carry it (<a href="#introspection-projection" class="auto internal xref">Section 4</a>).<a href="#section-3.4-10.2.2.4.1" class="pilcrow">¶</a></p>
 </li>
               <li class="normal" id="section-3.4-10.2.2.5">
-                <p id="section-3.4-10.2.2.5.1"><code>mission_expiry</code>: the point at which the Mission itself expires
+                <p id="section-3.4-10.2.2.5.1"><code>mission_expiry</code>: the point at which the Mission itself expires,
+mirroring the Mission record's <code>expires_at</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-3.4-10.2.2.5.1" class="pilcrow">¶</a></p>
 </li>
               <li class="normal" id="section-3.4-10.2.2.6">
@@ -2120,7 +2121,7 @@ refused as a conflict (<a href="#idempotency" class="auto internal xref">Section
 no-op. Re-requesting an operation that has already reached its resulting
 state (for example, <code>revoke</code> on an already-<code>revoked</code> Mission) is
 idempotent and succeeds without a state change. A Mission that reaches
-<code>mission_expiry</code> transitions to <code>expired</code> independently of this
+its <code>expires_at</code> transitions to <code>expired</code> independently of this
 endpoint, from <code>active</code> or <code>suspended</code>.<a href="#section-5.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2235,7 +2236,7 @@ every other state is non-deriving.<a href="#section-5.3-1" class="pilcrow">¶</a
                 <code>active</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>mission_expiry</code> reached</td>
+                <code>expires_at</code> reached</td>
               <td class="text-left" rowspan="1" colspan="1">expiry clock</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>expired</code>
@@ -2246,7 +2247,7 @@ every other state is non-deriving.<a href="#section-5.3-1" class="pilcrow">¶</a
                 <code>suspended</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>mission_expiry</code> reached</td>
+                <code>expires_at</code> reached</td>
               <td class="text-left" rowspan="1" colspan="1">expiry clock</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>expired</code>
@@ -2298,10 +2299,11 @@ every other state is non-deriving.<a href="#section-5.3-1" class="pilcrow">¶</a
             </tr>
           </tbody>
         </table>
-<p id="section-5.3-3"><code>revoke</code> and <code>mission_expiry</code> both apply in <code>suspended</code> as well as
-<code>active</code>, so a suspended Mission can still be terminated or expire. The
-<code>superseded</code> and <code>cascaded</code> rows are companion-defined: <code>superseded</code> is
-committed by the expansion profile and requires an <code>active</code> predecessor
+<p id="section-5.3-3"><code>revoke</code> and the Mission's <code>expires_at</code> both apply in <code>suspended</code> as
+well as <code>active</code>, so a suspended Mission can still be terminated or
+expire. The <code>superseded</code> and <code>cascaded</code> rows are companion-defined:
+<code>superseded</code> is committed by the expansion profile and requires an
+<code>active</code> predecessor
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>); <code>cascaded</code> is
 committed by the child-delegation profile only when a parent reaches a
 terminal state. A <code>suspended</code> parent holds a dependent Child Mission
@@ -2509,7 +2511,7 @@ specified separately by Mission Management
 not require them. The following capabilities remain deferred to future
 work. Approver transfer or re-anchoring, changing the party that
 anchors a Mission's consent, is not defined here. Administrative
-monotonic narrowing, such as shortening a Mission's <code>mission_expiry</code>
+monotonic narrowing, such as shortening a Mission's <code>expires_at</code>
 or retiring a single Authority Set entry, is not defined here.<a href="#section-5.9-1" class="pilcrow">¶</a></p>
 </section>
 </div>

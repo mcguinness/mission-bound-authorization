@@ -235,8 +235,8 @@ Table of Contents
       lifetime exceeding 300 seconds (a short lifetime bounds cross-
       domain revocation latency; see Section 9.1);
 
-   *  MUST have an exp that does not exceed the Mission's
-      mission_expiry, per the base profile's expiry rule
+   *  MUST have an exp that does not exceed the Mission's expires_at,
+      per the base profile's expiry rule
       ([I-D.draft-mcguinness-oauth-mission], Section "Mission-Bound
       Access Tokens");
 
@@ -389,8 +389,8 @@ Table of Contents
       local token:
 
       -  has an exp that MUST NOT exceed the grant's exp.  The Resource
-         AS does not hold mission_expiry; because the grant's own exp is
-         bounded by mission_expiry (Section 6), the local token is
+         AS does not hold the Mission's expires_at; because the grant's
+         own exp is bounded by it (Section 6), the local token is
          bounded transitively;
 
       -  MUST be sender-constrained ([RFC7800]), like the grant it
@@ -745,7 +745,7 @@ A.1.  Stage 2: Cross-Domain Projection via ID-JAG (Between Domains)
    }
 
    The ID-JAG is short-lived (300 s) and sender-constrained to the
-   agent.  Its exp does not exceed mission_expiry (Section 6).
+   agent.  Its exp does not exceed the Mission's expires_at (Section 6).
 
 A.2.  Stage 3: The Resource AS Issues a Local Access Token
 
@@ -789,10 +789,10 @@ A.2.  Stage 3: The Resource AS Issues a Local Access Token
 
    The issuing iss is now the Resource AS, but mission.origin remains
    the home AS.  The token's exp (1797840290) is below the ID-JAG's
-   (1797840300) and far below mission_expiry.  The Resource AS-local sub
-   is illustrative; its value is determined by the subject-resolution
-   rules of the ID-JAG and identity chaining profiles, not by this
-   document.
+   (1797840300) and far below the Mission's expires_at.  The Resource
+   AS-local sub is illustrative; its value is determined by the subject-
+   resolution rules of the ID-JAG and identity chaining profiles, not by
+   this document.
 
    Revoking the Mission now stops new ID-JAGs, but the local token the
    Resource AS minted stays usable until its exp (260 seconds), bounded
@@ -904,9 +904,9 @@ A.6.  What Rode Through, and What Narrowed
    end.  OAuth authority is preserved or narrowed at the cross-domain
    boundary, and local transaction context narrows the internal
    operation inside the partner domain.  The lifetime shrinks at every
-   hop and never exceeds mission_expiry.  The ID-JAG carried identity
-   _between_ trust domains; the Transaction Token carried context
-   _within_ one.  The Mission bound both.
+   hop and never exceeds the Mission's expires_at.  The ID-JAG carried
+   identity _between_ trust domains; the Transaction Token carried
+   context _within_ one.  The Mission bound both.
 
 Author's Address
 

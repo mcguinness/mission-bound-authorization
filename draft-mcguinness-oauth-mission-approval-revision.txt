@@ -258,9 +258,9 @@ Table of Contents
    The Mission Issuer verifies per-dimension narrowing after it re-
    derives the Authority Set from the revised Intent (Section 6.2); the
    client cannot author the Authority Set, so its obligation is scoped
-   to the Intent members it does author (the resources, the
-   mission_expiry, and the free-text constraints), which it revises to
-   drive that narrowing.
+   to the Intent members it does author (the resources, the expires_at,
+   and the free-text constraints), which it revises to drive that
+   narrowing.
 
    The revision_handle is bound to the deferred approval and authorizes
    one revision submission.  It is not a token, grant, or continuation
@@ -436,7 +436,7 @@ Table of Contents
      "mission": {
        "origin": "https://as.example.com",
        "intent_hash":
-         "sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E",
+         "sha-256:6mIFoCz79uCHNzKLfBpBwqFjoFXdpmpuc65486IqimQ",
        "authority_hash":
          "sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro"
      },
@@ -458,7 +458,7 @@ Table of Contents
      "disclosure": {
        "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
        "consent_rendering_hash":
-         "sha-256:3RYqFiY5ZNL181FgkHkIrY0FpfEkTvWi6DI9vsazb9Y"
+         "sha-256:W-aXkM2quCh07XvdixCTk8qHoMWOs2tA0hZej4kLGr0"
      },
      "evidence_envelope": {
        "format": "jws-compact",

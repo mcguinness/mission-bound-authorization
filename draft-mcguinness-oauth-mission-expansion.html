@@ -1761,12 +1761,12 @@ no successor is created and the predecessor is untouched
         <h3 id="name-successor-expiry">
 <a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-successor-expiry" class="section-name selfRef">Successor expiry</a>
         </h3>
-<p id="section-5.1-1">The successor's <code>mission_expiry</code> <span class="bcp14">MUST NOT</span> exceed the predecessor's
-<code>mission_expiry</code> unless the Mission Issuer's policy explicitly permits
+<p id="section-5.1-1">The successor's <code>expires_at</code> <span class="bcp14">MUST NOT</span> exceed the predecessor's
+<code>expires_at</code> unless the Mission Issuer's policy explicitly permits
 extension and the extension is disclosed to the Approver at the
 expansion consent event. Expansion is an authority-addition mechanism,
 not a lifetime-extension mechanism. The issuance profile caps every
-derived credential's <code>exp</code> at <code>mission_expiry</code>; a successor that
+derived credential's <code>exp</code> at the Mission's <code>expires_at</code>; a successor that
 silently outlived its predecessor would let expansion launder a
 longer-lived Mission past the originally approved horizon.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
 </section>
@@ -2318,7 +2318,7 @@ carries no authority and <span class="bcp14">MUST NOT</span> widen the successor
 (<a href="#predecessor-member" class="auto internal xref">Section 6</a>).<a href="#section-13.2-3.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.2-3.2">
-            <p id="section-13.2-3.2.1">The successor's <code>mission_expiry</code> <span class="bcp14">MUST NOT</span> silently exceed the
+            <p id="section-13.2-3.2.1">The successor's <code>expires_at</code> <span class="bcp14">MUST NOT</span> silently exceed the
 predecessor's (<a href="#successor-expiry" class="auto internal xref">Section 5.1</a>), so expansion cannot launder a
 longer lifetime past the originally approved horizon.<a href="#section-13.2-3.2.1" class="pilcrow">¶</a></p>
 </li>

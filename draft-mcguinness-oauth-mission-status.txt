@@ -378,7 +378,8 @@ Table of Contents
          even on the introspection projection, which has no signed
          envelope to carry it (Section 4).
 
-      -  mission_expiry: the point at which the Mission itself expires
+      -  mission_expiry: the point at which the Mission itself expires,
+         mirroring the Mission record's expires_at
          ([I-D.draft-mcguinness-oauth-mission]).
 
       -  successor: OPTIONAL.  A string, the successor mission_id.
@@ -701,7 +702,7 @@ Table of Contents
    no-op.  Re-requesting an operation that has already reached its
    resulting state (for example, revoke on an already-revoked Mission)
    is idempotent and succeeds without a state change.  A Mission that
-   reaches mission_expiry transitions to expired independently of this
+   reaches its expires_at transitions to expired independently of this
    endpoint, from active or suspended.
 
 5.3.  Consolidated State Machine
@@ -717,52 +718,54 @@ Table of Contents
    operations of Section 5.2.  Only active permits derivation; every
    other state is non-deriving.
 
-   +=========+==============+=======================================================+==========+
-   |From     |Event         |Event source                                           |To        |
-   +=========+==============+=======================================================+==========+
-   |(none)   |approval event|issuance profile                                       |active    |
-   +---------+--------------+-------------------------------------------------------+----------+
-   |active   |revoke        |lifecycle endpoint                                     |revoked   |
-   +---------+--------------+-------------------------------------------------------+----------+
-   |suspended|revoke        |lifecycle endpoint                                     |revoked   |
-   +---------+--------------+-------------------------------------------------------+----------+
-   |active   |suspend       |lifecycle endpoint                                     |suspended |
-   +---------+--------------+-------------------------------------------------------+----------+
-   |suspended|resume        |lifecycle endpoint                                     |active    |
-   +---------+--------------+-------------------------------------------------------+----------+
-   |active   |complete      |lifecycle endpoint                                     |completed |
-   +---------+--------------+-------------------------------------------------------+----------+
-   |suspended|complete      |lifecycle endpoint                                     |completed |
-   +---------+--------------+-------------------------------------------------------+----------+
-   |active   |mission_expiry|expiry clock                                           |expired   |
-   |         |reached       |                                                       |          |
-   +---------+--------------+-------------------------------------------------------+----------+
-   |suspended|mission_expiry|expiry clock                                           |expired   |
-   |         |reached       |                                                       |          |
-   +---------+--------------+-------------------------------------------------------+----------+
-   |suspended|suspend_until |expiry clock                                           |active    |
-   |         |reached,      |                                                       |          |
-   |         |on_expiry =   |                                                       |          |
-   |         |resume        |                                                       |          |
-   +---------+--------------+-------------------------------------------------------+----------+
-   |suspended|suspend_until |expiry clock                                           |revoked   |
-   |         |reached,      |                                                       |          |
-   |         |on_expiry =   |                                                       |          |
-   |         |revoke        |                                                       |          |
-   +---------+--------------+-------------------------------------------------------+----------+
-   |active   |successor     |companion adjudication                                 |superseded|
-   |         |activates     |([I-D.draft-mcguinness-oauth-mission-expansion])       |          |
-   +---------+--------------+-------------------------------------------------------+----------+
-   |active   |parent reaches|companion adjudication                                 |cascaded  |
-   |         |a terminal    |([I-D.draft-mcguinness-oauth-mission-child-delegation])|          |
-   |         |state         |                                                       |          |
-   +---------+--------------+-------------------------------------------------------+----------+
+   +=========+=============+=======================================================+==========+
+   |From     |Event        |Event source                                           |To        |
+   +=========+=============+=======================================================+==========+
+   |(none)   |approval     |issuance profile                                       |active    |
+   |         |event        |                                                       |          |
+   +---------+-------------+-------------------------------------------------------+----------+
+   |active   |revoke       |lifecycle endpoint                                     |revoked   |
+   +---------+-------------+-------------------------------------------------------+----------+
+   |suspended|revoke       |lifecycle endpoint                                     |revoked   |
+   +---------+-------------+-------------------------------------------------------+----------+
+   |active   |suspend      |lifecycle endpoint                                     |suspended |
+   +---------+-------------+-------------------------------------------------------+----------+
+   |suspended|resume       |lifecycle endpoint                                     |active    |
+   +---------+-------------+-------------------------------------------------------+----------+
+   |active   |complete     |lifecycle endpoint                                     |completed |
+   +---------+-------------+-------------------------------------------------------+----------+
+   |suspended|complete     |lifecycle endpoint                                     |completed |
+   +---------+-------------+-------------------------------------------------------+----------+
+   |active   |expires_at   |expiry clock                                           |expired   |
+   |         |reached      |                                                       |          |
+   +---------+-------------+-------------------------------------------------------+----------+
+   |suspended|expires_at   |expiry clock                                           |expired   |
+   |         |reached      |                                                       |          |
+   +---------+-------------+-------------------------------------------------------+----------+
+   |suspended|suspend_until|expiry clock                                           |active    |
+   |         |reached,     |                                                       |          |
+   |         |on_expiry =  |                                                       |          |
+   |         |resume       |                                                       |          |
+   +---------+-------------+-------------------------------------------------------+----------+
+   |suspended|suspend_until|expiry clock                                           |revoked   |
+   |         |reached,     |                                                       |          |
+   |         |on_expiry =  |                                                       |          |
+   |         |revoke       |                                                       |          |
+   +---------+-------------+-------------------------------------------------------+----------+
+   |active   |successor    |companion adjudication                                 |superseded|
+   |         |activates    |([I-D.draft-mcguinness-oauth-mission-expansion])       |          |
+   +---------+-------------+-------------------------------------------------------+----------+
+   |active   |parent       |companion adjudication                                 |cascaded  |
+   |         |reaches a    |([I-D.draft-mcguinness-oauth-mission-child-delegation])|          |
+   |         |terminal     |                                                       |          |
+   |         |state        |                                                       |          |
+   +---------+-------------+-------------------------------------------------------+----------+
 
                                   Table 4
 
-   revoke and mission_expiry both apply in suspended as well as active,
-   so a suspended Mission can still be terminated or expire.  The
-   superseded and cascaded rows are companion-defined: superseded is
+   revoke and the Mission's expires_at both apply in suspended as well
+   as active, so a suspended Mission can still be terminated or expire.
+   The superseded and cascaded rows are companion-defined: superseded is
    committed by the expansion profile and requires an active predecessor
    ([I-D.draft-mcguinness-oauth-mission-expansion]); cascaded is
    committed by the child-delegation profile only when a parent reaches
@@ -940,8 +943,8 @@ Table of Contents
    future work.  Approver transfer or re-anchoring, changing the party
    that anchors a Mission's consent, is not defined here.
    Administrative monotonic narrowing, such as shortening a Mission's
-   mission_expiry or retiring a single Authority Set entry, is not
-   defined here.
+   expires_at or retiring a single Authority Set entry, is not defined
+   here.
 
 6.  Revocation Propagation
 

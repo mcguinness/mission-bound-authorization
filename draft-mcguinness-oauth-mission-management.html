@@ -1512,7 +1512,7 @@ is strictly after, respectively strictly before, the value.<a href="#section-4-2
 <code>expiring_before</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-4-2.10">
           <p id="section-4-2.10.1">An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time. Matches a Mission whose
-<code>mission_expiry</code> is strictly before the value.<a href="#section-4-2.10.1" class="pilcrow">¶</a></p>
+<code>expires_at</code> is strictly before the value.<a href="#section-4-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-2.11">
@@ -1576,8 +1576,9 @@ maximum when <code>limit</code> is absent.<a href="#section-5-2.6.1" class="pilc
           <dd style="margin-left: 1.5em" id="section-5.1-2.2">
             <p id="section-5.1-2.2.1"><span class="bcp14">REQUIRED</span>. An array of Mission summary objects, each carrying
 <code>mission_id</code>, <code>state</code>, <code>subject</code> (an object with <code>iss</code> and <code>sub</code>),
-<code>client_id</code>, <code>created_at</code>, and <code>mission_expiry</code> from the Mission
-record, plus the lineage members <code>successor</code>, <code>predecessor</code>
+<code>client_id</code>, <code>created_at</code>, and <code>mission_expiry</code> (mirroring the
+record's <code>expires_at</code>), plus the lineage members <code>successor</code>,
+<code>predecessor</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), and <code>parent</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) where
 present on the record. A summary <span class="bcp14">MUST NOT</span> carry the Mission Intent,
@@ -2040,7 +2041,7 @@ not how fast any one revocation propagates.<a href="#section-8-3" class="pilcrow
       </h2>
 <p id="section-9-1">Approver transfer, re-anchoring a Mission's consent to a different
 accountable party, is not defined here. Administrative monotonic
-narrowing, such as shortening a Mission's <code>mission_expiry</code> or retiring
+narrowing, such as shortening a Mission's <code>expires_at</code> or retiring
 a single Authority Set entry, is not defined here. Cross-origin
 enumeration, one query spanning Missions held by multiple Mission
 Issuers, is not defined here; a Management Client queries each

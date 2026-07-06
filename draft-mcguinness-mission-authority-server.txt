@@ -352,7 +352,7 @@ Table of Contents
    {
      "goal": "Reconcile Q3 invoices and post adjustments under $500.",
      "resources": ["https://erp.example.com"],
-     "mission_expiry": "2026-12-31T23:59:59Z"
+     "expires_at": "2026-12-31T23:59:59Z"
    }
 
    HTTP/1.1 202 Accepted
@@ -776,7 +776,7 @@ Table of Contents
    {
      "goal": "Reconcile Q3 invoices and post adjustments under $2,000.",
      "resources": ["https://erp.example.com"],
-     "mission_expiry": "2026-12-31T23:59:59Z",
+     "expires_at": "2026-12-31T23:59:59Z",
      "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
    }
 
@@ -1148,7 +1148,7 @@ Table of Contents
       mission-join+jwt header typ;
 
    *  that iss and the mission claim match the referenced Mission's
-      origin, mission_id, and authority_hash;
+      origin, id, and authority_hash;
 
    *  that exp has not passed and any aud names this PDP; and
 
@@ -1673,7 +1673,7 @@ A.1.  Submit
    {
      "goal": "Reconcile Q3 invoices and post adjustments under $500.",
      "resources": ["https://erp.example.com"],
-     "mission_expiry": "2026-12-31T23:59:59Z"
+     "expires_at": "2026-12-31T23:59:59Z"
    }
 
    HTTP/1.1 202 Accepted

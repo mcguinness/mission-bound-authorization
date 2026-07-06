@@ -480,14 +480,14 @@ Table of Contents
 
 5.1.  Successor expiry
 
-   The successor's mission_expiry MUST NOT exceed the predecessor's
-   mission_expiry unless the Mission Issuer's policy explicitly permits
+   The successor's expires_at MUST NOT exceed the predecessor's
+   expires_at unless the Mission Issuer's policy explicitly permits
    extension and the extension is disclosed to the Approver at the
    expansion consent event.  Expansion is an authority-addition
    mechanism, not a lifetime-extension mechanism.  The issuance profile
-   caps every derived credential's exp at mission_expiry; a successor
-   that silently outlived its predecessor would let expansion launder a
-   longer-lived Mission past the originally approved horizon.
+   caps every derived credential's exp at the Mission's expires_at; a
+   successor that silently outlived its predecessor would let expansion
+   launder a longer-lived Mission past the originally approved horizon.
 
 6.  The Predecessor Mission Reference
 
@@ -919,7 +919,7 @@ Table of Contents
       predecessor member carries no authority and MUST NOT widen the
       successor (Section 6).
 
-   *  The successor's mission_expiry MUST NOT silently exceed the
+   *  The successor's expires_at MUST NOT silently exceed the
       predecessor's (Section 5.1), so expansion cannot launder a longer
       lifetime past the originally approved horizon.
 

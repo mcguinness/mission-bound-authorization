@@ -386,15 +386,15 @@ Table of Contents
    the issuance profile's mission_intent object
    ([I-D.draft-mcguinness-oauth-mission]): a goal, resources (each an
    absolute URI), optional free-text constraints, optional
-   success_criteria, an optional purpose, a mission_expiry, and an
-   optional controls object.  The shaper proposes the resources and
-   describes the desired bounds in free-text constraints and
-   success_criteria; it does not author actions, structured constraints,
-   or delegation.  The Mission Issuer derives the actions, structured
-   (object) constraints, and delegation as members of the Authority Set
-   it computes ([I-D.draft-mcguinness-oauth-mission]).  The proposal
-   MUST be bounded enough for the Mission Issuer to derive an Authority
-   Set without interpreting natural language as authority.
+   success_criteria, an optional purpose, an expires_at, and an optional
+   controls object.  The shaper proposes the resources and describes the
+   desired bounds in free-text constraints and success_criteria; it does
+   not author actions, structured constraints, or delegation.  The
+   Mission Issuer derives the actions, structured (object) constraints,
+   and delegation as members of the Authority Set it computes
+   ([I-D.draft-mcguinness-oauth-mission]).  The proposal MUST be bounded
+   enough for the Mission Issuer to derive an Authority Set without
+   interpreting natural language as authority.
 
    The proposal MUST NOT carry an Authority Set or its derived members:
    actions, structured (object) constraints such as max_amount, or
@@ -523,7 +523,7 @@ Table of Contents
      |                  |                         | issuance         |
      |                  |                         | profile.         |
      +------------------+-------------------------+------------------+
-     | mission_expiry   | The smallest ceiling    | Don't request    |
+     | expires_at       | The smallest ceiling    | Don't request    |
      |                  | that lets the task      | the maximum the  |
      |                  | complete; if the prompt | Mission Issuer   |
      |                  | names no bound, apply a | allows; the      |
@@ -771,7 +771,7 @@ Table of Contents
      ],
      "success_criteria": ["All Q3 invoices for acme-corp reconciled."],
      "purpose": "urn:example:purpose:reconcile",
-     "mission_expiry": "2026-11-05T00:00:00Z"
+     "expires_at": "2026-11-05T00:00:00Z"
    }
 
    This is only a proposal (Section 5.2).  The Mission Issuer, not the
@@ -903,8 +903,8 @@ Table of Contents
    documents, tool descriptions, and catalog metadata can all carry
    instructions aimed at the shaper.  Concrete threats include attempts
    to expand resources beyond what the user requested, to push
-   mission_expiry past deployment policy, to suppress a stated
-   constraint, or to select a purpose the user did not choose.
+   expires_at past deployment policy, to suppress a stated constraint,
+   or to select a purpose the user did not choose.
 
    Mitigations the shaper SHOULD apply:
 

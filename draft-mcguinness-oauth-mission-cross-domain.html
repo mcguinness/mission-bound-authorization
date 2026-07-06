@@ -1417,7 +1417,7 @@ revocation latency; see <a href="#cross-domain-revocation" class="auto internal 
 </li>
         <li class="normal" id="section-6-2.3">
           <p id="section-6-2.3.1"><span class="bcp14">MUST</span> have an <code>exp</code> that does not exceed the Mission's
-<code>mission_expiry</code>, per the base profile's expiry rule
+<code>expires_at</code>, per the base profile's expiry rule
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission-Bound
 Access Tokens");<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
 </li>
@@ -1578,8 +1578,8 @@ from the cross-domain grant. The issuing <code>iss</code> is the Resource AS;
 <ul class="normal">
 <li class="normal" id="section-7-2.5.2.1">
               <p id="section-7-2.5.2.1.1">has an <code>exp</code> that <span class="bcp14">MUST NOT</span> exceed the grant's <code>exp</code>. The Resource
-AS does not hold <code>mission_expiry</code>; because the grant's own <code>exp</code>
-is bounded by <code>mission_expiry</code> (<a href="#cross-domain-grant" class="auto internal xref">Section 6</a>), the local
+AS does not hold the Mission's <code>expires_at</code>; because the grant's
+own <code>exp</code> is bounded by it (<a href="#cross-domain-grant" class="auto internal xref">Section 6</a>), the local
 token is bounded transitively;<a href="#section-7-2.5.2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-7-2.5.2.2">
@@ -1965,7 +1965,7 @@ audience-scoped authority for the ERP:<a href="#appendix-A.1-1" class="pilcrow">
 </pre><a href="#appendix-A.1-2" class="pilcrow">¶</a>
 </div>
 <p id="appendix-A.1-3">The ID-JAG is short-lived (300 s) and sender-constrained to the
-agent. Its <code>exp</code> does not exceed <code>mission_expiry</code>
+agent. Its <code>exp</code> does not exceed the Mission's <code>expires_at</code>
 (<a href="#cross-domain-grant" class="auto internal xref">Section 6</a>).<a href="#appendix-A.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2017,8 +2017,8 @@ ID-JAG's <code>exp</code>:<a href="#appendix-A.2-1" class="pilcrow">¶</a></p>
 </div>
 <p id="appendix-A.2-3">The issuing <code>iss</code> is now the Resource AS, but <code>mission.origin</code> remains
 the home AS. The token's <code>exp</code> (1797840290) is below the ID-JAG's
-(1797840300) and far below <code>mission_expiry</code>. The Resource AS-local
-<code>sub</code> is illustrative; its value is determined by the
+(1797840300) and far below the Mission's <code>expires_at</code>. The Resource
+AS-local <code>sub</code> is illustrative; its value is determined by the
 subject-resolution rules of the ID-JAG and identity chaining profiles,
 not by this document.<a href="#appendix-A.2-3" class="pilcrow">¶</a></p>
 <p id="appendix-A.2-4">Revoking the Mission now stops new ID-JAGs, but the local token the
@@ -2162,9 +2162,9 @@ no call to <code>mission.origin</code>.<a href="#appendix-A.5-1" class="pilcrow"
 to end. OAuth authority is preserved or narrowed at the cross-domain
 boundary, and local transaction context narrows the internal operation
 inside the partner domain. The lifetime shrinks at every hop and never
-exceeds <code>mission_expiry</code>. The ID-JAG carried identity <em>between</em> trust
-domains; the Transaction Token carried context <em>within</em> one. The
-Mission bound both.<a href="#appendix-A.6-2" class="pilcrow">¶</a></p>
+exceeds the Mission's <code>expires_at</code>. The ID-JAG carried identity
+<em>between</em> trust domains; the Transaction Token carried context
+<em>within</em> one. The Mission bound both.<a href="#appendix-A.6-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

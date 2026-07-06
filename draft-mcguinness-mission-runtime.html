@@ -2303,12 +2303,12 @@ the immediate actor.<a href="#section-7-3.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-3.5">
           <p id="section-7-3.5.1"><strong>Time.</strong> The PDP <span class="bcp14">MUST</span> refuse if the decision context indicates the
-token is expired. The issuance profile caps a derived token's
-<code>exp</code> at <code>mission_expiry</code>, so the <code>exp</code> check enforces the Mission's
-expiry transitively. The standard <code>mission</code> claim and introspection
-do not surface <code>mission_expiry</code>; where a Mission state source does
-expose it (or reports the Mission <code>expired</code>), the PDP <span class="bcp14">MUST</span> refuse on
-it independent of the token's own <code>exp</code>. The PDP sets the permit's
+token is expired. The issuance profile caps a derived token's <code>exp</code>
+at the Mission's <code>expires_at</code>, so the <code>exp</code> check enforces the
+Mission's expiry transitively. The standard <code>mission</code> claim and
+introspection do not surface <code>expires_at</code>; where a Mission state
+source does expose it (or reports the Mission <code>expired</code>), the PDP
+<span class="bcp14">MUST</span> refuse on it independent of the token's own <code>exp</code>. The PDP sets the permit's
 validity window from these inputs; that the action actually executes
 within that window is the executing PEP's reverification, not a
 decision input (<a href="#parameter-binding" class="auto internal xref">Section 8</a>).<a href="#section-7-3.5.1" class="pilcrow">¶</a></p>
@@ -2668,8 +2668,7 @@ refusal.<a href="#section-10-1" class="pilcrow">¶</a></p>
             <td class="text-left" rowspan="1" colspan="1">Refuse</td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>mission_expiry</code> passed, when known from the Mission state source</td>
+            <td class="text-left" rowspan="1" colspan="1">The Mission's <code>expires_at</code> passed, when known from the Mission state source</td>
             <td class="text-left" rowspan="1" colspan="1">Refuse</td>
           </tr>
           <tr>

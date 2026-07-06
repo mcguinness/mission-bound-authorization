@@ -907,14 +907,14 @@ Table of Contents
 
    *  *Time.* The PDP MUST refuse if the decision context indicates the
       token is expired.  The issuance profile caps a derived token's exp
-      at mission_expiry, so the exp check enforces the Mission's expiry
-      transitively.  The standard mission claim and introspection do not
-      surface mission_expiry; where a Mission state source does expose
-      it (or reports the Mission expired), the PDP MUST refuse on it
-      independent of the token's own exp.  The PDP sets the permit's
-      validity window from these inputs; that the action actually
-      executes within that window is the executing PEP's reverification,
-      not a decision input (Section 8).
+      at the Mission's expires_at, so the exp check enforces the
+      Mission's expiry transitively.  The standard mission claim and
+      introspection do not surface expires_at; where a Mission state
+      source does expose it (or reports the Mission expired), the PDP
+      MUST refuse on it independent of the token's own exp.  The PDP
+      sets the permit's validity window from these inputs; that the
+      action actually executes within that window is the executing PEP's
+      reverification, not a decision input (Section 8).
 
    *  *State.* The PDP MUST refuse unless the Mission is active
       (Section 7.2).
@@ -1218,9 +1218,10 @@ Table of Contents
    +-------------------------+-----------------------------------------+
    | Mission not active      | Refuse                                  |
    +-------------------------+-----------------------------------------+
-   | mission_expiry passed,  | Refuse                                  |
-   | when known from the     |                                         |
-   | Mission state source    |                                         |
+   | The Mission's           | Refuse                                  |
+   | expires_at passed, when |                                         |
+   | known from the Mission  |                                         |
+   | state source            |                                         |
    +-------------------------+-----------------------------------------+
    | Unsupported             | Refuse                                  |
    | authorization_details   |                                         |

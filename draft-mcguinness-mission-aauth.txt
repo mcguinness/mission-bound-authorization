@@ -242,13 +242,12 @@ Table of Contents
    issuance profile's Mission Record section defines it, for every
    mission it approves, with origin equal to the approver URL.  The blob
    MUST include a mission_record member: a JSON object carrying the
-   record's immutable members, mission_id, origin, mission_intent,
-   authority_set, authority_hash, intent_hash, subject, approver,
-   client_id, policy_version, approval_event_id, created_at, and
-   mission_expiry, each as the issuance profile defines it.  The
-   record's state MUST NOT appear in the blob: the blob is immutable
-   under s256, and state is served by the lifecycle surfaces
-   (Section 6).
+   record's immutable members, id, origin, intent, authority_set,
+   authority_hash, intent_hash, subject, approver, client_id,
+   policy_version, approval_event_id, created_at, and expires_at, each
+   as the issuance profile defines it.  The record's state MUST NOT
+   appear in the blob: the blob is immutable under s256, and state is
+   served by the lifecycle surfaces (Section 6).
 
    The mapping into AAuth's vocabulary is fixed as follows:
 
@@ -261,11 +260,11 @@ Table of Contents
       issuer URL: in AAuth the PS is the party that asserts user
       identity.
 
-   *  mission_intent.goal MUST equal the blob's description: the
-      approved Markdown description is the recorded goal.
+   *  intent.goal MUST equal the blob's description: the approved
+      Markdown description is the recorded goal.
 
-   *  mission_expiry is REQUIRED (Section 6), in RFC 3339 [RFC3339]
-      date-time form.
+   *  expires_at is REQUIRED (Section 6), in RFC 3339 [RFC3339] date-
+      time form.
 
    The AAuth-native blob members (approver, agent, approved_at,
    description, and the optional approved_tools and capabilities) are
@@ -281,10 +280,10 @@ Table of Contents
    intent_hash and authority_hash, are computed per the issuance
    profile's envelope and canonicalization rules with the PS's issuer
    URL as the envelope iss, and are reproducible from the recorded
-   mission_intent and authority_set alone, independent of blob
-   serialization.  The s256 therefore commits the blob that contains the
-   anchors; a verifier holding the blob can check both, and neither
-   commitment substitutes for the other (Section 11.2).
+   intent and authority_set alone, independent of blob serialization.
+   The s256 therefore commits the blob that contains the anchors; a
+   verifier holding the blob can check both, and neither commitment
+   substitutes for the other (Section 11.2).
 
 3.2.  Mission Reference and Resolution
 
@@ -324,9 +323,9 @@ Table of Contents
      ],
      "capabilities": ["interaction"],
      "mission_record": {
-       "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "origin": "https://ps.example.com",
-       "mission_intent": {
+       "intent": {
          "goal":
            "Reconcile Q3 invoices and post adjustments under $500.",
          "resources": ["https://erp.example.com"],
@@ -334,7 +333,7 @@ Table of Contents
            "Read only invoices issued in 2026-Q3.",
            "Post journal entries under $500."
          ],
-         "mission_expiry": "2026-12-31T23:59:59Z"
+         "expires_at": "2026-12-31T23:59:59Z"
        },
        "authority_set": [
          { "type": "mission_resource_access",
@@ -354,19 +353,19 @@ Table of Contents
        "authority_hash":
          "sha-256:mdRUVZfU1BG_Bgla4mrLp6Q9NPVTJ-udnn88F1oXqFc",
        "intent_hash":
-         "sha-256:9wNdxTWMa1fLT4be0wf2FJUMRbVBSYAe9yrRhTqdbVA",
+         "sha-256:_XJAaRanTKlwadKGYDx60Gk6y6tCSYf04HvQRsHTWio",
        "subject": { "iss": "https://ps.example.com", "sub": "alice" },
        "approver": { "iss": "https://ps.example.com", "sub": "alice" },
        "client_id": "aauth:reconciler@agent.example",
        "policy_version": "ps-policy:v4",
        "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",
        "created_at": "2026-10-15T14:32:11Z",
-       "mission_expiry": "2026-12-31T23:59:59Z"
+       "expires_at": "2026-12-31T23:59:59Z"
      }
    }
 
    The anchors above are computed with the issuance profile's JCS
-   pipeline over the recorded mission_intent and authority_set with iss
+   pipeline over the recorded intent and authority_set with iss
    https://ps.example.com; an implementation reproduces them byte for
    byte per that profile's test-vector rules.  On the wire, s256 is
    computed over the exact response body bytes; for the compact
@@ -374,7 +373,7 @@ Table of Contents
    order shown, it is:
 
    AAuth-Mission: approver="https://ps.example.com";
-       s256="YQcSiDyTLRLlhR-ETk4HPLJZf4CqZNMYU_Jue8SQgLQ"
+       s256="uWj7ZoTUlDEougToNuhllbg-qh-L8pHo10Cc2hvdHX4"
 
 4.  Mission Intent
 
@@ -400,9 +399,9 @@ Table of Contents
    profile's disclosure and recording rules for generative derivation.
    In either case the PS records the approved Mission Intent, with goal
    equal to the approved description (Section 3) and resources drawn
-   from the tool providers and policy; when the proposal carries no
-   mission_expiry, the PS MUST set one by policy, since the record
-   requires it.
+   from the tool providers and policy; when the proposal's Intent
+   carries no expires_at, the PS MUST set one by policy, since the
+   record requires it.
 
    Tools map to the Authority Set per the issuance profile's Modeling
    Tools and Function Calls section: the tool's resource member is the
@@ -511,8 +510,8 @@ Table of Contents
       outstanding auth tokens issued under the Mission at the resources'
       revocation endpoints, as AAuth provides.
 
-   *  *Expiry.* mission_expiry is REQUIRED on the record.  When it
-      passes, the Mission transitions to expired without a request.
+   *  *Expiry.* expires_at is REQUIRED on the record.  When it passes,
+      the Mission transitions to expired without a request.
 
    *  *Completion.* AAuth's propose-completion interaction is the
       completion transition: when the user accepts the summary, the PS
@@ -542,11 +541,11 @@ Table of Contents
    atomic with issuance.
 
    An auth token issued under a Mission MUST NOT have an exp later than
-   mission_expiry, so no credential outlives the Mission.  AAuth already
-   caps auth-token lifetime at one hour, so every issuance is a fresh
-   evaluation point and revocation latency is bounded by the auth-token
-   lifetime; the state surfaces below give a tighter cutoff where a
-   deployment needs one.
+   the Mission's expires_at, so no credential outlives the Mission.
+   AAuth already caps auth-token lifetime at one hour, so every issuance
+   is a fresh evaluation point and revocation latency is bounded by the
+   auth-token lifetime; the state surfaces below give a tighter cutoff
+   where a deployment needs one.
 
 6.2.  Mission State Surfaces
 
@@ -664,7 +663,7 @@ Table of Contents
      "exp": 1797843600,
      "mission": {
        "approver": "https://ps.example.com",
-       "s256": "YQcSiDyTLRLlhR-ETk4HPLJZf4CqZNMYU_Jue8SQgLQ",
+       "s256": "uWj7ZoTUlDEougToNuhllbg-qh-L8pHo10Cc2hvdHX4",
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "origin": "https://ps.example.com",
        "authority_hash":
@@ -685,9 +684,9 @@ Table of Contents
    forgoes.  Against the architecture's binding checklist
    ([I-D.draft-mcguinness-mission-architecture]):
 
-   1.  *Identifier and origin*: mission_id on the record, origin the
-       approver URL; the (approver, s256) pair is the wire-native
-       reference to the same Mission (Section 3.2).
+   1.  *Identifier and origin*: id on the record, origin the approver
+       URL; the (approver, s256) pair is the wire-native reference to
+       the same Mission (Section 3.2).
 
    2.  *Lifecycle state space*: the issuance profile's states with the
        only-active rule and fail-safe unrecognized states, extended by
@@ -786,11 +785,11 @@ Table of Contents
       active atomically with the approval decision;
 
    *  operates the lifecycle of Section 6: authenticated revocation,
-      mission_expiry enforcement, completion, and the only-active gate
-      at every PS surface, atomic with issuance (Section 6.1);
+      expires_at enforcement, completion, and the only-active gate at
+      every PS surface, atomic with issuance (Section 6.1);
 
    *  issues auth tokens as Mission-bound credentials (Section 7.1,
-      Section 7.2), with exp bounded by mission_expiry; and
+      Section 7.2), with exp bounded by the Mission's expires_at; and
 
    *  serves Mission state per Section 6.2 and retains the record and
       mission log for the audit horizon.
@@ -880,11 +879,11 @@ Table of Contents
    mission-context request and token, so Resources observing it can
    correlate the Mission's activity within and across services, and
    approver identifies the person's PS.  This is the deliberate property
-   of the issuance profile's mission_id correlation, and that profile's
-   guidance applies: the stable anchor is what audit and governance key
-   on, and a deployment SHOULD document the correlation it implies.
-   AAuth's directed sub limits subject correlation; the Mission
-   reference is not directed, because it is the anchor.
+   of the issuance profile's Mission Identifier correlation, and that
+   profile's guidance applies: the stable anchor is what audit and
+   governance key on, and a deployment SHOULD document the correlation
+   it implies.  AAuth's directed sub limits subject correlation; the
+   Mission reference is not directed, because it is the anchor.
 
 13.  IANA Considerations
 

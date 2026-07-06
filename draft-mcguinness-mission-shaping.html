@@ -1654,7 +1654,7 @@ resolve those details.<a href="#section-6-3" class="pilcrow">¶</a></p>
 issuance profile's <code>mission_intent</code> object
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): a <code>goal</code>, <code>resources</code> (each an
 absolute URI), optional free-text <code>constraints</code>, optional
-<code>success_criteria</code>, an optional <code>purpose</code>, a <code>mission_expiry</code>, and an
+<code>success_criteria</code>, an optional <code>purpose</code>, an <code>expires_at</code>, and an
 optional <code>controls</code> object. The shaper proposes the resources and
 describes the desired bounds in free-text <code>constraints</code> and
 <code>success_criteria</code>; it does not author actions, structured constraints,
@@ -1797,7 +1797,7 @@ Mission Issuer derives the Authority Set from them.<a href="#section-7.3-1" clas
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>mission_expiry</code>
+                <code>expires_at</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">The smallest ceiling that lets the task complete; if the prompt names no bound, apply a conservative deployment default.</td>
               <td class="text-left" rowspan="1" colspan="1">Don't request the maximum the Mission Issuer allows; the Issuer <span class="bcp14">MAY</span> narrow further.</td>
@@ -2146,7 +2146,7 @@ a broad fallback. The candidate Mission Intent it submits:<a href="#section-11-1
   ],
   "success_criteria": ["All Q3 invoices for acme-corp reconciled."],
   "purpose": "urn:example:purpose:reconcile",
-  "mission_expiry": "2026-11-05T00:00:00Z"
+  "expires_at": "2026-11-05T00:00:00Z"
 }
 </pre><a href="#section-11-2" class="pilcrow">¶</a>
 </div>
@@ -2307,7 +2307,7 @@ trigger such as an inbound email or webhook. Task text, tickets,
 documents, tool descriptions, and catalog metadata can all carry
 instructions aimed at the shaper. Concrete threats include attempts to
 expand <code>resources</code> beyond what the user requested, to push
-<code>mission_expiry</code> past deployment policy, to suppress a stated
+<code>expires_at</code> past deployment policy, to suppress a stated
 constraint, or to select a <code>purpose</code> the user did not choose.<a href="#section-15.3-1" class="pilcrow">¶</a></p>
 <p id="section-15.3-2">Mitigations the shaper <span class="bcp14">SHOULD</span> apply:<a href="#section-15.3-2" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-15.3-3">

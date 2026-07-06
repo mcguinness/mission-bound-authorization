@@ -1472,7 +1472,7 @@ the base64url encoding, without padding, of the SHA-256 digest of the
 parent token's JWS Signing Input.<a href="#section-7-2" class="pilcrow">¶</a></p>
 <p id="section-7-3">The child's <code>aud</code> <span class="bcp14">MUST</span> equal its parent's <code>aud</code> or be a subset of it,
 and the child's <code>exp</code> <span class="bcp14">MUST NOT</span> exceed its parent's <code>exp</code>. Because the
-Mission Issuer caps the root's <code>exp</code> at the Mission's <code>mission_expiry</code>
+Mission Issuer caps the root's <code>exp</code> at the Mission's <code>expires_at</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the per-hop <code>exp</code> rule bounds
 the whole chain transitively: no descendant outlives the root, hence
 none outlives the Mission.<a href="#section-7-3" class="pilcrow">¶</a></p>

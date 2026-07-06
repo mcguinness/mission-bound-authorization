@@ -1431,7 +1431,7 @@ Mission Issuer verifies per-dimension narrowing after it re-derives the
 Authority Set from the revised Intent (<a href="#revision-submission" class="auto internal xref">Section 6.2</a>); the
 client cannot author the Authority Set, so its obligation is scoped to
 the Intent members it does author (the <code>resources</code>, the
-<code>mission_expiry</code>, and the free-text <code>constraints</code>), which it revises to
+<code>expires_at</code>, and the free-text <code>constraints</code>), which it revises to
 drive that narrowing.<a href="#section-6.1-4" class="pilcrow">¶</a></p>
 <p id="section-6.1-5">The <code>revision_handle</code> is bound to the deferred approval and
 authorizes one revision submission. It is not a token, grant, or
@@ -1646,7 +1646,7 @@ worked disclosure and test vector:<a href="#section-8-5" class="pilcrow">¶</a><
   "mission": {
     "origin": "https://as.example.com",
     "intent_hash":
-      "sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E",
+      "sha-256:6mIFoCz79uCHNzKLfBpBwqFjoFXdpmpuc65486IqimQ",
     "authority_hash":
       "sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro"
   },
@@ -1668,7 +1668,7 @@ worked disclosure and test vector:<a href="#section-8-5" class="pilcrow">¶</a><
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:3RYqFiY5ZNL181FgkHkIrY0FpfEkTvWi6DI9vsazb9Y"
+      "sha-256:W-aXkM2quCh07XvdixCTk8qHoMWOs2tA0hZej4kLGr0"
   },
   "evidence_envelope": {
     "format": "jws-compact",

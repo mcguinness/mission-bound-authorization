@@ -1980,8 +1980,8 @@ under the subset rule of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" cl
 or delegation right not present in the parent;<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.3">
-          <p id="section-8-2.3.1">the child's <code>mission_expiry</code> <span class="bcp14">MUST NOT</span> be later than the parent's
-<code>mission_expiry</code> (so it transitively caps every child-derived token's
+          <p id="section-8-2.3.1">the child's <code>expires_at</code> <span class="bcp14">MUST NOT</span> be later than the parent's
+<code>expires_at</code> (so it transitively caps every child-derived token's
 <code>exp</code>, per <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>);<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.4">
@@ -2261,7 +2261,7 @@ child's state as <code>suspended</code> on every state-reporting surface (the
 Mission Status operation and token introspection,
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), and <span class="bcp14">MUST</span> restore the
 child's own state when the parent resumes to <code>active</code>. A child whose own
-<code>mission_expiry</code> passes during the suspension is <code>expired</code>: expiry takes
+<code>expires_at</code> passes during the suspension is <code>expired</code>: expiry takes
 precedence over the projected <code>suspended</code> state.<a href="#section-10.1-6" class="pilcrow">¶</a></p>
 <p id="section-10.1-7">Mission Status for a Child Mission <span class="bcp14">SHOULD</span> also include a parent
 projection for authorized callers, as additional context:<a href="#section-10.1-7" class="pilcrow">¶</a></p>

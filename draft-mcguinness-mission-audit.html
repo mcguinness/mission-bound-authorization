@@ -1844,8 +1844,8 @@ segment <code>missions</code> and the Mission <code>id</code> to the <code>origi
 </div>
 <p id="section-7-4">The <code>origin</code> is used exactly as it appears in the <code>mission</code> claim, with
 any single trailing slash removed, and the <code>id</code> is appended without
-transformation; the issuance profile constrains <code>mission_id</code> to the
-URL-safe characters <code>[A-Za-z0-9_-]</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
+transformation; the issuance profile constrains the Mission Identifier
+to the URL-safe characters <code>[A-Za-z0-9_-]</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
 so no percent-encoding is required. Because the construction is fixed,
 independent producers writing evidence about the same Mission (the
 Mission Issuer, a PDP, a harness) compute the same <code>sub</code> and write to one
