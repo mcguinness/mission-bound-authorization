@@ -16,8 +16,8 @@ keyword:
  - orchestration
  - compensation
 venue:
-  github: "mcguinness/draft-mcguinness-oauth-mission"
-  latest: "https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-orchestration.html"
+  github: "mcguinness/mission-bound-authorization"
+  latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html"
 
 author:
  -
@@ -32,7 +32,7 @@ normative:
   RFC8785:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
     author:
       -
         ins: K. McGuinness
@@ -42,7 +42,7 @@ normative:
       Internet-Draft: draft-mcguinness-oauth-mission-latest
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-runtime.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
     author:
       -
         ins: K. McGuinness
@@ -52,7 +52,7 @@ normative:
       Internet-Draft: draft-mcguinness-mission-runtime-latest
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-status.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
     author:
       -
         ins: K. McGuinness
@@ -64,7 +64,7 @@ normative:
 informative:
   I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-authzen.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
     author:
       -
         ins: K. McGuinness
@@ -74,7 +74,7 @@ informative:
       Internet-Draft: draft-mcguinness-mission-authzen-latest
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-mission-harness.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
     author:
       -
         ins: K. McGuinness
@@ -84,7 +84,7 @@ informative:
       Internet-Draft: draft-mcguinness-mission-harness-latest
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-expansion.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
     author:
       -
         ins: K. McGuinness
@@ -94,7 +94,7 @@ informative:
       Internet-Draft: draft-mcguinness-oauth-mission-expansion-latest
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
-    target: https://mcguinness.github.io/draft-mcguinness-oauth-mission/draft-mcguinness-oauth-mission-signals.html
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
     author:
       -
         ins: K. McGuinness
