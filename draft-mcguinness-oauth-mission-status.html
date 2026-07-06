@@ -1612,7 +1612,11 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
 <li class="normal" id="section-3.4-10.1">
             <p id="section-3.4-10.1.1">The signed JWT envelope <code>iss</code>, <code>aud</code>, <code>sub</code>, <code>nonce</code>, <code>iat</code>, <code>exp</code>.
 The <code>aud</code> is the response's audience binding and the <code>nonce</code> its
-request binding. <code>exp</code> bounds the validity of the signed response
+request binding. When the request omitted <code>audience</code>
+(<a href="#mission-status-request" class="auto internal xref">Section 3.1</a>), the response is state-only and the AS
+<span class="bcp14">MUST</span> set <code>aud</code> to the authenticated requester's identifier, as the
+Lifecycle endpoint does (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>); the
+consumer's <code>aud</code> verification below then checks that identifier. <code>exp</code> bounds the validity of the signed response
 itself; how long the consumer <span class="bcp14">MAY</span> rely on the reported <code>state</code> is
 given separately by <code>mission.fresh_until</code> below.<a href="#section-3.4-10.1.1" class="pilcrow">¶</a></p>
 </li>
@@ -1708,7 +1712,8 @@ audience: the response is state-only and <span class="bcp14">MUST NOT</span> car
         <h3 id="name-caching">
 <a href="#section-3.5" class="section-number selfRef">3.5. </a><a href="#name-caching" class="section-name selfRef">Caching</a>
         </h3>
-<p id="section-3.5-1">Consumers <span class="bcp14">SHOULD</span> cache a response keyed on (<code>mission_id</code>, audience)
+<p id="section-3.5-1">Consumers <span class="bcp14">SHOULD</span> cache a response keyed on (<code>mission_id</code>, audience),
+or on (<code>mission_id</code>, requester identifier) for a state-only response,
 until <code>mission.fresh_until</code>. Consumers <span class="bcp14">MUST NOT</span> use a cached response
 after <code>mission.fresh_until</code>. When comparing the current time to
 <code>mission.fresh_until</code>, a consumer <span class="bcp14">MAY</span> allow up to 30 seconds of

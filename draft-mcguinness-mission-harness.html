@@ -1558,9 +1558,9 @@ task graph node to a Mission reference:<a href="#section-6-1" class="pilcrow">¶
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.3">
-<code>mission_origin</code>:</dt>
+<code>issuer</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.4">
-          <p id="section-6-2.4.1"><span class="bcp14">REQUIRED</span>. The Mission Issuer.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-6-2.4.1"><span class="bcp14">REQUIRED</span>. The Mission's <code>issuer</code>, the Mission Issuer's issuer URL.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.5">
@@ -1896,7 +1896,7 @@ because the posting is in a high-consequence action class:<a href="#section-9.1-
   "queue_item_id": "queue_journal_post_7",
   "mission_binding": {
     "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "mission_origin": "https://as.example.com",
+    "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "status_checked_at": "2026-11-01T22:00:00Z",
@@ -2385,7 +2385,7 @@ non-normative summary of what a record carries:<a href="#section-15-2" class="pi
       </ul>
 <p id="section-15-4">A Harness Evidence record carries the Mission as the nested <code>mission</code>
 object, mirroring the <code>mission</code> claim; the flat <code>mission_id</code> and
-<code>mission_origin</code> of Mission Binding (<a href="#mission-binding" class="auto internal xref">Section 6</a>) are a binding
+<code>issuer</code> of Mission Binding (<a href="#mission-binding" class="auto internal xref">Section 6</a>) are a binding
 key, whereas the evidence record mirrors the claim shape.<a href="#section-15-4" class="pilcrow">¶</a></p>
 <p id="section-15-5">Harness Evidence complements runtime enforcement evidence
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). It records

@@ -1933,10 +1933,10 @@ profile (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref
 <p id="section-5.7-1">The <span class="bcp14">OPTIONAL</span> <code>taint</code> member carries the harness's untrusted-content
 determination (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>) for the
 requested action, when the deployment routes taint enforcement
-through the PDP:<a href="#section-5.7-1" class="pilcrow">¶</a></p>
+through the PDP, as the value of <code>context.taint</code>:<a href="#section-5.7-1" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-5.7-2">
 <pre>
-"taint": {
+{
   "tainted": true,
   "granularity": "parameter",
   "source_class": "web_fetch"

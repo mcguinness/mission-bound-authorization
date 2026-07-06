@@ -18,14 +18,15 @@ Abstract
    profile evaluates each consequential action at the point of use.
    Neither bounds how much of an approved authority a Mission may
    consume.  This document defines an experimental consumption-metering
-   extension: three cumulative consumption bounds a Mission Intent may
-   carry (max_budget, max_calls, and max_duration), the runtime metering
-   semantics that enforce them (atomic check-and-decrement, reserve and
-   commit postures, duration leases, and settlement), and the AuthZEN
-   wire binding for lease renewal and settlement.  A consumption bound
-   is consented at approval and enforced only by a runtime deployment
-   that implements this profile; a deployment that does not meter a
-   bound must refuse rather than silently ignore it.
+   extension: four cumulative consumption bounds a Mission Intent may
+   carry (max_budget, max_calls, max_duration, and max_egress_volume),
+   the runtime metering semantics that enforce them (atomic check-and-
+   decrement, reserve and commit postures, duration leases, and
+   settlement), and the AuthZEN wire binding for lease renewal and
+   settlement.  A consumption bound is consented at approval and
+   enforced only by a runtime deployment that implements this profile; a
+   deployment that does not meter a bound must refuse rather than
+   silently ignore it.
 
 About This Document
 
@@ -77,20 +78,21 @@ Table of Contents
    2.  Status: An EXPERIMENTAL Extension
    3.  Relationship to the Issuance and Runtime Profiles
    4.  Conventions and Terminology
-   5.  Consumption Bounds
-     5.1.  Consent Integrity
-   6.  Consumption Metering
-     6.1.  Exactness and Topology
-     6.2.  Retry, Idempotency, and Reserve/Commit Posture
-   7.  AuthZEN Binding
-     7.1.  Settlement Exchange
-   8.  Conformance
-   9.  Security Considerations
-   10. Privacy Considerations
-   11. IANA Considerations
-   12. References
-     12.1.  Normative References
-     12.2.  Informative References
+   5.  Mission Substrate
+   6.  Consumption Bounds
+     6.1.  Consent Integrity
+   7.  Consumption Metering
+     7.1.  Exactness and Topology
+     7.2.  Retry, Idempotency, and Reserve/Commit Posture
+   8.  AuthZEN Binding
+     8.1.  Settlement Exchange
+   9.  Conformance
+   10. Security Considerations
+   11. Privacy Considerations
+   12. IANA Considerations
+   13. References
+     13.1.  Normative References
+     13.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -128,7 +130,7 @@ Table of Contents
    issuing Authorization Server at each derivation and needs none of
    this document ([I-D.draft-mcguinness-oauth-mission]).
 
-   The consent-integrity rule of Section 5.1 is the boundary that makes
+   The consent-integrity rule of Section 6.1 is the boundary that makes
    this safe to omit: a bound is rendered to an Approver only where it
    is actually metered.
 
@@ -156,7 +158,21 @@ Table of Contents
       depletes as the Mission is used, as distinct from a per-action
       constraint that is evaluated independently on each action.
 
-5.  Consumption Bounds
+5.  Mission Substrate
+
+   This profile is defined against the Mission model rather than against
+   OAuth 2.0 mechanics.  It consumes these substrate primitives
+   ([I-D.draft-mcguinness-mission-substrate]): the Mission Identifier
+   and issuer, which key every consumption counter; the Authority Set
+   representation, from which a call_class SHOULD be drawn (Section 6);
+   and the integrity-anchor envelope, through which the bounds are
+   committed by intent_hash as Mission Intent controls members.  It
+   defines no binding of its own: enforcement composes through the
+   runtime profile's Mission binding establishment step
+   ([I-D.draft-mcguinness-mission-runtime]), and metering adds counters
+   to the runtime decision.
+
+6.  Consumption Bounds
 
    A Mission Intent controls object
    ([I-D.draft-mcguinness-oauth-mission]) MAY carry these members:
@@ -204,7 +220,7 @@ Table of Contents
 
    The bounds are carried on the Mission and committed by intent_hash.
    They are not enforced by the Authorization Server at issuance; they
-   are enforced by the runtime layer at the point of use (Section 6).
+   are enforced by the runtime layer at the point of use (Section 7).
 
    Example Mission Intent controls carrying all three bounds alongside
    the issuance profile's members:
@@ -221,7 +237,7 @@ Table of Contents
      }
    }
 
-5.1.  Consent Integrity
+6.1.  Consent Integrity
 
    A consumption bound is part of what the Approver consents to.  Where
    a deployment records Consent Evidence
@@ -237,7 +253,7 @@ Table of Contents
    does not meter a bound SHOULD refuse an Intent that carries it, and
    MUST NOT render it as an enforced limit.
 
-6.  Consumption Metering
+7.  Consumption Metering
 
    Consumption bounds are enforced by the runtime profile's PDP
    ([I-D.draft-mcguinness-mission-runtime]), not at issuance:
@@ -277,7 +293,7 @@ Table of Contents
    refusal rather than silent pass-through
    ([I-D.draft-mcguinness-mission-runtime]).
 
-6.1.  Exactness and Topology
+7.1.  Exactness and Topology
 
    The exactness of a consumption bound depends on the decision
    topology, and this profile does not overpromise:
@@ -297,7 +313,7 @@ Table of Contents
    of the runtime enforcement scope the runtime profile requires a
    deployment to document ([I-D.draft-mcguinness-mission-runtime]).
 
-6.2.  Retry, Idempotency, and Reserve/Commit Posture
+7.2.  Retry, Idempotency, and Reserve/Commit Posture
 
    For a metered permit, the PDP and PEP MUST define retry and
    idempotency behavior.  A retry of the same normalized action under
@@ -310,7 +326,7 @@ Table of Contents
    decrement ambiguous.  A failed attempt releases any reserved
    consumption per the deployment's documented reserve/commit posture.
 
-7.  AuthZEN Binding
+8.  AuthZEN Binding
 
    Where the runtime deployment uses the AuthZEN binding
    ([I-D.draft-mcguinness-mission-authzen]), this section defines the
@@ -323,12 +339,12 @@ Table of Contents
    denial_reason in Decision Evidence.  Whether a metered permit is
    reserved at decision time and committed on settlement, or committed
    at decision time, follows the deployment's documented reserve/commit
-   posture (Section 6.2); this binding fixes neither.  In a batch
+   posture (Section 7.2); this binding fixes neither.  In a batch
    (boxcar) evaluation, consumption metering applies per item in request
    order.  The exactness of the bound is the consistency bound of
-   Section 6.1, not a property of this wire binding.
+   Section 7.1, not a property of this wire binding.
 
-7.1.  Settlement Exchange
+8.1.  Settlement Exchange
 
    The metering rules require the PEP to signal actual use so the PDP
    commits consumption and releases any reservation.  In the AuthZEN
@@ -396,31 +412,31 @@ Table of Contents
      }
    }
 
-8.  Conformance
+9.  Conformance
 
    A runtime deployment that claims this profile MUST:
 
    *  meter every consumption bound a governed Mission carries per
-      Section 6, within its documented runtime enforcement scope
+      Section 7, within its documented runtime enforcement scope
       ([I-D.draft-mcguinness-mission-runtime]);
 
    *  refuse a consequential action that would exceed a bound, and
       refuse on any bound it cannot meter;
 
    *  publish its consistency bound under a multi-PDP topology
-      (Section 6.1);
+      (Section 7.1);
 
    *  define and document its retry, idempotency, and reserve/commit
-      posture (Section 6.2); and
+      posture (Section 7.2); and
 
    *  where the AuthZEN binding is in use, implement the settlement
-      exchange of Section 7.1.
+      exchange of Section 8.1.
 
    A Mission Issuer in a deployment claiming this profile MUST carry the
    consented bounds on the Mission record committed by intent_hash, and
-   MUST render them at the approval event per Section 5.1.
+   MUST render them at the approval event per Section 6.1.
 
-9.  Security Considerations
+10.  Security Considerations
 
    Consumption bounds limit the blast radius of a compromised or runaway
    agent in a dimension authority narrowing cannot: a Mission whose
@@ -429,14 +445,14 @@ Table of Contents
 
    *  *Unenforced bounds are consent theater.* A bound rendered at
       approval but not metered anywhere misleads the Approver about the
-      Mission's exposure.  The consent-integrity rule (Section 5.1)
+      Mission's exposure.  The consent-integrity rule (Section 6.1)
       exists for this; a deployment that cannot meter MUST NOT render
       the bound as enforced.
 
    *  *Distributed undercounting.* Under a multi-PDP topology, an
       attacker who can spread actions across decision points exploits
       the consistency gap.  The published consistency bound
-      (Section 6.1) is the honest statement of that exposure; per-PDP
+      (Section 7.1) is the honest statement of that exposure; per-PDP
       sub-budgets bound it structurally.
 
    *  *Settlement honesty.* The PDP commits what the PEP reports.
@@ -447,9 +463,9 @@ Table of Contents
 
    *  *Lease abandonment.* An agent that stops renewing a duration lease
       and keeps acting is stopped by the PEP, which MUST stop the action
-      or obtain a new permit before the lease is exhausted (Section 6).
+      or obtain a new permit before the lease is exhausted (Section 7).
 
-10.  Privacy Considerations
+11.  Privacy Considerations
 
    Metering state (spend, call counts, activity durations) is a fine-
    grained record of Mission activity over time.  It SHOULD be retained
@@ -458,18 +474,18 @@ Table of Contents
    disclosed in decision responses only as refusals, not as remaining-
    balance oracles.
 
-11.  IANA Considerations
+12.  IANA Considerations
 
-   This document has no IANA actions. max_budget, max_calls, and
-   max_duration are Mission Intent controls members defined by this
-   profile under the issuance profile's controls extension seam;
-   context.prior_decision_id and measured_duration are AuthZEN extension
-   data carried per the AuthZEN profile's conventions
+   This document has no IANA actions. max_budget, max_calls,
+   max_duration, and max_egress_volume are Mission Intent controls
+   members defined by this profile under the issuance profile's controls
+   extension seam; context.prior_decision_id and measured_duration are
+   AuthZEN extension data carried per the AuthZEN profile's conventions
    ([I-D.draft-mcguinness-mission-authzen]).
 
-12.  References
+13.  References
 
-12.1.  Normative References
+13.1.  Normative References
 
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
@@ -494,13 +510,18 @@ Table of Contents
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
-12.2.  Informative References
+13.2.  Informative References
 
    [I-D.draft-mcguinness-mission-authzen]
               McGuinness, K., "Mission-Bound Runtime Enforcement:
               AuthZEN Profile", 2026, <https://mcguinness.github.io/
               mission-bound-authorization/draft-mcguinness-mission-
               authzen.html>.
+
+   [I-D.draft-mcguinness-mission-substrate]
+              McGuinness, K., "Mission Substrate Requirements", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-substrate.html>.
 
    [I-D.draft-mcguinness-oauth-mission-consent-evidence]
               McGuinness, K., "Mission Consent Evidence for OAuth 2.0",
