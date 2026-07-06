@@ -1,0 +1,586 @@
+
+
+
+
+Network Working Group                                      K. McGuinness
+Internet-Draft                                               Independent
+Intended status: Standards Track                             6 July 2026
+Expires: 7 January 2027
+
+
+                    Mission Completion for OAuth 2.0
+            draft-mcguinness-oauth-mission-completion-latest
+
+Abstract
+
+   Mission-Bound Authorization for OAuth 2.0 commits an approved
+   Authority Set and gates issuance on Mission state, but a Mission
+   keeps deriving an entry's authority until it is revoked or expires,
+   even after the task that entry was granted for is finished.  The
+   Intent's success_criteria record when a task is done but are inert.
+   This document defines an OPTIONAL Mission Completion profile.  It
+   adds terminal_when, a completion condition carried in a
+   mission_resource_access entry's constraints that, once met,
+   *discharges* the Authority Set entry: the Authorization Server stops
+   deriving tokens carrying that entry.  Discharge is monotonic, it can
+   only remove an entry's authority and never widen it, so it is safe
+   against a prompt-injected agent by construction; it composes with the
+   subset rule as a condition a derived entry can add but never drop;
+   and it lets a multi-resource Mission complete one entry at a time.
+   It is the enforceable counterpart of the inert success_criteria.
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://mcguinness.github.io/mission-bound-authorization/draft-
+   mcguinness-oauth-mission-completion.html.  Status information for
+   this document may be found at https://datatracker.ietf.org/doc/draft-
+   mcguinness-oauth-mission-completion/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/mcguinness/mission-bound-authorization.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 7 January 2027.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+   2.  Status: An OPTIONAL Extension
+   3.  Relationship to the Issuance Profile
+   4.  Conventions and Terminology
+   5.  Entry Completion Conditions
+   6.  Discharge and Issuance Gating
+     6.1.  Determining Discharge
+     6.2.  Discharge Visibility
+   7.  Subset Rule
+   8.  Forward Compatibility
+   9.  Derivation Guidance
+   10. Relationship to Runtime Enforcement
+   11. Worked Example
+   12. Conformance
+   13. Security Considerations
+   14. Privacy Considerations
+   15. IANA Considerations
+   16. References
+     16.1.  Normative References
+     16.2.  Informative References
+   Acknowledgments
+   Author's Address
+
+1.  Introduction
+
+   The issuance profile [I-D.draft-mcguinness-oauth-mission] (the
+   "issuance profile") gates issuance on Mission state: an active
+   Mission derives tokens, a revoked or expired Mission does not.  It
+   has no notion of an approved entry being *done*. A Mission granted
+   authority to release a record "for this enrollment" keeps deriving
+   that authority after the enrollment closes, until a clock or a revoke
+   stops it.  The Intent's success_criteria describe when the task is
+   complete, but the issuance profile keeps them inert: they are
+   rendered and committed, and carry no machine effect
+   ([I-D.draft-mcguinness-oauth-mission]).
+
+   This document supplies the enforceable counterpart.  It defines
+   terminal_when, an OPTIONAL Common Constraint
+   ([I-D.draft-mcguinness-oauth-mission]) on a mission_resource_access
+   entry that carries one or more completion conditions.  When a
+   condition is met, the entry is *discharged*: the Authorization Server
+   MUST NOT thereafter derive a token carrying that entry, exactly as it
+   refuses derivation for a non-active Mission.
+
+   Three properties make this safe inside the Mission model and this
+   document requires all three:
+
+   *  *Discharge is monotonic.* It only removes an entry's authority; it
+      can never widen the entry or the Mission.  A prompt-injected agent
+      therefore cannot use it to gain anything: the worst it can do is
+      spend its own authority sooner, which is not an attack.
+
+   *  *Discharge composes with the subset rule.* A derived entry carries
+      its parent's completion conditions unchanged and MAY add more, the
+      same way constraints may be added or tightened but never dropped.
+
+   *  *Discharge fails closed.* A consumer that does not understand
+      terminal_when refuses the entry rather than ignoring the
+      condition, and an Authorization Server that cannot determine a
+      condition's status refuses to derive.
+
+   Discharge gates at the entry, not the Mission, so a multi-resource
+   Mission completes one entry at a time while the Mission remains
+   active for the rest.  It also strengthens the kill switch: a task
+   that finishes stops issuing its own authority without waiting for a
+   clock or a revoke.
+
+2.  Status: An OPTIONAL Extension
+
+   This document is OPTIONAL.  A deployment that ends an entry's
+   authority only by Mission revocation or expiry is fully conformant to
+   the issuance profile and is unaffected by this document.  It places
+   no new requirement on the issuance profile; it defines one OPTIONAL
+   entry member and the rules for handling it.
+
+   A deployment claims this profile only when it issues or consumes
+   entries carrying terminal_when.
+
+   This profile is newer and less exercised than the issuance core and
+   the runtime layer, and is not part of the recommended v1 deployment
+   bundles.  Its entry-discharge details may change.
+
+3.  Relationship to the Issuance Profile
+
+   This document depends normatively on the issuance profile and is not
+   implementable alone.  It reuses, without restating, the issuance
+   profile's Mission, mission_resource_access entry, Authority Set,
+   subset rule, integrity anchors, lifecycle states, and issuance
+   gating, and the inert success_criteria member of the Mission Intent.
+   It uses Mission, Mission Issuer, Authority Set, and derivation as the
+   issuance profile defines them.
+
+   It extends the issuance profile in one narrow, additive way: it
+   registers terminal_when, an OPTIONAL Common Constraint on a
+   mission_resource_access entry (Section 5), whose subset rule the
+   issuance profile's existing subset comparison applies (Section 7).
+   It changes no Mission state, the three-state lifecycle, or the
+   meaning of any existing member.
+
+4.  Conventions and Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   Discharge:  The state of a mission_resource_access entry whose
+      terminal_when has been met.  A discharged entry's authority is
+      spent: it is no longer derivable.
+
+5.  Entry Completion Conditions
+
+   This document defines terminal_when, a Common Constraint
+   ([I-D.draft-mcguinness-oauth-mission]) carried in the constraints
+   object of a mission_resource_access entry.  It is a specification-
+   defined Common Constraint under the issuance profile's naming
+   convention (Section 15).
+
+   terminal_when:  OPTIONAL.  An array of completion conditions.  When
+      any condition is met, the entry is discharged (Section 6).  Each
+      condition is an object with these members:
+
+      event_type:  REQUIRED.  A string identifying the completion event.
+         Its semantics are deployment- or registry-defined and opaque to
+         this document, as purpose is
+         ([I-D.draft-mcguinness-oauth-mission]).
+
+      event_source:  OPTIONAL.  A string.  A URI the Authorization
+         Server consults to determine whether the event has occurred
+         (Section 6.1).
+
+      max_staleness:  OPTIONAL.  A string.  An ISO 8601 duration,
+         matching the duration rule in Appendix A of [RFC3339], bounding
+         how stale the Authorization Server's view of the event MAY be
+         when it gates issuance.
+
+   The terminal_when array is part of the entry's constraints and so of
+   the Authority Set: it is committed by authority_hash and reproducible
+   under derivation ([I-D.draft-mcguinness-oauth-mission]).  Whether a
+   condition has fired is evaluated state, not part of authority_hash;
+   folding fired status into the anchor would make the committed
+   authority time-varying.
+
+   terminal_when is the enforceable counterpart of the inert
+   success_criteria ([I-D.draft-mcguinness-oauth-mission]), which
+   remains inert: success_criteria describe completion for the Approver,
+   terminal_when acts on it.  It is distinct from a cumulative
+   consumption bound, which meters volume; a terminal_when condition is
+   a single external event.
+
+6.  Discharge and Issuance Gating
+
+   When a condition in an entry's terminal_when has been met, the entry
+   is discharged.  The Authorization Server MUST NOT derive a token
+   carrying a discharged entry, at the token endpoint, on refresh, or on
+   Token Exchange, exactly as issuance is refused for a non-active
+   Mission ([I-D.draft-mcguinness-oauth-mission]).  A derivation that
+   would carry only discharged entries MUST fail; a derivation that
+   carries a mix MUST omit the discharged entries.
+
+   Discharge gates at the entry, not the Mission.  The Mission remains
+   active and continues to derive its other entries: a multi-resource
+   Mission therefore completes partially, one entry at a time, as each
+   entry's task finishes.  The three Mission states are unchanged; a
+   deployment that also tracks Mission-level completion MAY transition a
+   Mission whose entries are all discharged to a completed state where a
+   lifecycle profile defines one
+   ([I-D.draft-mcguinness-oauth-mission-status]), but this document does
+   not require it.
+
+   Discharge gates new derivations only.  A token already issued for an
+   entry remains valid until it expires, as with revocation
+   ([I-D.draft-mcguinness-oauth-mission]).  A deployment that needs
+   prompt cutoff relies on short token lifetimes or on the runtime layer
+   denying a discharged entry at the point of use (Section 10).
+
+6.1.  Determining Discharge
+
+   The Authorization Server determines whether a condition has been met
+   from the event_source, within max_staleness when present.  The
+   mechanism is deployment-defined (a status query, a received signal, a
+   recorded administrative action).  This document defines one
+   interoperable event-source profile a deployment MAY use: the
+   event_source URI is retrieved over authenticated HTTPS and returns a
+   signed JSON status document, a JWS [RFC7515], with these members:
+
+   *  occurred: REQUIRED.  A boolean, true when the event has occurred.
+
+   *  observed_at: REQUIRED.  An RFC 3339 [RFC3339] date-time at which
+      the status was observed.
+
+   *  event_type: REQUIRED.  A string, the event_type the document
+      reports.
+
+   *  source: REQUIRED.  A URI identifying the reporting source.
+
+   Other source mechanisms remain deployment-defined.  The Mission
+   Issuer MUST authenticate and integrity-verify any event source
+   outside its own trust domain before acting on its report.
+
+   Once the Authorization Server observes that a condition has been met,
+   the discharge is recorded as Authorization-Server-side state and MUST
+   NOT revert, regardless of any later report from the event source: a
+   source that afterward reports the event as not occurred does not
+   restore the entry's authority.
+
+   If the Authorization Server cannot determine whether a condition has
+   been met, for example because event_source is unreachable within
+   max_staleness, it MUST treat the entry as possibly discharged and
+   refuse to derive it, as it fails closed for stale Mission state.
+   Discharge removes authority, so the conservative action when status
+   is unknown is to withhold issuance, never to issue.
+
+6.2.  Discharge Visibility
+
+   A discharged entry is no longer derivable, so the surfaces that
+   report a Mission's authority MUST reflect that.  Where the Mission
+   Status profile [I-D.draft-mcguinness-oauth-mission-status] is
+   deployed, the Status operation and the token introspection projection
+   MUST omit a discharged entry from the authorization_details they
+   return.  This is consistent with the audience filtering those
+   surfaces already apply: a discharged entry, like an entry addressed
+   to another audience, is not authority the caller may rely on.
+
+   A per-entry discharge lifecycle signal is future work for the Mission
+   Lifecycle Signals profile
+   [I-D.draft-mcguinness-oauth-mission-signals]; this document defines
+   no discharge event.
+
+7.  Subset Rule
+
+   Because terminal_when is a Common Constraint, the issuance profile's
+   subset comparison ([I-D.draft-mcguinness-oauth-mission]) applies its
+   defined subset rule with no new clause: for a key present in the
+   reference entry's constraints, the same key MUST be present in the
+   candidate entry and its value MUST be no broader under the key's
+   defined rule.  For terminal_when, a candidate value is no broader
+   than a reference value when the candidate's condition array contains
+   every condition of the reference, compared structurally after the
+   canonicalization of the issuance profile
+   ([I-D.draft-mcguinness-oauth-mission]); the candidate MAY add further
+   conditions.
+
+   Conditions are compared structurally, not by event semantics.  A
+   child cannot drop or alter a parent's completion condition, only add
+   more, so discharge composes monotonically: an added condition can
+   only make an entry discharge sooner, which is a narrowing.  Modifying
+   a parent condition is forbidden because a verifier cannot decide
+   whether the change discharges earlier or later from opaque event_type
+   values.
+
+8.  Forward Compatibility
+
+   Because terminal_when is a constraints member, a consumer that does
+   not recognize it fails closed by the issuance profile's Resource
+   Server enforcement rule directly: a consumer MUST fail closed on any
+   constraints key it does not understand, or understands but cannot
+   enforce, refusing the request rather than granting access while
+   ignoring the key ([I-D.draft-mcguinness-oauth-mission]).  Discharge
+   is load-bearing narrowing, so ignoring terminal_when would silently
+   widen the grant.  That enforcement rule is the honest basis of
+   discharge's safety: an unrecognized terminal_when is refused, never
+   dropped.
+
+   An Authorization Server that does not implement this profile simply
+   does not emit terminal_when, and is unaffected.  The fail-closed rule
+   binds a consumer that encounters the constraint without implementing
+   it.
+
+9.  Derivation Guidance
+
+   This guidance is non-normative.  When the Authorization Server
+   derives an entry from the Mission Intent, a reviewable rule governs
+   what each element of the Intent becomes:
+
+   *  an action if removing it would leave the task undefined;
+
+   *  an ordinary constraints member if removing it would merely make
+      the task less restrictive; and
+
+   *  a terminal_when completion condition, itself a constraints member,
+      if it defines when the task is satisfied, retiring the entry's
+      authority rather than widening or restricting it.
+
+   The third case is what this profile adds.  A bound that holds
+   throughout the task is an ordinary constraint; an event that ends the
+   task is a terminal_when condition.  For example, "only invoices under
+   500 USD" is a max_amount constraint, while "until the Q3 close is
+   finalized" is a completion condition.
+
+10.  Relationship to Runtime Enforcement
+
+   Discharge is an issuance-gating signal and is fully meaningful at the
+   issuance profile alone.  It is also a natural input to the runtime
+   layer ([I-D.draft-mcguinness-mission-runtime]): a runtime Policy
+   Enforcement Point that recognizes terminal_when SHOULD deny a
+   discharged entry at the point of use, closing the window between
+   discharge and token expiry the same way it denies a revoked Mission.
+   A Policy Enforcement Point learns that an entry is discharged from
+   the Mission Status operation or the token introspection projection
+   (Section 6.2), the same way it learns a Mission is revoked.  A
+   runtime Policy Enforcement Point that does not recognize
+   terminal_when fails closed for the entry per Section 8.
+
+11.  Worked Example
+
+   A Mission for alice reconciles Q3 payables.  Its Authority Set has
+   two entries: a read over the ledger, and a write to post journal
+   entries, bounded to under 500 USD and discharged when the Q3 close is
+   finalized:
+
+   [
+     { "type": "mission_resource_access",
+       "resource": "https://erp.example.com",
+       "actions": ["invoices.read"] },
+     { "type": "mission_resource_access",
+       "resource": "https://erp.example.com",
+       "actions": ["journal-entries.write"],
+       "constraints": {
+         "max_amount": { "amount": "500.00", "currency": "USD" },
+         "terminal_when": [
+           { "event_type": "accounting-period-closed",
+             "event_source": "https://erp.example.com/periods/2026-Q3",
+             "max_staleness": "PT15M" } ] } }
+   ]
+
+   While the period is open, the Authorization Server derives both
+   entries.  When the finance team finalizes the Q3 close, the
+   event_source reports the period closed.  From then on the
+   Authorization Server refuses to derive the write entry: a refresh
+   returns a token carrying only the read entry.  The Mission stays
+   active, so the agent can still read the ledger to finish its
+   reconciliation report, but it can no longer post journal entries.  No
+   revoke and no clock was needed; the write authority retired itself
+   when the task it was granted for completed.
+
+   If the event_source were unreachable when the agent refreshed, the
+   Authorization Server would treat the write entry as possibly
+   discharged and omit it, rather than risk issuing authority for a task
+   that may have ended (Section 6.1).
+
+12.  Conformance
+
+   An Authorization Server conforming to this profile MUST:
+
+   *  treat an entry whose terminal_when has been met as discharged and
+      refuse to derive it (Section 6);
+
+   *  refuse to derive an entry whose discharge status it cannot
+      determine (Section 6.1);
+
+   *  record an observed discharge as latched state that MUST NOT revert
+      on a later source report (Section 6.1);
+
+   *  carry every parent completion condition into a derived entry when
+      narrowing, permitting only added conditions (Section 7);
+
+   *  where it offers the Mission Status operation or the token
+      introspection projection, omit a discharged entry from the
+      authorization_details it returns (Section 6.2); and
+
+   *  keep the terminal_when condition array committed by authority_hash
+      and keep fired status out of it (Section 5).
+
+   A consumer conforming to this profile MUST fail closed for an entry
+   carrying a terminal_when constraint it does not understand
+   (Section 8).
+
+13.  Security Considerations
+
+   The security considerations of the issuance profile apply.  This
+   profile adds:
+
+   *  Monotonic by construction.  Discharge only removes an entry's
+      authority, so it is not a path to escalation; a compromised or
+      injected agent cannot use terminal_when to widen authority, and
+      the worst it can do is retire its own authority sooner.
+
+   *  Fail closed on unknown constraint.  A consumer that does not
+      understand the terminal_when constraint MUST refuse the entry
+      (Section 8); ignoring the constraint would let a discharged entry
+      continue to be narrowed, projected, or enforced, defeating
+      discharge.
+
+   *  Fail closed on unknown status.  When discharge status is
+      indeterminate the Authorization Server withholds issuance
+      (Section 6.1); a deployment that fails open here defeats the
+      control.
+
+   *  Trusted event source. event_source is a trusted input to issuance:
+      a party that can make the source report "not yet complete" can
+      keep an entry derivable past its true completion.  The Mission
+      Issuer MUST authenticate and integrity-verify an event source
+      outside its own trust domain (Section 6.1), and SHOULD prefer
+      sources within it.
+
+   *  Already-issued tokens.  Discharge gates new derivations only; a
+      token already issued runs to expiry.  Prompt cutoff relies on
+      short token lifetimes or runtime point-of-use denial (Section 10),
+      the same caveat revocation carries.
+
+14.  Privacy Considerations
+
+   A terminal_when condition can reveal task structure: event_type and
+   event_source may name a business event, a case, or a record whose
+   mere existence is sensitive, and they ride the token where the entry
+   is carried.  A deployment SHOULD treat them as it treats other
+   authority detail, and SHOULD avoid event identifiers that disclose
+   more than the consuming party needs.  Consulting an event_source also
+   reveals the Authorization Server's interest in that event; a
+   deployment SHOULD weigh that exposure when the source is operated by
+   another party.
+
+15.  IANA Considerations
+
+   This document has no IANA actions.  It defines one Common Constraint
+   by specification, under the issuance profile's Common Constraint
+   convention ([I-D.draft-mcguinness-oauth-mission]), which requires a
+   definition to fix the name, value syntax, subset rule, and
+   intersection rule:
+
+   *  Name: terminal_when
+
+   *  Value syntax: a JSON array of completion-condition objects, each
+      with a REQUIRED event_type (string), an OPTIONAL event_source
+      (string, a URI), and an OPTIONAL max_staleness (string, an ISO
+      8601 duration) (Section 5).
+
+   *  Subset rule: a candidate value is no broader than a reference
+      value when the candidate's condition array contains every
+      condition of the reference, compared structurally after the
+      issuance profile's canonicalization; the candidate MAY add further
+      conditions (Section 7).
+
+   *  Intersection rule: the union of the two condition arrays.
+
+   *  Change Controller: IETF
+
+   *  Reference: this document, Section 5
+
+   terminal_when is a constraints member of the mission_resource_access
+   authorization details type defined by the issuance profile
+   ([I-D.draft-mcguinness-oauth-mission]). event_type values are
+   deployment- or registry-defined and opaque to this document, as
+   purpose is, so this profile establishes no registry of event types.
+
+16.  References
+
+16.1.  Normative References
+
+   [I-D.draft-mcguinness-oauth-mission]
+              McGuinness, K., "Mission-Bound Authorization for OAuth
+              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
+              oauth-mission, 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-oauth-
+              mission.html>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC3339]  Klyne, G. and C. Newman, "Date and Time on the Internet:
+              Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
+              <https://www.rfc-editor.org/rfc/rfc3339>.
+
+   [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
+              Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
+              2015, <https://www.rfc-editor.org/rfc/rfc7515>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+16.2.  Informative References
+
+   [I-D.draft-mcguinness-mission-runtime]
+              McGuinness, K., "Mission-Bound Runtime Enforcement", Work
+              in Progress, Internet-Draft, draft-mcguinness-mission-
+              runtime, 2026, <https://mcguinness.github.io/mission-
+              bound-authorization/draft-mcguinness-mission-
+              runtime.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-signals]
+              McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              mission-signals, 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-oauth-
+              mission-signals.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-status]
+              McGuinness, K., "Mission Status and Lifecycle for OAuth
+              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
+              oauth-mission-status, 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-oauth-
+              mission-status.html>.
+
+Acknowledgments
+
+   This document is part of the Mission-Bound Authorization for OAuth
+   2.0 work and gives the inert success_criteria of the issuance profile
+   an enforceable, monotonic counterpart.
+
+Author's Address
+
+   Karl McGuinness
+   Independent
+   Email: public@karlmcguinness.com
