@@ -103,6 +103,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-harness:
+    title: "Mission-Aware Agent Harness"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -507,6 +515,46 @@ consequential action MUST fail closed when the Mission cannot be
 established as `active` within that bound, are defined by the runtime
 profile ({{I-D.draft-mcguinness-mission-runtime}}); the
 `freshness` object is only their wire representation.
+
+## Taint Context {#context-taint}
+
+The OPTIONAL `taint` member carries the harness's untrusted-content
+determination ({{I-D.draft-mcguinness-mission-harness}}) for the
+requested action, when the deployment routes taint enforcement
+through the PDP:
+
+~~~ json
+"taint": {
+  "tainted": true,
+  "granularity": "parameter",
+  "source_class": "web_fetch"
+}
+~~~
+
+`tainted`:
+: REQUIRED when `taint` is present. A boolean. Whether a bound
+  parameter of the action derives from tainted content (under
+  `granularity` `parameter`) or tainted content has entered the
+  governed session (under `granularity` `session`).
+
+`granularity`:
+: REQUIRED when `taint` is present. A string, `parameter` or
+  `session`: the trigger granularity the harness established.
+
+`source_class`:
+: OPTIONAL. A string. The deployment-defined class of the tainting
+  source (for example, `web_fetch`, `inbound_message`,
+  `third_party_document`), for policy and evidence.
+
+Absence of `taint` means the harness did not route the determination
+through the decision request, not that the action is untainted; the
+harness's own egress rule then applies. When `taint` is present with
+`tainted` true on a consequential external-communication or
+external-commitment action, the PDP MUST deny or return
+`action_approval_required` ({{runtime-denial-classification}}) unless
+a fresh action-bound approval bound to the action's parameters is
+present in the decision context. The PDP MUST record the presented
+taint context in Decision Evidence.
 
 ## Capability Source Context {#context-capability-source}
 

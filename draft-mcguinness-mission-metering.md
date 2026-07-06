@@ -184,6 +184,16 @@ A Mission Intent `controls` object
   under the Mission. It is distinct from the Mission's `expires_at`,
   which bounds issuance rather than activity.
 
+`max_egress_volume`:
+: OPTIONAL. An object with one or both members `bytes` and
+  `messages`, each an integer, 1 or greater: hard caps on cumulative
+  egress under the Mission across consequential
+  external-communication and external-commitment actions
+  ({{I-D.draft-mcguinness-mission-runtime}}), as the total size in
+  bytes of those actions' bound payload parameters and the count of
+  such actions. It bounds the volume of within-scope laundering; it
+  does not detect it.
+
 The bounds are carried on the Mission and committed by `intent_hash`.
 They are not enforced by the Authorization Server at issuance; they are
 enforced by the runtime layer at the point of use ({{metering}}).
@@ -232,6 +242,12 @@ Consumption bounds are enforced by the runtime profile's PDP
   insufficient.
 - `max_calls`: the PDP increments an atomic
   counter for the named `call_class` and MUST refuse a call past `count`.
+- `max_egress_volume`: the PDP adds the action's bound payload size
+  and increments the action count atomically with the permit and MUST
+  refuse an action that would exceed either cap. Payload size is
+  measured over the parameter bytes committed by `parameter_digest`
+  ({{I-D.draft-mcguinness-mission-runtime}}); the operation profile
+  defines the measurement so PDPs accumulate consistently.
 - `max_duration`: the PDP
   accumulates the duration of consequential activity it reserves,
   commits, or permits and MUST refuse once that total would exceed the

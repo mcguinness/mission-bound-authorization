@@ -794,6 +794,19 @@ mandatory from the start. Throughout, every companion is optional;
 each profile states its own scoped conformance, and the bundles are
 guidance, not a conformance class.
 
+The quarantine pattern removes a leg of the injection-to-exfiltration
+chain instead of gating it. Work that ingests untrusted content (web
+pages, inbound mail, third-party documents) runs under a Mission
+whose Authority Set carries no external-communication or
+external-commitment authority; work that communicates externally runs
+under a separate Mission whose inputs are the quarantined product,
+under the harness taint policy
+({{I-D.draft-mcguinness-mission-harness}}) and, where claimed, the
+runtime profile's trifecta containment
+({{I-D.draft-mcguinness-mission-runtime}}). Per-task Missions already
+shrink blast radius; this composition uses them so that no single
+Mission ever holds untrusted input and an egress path at once.
+
 # Mission Requirements {#requirements}
 
 The requirements the family answers, stated implementation-neutrally;
