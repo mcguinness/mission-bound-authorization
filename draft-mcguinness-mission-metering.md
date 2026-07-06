@@ -189,8 +189,8 @@ A Mission Intent `controls` object
 : OPTIONAL. A string. An ISO 8601 duration (for
   example, `PT8H`), matching the `duration` rule in Appendix A of
   {{RFC3339}}, bounding cumulative wall-clock consequential activity
-  under the Mission. It is distinct from `mission_expiry`, which
-  bounds issuance rather than activity.
+  under the Mission. It is distinct from the Mission's `expires_at`,
+  which bounds issuance rather than activity.
 
 The bounds are carried on the Mission and committed by `intent_hash`.
 They are not enforced by the Authorization Server at issuance; they are

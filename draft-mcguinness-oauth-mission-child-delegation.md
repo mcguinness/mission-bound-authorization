@@ -600,8 +600,8 @@ A Child Mission MUST be bounded by the Parent Mission:
   under the subset rule of {{I-D.draft-mcguinness-oauth-mission}};
 - the child MUST NOT include a resource, action, constraint relaxation,
   or delegation right not present in the parent;
-- the child's `mission_expiry` MUST NOT be later than the parent's
-  `mission_expiry` (so it transitively caps every child-derived token's
+- the child's `expires_at` MUST NOT be later than the parent's
+  `expires_at` (so it transitively caps every child-derived token's
   `exp`, per {{I-D.draft-mcguinness-oauth-mission}});
 - the child MUST be created only where the applicable parent entry's
   `delegation` member carries a `children` object ({{fanout}}), and a
@@ -810,7 +810,7 @@ child's state as `suspended` on every state-reporting surface (the
 Mission Status operation and token introspection,
 {{I-D.draft-mcguinness-oauth-mission-status}}), and MUST restore the
 child's own state when the parent resumes to `active`. A child whose own
-`mission_expiry` passes during the suspension is `expired`: expiry takes
+`expires_at` passes during the suspension is `expired`: expiry takes
 precedence over the projected `suspended` state.
 
 Mission Status for a Child Mission SHOULD also include a parent

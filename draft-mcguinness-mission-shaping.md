@@ -338,7 +338,7 @@ A Mission Intent proposal MUST satisfy the syntactic requirements of the
 issuance profile's `mission_intent` object
 ({{I-D.draft-mcguinness-oauth-mission}}): a `goal`, `resources` (each an
 absolute URI), optional free-text `constraints`, optional
-`success_criteria`, an optional `purpose`, a `mission_expiry`, and an
+`success_criteria`, an optional `purpose`, an `expires_at`, and an
 optional `controls` object. The shaper proposes the resources and
 describes the desired bounds in free-text `constraints` and
 `success_criteria`; it does not author actions, structured constraints,
@@ -440,7 +440,7 @@ Mission Issuer derives the Authority Set from them.
 | `resources` | Enumerate, as absolute URIs, the resources, datasets, tools, or domains the prompt referenced; record any human-readable label as an audit annotation in Shaping Evidence, not as the `resources` value. | SHOULD NOT widen beyond what the prompt referenced; "for convenience" enlarges approved authority. |
 | `constraints` | Free-text bounds the user expressed plus deployment-policy bounds always applied, so the Approver sees the full bound set. The Mission Issuer derives any structured constraint from these. | SHOULD NOT silently drop a user-expressed bound; record it in `constraints` or in Shaping Evidence, or clarify or refuse instead. |
 | `success_criteria` | Free-text observable outcomes that indicate the task is complete, phrased for the Approver. Disclosure and audit material only. | SHOULD NOT encode authority here; `success_criteria` carries no machine semantics in the issuance profile. |
-| `mission_expiry` | The smallest ceiling that lets the task complete; if the prompt names no bound, apply a conservative deployment default. | Don't request the maximum the Mission Issuer allows; the Issuer MAY narrow further. |
+| `expires_at` | The smallest ceiling that lets the task complete; if the prompt names no bound, apply a conservative deployment default. | Don't request the maximum the Mission Issuer allows; the Issuer MAY narrow further. |
 | `purpose` | If the client has registered purposes, select the closest registered URI. | SHOULD NOT invent a new `purpose` URI. |
 | `controls` | Emit `controls` keys the deployment recognizes; a deployment MAY add further keys it defines. | SHOULD NOT emit a key the specific deployment does not recognize; an unrecognized key risks rejection of the Intent. |
 
@@ -671,7 +671,7 @@ a broad fallback. The candidate Mission Intent it submits:
   ],
   "success_criteria": ["All Q3 invoices for acme-corp reconciled."],
   "purpose": "urn:example:purpose:reconcile",
-  "mission_expiry": "2026-11-05T00:00:00Z"
+  "expires_at": "2026-11-05T00:00:00Z"
 }
 ~~~
 
@@ -801,7 +801,7 @@ trigger such as an inbound email or webhook. Task text, tickets,
 documents, tool descriptions, and catalog metadata can all carry
 instructions aimed at the shaper. Concrete threats include attempts to
 expand `resources` beyond what the user requested, to push
-`mission_expiry` past deployment policy, to suppress a stated
+`expires_at` past deployment policy, to suppress a stated
 constraint, or to select a `purpose` the user did not choose.
 
 Mitigations the shaper SHOULD apply:

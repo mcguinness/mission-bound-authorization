@@ -390,7 +390,8 @@ The members are:
     report-freshness metadata, carried in `mission` so it travels with
     `state` even on the introspection projection, which has no signed
     envelope to carry it ({{introspection-projection}}).
-  - `mission_expiry`: the point at which the Mission itself expires
+  - `mission_expiry`: the point at which the Mission itself expires,
+    mirroring the Mission record's `expires_at`
     ({{I-D.draft-mcguinness-oauth-mission}}).
   - `successor`: OPTIONAL. A string, the successor `mission_id`. Present
     only when `state` is `superseded`, giving the successor that
@@ -687,7 +688,7 @@ refused as a conflict ({{idempotency}}); the AS MUST NOT treat it as a
 no-op. Re-requesting an operation that has already reached its resulting
 state (for example, `revoke` on an already-`revoked` Mission) is
 idempotent and succeeds without a state change. A Mission that reaches
-`mission_expiry` transitions to `expired` independently of this
+its `expires_at` transitions to `expired` independently of this
 endpoint, from `active` or `suspended`.
 
 ## Consolidated State Machine {#state-machine}
@@ -712,17 +713,18 @@ every other state is non-deriving.
 | `suspended` | `resume` | lifecycle endpoint | `active` |
 | `active` | `complete` | lifecycle endpoint | `completed` |
 | `suspended` | `complete` | lifecycle endpoint | `completed` |
-| `active` | `mission_expiry` reached | expiry clock | `expired` |
-| `suspended` | `mission_expiry` reached | expiry clock | `expired` |
+| `active` | `expires_at` reached | expiry clock | `expired` |
+| `suspended` | `expires_at` reached | expiry clock | `expired` |
 | `suspended` | `suspend_until` reached, `on_expiry` = `resume` | expiry clock | `active` |
 | `suspended` | `suspend_until` reached, `on_expiry` = `revoke` | expiry clock | `revoked` |
 | `active` | successor activates | companion adjudication ({{I-D.draft-mcguinness-oauth-mission-expansion}}) | `superseded` |
 | `active` | parent reaches a terminal state | companion adjudication ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) | `cascaded` |
 
-`revoke` and `mission_expiry` both apply in `suspended` as well as
-`active`, so a suspended Mission can still be terminated or expire. The
-`superseded` and `cascaded` rows are companion-defined: `superseded` is
-committed by the expansion profile and requires an `active` predecessor
+`revoke` and the Mission's `expires_at` both apply in `suspended` as
+well as `active`, so a suspended Mission can still be terminated or
+expire. The `superseded` and `cascaded` rows are companion-defined:
+`superseded` is committed by the expansion profile and requires an
+`active` predecessor
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}); `cascaded` is
 committed by the child-delegation profile only when a parent reaches a
 terminal state. A `suspended` parent holds a dependent Child Mission
@@ -911,7 +913,7 @@ specified separately by Mission Management
 not require them. The following capabilities remain deferred to future
 work. Approver transfer or re-anchoring, changing the party that
 anchors a Mission's consent, is not defined here. Administrative
-monotonic narrowing, such as shortening a Mission's `mission_expiry`
+monotonic narrowing, such as shortening a Mission's `expires_at`
 or retiring a single Authority Set entry, is not defined here.
 
 # Revocation Propagation {#revocation-enforcement-classes}

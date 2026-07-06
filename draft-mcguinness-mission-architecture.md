@@ -478,8 +478,8 @@ mirrors a rule the named profile states normatively.
 
 ## The Mission Identifier and Origin
 
-An opaque, non-reused `mission_id` with at least 128 bits of entropy
-and no semantic content, plus `origin`, the issuer URL of the
+An opaque, non-reused Mission Identifier with at least 128 bits of
+entropy and no semantic content, plus `origin`, the issuer URL of the
 approving Mission Issuer; together they name exactly one Mission.
 Home: the core's Mission Record and Mission Identifier Format
 sections. Consumed by every companion: enforcement decisions,

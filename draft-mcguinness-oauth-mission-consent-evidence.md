@@ -261,7 +261,7 @@ A Consent Disclosure object has these members:
 
 `mission_summary`:
 : REQUIRED. An object presenting the task to the Approver. It MUST carry
-  the rendered `goal`, the rendered `mission_expiry`, a display of the
+  the rendered `goal`, the rendered `expires_at`, a display of the
   Subject, and a display of the Approver. Presentation wording is free.
 
 `authority_summary`:
@@ -699,10 +699,10 @@ Example, over the worked disclosure of {{disclosure-vector}}:
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "origin": "https://as.example.com",
-    "intent_hash": "sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E",
+    "intent_hash": "sha-256:6mIFoCz79uCHNzKLfBpBwqFjoFXdpmpuc65486IqimQ",
     "authority_hash": "sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro",
     "consent_rendering_hash":
-      "sha-256:3RYqFiY5ZNL181FgkHkIrY0FpfEkTvWi6DI9vsazb9Y"
+      "sha-256:W-aXkM2quCh07XvdixCTk8qHoMWOs2tA0hZej4kLGr0"
   },
   "approver": {
     "iss": "https://idp.example.com",
@@ -720,7 +720,7 @@ Example, over the worked disclosure of {{disclosure-vector}}:
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:3RYqFiY5ZNL181FgkHkIrY0FpfEkTvWi6DI9vsazb9Y"
+      "sha-256:W-aXkM2quCh07XvdixCTk8qHoMWOs2tA0hZej4kLGr0"
   },
   "evidence_envelope": {
     "format": "jws-compact",
@@ -1074,7 +1074,7 @@ The Consent Disclosure object:
 {
   "disclosure_id": "disc_4pQ9z",
   "source_hashes": {
-    "intent_hash": "sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E",
+    "intent_hash": "sha-256:6mIFoCz79uCHNzKLfBpBwqFjoFXdpmpuc65486IqimQ",
     "authority_hash": "sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro"
   },
   "template_id": "mission-consent-standard",
@@ -1083,7 +1083,7 @@ The Consent Disclosure object:
   "locale": "en-US",
   "mission_summary": {
     "goal": "Reconcile Q3 invoices",
-    "mission_expiry": "2026-12-31T23:59:59Z",
+    "expires_at": "2026-12-31T23:59:59Z",
     "subject_display": "alice (user_3p2q8mN1a0kV7tR)",
     "approver_display": "alice (user_3p2q8mN1a0kV7tR)"
   },
@@ -1201,22 +1201,22 @@ closure_id":"disc_4pQ9z","display_context":{"channel":"web","rendered_at
 _to":{"action":"journal-entries.write","resource":"https://erp.example.c
 om"},"condition":"irreversible_action","statement":"Posted journal entri
 es are not automatically reversible."}],"mission_summary":{"approver_dis
-play":"alice (user_3p2q8mN1a0kV7tR)","goal":"Reconcile Q3 invoices","mis
-sion_expiry":"2026-12-31T23:59:59Z","subject_display":"alice (user_3p2q8
-mN1a0kV7tR)"},"risk_summary":[{"dimension":"data_access","statement":"Th
-e agent can read invoices held in the ERP system."},{"dimension":"spend"
-,"statement":"The agent can post journal entries of up to 500 US dollars
-."},{"dimension":"irreversibility","statement":"Posted journal entries a
-lter the ledger of record."}],"source_hashes":{"authority_hash":"sha-256
-:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro","intent_hash":"sha-256:P38
-IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E"},"template_hash":"sha-256:50S2
-DpJfcfNGlzi_vzZJNJbJKkknFX65rhWJWLiMyok","template_id":"mission-consent-
-standard","template_version":"2026-06"}}
+play":"alice (user_3p2q8mN1a0kV7tR)","expires_at":"2026-12-31T23:59:59Z"
+,"goal":"Reconcile Q3 invoices","subject_display":"alice (user_3p2q8mN1a
+0kV7tR)"},"risk_summary":[{"dimension":"data_access","statement":"The ag
+ent can read invoices held in the ERP system."},{"dimension":"spend","st
+atement":"The agent can post journal entries of up to 500 US dollars."},
+{"dimension":"irreversibility","statement":"Posted journal entries alter
+ the ledger of record."}],"source_hashes":{"authority_hash":"sha-256:vUC
+CfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro","intent_hash":"sha-256:6mIFoCz
+79uCHNzKLfBpBwqFjoFXdpmpuc65486IqimQ"},"template_hash":"sha-256:50S2DpJf
+cfNGlzi_vzZJNJbJKkknFX65rhWJWLiMyok","template_id":"mission-consent-stan
+dard","template_version":"2026-06"}}
 ~~~
 
 ~~~ text
 consent_rendering_hash =
-  sha-256:3RYqFiY5ZNL181FgkHkIrY0FpfEkTvWi6DI9vsazb9Y
+  sha-256:W-aXkM2quCh07XvdixCTk8qHoMWOs2tA0hZej4kLGr0
 ~~~
 
 An implementation that canonicalizes the same envelope, computes
