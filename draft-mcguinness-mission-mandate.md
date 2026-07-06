@@ -257,8 +257,8 @@ The protected header MUST carry:
 : REQUIRED. A string. The Mission record's `client_id`.
 
 `mission_expiry`:
-: REQUIRED. A string. An RFC 3339 {{RFC3339}} date-time, the Mission
-  record's `mission_expiry`.
+: REQUIRED. A string. An RFC 3339 {{RFC3339}} date-time, mirroring the
+  Mission record's `expires_at`.
 
 `policy_version`:
 : REQUIRED. A string. The Mission record's `policy_version`.

@@ -266,7 +266,7 @@ Mission Issuer verifies per-dimension narrowing after it re-derives the
 Authority Set from the revised Intent ({{revision-submission}}); the
 client cannot author the Authority Set, so its obligation is scoped to
 the Intent members it does author (the `resources`, the
-`mission_expiry`, and the free-text `constraints`), which it revises to
+`expires_at`, and the free-text `constraints`), which it revises to
 drive that narrowing.
 
 The `revision_handle` is bound to the deferred approval and
@@ -442,7 +442,7 @@ worked disclosure and test vector:
   "mission": {
     "origin": "https://as.example.com",
     "intent_hash":
-      "sha-256:P38IRTmTaUESJ5RpCw1WXmIqfsQmYek7zxiQWERcq-E",
+      "sha-256:6mIFoCz79uCHNzKLfBpBwqFjoFXdpmpuc65486IqimQ",
     "authority_hash":
       "sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro"
   },
@@ -464,7 +464,7 @@ worked disclosure and test vector:
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:3RYqFiY5ZNL181FgkHkIrY0FpfEkTvWi6DI9vsazb9Y"
+      "sha-256:W-aXkM2quCh07XvdixCTk8qHoMWOs2tA0hZej4kLGr0"
   },
   "evidence_envelope": {
     "format": "jws-compact",

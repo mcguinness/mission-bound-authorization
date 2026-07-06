@@ -319,7 +319,7 @@ match against the Mission record
 
 `expiring_before`:
 : An RFC 3339 {{RFC3339}} date-time. Matches a Mission whose
-  `mission_expiry` is strictly before the value.
+  `expires_at` is strictly before the value.
 
 `parent`:
 : A string, a `mission_id`. Matches the Child Missions whose `parent`
@@ -359,8 +359,9 @@ The signed payload ({{management-endpoint}}) carries:
 `missions`:
 : REQUIRED. An array of Mission summary objects, each carrying
   `mission_id`, `state`, `subject` (an object with `iss` and `sub`),
-  `client_id`, `created_at`, and `mission_expiry` from the Mission
-  record, plus the lineage members `successor`, `predecessor`
+  `client_id`, `created_at`, and `mission_expiry` (mirroring the
+  record's `expires_at`), plus the lineage members `successor`,
+  `predecessor`
   ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and `parent`
   ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) where
   present on the record. A summary MUST NOT carry the Mission Intent,
@@ -667,7 +668,7 @@ not how fast any one revocation propagates.
 
 Approver transfer, re-anchoring a Mission's consent to a different
 accountable party, is not defined here. Administrative monotonic
-narrowing, such as shortening a Mission's `mission_expiry` or retiring
+narrowing, such as shortening a Mission's `expires_at` or retiring
 a single Authority Set entry, is not defined here. Cross-origin
 enumeration, one query spanning Missions held by multiple Mission
 Issuers, is not defined here; a Management Client queries each
