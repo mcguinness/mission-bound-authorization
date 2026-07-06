@@ -964,16 +964,17 @@ A `mission_resource_access` entry is a {{RFC9396}}
 
 `actions`:
 : REQUIRED. An array of strings. Permitted action
-  identifiers, each matching `[A-Za-z0-9_.:-]+`. Like an OAuth scope, an
-  action identifier carries meaning only at the `resource` that defines
+  values. Each value is either an action identifier matching
+  `[A-Za-z0-9_.:-]+` or an action family: an action identifier followed
+  by `.*`. Like an OAuth scope, an
+  action value carries meaning only at the `resource` that defines
   it; a consumer enforces only the actions it recognizes for that
   resource and honors no others, so an action a consumer does not
   understand is fail-closed by construction (the action is simply not
   within the authority it can enforce). An AS SHOULD draw action
   identifiers from a namespace the serving resource documents, so the
-  set is interpretable cross-vendor rather than ad hoc. A value MAY
-  instead be an **action family**: an action identifier followed by
-  `.*`, authorizing every action whose dot-separated identifier
+  set is interpretable cross-vendor rather than ad hoc. An action
+  family authorizes every action whose dot-separated identifier
   extends the family name at a segment boundary (`invoices.*`
   authorizes `invoices.read` and `invoices.q3.export`, not
   `invoicesx.read`). A consent rendering MUST present a family as the
@@ -1175,7 +1176,7 @@ instants they denote after normalization to UTC, so two RFC 3339
 representations of the same instant that differ only in timezone offset
 or trailing subsecond zeros are equal; `recipient_domain` values are
 compared as DNS names, case-insensitively and on whole labels, so
-`mail.example.com` is within `example.com` and `notexample.com` is
+`mail.example.com` is within `example.com` and `not-example.net` is
 not. A Common Constraint definition
 MUST fix its subset and intersection in value-space terms, so that
 independent deployments compute the same result for the same values and
@@ -1245,9 +1246,11 @@ Both entries are committed by the one `authority_hash` and bound to
 the Mission. The Cedar entry is evaluated by the finance audience's
 PDP; the `mission_resource_access` entry is enforced as in
 {{mission-bound-tokens}}. Because the Cedar profile defines no subset
-rule over policy sets, the AS carries the Cedar entry as approved
-rather than narrowing it; the per-entry `delegation` controls still
-bound who may delegate it and how far.
+or delegation rule over policy sets, the AS carries the Cedar entry as
+approved rather than narrowing it, and it MUST NOT appear in a
+delegated token or cross-domain grant. Delegation controls on other
+entries, such as the `mission_resource_access` entry, apply to those
+entries only.
 
 ## Modeling Tools and Function Calls {#tools}
 
