@@ -1068,7 +1068,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 7 January 2027</td>
+<td class="center">Expires 8 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1081,12 +1081,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-attenuation-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-06" class="published">6 July 2026</time>
+<time datetime="2026-07-07" class="published">7 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
-<dd class="intended-status">Standards Track</dd>
+<dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-07">7 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1146,7 +1146,7 @@ alongside, not instead of, Authorization-Server-mediated delegation.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 7 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1603,8 +1603,8 @@ levels of offline narrowing. Decoded root token:<a href="#section-11-1" class="p
   "sub": "user_3p2q8mN1a0kV7tR",
   "client_id": "s6BhdRkqt3",
   "aud": "https://erp.example.com",
-  "iat": 1797840000,
-  "exp": 1797840300,
+  "iat": 1793606400,
+  "exp": 1793606700,
   "jti": "aat_root_7M2R4kP9sT1x",
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "del_depth": 0,
@@ -1647,8 +1647,8 @@ is one line, wrapped here for display):<a href="#section-11-4" class="pilcrow">�
      DWpqq30jZyJGHTN0d2HglBV3uiguA4I",
   "sub": "user_3p2q8mN1a0kV7tR",
   "aud": "https://erp.example.com",
-  "iat": 1797840030,
-  "exp": 1797840240,
+  "iat": 1793606430,
+  "exp": 1793606640,
   "jti": "aat_child_2Yt7Qv9Lq",
   "cnf": { "jkt": "kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t" },
   "par_hash": "9XbVt2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQ",
@@ -1671,7 +1671,7 @@ is one line, wrapped here for display):<a href="#section-11-4" class="pilcrow">�
 </pre><a href="#section-11-5" class="pilcrow">¶</a>
 </div>
 <p id="section-11-6">The <code>mission</code> claim is unchanged, the child's <code>aud</code> equals the root's,
-its <code>exp</code> (1797840240) ends before the root's (1797840300), within the
+its <code>exp</code> (1793606640) ends before the root's (1793606700), within the
 per-hop bound, the write tool is gone, and the read constraint is
 unchanged (a permitted narrowing). The child's <code>cnf.jkt</code> is the JWK
 thumbprint <span>[<a href="#RFC7638" class="cite xref">RFC7638</a>]</span> of the delegate extractor's own key, which its
@@ -1694,7 +1694,7 @@ the Mission, the next presentation fails the state check and the whole
 chain stops, even though no issuer ever saw the child and the child's
 <code>exp</code> has not passed.<a href="#section-11-6" class="pilcrow">¶</a></p>
 <p id="section-11-7">For contrast, suppose the extractor presents a chain whose child
-carries <code>"exp": 1797840360</code>, sixty seconds past the root's. The
+carries <code>"exp": 1793606760</code>, sixty seconds past the root's. The
 per-hop bound check (<a href="#mission-binding-check" class="auto internal xref">Section 8</a>) fails before any tool
 or Mission-state evaluation: a child that outlives its parent breaks
 the chain's transitive expiry bound, so the gateway refuses the whole

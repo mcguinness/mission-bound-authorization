@@ -1073,7 +1073,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 7 January 2027</td>
+<td class="center">Expires 8 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1086,12 +1086,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-runtime-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-06" class="published">6 July 2026</time>
+<time datetime="2026-07-07" class="published">7 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-07">7 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1156,7 +1156,7 @@ individually verifiable conditions.<a href="#section-abstract-1" class="pilcrow"
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 7 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1797,34 +1797,44 @@ separately PDP-gated by this profile. A deployment <span class="bcp14">MUST NOT<
 use classification to evade the floor or a Resource-policy minimum, and
 once an action is a consequential write or higher it <span class="bcp14">MUST</span> be gated and
 bound as the table requires.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
-<p id="section-4.3-4">The three highest classes are defined by predicates; the table's
-examples illustrate them:<a href="#section-4.3-4" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-4.3-5">
-          <dt id="section-4.3-5.1">Irreversible action:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.3-5.2">
-            <p id="section-4.3-5.2.1">the action's effect cannot be reversed by the same authority within
-the deployment's own systems.<a href="#section-4.3-5.2.1" class="pilcrow">¶</a></p>
+<p id="section-4.3-4">One predicate cuts across the classes. An <strong>external-communication
+action</strong> is a consequential action, of any class, whose effect
+carries data to a recipient outside the deployment's trust boundary
+(sending a message or mail, posting to an external service,
+publishing, or any equivalent egress). The term names the egress
+property, not a sixth class: an external-communication action keeps
+its class and that class's requirements, and rules stated over
+"external-communication and external-commitment actions" (the taint
+rule, trifecta containment, egress metering) apply to any action
+satisfying the predicate or classified <code>external_commitment</code>.<a href="#section-4.3-4" class="pilcrow">¶</a></p>
+<p id="section-4.3-5">The three highest classes are defined by predicates; the table's
+examples illustrate them:<a href="#section-4.3-5" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4.3-6">
+          <dt id="section-4.3-6.1">Irreversible action:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.3-6.2">
+            <p id="section-4.3-6.2.1">the action's effect cannot be reversed by the same authority within
+the deployment's own systems.<a href="#section-4.3-6.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-4.3-5.3">External commitment:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.3-5.4">
-            <p id="section-4.3-5.4.1">the action creates an obligation or communication binding the
-Subject to a party outside the deployment.<a href="#section-4.3-5.4.1" class="pilcrow">¶</a></p>
+<dt id="section-4.3-6.3">External commitment:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.3-6.4">
+            <p id="section-4.3-6.4.1">the action creates an obligation or communication binding the
+Subject to a party outside the deployment.<a href="#section-4.3-6.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-4.3-5.5">Privileged administration:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.3-5.6">
-            <p id="section-4.3-5.6.1">the action changes who holds authority or how authority is
-evaluated.<a href="#section-4.3-5.6.1" class="pilcrow">¶</a></p>
+<dt id="section-4.3-6.5">Privileged administration:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.3-6.6">
+            <p id="section-4.3-6.6.1">the action changes who holds authority or how authority is
+evaluated.<a href="#section-4.3-6.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-4.3-6">Classification remains deployment-scoped: each deployment applies the
+<p id="section-4.3-7">Classification remains deployment-scoped: each deployment applies the
 predicates to its own actions and systems. The predicates make the
 resulting classifications comparable across deployments and auditable:
 an assignment is justified by whether its predicate holds, not by
-resemblance to the examples.<a href="#section-4.3-6" class="pilcrow">¶</a></p>
-<p id="section-4.3-7"><strong>Classification floor.</strong> Actions in the <strong>irreversible</strong>, <strong>external
+resemblance to the examples.<a href="#section-4.3-7" class="pilcrow">¶</a></p>
+<p id="section-4.3-8"><strong>Classification floor.</strong> Actions in the <strong>irreversible</strong>, <strong>external
 commitment</strong>, and <strong>privileged administration</strong> classes <span class="bcp14">MUST</span> be
 treated as consequential and gated. These three are the
 <strong>high-consequence classes</strong>, to which this profile's strictest
@@ -1840,7 +1850,7 @@ any case <span class="bcp14">MUST NOT</span> classify an
 irreversible, external-commitment, or privileged-administration action
 as non-consequential. A deployment
 that leaves such an action ungated does not enforce this profile for
-that action's class (<a href="#pep-placement" class="auto internal xref">Section 4.5</a>).<a href="#section-4.3-7" class="pilcrow">¶</a></p>
+that action's class (<a href="#pep-placement" class="auto internal xref">Section 4.5</a>).<a href="#section-4.3-8" class="pilcrow">¶</a></p>
 <div id="class-floors">
 <section id="section-4.3.1">
           <h4 id="name-resource-owner-class-floors">

@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                               6 July 2026
-Expires: 7 January 2027
+Intended status: Informational                               7 July 2026
+Expires: 8 January 2027
 
 
                          Mission Security Model
@@ -62,7 +62,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 January 2027.
+   This Internet-Draft will expire on 8 January 2027.
 
 Copyright Notice
 
@@ -327,7 +327,7 @@ Table of Contents
 
 7.  Cross-Cutting Assumptions
 
-   Five assumptions hold across the whole model:
+   Four assumptions hold across the whole model:
 
    *  *Sender-constrained credentials.* Mission-bound tokens are sender-
       constrained ([I-D.draft-mcguinness-oauth-mission]); a token
@@ -360,11 +360,13 @@ Table of Contents
       [I-D.draft-mcguinness-oauth-domain-authorized-issuer]) are
       concrete publication and evaluation mechanisms for such policy.
 
-   *  *Authority does not move on inert input.* Intent that the agent or
-      attacker-reachable content can influence (goal, purpose,
-      success_criteria, and disclosure-only audit material) is inert and
-      cannot derive, widen, or gate authority
-      ([I-D.draft-mcguinness-oauth-mission]).
+   *  *Authority does not move on inert input.* purpose,
+      success_criteria, and disclosure-only audit material are inert and
+      cannot derive, widen, or gate authority; goal shapes authority
+      only through the pre-approval derivation whose result the Approver
+      reads and consents to, and is inert once the Mission is approved
+      ([I-D.draft-mcguinness-oauth-mission]).  Authority is fixed at the
+      approval event.
 
 8.  What the Model Does and Does Not Guarantee
 
@@ -378,18 +380,19 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-runtime]), the model further
    guarantees that such an agent cannot unilaterally take a high-
    consequence action it does not hold a mediated credential for.  In
-   the base profiles the mechanisms behind that further guarantee
-   (mediated credential custody, no unmediated path, action-bound
-   approval, and an active-freshness state source) are recommendations,
-   not requirements, and a deployment that leaves them as
-   recommendations does not obtain it.  This matches the suite's front-
-   door framing: adopting the profiles does not by itself make a
-   deployment resistant to a compromised agent.  The model makes misuse
-   bounded and, where evidence is produced, attributable.  A deployment
-   that additionally claims the runtime profile's trifecta containment
-   enforces least exposure and the harness taint rule as MUSTs, so an
-   injected agent cannot egress on the strength of untrusted content
-   alone.
+   the base profiles two of the mechanisms behind that further guarantee
+   (mediated credential custody and action-bound approval) are
+   recommendations, not requirements, while active-state freshness for
+   the high-consequence classes and the no-unmediated-path rule for
+   mediated classes are already base-profile requirements; a deployment
+   that leaves the recommendations as recommendations does not obtain
+   the guarantee.  This matches the suite's front-door framing: adopting
+   the profiles does not by itself make a deployment resistant to a
+   compromised agent.  The model makes misuse bounded and, where
+   evidence is produced, attributable.  A deployment that additionally
+   claims the runtime profile's trifecta containment enforces least
+   exposure and the harness taint rule as MUSTs, so an injected agent
+   cannot egress on the strength of untrusted content alone.
 
    It does not make a compromised trusted component safe.  The
    compromise of each component degrades a specific guarantee, as listed
@@ -422,7 +425,7 @@ Table of Contents
    is assumed not to break the cryptographic primitives, not to forge an
    authenticated component's signing key, and not to compromise a
    trusted-base component; those last two are the residuals of
-   Section 6, not adversary moves this table covers.
+   Section 6, and the table's final row only restates that exclusion.
 
    The following maps each adversary move to the mechanism that
    addresses it and to what is explicitly not stopped.  The residual
@@ -441,11 +444,12 @@ Table of Contents
    |              |                                | legitimately     |
    |              |                                | holds            |
    +--------------+--------------------------------+------------------+
-   | Prompt       | Inert intent: goal, purpose,   | Injected text    |
-   | injection    | success_criteria never derive, | can still drive  |
-   | tries to     | widen, or gate authority       | actions already  |
-   | widen        |                                | in scope         |
-   | authority    |                                |                  |
+   | Prompt       | Authority fixed at approval:   | Injected text    |
+   | injection    | purpose and success_criteria   | can still drive  |
+   | tries to     | are inert, and goal shapes     | actions already  |
+   | widen        | authority only through the     | in scope         |
+   | authority    | pre-approval derivation the    |                  |
+   |              | Approver consents to           |                  |
    +--------------+--------------------------------+------------------+
    | Stolen or    | Sender-constraint (proof-of-   | A token stolen   |
    | exfiltrated  | possession); the high-         | together with    |

@@ -1068,7 +1068,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 7 January 2027</td>
+<td class="center">Expires 8 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1081,12 +1081,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-authzen-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-06" class="published">6 July 2026</time>
+<time datetime="2026-07-07" class="published">7 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-07">7 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1147,7 +1147,7 @@ does not restate the enforcement semantics the runtime profile owns.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 7 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1996,8 +1996,13 @@ absent.<a href="#section-5.8-1" class="pilcrow">¶</a></p>
         <h3 id="name-worked-pdp-request">
 <a href="#section-5.9" class="section-number selfRef">5.9. </a><a href="#name-worked-pdp-request" class="section-name selfRef">Worked PDP request</a>
         </h3>
-<p id="section-5.9-1">For the ERP reconciliation Mission:<a href="#section-5.9-1" class="pilcrow">¶</a></p>
-<div class="breakable lang-http-message sourcecode" id="section-5.9-2">
+<p id="section-5.9-1">The <code>policy_view_id</code> values in this document's examples
+(<code>sha-256:kP3xR9sQ...</code>) differ from the runtime profile's worked
+materialized-view value (<code>sha-256:fuMqn6Nb...</code>): this deployment's
+view payload includes the engine-evaluable form, so it hashes
+differently. Both are valid views of the same Mission.<a href="#section-5.9-1" class="pilcrow">¶</a></p>
+<p id="section-5.9-2">For the ERP reconciliation Mission:<a href="#section-5.9-2" class="pilcrow">¶</a></p>
+<div class="breakable lang-http-message sourcecode" id="section-5.9-3">
 <pre>
 POST /pdp/access/v1/evaluation HTTP/1.1
 Host: pdp.example.com
@@ -2059,7 +2064,7 @@ Authorization: ...
     }
   }
 }
-</pre><a href="#section-5.9-2" class="pilcrow">¶</a>
+</pre><a href="#section-5.9-3" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -2309,10 +2314,13 @@ canonicalization, and integrity envelope an AuthZEN deployment emits.<a href="#s
           <dd style="margin-left: 1.5em" id="section-6.1-1.4">
             <p id="section-6.1-1.4.1"><span class="bcp14">REQUIRED</span>. An object. the PDP request's <code>context.mission</code>
 object (<code>id</code>, <code>issuer</code>, <code>authority_hash</code>, and, when known,
-<code>policy_version</code> and <code>policy_view_id</code>), extended with <code>intent_hash</code>
+<code>policy_version</code>), extended with the PDP's own <code>policy_view_id</code>,
+with <code>intent_hash</code>,
 and, when known, a consent-disclosure commitment, so the evidence
 chains back to the exact approved Mission. Within <code>mission</code>, <code>id</code>,
-<code>issuer</code>, and <code>authority_hash</code> are <span class="bcp14">REQUIRED</span>; <code>intent_hash</code> is <span class="bcp14">OPTIONAL</span>
+<code>issuer</code>, <code>authority_hash</code>, and <code>policy_view_id</code> are <span class="bcp14">REQUIRED</span>
+(the PDP always knows and populates its own view identifier,
+whatever the request carried); <code>intent_hash</code> is <span class="bcp14">OPTIONAL</span>
 (it is carried in neither the <code>mission</code> claim nor introspection, so
 only a PDP with direct Mission-record access can record it), and the
 remaining members are <span class="bcp14">OPTIONAL</span>. These hashes are the issuing AS's
@@ -2466,16 +2474,47 @@ enum and the open constraint-key space never mix in one field.<a href="#section-
 </dd>
           <dd class="break"></dd>
 <dt id="section-6.1-1.39">
-<code>evidence_envelope</code>:</dt>
+<code>authorizing_entry</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.1-1.40">
-            <p id="section-6.1-1.40.1"><span class="bcp14">REQUIRED</span>. An object. integrity protection
+            <p id="section-6.1-1.40.1"><span class="bcp14">OPTIONAL</span>. An object. the <code>authorization_details</code> entry the decision
+was evaluated against.<a href="#section-6.1-1.40.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.1-1.41">
+<code>entry_digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.1-1.42">
+            <p id="section-6.1-1.42.1"><span class="bcp14">OPTIONAL</span>. A string. the integrity-anchor encoded digest
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) of that entry, for a
+deployment that does not record the entry in full. A record of a
+permit <span class="bcp14">MUST</span> carry <code>authorizing_entry</code> or <code>entry_digest</code>, per the
+runtime record requirements
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6.1-1.42.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.1-1.43">
+<code>taint</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.1-1.44">
+            <p id="section-6.1-1.44.1"><span class="bcp14">OPTIONAL</span>. An object. the presented taint context
+(<a href="#context-taint" class="auto internal xref">Section 5.7</a>), recorded as supplied. <span class="bcp14">REQUIRED</span> when the
+decision request carried <code>context.taint</code>.<a href="#section-6.1-1.44.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.1-1.45">
+<code>evidence_envelope</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-6.1-1.46">
+            <p id="section-6.1-1.46.1"><span class="bcp14">REQUIRED</span>. An object. integrity protection
 (<a href="#decision-evidence-integrity" class="auto internal xref">Section 6.3</a>), carrying a <code>format</code> (string,
-required) and a <code>value</code> (string, required).<a href="#section-6.1-1.40.1" class="pilcrow">¶</a></p>
+required) and a <code>value</code> (string, required).<a href="#section-6.1-1.46.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-6.1-2">A Decision Evidence Object is a closed object: it <span class="bcp14">MUST NOT</span> contain
-members other than those defined above.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+<p id="section-6.1-2">A Decision Evidence Object is closed to uncoordinated extension: a
+companion profile of the runtime contract <span class="bcp14">MAY</span> add members with short
+names coordinated with this profile (for example, the metering
+companion's consumption and settlement members), any other extension
+<span class="bcp14">MUST</span> use a collision-resistant name, and a consumer <span class="bcp14">MUST</span> ignore
+members it does not understand and <span class="bcp14">MUST NOT</span> derive authority from any
+member.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="pre-decision-refusal">
@@ -2493,6 +2532,9 @@ refusal has no PDP decision and cannot populate the PDP-derived members
 above. An AuthZEN deployment records it not as a Decision Evidence
 Object but as a refusal record carrying only the fields the PEP
 verified, at least <code>audience</code>, an action descriptor, <code>evaluated_at</code>,
+the <code>parameter_digest</code> for a parameter-bound class (or a
+privacy-preserving digest of the refused request otherwise, per the
+runtime record minimum),
 <code>decision</code> of <code>deny</code>, and a <code>denial_reason</code> from this pre-decision set:
 <code>token_invalid</code>, <code>mission_claim_missing</code>, <code>channel_failure</code>,
 <code>pdp_unreachable</code>, or <code>state_unavailable</code> (the PEP cannot establish
@@ -2784,8 +2826,11 @@ required).<a href="#section-7.1-1.24.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-7.1-2">An Execution Evidence Object is a closed object: it <span class="bcp14">MUST NOT</span> contain
-members other than those defined above.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
+<p id="section-7.1-2">An Execution Evidence Object is closed to uncoordinated extension
+under the same rule as Decision Evidence: coordinated companion
+members (for example, the metering companion's <code>measured_duration</code>)
+are permitted, any other extension <span class="bcp14">MUST</span> use a collision-resistant
+name, and a consumer <span class="bcp14">MUST</span> ignore members it does not understand.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="worked-example-1">
@@ -3141,8 +3186,10 @@ identity that requested it, and <span class="bcp14">MUST NOT</span> be relayed t
 component as a bearer grant. Where the requesting component and the
 executing PEP differ, the executor <span class="bcp14">MUST</span> receive the signed Decision
 Evidence (<a href="#decision-evidence-object" class="auto internal xref">Section 6</a>) and verify the runtime's binding
-fields (the Mission reference, <code>audience</code>, <code>subject</code>, <code>client_id</code>, actor
-context, action, resource, and <code>parameter_digest</code>) from it before
+fields (the Mission reference and <code>policy_view_id</code>, <code>audience</code>,
+<code>subject</code>, <code>client_id</code>, actor
+context, action, resource, the authorizing entry or <code>entry_digest</code>,
+and <code>parameter_digest</code>) from it before
 acting, rather than trusting a relayed <code>decision: true</code>. A PEP permit
 cache <span class="bcp14">MUST</span> key on the complete request envelope, so a cached permit
 cannot be reused for a request whose envelope differs in any bound
@@ -3167,10 +3214,11 @@ requests the signature <span class="bcp14">MUST</span> cover it.<a href="#sectio
 it serves closes the decision-to-access join: the Decision Evidence,
 the Execution Evidence, and the Resource Server's access log then share
 one identifier, so an access is joined to the decision that permitted
-it without timestamp correlation. This is the wire realization of the
-issuance profile's recommendation that a Resource Server log the
-decision identifier accompanying a Mission-governed request
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-8.4-2" class="pilcrow">¶</a></p>
+it without timestamp correlation. This extends the issuance profile's
+recommendation that a Resource Server log the <code>mission</code> claim's <code>id</code>
+and the token <code>jti</code> with each decision
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): the decision identifier is
+this profile's addition to that correlation set.<a href="#section-8.4-2" class="pilcrow">¶</a></p>
 <p id="section-8.4-3">The field is a correlation aid, not an authorization. Its presence or
 value grants nothing, the Resource Server's token validation and PEP
 obligations are unchanged, and a Resource Server <span class="bcp14">MUST NOT</span> treat it as a
@@ -3887,7 +3935,8 @@ Protocol (HTTP) Field Name" registry (<span>[<a href="#RFC9110" class="cite xref
         </ul>
 <p id="section-14.2-3">The <code>context.mission</code>, <code>context.actor</code>, <code>context.credential</code>,
 <code>context.parameters</code>, <code>context.parameter_digest</code>, <code>context.audience</code>,
-<code>context.freshness</code>, and <code>context.capability_source</code> members carried
+<code>context.freshness</code>, <code>context.taint</code>, and <code>context.capability_source</code>
+members carried
 inside the AuthZEN request
 <code>context</code> object (<a href="#pdp-request" class="auto internal xref">Section 5</a>) are
 AuthZEN extension data and are not registered in an IETF registry.

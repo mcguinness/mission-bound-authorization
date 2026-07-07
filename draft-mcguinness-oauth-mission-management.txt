@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             6 July 2026
-Expires: 7 January 2027
+Intended status: Standards Track                             7 July 2026
+Expires: 8 January 2027
 
 
                     Mission Management for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 January 2027.
+   This Internet-Draft will expire on 8 January 2027.
 
 Copyright Notice
 
@@ -372,8 +372,8 @@ Table of Contents
      "aud": "client_secops-console",
      "sub": "client_secops-console",
      "nonce": "nonce_M4kR8vT2nQ7xB5sW",
-     "iat": 1797845340,
-     "exp": 1797845400,
+     "iat": 1793611740,
+     "exp": 1793611800,
      "missions": [
        { "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
          "state": "active",
@@ -533,8 +533,8 @@ Table of Contents
      "aud": "client_secops-console",
      "sub": "client_secops-console",
      "nonce": "nonce_P9sB3xV7mK1tR6qZ",
-     "iat": 1797845400,
-     "exp": 1797845460,
+     "iat": 1793611800,
+     "exp": 1793611860,
      "operation": "revoke",
      "match_count": 3,
      "bulk_token": "blk_7Nq4xW2rT9mK5vB8sD1zA6pY3cE0hJfL",
@@ -554,8 +554,8 @@ Table of Contents
      "aud": "client_secops-console",
      "sub": "client_secops-console",
      "nonce": "nonce_W2tN6bQ9kX4mV8rS",
-     "iat": 1797845580,
-     "exp": 1797845640,
+     "iat": 1793611980,
+     "exp": 1793612040,
      "operation": "revoke",
      "results": [
        { "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",

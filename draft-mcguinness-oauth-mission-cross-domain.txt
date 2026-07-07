@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             6 July 2026
-Expires: 7 January 2027
+Intended status: Standards Track                             7 July 2026
+Expires: 8 January 2027
 
 
              Mission Cross-Domain Projection for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 January 2027.
+   This Internet-Draft will expire on 8 January 2027.
 
 Copyright Notice
 
@@ -242,15 +242,17 @@ Table of Contents
 
    *  MUST be sender-constrained ([RFC7800]) to the presenting client by
       the proof-of-possession mechanism the cross-domain grant profile
-      defines (for the ID-JAG profile, as that specification defines).
-      This document does not define a new PoP mechanism; the originating
-      AS and the Resource AS MUST use the mechanism of the profile in
-      use, so that binding and verification interoperate.  When the
-      grant profile in use defines no proof-of-possession, the grant
-      carries a cnf claim ([RFC7800]) binding the presenting client's
-      DPoP key (jkt, [RFC9449]) or mTLS certificate (x5t#S256,
-      [RFC8705]), and the Resource AS MUST verify possession at
-      redemption (Section 7).  Binding and verification MUST use the
+      defines, where it defines one.  This document does not define a
+      new PoP mechanism; the originating AS and the Resource AS MUST use
+      the mechanism of the profile in use, so that binding and
+      verification interoperate.  When the grant profile in use defines
+      no proof-of-possession, as the ID-JAG profile does not (the ID-JAG
+      is a bearer authorization grant, protected by audience
+      restriction, short lifetime, and client authentication at
+      redemption), the grant carries a cnf claim ([RFC7800]) binding the
+      presenting client's DPoP key (jkt, [RFC9449]) or mTLS certificate
+      (x5t#S256, [RFC8705]), and the Resource AS MUST verify possession
+      at redemption (Section 7).  Binding and verification MUST use the
       same mechanism;
 
    *  MUST carry a jti for one-time use, so the bound party cannot
@@ -273,13 +275,18 @@ Table of Contents
    The client obtains the grant with an [RFC8693] token exchange.  The
    subject_token MUST be the Mission's refresh token, with
    subject_token_type of urn:ietf:params:oauth:token-type:refresh_token,
-   and the audience identifies the target Resource AS.  This refresh-
-   token mode is what binds the request to a Mission: the AS resolves
-   the Mission from the presented grant per the base profile's grant
-   binding ([I-D.draft-mcguinness-oauth-mission], Section "Binding the
-   Mission to the Grant"), exactly as on any other refresh, and the
-   grant therefore projects the agent's full Mission authority
-   (audience-scoped), never a narrowed delegate's.
+   and the audience identifies the target Resource AS.  The refresh-
+   token subject is this profile's deviation from the ID-JAG issuance
+   request, which that specification defines over an identity-assertion
+   subject_token (id_token or saml2); a Mission-bound deployment
+   substitutes the Mission's grant so the exchange resolves a Mission
+   rather than a bare subject assertion.  This refresh-token mode is
+   what binds the request to a Mission: the AS resolves the Mission from
+   the presented grant per the base profile's grant binding
+   ([I-D.draft-mcguinness-oauth-mission], Section "Binding the Mission
+   to the Grant"), exactly as on any other refresh, and the grant
+   therefore projects the agent's full Mission authority (audience-
+   scoped), never a narrowed delegate's.
 
    This profile intentionally fixes the refresh-token subject mode to
    remove any ambiguity about which Mission authority a cross-domain
@@ -723,11 +730,13 @@ Appendix A.  End-to-End Example (Non-Normative)
    (delegable to ai_agent actors at depth 1) and a journal-entries.write
    entry capped at a max_amount of 500.00 USD.  The Mission was recorded
    active with authority_hash sha-
-   256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ and intent_hash sha-
-   256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY.  The partner ERP is
-   behind the Resource AS ras.partner.example.com, so the agent's next
-   step is a cross-domain projection rather than a home-domain access
-   token.
+   256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ and intent_hash sha-
+   256:Zb8mR3nX5pV4lE6sQqYwQ7p4LHnX9Md0LqJ6sZJ2xT5f (illustrative; this
+   Mission's Intent and Authority Set extend the single-domain
+   walkthrough's, so its anchors differ from that example's).  The
+   partner ERP is behind the Resource AS ras.partner.example.com, so the
+   agent's next step is a cross-domain projection rather than a home-
+   domain access token.
 
 A.1.  Stage 2: Cross-Domain Projection via ID-JAG (Between Domains)
 
@@ -744,8 +753,8 @@ A.1.  Stage 2: Cross-Domain Projection via ID-JAG (Between Domains)
      "aud": "https://ras.partner.example.com",
      "sub": "user_3p2q8mN1a0kV7tR",
      "client_id": "s6BhdRkqt3",
-     "iat": 1797840000,
-     "exp": 1797840300,
+     "iat": 1793606400,
+     "exp": 1793606700,
      "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
      "authorization_details": [
        { "type": "mission_resource_access",
@@ -765,7 +774,7 @@ A.1.  Stage 2: Cross-Domain Projection via ID-JAG (Between Domains)
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "issuer": "https://as.example.com",
        "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+         "sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ"
      }
    }
 
@@ -786,8 +795,8 @@ A.2.  Stage 3: The Resource AS Issues a Local Access Token
      "aud": "https://erp.partner.example.com",
      "sub": "partner-user_7Kp4QnZ2vR9s",
      "client_id": "s6BhdRkqt3",
-     "iat": 1797840030,
-     "exp": 1797840290,
+     "iat": 1793606430,
+     "exp": 1793606690,
      "jti": "at_7Kp4QnZ2vR9sT1mX8b3N",
      "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
      "authorization_details": [
@@ -808,13 +817,13 @@ A.2.  Stage 3: The Resource AS Issues a Local Access Token
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "issuer": "https://as.example.com",
        "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+         "sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ"
      }
    }
 
    The issuing iss is now the Resource AS, but mission.issuer remains
-   the home AS.  The token's exp (1797840290) is below the ID-JAG's
-   (1797840300) and far below the Mission's expires_at.  The Resource
+   the home AS.  The token's exp (1793606690) is below the ID-JAG's
+   (1793606700) and far below the Mission's expires_at.  The Resource
    AS-local sub is illustrative; its value is determined by the subject-
    resolution rules of the ID-JAG and identity chaining profiles, not by
    this document.
@@ -876,8 +885,8 @@ A.4.  Stage 5: Internal Call Context via Transaction Tokens
      "aud": "https://ledger.partner.example.com",
      "sub": "partner-user_7Kp4QnZ2vR9s",
      "tid": "txn_5kQ9pX2vN7sR1tY8mZ3",
-     "iat": 1797840060,
-     "exp": 1797840120,
+     "iat": 1793606460,
+     "exp": 1793606520,
      "txn_authorization": {
        "source_resource": "https://erp.partner.example.com",
        "source_actions": ["invoices.read"],
@@ -888,7 +897,7 @@ A.4.  Stage 5: Internal Call Context via Transaction Tokens
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "issuer": "https://as.example.com",
        "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+         "sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ"
      }
    }
 
@@ -913,13 +922,13 @@ A.6.  What Rode Through, and What Narrowed
       | Hop (mechanism) | Mission anchor | Authority  | Expiry     |
       |                 |                | or context |            |
       +=================+================+============+============+
-      | ID-JAG (between | unchanged      | ERP: read  | 1797840300 |
+      | ID-JAG (between | unchanged      | ERP: read  | 1793606700 |
       | domains)        |                | + write    |            |
       +-----------------+----------------+------------+------------+
-      | Resource AS     | unchanged      | ERP: read  | 1797840290 |
+      | Resource AS     | unchanged      | ERP: read  | 1793606690 |
       | token           |                | + write    |            |
       +-----------------+----------------+------------+------------+
-      | Txn Token       | unchanged      | one ledger | 1797840120 |
+      | Txn Token       | unchanged      | one ledger | 1793606520 |
       | (within domain) |                | lookup     |            |
       +-----------------+----------------+------------+------------+
 

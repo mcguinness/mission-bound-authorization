@@ -1061,7 +1061,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 7 January 2027</td>
+<td class="center">Expires 8 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1074,12 +1074,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-substrate-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-06" class="published">6 July 2026</time>
+<time datetime="2026-07-07" class="published">7 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-07">7 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1133,7 +1133,7 @@ profiles.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 7 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1271,7 +1271,8 @@ decision API bindings, the harness, orchestration, intent shaping,
 consent evidence, the Mandate, audit transparency, and the security
 model) are written against Mission primitives rather than against
 OAuth mechanics; each names what it consumes in a Mission Substrate
-section of its own. The architecture document consolidates that
+section of its own, except consent evidence, whose consumption is
+stated by its approval binding. The architecture document consolidates that
 interface informationally, ending in a Binding Checklist
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>). This document is the
 checklist's normative home, written for the author of a new binding:
@@ -1457,8 +1458,11 @@ the Mission. The MAS's Mission Join is the profiled example
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-2.5-3" class="pilcrow">¶</a></p>
 <p id="section-2.5-4">Profiles that ride the credential itself (offline attenuation, and the
 token-carriage aspects of delegation) apply only under full provision.
-Every other substrate-neutral profile routes through the binding
-establishment step, which is what makes partial provision possible.<a href="#section-2.5-4" class="pilcrow">¶</a></p>
+Of the substrate-neutral profiles, those that need a
+credential-to-Mission association (the runtime layer and the harness)
+route through the binding establishment step, which is what makes
+partial provision possible; the rest consume no credential at all
+(the composition table's credential column).<a href="#section-2.5-4" class="pilcrow">¶</a></p>
 <p id="section-2.5-5">Home: the Mission-Bound Access Tokens and The Mission Claim sections
 of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; the seam is the Mission
 binding establishment section of the runtime profile
@@ -1532,7 +1536,8 @@ approval decision.<a href="#section-2.8-2.5.1" class="pilcrow">¶</a></p>
         </ol>
 <p id="section-2.8-3">Home: the Mission Approval section of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. The MAS shows the steps
-re-sequenced for an asynchronous surface; the AAuth binding shows them
+re-shaped for an asynchronous surface, approval bound to the
+submission rather than an authorization code; the AAuth binding shows them
 profiled onto a propose-clarify-approve interaction.<a href="#section-2.8-3" class="pilcrow">¶</a></p>
 <p id="section-2.8-4">Consumers: consent evidence binds to this event; every downstream
 guarantee (the anchors, the gating, the record) assumes it.<a href="#section-2.8-4" class="pilcrow">¶</a></p>

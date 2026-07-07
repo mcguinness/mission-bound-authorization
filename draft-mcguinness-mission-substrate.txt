@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             6 July 2026
-Expires: 7 January 2027
+Intended status: Standards Track                             7 July 2026
+Expires: 8 January 2027
 
 
                      Mission Substrate Requirements
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 January 2027.
+   This Internet-Draft will expire on 8 January 2027.
 
 Copyright Notice
 
@@ -118,15 +118,16 @@ Table of Contents
    consent evidence, the Mandate, audit transparency, and the security
    model) are written against Mission primitives rather than against
    OAuth mechanics; each names what it consumes in a Mission Substrate
-   section of its own.  The architecture document consolidates that
-   interface informationally, ending in a Binding Checklist
-   ([I-D.draft-mcguinness-mission-architecture]).  This document is the
-   checklist's normative home, written for the author of a new binding:
-   what a binding of the Mission model to another authorization
-   substrate provides so that the substrate-neutral profiles apply as
-   written, with the binding supplying the primitives their Mission
-   Substrate sections consume.  It restates no definition: each
-   requirement points at the core section that owns it.
+   section of its own, except consent evidence, whose consumption is
+   stated by its approval binding.  The architecture document
+   consolidates that interface informationally, ending in a Binding
+   Checklist ([I-D.draft-mcguinness-mission-architecture]).  This
+   document is the checklist's normative home, written for the author of
+   a new binding: what a binding of the Mission model to another
+   authorization substrate provides so that the substrate-neutral
+   profiles apply as written, with the binding supplying the primitives
+   their Mission Substrate sections consume.  It restates no definition:
+   each requirement points at the core section that owns it.
 
 1.1.  Status: A Profile for New Bindings
 
@@ -283,9 +284,11 @@ Table of Contents
 
    Profiles that ride the credential itself (offline attenuation, and
    the token-carriage aspects of delegation) apply only under full
-   provision.  Every other substrate-neutral profile routes through the
-   binding establishment step, which is what makes partial provision
-   possible.
+   provision.  Of the substrate-neutral profiles, those that need a
+   credential-to-Mission association (the runtime layer and the harness)
+   route through the binding establishment step, which is what makes
+   partial provision possible; the rest consume no credential at all
+   (the composition table's credential column).
 
    Home: the Mission-Bound Access Tokens and The Mission Claim sections
    of [I-D.draft-mcguinness-oauth-mission]; the seam is the Mission
@@ -347,7 +350,8 @@ Table of Contents
 
    Home: the Mission Approval section of
    [I-D.draft-mcguinness-oauth-mission].  The MAS shows the steps re-
-   sequenced for an asynchronous surface; the AAuth binding shows them
+   shaped for an asynchronous surface, approval bound to the submission
+   rather than an authorization code; the AAuth binding shows them
    profiled onto a propose-clarify-approve interaction.
 
    Consumers: consent evidence binds to this event; every downstream

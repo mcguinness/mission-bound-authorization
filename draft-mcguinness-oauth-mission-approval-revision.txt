@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             6 July 2026
-Expires: 7 January 2027
+Intended status: Experimental                                7 July 2026
+Expires: 8 January 2027
 
 
                 Mission Approval Revision for OAuth 2.0
@@ -51,7 +51,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 January 2027.
+   This Internet-Draft will expire on 8 January 2027.
 
 Copyright Notice
 
@@ -454,7 +454,7 @@ Table of Contents
        ]
      },
      "policy_version": "approval-policy:v12",
-     "sequence": 88126,
+     "sequence": 91427,
      "disclosure": {
        "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
        "consent_rendering_hash":
@@ -501,7 +501,7 @@ Table of Contents
          "resource": "https://erp.example.com",
          "actions": ["invoices.read"],
          "constraints": { "period": "2026-Q3" } } ],
-     "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-" }
+     "mission_id": "msn_5Jt9wX4kP7rN2vQ8yL3sD6zB0mF1hG-" }
 
    The token carries the mission claim and its authority_hash as the
    issuance profile defines.  The agent never abandoned its request; the

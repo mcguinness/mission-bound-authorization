@@ -1067,7 +1067,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 7 January 2027</td>
+<td class="center">Expires 8 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1080,12 +1080,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-audit-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-06" class="published">6 July 2026</time>
+<time datetime="2026-07-07" class="published">7 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-07">7 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1144,7 +1144,7 @@ commit to the evidence by hash rather than carrying it.<a href="#section-abstrac
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 7 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1380,7 +1380,9 @@ decision and execution evidence
 OAuth 2.0 mechanics. It consumes these substrate primitives: the
 Mission identifier and issuer, from which the statement subject is
 constructed; the evidence types and their canonical bytes; the
-integrity-anchor envelope; and each producer's published key material.
+integrity-anchor envelope; each producer's published key material;
+and the audit horizon, the retention window the registered evidence
+must survive.
 The issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> is this
 version's normative substrate. Evidence produced under another Mission
 substrate registers and verifies the same way once its types and
@@ -1432,7 +1434,7 @@ canonical bytes. The protected header carries:<a href="#section-6.1-2" class="pi
 for SHA-256 <span>[<a href="#I-D.draft-ietf-cose-hash-envelope" class="cite xref">I-D.draft-ietf-cose-hash-envelope</a>]</span>; and<a href="#section-6.1-3.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.1-3.2">
-            <p id="section-6.1-3.2.1"><code>preimage-content-type</code> (label 259): the media type of the evidence
+            <p id="section-6.1-3.2.1"><code>payload-preimage-content-type</code> (label 259): the media type of the evidence
 that was hashed, from <a href="#evidence-types" class="auto internal xref">Section 6.2</a>.<a href="#section-6.1-3.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
@@ -1448,7 +1450,7 @@ canonical bytes are rehashed and checked against the committed digest
 <a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-evidence-types" class="section-name selfRef">Evidence Types</a>
         </h3>
 <p id="section-6.2-1">Each registrable evidence type fixes the exact bytes that are hashed,
-the media type carried in <code>preimage-content-type</code>, and the producer
+the media type carried in <code>payload-preimage-content-type</code>, and the producer
 authoritative for it. A producer <span class="bcp14">MUST</span> commit to the canonical bytes
 named here, and a relying party <span class="bcp14">MUST</span> verify the producer is
 authoritative for the type (<a href="#registration-policy" class="auto internal xref">Section 6.3</a>) before treating a
@@ -1459,7 +1461,7 @@ record as part of the Mission's feed.<a href="#section-6.2-1" class="pilcrow">¶
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Evidence type</th>
               <th class="text-left" rowspan="1" colspan="1">Canonical bytes (hashed)</th>
-              <th class="text-left" rowspan="1" colspan="1">preimage-content-type</th>
+              <th class="text-left" rowspan="1" colspan="1">payload-preimage-content-type</th>
               <th class="text-left" rowspan="1" colspan="1">Producer</th>
             </tr>
           </thead>
@@ -1535,7 +1537,7 @@ record as part of the Mission's feed.<a href="#section-6.2-1" class="pilcrow">¶
         </table>
 <p id="section-6.2-3">The table is extensible by specification: a profile <span class="bcp14">MAY</span> define an
 additional evidence type by fixing its canonical bytes, its
-<code>preimage-content-type</code>, and its authoritative producer, as the
+<code>payload-preimage-content-type</code>, and its authoritative producer, as the
 Mandate profile does for the Mission Mandate
 (<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>). A relying party admits an
 extension type it implements; it ignores records of a type it does
@@ -1627,7 +1629,7 @@ protected header (<a href="#hash-commitment" class="auto internal xref">Section 
 {
   / alg /                    1: -7,   / ES256 /
   / payload-hash-alg /     258: -16,  / SHA-256 /
-  / preimage-content-type / 259:
+  / payload-preimage-content-type / 259:
       "application/mission-lifecycle-transition+json",
   / kid /                    4: h'61732d6b65792d323032362d7133',
   / CWT Claims /            15: {
@@ -1744,7 +1746,7 @@ mzHlvkGr7hEA1rUoJMuj00y0q-eE"}
 <p id="section-6.2.2.1-7">The committed digest is the SHA-256 of those bytes; its base64url
 form is <code>_cM7GYYiV3VI-QrtRWSogl5Wz1-sB90GM4ZHxuPC3j0</code>. The Signed
 Statement carries the digest bytes inline as its payload, with
-<code>preimage-content-type</code> <code>application/mission-derivation-record+json</code>
+<code>payload-preimage-content-type</code> <code>application/mission-derivation-record+json</code>
 and the same <code>iss</code> and <code>sub</code> as <a href="#transition-vector" class="auto internal xref">Section 6.2.1.1</a>.<a href="#section-6.2.2.1-7" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1978,13 +1980,14 @@ log; it signs a Signed Statement whose payload is the hash of the Consent
 Evidence, carried inline, with the hash algorithm and the evidence media
 type in the protected header (<a href="#hash-commitment" class="auto internal xref">Section 6.1</a>). The <code>sub</code> is the
 Mission feed, derived from the Mission <code>issuer</code> and <code>id</code>; the <code>iss</code> is
-the Mission Issuer. Protected header, in COSE EDN (<span>[<a href="#RFC9052" class="cite xref">RFC9052</a>]</span>):<a href="#section-9-1" class="pilcrow">¶</a></p>
+the Mission Issuer. Protected header, in CBOR extended diagnostic notation
+(<span>[<a href="#RFC8610" class="cite xref">RFC8610</a>]</span>, Appendix G):<a href="#section-9-1" class="pilcrow">¶</a></p>
 <div class="lang-cbor-diag sourcecode" id="section-9-2">
 <pre>
 {
   / alg /                    1: -7,   / ES256 /
   / payload-hash-alg /     258: -16,  / SHA-256 /
-  / preimage-content-type / 259:
+  / payload-preimage-content-type / 259:
       "application/mission-consent-evidence+json",
   / kid /                    4: h'61732d6b65792d323032362d7133',
   / CWT Claims /            15: {
@@ -2299,8 +2302,12 @@ identifier.<a href="#section-14-2" class="pilcrow">¶</a></p>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8610">[RFC8610]</dt>
+      <dd>
+<span class="refAuthor">Birkholz, H.</span>, <span class="refAuthor">Vigano, C.</span>, and <span class="refAuthor">C. Bormann</span>, <span class="refTitle">"Concise Data Definition Language (CDDL): A Notational Convention to Express Concise Binary Object Representation (CBOR) and JSON Data Structures"</span>, <span class="seriesInfo">RFC 8610</span>, <span class="seriesInfo">DOI 10.17487/RFC8610</span>, <time datetime="2019-06" class="refDate">June 2019</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8610">https://www.rfc-editor.org/rfc/rfc8610</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>

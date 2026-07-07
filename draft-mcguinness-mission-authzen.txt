@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             6 July 2026
-Expires: 7 January 2027
+Intended status: Standards Track                             7 July 2026
+Expires: 8 January 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -59,7 +59,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 January 2027.
+   This Internet-Draft will expire on 8 January 2027.
 
 Copyright Notice
 
@@ -562,6 +562,12 @@ Table of Contents
 
 5.9.  Worked PDP request
 
+   The policy_view_id values in this document's examples (sha-
+   256:kP3xR9sQ...) differ from the runtime profile's worked
+   materialized-view value (sha-256:fuMqn6Nb...): this deployment's view
+   payload includes the engine-evaluable form, so it hashes differently.
+   Both are valid views of the same Mission.
+
    For the ERP reconciliation Mission:
 
    POST /pdp/access/v1/evaluation HTTP/1.1
@@ -837,10 +843,12 @@ Table of Contents
 
    mission:  REQUIRED.  An object. the PDP request's context.mission
       object (id, issuer, authority_hash, and, when known,
-      policy_version and policy_view_id), extended with intent_hash and,
-      when known, a consent-disclosure commitment, so the evidence
-      chains back to the exact approved Mission.  Within mission, id,
-      issuer, and authority_hash are REQUIRED; intent_hash is OPTIONAL
+      policy_version), extended with the PDP's own policy_view_id, with
+      intent_hash, and, when known, a consent-disclosure commitment, so
+      the evidence chains back to the exact approved Mission.  Within
+      mission, id, issuer, authority_hash, and policy_view_id are
+      REQUIRED (the PDP always knows and populates its own view
+      identifier, whatever the request carried); intent_hash is OPTIONAL
       (it is carried in neither the mission claim nor introspection, so
       only a PDP with direct Mission-record access can record it), and
       the remaining members are OPTIONAL.  These hashes are the issuing
@@ -928,12 +936,31 @@ Table of Contents
 
    evaluated_at:  REQUIRED.  An RFC 3339 [RFC3339] timestamp.
 
+   authorizing_entry:  OPTIONAL.  An object. the authorization_details
+      entry the decision was evaluated against.
+
+   entry_digest:  OPTIONAL.  A string. the integrity-anchor encoded
+      digest ([I-D.draft-mcguinness-oauth-mission]) of that entry, for a
+      deployment that does not record the entry in full.  A record of a
+      permit MUST carry authorizing_entry or entry_digest, per the
+      runtime record requirements
+      ([I-D.draft-mcguinness-mission-runtime]).
+
+   taint:  OPTIONAL.  An object. the presented taint context
+      (Section 5.7), recorded as supplied.  REQUIRED when the decision
+      request carried context.taint.
+
    evidence_envelope:  REQUIRED.  An object. integrity protection
       (Section 6.3), carrying a format (string, required) and a value
       (string, required).
 
-   A Decision Evidence Object is a closed object: it MUST NOT contain
-   members other than those defined above.
+   A Decision Evidence Object is closed to uncoordinated extension: a
+   companion profile of the runtime contract MAY add members with short
+   names coordinated with this profile (for example, the metering
+   companion's consumption and settlement members), any other extension
+   MUST use a collision-resistant name, and a consumer MUST ignore
+   members it does not understand and MUST NOT derive authority from any
+   member.
 
 6.2.  Pre-decision refusal records
 
@@ -947,17 +974,20 @@ Table of Contents
    derived members above.  An AuthZEN deployment records it not as a
    Decision Evidence Object but as a refusal record carrying only the
    fields the PEP verified, at least audience, an action descriptor,
-   evaluated_at, decision of deny, and a denial_reason from this pre-
-   decision set: token_invalid, mission_claim_missing, channel_failure,
-   pdp_unreachable, or state_unavailable (the PEP cannot establish
-   Mission state to send to the PDP).  These name PEP-side conditions
-   and are disjoint from the PDP denial reasons of Section 8; a record
-   that can populate the PDP-derived members is a Decision Evidence
-   Object instead.  When the deployment establishes the Mission binding
-   externally under the runtime profile's binding-establishment step
-   ([I-D.draft-mcguinness-mission-runtime]), absence of the mission
-   claim is not a pre-decision refusal and mission_claim_missing does
-   not apply; the external join's verification governs instead.
+   evaluated_at, the parameter_digest for a parameter-bound class (or a
+   privacy-preserving digest of the refused request otherwise, per the
+   runtime record minimum), decision of deny, and a denial_reason from
+   this pre-decision set: token_invalid, mission_claim_missing,
+   channel_failure, pdp_unreachable, or state_unavailable (the PEP
+   cannot establish Mission state to send to the PDP).  These name PEP-
+   side conditions and are disjoint from the PDP denial reasons of
+   Section 8; a record that can populate the PDP-derived members is a
+   Decision Evidence Object instead.  When the deployment establishes
+   the Mission binding externally under the runtime profile's binding-
+   establishment step ([I-D.draft-mcguinness-mission-runtime]), absence
+   of the mission claim is not a pre-decision refusal and
+   mission_claim_missing does not apply; the external join's
+   verification governs instead.
 
 6.3.  Integrity
 
@@ -1151,8 +1181,11 @@ Table of Contents
       same form as Decision Evidence (Section 6.3), carrying a format
       (string, required) and a value (string, required).
 
-   An Execution Evidence Object is a closed object: it MUST NOT contain
-   members other than those defined above.
+   An Execution Evidence Object is closed to uncoordinated extension
+   under the same rule as Decision Evidence: coordinated companion
+   members (for example, the metering companion's measured_duration) are
+   permitted, any other extension MUST use a collision-resistant name,
+   and a consumer MUST ignore members it does not understand.
 
 7.2.  Worked example
 
@@ -1431,8 +1464,9 @@ Table of Contents
    component as a bearer grant.  Where the requesting component and the
    executing PEP differ, the executor MUST receive the signed Decision
    Evidence (Section 6) and verify the runtime's binding fields (the
-   Mission reference, audience, subject, client_id, actor context,
-   action, resource, and parameter_digest) from it before acting, rather
+   Mission reference and policy_view_id, audience, subject, client_id,
+   actor context, action, resource, the authorizing entry or
+   entry_digest, and parameter_digest) from it before acting, rather
    than trusting a relayed decision: true.  A PEP permit cache MUST key
    on the complete request envelope, so a cached permit cannot be reused
    for a request whose envelope differs in any bound field.
@@ -1452,10 +1486,11 @@ Table of Contents
    it serves closes the decision-to-access join: the Decision Evidence,
    the Execution Evidence, and the Resource Server's access log then
    share one identifier, so an access is joined to the decision that
-   permitted it without timestamp correlation.  This is the wire
-   realization of the issuance profile's recommendation that a Resource
-   Server log the decision identifier accompanying a Mission-governed
-   request ([I-D.draft-mcguinness-oauth-mission]).
+   permitted it without timestamp correlation.  This extends the
+   issuance profile's recommendation that a Resource Server log the
+   mission claim's id and the token jti with each decision
+   ([I-D.draft-mcguinness-oauth-mission]): the decision identifier is
+   this profile's addition to that correlation set.
 
    The field is a correlation aid, not an authorization.  Its presence
    or value grants nothing, the Resource Server's token validation and
@@ -1976,10 +2011,10 @@ Table of Contents
 
    The context.mission, context.actor, context.credential,
    context.parameters, context.parameter_digest, context.audience,
-   context.freshness, and context.capability_source members carried
-   inside the AuthZEN request context object (Section 5) are AuthZEN
-   extension data and are not registered in an IETF registry.  The
-   response context.decision_id, context.denial_reason,
+   context.freshness, context.taint, and context.capability_source
+   members carried inside the AuthZEN request context object (Section 5)
+   are AuthZEN extension data and are not registered in an IETF
+   registry.  The response context.decision_id, context.denial_reason,
    context.action_class, context.class_source, context.parameter_digest,
    context.policy_view_id, context.permit_expires_at,
    context.single_use, context.insufficient_claims, and

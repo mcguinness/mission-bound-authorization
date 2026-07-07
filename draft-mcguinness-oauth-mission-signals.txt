@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             6 July 2026
-Expires: 7 January 2027
+Intended status: Experimental                                7 July 2026
+Expires: 8 January 2027
 
 
                 Mission Lifecycle Signals for OAuth 2.0
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 January 2027.
+   This Internet-Draft will expire on 8 January 2027.
 
 Copyright Notice
 
@@ -187,7 +187,7 @@ Table of Contents
    recommendations of [RFC9325].
 
    Delivery uses the Shared Signals Framework delivery methods,
-   advertised in the SSF stream configuration's
+   advertised in the SSF Transmitter Configuration Metadata's
    delivery_methods_supported [OIDC-SSF]:
 
    *  push-based delivery, SET delivery method urn:ietf:rfc:8935
@@ -199,11 +199,12 @@ Table of Contents
       consumer to poll.
 
    A Mission Issuer that emits events MUST support at least one method,
-   and a consumer discovers the supported methods from the SSF stream
-   configuration rather than from a separate Authorization Server
-   metadata member.  The consumer's stream configuration declares the
-   method it uses; the Mission Issuer MUST respect it and MUST NOT
-   silently fall back to a less-timely method.
+   and a consumer discovers the supported methods from the SSF
+   Transmitter Configuration Metadata rather than from a separate
+   Authorization Server metadata member.  The consumer's stream
+   configuration declares, in its delivery object, the method it uses;
+   the Mission Issuer MUST respect it and MUST NOT silently fall back to
+   a less-timely method.
 
 3.1.  Stream Scoping
 
@@ -303,7 +304,7 @@ Table of Contents
    {
      "iss": "https://as.example.com",
      "aud": "https://erp.example.com",
-     "iat": 1797843200,
+     "iat": 1793609600,
      "jti": "set_9Kp2vN7sR1tY8mZ3qX5b",
      "sub_id": {
        "format": "opaque",
@@ -330,7 +331,7 @@ Table of Contents
    {
      "iss": "https://as.example.com",
      "aud": "https://erp.example.com",
-     "iat": 1797836400,
+     "iat": 1793602800,
      "jti": "set_3Fw7bJ4nQ9xD2kM6vL1c",
      "sub_id": {
        "format": "opaque",
@@ -354,7 +355,7 @@ Table of Contents
    {
      "iss": "https://as.example.com",
      "aud": "https://erp.example.com",
-     "iat": 1797846000,
+     "iat": 1793612400,
      "jti": "set_6Tn4rW8pB3zK7qC2mV5j",
      "sub_id": {
        "format": "opaque",
@@ -460,7 +461,7 @@ Table of Contents
    {
      "iss": "https://as.example.com",
      "aud": "https://erp.partner.example.com",
-     "iat": 1797843600,
+     "iat": 1793610000,
      "jti": "set_5kQ8mP2vR9nT",
      "sub_id": {
        "format": "opaque",
@@ -501,8 +502,9 @@ Table of Contents
       The Shared Signals Framework [OIDC-SSF] stream endpoint for
       Mission lifecycle events (Section 3).  Present when the Mission
       Issuer emits events.  The supported delivery methods are
-      discovered from the SSF stream configuration's
-      delivery_methods_supported, not from a separate metadata member.
+      discovered from the SSF stream Transmitter Configuration
+      Metadata's delivery_methods_supported, not from a separate
+      metadata member.
 
 10.  Security Considerations
 

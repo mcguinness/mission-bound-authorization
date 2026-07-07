@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             6 July 2026
-Expires: 7 January 2027
+Intended status: Standards Track                             7 July 2026
+Expires: 8 January 2027
 
 
                         Mission Authority Server
@@ -59,7 +59,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 January 2027.
+   This Internet-Draft will expire on 8 January 2027.
 
 Copyright Notice
 
@@ -432,9 +432,10 @@ Table of Contents
    | unauthorized           | 401  | Request not                       |
    |                        |      | authenticated.                    |
    +------------------------+------+-----------------------------------+
-   | not_found              | 404  | Submission reference does         |
-   |                        |      | not exist OR is not               |
-   |                        |      | visible.                          |
+   | not_found              | 404  | A referenced submission           |
+   |                        |      | or Mission does not exist         |
+   |                        |      | OR is not visible to the          |
+   |                        |      | caller.                           |
    +------------------------+------+-----------------------------------+
    | rate_limited           | 429  | Caller is rate-limited.           |
    +------------------------+------+-----------------------------------+
@@ -980,7 +981,12 @@ Table of Contents
    {
      "decision": true,
      "context": {
-       "decision_id": "dec_7mQ2sV5rL9tY3sB8zN1eF4jB0K"
+       "decision_id": "dec_7mQ2sV5rL9tY3sB8zN1eF4jB0K",
+       "policy_view_id":
+         "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
+       "action_class": "irreversible_action",
+       "class_source": "resource_floor",
+       "permit_expires_at": "2026-11-02T08:15:30Z"
      }
    }
 
@@ -1005,6 +1011,8 @@ Table of Contents
      "context": {
        "decision_id": "dec_2nP4qV9rL3tY6sB1zN0eF7jB8K",
        "denial_reason": "mission_mismatch",
+       "action_class": "irreversible_action",
+       "class_source": "resource_floor",
        "policy_view_id":
          "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
      }
@@ -1079,9 +1087,9 @@ Table of Contents
        client mappings and delegate policy.
 
    A token that does not join is refused with the join_failed error
-   (HTTP 403), in the error format of Section 3.3.  An unknown or not-
-   visible mission_id returns not_found, preserving the anti-oracle
-   property.
+   (HTTP 403), in the error format of Section 3.3; like conflict, it
+   extends that section's error code set.  An unknown or not-visible
+   mission_id returns not_found, preserving the anti-oracle property.
 
 10.2.  The Assertion
 
@@ -1135,8 +1143,8 @@ Table of Contents
        "sha256": "rN2kQ4mZ7tP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2n",
        "jkt": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
      },
-     "iat": 1797840000,
-     "exp": 1797841800
+     "iat": 1793606400,
+     "exp": 1793608200
    }
 
 10.3.  PDP Consumption
@@ -1727,7 +1735,12 @@ A.4.  Permit
    {
      "decision": true,
      "context": {
-       "decision_id": "dec_7mQ2sV5rL9tY3sB8zN1eF4jB0K"
+       "decision_id": "dec_7mQ2sV5rL9tY3sB8zN1eF4jB0K",
+       "policy_view_id":
+         "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
+       "action_class": "irreversible_action",
+       "class_source": "resource_floor",
+       "permit_expires_at": "2026-11-02T08:15:30Z"
      }
    }
 

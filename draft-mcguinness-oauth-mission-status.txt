@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             6 July 2026
-Expires: 7 January 2027
+Intended status: Standards Track                             7 July 2026
+Expires: 8 January 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 January 2027.
+   This Internet-Draft will expire on 8 January 2027.
 
 Copyright Notice
 
@@ -227,7 +227,9 @@ Table of Contents
    The request is an HTTPS POST with an application/x-www-form-
    urlencoded body containing:
 
-   mission:  REQUIRED.  A string.  The canonical mission_id.
+   mission_id:  REQUIRED.  A string.  The canonical Mission Identifier,
+      named per the core's external-surface convention
+      ([I-D.draft-mcguinness-oauth-mission]).
 
    audience:  CONDITIONAL.  A string.  The audience identifier of the
       requesting consumer.  An authorized non-RS consumer (for example
@@ -275,7 +277,7 @@ Table of Contents
    Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
    DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
-   mission=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
+   mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
    &audience=https%3A%2F%2Ferp.example.com
    &nonce=nonce_K9pV4nT2sR7mB1xQ
 
@@ -320,8 +322,8 @@ Table of Contents
      "aud": "https://erp.example.com",
      "sub": "client_erp-recon-agent",
      "nonce": "nonce_K9pV4nT2sR7mB1xQ",
-     "iat": 1797840000,
-     "exp": 1797840060,
+     "iat": 1793606400,
+     "exp": 1793606460,
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "issuer": "https://as.example.com",
@@ -551,8 +553,9 @@ Table of Contents
       provenance need to be verifiable independently of the transport
       (for example when the response transits intermediaries or is
       retained for audit), the AS SHOULD return it as a [RFC9701]-signed
-      response, advertised through the standard
-      introspection_signing_alg_values_supported metadata [RFC8414].
+      response, advertised through the
+      introspection_signing_alg_values_supported metadata that [RFC9701]
+      registers in the [RFC8414] registry.
 
    *  When the responding AS is the Mission's issuer, the projection MAY
       additionally carry fresh_until, an RFC 3339 [RFC3339] date-time
@@ -576,23 +579,29 @@ Table of Contents
    for a token whose Mission is active:
 
    {
-     "iss":     "https://as.example.com",
-     "aud":     "https://erp.example.com",
-     "iat":     1797840000,
-     "exp":     1797840060,
-     "active":  true,
-     "client_id": "s6BhdRkqt3",
-     "sub":     "user_3p2q8mN1a0kV7tR",
-     "scope":   "openid",
-     "mission": {
-       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-       "issuer": "https://as.example.com",
-       "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-       "state":   "active",
-       "fresh_until": "2026-11-02T08:15:00Z"
+     "iss": "https://as.example.com",
+     "aud": "https://erp.example.com",
+     "iat": 1793606400,
+     "token_introspection": {
+       "active":  true,
+       "client_id": "s6BhdRkqt3",
+       "sub":     "user_3p2q8mN1a0kV7tR",
+       "scope":   "invoices.read",
+       "mission": {
+         "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+         "issuer": "https://as.example.com",
+         "authority_hash":
+           "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+         "state":   "active",
+         "fresh_until": "2026-11-02T08:15:00Z"
+       }
      }
    }
+
+   Per [RFC9701], the signed response is a JWT of typ token-
+   introspection+jwt whose [RFC7662] members, including the mission
+   projection, ride in the token_introspection claim; only iss, aud, and
+   iat are top-level.
 
    A consumer holding only a mission_id, or one that needs signed
    evidence independent of a specific token (an auditor or a cross-
@@ -639,7 +648,9 @@ Table of Contents
    The endpoint accepts authenticated POST requests with a form-
    urlencoded body:
 
-   mission:  REQUIRED.  A string.  The canonical mission_id.
+   mission_id:  REQUIRED.  A string.  The canonical Mission Identifier,
+      named per the core's external-surface convention
+      ([I-D.draft-mcguinness-oauth-mission]).
 
    operation:  REQUIRED.  A string.  One of revoke, suspend, resume,
       complete.
@@ -763,6 +774,9 @@ Table of Contents
     | active    | parent reaches a   | child-delegation | cascaded   |
     |           | terminal state     | profile          |            |
     +-----------+--------------------+------------------+------------+
+    | suspended | parent reaches a   | child-delegation | cascaded   |
+    |           | terminal state     | profile          |            |
+    +-----------+--------------------+------------------+------------+
 
                                  Table 4
 
@@ -816,7 +830,7 @@ Table of Contents
    Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
    DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
-   mission=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
+   mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
    &operation=revoke
    &reason=Quarterly+reconcile+completed+early
    &nonce=nonce_8Y3vN0sM6tP1xR9bQ5
@@ -843,8 +857,8 @@ Table of Contents
      "aud": "client_erp-recon-agent",
      "sub": "client_erp-recon-agent",
      "nonce": "nonce_8Y3vN0sM6tP1xR9bQ5",
-     "iat": 1797843200,
-     "exp": 1797843260,
+     "iat": 1793609600,
+     "exp": 1793609660,
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "issuer": "https://as.example.com",
@@ -868,7 +882,7 @@ Table of Contents
    Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
    DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
-   mission=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
+   mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
    &operation=suspend
    &suspend_until=2026-11-09T08%3A15%3A00Z
    &on_expiry=revoke
@@ -884,8 +898,8 @@ Table of Contents
      "aud": "client_erp-recon-agent",
      "sub": "client_erp-recon-agent",
      "nonce": "nonce_4Dq2mV8kX1sB7nR3tW",
-     "iat": 1797841200,
-     "exp": 1797841260,
+     "iat": 1793607600,
+     "exp": 1793607660,
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "issuer": "https://as.example.com",
@@ -1013,9 +1027,11 @@ Table of Contents
 
    mission_status_signing_alg_values_supported:  OPTIONAL.  A JSON array
       of strings.  The JWS [RFC7515] algorithm values the AS uses to
-      sign the Mission Status Response (Section 3.4), mirroring
-      introspection_signing_alg_values_supported.  Present when the AS
-      supports the dedicated Mission Status operation.
+      sign the Mission Status Response shape (Section 3.4), on whichever
+      surfaces of this profile family serve it (the dedicated Mission
+      Status operation, the Lifecycle endpoint, and Mission Management),
+      mirroring introspection_signing_alg_values_supported.  Present
+      when the AS serves any such surface.
 
    mission_lifecycle_endpoint:  OPTIONAL.  A string containing a URL.
       The URL of the Mission Lifecycle endpoint (Section 5).  Present

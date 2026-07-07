@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             6 July 2026
-Expires: 7 January 2027
+Intended status: Experimental                                7 July 2026
+Expires: 8 January 2027
 
 
                   Mission Orchestration and Unwinding
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 January 2027.
+   This Internet-Draft will expire on 8 January 2027.
 
 Copyright Notice
 
@@ -389,7 +389,7 @@ Table of Contents
    {
      "step_id": "post_journal_entry",
      "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-     "reversibility": "external_commitment",
+     "reversibility": "irreversible_action",
      "pre_start_behavior": "human_review",
      "in_flight_behavior": "wait_then_review",
      "post_completion_behavior": "human_review",
@@ -414,11 +414,11 @@ Table of Contents
    ission_audit_horizon"},"in_flight_behavior":"wait_then_review","mi
    ssion_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","post_completion_
    behavior":"human_review","pre_start_behavior":"human_review","reve
-   rsibility":"external_commitment","review_queue":"finance-control-r
+   rsibility":"irreversible_action","review_queue":"finance-control-r
    eview","step_id":"post_journal_entry"}}
 
    unwind_plan_hash =
-     sha-256:Qf-0Xqo8QPMN0D3xMOSi2j4qTvaU2U8ne1g8UEBrAIc
+     sha-256:jKxM47ygRiTXYVfKjrVE34VZx8nsxg1I9OPPeHnO-_c
 
    The evidence example of Section 11 carries this value.
 
@@ -667,8 +667,10 @@ Table of Contents
       compact, it is a JWS [RFC7515] Compact Serialization whose payload
       is the JCS [RFC8785] canonical bytes of the object with
       evidence_envelope removed.  When present, it MUST identify the
-      signer: the JWS protected header MUST carry iss and kid resolvable
-      under deployment policy.
+      signer: the JWS protected header MUST carry alg, iss, kid
+      resolvable under deployment policy, and a typ naming the record's
+      own media type, matching the suite's evidence-envelope convention
+      ([I-D.draft-mcguinness-mission-runtime]).
 
    Example:
 
@@ -688,7 +690,7 @@ Table of Contents
      "reason": "external_commitment_dispatched_unknown",
      "outcome_state": "unknown",
      "unwind_plan_hash":
-       "sha-256:Qf-0Xqo8QPMN0D3xMOSi2j4qTvaU2U8ne1g8UEBrAIc",
+       "sha-256:jKxM47ygRiTXYVfKjrVE34VZx8nsxg1I9OPPeHnO-_c",
      "occurred_at": "2026-11-02T08:16:00Z"
    }
 

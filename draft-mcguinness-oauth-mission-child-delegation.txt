@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             6 July 2026
-Expires: 7 January 2027
+Intended status: Standards Track                             7 July 2026
+Expires: 8 January 2027
 
 
                  Mission Child Delegation for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 January 2027.
+   This Internet-Draft will expire on 8 January 2027.
 
 Copyright Notice
 
@@ -453,10 +453,10 @@ Table of Contents
      ],
      "cnf": { "jkt": "wZ5nT8qL2xV9rB4mC7sD1yF6jH3kP0aG5uE8oS2iN4w" },
      "mission": {
-       "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
+       "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
        "issuer": "https://as.example.com",
        "authority_hash":
-         "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
+         "sha-256:hQ2vJ4kE5pNQl3KvZ4mP5x0wRr6tY2nD9bM7sX1cF8g",
        "parent": {
          "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
          "issuer": "https://as.example.com",
@@ -557,10 +557,10 @@ Table of Contents
 
    {
      "mission": {
-       "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
+       "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
        "issuer": "https://as.example.com",
        "authority_hash":
-         "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
+         "sha-256:hQ2vJ4kE5pNQl3KvZ4mP5x0wRr6tY2nD9bM7sX1cF8g",
        "parent": {
          "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
          "issuer": "https://as.example.com",
@@ -628,8 +628,9 @@ Table of Contents
    entry.  Each child entry MUST be a subset of some parent entry under
    the core rule, and the delegation narrowing of Section 8 applies in
    addition.  A Mission Issuer MUST NOT assume any relaxation the core
-   rule does not define (for example resource containment or action-
-   family narrowing, which the core defers to future work).
+   rule does not define: the core's own opt-in hierarchy forms (prefix
+   resource containment and .* action families) apply as that rule
+   defines them, and nothing beyond them applies.
 
    If the Mission Issuer cannot prove the child Authority Set is a
    strict subset of the parent, it MUST refuse child creation with
@@ -893,10 +894,10 @@ Table of Contents
          "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
      },
      "child": {
-       "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
+       "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
        "issuer": "https://as.example.com",
        "authority_hash":
-         "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2"
+         "sha-256:hQ2vJ4kE5pNQl3KvZ4mP5x0wRr6tY2nD9bM7sX1cF8g"
      },
      "child_actor": {
        "sub": "subagent-invoice-extractor",
