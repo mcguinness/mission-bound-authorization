@@ -263,6 +263,14 @@ delegation, and proof capabilities on top. The decomposition keeps
 each interface small but spreads the structure across many documents
 and three bindings; this document is the single structural view.
 
+Read as one system, the family defines a **delegated-authority
+layer**: a durable, approved task object with a lifecycle, bounded
+authority, runtime enforcement, delegation, evidence, and management
+surfaces. OAuth 2.0, the standalone Mission Authority Server, and
+AAuth are peer bindings into that layer, and the MAS is its control
+plane for an estate whose task governance spans many issuers,
+resources, and tools ({{the-mission}}).
+
 It defines no protocol, no object, and no requirement. It is a map,
 not the territory: every mechanism named points at the profile that
 normatively defines it, and where this document and a profile appear
@@ -339,9 +347,15 @@ Authority Server ({{I-D.draft-mcguinness-mission-authority-server}})
 is that layer's binding-independent control plane: it holds the
 approved task, its lifecycle, and its authority across an estate of
 Authorization Servers, resources, and tools, whichever of them issues
-a given token. The near-term deployment is a control plane beside an
-unchanged OAuth estate; the direction is delegated authority
-management as a layer of its own.
+a given token. The layer's operational surface is already named: the
+Mission record and its anchors, the lifecycle and its status,
+authority distribution to the points of enforcement (the Authority
+Set and its policy views), decision evidence, the portable proof
+(the Mission Mandate, {{I-D.draft-mcguinness-mission-mandate}}), and
+the management plane for fleet-scale operation
+({{I-D.draft-mcguinness-oauth-mission-management}}). The near-term
+deployment is a control plane beside an unchanged OAuth estate; the
+direction is delegated authority management as a layer of its own.
 
 # Mission Roles and Components {#components}
 

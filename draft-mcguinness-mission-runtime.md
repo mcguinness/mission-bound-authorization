@@ -139,6 +139,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-architecture:
+    title: "An Architecture for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-aauth:
+    title: "Mission-Bound Authorization for AAuth"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -408,7 +424,10 @@ enforcement scope.
 A deployment that claims conformance to this profile MUST publish an
 **Enforcement Scope Statement**: the structured, referenceable
 declaration of its enforcement scope that auditors, procurement, and
-interop tests key on. It MUST include:
+interop tests key on. This statement is what earns the
+Runtime-Enforced level of the Mission Assurance Levels, and it feeds
+the Mission Deployment Profile, the deployment-level manifest the
+architecture defines ({{I-D.draft-mcguinness-mission-architecture}}). It MUST include:
 
 - the protected resources, action classes, and execution paths it
   mediates;
@@ -1061,7 +1080,9 @@ deployment establishes it in one of two modes:
   the acting credential under a join a binding profile defines; an
   unverified reference MUST NOT establish the Mission. The Mission
   Authority Server profile defines the concrete join for this mode
-  ({{I-D.draft-mcguinness-mission-authority-server}}).
+  ({{I-D.draft-mcguinness-mission-authority-server}}), and the AAuth
+  binding defines it as its Reference-only verification mode
+  ({{I-D.draft-mcguinness-mission-aauth}}).
 
 A deployment MUST document the mode each enforcement scope uses
 ({{runtime-conformance}}). In either mode, the established Mission is

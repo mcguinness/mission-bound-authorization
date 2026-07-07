@@ -47,7 +47,7 @@ normative:
 
 informative:
   I-D.draft-mcguinness-mission-architecture:
-    title: "Mission-Bound Authorization Architecture"
+    title: "An Architecture for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
     author:
       -

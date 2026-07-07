@@ -81,6 +81,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-aauth:
+    title: "Mission-Bound Authorization for AAuth"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -176,9 +184,10 @@ uses:
 Mission Issuer:
 : The component that approved and holds the Mission, identified by the
   Mission's `issuer`: the OAuth Authorization Server under the
-  issuance profile, or a Mission Authority Server
+  issuance profile, a Mission Authority Server
   ({{I-D.draft-mcguinness-mission-authority-server}}) under the
-  standalone binding.
+  standalone binding, or an AAuth Person Server
+  ({{I-D.draft-mcguinness-mission-aauth}}) under the AAuth binding.
 
 Mission Mandate (Mandate):
 : A signed, portable statement of a Mission's committed facts, minted
@@ -202,8 +211,11 @@ profile {{I-D.draft-mcguinness-oauth-mission}} is this version's
 normative substrate, publishing keys through its Authorization Server
 metadata `jwks_uri`; the Mission Authority Server
 ({{I-D.draft-mcguinness-mission-authority-server}}) is a standalone
-binding of the same primitives with its own metadata `jwks_uri`. A
-Mandate minted under either binding is verified identically.
+binding of the same primitives with its own metadata `jwks_uri`; and
+the AAuth binding ({{I-D.draft-mcguinness-mission-aauth}}) hosts the
+same primitives at the AAuth Person Server, whose existing `jwks_uri`
+is the published key material for its signed artifacts. A Mandate
+minted under any of the three bindings is verified identically.
 
 # Mission Mandate {#mandate}
 

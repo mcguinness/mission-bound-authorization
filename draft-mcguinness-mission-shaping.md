@@ -41,6 +41,14 @@ normative:
 informative:
   RFC6749:
   RFC9126:
+  I-D.draft-mcguinness-mission-aauth:
+    title: "Mission-Bound Authorization for AAuth"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -208,8 +216,10 @@ issuance profile {{I-D.draft-mcguinness-oauth-mission}} defines these
 for OAuth 2.0. The Mission Authority Server
 ({{I-D.draft-mcguinness-mission-authority-server}}) is a standalone
 binding of that submission channel; a shaped proposal enters it through
-the MAS mission submission endpoint unchanged. Another authorization
-substrate that accepts a
+the MAS mission submission endpoint unchanged. The AAuth binding
+({{I-D.draft-mcguinness-mission-aauth}}) accepts the same structured
+Mission Intent proposal at the AAuth Person Server. Another
+authorization substrate that accepts a
 structured, untrusted task proposal and commits it at approval can
 host the shaping practices described here unchanged.
 

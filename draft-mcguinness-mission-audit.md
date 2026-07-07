@@ -93,6 +93,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-aauth:
+    title: "Mission-Bound Authorization for AAuth"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -475,9 +483,11 @@ components that are not entitled to write to a Mission's feed.
 A relying party discovers a producer's key by the producer's role. The
 `issuer`'s key is resolved through its published key material: the
 Authorization Server's metadata `jwks_uri` in the OAuth binding
-({{I-D.draft-mcguinness-oauth-mission}}), or the Mission Authority
+({{I-D.draft-mcguinness-oauth-mission}}), the Mission Authority
 Server's discovery `jwks_uri` in the standalone binding
-({{I-D.draft-mcguinness-mission-authority-server}}). A PDP or PEP key
+({{I-D.draft-mcguinness-mission-authority-server}}), or the AAuth
+Person Server's existing `jwks_uri` in the AAuth binding
+({{I-D.draft-mcguinness-mission-aauth}}). A PDP or PEP key
 is resolved
 through the deployment-published key sets the runtime and AuthZEN
 profiles require ({{I-D.draft-mcguinness-mission-runtime}},
@@ -835,7 +845,8 @@ profile and the runtime and consent-evidence records it aggregates:
   correlation adopts the directed or audience-pairwise Mission
   references named as future work by the issuance profile and the
   AAuth binding, when available
-  ({{I-D.draft-mcguinness-oauth-mission}}).
+  ({{I-D.draft-mcguinness-oauth-mission}},
+  {{I-D.draft-mcguinness-mission-aauth}}).
 - **Export.** An evidence export preserves integrity (the commitments
   and their salts) without over-sharing the raw committed content
   beyond the recipient's need.

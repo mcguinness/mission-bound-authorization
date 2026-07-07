@@ -38,7 +38,7 @@ normative:
 
 informative:
   I-D.draft-mcguinness-mission-architecture:
-    title: "Mission-Bound Authorization Architecture"
+    title: "An Architecture for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
     author:
       -
@@ -169,6 +169,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-aauth:
+    title: "Mission-Bound Authorization for AAuth"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -182,9 +190,10 @@ informative:
 
 Mission-Bound Authorization for OAuth 2.0 and its companion profiles
 spread enforcement across several components: a Mission Issuer derives
-authority and, in the OAuth binding, gates issuance (an OAuth
-Authorization Server, or a standalone Mission Authority Server that
-records and serves Missions without issuing tokens); a Policy
+authority and, where it also issues tokens, gates issuance (an OAuth
+Authorization Server, a standalone Mission Authority Server that
+records and serves Missions without issuing tokens, or an AAuth
+Person Server hosting that protocol's native missions); a Policy
 Enforcement Point and Policy Decision Point evaluate each action; a
 harness establishes a mediated execution environment; a consent
 rendering layer discloses authority to an Approver; an orchestrator
@@ -210,8 +219,9 @@ agent may be prompt-injected or compromised, and the suite's purpose is
 to bound what such an agent can do, not to make it trustworthy
 ({{I-D.draft-mcguinness-mission-runtime}}). Bounding the agent
 means relying on other components: the Mission Issuer that derives
-authority and, in the OAuth binding, gates issuance (an Authorization
-Server or a standalone Mission Authority Server), the enforcement
+authority and, where it also issues tokens, gates issuance (an
+Authorization Server, a standalone Mission Authority Server, or an
+AAuth Person Server), the enforcement
 points that evaluate each action,
 the harness that removes unmediated paths, and a set of optional
 services. Those components are the **trusted base**: the parts that, if
@@ -241,7 +251,8 @@ requirement of its own.
 
 This document uses Mission, Mission Issuer (the Authorization Server
 in the OAuth binding; the Mission Authority Server in the standalone
-binding), Policy
+binding; the AAuth Person Server in the AAuth binding,
+{{I-D.draft-mcguinness-mission-aauth}}), Policy
 Enforcement Point (PEP), Policy Decision Point (PDP), Approver, Subject,
 agent, Authority Set, and Mission state as defined in
 {{I-D.draft-mcguinness-oauth-mission}} and
@@ -335,6 +346,16 @@ Mission Authority Server (standalone binding):
   it yields arbitrary attribution of authority to any credential the
   join accepts
   ({{I-D.draft-mcguinness-mission-authority-server}}).
+
+AAuth Person Server (AAuth binding):
+: When the AAuth binding is used, the AAuth Person Server implements
+  the Mission Issuer role for that protocol's native missions, and it
+  also issues or gates every AAuth auth token, so issuance gating
+  holds at the PS as it does at the AS in the OAuth binding. Its
+  compromise is Mission Issuer compromise plus token-issuer
+  compromise: forged approvals, altered records, false state, and
+  freely minted or ungated auth tokens
+  ({{I-D.draft-mcguinness-mission-aauth}}).
 
 Policy Enforcement Point (PEP):
 : Sits at the last controllable boundary before an action and obtains a

@@ -237,8 +237,7 @@ evaluating the action ({{mission-join}}). Per-action enforcement then
 proceeds under the runtime profile
 {{I-D.draft-mcguinness-mission-runtime}} unchanged.
 
-The OAuth binding remains the flagship of the family, and a
-deployment that changes its AS gets Mission-bound credentials and
+A deployment that changes its AS gets Mission-bound credentials and
 issuance gating, which the MAS mode does not provide
 ({{limitations}}). The MAS is nonetheless a peer binding, not a
 staging area: decoupling governance from token issuance is an
@@ -967,7 +966,11 @@ Mission-derived `authorization_details`, so it cannot identify its
 Mission. The PEP names the Mission explicitly, and the PDP joins the
 credential to it before evaluating the action. The join is this
 profile's load-bearing mechanism: it is what a permit "under this
-Mission" rests on when no cryptographic binding exists.
+Mission" rests on when no cryptographic binding exists. This section
+defines the baseline mapping join; the Mission Join Assertion
+({{join-assertion}}) is the enterprise-mode join built on it, and the
+Enterprise profile requires it for the high-consequence classes
+({{enterprise-profile}}).
 
 A Mission-joining PDP and its PEPs MUST observe the following:
 
@@ -1424,6 +1427,10 @@ binding, with the obligations below ({{I-D.draft-mcguinness-mission-architecture
   evidence retained for the audit horizon
   ({{I-D.draft-mcguinness-mission-runtime}}).
 
+A deployment claiming this profile SHOULD publish its claims,
+coverage, and residual risks as a Mission Deployment Profile
+({{I-D.draft-mcguinness-mission-architecture}}).
+
 ## The Enterprise Mapping Contract {#mapping-contract}
 
 The dominant MAS risk is a coarse or drifting join: shared
@@ -1510,13 +1517,16 @@ A MAS is adopted level by level across the Mission Assurance Levels
 independently useful:
 
 1. The MAS records Missions and approvals: governance and audit of
-   what tasks were approved, with no enforcement change yet.
+   what tasks were approved, with no enforcement change yet
+   (Baseline Issuance under the MAS binding).
 2. Mission Status and lifecycle become the estate-wide kill switch:
-   consumers fail safe on non-`active` state.
+   consumers fail safe on non-`active` state (the state-aware
+   half-step).
 3. PEP/PDP runtime enforcement gates consequential actions per the
-   runtime profile.
+   runtime profile (the Runtime-Enforced level).
 4. Join Assertions and instance-bound joins harden the join for the
-   high-consequence classes (the Enterprise profile).
+   high-consequence classes (the Enterprise profile,
+   {{enterprise-profile}}).
 5. Where a particular AS later becomes Mission-aware, it adds
    Mission-bound tokens and issuance gating for its own resources,
    while the MAS record, lifecycle, and authority model continue to
