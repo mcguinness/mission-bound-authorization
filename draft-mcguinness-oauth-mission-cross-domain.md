@@ -51,6 +51,22 @@ informative:
   I-D.draft-mcguinness-oauth-id-assertion-framework:
   I-D.draft-mcguinness-oauth-domain-authorized-issuer:
   I-D.draft-mcguinness-oauth-actor-receipts:
+  I-D.draft-mcguinness-mission-architecture:
+    title: "An Architecture for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-mandate:
+    title: "Mission Mandate"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
@@ -87,7 +103,9 @@ Mission it did not issue. The Mission Issuer projects audience-scoped
 Mission authority in a short-lived, sender-constrained cross-domain
 grant of the OAuth identity chaining architecture; the Resource AS
 validates the grant and mints its own local tokens, preserving the
-Mission binding unchanged. The Identity Assertion Authorization Grant
+Mission binding unchanged. The Mission record never crosses the
+boundary, and honoring it needs no session with the Mission Issuer.
+The Identity Assertion Authorization Grant
 (ID-JAG) is the recommended grant profile. Single-domain deployments
 of the base profile are unaffected by this document.
 
@@ -120,6 +138,18 @@ validates the projected grant, applies its own local policy, and mints
 its own tokens, preserving the Mission binding unchanged. A Resource
 AS is never the Mission Issuer.
 
+Three properties define the projection. The Mission does not cross:
+the record, the Mission Intent, the full Authority Set, and lifecycle
+authority stay with the Mission Issuer, and the Resource AS receives
+only claim-shape facts and the entries scoped to it
+({{what-crosses}}). Authority only narrows: a projection carries an
+audience-scoped subset, and nothing the Resource AS mints may widen
+it ({{validation-at-resource-as}}). Honoring is session-less: the
+Resource AS verifies pre-established issuer trust and a signature, so
+the Mission Issuer is never on the partner's request path; the cost
+of that independence is a bounded revocation lease
+({{cross-domain-revocation}}).
+
 # Status: An OPTIONAL Extension {#status}
 
 This document is the Cross-Domain capability named by the base
@@ -136,6 +166,11 @@ Grant {{I-D.draft-ietf-oauth-identity-assertion-authz-grant}} is a
 working-group document. This document profiles them and cannot advance
 ahead of them; confining them here keeps the base profile free of
 in-progress cross-domain dependencies.
+
+The capability is orthogonal to the family's Mission Assurance Levels
+({{I-D.draft-mcguinness-mission-architecture}}): projection changes
+where a Mission is honored, not the strength at which either domain
+enforces it. Each trust domain runs at its own level.
 
 # Conventions and Terminology
 
@@ -205,23 +240,95 @@ In this model there is exactly one Mission Issuer per Mission (the
 mint their own tokens for their resources. A Resource AS is never the
 Mission Issuer and MUST NOT create or alter a Mission.
 
-# Audience-Scoped Authority {#audience-scope}
+# What Crosses the Trust Boundary {#what-crosses}
+
+The projection is exact about what leaves the issuing domain.
+
+Three values cross unchanged: `mission.id`, `mission.issuer`, and
+`authority_hash`, the claim-shape Mission binding every downstream
+token preserves ({{validation-at-resource-as}}). They are audit and
+correlation anchors, not credentials.
+
+Two things cross scoped: the audience-scoped Authority Set entries
+({{audience-scope}}), and the Mission's Subject in the form the
+identity chaining architecture defines ({{cross-domain-grant}}).
+
+Everything else stays home. The Mission record, the Mission Intent,
+the full Authority Set, and lifecycle authority remain with the
+Mission Issuer; a Resource AS never creates or alters a Mission
+({{model}}). The grant is not refreshable and confers no standing
+authority in the partner domain: when it expires, the client returns
+to the issuer for a new one, which is how the issuer's lifecycle gate
+keeps reaching across the boundary.
+
+Nothing returns across the boundary at validation time. The Resource
+AS honors the grant from pre-established trust
+({{pre-established-trust}}) and the signature alone; its assurance
+that the Mission was `active` is a lease bounded by the grant
+lifetime ({{cross-domain-revocation}}).
+
+## Audience-Scoped Authority {#audience-scope}
 
 When projecting authority toward a Resource AS, the Mission Issuer
 includes only the Authority Set entries whose `resource` that
 Resource AS is authoritative for, under the deployment's
-resource-to-AS mapping. Entries for other Resource ASes MUST NOT be
-disclosed.
+resource-to-AS mapping ({{pre-established-trust}}). Entries for other
+Resource ASes MUST NOT be disclosed.
+
+# Pre-Established Trust {#pre-established-trust}
+
+Projection is configured, not negotiated: nothing in the protocol
+establishes trust between the domains, and every trust input below
+exists before the first grant is issued.
+
+- Issuer trust: which Mission Issuers the Resource AS accepts, by
+  local policy or issuer metadata ({{validation-at-resource-as}}).
+  The identity-assertion trust framework and its
+  domain-authorized-issuer method
+  ({{I-D.draft-mcguinness-oauth-id-assertion-framework}},
+  {{I-D.draft-mcguinness-oauth-domain-authorized-issuer}}) are
+  concrete ways to publish and evaluate this policy instead of
+  hand-maintaining a list.
+- The resource-to-AS mapping: which Resource AS is authoritative for
+  which `resource` values, the mapping audience scoping is computed
+  under ({{audience-scope}}).
+- The grant profile in use (the ID-JAG in the RECOMMENDED case) and,
+  where that profile defines no proof-of-possession, the
+  sender-constraint mechanism ({{cross-domain-grant}}); binding and
+  verification interoperate only if both domains fix the same one.
+- Client registration: the presenting client is registered with and
+  authenticates to the Resource AS's token endpoint, as the grant
+  profile requires.
+- Subject resolution: the account-linking policy by which the
+  Resource AS resolves the conveyed Subject in its own namespace
+  ({{validation-at-resource-as}}).
+
+A deployment that publishes a Mission Deployment Profile
+({{I-D.draft-mcguinness-mission-architecture}}) records its
+projection posture in these terms, and the accepted cross-domain
+revocation window ({{cross-domain-revocation}}) among its residual
+risks.
 
 # Issuing the Cross-Domain Grant {#cross-domain-grant}
 
 Issuing a cross-domain grant is a derivation event and is gated like
 any other derivation ({{I-D.draft-mcguinness-oauth-mission}}, Section
-"Mission Lifecycle and Gating"). A Mission-bound cross-domain grant:
+"Mission Lifecycle and Gating"). It counts once against the Mission's
+derivation budget, however many local tokens the partner domain later
+mints: the issuer cannot observe those tokens and does not count
+them, and the Resource AS bounds its own minting by the grant and by
+local policy ({{validation-at-resource-as}}). A Mission-bound
+cross-domain grant:
 
 - MUST be a JWT authorization grant issued and signed by the Mission
   `issuer`, redeemable at the target Resource AS through the
   {{RFC7523}} JWT-bearer grant;
+- MUST be explicitly typed with the JWT `typ` its grant profile
+  defines (`oauth-id-jag+jwt` for the RECOMMENDED profile), so the
+  grant is mechanically distinguishable from every other issuer-signed
+  Mission artifact; a Mission Mandate
+  ({{I-D.draft-mcguinness-mission-mandate}}) is never redeemable as a
+  grant, and the `typ` is what a token endpoint separates them by;
 - MUST be audienced to the target Resource AS, and MUST NOT have a
   lifetime exceeding 300 seconds (a short lifetime bounds cross-domain
   revocation latency; see {{cross-domain-revocation}});
@@ -277,19 +384,21 @@ to the Grant"), exactly as on any other refresh, and the grant
 therefore projects the agent's full Mission authority
 (audience-scoped), never a narrowed delegate's.
 
-This profile intentionally fixes the refresh-token subject mode to
-remove any ambiguity about which Mission authority a cross-domain grant
-projects: the refresh token resolves to exactly one Mission and its
-full authority, whereas an access token or delegated token could carry
-a narrowed or actor-specific subset. The cost is that this optional
-cross-domain binding is unavailable to a deployment that issues no
-refresh token; such a deployment uses the single-domain base profile,
-which needs no refresh token.
+The refresh-token subject mode is the only mode this profile defines,
+and fixing it is deliberate: the refresh token resolves to exactly
+one Mission and its full authority, where an access token or
+delegated token could carry a narrowed or actor-specific subset that
+a trust-boundary crossing could re-widen. Other Mission-bound
+subject-token modes, such as an access-token mode bounding the
+projection by the presenting token, are left to future profiles. The
+cost is that this OPTIONAL capability is unavailable to a deployment
+that issues no refresh token; such a deployment uses the
+single-domain base profile, which needs none.
 
 The AS MUST reject an access token or a delegated token presented as
 `subject_token` for cross-domain issuance. The AS MUST NOT resolve the
 Mission from a client-supplied `mission_id`, nor from an identity
-assertion that carries no Mission binding.
+assertion that carries no Mission binding ({{error-responses}}).
 
 Before issuing, the AS MUST verify the Mission is `active` (failing
 otherwise with `invalid_grant`) and that the target Resource AS is
@@ -298,17 +407,6 @@ Set (failing otherwise with `invalid_target`, {{RFC8693}}). The token-exchange
 response carries `issued_token_type` of
 `urn:ietf:params:oauth:token-type:id-jag` (for the RECOMMENDED
 profile) and `token_type` of `N_A`, per {{RFC8693}} Section 2.2.1.
-
-This profile defines only the refresh-token `subject_token` mode above.
-Other Mission-bound subject-token modes, such as an access-token
-subject mode (which would have to bound the projected authority by the
-presenting token rather than by the full Mission Authority Set), are
-left to future profiles. Excluding the access-token subject mode here
-is a deliberate choice: it avoids
-propagating a narrowed or delegated authority across a trust boundary,
-where it could be re-widened. A deployment that does not issue the
-agent a Mission refresh token therefore cannot use this OPTIONAL
-cross-domain hop as defined here.
 
 A delegate, rather than the agent, crossing a trust domain directly
 and carrying its own narrowed authority into another domain is out of
@@ -346,9 +444,12 @@ A Resource AS consuming a Mission-bound cross-domain grant:
   or issuer metadata before accepting any Mission reference. It MUST
   NOT trust a `mission.issuer` merely because it appears inside a
   signed assertion.
-- MUST validate the grant's signature and expiry, and verify its
-  `aud` is the Resource AS's own identifier, rejecting a grant
-  minted for a different Resource AS.
+- MUST validate the grant's explicit `typ` (per the grant profile in
+  use; `oauth-id-jag+jwt` for the RECOMMENDED profile), signature,
+  and expiry, and verify its `aud` is the Resource AS's own
+  identifier: it rejects a grant minted for a different Resource AS,
+  and rejects a JWT of any other type presented as this grant,
+  whatever Mission facts it carries.
 - MUST verify the grant's sender-constraint by the proof-of-possession
   mechanism the cross-domain grant profile defines (for the ID-JAG
   profile, as that specification defines), and MUST reject with
@@ -406,6 +507,14 @@ A Resource AS consuming a Mission-bound cross-domain grant:
   Constraints"); the policy travels on the conveyed entries. The
   cross-domain grant carries no `act` chain ({{cross-domain-grant}}),
   so the Resource AS's own delegation depth begins at 0.
+- SHOULD record, per minted local token, both sides of the
+  derivation: the consumed grant's `jti` and conveyed
+  `authorization_details`, and the local token's own identifier or
+  digest (`jti`), `iss`, `aud`, `iat`, `exp`, and issued
+  `authorization_details`. The issuer cannot observe local tokens
+  ({{cross-domain-revocation}}), so this record is the only evidence
+  tying a local token to the grant it was minted from and showing
+  its authority did not widen.
 
 A `{ "sub": ... }` matcher in a conveyed entry's
 `delegation.allowed_delegates` is a client identifier in the
@@ -438,6 +547,35 @@ the ID-JAG; the Resource AS validates issuer trust and signs its local
 token). It is verifiable only against the originating AS, which this
 document does not require to be exposed.
 
+# Error Responses {#error-responses}
+
+This document defines no new error codes; it binds the standard codes
+of {{RFC8693}}, {{RFC7523}}, and OAuth 2.0 to this profile's failure
+conditions so both surfaces fail uniformly.
+
+At issuance (the token exchange at the Mission Issuer,
+{{cross-domain-grant}}):
+
+| Condition | Error |
+|---|---|
+| `subject_token_type` is not `refresh_token`, or an access, delegated, or bare identity-assertion token is presented | `invalid_request` |
+| The subject token does not resolve to a Mission, or the Mission is not `active` | `invalid_grant` |
+| The target Resource AS is not authorized for the requested resources under the Authority Set | `invalid_target` |
+
+At redemption (the JWT-bearer grant at the Resource AS,
+{{validation-at-resource-as}}):
+
+| Condition | Error |
+|---|---|
+| Client authentication fails | `invalid_client` |
+| Untrusted issuer; wrong or missing `typ`; signature, audience, or expiry failure; a sender-constraint absent, unverifiable, or bound to a different client; a replayed `jti`; a missing or malformed `mission` claim | `invalid_grant` |
+| The request names a resource outside the conveyed entries | `invalid_target` |
+
+A Resource AS rejecting a grant reveals no Mission state it does not
+hold: `invalid_grant` at redemption speaks to the presented grant,
+not to the Mission's current lifecycle state, which the Resource AS
+cannot know ({{introspection-at-resource-as}}).
+
 # Introspection at a Resource AS {#introspection-at-resource-as}
 
 The base profile's OPTIONAL token introspection ({{RFC7662}}) reports
@@ -457,6 +595,19 @@ is the issuer's commitment carried through the grant, not a value the
 Resource AS recomputes from its audience-scoped subset
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Consent Binding").
 
+# Authorization Server Metadata {#as-metadata}
+
+Discovery uses existing metadata; this document defines no new
+parameters. A Mission Issuer supporting this capability advertises
+the {{RFC8693}} token-exchange grant type in `grant_types_supported`,
+the base profile's signal for cross-domain grant issuance
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Authorization
+Server Metadata"). A Resource AS advertises the {{RFC7523}}
+JWT-bearer grant type the grant is redeemed through; support for a
+specific grant profile is discovered as that profile specifies, or
+out of band. The bilateral inputs of {{pre-established-trust}} are
+not discoverable and exist before first use.
+
 # Security Considerations
 
 The security considerations of the base profile
@@ -472,7 +623,11 @@ Mission is revoked at the originating AS, that AS can stop issuing new
 cross-domain grants, but it cannot revoke a token a Resource AS has
 already minted in another domain: that token remains valid until its
 own expiry. Cross-domain revocation latency is therefore the
-downstream token lifetime. For this reason, Resource ASes MUST issue
+downstream token lifetime. The grant lifetime is the state lease the
+partner domain runs on: the longest a Resource AS may treat Mission
+state established at issuance as current
+({{I-D.draft-mcguinness-mission-runtime}}). For this reason, Resource
+ASes MUST issue
 short-lived local tokens for Mission-bound interactions; the
 originating AS bounds grant lifetimes by the 300-second cap of
 {{cross-domain-grant}}, so a revoked Mission cannot continue to seed
@@ -481,12 +636,13 @@ The base profile's token introspection closes the revocation gap only
 single-domain: it requires the introspecting AS to hold the Mission,
 and a Resource AS has no query to the issuer keyed by `mission_id`
 ({{introspection-at-resource-as}}), so short downstream lifetimes
-remain the only cross-domain control. Deployments needing tighter
-cross-domain revocation can add the status or event-distribution
-mechanisms specified separately by Mission Status
-{{I-D.draft-mcguinness-oauth-mission-status}} and Mission Lifecycle
-Signals {{I-D.draft-mcguinness-oauth-mission-signals}}, which this
-document does not require.
+remain the only cross-domain control. Deployments needing a tighter
+lease add the companion mechanisms this document does not require:
+Mission Status {{I-D.draft-mcguinness-oauth-mission-status}} gives
+any consumer holding the `mission_id`, including a Resource AS, a
+state query against the issuer, and Mission Lifecycle Signals
+{{I-D.draft-mcguinness-oauth-mission-signals}} pushes lifecycle
+transitions to the partner domain.
 
 ## The Grant at the Trust Boundary
 
@@ -503,15 +659,11 @@ Downstream of the issuer, `authority_hash` is an audit and correlation
 anchor, not a recomputable proof: its integrity rests on the signature
 chain ({{validation-at-resource-as}}).
 
-Two companion mechanisms compose here. The identity-assertion trust
-framework and its domain-authorized-issuer method
-({{I-D.draft-mcguinness-oauth-id-assertion-framework}},
-{{I-D.draft-mcguinness-oauth-domain-authorized-issuer}}) are concrete
-ways a deployment publishes and evaluates the issuer policy this
-section requires, instead of a hand-maintained list. And a consumer
-that needs independently verifiable provenance of the delegation hops
-upstream of the re-mint, rather than trust in the minting domain's
-assertion of them, MAY require issuer-signed hop receipts
+One companion mechanism composes here beyond the trust publication
+methods of {{pre-established-trust}}: a consumer that needs
+independently verifiable provenance of the delegation hops upstream
+of the re-mint, rather than trust in the minting domain's assertion
+of them, MAY require issuer-signed hop receipts
 ({{I-D.draft-mcguinness-oauth-actor-receipts}}).
 
 # Privacy Considerations
@@ -529,20 +681,36 @@ sees Authority Set entries addressed to other audiences.
 
 # Conformance {#conformance}
 
-An implementation conforms in one of two roles.
+An implementation conforms in one of two roles and names the
+capability as the base profile's conformance model directs (for
+example, "Mission Issuer with Cross-Domain";
+{{I-D.draft-mcguinness-oauth-mission}}, Section "Conformance").
 
 An **Originating Mission Issuer with Cross-Domain** is a conforming
-Mission Issuer of the base profile
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Conformance") that
-additionally issues the Mission-bound cross-domain grant per
-{{cross-domain-grant}}, including the audience scoping of
-{{audience-scope}}.
+Mission Issuer of the base profile that additionally:
 
-A **Resource AS** honors the cross-domain grant per
-{{validation-at-resource-as}} and, where it offers token introspection
-for its local tokens, follows {{introspection-at-resource-as}}. A
-Resource AS is not required to implement the base profile's Mission
-Issuer role; it never creates or alters a Mission ({{model}}).
+- issues the Mission-bound cross-domain grant per
+  {{cross-domain-grant}}, gated and counted as a derivation;
+- scopes every projection by audience ({{audience-scope}});
+- fails issuance with the codes of {{error-responses}}; and
+- advertises cross-domain grant issuance per {{as-metadata}}.
+
+A **Resource AS**:
+
+- honors the cross-domain grant per {{validation-at-resource-as}},
+  including issuer trust by local policy, explicit typing,
+  sender-constraint and one-time-use verification, and fail-closed
+  interpretation of conveyed authority;
+- bounds every local token by the grant that seeded it and issues it
+  sender-constrained and short-lived ({{validation-at-resource-as}},
+  {{cross-domain-revocation}});
+- fails redemption with the codes of {{error-responses}};
+- where it offers token introspection for its local tokens, follows
+  {{introspection-at-resource-as}}; and
+- never creates or alters a Mission ({{model}}).
+
+A Resource AS is not required to implement the base profile's Mission
+Issuer role.
 
 # IANA Considerations
 
@@ -647,7 +815,8 @@ audience-scoped authority for the ERP:
 }
 ~~~
 
-The ID-JAG is short-lived (300 s) and sender-constrained to the
+The ID-JAG is short-lived (300 s), explicitly typed
+(`oauth-id-jag+jwt` in its JWT header), and sender-constrained to the
 agent. Its `exp` does not exceed the Mission's `expires_at`
 ({{cross-domain-grant}}).
 
@@ -711,13 +880,11 @@ Mission Lifecycle Signal notifies the partner on a Mission transition so
 it can react without polling.
 
 The Resource AS holds only this audience's subset and cannot recompute
-`authority_hash`. To show its local token did not widen beyond the
-ID-JAG, it SHOULD record, per minted token, both sides of the
-derivation: the consumed ID-JAG's `jti` and conveyed
-`authorization_details`, and the local token's own identifier or digest
-(`jti`), `iss`, `aud`, `iat`, `exp`, and issued `authorization_details`.
-An auditor can then identify the exact local token, tie it to the grant
-it was minted from, and check its authority is a subset of that grant.
+`authority_hash`. It records both sides of the derivation, the
+consumed ID-JAG and the minted token ({{validation-at-resource-as}}),
+so an auditor can identify the exact local token, tie it to the grant
+it was minted from, and check its authority is a subset of that
+grant.
 
 ## Stage 4: The Resource Server Enforces
 
