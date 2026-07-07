@@ -1,0 +1,922 @@
+
+
+
+
+Web Authorization Protocol                                 K. McGuinness
+Internet-Draft                                               Independent
+Intended status: Standards Track                             7 July 2026
+Expires: 8 January 2027
+
+
+                    Mission Management for OAuth 2.0
+            draft-mcguinness-oauth-mission-management-latest
+
+Abstract
+
+   The Mission Status and Lifecycle profile observes and changes one
+   Mission at a time and defers fleet-scale management.  This document
+   defines that deferred surface: a Mission Management endpoint through
+   which an authorized Management Client enumerates the Missions a
+   Mission Issuer holds, filtered by Subject, client, state, creation
+   time, expiry, or parent, and applies bulk lifecycle operations to the
+   enumerated set through a dry-run-then-execute exchange whose bulk
+   token pins the evaluated membership.  The surface is management-plane
+   and operator-facing: authorized for the existence knowledge the
+   status profile's anti-oracle rules deny to ordinary consumers,
+   audited on every call, and never exposed to the agents whose Missions
+   it manages.  It is optional; a deployment that does not adopt it is
+   unaffected.
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://mcguinness.github.io/mission-bound-authorization/draft-
+   mcguinness-oauth-mission-management.html.  Status information for
+   this document may be found at https://datatracker.ietf.org/doc/draft-
+   mcguinness-oauth-mission-management/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/mcguinness/mission-bound-authorization.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 8 January 2027.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+   2.  Conventions and Terminology
+   3.  Mission Management Endpoint
+     3.1.  Authentication
+     3.2.  Authorization and Filter Scope
+   4.  Mission Filter
+   5.  Mission Enumeration
+     5.1.  Response
+     5.2.  Worked Example
+   6.  Bulk Mission Lifecycle
+     6.1.  Dry Run
+     6.2.  Execution
+     6.3.  Outcome Manifest
+     6.4.  Worked Example
+   7.  Error Responses
+   8.  Incident Response Patterns
+   9.  Deferred Management Capabilities
+   10. Authorization Server Metadata
+   11. Security Considerations
+     11.1.  Blast Radius
+     11.2.  Enumeration-Oracle Inversion
+     11.3.  Bulk Token Binding
+     11.4.  General OAuth Security
+   12. Privacy Considerations
+   13. Conformance
+   14. IANA Considerations
+     14.1.  Metadata Registrations
+     14.2.  Media Type
+   Acknowledgments
+   References
+     Normative References
+     Informative References
+   Author's Address
+
+1.  Introduction
+
+   The Mission Status and Lifecycle profile
+   [I-D.draft-mcguinness-oauth-mission-status] (the "status profile")
+   answers "what is the state of this Mission" and changes that state,
+   one Mission per request.  Its Deferred Lifecycle Capabilities section
+   defers two fleet-scale capabilities: Mission enumeration ("which
+   Missions exist for this Subject, client, or state") and bulk
+   lifecycle operations over the enumerated set.  This document
+   specifies both.
+
+   The two surfaces are deliberate counterparts.  The status profile is
+   consumption-plane: its callers are authorized for individual
+   Missions, so it makes an unknown reference indistinguishable from an
+   unauthorized one.  This document is management-plane: its callers are
+   operator consoles and incident-response tooling in the Mission
+   Issuer's own trust domain, explicitly authorized for existence
+   knowledge over a declared filter scope, compensated not by
+   indistinguishability but by explicit authorization and mandatory
+   audit of every call (Section 3.2).  The surface is never agent-
+   facing: the Agent executing a Mission has no role here (Section 3.1).
+
+   Both capabilities share one endpoint, one request shape, one
+   authentication and authorization model, one signing discipline, and
+   one audit rule; a request's operation member selects between them.
+   Bulk operations apply the status profile's per-Mission lifecycle
+   semantics unchanged, so this document adds no state, no transition,
+   and no event type to the lifecycle state space.  It is OPTIONAL and
+   does not restate the issuance profile
+   [I-D.draft-mcguinness-oauth-mission] or the status profile; a
+   deployment that does not adopt it is unaffected.
+
+2.  Conventions and Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   This document uses the terms defined in the issuance profile
+   [I-D.draft-mcguinness-oauth-mission] and the status profile
+   [I-D.draft-mcguinness-oauth-mission-status], in particular Mission,
+   Mission Issuer (the Mission issuer: in this document's OAuth binding
+   the Authorization Server; a standalone Mission Issuer, the Mission
+   Authority Server [I-D.draft-mcguinness-mission-authority-server],
+   serves this surface with the same semantics), mission_id, the Mission
+   record, and the Mission lifecycle states and operations.  It
+   additionally uses:
+
+   Management Client:  An authenticated client authorized for the
+      Mission Management endpoint: an operator console, incident-
+      response tooling, or administrative automation acting in the
+      Mission Issuer's trust domain.  An Agent executing a Mission is
+      never a Management Client.
+
+   All JSON shown in this document is non-normative and illustrative;
+   the member definitions in the surrounding text are authoritative.
+   HTTP message examples follow the conventions of [RFC9110]; long
+   values are wrapped for display.  JWT examples are shown as decoded
+   JSON; on the wire the JWS Compact Serialization [RFC7515] applies.
+
+3.  Mission Management Endpoint
+
+   The Mission Issuer publishes its Mission Management endpoint URL in
+   Authorization Server metadata (Section 10) as
+   mission_management_endpoint.  The endpoint MUST be served over TLS
+   1.2 or later (TLS 1.3 RECOMMENDED), following the recommendations of
+   [RFC9325].
+
+   A request is an HTTPS POST whose body is a JSON object [RFC8259] sent
+   as application/json; the structured filter does not fit the form
+   encoding of the status profile's single-Mission operations.  Every
+   request carries:
+
+   operation:  REQUIRED.  A string. enumerate (Section 5) or one of the
+      status profile's lifecycle operations revoke, suspend, resume,
+      complete, applied in bulk (Section 6).
+
+   filter:  REQUIRED.  An object (Section 4) selecting the Missions the
+      operation addresses.
+
+   nonce:  REQUIRED.  A string.  A client-generated nonce, unique per
+      request within the response lifetime, echoed in the signed
+      response.  It is also the idempotency key: the AS MUST deduplicate
+      management requests by (client, nonce) for a bounded window and,
+      on a retransmit, MUST replay the original response rather than re-
+      execute the request.
+
+   A success response is a JWS Compact Serialization [RFC7515] signed
+   with a key published in the Mission Issuer's jwks_uri, following the
+   status profile's signing discipline: the JWS header carries a kid and
+   a typ of mission-management-response+jwt, the algorithm is one
+   advertised in mission_status_signing_alg_values_supported
+   (Section 10), and the status profile's signing-key retention rules
+   apply.  The HTTP Content-Type is application/jwt [RFC7519] with
+   Cache-Control: no-store; the typ value is a local-use identifier
+   defined by this document (Section 14).  The signed payload carries
+   the envelope iss, aud (the authenticated caller), sub (the acting
+   party), nonce, iat, and exp, plus the members of Section 5.1,
+   Section 6.1, or Section 6.3.  Before honoring a response a Management
+   Client MUST apply the status profile's response verification checks
+   (signature, iss, aud, sub, nonce, iat/exp with up to 30 seconds skew)
+   and MUST verify the typ.
+
+   Rate limits, the enumeration page maximum, and the bulk size bound
+   are deployment-declared operational configuration; this document
+   defines the error symbols that surface them (Section 7) but no
+   metadata for them.
+
+3.1.  Authentication
+
+   The request MUST be authenticated using the status profile's
+   mechanism set ([I-D.draft-mcguinness-oauth-mission-status],
+   Section "Authentication"): mTLS client authentication, a DPoP-bound
+   bearer token, or private-key-JWT client authentication, discovered
+   through the AS's existing client-authentication metadata [RFC8414].
+   Plain Basic or POST client authentication MUST NOT be used.  A
+   deployment MUST NOT accept at the Management endpoint an
+   authentication mechanism weaker than those it accepts at its Mission
+   Lifecycle endpoint.  When a sender-constrained access token
+   authenticates the call, it MUST carry a management authorization: a
+   mission_management scope or an equivalent deployment-defined grant,
+   distinct from the status profile's lifecycle grant.
+
+   The surface is management-plane only.  A Mission Issuer MUST NOT
+   authorize an Agent (the OAuth client that submitted or executes a
+   Mission) as a Management Client, and MUST NOT accept a Mission-bound
+   access token as authentication here.
+
+3.2.  Authorization and Filter Scope
+
+   A deployment authorizes each Management Client for a *filter scope*:
+   the Missions it may enumerate and operate on, expressed over the
+   filter members of Section 4.  A subject-scoped operator, a client-
+   scoped operator, and a tenant-wide incident responder are distinct
+   grants; the grant syntax is deployment-defined.  The AS MUST evaluate
+   a request's filter against the caller's filter scope before
+   evaluating it against the Mission store, and MUST refuse with
+   forbidden (Section 7) a request whose filter could match a Mission
+   outside that scope.
+
+   This surface intentionally inverts the status profile's anti-oracle
+   property.  That property exists because status callers are not
+   authorized for existence knowledge; a Management Client is, over
+   exactly its filter scope, so unknown and unauthorized references need
+   not be indistinguishable here and forbidden is returned openly.  The
+   compensating control is audit: the AS MUST record every management
+   request, including refused ones, in its audit log with the caller,
+   the operation, the full filter, the purpose or reason, the result
+   count or outcome manifest, and the disposition.  A refusal is
+   computed from the caller's grant and the request alone, never from
+   Mission data, so it discloses nothing about which Missions exist.
+
+4.  Mission Filter
+
+   The filter object selects Missions by conjunction: a Mission matches
+   when it satisfies every member present.  An empty filter matches
+   every Mission in the caller's filter scope.  The members, each
+   OPTIONAL, match against the Mission record
+   ([I-D.draft-mcguinness-oauth-mission], Section "Mission Record"):
+
+   subject:  An object with iss and sub.  Matches the record's subject
+      exactly.
+
+   client_id:  A string.  Matches the record's client_id.
+
+   state:  An array of strings.  Matches a Mission whose current
+      lifecycle state equals any listed value, drawn from the issuance
+      profile's open state space as extended by the profiles the
+      deployment runs.  The AS MUST NOT refuse a filter for carrying a
+      state value it does not produce; such a value matches no Mission.
+
+   created_after, created_before:  RFC 3339 [RFC3339] date-times.  Match
+      a Mission whose created_at is strictly after, respectively
+      strictly before, the value.
+
+   expiring_before:  An RFC 3339 [RFC3339] date-time.  Matches a Mission
+      whose expires_at is strictly before the value.
+
+   parent:  A string, a Mission Identifier.  Matches the Child Missions
+      whose parent lineage member names it
+      ([I-D.draft-mcguinness-oauth-mission-child-delegation]): direct
+      children only.  A caller walks a delegation tree level by level.
+
+   The AS MUST refuse a filter carrying an unrecognized member with
+   invalid_request, so a filter is never silently broader than the
+   caller intended.
+
+5.  Mission Enumeration
+
+   The enumerate operation answers "which Missions exist" for the
+   caller's filter, returning signed pages of Mission summaries.  In
+   addition to the common members (Section 3), the request carries:
+
+   purpose:  REQUIRED.  A string, maximum 1024 characters.  The
+      operator's reason for the query (for example a ticket or case
+      identifier), recorded in audit (Section 3.2).
+
+   cursor:  OPTIONAL.  A string.  An opaque pagination cursor from a
+      prior response.
+
+   limit:  OPTIONAL.  A positive integer.  The AS returns at most the
+      smaller of limit and its deployment-declared page maximum, and
+      applies the maximum when limit is absent.
+
+5.1.  Response
+
+   The signed payload (Section 3) carries:
+
+   missions:  REQUIRED.  An array of Mission summary objects, each
+      carrying id, state, subject (an object with iss and sub),
+      client_id, created_at, and expires_at from the Mission record,
+      plus the lineage members successor, predecessor
+      ([I-D.draft-mcguinness-oauth-mission-expansion]), and parent
+      ([I-D.draft-mcguinness-oauth-mission-child-delegation]) where
+      present on the record.  A summary MUST NOT carry the Mission
+      Intent, the Authority Set, or any member beyond these: enumeration
+      answers which Missions exist and stand in what state; a caller
+      needing full detail resolves each Mission through Mission Status,
+      which is separately authorized.
+
+   cursor:  CONDITIONAL.  A string.  Present exactly when more results
+      remain; the caller re-sends the same request with this cursor to
+      continue.
+
+   A cursor is opaque and bound to the (caller, filter) that produced
+   it; the AS MUST refuse with invalid_request a cursor presented by a
+   different caller or with a different filter.  Result order MUST be
+   stable within a cursor walk.  The AS SHOULD present a consistent
+   membership across a walk but MAY reflect transitions committed while
+   it is in progress; a caller that needs a pinned membership uses the
+   bulk dry run (Section 6.1), whose bulk token provides exactly that.
+
+5.2.  Worked Example
+
+   An incident responder (client_secops-console) triages a credential
+   compromise for Subject user_3p2q8mN1a0kV7tR and enumerates that
+   Subject's active Missions:
+
+   POST /as/mission/manage HTTP/1.1
+   Host: as.example.com
+   Content-Type: application/json
+   Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
+   DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+
+   {
+     "operation": "enumerate",
+     "filter": {
+       "subject": { "iss": "https://idp.example.com",
+                    "sub": "user_3p2q8mN1a0kV7tR" },
+       "state": ["active"]
+     },
+     "purpose": "IR-4192: credential compromise triage",
+     "limit": 50,
+     "nonce": "nonce_M4kR8vT2nQ7xB5sW"
+   }
+
+   Decoded signed response payload:
+
+   {
+     "iss": "https://as.example.com",
+     "aud": "client_secops-console",
+     "sub": "client_secops-console",
+     "nonce": "nonce_M4kR8vT2nQ7xB5sW",
+     "iat": 1793611740,
+     "exp": 1793611800,
+     "missions": [
+       { "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+         "state": "active",
+         "subject": { "iss": "https://idp.example.com",
+                      "sub": "user_3p2q8mN1a0kV7tR" },
+         "client_id": "s6BhdRkqt3",
+         "created_at": "2026-10-15T14:32:11Z",
+         "expires_at": "2026-12-31T23:59:59Z" }
+     ]
+   }
+
+   No cursor is present: the result is complete.  The AS records the
+   caller, filter, purpose, and result count in its audit log.
+
+6.  Bulk Mission Lifecycle
+
+   A bulk request applies one lifecycle operation of the status profile
+   (revoke, suspend, resume, complete) to every Mission a filter
+   matches, in two steps: a REQUIRED dry run returning the match count
+   and a bulk token pinning the evaluated membership, then an execute
+   presenting that token.  In addition to the common members
+   (Section 3), the request carries:
+
+   mode:  REQUIRED.  A string, dry_run or execute.
+
+   bulk_token:  CONDITIONAL.  A string.  REQUIRED when mode is execute;
+      MUST NOT be sent otherwise.
+
+   reason:  REQUIRED.  A string, maximum 1024 characters.  Recorded in
+      audit (Section 3.2) and applied as each per-Mission transition's
+      reason under the status profile, so it surfaces in per-Mission
+      audit and, where signals run, in each emitted event
+      ([I-D.draft-mcguinness-oauth-mission-signals]).
+
+   suspend_until, on_expiry:  OPTIONAL and CONDITIONAL respectively,
+      valid only when operation is suspend, with the status profile's
+      semantics, applied uniformly to every Mission in the set.
+
+   The AS MAY declare a bound on the evaluated set size and refuse a dry
+   run whose match count exceeds it with filter_too_broad (Section 7);
+   the caller narrows the filter (for example with created_after) and
+   retries.
+
+6.1.  Dry Run
+
+   On mode dry_run the AS evaluates the filter within the caller's
+   filter scope (Section 3.2), records the matched membership, and
+   returns a signed response carrying:
+
+   operation:  REQUIRED.  The requested operation, echoed.
+
+   match_count:  REQUIRED.  An integer.  The size of the evaluated
+      membership.
+
+   bulk_token:  REQUIRED.  A string.  An opaque, single-use token
+      binding the caller, the operation, the filter (with suspend_until
+      and on_expiry when present), and the evaluated membership itself:
+      the exact set of mission_id values matched at dry-run time
+      (Section 11.3).
+
+   bulk_token_expires_at:  REQUIRED.  An RFC 3339 [RFC3339] date-time.
+      The bulk token's expiry.  Its lifetime is deployment-defined and
+      SHOULD NOT exceed 15 minutes: long enough to review, short enough
+      that the reviewed set cannot silently age.
+
+   A dry run commits no transition.  To review the membership behind the
+   count, the caller runs enumerate with the same filter.
+
+6.2.  Execution
+
+   On mode execute the AS MUST verify that the presented bulk_token is
+   unexpired and unused, was issued to this caller, and binds an
+   operation and filter equal to the request's; on any mismatch it MUST
+   refuse with invalid_bulk_token and execute nothing.  The token is
+   then consumed: it is single-use whatever the outcome.
+
+   The AS applies the operation to each member of the bound membership
+   individually, under the status profile's lifecycle semantics
+   unchanged: legality per its Legal Transitions, idempotency, per-
+   transition evidence and audit, and, where signals run, one
+   mission.lifecycle-change SET per committed transition
+   ([I-D.draft-mcguinness-oauth-mission-signals]).  There is no bulk
+   event type and no transactionality: transitions commit independently,
+   and a failure on one member MUST NOT roll back another.
+
+   The membership is the one the dry run evaluated.  A Mission created,
+   or newly matching the filter, after the dry run is not in the
+   membership and MUST NOT be operated on; a member that transitioned in
+   the interim yields an already_terminal or illegal_transition outcome
+   rather than a surprise transition (Section 11.3).
+
+6.3.  Outcome Manifest
+
+   The execute response is a signed manifest carrying operation (the
+   executed operation, echoed) and:
+
+   results:  REQUIRED.  An array of objects, one per member of the
+      executed membership, each carrying mission_id, outcome, and, on
+      error only, an OPTIONAL detail string.
+
+   The outcomes:
+
+   +====================+==============================================+
+   | Outcome            | Meaning                                      |
+   +====================+==============================================+
+   | applied            | The operation succeeded: the transition      |
+   |                    | was committed, or the Mission already        |
+   |                    | stood in the operation's resulting non-      |
+   |                    | terminal state (the status profile's         |
+   |                    | idempotent case).                            |
+   +--------------------+----------------------------------------------+
+   | already_terminal   | The Mission was already in a terminal        |
+   |                    | state, including the operation's own         |
+   |                    | resulting state; nothing remained to         |
+   |                    | stop.                                        |
+   +--------------------+----------------------------------------------+
+   | illegal_transition | The operation is not legal from the          |
+   |                    | Mission's current non-terminal state;        |
+   |                    | the Mission is unchanged.                    |
+   +--------------------+----------------------------------------------+
+   | error              | The AS failed to process this Mission;       |
+   |                    | its state is unverified.                     |
+   +--------------------+----------------------------------------------+
+
+                                  Table 1
+
+   A Mission in any terminal state reports already_terminal, taking
+   precedence over the idempotent reading of applied; it is reported
+   distinctly from error because, for a terminating operation, an
+   already-terminal member is a satisfied objective, not a failure.
+   After a partial failure the spent bulk token is not reusable; the
+   caller remediates with a fresh dry run over the same filter and a new
+   execute: members already transitioned then report already_terminal,
+   and only error members are retried.
+
+6.4.  Worked Example
+
+   Continuing Section 5.2, the responder revokes every Mission for the
+   compromised Subject in any state, so the filter omits state.  Dry-run
+   request body (transport and authentication as in Section 5.2):
+
+   {
+     "operation": "revoke",
+     "filter": {
+       "subject": { "iss": "https://idp.example.com",
+                    "sub": "user_3p2q8mN1a0kV7tR" }
+     },
+     "mode": "dry_run",
+     "reason": "IR-4192: subject credential compromise",
+     "nonce": "nonce_P9sB3xV7mK1tR6qZ"
+   }
+
+   Decoded dry-run response payload:
+
+   {
+     "iss": "https://as.example.com",
+     "aud": "client_secops-console",
+     "sub": "client_secops-console",
+     "nonce": "nonce_P9sB3xV7mK1tR6qZ",
+     "iat": 1793611800,
+     "exp": 1793611860,
+     "operation": "revoke",
+     "match_count": 3,
+     "bulk_token": "blk_7Nq4xW2rT9mK5vB8sD1zA6pY3cE0hJfL",
+     "bulk_token_expires_at": "2026-11-02T09:45:00Z"
+   }
+
+   The count is 3, more than the enumeration above: without state the
+   filter also matches a suspended and a completed Mission (revoke is
+   legal from suspended, so suspended Missions belong in the sweep).
+   The responder executes, re-sending the same operation and filter with
+   mode of execute, the bulk_token, the same reason, and a fresh nonce
+   (nonce_W2tN6bQ9kX4mV8rS).  Decoded manifest payload, with a partial
+   failure:
+
+   {
+     "iss": "https://as.example.com",
+     "aud": "client_secops-console",
+     "sub": "client_secops-console",
+     "nonce": "nonce_W2tN6bQ9kX4mV8rS",
+     "iat": 1793611980,
+     "exp": 1793612040,
+     "operation": "revoke",
+     "results": [
+       { "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+         "outcome": "applied" },
+       { "mission_id": "msn_6VbT1yHn4RwQk9x3zE8sC5j2MpDfL0G-",
+         "outcome": "already_terminal" },
+       { "mission_id": "msn_0JpW3xEr8KtNb5v2qC7mD4h1YsAgF9L-",
+         "outcome": "error",
+         "detail": "state store timeout" }
+     ]
+   }
+
+   One Mission was revoked, emitting its own lifecycle signal where
+   signals run; the completed Mission needed nothing; one failed.  The
+   responder re-runs the dry run over the same filter, reviews the new
+   count, and executes again: the revoked and completed members report
+   already_terminal and only the failed one is retried.
+
+7.  Error Responses
+
+   A wire error returns the matching HTTP status with a JSON object
+   [RFC8259] body carrying error, error_description, and nonce, as in
+   the status profile.  Per-Mission conditions during a bulk execute are
+   manifest outcomes (Section 6.3), never wire errors.  The codes:
+
+   +====================+======+=======================================+
+   | error              | HTTP | Description                           |
+   +====================+======+=======================================+
+   | invalid_request    | 400  | Malformed request: unknown            |
+   |                    |      | operation, unrecognized filter        |
+   |                    |      | member, invalid member                |
+   |                    |      | combination, or a cursor that does    |
+   |                    |      | not match its caller and filter.      |
+   +--------------------+------+---------------------------------------+
+   | invalid_bulk_token | 400  | The bulk token is missing,            |
+   |                    |      | expired, already used, issued to      |
+   |                    |      | another caller, or bound to a         |
+   |                    |      | different operation or filter.        |
+   +--------------------+------+---------------------------------------+
+   | filter_too_broad   | 400  | The filter matches more Missions      |
+   |                    |      | than the deployment's declared        |
+   |                    |      | bound for the requested operation.    |
+   +--------------------+------+---------------------------------------+
+   | unauthorized       | 401  | Request not authenticated.            |
+   +--------------------+------+---------------------------------------+
+   | forbidden          | 403  | Caller authenticated but not          |
+   |                    |      | authorized for the requested          |
+   |                    |      | operation or filter scope             |
+   |                    |      | (Section 3.2).                        |
+   +--------------------+------+---------------------------------------+
+   | rate_limited       | 429  | Caller is rate-limited.               |
+   +--------------------+------+---------------------------------------+
+   | unavailable        | 503  | The AS temporarily cannot serve       |
+   |                    |      | management requests.                  |
+   +--------------------+------+---------------------------------------+
+
+                                  Table 2
+
+   For rate_limited, the response SHOULD include a Retry-After header
+   [RFC9110] and a retry_after body member in seconds.
+
+8.  Incident Response Patterns
+
+   This section is non-normative.  Common incident shapes compose the
+   two operations directly:
+
+   *  *Compromised Subject.* Filter subject, enumerate to triage, then
+      bulk revoke (the worked examples above).
+
+   *  *Decommissioned client.* Filter client_id, bulk revoke; every
+      Mission the retired Agent submitted stops deriving.
+
+   *  *Key or approval-surface compromise.* Filter created_after and
+      created_before around the compromise window, bulk revoke; every
+      Mission approved while the surface was suspect is terminated,
+      regardless of Subject or client.
+
+   *  *Suspend-first triage.* Bulk suspend with suspend_until and
+      on_expiry of revoke, investigate, then selectively resume
+      individual Missions through the status profile's lifecycle
+      endpoint; anything not affirmatively cleared revokes itself at the
+      deadline.
+
+   What bulk revocation does and does not stop is the security model's
+   revocation-to-action latency table
+   ([I-D.draft-mcguinness-mission-security-model]): each revocation
+   stops new derivation at commit, while tokens already derived persist
+   until the tightest propagation layer the deployment runs cuts them
+   off.  Bulk management changes how many Missions one request can stop,
+   not how fast any one revocation propagates.
+
+9.  Deferred Management Capabilities
+
+   Approver transfer, re-anchoring a Mission's consent to a different
+   accountable party, is not defined here.  Administrative monotonic
+   narrowing, such as shortening a Mission's expires_at or retiring a
+   single Authority Set entry, is not defined here.  Cross-issuer
+   enumeration, one query spanning Missions held by multiple Mission
+   Issuers, is not defined here; a Management Client queries each issuer
+   it is authorized for separately.
+
+10.  Authorization Server Metadata
+
+   An AS that serves the Mission Management endpoint advertises it in
+   its Authorization Server metadata [RFC8414]:
+
+   mission_management_endpoint:  OPTIONAL.  A string containing a URL.
+      The URL of the Mission Management endpoint (Section 3).  Present
+      when the AS serves it.
+
+   Because management responses reuse the status profile's signing
+   discipline, an AS that publishes mission_management_endpoint MUST
+   also publish mission_status_signing_alg_values_supported
+   ([I-D.draft-mcguinness-oauth-mission-status]).
+
+   A standalone Mission Issuer (a Mission Authority Server
+   [I-D.draft-mcguinness-mission-authority-server]) MAY serve this
+   surface and, when it does, carries the same member with the same
+   semantics in its discovery document; Section 14 registers the member
+   in the Mission Authority Server Metadata registry.
+
+11.  Security Considerations
+
+   The security considerations of the issuance profile
+   [I-D.draft-mcguinness-oauth-mission] and the status profile
+   [I-D.draft-mcguinness-oauth-mission-status] apply.  This section
+   covers what is specific to fleet-scale management.
+
+11.1.  Blast Radius
+
+   This endpoint is the highest-blast-radius surface in this suite: one
+   authorized request can terminate or suspend every Mission in a filter
+   scope, and one enumeration can disclose a tenant's entire Mission
+   population.  Accordingly, the authentication floor of Section 3.1 is
+   at least the lifecycle endpoint's with a distinct management grant,
+   every call including every refusal is audited (Section 3.2), and
+   destructive operations are structurally two-step, since an execute
+   cannot exist without the dry run that pinned its membership.
+
+   A compromised Management Client is equivalent to an operator
+   compromise of the Mission Issuer's management plane: within its
+   filter scope it can enumerate at will and stop or suspend all
+   governed work.  It is a trusted-base component in the sense of the
+   security model ([I-D.draft-mcguinness-mission-security-model]); its
+   compromise is not prevented here, only bounded by the filter scope
+   and recorded by the mandatory audit trail.  Its abuse ceiling is
+   disclosure and work stoppage, not authority escalation: the surface
+   cannot create or widen a Mission, and the model's availability trade
+   applies, since a management credential converts into stopped governed
+   work rather than loosened enforcement.  Deployments SHOULD scope
+   Management Clients narrowly, protect their credentials as operator
+   credentials, and alert on anomalous management activity; where audit
+   transparency runs, management audit records are candidates for it
+   ([I-D.draft-mcguinness-mission-audit]).  The purpose and reason
+   strings that flow into those records, and into per-Mission evidence
+   and signals, are caller-written free text; audit systems MUST treat
+   them as untrusted input.
+
+11.2.  Enumeration-Oracle Inversion
+
+   The status profile makes Mission existence unobservable to the
+   unauthorized; this document makes it queryable by the authorized.
+   The two compose safely only if the boundary between them holds: a
+   deployment MUST NOT satisfy a management request with a credential
+   authorized only for status or lifecycle calls, and the filter-scope
+   check of Section 3.2 MUST run before any Mission data is touched, so
+   a refusal is data-independent.  The audit rule is the compensating
+   control for the disclosure this surface exists to provide.
+
+11.3.  Bulk Token Binding
+
+   The bulk token closes the review-to-execution gap, and each of its
+   bindings (Section 6.1) is load-bearing.  The membership binding
+   prevents time-of-review to time-of-execution growth: without it, a
+   filter re-evaluated at execute time could match Missions created
+   after the operator reviewed the dry-run count, so a reviewed "revoke
+   these 3" could silently become "revoke these 30".  Single use
+   prevents a captured or logged token from re-running the sweep; the
+   short lifetime bounds how stale the reviewed set can be; and the
+   caller binding keeps the reviewed set and the executing principal the
+   same.  An AS MUST enforce all four; a bulk token that survives reuse,
+   transfer, or filter substitution reduces the two-step exchange to a
+   one-step sweep.
+
+11.4.  General OAuth Security
+
+   This document inherits OAuth 2.0 Best Current Practice [RFC9700] for
+   the OAuth surfaces it composes with; implementers MUST follow current
+   OAuth security guidance.
+
+12.  Privacy Considerations
+
+   The privacy considerations of the issuance and status profiles apply.
+   This section covers what is specific to enumeration.
+
+   An enumeration response is PII-bearing by construction: each summary
+   row ties a Subject identifier to an Agent, a lifecycle state, and
+   activity timing, and a page of rows profiles a person's delegated
+   activity.  Minimization is structural: the summary shape of
+   Section 5.1 excludes the Mission Intent and the Authority Set, and
+   the filter-scope authorization of Section 3.2 bounds each Management
+   Client to the population it demonstrably needs.  A deployment SHOULD
+   grant tenant-wide filter scopes only to incident-response roles.
+
+   The audit records of Section 3.2 are doubly sensitive: they carry the
+   Subject identifiers of the Missions touched, and they record which
+   operator investigated which person, when, and why.  Deployments MUST
+   treat them as PII sinks under the issuance profile's privacy rules,
+   retain them for at least the audit horizon of the Missions they
+   concern ([I-D.draft-mcguinness-oauth-mission]), and restrict read
+   access to them at least as tightly as the management surface itself.
+
+13.  Conformance
+
+   This document is OPTIONAL.  An implementation that claims it conforms
+   in one of two roles.
+
+   A *Management-capable Mission Issuer* serves the Mission Management
+   endpoint over the authentication and authorization of Section 3.1 and
+   Section 3.2 with signed responses per Section 3; serves enumerate
+   (Section 5) and the bulk lifecycle operations (Section 6) with dry-
+   run-then-execute and the bulk token bindings of Section 6.1; applies
+   bulk transitions per Mission under the status profile's lifecycle
+   semantics, emitting per-Mission evidence and signals (Section 6.2);
+   audit-logs every management request per Section 3.2; and advertises
+   mission_management_endpoint (Section 10).
+
+   A *Management Client* authenticates per Section 3.1; sends the
+   REQUIRED purpose or reason on every request, identifying the operator
+   task rather than a fixed placeholder; obtains a fresh dry run for
+   every execute, surfacing the match_count to the deciding operator or
+   decision point before executing; and executes only bulk tokens from
+   dry runs it itself requested.
+
+   An implementation that supports neither role is unaffected and
+   remains a conforming issuance or status profile implementation.
+
+14.  IANA Considerations
+
+14.1.  Metadata Registrations
+
+   IANA is requested to register mission_management_endpoint in the
+   "OAuth Authorization Server Metadata" registry [RFC8414], and in the
+   "Mission Authority Server Metadata" registry established by
+   [I-D.draft-mcguinness-mission-authority-server], whose registration
+   policy is Specification Required; this document is the specification.
+   For both: Change Controller IETF; Reference this document,
+   Section 10.
+
+14.2.  Media Type
+
+   This document registers no media type.  A management response is
+   served as application/jwt [RFC7519] and identified by its JWS header
+   typ of mission-management-response+jwt (Section 3), a local-use type
+   identifier following this suite's convention for issuer-signed
+   artifacts that need a distinguishing typ without a dedicated media
+   type.
+
+Acknowledgments
+
+   The author thanks the implementers and reviewers of the Mission-Bound
+   Authorization work for the incident-response experience that shaped
+   this surface.
+
+References
+
+Normative References
+
+   [I-D.draft-mcguinness-oauth-mission]
+              McGuinness, K., "Mission-Bound Authorization for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-status]
+              McGuinness, K., "Mission Status and Lifecycle for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-status.html>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC3339]  Klyne, G. and C. Newman, "Date and Time on the Internet:
+              Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
+              <https://www.rfc-editor.org/rfc/rfc3339>.
+
+   [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
+              Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
+              2015, <https://www.rfc-editor.org/rfc/rfc7515>.
+
+   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
+              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7519>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC8259]  Bray, T., Ed., "The JavaScript Object Notation (JSON) Data
+              Interchange Format", STD 90, RFC 8259,
+              DOI 10.17487/RFC8259, December 2017,
+              <https://www.rfc-editor.org/rfc/rfc8259>.
+
+   [RFC8414]  Jones, M., Sakimura, N., and J. Bradley, "OAuth 2.0
+              Authorization Server Metadata", RFC 8414,
+              DOI 10.17487/RFC8414, June 2018,
+              <https://www.rfc-editor.org/rfc/rfc8414>.
+
+   [RFC9325]  Sheffer, Y., Saint-Andre, P., and T. Fossati,
+              "Recommendations for Secure Use of Transport Layer
+              Security (TLS) and Datagram Transport Layer Security
+              (DTLS)", BCP 195, RFC 9325, DOI 10.17487/RFC9325, November
+              2022, <https://www.rfc-editor.org/rfc/rfc9325>.
+
+Informative References
+
+   [I-D.draft-mcguinness-mission-audit]
+              McGuinness, K., "Mission Audit Transparency", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-audit.html>.
+
+   [I-D.draft-mcguinness-mission-authority-server]
+              McGuinness, K., "Mission Authority Server", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-authority-server.html>.
+
+   [I-D.draft-mcguinness-mission-security-model]
+              McGuinness, K., "Mission Security Model", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-security-model.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-child-delegation]
+              McGuinness, K., "Mission Child Delegation for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-child-
+              delegation.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-expansion]
+              McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-expansion.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-signals]
+              McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-
+              signals.html>.
+
+   [RFC9110]  Fielding, R., Ed., Nottingham, M., Ed., and J. Reschke,
+              Ed., "HTTP Semantics", STD 97, RFC 9110,
+              DOI 10.17487/RFC9110, June 2022,
+              <https://www.rfc-editor.org/rfc/rfc9110>.
+
+   [RFC9700]  Lodderstedt, T., Bradley, J., Labunets, A., and D. Fett,
+              "Best Current Practice for OAuth 2.0 Security", BCP 240,
+              RFC 9700, DOI 10.17487/RFC9700, January 2025,
+              <https://www.rfc-editor.org/rfc/rfc9700>.
+
+Author's Address
+
+   Karl McGuinness
+   Independent
+   Email: public@karlmcguinness.com
