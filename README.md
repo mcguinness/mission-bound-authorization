@@ -178,7 +178,8 @@ Each draft is optional on its own, but the properties many readers
 assume from "Mission-bound agents" (action-time checks, prompt stop,
 unwinding, consent evidence) only arrive when several are deployed
 together. Most agent deployments therefore want a bundle, not the core
-alone. These bundles name what to deploy for a given goal. The short
+alone. These bundles name what to deploy for a given goal; the
+Architecture document defines them citably as the Adoption Ladder. The short
 names in the table are the drafts' nicknames; each maps to a document
 described under "The documents" below (mission is the core; the rest
 are the companion profiles of the same names).

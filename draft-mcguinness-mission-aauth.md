@@ -301,11 +301,9 @@ A Mission-Bound Person Server MUST create a Mission record, as the
 issuance profile's Mission Record section defines it, for every
 mission it approves, with `issuer` equal to the `approver` URL. The
 blob MUST include a `mission_record` member: a JSON object carrying
-the record's immutable members, `id`, `issuer`,
-`intent`, `authority_set`, `authority_hash`, `intent_hash`,
-`subject`, `approver`, `client_id`, `policy_version`,
-`approval_event_id`, `created_at`, and `expires_at`, each as the
-issuance profile defines it. The record's `state` MUST NOT appear in
+every immutable member of the Mission record, each as the issuance
+profile's Mission Record section defines it; that section's member
+list is authoritative and is not restated here. The record's `state` MUST NOT appear in
 the blob: the blob is immutable under `s256`, and state is served by
 the lifecycle surfaces ({{lifecycle}}).
 
