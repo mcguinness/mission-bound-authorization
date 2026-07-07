@@ -197,7 +197,13 @@ is the standalone binding, the AS-optional
 deployment mode: Mission governance and per-action enforcement with no
 change to the deployment's Authorization Server, forgoing the
 Mission-bound credentials and issuance gating that only the issuance
-profile provides.
+profile provides. Beyond a single-AS workaround, the Mission
+Authority Server is the standalone Mission Issuer for an estate whose
+task governance must span many Authorization Servers, SaaS systems,
+APIs, local tools, and agent runtimes at once: a control plane for
+approved-task authority over an unchanged OAuth estate. This document
+defines a deployable conformance floor and, above it, an Enterprise
+Mission Authority Profile for that role.
 
 --- middle
 
@@ -236,11 +242,19 @@ deployment that changes its AS gets Mission-bound credentials and
 issuance gating, which the MAS mode does not provide
 ({{limitations}}). The MAS is nonetheless a peer binding, not a
 staging area: decoupling governance from token issuance is an
-architectural choice some deployments make deliberately and keep. For
-deployments that want Mission-bound tokens later, the path is smooth:
-the record, anchors, and lifecycle a MAS operates are the issuance
-profile's own, so moving issuance into the AS carries them over
-unchanged.
+architectural choice some deployments make deliberately and keep.
+Lacking a Mission-bound credential is not the same as lacking
+strategic value. An enterprise governing agent tasks across many
+Authorization Servers, SaaS tenants, APIs, and tool gateways needs
+one place that holds the approved task, its lifecycle, and its
+authority, independent of which system issued a given token; a
+central MAS can be that place, and can remain the long-term
+architecture even after some Authorization Servers become
+Mission-aware. For deployments that want Mission-bound tokens on a
+particular AS later, the path is smooth: the record, anchors, and
+lifecycle a MAS operates are the issuance profile's own, so moving
+issuance into that AS carries them over unchanged, while the MAS
+continues to govern the rest of the estate.
 
 ## Applicability
 
@@ -1367,6 +1381,146 @@ A **Mission-joining PDP**:
 - when the AuthZEN binding is in use, emits Decision Evidence per
   {{I-D.draft-mcguinness-mission-authzen}}, recording the Mission
   reference the join was verified against.
+
+# The Enterprise Mission Authority Profile {#enterprise-profile}
+
+The conformance floor above makes a MAS deployable. This profile is
+the operating profile for a MAS used as an estate's Mission control
+plane: it turns the floor's SHOULDs and OPTIONALs into the guarantees
+an enterprise deployment needs. A deployment claims the Enterprise
+Mission Authority Profile only when all of the following hold; it maps
+to the family's MAS-Joined Governance tier raised to Runtime-Enforced
+with the obligations below ({{I-D.draft-mcguinness-mission-architecture}}).
+
+- **Status and lifecycle.** The MAS MUST serve the Mission Status
+  operation and the Mission Lifecycle endpoint with signed responses
+  ({{lifecycle-and-state}}), so state and the kill switch are
+  available estate-wide.
+- **Active freshness.** For the high-consequence action classes, the
+  MAS-served state MUST be an active freshness source with a published
+  staleness bound, meeting the runtime profile's requirement for those
+  classes ({{I-D.draft-mcguinness-mission-runtime}}); token-lifetime
+  expiry alone does not qualify.
+- **Join Assertion.** The MAS MUST offer the Mission Join Assertion
+  ({{join-assertion}}), and for the high-consequence classes the PDP
+  MUST require one: the mapping join ({{mission-join}}) is the baseline
+  compatibility mode, and the Join Assertion is the enterprise mode,
+  because it centralizes subject and client mapping at the MAS, binds
+  the proof to one token digest and key thumbprint, and produces audit
+  evidence rather than leaving each PDP to maintain mapping tables.
+- **Instance-bound joins.** Where the acting credential carries a
+  client-instance identity
+  ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}), a
+  high-consequence join MUST bind (`subject`, `client`, `instance`),
+  not (`subject`, `client`), so a single workload joins rather than
+  every workload sharing a gateway `client_id`.
+- **Runtime enforcement.** Consequential actions MUST be enforced
+  under the runtime profile and its AuthZEN binding
+  ({{I-D.draft-mcguinness-mission-authzen}}), with documented PEP
+  coverage published in the runtime profile's Enforcement Scope
+  Statement.
+- **Audit evidence.** Joins and decisions MUST produce runtime
+  evidence retained for the audit horizon
+  ({{I-D.draft-mcguinness-mission-runtime}}).
+
+## The Enterprise Mapping Contract {#mapping-contract}
+
+The dominant MAS risk is a coarse or drifting join: shared
+`client_id` values, many-to-one directory mappings, and workload
+identity that the join collapses ({{join-spoofing}}). An enterprise
+MAS MUST publish a mapping contract stating, for the joins it
+performs:
+
+- the subject namespace mapping (how a credential's authenticated
+  subject maps to the Mission's `subject`);
+- the client namespace mapping (how a credential's client maps to the
+  Mission's `client_id`);
+- the delegate policy applied to `act`-chain actors;
+- whether client-instance identity is supported and required;
+- a mapping version identifier, so a mapping change is detectable;
+- an audit record for each mapping decision; and
+- the failure semantics, which MUST fail closed with `mission_mismatch`
+  on any unresolved or ambiguous mapping.
+
+## Policy View Distribution {#policy-distribution}
+
+An enterprise MAS MAY serve audience-scoped Authority Set views, or
+the runtime profile's materialized policy view
+({{I-D.draft-mcguinness-mission-runtime}}), to the PDPs that enforce
+for each audience, rather than each PDP resolving full Mission state
+per action. This is what makes the MAS the estate's approved-task
+authority distribution point: it distributes bounded, audience-scoped
+authority derived from the Mission, not tokens. The view is served
+under the Mission Status operation's authentication and anti-oracle
+rules, carries the Mission's `authority_hash` as its consent anchor,
+and does not widen authority beyond the Authority Set.
+
+# Deployment {#deployment}
+
+This section is non-normative. It shows where a MAS lands in a real
+estate and how a deployment adopts it incrementally.
+
+## Topology {#deployment-topology}
+
+A typical MAS deployment runs the MAS beside the existing identity
+provider and Authorization Server, changing neither:
+
+- the MAS records Missions, runs approvals, operates the lifecycle,
+  and signs Mission Status;
+- a PEP at the enforcement boundary (an API gateway, a service-mesh
+  sidecar, an MCP or tool gateway, a SaaS connector, a workflow
+  orchestrator, or a legacy-API wrapper) presents the Mission
+  reference and calls a PDP before each consequential action;
+- the PDP runs the runtime profile's decision contract and its
+  AuthZEN binding, drawing authority from the MAS-served Authority Set
+  or a materialized policy view ({{policy-distribution}});
+- the MAS mints a Join Assertion after introspecting the presented
+  token, so the PDP verifies one signed proof rather than a mapping
+  table; and
+- runtime decision and execution evidence flows to the deployment's
+  audit sink.
+
+## Connector Patterns {#deployment-connectors}
+
+The PEP is wherever consequential effects can be refused before they
+happen. Common placements, all non-normative:
+
+- **API gateway PEP**: refuses at the gateway in front of a protected
+  API.
+- **Service-mesh sidecar PEP**: refuses at the sidecar for
+  service-to-service calls.
+- **SaaS connector PEP**: refuses in the connector mediating a SaaS
+  API.
+- **MCP or tool-server PEP**: refuses at the tool boundary an agent
+  invokes.
+- **Workflow or orchestrator PEP**: refuses at the step boundary of a
+  governed workflow.
+- **Legacy-API wrapper PEP**: refuses in a wrapper fronting a system
+  that cannot itself enforce.
+
+Each is credible only to the extent it has no unmediated bypass, which
+the runtime profile's Enforcement Scope Statement must state
+({{I-D.draft-mcguinness-mission-runtime}}).
+
+## Progressive Adoption {#deployment-adoption}
+
+A MAS is adopted in phases, each independently useful:
+
+1. The MAS records Missions and approvals: governance and audit of
+   what tasks were approved, with no enforcement change yet.
+2. Mission Status and lifecycle become the estate-wide kill switch:
+   consumers fail safe on non-`active` state.
+3. PEP/PDP runtime enforcement gates consequential actions per the
+   runtime profile.
+4. Join Assertions and instance-bound joins harden the join for the
+   high-consequence classes (the Enterprise profile).
+5. Where a particular AS later becomes Mission-aware, it adds
+   Mission-bound tokens and issuance gating for its own resources,
+   while the MAS record, lifecycle, and authority model continue to
+   govern the rest of the estate.
+
+A deployment stops at the phase its risk warrants; nothing above the
+floor is required to begin.
 
 # Security Considerations
 
