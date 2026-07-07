@@ -37,6 +37,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-architecture:
+    title: "Mission-Bound Authorization Architecture"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-progressive:
     title: "Mission Progressive Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
@@ -627,6 +635,21 @@ The token lifetime and introspection layers are the issuance profile's
 as their own profile defines. A deployment reads the row for the
 mechanism it runs, or the tightest of several, to state how long a
 revoked Mission can still act.
+
+The same window, read per assurance tier
+({{I-D.draft-mcguinness-mission-architecture}}) and per what it stops:
+
+| Tier | Further issuance | Cached token use | Runtime action | Background work |
+|---|---|---|---|---|
+| Baseline Issuance | stopped at once | until token `exp` | not gated | not gated |
+| State-Aware Reliance | stopped at once | within staleness bound | not gated | not gated |
+| Runtime-Enforced | stopped at once | stopped for mediated actions | stopped within freshness bound | only if the harness re-checks |
+| Governed / Compromise-Resistant | stopped at once | stopped | stopped within freshness bound | stopped on resume re-check |
+
+Background work is bounded only where the harness re-checks Mission
+state on resume, retry, and dispatch
+({{I-D.draft-mcguinness-mission-harness}}); without it, a resumed job
+acts on the authority its cached credential still carries.
 
 # Documenting the Trusted Base {#documenting}
 
