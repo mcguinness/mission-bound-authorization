@@ -80,6 +80,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-architecture:
+    title: "An Architecture for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -118,6 +126,9 @@ token pins the evaluated membership. The surface is management-plane
 and operator-facing: authorized for the existence knowledge the status
 profile's anti-oracle rules deny to ordinary consumers, audited on
 every call, and never exposed to the agents whose Missions it manages.
+Fleet enumeration and bulk lifecycle are the operator surface of the
+family's delegated-authority layer: how an estate administers
+delegated authority at scale.
 It is optional; a deployment that does not adopt it is unaffected.
 
 --- middle

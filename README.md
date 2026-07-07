@@ -6,9 +6,11 @@ This is the working area for a family of individual Internet-Drafts
 that define the **Mission**: a durable, approval-backed *governance*
 object for authorization. A Mission is not a new way to express
 authority; it is the approved task, with a lifecycle, that authority is
-derived for, bound to, and gated on. The model is substrate-neutral;
-**OAuth 2.0 is its flagship binding**, and a standalone binding runs
-without touching an existing Authorization Server.
+derived for, bound to, and gated on. The model is substrate-neutral,
+with three peer bindings: **OAuth 2.0** (the core), a **standalone
+Mission Authority Server** that runs beside an unchanged Authorization
+Server, and the **AAuth Person Server** hosting that protocol's native
+missions.
 
 **Start with the Architecture document and the OAuth core.** Everything
 else is optional companion work, and the minimal implementation below
@@ -55,6 +57,14 @@ Person Server issues or gates every AAuth auth token, issuance gating
 holds there too. In all three, authority only narrows as it flows down
 to derived and delegated credentials; widening requires a fresh
 approval.
+
+Together the drafts define a **delegated-authority layer**: durable
+approved-task objects with lifecycle, bounded authority, runtime
+enforcement, delegation, evidence, and management surfaces. The three
+bindings are peer entry points into that layer, and the Mission
+Authority Server is its control plane for estates whose task
+governance spans many issuers, SaaS systems, APIs, tools, and agent
+runtimes at once.
 
 The **core** defines the model and its OAuth 2.0 binding. Everything
 else is an OPTIONAL companion profile that layers on without changing
@@ -196,7 +206,7 @@ below the table.
 | **High-Assurance Agent** | Governed Agent + mediated custody, no unmediated path, action-bound approval, active freshness | Resistance to a compromised agent: the runtime profile's named agent-compromise-resistant enforcement and trifecta containment claims (see the note below the table), optionally bound to execution-environment attestation. |
 
 The model deploys through three bindings. The OAuth binding is the
-normative adoption path: the Authorization Server implements the
+core's own: the Authorization Server implements the
 issuance profile, tokens carry the `mission` claim, and issuance is
 gated on Mission state. The standalone binding runs a Mission
 Authority Server: a peer binding whose architectural rationale
@@ -204,7 +214,8 @@ Authority Server: a peer binding whose architectural rationale
 many ASes) can make it the right long-term shape for some
 deployments, and which also serves as the adoption bridge where the
 AS cannot yet change. The AAuth binding hosts AAuth's native missions
-at the Person Server. The Mission Mandate makes a Mission portable
+at the Person Server, which issues or gates every AAuth auth token,
+so issuance gating holds there as it does at a Mission-aware AS. The Mission Mandate makes a Mission portable
 across all of them: a signed, verifiable statement of what was
 approved, checkable by any party without a token exchange.
 
@@ -290,8 +301,8 @@ timelines.
 
 Together these drafts form the **Mission-Bound Authorization suite**.
 The suite takes its name from the model; the core's title,
-"Mission-Bound Authorization for OAuth 2.0", names its flagship
-binding. The companions refer to the core as the **"issuance profile"**
+"Mission-Bound Authorization for OAuth 2.0", names the binding the
+core defines. The companions refer to the core as the **"issuance profile"**
 (it governs issuance and derivation).
 
 The naming encodes a boundary. Profiles that extend the Authorization
