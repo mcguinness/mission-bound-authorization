@@ -639,6 +639,24 @@ them and adds nothing further.
 
 # Mission Layers {#layers}
 
+One tension organizes the whole family. A Mission commits its
+authority and intent once, at approval, but an agent's work is
+open-ended: the actions a task will take are not known when it is
+approved. "Reconcile Q3 invoices" must authorize reading any invoice
+and posting any adjustment under the cap, because the specific ones
+cannot be enumerated in advance. So the Authority Set an Approver
+consents to is a **capability envelope, not a task specification**,
+and the gap between that envelope and what a given run actually does
+is where agent risk lives. Every layer below is a lever that narrows
+that gap: constraint-bounding and the subset rule shrink the envelope
+at issuance; runtime enforcement checks each action against it at the
+point of use; action-bound approval re-consents the highest-consequence
+actions with their concrete parameters; progressive authorization
+trades many increment approvals for one bounded ceiling; metering caps
+cumulative consumption; and completion retires authority as the task
+finishes. The family is that set of levers; no single one closes the
+gap, and a deployment composes the ones its risk warrants.
+
 The family organizes along a verb spine: each layer answers one
 question, sits on one trust boundary, and is owned by named documents.
 
