@@ -24,8 +24,10 @@ Abstract
    and operator-facing: authorized for the existence knowledge the
    status profile's anti-oracle rules deny to ordinary consumers,
    audited on every call, and never exposed to the agents whose Missions
-   it manages.  It is optional; a deployment that does not adopt it is
-   unaffected.
+   it manages.  Fleet enumeration and bulk lifecycle are the operator
+   surface of the family's delegated-authority layer: how an estate
+   administers delegated authority at scale.  It is optional; a
+   deployment that does not adopt it is unaffected.
 
 About This Document
 
@@ -872,6 +874,12 @@ Normative References
               2022, <https://www.rfc-editor.org/rfc/rfc9325>.
 
 Informative References
+
+   [I-D.draft-mcguinness-mission-architecture]
+              McGuinness, K., "An Architecture for Mission-Bound
+              Authorization", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-mission-
+              architecture.html>.
 
    [I-D.draft-mcguinness-mission-audit]
               McGuinness, K., "Mission Audit Transparency", 2026,

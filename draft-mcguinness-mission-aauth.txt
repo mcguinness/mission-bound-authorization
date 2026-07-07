@@ -815,13 +815,14 @@ Table of Contents
       verification MUST serve this mode.
 
    These modes are the AAuth-specific verification axis; the family's
-   maturity ladder ([I-D.draft-mcguinness-mission-architecture]) layers
-   on top, and a runtime-enforced or agent-compromise-resistant AAuth
-   deployment claims the corresponding rung there rather than a binding-
-   specific name.  Full-provision Mission governance, which the PS gate
-   already provides (Section 6.1), reaches the Runtime-Enforced rung
-   only in the Resource-verifiable mode with the runtime decision
-   contract in force (Section 7.4).
+   Mission Assurance Levels
+   ([I-D.draft-mcguinness-mission-architecture]) layer on top, and a
+   runtime-enforced or agent-compromise-resistant AAuth deployment
+   claims the corresponding level there rather than a binding-specific
+   name.  Full-provision Mission governance, which the PS gate already
+   provides (Section 6.1), reaches the Runtime-Enforced level only in
+   the Resource-verifiable mode with the runtime decision contract in
+   force (Section 7.4).
 
 11.  Conformance
 
@@ -1074,9 +1075,9 @@ Table of Contents
               evidence.html>.
 
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
-              McGuinness, K., "Mission Cross-Domain Authorization for
-              OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
-              bound-authorization/draft-mcguinness-oauth-mission-cross-
+              McGuinness, K., "Mission Cross-Domain Projection for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-cross-
               domain.html>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]

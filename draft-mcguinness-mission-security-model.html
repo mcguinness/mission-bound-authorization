@@ -8,25 +8,25 @@
 <meta content="Karl McGuinness" name="author">
 <meta content="
        Mission-Bound Authorization for OAuth 2.0 and its companion profiles
-spread enforcement across several components: a Mission Issuer derives
-authority and, in the OAuth binding, gates issuance (an OAuth
-Authorization Server, or a standalone Mission Authority Server that
-records and serves Missions without issuing tokens); a Policy
-Enforcement Point and Policy Decision Point evaluate each action; a
-harness establishes a mediated execution environment; a consent
-rendering layer discloses authority to an Approver; an orchestrator
-unwinds in-flight work; and optional services report Mission state,
-adjudicate requested authority, log evidence, and report completion
-events. In cross-domain use, a resource-side Authorization Server
-joins this base. Each
-profile states its own security considerations, but no single document
-says which components must be trusted, what each assumes of the others,
-and how the compromise of each degrades the guarantees. This document
-provides that consolidated view. It is an Informational security model
-for the Mission suite: it defines the trusted base, the cross-cutting
-assumptions, and the consequence of each component's compromise, and it
-points to the normative security considerations of each profile rather
-than restating them. 
+spread enforcement across several components: a Mission Issuer, in one
+of three bindings (OAuth Authorization Server, standalone Mission
+Authority Server, AAuth Person Server), derives authority and, where
+it also issues tokens, gates issuance; a Policy Enforcement Point and
+Policy Decision Point evaluate each action; a harness establishes a
+mediated execution environment; a consent rendering layer discloses
+authority to an Approver; an orchestrator unwinds in-flight work; and
+optional services report Mission state, adjudicate requested
+authority, meter consumption, manage the Mission fleet, log evidence,
+and report completion events. In cross-domain use, a resource-side
+Authorization Server joins this base. Each profile states its own security
+considerations, but no single document says which components must be
+trusted, what each assumes of the others, and how the compromise of
+each degrades the guarantees. This document provides that consolidated
+view. It is an Informational security model for the Mission suite: it
+defines the trusted base, the cross-cutting assumptions, the named
+guarantees with the components each rests on, and the residual risks a
+deployment still owns, and it points to the normative security
+considerations of each profile rather than restating them. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="oauth" name="keyword">
@@ -1104,25 +1104,25 @@ svg {
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
 <p id="section-abstract-1">Mission-Bound Authorization for OAuth 2.0 and its companion profiles
-spread enforcement across several components: a Mission Issuer derives
-authority and, in the OAuth binding, gates issuance (an OAuth
-Authorization Server, or a standalone Mission Authority Server that
-records and serves Missions without issuing tokens); a Policy
-Enforcement Point and Policy Decision Point evaluate each action; a
-harness establishes a mediated execution environment; a consent
-rendering layer discloses authority to an Approver; an orchestrator
-unwinds in-flight work; and optional services report Mission state,
-adjudicate requested authority, log evidence, and report completion
-events. In cross-domain use, a resource-side Authorization Server
-joins this base. Each
-profile states its own security considerations, but no single document
-says which components must be trusted, what each assumes of the others,
-and how the compromise of each degrades the guarantees. This document
-provides that consolidated view. It is an Informational security model
-for the Mission suite: it defines the trusted base, the cross-cutting
-assumptions, and the consequence of each component's compromise, and it
-points to the normative security considerations of each profile rather
-than restating them.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+spread enforcement across several components: a Mission Issuer, in one
+of three bindings (OAuth Authorization Server, standalone Mission
+Authority Server, AAuth Person Server), derives authority and, where
+it also issues tokens, gates issuance; a Policy Enforcement Point and
+Policy Decision Point evaluate each action; a harness establishes a
+mediated execution environment; a consent rendering layer discloses
+authority to an Approver; an orchestrator unwinds in-flight work; and
+optional services report Mission state, adjudicate requested
+authority, meter consumption, manage the Mission fleet, log evidence,
+and report completion events. In cross-domain use, a resource-side
+Authorization Server joins this base. Each profile states its own security
+considerations, but no single document says which components must be
+trusted, what each assumes of the others, and how the compromise of
+each degrades the guarantees. This document provides that consolidated
+view. It is an Informational security model for the Mission suite: it
+defines the trusted base, the cross-cutting assumptions, the named
+guarantees with the components each rests on, and the residual risks a
+deployment still owns, and it points to the normative security
+considerations of each profile rather than restating them.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1259,12 +1259,17 @@ agent may be prompt-injected or compromised, and the suite's purpose is
 to bound what such an agent can do, not to make it trustworthy
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Bounding the agent
 means relying on other components: the Mission Issuer that derives
-authority and, in the OAuth binding, gates issuance (an Authorization
-Server or a standalone Mission Authority Server), the enforcement
+authority and, where it also issues tokens, gates issuance (an
+Authorization Server, a standalone Mission Authority Server, or an
+AAuth Person Server), the enforcement
 points that evaluate each action,
 the harness that removes unmediated paths, and a set of optional
-services. Those components are the <strong>trusted base</strong>: the parts that, if
-compromised, degrade or void the guarantees the suite otherwise provides.<a href="#section-1-1" class="pilcrow">¶</a></p>
+services. Those components are the <strong>trusted base</strong> of the family's
+delegated-authority layer: the parts that, if
+compromised, degrade or void the guarantees the suite otherwise
+provides. Everything on the other side of that line, the agent that
+executes the task and the shaper that authors its proposal, is
+untrusted (<a href="#untrusted-agent" class="auto internal xref">Section 5</a>).<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">Each profile documents the security considerations local to its own
 mechanism. What no single profile provides, and what a reviewer or a
 deploying operator needs, is the consolidated picture: the full trusted
@@ -1296,11 +1301,16 @@ requirement of its own.<a href="#section-2-1" class="pilcrow">¶</a></p>
       </h2>
 <p id="section-3-1">This document uses Mission, Mission Issuer (the Authorization Server
 in the OAuth binding; the Mission Authority Server in the standalone
-binding), Policy
+binding; the AAuth Person Server in the AAuth binding,
+<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>), Policy
 Enforcement Point (PEP), Policy Decision Point (PDP), Approver, Subject,
 agent, Authority Set, and Mission state as defined in
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>. It uses Mission Shaper as
+defined in <span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>, Management Client
+as defined in <span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>, and
+Mission Assurance Levels as defined in
+<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>.<a href="#section-3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-substrate">
@@ -1321,7 +1331,10 @@ profile's Mission binding establishment step
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> is the OAuth 2.0 binding of
 those primitives and the substrate the profiles' security
 considerations assume; a different binding re-derives only the
-substrate-specific entries of this model.<a href="#section-4-1" class="pilcrow">¶</a></p>
+substrate-specific entries of this model.
+<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span> consolidates the primitives
+a further binding provides and points at where each is normatively
+defined.<a href="#section-4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="untrusted-agent">
@@ -1361,6 +1374,16 @@ agent-compromise-resistant enforcement therefore isolates the mediating
 PEP and its key custody from agent-facing components; the harness profile
 requires this separation
 (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-4">The untrusted side extends to everything that authors the task. Where
+a Mission Shaper turns a prompt or an upstream trigger into a
+candidate Mission Intent
+(<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>), the shaper is client-side
+machinery on the agent's side of the trust boundary: its proposal
+reaches the Mission Issuer as untrusted input, authority is created
+solely by the issuer's validation and the approval event, and Shaping
+Evidence is inert audit material. A compromised or manipulated shaper
+can propose a hostile Mission; it cannot approve one, and what it
+proposed is what the derivation bounds and the Approver reads.<a href="#section-5-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="trusted-base">
@@ -1413,31 +1436,43 @@ join accepts
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.7">Policy Enforcement Point (PEP):</dt>
+<dt id="section-6-2.7">AAuth Person Server (AAuth binding):</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.8">
-          <p id="section-6-2.8.1">Sits at the last controllable boundary before an action and obtains a
+          <p id="section-6-2.8.1">When the AAuth binding is used, the AAuth Person Server implements
+the Mission Issuer role for that protocol's native missions, and it
+also issues or gates every AAuth auth token, so issuance gating
+holds at the PS as it does at the AS in the OAuth binding. Its
+compromise is Mission Issuer compromise plus token-issuer
+compromise: forged approvals, altered records, false state, and
+freely minted or ungated auth tokens
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-6-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.9">Policy Enforcement Point (PEP):</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.10">
+          <p id="section-6-2.10.1">Sits at the last controllable boundary before an action and obtains a
 permit before each consequential action; under mediated execution it
 holds the sender-constraint key. It must be at the last boundary and
 must not act without a permit; it assumes the harness leaves no
 unmediated path. A compromised PEP can decline to consult the PDP or
 ignore its decision; the suite does not prevent this, and evidence
 makes it detectable after the fact, not in the moment
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.8.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.9">Policy Decision Point (PDP):</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.10">
-          <p id="section-6-2.10.1">Evaluates each action against the Mission and returns a permit or deny.
+<dt id="section-6-2.11">Policy Decision Point (PDP):</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.12">
+          <p id="section-6-2.12.1">Evaluates each action against the Mission and returns a permit or deny.
 It must evaluate faithfully and fail closed; it assumes the inputs the
 PEP supplies are authentic. A compromised PDP can return arbitrary
 decisions; as with the PEP, evidence detects this after the fact but
 does not prevent it
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.10.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.11">Mission state source:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.12">
-          <p id="section-6-2.12.1">Reports current Mission state for the freshness the runtime layer
+<dt id="section-6-2.13">Mission state source:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.14">
+          <p id="section-6-2.14.1">Reports current Mission state for the freshness the runtime layer
 requires, whether by introspection, the Status surface, or pushed
 Signals. It must report accurately within the staleness bound and be
 authenticated and integrity-protected. A compromised or spoofed state
@@ -1446,46 +1481,79 @@ kill switch; the runtime layer fails closed when state cannot be
 established within the bound
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.12.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.13">Harness:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.14">
-          <p id="section-6-2.14.1">Establishes the execution environment in which governed work has no
+<dt id="section-6-2.15">Harness:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.16">
+          <p id="section-6-2.16.1">Establishes the execution environment in which governed work has no
 unmediated path to the actions the PEP mediates, and binds sessions,
 queues, and caches to Mission state. It must ensure no unmediated
 egress and must re-check state. A compromised harness can hand the
 agent an unmediated path, which defeats mediated execution for the
 classes that path reaches
-(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-6-2.14.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-6-2.16.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.15">Orchestrator:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.16">
-          <p id="section-6-2.16.1">When multi-step unwinding is used, it drives compensation of in-flight
+<dt id="section-6-2.17">Orchestrator:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.18">
+          <p id="section-6-2.18.1">When multi-step unwinding is used, it drives compensation of in-flight
 work after a Mission stops. It must derive each step's reversibility
 class from a trusted source, and must compensate only under a
 documented authority basis: resource policy (<code>resource_policy</code>) or a
 separate remedial Mission
 (<span>[<a href="#I-D.draft-mcguinness-mission-orchestration" class="cite xref">I-D.draft-mcguinness-mission-orchestration</a>]</span>). Its compromise
 converts the kill switch into a channel for unauthorized remedial
-actions, driving compensating writes under the guise of unwinding.<a href="#section-6-2.16.1" class="pilcrow">¶</a></p>
+actions, driving compensating writes under the guise of unwinding.<a href="#section-6-2.18.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.17">Consent rendering layer:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.18">
-          <p id="section-6-2.18.1">Renders the approved authority to the Approver at the approval event.
+<dt id="section-6-2.19">Metering state:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.20">
+          <p id="section-6-2.20.1">When consumption metering is used, the PDP and the metering state
+behind it enforce the consented consumption bounds by atomic
+check-and-decrement, with reserve-and-commit postures and duration
+leases. The metering must count every governed action exactly once
+across the deployment's decision points, and a deployment that
+cannot meter a consented bound must refuse rather than render it as
+enforced. Its compromise voids the volume bound but not the
+authority bound: a drained, reset, or bypassed meter lets a Mission
+consume without limit inside its approved scope, and a falsely
+exhausted meter is a denial of service. Under a multi-PDP topology
+the published consistency bound is the honest statement of the
+undercounting exposure
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-6-2.20.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.21">Management Client and endpoint:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.22">
+          <p id="section-6-2.22.1">When fleet management is used, an authorized Management Client
+enumerates the Missions a Mission Issuer holds and applies bulk
+lifecycle operations through a dry-run-then-execute exchange whose
+bulk token pins the evaluated membership. The endpoint must
+authenticate and authorize the Management Client, audit every call,
+and never expose the surface to the agents whose Missions it
+manages. Its compromise cannot mint authority, but it reaches the
+whole fleet: bulk revoke or suspend is fleet-wide work stoppage,
+bulk resume re-enables suspended authority wholesale, and
+enumeration yields the existence knowledge the status profile's
+anti-oracle rules deny to ordinary consumers
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>).<a href="#section-6-2.22.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.23">Consent rendering layer:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.24">
+          <p id="section-6-2.24.1">Renders the approved authority to the Approver at the approval event.
 It must render faithfully what is committed. A compromised renderer can
 display something other than the committed disclosure; the rendering
 assurance ladder bounds this by degree, up to an Approver authenticator
 signing the disclosure commitment, but no server-side commitment proves
 what a human perceived
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-6-2.18.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-6-2.24.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.19">Access-request and approval workflow:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.20">
-          <p id="section-6-2.20.1">When requestable denials are used, this workflow adjudicates an agent's
+<dt id="section-6-2.25">Access-request and approval workflow:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.26">
+          <p id="section-6-2.26.1">When requestable denials are used, this workflow adjudicates an agent's
 request for authority it discovers it needs, integrating the AuthZEN
 Access Request and Approval Profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). It must not
@@ -1493,27 +1561,27 @@ auto-approve a high-consequence escalation without an independent
 approver. A compromised approval service can grant escalations the
 model would otherwise route to a human, so it is in the trusted base
 wherever the access-request flow is enabled
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.20.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.26.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.21">Transparency Service:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.22">
-          <p id="section-6-2.22.1">When audit transparency is used, it is an append-only, non-equivocating
+<dt id="section-6-2.27">Transparency Service:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.28">
+          <p id="section-6-2.28.1">When audit transparency is used, it is an append-only, non-equivocating
 log that issues inclusion receipts. It must not equivocate. A single
 compromised service can present different histories to different
 auditors; registering with more than one service makes equivocation
 detectable, but the non-equivocation guarantee is per-service
-(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-6-2.22.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-6-2.28.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.23">Event source:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.24">
-          <p id="section-6-2.24.1">When completion or trigger-based discharge is used, it reports whether
+<dt id="section-6-2.29">Event source:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.30">
+          <p id="section-6-2.30.1">When completion or trigger-based discharge is used, it reports whether
 a completion event has occurred. It must report accurately and be
 authenticated. A compromised event source can keep a discharged entry
 derivable or falsely discharge one; the Authorization Server fails
 closed when it cannot determine the event status
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-completion" class="cite xref">I-D.draft-mcguinness-oauth-mission-completion</a>]</span>).<a href="#section-6-2.24.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-completion" class="cite xref">I-D.draft-mcguinness-oauth-mission-completion</a>]</span>).<a href="#section-6-2.30.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1548,7 +1616,11 @@ a trusted component cannot establish an authority-relevant fact it
 needs (Mission state, a completion event, a verifiable decision),
 the relying component refuses rather than proceeds; a deployment
 that fails open at any such point forfeits the guarantee that point
-protects. Unavailability of inert evidence (a consent-evidence
+protects. The same principle governs capability gaps: a consented
+consumption bound the deployment cannot meter is refused, not
+rendered as enforced
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). Unavailability of
+inert evidence (a consent-evidence
 retrieval, the transparency feed, a Mandate) is recorded and is
 never by itself grounds for refusal
 (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>); tampered inert evidence
@@ -1586,17 +1658,77 @@ fixed at the approval event.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p
       <h2 id="name-what-the-model-does-and-doe">
 <a href="#section-8" class="section-number selfRef">8. </a><a href="#name-what-the-model-does-and-doe" class="section-name selfRef">What the Model Does and Does Not Guarantee</a>
       </h2>
-<p id="section-8-1">Given an intact trusted base, the model guarantees that a compromised or
-injected agent cannot exceed the approved Authority Set and cannot move
-authority by influencing inert intent; authority grows only by a fresh
-approval that supersedes the prior Mission
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), not by agent action.
-In a deployment that claims the runtime profile's
-agent-compromise-resistant enforcement
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), the model further
-guarantees that such an agent cannot unilaterally take a high-consequence
-action it does not hold a mediated credential for. In the base profiles
-two of the mechanisms behind that further guarantee (mediated
+<p id="section-8-1">Given an intact trusted base, the model's guarantees are these. Each
+is named, names the Mission Assurance Level
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>) at which it is earned,
+and names the components that must be intact for it to hold;
+<a href="#trusted-base" class="auto internal xref">Section 6</a> is the failure analysis of those dependencies, and
+<a href="#documenting" class="auto internal xref">Section 11</a> is where a deployment states which of them it claims.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-8-2">
+        <dt id="section-8-2.1">Bounded authority (Baseline Issuance):</dt>
+        <dd style="margin-left: 1.5em" id="section-8-2.2">
+          <p id="section-8-2.2.1">A compromised or injected agent cannot exceed the approved Authority
+Set and cannot move authority by influencing inert intent; authority
+grows only by a fresh approval that supersedes the prior Mission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), not by agent
+action. Rests on the Mission Issuer.<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-8-2.3">Kill switch (Baseline Issuance for issuance; Runtime-Enforced for action):</dt>
+        <dd style="margin-left: 1.5em" id="section-8-2.4">
+          <p id="section-8-2.4.1">Revoking or expiring a Mission stops further issuance at once and
+stops governed action within a window this model states precisely
+(<a href="#revocation-latency" class="auto internal xref">Section 10</a>). Rests on the Mission Issuer, the Mission
+state source, and, for action, the PEP and PDP.<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-8-2.5">Per-action enforcement (Runtime-Enforced):</dt>
+        <dd style="margin-left: 1.5em" id="section-8-2.6">
+          <p id="section-8-2.6.1">Every consequential action obtains a fresh permit against current
+Mission state and bound parameters, so an active Mission is not
+ambient standing authority. Rests on the PEP, the PDP, the state
+source, and the harness's no-unmediated-path condition.<a href="#section-8-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-8-2.7">Bounded consumption (Runtime-Enforced plus consumption metering):</dt>
+        <dd style="margin-left: 1.5em" id="section-8-2.8">
+          <p id="section-8-2.8.1">A Mission cannot consume beyond its consented bounds even inside its
+approved scope (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). Rests on
+the PDP, its metering state, and the PEP's settlement honesty.<a href="#section-8-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-8-2.9">Agent-compromise-resistant enforcement (High-Assurance Agent):</dt>
+        <dd style="margin-left: 1.5em" id="section-8-2.10">
+          <p id="section-8-2.10.1">A compromised agent cannot unilaterally take a high-consequence
+action it does not hold a mediated credential for
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Rests on PEP key
+custody, the agent and harness isolation boundary, and an
+active-freshness state source.<a href="#section-8-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-8-2.11">Trifecta containment (High-Assurance Agent):</dt>
+        <dd style="margin-left: 1.5em" id="section-8-2.12">
+          <p id="section-8-2.12.1">An injected agent cannot egress on the strength of untrusted content
+alone: least exposure and the harness taint rule are enforced as
+MUSTs, and the external-communication and external-commitment
+classes are fully mediated
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>). Rests on the harness and
+on PEP coverage of every egress channel.<a href="#section-8-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-8-2.13">Attributable action (any level, per the evidence deployed):</dt>
+        <dd style="margin-left: 1.5em" id="section-8-2.14">
+          <p id="section-8-2.14.1">What was proposed, approved, decided, and executed is recorded and,
+where audit transparency is used, tamper-evident
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). This is accountability,
+not prevention. Rests on the evidence producers and, for
+non-equivocation, the Transparency Service.<a href="#section-8-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-8-3">The strong claims are earned, not implied. In the base profiles two of
+the mechanisms behind agent-compromise-resistant enforcement (mediated
 credential custody and action-bound approval) are recommendations,
 not requirements, while active-state freshness for the
 high-consequence classes and the no-unmediated-path rule for mediated
@@ -1605,12 +1737,8 @@ leaves the recommendations as recommendations does not obtain the
 guarantee. This
 matches the suite's front-door framing: adopting the profiles does not by
 itself make a deployment resistant to a compromised agent. The model
-makes misuse bounded and, where evidence is produced, attributable. A
-deployment that additionally claims the runtime profile's trifecta
-containment enforces least exposure and the harness taint rule as
-MUSTs, so an injected agent cannot egress on the strength of
-untrusted content alone.<a href="#section-8-1" class="pilcrow">¶</a></p>
-<p id="section-8-2">It does not make a compromised trusted component safe. The compromise of
+makes misuse bounded and, where evidence is produced, attributable.<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">It does not make a compromised trusted component safe. The compromise of
 each component degrades a specific guarantee, as listed in
 <a href="#trusted-base" class="auto internal xref">Section 6</a>. It does not verify the agent's reasoning or the
 truthfulness of its outputs; semantic and intent verification are a
@@ -1619,8 +1747,8 @@ inherits the threat models of the substrates the companions profile
 (Token Exchange, Attenuating Agent Tokens, SCITT, Deferred Token
 Response), which those substrates own. <a href="#adversary-model" class="auto internal xref">Section 9</a> gives the
 per-adversary-move detail: what addresses each move, and the residual it
-leaves.<a href="#section-8-2" class="pilcrow">¶</a></p>
-<p id="section-8-3">"On behalf of" is not treated as a permission model. The family
+leaves.<a href="#section-8-4" class="pilcrow">¶</a></p>
+<p id="section-8-5">"On behalf of" is not treated as a permission model. The family
 splits what that phrase conflates: the Mission carries the approved
 task the agent pursues for the Subject; a derived token presents
 delegated authority without identity collapse, since <code>sub</code> remains
@@ -1629,7 +1757,7 @@ chain names who executed; and personal sanction is carried only by
 approval events (the approval event, action-bound approval), never
 inferred from token possession. Authority derived down this chain
 never exceeds its source (the subset rule), so broad "acting as"
-standing cannot be laundered out of a narrow approval.<a href="#section-8-3" class="pilcrow">¶</a></p>
+standing cannot be laundered out of a narrow approval.<a href="#section-8-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="adversary-model">
@@ -1638,7 +1766,9 @@ standing cannot be laundered out of a narrow approval.<a href="#section-8-3" cla
 <a href="#section-9" class="section-number selfRef">9. </a><a href="#name-adversary-model-and-coverag" class="section-name selfRef">Adversary Model and Coverage</a>
       </h2>
 <p id="section-9-1">The trusted base (<a href="#trusted-base" class="auto internal xref">Section 6</a>) is the component view; this is the
-adversary view. The adversary is assumed to control the agent, to reach
+adversary view. The adversary is assumed to control the agent and the
+task proposal it submits (including a shaper's output,
+<a href="#untrusted-agent" class="auto internal xref">Section 5</a>), to reach
 the content and inputs the agent processes (so it can attempt prompt
 injection), and to capture tokens in transit. The adversary is assumed
 not to break the cryptographic primitives, not to forge an
@@ -1668,6 +1798,16 @@ honest part: it is what a deploying party still owns.<a href="#section-9-2" clas
             <td class="text-left" rowspan="1" colspan="1">Prompt injection tries to widen authority</td>
             <td class="text-left" rowspan="1" colspan="1">Authority fixed at approval: <code>purpose</code> and <code>success_criteria</code> are inert, and <code>goal</code> shapes authority only through the pre-approval derivation the Approver consents to</td>
             <td class="text-left" rowspan="1" colspan="1">Injected text can still drive actions already in scope</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Agent escalates through the request path (expansion, requestable denial, deferred approval)</td>
+            <td class="text-left" rowspan="1" colspan="1">Every widening is a fresh approval event: expansion supersedes rather than amends, access-request adjudication routes high-consequence escalation to an independent approver, and an approval revision can only narrow (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval-revision" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval-revision</a>]</span>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Rubber-stamping: an over-asked Approver approves an escalation like a considered one (the consent-fatigue residual)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">In-scope volume abuse (budget drain, call flooding, egress volume)</td>
+            <td class="text-left" rowspan="1" colspan="1">Consumption metering where deployed: atomic check-and-decrement, reserve and commit, duration leases; a bound that cannot be metered is refused, not rendered as enforced</td>
+            <td class="text-left" rowspan="1" colspan="1">Without metering, volume inside the approved scope is bounded only by Mission expiry; with it, the published multi-PDP consistency bound</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Stolen or exfiltrated token</td>
@@ -1702,12 +1842,22 @@ honest part: it is what a deploying party still owns.<a href="#section-9-2" clas
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Exfiltration of private data (the third leg of the lethal trifecta)</td>
             <td class="text-left" rowspan="1" colspan="1">External communication is a gated consequential action; harness leaves no unmediated path; session taint downgrades egress after untrusted input (optional; recommended, not required); least-exposure context minimization narrows what an injected agent sees (runtime, harness); the composite is claimable as trifecta containment (runtime)</td>
-            <td class="text-left" rowspan="1" colspan="1">PEP-placement completeness; no information-flow control, so a sequence of in-scope steps can launder data</td>
+            <td class="text-left" rowspan="1" colspan="1">PEP-placement completeness; no information-flow control, so a sequence of in-scope steps can launder data; the quarantine pattern (separate ingestion and egress Missions) turns that limit into a deployment architecture (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Sub-agent fan-out abuse (Child Missions)</td>
+            <td class="text-left" rowspan="1" colspan="1">Child creation is issuer-adjudicated: strict-subset authority, expiry no later than the parent, fan-out controls, separate child actor identity, cascade termination when the parent ends, and child credentials never transit the parent</td>
+            <td class="text-left" rowspan="1" colspan="1">Breadth within the fan-out policy is the deployment's; a permissive delegation policy is consented but wide</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Offline sub-agent fan-out abuse</td>
             <td class="text-left" rowspan="1" colspan="1">Capability monotonicity (narrow-only) and the runtime kill-switch re-check on the carried chain</td>
             <td class="text-left" rowspan="1" colspan="1">Fan-out breadth is unobserved by the issuer; bounded by depth and policy, not by the issuer</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Operator surface abused (fleet management)</td>
+            <td class="text-left" rowspan="1" colspan="1">Management Client authorization; dry-run-then-execute with a bulk token pinning the evaluated membership; every call audited; never agent-facing</td>
+            <td class="text-left" rowspan="1" colspan="1">A compromised Management Client stops or resumes Missions fleet-wide and learns Mission existence; it cannot mint or widen authority</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Audit tampered, dropped, or reordered</td>
@@ -1727,7 +1877,7 @@ honest part: it is what a deploying party still owns.<a href="#section-9-2" clas
           </tr>
         </tbody>
       </table>
-<p id="section-9-4">Seven residuals are worth stating on their own, because they are the
+<p id="section-9-4">Eight residuals are worth stating on their own, because they are the
 limits most likely to matter and most often overstated away elsewhere:<a href="#section-9-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9-5.1">
@@ -1763,7 +1913,15 @@ entries, which is a design trade a deployment should make
 knowingly.<a href="#section-9-5.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-5.4">
-          <p id="section-9-5.4.1"><strong>Consent fatigue.</strong> The model multiplies approval moments: the
+          <p id="section-9-5.4.1"><strong>In-scope volume.</strong> The Authority Set bounds what a Mission may
+touch, not how much. Consumption metering
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>) is the extension that
+bounds volume; where it is not deployed, an agent whose every action
+individually passes is limited only by Mission expiry, and the first
+row of the coverage table is unbounded in this dimension.<a href="#section-9-5.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-5.5">
+          <p id="section-9-5.5.1"><strong>Consent fatigue.</strong> The model multiplies approval moments: the
 approval event, expansion approvals, action-bound approvals, and
 review queues. A deployment that over-asks trains its Approvers to
 rubber-stamp, and a rubber-stamped approval carries the same
@@ -1774,29 +1932,34 @@ highest-consequence actions
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and use a pre-consented
 ceiling with policy-adjudicated drawdown where growth is
 anticipated (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>),
-so the human moments that remain are rare enough to be read.<a href="#section-9-5.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-9-5.5">
-          <p id="section-9-5.5.1"><strong>Single-service equivocation.</strong> Transparency is non-equivocating only
-per service; a deployment that needs that property checked registers
-with more than one independent service.<a href="#section-9-5.5.1" class="pilcrow">¶</a></p>
+so the human moments that remain are rare enough to be read.<a href="#section-9-5.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-5.6">
-          <p id="section-9-5.6.1"><strong>Offline breadth.</strong> Offline attenuation
+          <p id="section-9-5.6.1"><strong>Single-service equivocation.</strong> Transparency is non-equivocating only
+per service; a deployment that needs that property checked registers
+with more than one independent service.<a href="#section-9-5.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-5.7">
+          <p id="section-9-5.7.1"><strong>Offline breadth.</strong> Offline attenuation
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>) bounds each child
 to a narrowing of its parent, but the issuer does not observe how many
 children are minted; breadth is bounded by depth and policy, not by the
-issuer.<a href="#section-9-5.6.1" class="pilcrow">¶</a></p>
+issuer. Child Delegation
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) is the
+observed alternative: creation is issuer-adjudicated, fan-out is
+controlled, and termination cascades. The trade between the two is
+availability against observation, and a deployment that chooses
+offline minting accepts the unobserved breadth.<a href="#section-9-5.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-5.7">
-          <p id="section-9-5.7.1"><strong>Availability.</strong> The model fails closed everywhere a trusted component
+        <li class="normal" id="section-9-5.8">
+          <p id="section-9-5.8.1"><strong>Availability.</strong> The model fails closed everywhere a trusted component
 cannot establish the fact it needs (<a href="#cross-cutting" class="auto internal xref">Section 7</a>), which trades
 availability for safety. An attacker who degrades a state source, an
 event stream, or a PDP does not gain unauthorized action, but converts
 the attack into work stoppage and, for in-flight work, unwind activity.
 A deployment provisions state-source, event-stream, and PDP
 availability accordingly, because under this model their outage stops
-governed work rather than loosening it.<a href="#section-9-5.7.1" class="pilcrow">¶</a></p>
+governed work rather than loosening it.<a href="#section-9-5.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -1857,14 +2020,17 @@ layer the deployment enforces for that class.<a href="#section-10-1" class="pilc
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) each tighten the window
 as their own profile defines. A deployment reads the row for the
 mechanism it runs, or the tightest of several, to state how long a
-revoked Mission can still act.<a href="#section-10-3" class="pilcrow">¶</a></p>
-<p id="section-10-4">The same window, read per maturity-ladder rung
+revoked Mission can still act. Where Child Delegation is used, a
+parent's terminal state cascades to its Child Missions
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), and each
+child's own window then runs under the same table.<a href="#section-10-3" class="pilcrow">¶</a></p>
+<p id="section-10-4">The same window, read per Mission Assurance Level
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>) and per what it stops:<a href="#section-10-4" class="pilcrow">¶</a></p>
 <table class="center" id="table-3">
         <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
 <thead>
           <tr>
-            <th class="text-left" rowspan="1" colspan="1">Rung</th>
+            <th class="text-left" rowspan="1" colspan="1">Level</th>
             <th class="text-left" rowspan="1" colspan="1">Further issuance</th>
             <th class="text-left" rowspan="1" colspan="1">Cached token use</th>
             <th class="text-left" rowspan="1" colspan="1">Runtime action</th>
@@ -1881,7 +2047,7 @@ revoked Mission can still act.<a href="#section-10-3" class="pilcrow">¶</a></p>
             <td class="text-left" rowspan="1" colspan="1">not gated</td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">Baseline + state-aware freshness</td>
+            <td class="text-left" rowspan="1" colspan="1">Baseline plus a freshness surface (the half-step)</td>
             <td class="text-left" rowspan="1" colspan="1">stopped at once</td>
             <td class="text-left" rowspan="1" colspan="1">within staleness bound</td>
             <td class="text-left" rowspan="1" colspan="1">not gated</td>
@@ -1895,10 +2061,17 @@ revoked Mission can still act.<a href="#section-10-3" class="pilcrow">¶</a></p>
             <td class="text-left" rowspan="1" colspan="1">only if the harness re-checks</td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">Governed / High-Assurance Agent</td>
+            <td class="text-left" rowspan="1" colspan="1">Governed Agent</td>
             <td class="text-left" rowspan="1" colspan="1">stopped at once</td>
-            <td class="text-left" rowspan="1" colspan="1">stopped</td>
+            <td class="text-left" rowspan="1" colspan="1">stopped for mediated actions</td>
             <td class="text-left" rowspan="1" colspan="1">stopped within freshness bound</td>
+            <td class="text-left" rowspan="1" colspan="1">stopped on resume re-check</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">High-Assurance Agent</td>
+            <td class="text-left" rowspan="1" colspan="1">stopped at once</td>
+            <td class="text-left" rowspan="1" colspan="1">stopped (mediated credential custody)</td>
+            <td class="text-left" rowspan="1" colspan="1">stopped within the active-freshness bound</td>
             <td class="text-left" rowspan="1" colspan="1">stopped on resume re-check</td>
           </tr>
         </tbody>
@@ -1926,6 +2099,14 @@ class, which components must be intact for the class's guarantee to hold.
 This documentation is what lets a relying party or auditor reason about
 the deployment's actual security posture rather than the model's
 idealized one.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-11-2">The Mission Deployment Profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>) is the artifact this
+statement belongs in: one publishable manifest that composes the
+per-layer scope statements and states its residual risks alongside its
+claims. The named guarantees of <a href="#guarantees" class="auto internal xref">Section 8</a> are the vocabulary for
+the claims, and the residuals of <a href="#adversary-model" class="auto internal xref">Section 9</a> are the
+vocabulary for <code>residual_risks</code>: a deployment names which residuals it
+accepts, which it mitigates, and how.<a href="#section-11-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="retention">
@@ -1937,7 +2118,10 @@ idealized one.<a href="#section-11-1" class="pilcrow">¶</a></p>
 several profiles retain independently: Consent Evidence
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>), runtime
 decision and execution evidence
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and, where audit
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), Shaping Evidence where a
+shaper is deployed (<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>),
+metering and settlement records where consumption metering is deployed
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>), and, where audit
 transparency is used, the receipts that stand over evidence a deployment
 may later erase (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). Each of
 those profiles anchors its retention on the Mission's audit horizon, the
@@ -1975,6 +2159,15 @@ Mission Identifier is a durable cross-audience correlator the suite
 acknowledges and does not yet narrow
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); unlinkable or per-audience
 presentation of Mission-bound authority is out of scope across the suite.
+Two of the newer surfaces concentrate observation and are handled
+accordingly: metering state is a fine-grained record of Mission
+activity over time, disclosed in decision responses only as refusals,
+never as remaining-balance oracles
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>), and the management
+endpoint holds the fleet-wide existence knowledge the status profile's
+anti-oracle rules deny to ordinary consumers, which is why it is
+authorized and audited as an operator surface
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>).
 Each profile's Privacy Considerations govern the data its own component
 handles.<a href="#section-14-1" class="pilcrow">¶</a></p>
 </section>
@@ -2011,9 +2204,13 @@ handles.<a href="#section-14-1" class="pilcrow">¶</a></p>
 <a href="#section-16.2" class="section-number selfRef">16.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-aauth">[I-D.draft-mcguinness-mission-aauth]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for AAuth"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization Architecture"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"An Architecture for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-audit">[I-D.draft-mcguinness-mission-audit]</dt>
         <dd>
@@ -2035,6 +2232,10 @@ handles.<a href="#section-14-1" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Mandate"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-metering">[I-D.draft-mcguinness-mission-metering]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consumption Metering"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-orchestration">[I-D.draft-mcguinness-mission-orchestration]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Orchestration and Unwinding"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html</a>&gt;</span>. </dd>
@@ -2042,6 +2243,14 @@ handles.<a href="#section-14-1" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-shaping">[I-D.draft-mcguinness-mission-shaping]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Intent Shaping"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-ai-agent-instance">[I-D.draft-mcguinness-oauth-ai-agent-instance]</dt>
         <dd>
@@ -2063,9 +2272,17 @@ handles.<a href="#section-14-1" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Deferred Approval for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-approval-revision">[I-D.draft-mcguinness-oauth-mission-approval-revision]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approval Revision for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval-revision.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval-revision.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-attenuation">[I-D.draft-mcguinness-oauth-mission-attenuation]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Offline Attenuation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-attenuation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-attenuation.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Child Delegation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-completion">[I-D.draft-mcguinness-oauth-mission-completion]</dt>
         <dd>
@@ -2082,6 +2299,10 @@ handles.<a href="#section-14-1" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-management">[I-D.draft-mcguinness-oauth-mission-management]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Management for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-management.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-management.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-progressive">[I-D.draft-mcguinness-oauth-mission-progressive]</dt>
         <dd>

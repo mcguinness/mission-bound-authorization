@@ -16,7 +16,9 @@ Mission it did not issue. The Mission Issuer projects audience-scoped
 Mission authority in a short-lived, sender-constrained cross-domain
 grant of the OAuth identity chaining architecture; the Resource AS
 validates the grant and mints its own local tokens, preserving the
-Mission binding unchanged. The Identity Assertion Authorization Grant
+Mission binding unchanged. The Mission record never crosses the
+boundary, and honoring it needs no session with the Mission Issuer.
+The Identity Assertion Authorization Grant
 (ID-JAG) is the recommended grant profile. Single-domain deployments
 of the base profile are unaffected by this document. 
     " name="description">
@@ -1104,7 +1106,9 @@ Mission it did not issue. The Mission Issuer projects audience-scoped
 Mission authority in a short-lived, sender-constrained cross-domain
 grant of the OAuth identity chaining architecture; the Resource AS
 validates the grant and mints its own local tokens, preserving the
-Mission binding unchanged. The Identity Assertion Authorization Grant
+Mission binding unchanged. The Mission record never crosses the
+boundary, and honoring it needs no session with the Mission Issuer.
+The Identity Assertion Authorization Grant
 (ID-JAG) is the recommended grant profile. Single-domain deployments
 of the base profile are unaffected by this document.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
@@ -1180,73 +1184,87 @@ of the base profile are unaffected by this document.<a href="#section-abstract-1
             <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-cross-domain-projection" class="internal xref">Cross-Domain Projection</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
-            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-audience-scoped-authority" class="internal xref">Audience-Scoped Authority</a></p>
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-what-crosses-the-trust-boun" class="internal xref">What Crosses the Trust Boundary</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-audience-scoped-authority" class="internal xref">Audience-Scoped Authority</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
-            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-issuing-the-cross-domain-gr" class="internal xref">Issuing the Cross-Domain Grant</a></p>
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-pre-established-trust" class="internal xref">Pre-Established Trust</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
-            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-validation-at-the-resource-" class="internal xref">Validation at the Resource AS</a></p>
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-issuing-the-cross-domain-gr" class="internal xref">Issuing the Cross-Domain Grant</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
-            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-introspection-at-a-resource" class="internal xref">Introspection at a Resource AS</a></p>
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-validation-at-the-resource-" class="internal xref">Validation at the Resource AS</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
-            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
-                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-cross-domain-revocation-lat" class="internal xref">Cross-Domain Revocation Latency</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
-                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-the-grant-at-the-trust-boun" class="internal xref">The Grant at the Trust Boundary</a></p>
-</li>
-            </ul>
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-error-responses" class="internal xref">Error Responses</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
-            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-introspection-at-a-resource" class="internal xref">Introspection at a Resource AS</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
-            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-authorization-server-metada" class="internal xref">Authorization Server Metadata</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
-            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
+                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-cross-domain-revocation-lat" class="internal xref">Cross-Domain Revocation Latency</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.2">
+                <p id="section-toc.1-1.12.2.2.1"><a href="#section-12.2" class="auto internal xref">12.2</a>.  <a href="#name-the-grant-at-the-trust-boun" class="internal xref">The Grant at the Trust Boundary</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
-            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-references" class="internal xref">References</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
-                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
-                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
-</li>
-            </ul>
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
-            <p id="section-toc.1-1.14.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-end-to-end-example-non-norm" class="internal xref">End-to-End Example (Non-Normative)</a></p>
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref">16</a>. <a href="#name-references" class="internal xref">References</a></p>
 <ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
-                <p id="section-toc.1-1.14.2.1.1"><a href="#appendix-A.1" class="auto internal xref">A.1</a>.  <a href="#name-stage-2-cross-domain-projec" class="internal xref">Stage 2: Cross-Domain Projection via ID-JAG (Between Domains)</a></p>
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.1">
+                <p id="section-toc.1-1.16.2.1.1"><a href="#section-16.1" class="auto internal xref">16.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2">
-                <p id="section-toc.1-1.14.2.2.1"><a href="#appendix-A.2" class="auto internal xref">A.2</a>.  <a href="#name-stage-3-the-resource-as-iss" class="internal xref">Stage 3: The Resource AS Issues a Local Access Token</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.3">
-                <p id="section-toc.1-1.14.2.3.1"><a href="#appendix-A.3" class="auto internal xref">A.3</a>.  <a href="#name-stage-4-the-resource-server" class="internal xref">Stage 4: The Resource Server Enforces</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.4">
-                <p id="section-toc.1-1.14.2.4.1"><a href="#appendix-A.4" class="auto internal xref">A.4</a>.  <a href="#name-stage-5-internal-call-conte" class="internal xref">Stage 5: Internal Call Context via Transaction Tokens</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.5">
-                <p id="section-toc.1-1.14.2.5.1"><a href="#appendix-A.5" class="auto internal xref">A.5</a>.  <a href="#name-stage-6-the-internal-servic" class="internal xref">Stage 6: The Internal Service Enforces</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.6">
-                <p id="section-toc.1-1.14.2.6.1"><a href="#appendix-A.6" class="auto internal xref">A.6</a>.  <a href="#name-what-rode-through-and-what-" class="internal xref">What Rode Through, and What Narrowed</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.2">
+                <p id="section-toc.1-1.16.2.2.1"><a href="#section-16.2" class="auto internal xref">16.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
 </li>
             </ul>
 </li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
-            <p id="section-toc.1-1.15.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-end-to-end-example-non-norm" class="internal xref">End-to-End Example (Non-Normative)</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.1">
+                <p id="section-toc.1-1.17.2.1.1"><a href="#appendix-A.1" class="auto internal xref">A.1</a>.  <a href="#name-stage-2-cross-domain-projec" class="internal xref">Stage 2: Cross-Domain Projection via ID-JAG (Between Domains)</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.2">
+                <p id="section-toc.1-1.17.2.2.1"><a href="#appendix-A.2" class="auto internal xref">A.2</a>.  <a href="#name-stage-3-the-resource-as-iss" class="internal xref">Stage 3: The Resource AS Issues a Local Access Token</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.3">
+                <p id="section-toc.1-1.17.2.3.1"><a href="#appendix-A.3" class="auto internal xref">A.3</a>.  <a href="#name-stage-4-the-resource-server" class="internal xref">Stage 4: The Resource Server Enforces</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.4">
+                <p id="section-toc.1-1.17.2.4.1"><a href="#appendix-A.4" class="auto internal xref">A.4</a>.  <a href="#name-stage-5-internal-call-conte" class="internal xref">Stage 5: Internal Call Context via Transaction Tokens</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.5">
+                <p id="section-toc.1-1.17.2.5.1"><a href="#appendix-A.5" class="auto internal xref">A.5</a>.  <a href="#name-stage-6-the-internal-servic" class="internal xref">Stage 6: The Internal Service Enforces</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.6">
+                <p id="section-toc.1-1.17.2.6.1"><a href="#appendix-A.6" class="auto internal xref">A.6</a>.  <a href="#name-what-rode-through-and-what-" class="internal xref">What Rode Through, and What Narrowed</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
+            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1279,6 +1297,17 @@ Mission. A <strong>Resource AS</strong> honors a Mission it did not issue: it
 validates the projected grant, applies its own local policy, and mints
 its own tokens, preserving the Mission binding unchanged. A Resource
 AS is never the Mission Issuer.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">Three properties define the projection. The Mission does not cross:
+the record, the Mission Intent, the full Authority Set, and lifecycle
+authority stay with the Mission Issuer, and the Resource AS receives
+only claim-shape facts and the entries scoped to it
+(<a href="#what-crosses" class="auto internal xref">Section 5</a>). Authority only narrows: a projection carries an
+audience-scoped subset, and nothing the Resource AS mints may widen
+it (<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>). Honoring is session-less: the
+Resource AS verifies pre-established issuer trust and a signature, so
+the Mission Issuer is never on the partner's request path; the cost
+of that independence is a bounded revocation lease
+(<a href="#cross-domain-revocation" class="auto internal xref">Section 12.1</a>).<a href="#section-1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="status">
@@ -1299,6 +1328,10 @@ Grant <span>[<a href="#I-D.draft-ietf-oauth-identity-assertion-authz-grant" clas
 working-group document. This document profiles them and cannot advance
 ahead of them; confining them here keeps the base profile free of
 in-progress cross-domain dependencies.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">The capability is orthogonal to the family's Mission Assurance Levels
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>): projection changes
+where a Mission is honored, not the strength at which either domain
+enforces it. Each trust domain runs at its own level.<a href="#section-2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conventions-and-terminology">
@@ -1330,7 +1363,7 @@ Issuer.<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
 <dt id="section-3-3.3">Cross-domain grant:</dt>
         <dd style="margin-left: 1.5em" id="section-3-3.4">
           <p id="section-3-3.4.1">The short-lived JWT authorization grant the Mission Issuer issues
-toward a Resource AS (<a href="#cross-domain-grant" class="auto internal xref">Section 6</a>), carrying
+toward a Resource AS (<a href="#cross-domain-grant" class="auto internal xref">Section 7</a>), carrying
 audience-scoped Mission authority and the <code>mission</code> claim. It is a
 Mission-bound token in the sense of the base profile.<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
 </dd>
@@ -1338,7 +1371,7 @@ Mission-bound token in the sense of the base profile.<a href="#section-3-3.4.1" 
 <dt id="section-3-3.5">Local token:</dt>
         <dd style="margin-left: 1.5em" id="section-3-3.6">
           <p id="section-3-3.6.1">An access token a Resource AS mints for its own resources from a
-cross-domain grant (<a href="#validation-at-resource-as" class="auto internal xref">Section 7</a>).<a href="#section-3-3.6.1" class="pilcrow">¶</a></p>
+cross-domain grant (<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>).<a href="#section-3-3.6.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1358,12 +1391,12 @@ issuer AS issues, through an <span>[<a href="#RFC8693" class="cite xref">RFC8693
 JWT authorization grant audienced to the target Authorization Server,
 which the client redeems there with the <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> JWT-bearer grant.<a href="#section-4-1" class="pilcrow">¶</a></p>
 <p id="section-4-2">This document calls that artifact the <strong>cross-domain grant</strong> and
-attaches Mission context to it (<a href="#cross-domain-grant" class="auto internal xref">Section 6</a>). The Identity
+attaches Mission context to it (<a href="#cross-domain-grant" class="auto internal xref">Section 7</a>). The Identity
 Assertion Authorization Grant (ID-JAG)
 <span>[<a href="#I-D.draft-ietf-oauth-identity-assertion-authz-grant" class="cite xref">I-D.draft-ietf-oauth-identity-assertion-authz-grant</a>]</span> is the
 <span class="bcp14">RECOMMENDED</span> profile of the cross-domain grant, and every example in
 this document uses it; another identity-chaining JWT authorization
-grant profile that meets the requirements of <a href="#cross-domain-grant" class="auto internal xref">Section 6</a>
+grant profile that meets the requirements of <a href="#cross-domain-grant" class="auto internal xref">Section 7</a>
         <span class="bcp14">MAY</span> be used instead. Where a requirement elsewhere in this document
 names the ID-JAG, it is illustrating with the recommended profile and
 applies equally to any conforming cross-domain grant.<a href="#section-4-2" class="pilcrow">¶</a></p>
@@ -1371,7 +1404,7 @@ applies equally to any conforming cross-domain grant.<a href="#section-4-2" clas
 grant, not merely <code>mission</code>-claim carriage: beyond attaching and
 validating Mission context, it imposes two security requirements on the
 grant for Mission-bound use, proof-of-possession and single use
-(<a href="#cross-domain-grant" class="auto internal xref">Section 6</a>, <a href="#validation-at-resource-as" class="auto internal xref">Section 7</a>). The grant's
+(<a href="#cross-domain-grant" class="auto internal xref">Section 7</a>, <a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>). The grant's
 own format, signing, and token-exchange envelope remain defined by the
 cross-domain grant profile (ID-JAG in the recommended case) and its
 underlying <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> and <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>; this document does not redefine
@@ -1384,45 +1417,133 @@ mint their own tokens for their resources. A Resource AS is never the
 Mission Issuer and <span class="bcp14">MUST NOT</span> create or alter a Mission.<a href="#section-4-4" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="audience-scope">
+<div id="what-crosses">
 <section id="section-5">
-      <h2 id="name-audience-scoped-authority">
-<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-audience-scoped-authority" class="section-name selfRef">Audience-Scoped Authority</a>
+      <h2 id="name-what-crosses-the-trust-boun">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-what-crosses-the-trust-boun" class="section-name selfRef">What Crosses the Trust Boundary</a>
       </h2>
-<p id="section-5-1">When projecting authority toward a Resource AS, the Mission Issuer
+<p id="section-5-1">The projection is exact about what leaves the issuing domain.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">Three values cross unchanged: <code>mission.id</code>, <code>mission.issuer</code>, and
+<code>authority_hash</code>, the claim-shape Mission binding every downstream
+token preserves (<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>). They are audit and
+correlation anchors, not credentials.<a href="#section-5-2" class="pilcrow">¶</a></p>
+<p id="section-5-3">Two things cross scoped: the audience-scoped Authority Set entries
+(<a href="#audience-scope" class="auto internal xref">Section 5.1</a>), and the Mission's Subject in the form the
+identity chaining architecture defines (<a href="#cross-domain-grant" class="auto internal xref">Section 7</a>).<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-4">Everything else stays home. The Mission record, the Mission Intent,
+the full Authority Set, and lifecycle authority remain with the
+Mission Issuer; a Resource AS never creates or alters a Mission
+(<a href="#model" class="auto internal xref">Section 4</a>). The grant is not refreshable and confers no standing
+authority in the partner domain: when it expires, the client returns
+to the issuer for a new one, which is how the issuer's lifecycle gate
+keeps reaching across the boundary.<a href="#section-5-4" class="pilcrow">¶</a></p>
+<p id="section-5-5">Nothing returns across the boundary at validation time. The Resource
+AS honors the grant from pre-established trust
+(<a href="#pre-established-trust" class="auto internal xref">Section 6</a>) and the signature alone; its assurance
+that the Mission was <code>active</code> is a lease bounded by the grant
+lifetime (<a href="#cross-domain-revocation" class="auto internal xref">Section 12.1</a>).<a href="#section-5-5" class="pilcrow">¶</a></p>
+<div id="audience-scope">
+<section id="section-5.1">
+        <h3 id="name-audience-scoped-authority">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-audience-scoped-authority" class="section-name selfRef">Audience-Scoped Authority</a>
+        </h3>
+<p id="section-5.1-1">When projecting authority toward a Resource AS, the Mission Issuer
 includes only the Authority Set entries whose <code>resource</code> that
 Resource AS is authoritative for, under the deployment's
-resource-to-AS mapping. Entries for other Resource ASes <span class="bcp14">MUST NOT</span> be
-disclosed.<a href="#section-5-1" class="pilcrow">¶</a></p>
+resource-to-AS mapping (<a href="#pre-established-trust" class="auto internal xref">Section 6</a>). Entries for other
+Resource ASes <span class="bcp14">MUST NOT</span> be disclosed.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="pre-established-trust">
+<section id="section-6">
+      <h2 id="name-pre-established-trust">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-pre-established-trust" class="section-name selfRef">Pre-Established Trust</a>
+      </h2>
+<p id="section-6-1">Projection is configured, not negotiated: nothing in the protocol
+establishes trust between the domains, and every trust input below
+exists before the first grant is issued.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6-2.1">
+          <p id="section-6-2.1.1">Issuer trust: which Mission Issuers the Resource AS accepts, by
+local policy or issuer metadata (<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>).
+The identity-assertion trust framework and its
+domain-authorized-issuer method
+(<span>[<a href="#I-D.draft-mcguinness-oauth-id-assertion-framework" class="cite xref">I-D.draft-mcguinness-oauth-id-assertion-framework</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-domain-authorized-issuer" class="cite xref">I-D.draft-mcguinness-oauth-domain-authorized-issuer</a>]</span>) are
+concrete ways to publish and evaluate this policy instead of
+hand-maintaining a list.<a href="#section-6-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.2">
+          <p id="section-6-2.2.1">The resource-to-AS mapping: which Resource AS is authoritative for
+which <code>resource</code> values, the mapping audience scoping is computed
+under (<a href="#audience-scope" class="auto internal xref">Section 5.1</a>).<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.3">
+          <p id="section-6-2.3.1">The grant profile in use (the ID-JAG in the <span class="bcp14">RECOMMENDED</span> case) and,
+where that profile defines no proof-of-possession, the
+sender-constraint mechanism (<a href="#cross-domain-grant" class="auto internal xref">Section 7</a>); binding and
+verification interoperate only if both domains fix the same one.<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.4">
+          <p id="section-6-2.4.1">Client registration: the presenting client is registered with and
+authenticates to the Resource AS's token endpoint, as the grant
+profile requires.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.5">
+          <p id="section-6-2.5.1">Subject resolution: the account-linking policy by which the
+Resource AS resolves the conveyed Subject in its own namespace
+(<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>).<a href="#section-6-2.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-6-3">A deployment that publishes a Mission Deployment Profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>) records its
+projection posture in these terms, and the accepted cross-domain
+revocation window (<a href="#cross-domain-revocation" class="auto internal xref">Section 12.1</a>) among its residual
+risks.<a href="#section-6-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="cross-domain-grant">
-<section id="section-6">
+<section id="section-7">
       <h2 id="name-issuing-the-cross-domain-gr">
-<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-issuing-the-cross-domain-gr" class="section-name selfRef">Issuing the Cross-Domain Grant</a>
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-issuing-the-cross-domain-gr" class="section-name selfRef">Issuing the Cross-Domain Grant</a>
       </h2>
-<p id="section-6-1">Issuing a cross-domain grant is a derivation event and is gated like
+<p id="section-7-1">Issuing a cross-domain grant is a derivation event and is gated like
 any other derivation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
-"Mission Lifecycle and Gating"). A Mission-bound cross-domain grant:<a href="#section-6-1" class="pilcrow">¶</a></p>
+"Mission Lifecycle and Gating"). It counts once against the Mission's
+derivation budget, however many local tokens the partner domain later
+mints: the issuer cannot observe those tokens and does not count
+them, and the Resource AS bounds its own minting by the grant and by
+local policy (<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>). A Mission-bound
+cross-domain grant:<a href="#section-7-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-6-2.1">
-          <p id="section-6-2.1.1"><span class="bcp14">MUST</span> be a JWT authorization grant issued and signed by the Mission
+<li class="normal" id="section-7-2.1">
+          <p id="section-7-2.1.1"><span class="bcp14">MUST</span> be a JWT authorization grant issued and signed by the Mission
 <code>issuer</code>, redeemable at the target Resource AS through the
-<span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> JWT-bearer grant;<a href="#section-6-2.1.1" class="pilcrow">¶</a></p>
+<span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> JWT-bearer grant;<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-6-2.2">
-          <p id="section-6-2.2.1"><span class="bcp14">MUST</span> be audienced to the target Resource AS, and <span class="bcp14">MUST NOT</span> have a
+        <li class="normal" id="section-7-2.2">
+          <p id="section-7-2.2.1"><span class="bcp14">MUST</span> be explicitly typed with the JWT <code>typ</code> its grant profile
+defines (<code>oauth-id-jag+jwt</code> for the <span class="bcp14">RECOMMENDED</span> profile), so the
+grant is mechanically distinguishable from every other issuer-signed
+Mission artifact; a Mission Mandate
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>) is never redeemable as a
+grant, and the <code>typ</code> is what a token endpoint separates them by;<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.3">
+          <p id="section-7-2.3.1"><span class="bcp14">MUST</span> be audienced to the target Resource AS, and <span class="bcp14">MUST NOT</span> have a
 lifetime exceeding 300 seconds (a short lifetime bounds cross-domain
-revocation latency; see <a href="#cross-domain-revocation" class="auto internal xref">Section 9.1</a>);<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+revocation latency; see <a href="#cross-domain-revocation" class="auto internal xref">Section 12.1</a>);<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-6-2.3">
-          <p id="section-6-2.3.1"><span class="bcp14">MUST</span> have an <code>exp</code> that does not exceed the Mission's
+        <li class="normal" id="section-7-2.4">
+          <p id="section-7-2.4.1"><span class="bcp14">MUST</span> have an <code>exp</code> that does not exceed the Mission's
 <code>expires_at</code>, per the base profile's expiry rule
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission-Bound
-Access Tokens");<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
+Access Tokens");<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-6-2.4">
-          <p id="section-6-2.4.1"><span class="bcp14">MUST</span> be sender-constrained (<span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span>) to the presenting client by
+        <li class="normal" id="section-7-2.5">
+          <p id="section-7-2.5.1"><span class="bcp14">MUST</span> be sender-constrained (<span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span>) to the presenting client by
 the proof-of-possession mechanism the cross-domain grant profile
 defines, where it defines one. This
 document does not define a new PoP mechanism; the originating AS and
@@ -1435,31 +1556,31 @@ redemption), the grant carries a <code>cnf</code> claim
 (<span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span>) binding the presenting client's DPoP key (<code>jkt</code>,
 <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) or mTLS certificate (<code>x5t#S256</code>, <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>), and the
 Resource AS <span class="bcp14">MUST</span> verify possession at redemption
-(<a href="#validation-at-resource-as" class="auto internal xref">Section 7</a>). Binding and verification <span class="bcp14">MUST</span> use the
-same mechanism;<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+(<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>). Binding and verification <span class="bcp14">MUST</span> use the
+same mechanism;<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-6-2.5">
-          <p id="section-6-2.5.1"><span class="bcp14">MUST</span> carry a <code>jti</code> for one-time use, so the bound party cannot
-replay it within its lifetime (<a href="#validation-at-resource-as" class="auto internal xref">Section 7</a>,
-<span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> Section 3);<a href="#section-6-2.5.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-7-2.6">
+          <p id="section-7-2.6.1"><span class="bcp14">MUST</span> carry a <code>jti</code> for one-time use, so the bound party cannot
+replay it within its lifetime (<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>,
+<span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> Section 3);<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-6-2.6">
-          <p id="section-6-2.6.1"><span class="bcp14">MUST</span> carry the <code>mission</code> claim
+        <li class="normal" id="section-7-2.7">
+          <p id="section-7-2.7.1"><span class="bcp14">MUST</span> carry the <code>mission</code> claim
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "The Mission
 Claim") with <code>id</code>, <code>issuer</code>, and <code>authority_hash</code> unchanged from the
 Mission, and the audience-scoped <code>authorization_details</code>
-(<a href="#audience-scope" class="auto internal xref">Section 5</a>); and<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
+(<a href="#audience-scope" class="auto internal xref">Section 5.1</a>); and<a href="#section-7-2.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-6-2.7">
-          <p id="section-6-2.7.1"><span class="bcp14">MUST</span> convey the Mission's Subject in the form the identity chaining
+        <li class="normal" id="section-7-2.8">
+          <p id="section-7-2.8.1"><span class="bcp14">MUST</span> convey the Mission's Subject in the form the identity chaining
 architecture defines, so the Resource AS can resolve it locally
-(<a href="#validation-at-resource-as" class="auto internal xref">Section 7</a>).<a href="#section-6-2.7.1" class="pilcrow">¶</a></p>
+(<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>).<a href="#section-7-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-6-3">The ID-JAG profile meets these requirements and is <span class="bcp14">RECOMMENDED</span>; in it
+<p id="section-7-3">The ID-JAG profile meets these requirements and is <span class="bcp14">RECOMMENDED</span>; in it
 the artifact is the ID-JAG and the issuance request carries a
-<code>requested_token_type</code> of <code>urn:ietf:params:oauth:token-type:id-jag</code>.<a href="#section-6-3" class="pilcrow">¶</a></p>
-<p id="section-6-4">The client obtains the grant with an <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token exchange. The
+<code>requested_token_type</code> of <code>urn:ietf:params:oauth:token-type:id-jag</code>.<a href="#section-7-3" class="pilcrow">¶</a></p>
+<p id="section-7-4">The client obtains the grant with an <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token exchange. The
 <code>subject_token</code> <span class="bcp14">MUST</span> be the Mission's refresh token, with
 <code>subject_token_type</code> of
 <code>urn:ietf:params:oauth:token-type:refresh_token</code>, and the <code>audience</code>
@@ -1474,138 +1595,133 @@ presented grant per the base profile's grant binding
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Binding the Mission
 to the Grant"), exactly as on any other refresh, and the grant
 therefore projects the agent's full Mission authority
-(audience-scoped), never a narrowed delegate's.<a href="#section-6-4" class="pilcrow">¶</a></p>
-<p id="section-6-5">This profile intentionally fixes the refresh-token subject mode to
-remove any ambiguity about which Mission authority a cross-domain grant
-projects: the refresh token resolves to exactly one Mission and its
-full authority, whereas an access token or delegated token could carry
-a narrowed or actor-specific subset. The cost is that this optional
-cross-domain binding is unavailable to a deployment that issues no
-refresh token; such a deployment uses the single-domain base profile,
-which needs no refresh token.<a href="#section-6-5" class="pilcrow">¶</a></p>
-<p id="section-6-6">The AS <span class="bcp14">MUST</span> reject an access token or a delegated token presented as
+(audience-scoped), never a narrowed delegate's.<a href="#section-7-4" class="pilcrow">¶</a></p>
+<p id="section-7-5">The refresh-token subject mode is the only mode this profile defines,
+and fixing it is deliberate: the refresh token resolves to exactly
+one Mission and its full authority, where an access token or
+delegated token could carry a narrowed or actor-specific subset that
+a trust-boundary crossing could re-widen. Other Mission-bound
+subject-token modes, such as an access-token mode bounding the
+projection by the presenting token, are left to future profiles. The
+cost is that this <span class="bcp14">OPTIONAL</span> capability is unavailable to a deployment
+that issues no refresh token; such a deployment uses the
+single-domain base profile, which needs none.<a href="#section-7-5" class="pilcrow">¶</a></p>
+<p id="section-7-6">The AS <span class="bcp14">MUST</span> reject an access token or a delegated token presented as
 <code>subject_token</code> for cross-domain issuance. The AS <span class="bcp14">MUST NOT</span> resolve the
 Mission from a client-supplied <code>mission_id</code>, nor from an identity
-assertion that carries no Mission binding.<a href="#section-6-6" class="pilcrow">¶</a></p>
-<p id="section-6-7">Before issuing, the AS <span class="bcp14">MUST</span> verify the Mission is <code>active</code> (failing
+assertion that carries no Mission binding (<a href="#error-responses" class="auto internal xref">Section 9</a>).<a href="#section-7-6" class="pilcrow">¶</a></p>
+<p id="section-7-7">Before issuing, the AS <span class="bcp14">MUST</span> verify the Mission is <code>active</code> (failing
 otherwise with <code>invalid_grant</code>) and that the target Resource AS is
 authorized for the requested resources under the Mission's Authority
 Set (failing otherwise with <code>invalid_target</code>, <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>). The token-exchange
 response carries <code>issued_token_type</code> of
 <code>urn:ietf:params:oauth:token-type:id-jag</code> (for the <span class="bcp14">RECOMMENDED</span>
-profile) and <code>token_type</code> of <code>N_A</code>, per <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> Section 2.2.1.<a href="#section-6-7" class="pilcrow">¶</a></p>
-<p id="section-6-8">This profile defines only the refresh-token <code>subject_token</code> mode above.
-Other Mission-bound subject-token modes, such as an access-token
-subject mode (which would have to bound the projected authority by the
-presenting token rather than by the full Mission Authority Set), are
-left to future profiles. Excluding the access-token subject mode here
-is a deliberate choice: it avoids
-propagating a narrowed or delegated authority across a trust boundary,
-where it could be re-widened. A deployment that does not issue the
-agent a Mission refresh token therefore cannot use this <span class="bcp14">OPTIONAL</span>
-cross-domain hop as defined here.<a href="#section-6-8" class="pilcrow">¶</a></p>
-<p id="section-6-9">A delegate, rather than the agent, crossing a trust domain directly
+profile) and <code>token_type</code> of <code>N_A</code>, per <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> Section 2.2.1.<a href="#section-7-7" class="pilcrow">¶</a></p>
+<p id="section-7-8">A delegate, rather than the agent, crossing a trust domain directly
 and carrying its own narrowed authority into another domain is out of
 scope for this document and deferred to future work. Cross-domain
 issuance here always projects the agent's Mission authority; delegation
 within the target domain is performed by the Resource AS
-(<a href="#validation-at-resource-as" class="auto internal xref">Section 7</a>). A sub-agent that must act in a
+(<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>). A sub-agent that must act in a
 different trust domain under its own narrowed authority is therefore not
 covered by a single hop; distributed multi-agent work across domains
 composes only through the agent's projected authority or through
 separate Missions per domain. A delegate-carries-its-own-authority mode
-is future work.<a href="#section-6-9" class="pilcrow">¶</a></p>
-<p id="section-6-10">Two roles <span class="bcp14">MUST NOT</span> be conflated. The grant the client presents to
+is future work.<a href="#section-7-8" class="pilcrow">¶</a></p>
+<p id="section-7-9">Two roles <span class="bcp14">MUST NOT</span> be conflated. The grant the client presents to
 <em>obtain</em> the cross-domain grant (the Mission's refresh token) is the
 input to the exchange and selects the Mission; the Mission-bound
 access token plays no part here. The identity the issued grant conveys
 <em>to</em> the Resource AS is the Mission's Subject, which the AS populates
 from the Mission's recorded <code>subject</code> and which the Resource AS
 resolves locally per the identity chaining rules (this document
-defines no cross-domain subject mapping, <a href="#validation-at-resource-as" class="auto internal xref">Section 7</a>).<a href="#section-6-10" class="pilcrow">¶</a></p>
-<p id="section-6-11">Sender-constraining is <span class="bcp14">REQUIRED</span> for the cross-domain grant, stronger
+defines no cross-domain subject mapping, <a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>).<a href="#section-7-9" class="pilcrow">¶</a></p>
+<p id="section-7-10">Sender-constraining is <span class="bcp14">REQUIRED</span> for the cross-domain grant, stronger
 than the <span class="bcp14">RECOMMENDED</span> level the base profile sets for the primary
 access token (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
 "Mission-Bound Access Tokens"): it is the highest-authority credential
 in the chain and the only one that crosses a trust boundary, and the
-underlying grant provides no replay backstop of its own.<a href="#section-6-11" class="pilcrow">¶</a></p>
+underlying grant provides no replay backstop of its own.<a href="#section-7-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="validation-at-resource-as">
-<section id="section-7">
+<section id="section-8">
       <h2 id="name-validation-at-the-resource-">
-<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-validation-at-the-resource-" class="section-name selfRef">Validation at the Resource AS</a>
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-validation-at-the-resource-" class="section-name selfRef">Validation at the Resource AS</a>
       </h2>
-<p id="section-7-1">A Resource AS consuming a Mission-bound cross-domain grant:<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-8-1">A Resource AS consuming a Mission-bound cross-domain grant:<a href="#section-8-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-7-2.1">
-          <p id="section-7-2.1.1"><span class="bcp14">MUST</span> establish issuer trust in the originating AS by local policy
+<li class="normal" id="section-8-2.1">
+          <p id="section-8-2.1.1"><span class="bcp14">MUST</span> establish issuer trust in the originating AS by local policy
 or issuer metadata before accepting any Mission reference. It <span class="bcp14">MUST NOT</span> trust a <code>mission.issuer</code> merely because it appears inside a
-signed assertion.<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
+signed assertion.<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-7-2.2">
-          <p id="section-7-2.2.1"><span class="bcp14">MUST</span> validate the grant's signature and expiry, and verify its
-<code>aud</code> is the Resource AS's own identifier, rejecting a grant
-minted for a different Resource AS.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-8-2.2">
+          <p id="section-8-2.2.1"><span class="bcp14">MUST</span> validate the grant's explicit <code>typ</code> (per the grant profile in
+use; <code>oauth-id-jag+jwt</code> for the <span class="bcp14">RECOMMENDED</span> profile), signature,
+and expiry, and verify its <code>aud</code> is the Resource AS's own
+identifier: it rejects a grant minted for a different Resource AS,
+and rejects a JWT of any other type presented as this grant,
+whatever Mission facts it carries.<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-7-2.3">
-          <p id="section-7-2.3.1"><span class="bcp14">MUST</span> verify the grant's sender-constraint by the proof-of-possession
+        <li class="normal" id="section-8-2.3">
+          <p id="section-8-2.3.1"><span class="bcp14">MUST</span> verify the grant's sender-constraint by the proof-of-possession
 mechanism the cross-domain grant profile defines (for the ID-JAG
 profile, as that specification defines), and <span class="bcp14">MUST</span> reject with
 <code>invalid_grant</code> a cross-domain grant that is not sender-constrained
 or whose proof-of-possession does not verify. When the grant profile
 defines no proof-of-possession and the grant carries a <code>cnf</code> claim
-per <a href="#cross-domain-grant" class="auto internal xref">Section 6</a>, the Resource AS <span class="bcp14">MUST</span> verify possession of
+per <a href="#cross-domain-grant" class="auto internal xref">Section 7</a>, the Resource AS <span class="bcp14">MUST</span> verify possession of
 that key at redemption: a DPoP proof (<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) for its own token
 endpoint for a <code>jkt</code> binding, or the mTLS connection certificate
 (<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>) for an <code>x5t#S256</code> binding. Binding and verification
 <span class="bcp14">MUST</span> use the same mechanism. A bearer grant <span class="bcp14">MUST NOT</span> be accepted: it is the highest-authority credential crossing the
 trust boundary, so accepting one unbound would let any party that
-captured it mint a local token.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+captured it mint a local token.<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-7-2.3.2.1">
-              <p id="section-7-2.3.2.1.1">Because this document defines no cross-domain status query,
+<li class="normal" id="section-8-2.3.2.1">
+              <p id="section-8-2.3.2.1.1">Because this document defines no cross-domain status query,
 freshness is the Resource AS's only check that the Mission was
-active at issuance; the short grant lifetime bounds the staleness.<a href="#section-7-2.3.2.1.1" class="pilcrow">¶</a></p>
+active at issuance; the short grant lifetime bounds the staleness.<a href="#section-8-2.3.2.1.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </li>
-        <li class="normal" id="section-7-2.4">
-          <p id="section-7-2.4.1"><span class="bcp14">MUST</span> reject a replayed cross-domain grant: it <span class="bcp14">MUST</span> track the grant's
+        <li class="normal" id="section-8-2.4">
+          <p id="section-8-2.4.1"><span class="bcp14">MUST</span> reject a replayed cross-domain grant: it <span class="bcp14">MUST</span> track the grant's
 <code>jti</code> for the grant's validity window and refuse a second
 presentation with <code>invalid_grant</code> (<span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> Section 3), so a grant
-cannot be replayed even by the party it is bound to.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
+cannot be replayed even by the party it is bound to.<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-7-2.5">
-          <p id="section-7-2.5.1">When issuing local access tokens for its resources, the Resource AS
+        <li class="normal" id="section-8-2.5">
+          <p id="section-8-2.5.1">When issuing local access tokens for its resources, the Resource AS
 uses the subject-resolution rules of the underlying cross-domain
 grant and identity chaining specifications. The local token preserves
 the <code>mission</code> claim (<code>id</code>, <code>issuer</code>, and <code>authority_hash</code>) unchanged
 from the cross-domain grant. The issuing <code>iss</code> is the Resource AS;
-<code>mission.issuer</code> remains the originating AS. Such a local token:<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
+<code>mission.issuer</code> remains the originating AS. Such a local token:<a href="#section-8-2.5.1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-7-2.5.2.1">
-              <p id="section-7-2.5.2.1.1">has an <code>exp</code> that <span class="bcp14">MUST NOT</span> exceed the grant's <code>exp</code>. The Resource
+<li class="normal" id="section-8-2.5.2.1">
+              <p id="section-8-2.5.2.1.1">has an <code>exp</code> that <span class="bcp14">MUST NOT</span> exceed the grant's <code>exp</code>. The Resource
 AS does not hold the Mission's <code>expires_at</code>; because the grant's
-own <code>exp</code> is bounded by it (<a href="#cross-domain-grant" class="auto internal xref">Section 6</a>), the local
-token is bounded transitively;<a href="#section-7-2.5.2.1.1" class="pilcrow">¶</a></p>
+own <code>exp</code> is bounded by it (<a href="#cross-domain-grant" class="auto internal xref">Section 7</a>), the local
+token is bounded transitively;<a href="#section-8-2.5.2.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-7-2.5.2.2">
-              <p id="section-7-2.5.2.2.1"><span class="bcp14">MUST</span> be sender-constrained (<span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span>), like the grant it derives
-from, and <span class="bcp14">MUST NOT</span> be issued as a bearer token; and<a href="#section-7-2.5.2.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-8-2.5.2.2">
+              <p id="section-8-2.5.2.2.1"><span class="bcp14">MUST</span> be sender-constrained (<span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span>), like the grant it derives
+from, and <span class="bcp14">MUST NOT</span> be issued as a bearer token; and<a href="#section-8-2.5.2.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-7-2.5.2.3">
-              <p id="section-7-2.5.2.3.1">if it preserves the issuer's <code>client_id</code>, does so only as an audit
+            <li class="normal" id="section-8-2.5.2.3">
+              <p id="section-8-2.5.2.3.1">if it preserves the issuer's <code>client_id</code>, does so only as an audit
 reference, not a local identity: that value is in the originating
 AS's namespace, and a partner Resource Server <span class="bcp14">MUST NOT</span> resolve or
 authorize on it as a local client, for the same portability reason
 that applies to a <code>sub</code> matcher in <code>allowed_delegates</code> (see
-below).<a href="#section-7-2.5.2.3.1" class="pilcrow">¶</a></p>
+below).<a href="#section-8-2.5.2.3.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </li>
-        <li class="normal" id="section-7-2.6">
-          <p id="section-7-2.6.1"><span class="bcp14">MUST</span> bound the issued <code>authorization_details</code> by what the
+        <li class="normal" id="section-8-2.6">
+          <p id="section-8-2.6.1"><span class="bcp14">MUST</span> bound the issued <code>authorization_details</code> by what the
 cross-domain grant conveyed, and <span class="bcp14">MUST</span> apply its own local
 authorization policy in addition: honoring a Mission does not
 obligate it to authorize any particular request. Because the
@@ -1616,18 +1732,28 @@ conveyed <code>actions</code> identifier or <code>constraints</code> key it does
 recognize for the resource in question, exactly as a Resource Server
 does (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Resource
 Server Enforcement"), so authority it cannot interpret is never
-honored across the trust boundary rather than enforced by guess.<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
+honored across the trust boundary rather than enforced by guess.<a href="#section-8-2.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-7-2.7">
-          <p id="section-7-2.7.1"><span class="bcp14">MUST</span>, when it issues delegated tokens of its own, enforce each
+        <li class="normal" id="section-8-2.7">
+          <p id="section-8-2.7.1"><span class="bcp14">MUST</span>, when it issues delegated tokens of its own, enforce each
 entry's <code>delegation</code> policy as the base profile specifies
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Delegation
 Constraints"); the policy travels on the conveyed entries. The
-cross-domain grant carries no <code>act</code> chain (<a href="#cross-domain-grant" class="auto internal xref">Section 6</a>),
-so the Resource AS's own delegation depth begins at 0.<a href="#section-7-2.7.1" class="pilcrow">¶</a></p>
+cross-domain grant carries no <code>act</code> chain (<a href="#cross-domain-grant" class="auto internal xref">Section 7</a>),
+so the Resource AS's own delegation depth begins at 0.<a href="#section-8-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.8">
+          <p id="section-8-2.8.1"><span class="bcp14">SHOULD</span> record, per minted local token, both sides of the
+derivation: the consumed grant's <code>jti</code> and conveyed
+<code>authorization_details</code>, and the local token's own identifier or
+digest (<code>jti</code>), <code>iss</code>, <code>aud</code>, <code>iat</code>, <code>exp</code>, and issued
+<code>authorization_details</code>. The issuer cannot observe local tokens
+(<a href="#cross-domain-revocation" class="auto internal xref">Section 12.1</a>), so this record is the only evidence
+tying a local token to the grant it was minted from and showing
+its authority did not widen.<a href="#section-8-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-7-3">A <code>{ "sub": ... }</code> matcher in a conveyed entry's
+<p id="section-8-3">A <code>{ "sub": ... }</code> matcher in a conveyed entry's
 <code>delegation.allowed_delegates</code> is a client identifier in the
 originating AS's namespace and is not portable across the trust
 domain. When a Resource AS evaluates a conveyed entry, it <span class="bcp14">MUST</span> fail
@@ -1636,8 +1762,8 @@ resolve against the delegate it authenticated in its own namespace.
 Portable cross-domain matching <span class="bcp14">SHOULD</span> therefore use a <code>sub_profile</code>
 matcher, an actor-type class rather than a domain-relative identifier
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Delegation
-Constraints").<a href="#section-7-3" class="pilcrow">¶</a></p>
-<p id="section-7-4">This document does not define cross-domain subject mapping. A Resource
+Constraints").<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">This document does not define cross-domain subject mapping. A Resource
 AS consuming a Mission-bound cross-domain grant resolves the subject
 of any local token according to the cross-domain grant profile in use
 (the Identity Assertion Authorization Grant profile in the recommended
@@ -1645,8 +1771,8 @@ case), the OAuth identity chaining architecture, and its local trust
 and account-linking policy. This document only requires that the
 Mission binding (<code>mission.id</code>, <code>mission.issuer</code>, and <code>authority_hash</code>)
 and the audience-scoped <code>authorization_details</code> remain bounded as
-described here.<a href="#section-7-4" class="pilcrow">¶</a></p>
-<p id="section-7-5">Downstream, <code>authority_hash</code> is an immutable audit and correlation
+described here.<a href="#section-8-4" class="pilcrow">¶</a></p>
+<p id="section-8-5">Downstream, <code>authority_hash</code> is an immutable audit and correlation
 anchor to the originating AS's consent commitment. A Resource AS and
 its Resource Servers hold only the audience-scoped subset, never the
 full Authority Set, so they cannot recompute <code>authority_hash</code>
@@ -1654,20 +1780,98 @@ full Authority Set, so they cannot recompute <code>authority_hash</code>
 its integrity rests on the signature chain (the originating AS signs
 the ID-JAG; the Resource AS validates issuer trust and signs its local
 token). It is verifiable only against the originating AS, which this
-document does not require to be exposed.<a href="#section-7-5" class="pilcrow">¶</a></p>
+document does not require to be exposed.<a href="#section-8-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="error-responses">
+<section id="section-9">
+      <h2 id="name-error-responses">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-error-responses" class="section-name selfRef">Error Responses</a>
+      </h2>
+<p id="section-9-1">This document defines no new error codes; it binds the standard codes
+of <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>, <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>, and OAuth 2.0 to this profile's failure
+conditions so both surfaces fail uniformly.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">At issuance (the token exchange at the Mission Issuer,
+<a href="#cross-domain-grant" class="auto internal xref">Section 7</a>):<a href="#section-9-2" class="pilcrow">¶</a></p>
+<table class="center" id="table-1">
+        <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Condition</th>
+            <th class="text-left" rowspan="1" colspan="1">Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>subject_token_type</code> is not <code>refresh_token</code>, or an access, delegated, or bare identity-assertion token is presented</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_request</code>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">The subject token does not resolve to a Mission, or the Mission is not <code>active</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_grant</code>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">The target Resource AS is not authorized for the requested resources under the Authority Set</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_target</code>
+</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-9-4">At redemption (the JWT-bearer grant at the Resource AS,
+<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>):<a href="#section-9-4" class="pilcrow">¶</a></p>
+<table class="center" id="table-2">
+        <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Condition</th>
+            <th class="text-left" rowspan="1" colspan="1">Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Client authentication fails</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_client</code>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Untrusted issuer; wrong or missing <code>typ</code>; signature, audience, or expiry failure; a sender-constraint absent, unverifiable, or bound to a different client; a replayed <code>jti</code>; a missing or malformed <code>mission</code> claim</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_grant</code>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">The request names a resource outside the conveyed entries</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_target</code>
+</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-9-6">A Resource AS rejecting a grant reveals no Mission state it does not
+hold: <code>invalid_grant</code> at redemption speaks to the presented grant,
+not to the Mission's current lifecycle state, which the Resource AS
+cannot know (<a href="#introspection-at-resource-as" class="auto internal xref">Section 10</a>).<a href="#section-9-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="introspection-at-resource-as">
-<section id="section-8">
+<section id="section-10">
       <h2 id="name-introspection-at-a-resource">
-<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-introspection-at-a-resource" class="section-name selfRef">Introspection at a Resource AS</a>
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-introspection-at-a-resource" class="section-name selfRef">Introspection at a Resource AS</a>
       </h2>
-<p id="section-8-1">The base profile's <span class="bcp14">OPTIONAL</span> token introspection (<span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>) reports
+<p id="section-10-1">The base profile's <span class="bcp14">OPTIONAL</span> token introspection (<span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>) reports
 a <code>mission</code> response member, and only the Mission <code>issuer</code> reports the
 Mission's lifecycle <code>state</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
 Section "Mission State via Token Introspection"). This section
-specifies the non-issuer half of that rule.<a href="#section-8-1" class="pilcrow">¶</a></p>
-<p id="section-8-2">A Resource AS that supports introspection for a local token it minted
+specifies the non-issuer half of that rule.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<p id="section-10-2">A Resource AS that supports introspection for a local token it minted
 from a cross-domain grant returns the claim-shape members only: <code>id</code>,
 <code>issuer</code>, and <code>authority_hash</code>. It holds the token, not the Mission:
 it knows the Mission state only as of grant validation and has no
@@ -1676,54 +1880,76 @@ the base profile defines one). It <span class="bcp14">MUST</span> omit <code>mis
 than report a stale value as current. <code>authority_hash</code>, when included,
 is the issuer's commitment carried through the grant, not a value the
 Resource AS recomputes from its audience-scoped subset
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Consent Binding").<a href="#section-8-2" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Consent Binding").<a href="#section-10-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="as-metadata">
+<section id="section-11">
+      <h2 id="name-authorization-server-metada">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-authorization-server-metada" class="section-name selfRef">Authorization Server Metadata</a>
+      </h2>
+<p id="section-11-1">Discovery uses existing metadata; this document defines no new
+parameters. A Mission Issuer supporting this capability advertises
+the <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token-exchange grant type in <code>grant_types_supported</code>,
+the base profile's signal for cross-domain grant issuance
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Authorization
+Server Metadata"). A Resource AS advertises the <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>
+JWT-bearer grant type the grant is redeemed through; support for a
+specific grant profile is discovered as that profile specifies, or
+out of band. The bilateral inputs of <a href="#pre-established-trust" class="auto internal xref">Section 6</a> are
+not discoverable and exist before first use.<a href="#section-11-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
-<section id="section-9">
+<section id="section-12">
       <h2 id="name-security-considerations">
-<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
       </h2>
-<p id="section-9-1">The security considerations of the base profile
+<p id="section-12-1">The security considerations of the base profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and of the identity chaining
-architecture <span>[<a href="#I-D.draft-ietf-oauth-identity-chaining" class="cite xref">I-D.draft-ietf-oauth-identity-chaining</a>]</span> apply.<a href="#section-9-1" class="pilcrow">¶</a></p>
+architecture <span>[<a href="#I-D.draft-ietf-oauth-identity-chaining" class="cite xref">I-D.draft-ietf-oauth-identity-chaining</a>]</span> apply.<a href="#section-12-1" class="pilcrow">¶</a></p>
 <div id="cross-domain-revocation">
-<section id="section-9.1">
+<section id="section-12.1">
         <h3 id="name-cross-domain-revocation-lat">
-<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-cross-domain-revocation-lat" class="section-name selfRef">Cross-Domain Revocation Latency</a>
+<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-cross-domain-revocation-lat" class="section-name selfRef">Cross-Domain Revocation Latency</a>
         </h3>
-<p id="section-9.1-1">Single-domain revocation is prompt: the AS that issued a token also
+<p id="section-12.1-1">Single-domain revocation is prompt: the AS that issued a token also
 honors its revocation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
 "Revocation"). The cross-domain case is strictly weaker. When a
 Mission is revoked at the originating AS, that AS can stop issuing new
 cross-domain grants, but it cannot revoke a token a Resource AS has
 already minted in another domain: that token remains valid until its
 own expiry. Cross-domain revocation latency is therefore the
-downstream token lifetime. For this reason, Resource ASes <span class="bcp14">MUST</span> issue
+downstream token lifetime. The grant lifetime is the state lease the
+partner domain runs on: the longest a Resource AS may treat Mission
+state established at issuance as current
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). For this reason, Resource
+ASes <span class="bcp14">MUST</span> issue
 short-lived local tokens for Mission-bound interactions; the
 originating AS bounds grant lifetimes by the 300-second cap of
-<a href="#cross-domain-grant" class="auto internal xref">Section 6</a>, so a revoked Mission cannot continue to seed
+<a href="#cross-domain-grant" class="auto internal xref">Section 7</a>, so a revoked Mission cannot continue to seed
 new downstream tokens for long.
 The base profile's token introspection closes the revocation gap only
 single-domain: it requires the introspecting AS to hold the Mission,
 and a Resource AS has no query to the issuer keyed by <code>mission_id</code>
-(<a href="#introspection-at-resource-as" class="auto internal xref">Section 8</a>), so short downstream lifetimes
-remain the only cross-domain control. Deployments needing tighter
-cross-domain revocation can add the status or event-distribution
-mechanisms specified separately by Mission Status
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> and Mission Lifecycle
-Signals <span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>, which this
-document does not require.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+(<a href="#introspection-at-resource-as" class="auto internal xref">Section 10</a>), so short downstream lifetimes
+remain the only cross-domain control. Deployments needing a tighter
+lease add the companion mechanisms this document does not require:
+Mission Status <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> gives
+any consumer holding the <code>mission_id</code>, including a Resource AS, a
+state query against the issuer, and Mission Lifecycle Signals
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span> pushes lifecycle
+transitions to the partner domain.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="the-grant-at-the-trust-boundary">
-<section id="section-9.2">
+<section id="section-12.2">
         <h3 id="name-the-grant-at-the-trust-boun">
-<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-the-grant-at-the-trust-boun" class="section-name selfRef">The Grant at the Trust Boundary</a>
+<a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-the-grant-at-the-trust-boun" class="section-name selfRef">The Grant at the Trust Boundary</a>
         </h3>
-<p id="section-9.2-1">The cross-domain grant is the highest-authority credential in the
+<p id="section-12.2-1">The cross-domain grant is the highest-authority credential in the
 chain and the only one that crosses a trust boundary. The requirements
-of <a href="#cross-domain-grant" class="auto internal xref">Section 6</a> and <a href="#validation-at-resource-as" class="auto internal xref">Section 7</a> follow
+of <a href="#cross-domain-grant" class="auto internal xref">Section 7</a> and <a href="#validation-at-resource-as" class="auto internal xref">Section 8</a> follow
 from that position: issuer trust is established by local policy or
 metadata, never inferred from a signed assertion's own
 <code>mission.issuer</code>; the grant is sender-constrained and one-time-use,
@@ -1732,27 +1958,23 @@ its own; and everything the Resource AS honors is bounded by the
 audience-scoped entries the grant conveyed, interpreted fail-closed.
 Downstream of the issuer, <code>authority_hash</code> is an audit and correlation
 anchor, not a recomputable proof: its integrity rests on the signature
-chain (<a href="#validation-at-resource-as" class="auto internal xref">Section 7</a>).<a href="#section-9.2-1" class="pilcrow">¶</a></p>
-<p id="section-9.2-2">Two companion mechanisms compose here. The identity-assertion trust
-framework and its domain-authorized-issuer method
-(<span>[<a href="#I-D.draft-mcguinness-oauth-id-assertion-framework" class="cite xref">I-D.draft-mcguinness-oauth-id-assertion-framework</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-oauth-domain-authorized-issuer" class="cite xref">I-D.draft-mcguinness-oauth-domain-authorized-issuer</a>]</span>) are concrete
-ways a deployment publishes and evaluates the issuer policy this
-section requires, instead of a hand-maintained list. And a consumer
-that needs independently verifiable provenance of the delegation hops
-upstream of the re-mint, rather than trust in the minting domain's
-assertion of them, <span class="bcp14">MAY</span> require issuer-signed hop receipts
-(<span>[<a href="#I-D.draft-mcguinness-oauth-actor-receipts" class="cite xref">I-D.draft-mcguinness-oauth-actor-receipts</a>]</span>).<a href="#section-9.2-2" class="pilcrow">¶</a></p>
+chain (<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>).<a href="#section-12.2-1" class="pilcrow">¶</a></p>
+<p id="section-12.2-2">One companion mechanism composes here beyond the trust publication
+methods of <a href="#pre-established-trust" class="auto internal xref">Section 6</a>: a consumer that needs
+independently verifiable provenance of the delegation hops upstream
+of the re-mint, rather than trust in the minting domain's assertion
+of them, <span class="bcp14">MAY</span> require issuer-signed hop receipts
+(<span>[<a href="#I-D.draft-mcguinness-oauth-actor-receipts" class="cite xref">I-D.draft-mcguinness-oauth-actor-receipts</a>]</span>).<a href="#section-12.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="privacy-considerations">
-<section id="section-10">
+<section id="section-13">
       <h2 id="name-privacy-considerations">
-<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
-<p id="section-10-1">The cross-domain grant and every local token minted from it carry the
+<p id="section-13-1">The cross-domain grant and every local token minted from it carry the
 canonical <code>mission_id</code>, <code>mission.issuer</code>, and <code>authority_hash</code>
 unchanged, so a Resource AS and its Resource Servers can correlate a
 Mission's activity across domains, and <code>mission.issuer</code> identifies the
@@ -1760,49 +1982,84 @@ issuing AS to the partner domain. This is the deliberate correlation
 property of the base profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission Identifier
 Correlation"), extended across the trust boundary. Audience scoping
-(<a href="#audience-scope" class="auto internal xref">Section 5</a>) is the minimization measure: a Resource AS never
-sees Authority Set entries addressed to other audiences.<a href="#section-10-1" class="pilcrow">¶</a></p>
+(<a href="#audience-scope" class="auto internal xref">Section 5.1</a>) is the minimization measure: a Resource AS never
+sees Authority Set entries addressed to other audiences.<a href="#section-13-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conformance">
-<section id="section-11">
+<section id="section-14">
       <h2 id="name-conformance">
-<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
       </h2>
-<p id="section-11-1">An implementation conforms in one of two roles.<a href="#section-11-1" class="pilcrow">¶</a></p>
-<p id="section-11-2">An <strong>Originating Mission Issuer with Cross-Domain</strong> is a conforming
-Mission Issuer of the base profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Conformance") that
-additionally issues the Mission-bound cross-domain grant per
-<a href="#cross-domain-grant" class="auto internal xref">Section 6</a>, including the audience scoping of
-<a href="#audience-scope" class="auto internal xref">Section 5</a>.<a href="#section-11-2" class="pilcrow">¶</a></p>
-<p id="section-11-3">A <strong>Resource AS</strong> honors the cross-domain grant per
-<a href="#validation-at-resource-as" class="auto internal xref">Section 7</a> and, where it offers token introspection
-for its local tokens, follows <a href="#introspection-at-resource-as" class="auto internal xref">Section 8</a>. A
-Resource AS is not required to implement the base profile's Mission
-Issuer role; it never creates or alters a Mission (<a href="#model" class="auto internal xref">Section 4</a>).<a href="#section-11-3" class="pilcrow">¶</a></p>
+<p id="section-14-1">An implementation conforms in one of two roles and names the
+capability as the base profile's conformance model directs (for
+example, "Mission Issuer with Cross-Domain";
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Conformance").<a href="#section-14-1" class="pilcrow">¶</a></p>
+<p id="section-14-2">An <strong>Originating Mission Issuer with Cross-Domain</strong> is a conforming
+Mission Issuer of the base profile that additionally:<a href="#section-14-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-14-3.1">
+          <p id="section-14-3.1.1">issues the Mission-bound cross-domain grant per
+<a href="#cross-domain-grant" class="auto internal xref">Section 7</a>, gated and counted as a derivation;<a href="#section-14-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-3.2">
+          <p id="section-14-3.2.1">scopes every projection by audience (<a href="#audience-scope" class="auto internal xref">Section 5.1</a>);<a href="#section-14-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-3.3">
+          <p id="section-14-3.3.1">fails issuance with the codes of <a href="#error-responses" class="auto internal xref">Section 9</a>; and<a href="#section-14-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-3.4">
+          <p id="section-14-3.4.1">advertises cross-domain grant issuance per <a href="#as-metadata" class="auto internal xref">Section 11</a>.<a href="#section-14-3.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-14-4">A <strong>Resource AS</strong>:<a href="#section-14-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-14-5.1">
+          <p id="section-14-5.1.1">honors the cross-domain grant per <a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>,
+including issuer trust by local policy, explicit typing,
+sender-constraint and one-time-use verification, and fail-closed
+interpretation of conveyed authority;<a href="#section-14-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-5.2">
+          <p id="section-14-5.2.1">bounds every local token by the grant that seeded it and issues it
+sender-constrained and short-lived (<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>,
+<a href="#cross-domain-revocation" class="auto internal xref">Section 12.1</a>);<a href="#section-14-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-5.3">
+          <p id="section-14-5.3.1">fails redemption with the codes of <a href="#error-responses" class="auto internal xref">Section 9</a>;<a href="#section-14-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-5.4">
+          <p id="section-14-5.4.1">where it offers token introspection for its local tokens, follows
+<a href="#introspection-at-resource-as" class="auto internal xref">Section 10</a>; and<a href="#section-14-5.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-5.5">
+          <p id="section-14-5.5.1">never creates or alters a Mission (<a href="#model" class="auto internal xref">Section 4</a>).<a href="#section-14-5.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-14-6">A Resource AS is not required to implement the base profile's Mission
+Issuer role.<a href="#section-14-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana-considerations">
-<section id="section-12">
+<section id="section-15">
       <h2 id="name-iana-considerations">
-<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-12-1">This document has no IANA actions. The <code>mission</code> JWT claim, the
+<p id="section-15-1">This document has no IANA actions. The <code>mission</code> JWT claim, the
 <code>mission</code> introspection response member, and the
 <code>mission_resource_access</code> authorization details type it carries are
-registered by the base profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-12-1" class="pilcrow">¶</a></p>
+registered by the base profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-15-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
-<section id="section-13">
+<section id="section-16">
       <h2 id="name-references">
-<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-references" class="section-name selfRef">References</a>
+<a href="#section-16" class="section-number selfRef">16. </a><a href="#name-references" class="section-name selfRef">References</a>
       </h2>
 <div id="sec-normative-references">
-<section id="section-13.1">
+<section id="section-16.1">
         <h3 id="name-normative-references">
-<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+<a href="#section-16.1" class="section-number selfRef">16.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
 <dt id="I-D.draft-ietf-oauth-identity-assertion-authz-grant">[I-D.draft-ietf-oauth-identity-assertion-authz-grant]</dt>
@@ -1857,14 +2114,22 @@ registered by the base profile <span>[<a href="#I-D.draft-mcguinness-oauth-missi
 </section>
 </div>
 <div id="sec-informative-references">
-<section id="section-13.2">
+<section id="section-16.2">
         <h3 id="name-informative-references">
-<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+<a href="#section-16.2" class="section-number selfRef">16.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
 <dt id="I-D.draft-ietf-oauth-transaction-tokens">[I-D.draft-ietf-oauth-transaction-tokens]</dt>
         <dd>
 <span class="refAuthor">Tulshibagwale, A.</span>, <span class="refAuthor">Fletcher, G.</span>, and <span class="refAuthor">P. Kasselman</span>, <span class="refTitle">"Transaction Tokens"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-transaction-tokens-09</span>, <time datetime="2026-07-06" class="refDate">6 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-transaction-tokens-09">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-transaction-tokens-09</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"An Architecture for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-mandate">[I-D.draft-mcguinness-mission-mandate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Mandate"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
         <dd>
@@ -1959,7 +2224,7 @@ access token.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
 <p id="appendix-A.1-1">The agent needs the partner ERP, behind the Resource AS
 <code>ras.partner.example.com</code>. It presents its Mission refresh token as
 the <code>subject_token</code> of a token exchange requesting an ID-JAG
-(<a href="#cross-domain-grant" class="auto internal xref">Section 6</a>); the home AS resolves the Mission from that
+(<a href="#cross-domain-grant" class="auto internal xref">Section 7</a>); the home AS resolves the Mission from that
 grant, gates on Mission <code>active</code>, and mints a Mission-bound ID-JAG
 audienced to that Resource AS, carrying the <code>mission</code> claim and the
 audience-scoped authority for the ERP:<a href="#appendix-A.1-1" class="pilcrow">¶</a></p>
@@ -1996,9 +2261,10 @@ audience-scoped authority for the ERP:<a href="#appendix-A.1-1" class="pilcrow">
 }
 </pre><a href="#appendix-A.1-2" class="pilcrow">¶</a>
 </div>
-<p id="appendix-A.1-3">The ID-JAG is short-lived (300 s) and sender-constrained to the
+<p id="appendix-A.1-3">The ID-JAG is short-lived (300 s), explicitly typed
+(<code>oauth-id-jag+jwt</code> in its JWT header), and sender-constrained to the
 agent. Its <code>exp</code> does not exceed the Mission's <code>expires_at</code>
-(<a href="#cross-domain-grant" class="auto internal xref">Section 6</a>).<a href="#appendix-A.1-3" class="pilcrow">¶</a></p>
+(<a href="#cross-domain-grant" class="auto internal xref">Section 7</a>).<a href="#appendix-A.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="stage-3-the-resource-as-issues-a-local-access-token">
@@ -2007,7 +2273,7 @@ agent. Its <code>exp</code> does not exceed the Mission's <code>expires_at</code
 <a href="#appendix-A.2" class="section-number selfRef">A.2. </a><a href="#name-stage-3-the-resource-as-iss" class="section-name selfRef">Stage 3: The Resource AS Issues a Local Access Token</a>
         </h3>
 <p id="appendix-A.2-1"><code>ras.partner.example.com</code> validates the ID-JAG
-(<a href="#validation-at-resource-as" class="auto internal xref">Section 7</a>): it
+(<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>): it
 establishes issuer trust in <code>as.example.com</code>, verifies the signature,
 checks that <code>aud</code> is itself, checks the expiry, and verifies the
 sender-constraint proof. It then issues its own access token for the
@@ -2055,20 +2321,18 @@ subject-resolution rules of the ID-JAG and identity chaining profiles,
 not by this document.<a href="#appendix-A.2-3" class="pilcrow">¶</a></p>
 <p id="appendix-A.2-4">Revoking the Mission now stops new ID-JAGs, but the local token the
 Resource AS minted stays usable until its <code>exp</code> (260 seconds), bounded
-by the 300-second ID-JAG cap (<a href="#cross-domain-revocation" class="auto internal xref">Section 9.1</a>). Tighter
+by the 300-second ID-JAG cap (<a href="#cross-domain-revocation" class="auto internal xref">Section 12.1</a>). Tighter
 cross-domain revocation is opt-in, and the two companions do different
 things: a Mission Status freshness lease shortens how long the partner
 relies on stale state by forcing a pull or per-request re-check, while a
 Mission Lifecycle Signal notifies the partner on a Mission transition so
 it can react without polling.<a href="#appendix-A.2-4" class="pilcrow">¶</a></p>
 <p id="appendix-A.2-5">The Resource AS holds only this audience's subset and cannot recompute
-<code>authority_hash</code>. To show its local token did not widen beyond the
-ID-JAG, it <span class="bcp14">SHOULD</span> record, per minted token, both sides of the
-derivation: the consumed ID-JAG's <code>jti</code> and conveyed
-<code>authorization_details</code>, and the local token's own identifier or digest
-(<code>jti</code>), <code>iss</code>, <code>aud</code>, <code>iat</code>, <code>exp</code>, and issued <code>authorization_details</code>.
-An auditor can then identify the exact local token, tie it to the grant
-it was minted from, and check its authority is a subset of that grant.<a href="#appendix-A.2-5" class="pilcrow">¶</a></p>
+<code>authority_hash</code>. It records both sides of the derivation, the
+consumed ID-JAG and the minted token (<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>),
+so an auditor can identify the exact local token, tie it to the grant
+it was minted from, and check its authority is a subset of that
+grant.<a href="#appendix-A.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="stage-4-the-resource-server-enforces">
@@ -2159,8 +2423,8 @@ no call to <code>mission.issuer</code>.<a href="#appendix-A.5-1" class="pilcrow"
         <h3 id="name-what-rode-through-and-what-">
 <a href="#appendix-A.6" class="section-number selfRef">A.6. </a><a href="#name-what-rode-through-and-what-" class="section-name selfRef">What Rode Through, and What Narrowed</a>
         </h3>
-<table class="center" id="table-1">
-          <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<table class="center" id="table-3">
+          <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Hop (mechanism)</th>

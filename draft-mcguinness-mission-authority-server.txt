@@ -169,8 +169,7 @@ Table of Contents
    proceeds under the runtime profile
    [I-D.draft-mcguinness-mission-runtime] unchanged.
 
-   The OAuth binding remains the flagship of the family, and a
-   deployment that changes its AS gets Mission-bound credentials and
+   A deployment that changes its AS gets Mission-bound credentials and
    issuance gating, which the MAS mode does not provide (Section 11).
    The MAS is nonetheless a peer binding, not a staging area: decoupling
    governance from token issuance is an architectural choice some
@@ -917,7 +916,11 @@ Table of Contents
    Mission.  The PEP names the Mission explicitly, and the PDP joins the
    credential to it before evaluating the action.  The join is this
    profile's load-bearing mechanism: it is what a permit "under this
-   Mission" rests on when no cryptographic binding exists.
+   Mission" rests on when no cryptographic binding exists.  This section
+   defines the baseline mapping join; the Mission Join Assertion
+   (Section 10) is the enterprise-mode join built on it, and the
+   Enterprise profile requires it for the high-consequence classes
+   (Section 13).
 
    A Mission-joining PDP and its PEPs MUST observe the following:
 
@@ -1205,9 +1208,9 @@ Table of Contents
    terms ([I-D.draft-mcguinness-mission-substrate]): it provides the
    Mission record, anchors, and lifecycle but not the Mission-bound
    credential, so enforcement composes entirely through the runtime join
-   and PEP coverage.  Under the maturity ladder this is the Runtime-
-   Enforced rung reached through the MAS binding, which provides no
-   Mission-bound credential and no issuance gating
+   and PEP coverage.  Among the Mission Assurance Levels this is the
+   Runtime-Enforced level reached through the MAS binding, which
+   provides no Mission-bound credential and no issuance gating
    ([I-D.draft-mcguinness-mission-architecture]).
 
    A deployment claiming this profile MUST state, alongside its
@@ -1343,8 +1346,8 @@ Table of Contents
    plane: it turns the floor's SHOULDs and OPTIONALs into the guarantees
    an enterprise deployment needs.  A deployment claims the Enterprise
    Mission Authority Profile only when all of the following hold; it is
-   the Runtime-Enforced rung of the maturity ladder under the MAS
-   binding, with the obligations below
+   the Runtime-Enforced level of the Mission Assurance Levels under the
+   MAS binding, with the obligations below
    ([I-D.draft-mcguinness-mission-architecture]).
 
    *  *Status and lifecycle.* The MAS MUST serve the Mission Status
@@ -1384,6 +1387,10 @@ Table of Contents
    *  *Audit evidence.* Joins and decisions MUST produce runtime
       evidence retained for the audit horizon
       ([I-D.draft-mcguinness-mission-runtime]).
+
+   A deployment claiming this profile SHOULD publish its claims,
+   coverage, and residual risks as a Mission Deployment Profile
+   ([I-D.draft-mcguinness-mission-architecture]).
 
 13.1.  The Enterprise Mapping Contract
 
@@ -1480,19 +1487,23 @@ Table of Contents
 
 14.3.  Progressive Adoption
 
-   A MAS is adopted in phases, each independently useful:
+   A MAS is adopted level by level across the Mission Assurance Levels
+   ([I-D.draft-mcguinness-mission-architecture]), each phase
+   independently useful:
 
    1.  The MAS records Missions and approvals: governance and audit of
-       what tasks were approved, with no enforcement change yet.
+       what tasks were approved, with no enforcement change yet
+       (Baseline Issuance under the MAS binding).
 
    2.  Mission Status and lifecycle become the estate-wide kill switch:
-       consumers fail safe on non-active state.
+       consumers fail safe on non-active state (the state-aware half-
+       step).
 
    3.  PEP/PDP runtime enforcement gates consequential actions per the
-       runtime profile.
+       runtime profile (the Runtime-Enforced level).
 
    4.  Join Assertions and instance-bound joins harden the join for the
-       high-consequence classes (the Enterprise profile).
+       high-consequence classes (the Enterprise profile, Section 13).
 
    5.  Where a particular AS later becomes Mission-aware, it adds
        Mission-bound tokens and issuance gating for its own resources,
@@ -1500,7 +1511,10 @@ Table of Contents
        govern the rest of the estate.
 
    A deployment stops at the phase its risk warrants; nothing above the
-   floor is required to begin.
+   floor is required to begin.  The MAS is not a throwaway bridge but
+   the enduring control plane of the family's delegated-authority layer
+   ([I-D.draft-mcguinness-mission-architecture]), which a deployment
+   keeps even as individual Authorization Servers become Mission-aware.
 
 15.  Security Considerations
 

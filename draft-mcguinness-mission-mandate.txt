@@ -178,9 +178,10 @@ Table of Contents
 
    Mission Issuer:  The component that approved and holds the Mission,
       identified by the Mission's issuer: the OAuth Authorization Server
-      under the issuance profile, or a Mission Authority Server
+      under the issuance profile, a Mission Authority Server
       ([I-D.draft-mcguinness-mission-authority-server]) under the
-      standalone binding.
+      standalone binding, or an AAuth Person Server
+      ([I-D.draft-mcguinness-mission-aauth]) under the AAuth binding.
 
    Mission Mandate (Mandate):  A signed, portable statement of a
       Mission's committed facts, minted by the Mission Issuer
@@ -203,8 +204,11 @@ Table of Contents
    normative substrate, publishing keys through its Authorization Server
    metadata jwks_uri; the Mission Authority Server
    ([I-D.draft-mcguinness-mission-authority-server]) is a standalone
-   binding of the same primitives with its own metadata jwks_uri.  A
-   Mandate minted under either binding is verified identically.
+   binding of the same primitives with its own metadata jwks_uri; and
+   the AAuth binding ([I-D.draft-mcguinness-mission-aauth]) hosts the
+   same primitives at the AAuth Person Server, whose existing jwks_uri
+   is the published key material for its signed artifacts.  A Mandate
+   minted under any of the three bindings is verified identically.
 
 5.  Mission Mandate
 
@@ -775,6 +779,11 @@ Table of Contents
               <https://www.rfc-editor.org/rfc/rfc9901>.
 
 14.2.  Informative References
+
+   [I-D.draft-mcguinness-mission-aauth]
+              McGuinness, K., "Mission-Bound Authorization for AAuth",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-mission-aauth.html>.
 
    [I-D.draft-mcguinness-mission-audit]
               McGuinness, K., "Mission Audit Transparency", 2026,

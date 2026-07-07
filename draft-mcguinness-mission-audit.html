@@ -1776,9 +1776,11 @@ components that are not entitled to write to a Mission's feed.<a href="#section-
 <p id="section-6.3-3">A relying party discovers a producer's key by the producer's role. The
 <code>issuer</code>'s key is resolved through its published key material: the
 Authorization Server's metadata <code>jwks_uri</code> in the OAuth binding
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), or the Mission Authority
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the Mission Authority
 Server's discovery <code>jwks_uri</code> in the standalone binding
-(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>). A PDP or PEP key
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), or the AAuth
+Person Server's existing <code>jwks_uri</code> in the AAuth binding
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>). A PDP or PEP key
 is resolved
 through the deployment-published key sets the runtime and AuthZEN
 profiles require (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
@@ -2224,7 +2226,8 @@ cross-audience correlator; a deployment that needs to limit
 correlation adopts the directed or audience-pairwise Mission
 references named as future work by the issuance profile and the
 AAuth binding, when available
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-13.1-2.5.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-13.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.1-2.6">
             <p id="section-13.1-2.6.1"><strong>Export.</strong> An evidence export preserves integrity (the commitments
@@ -2326,6 +2329,10 @@ identifier.<a href="#section-14-2" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-ietf-scitt-scrapi">[I-D.draft-ietf-scitt-scrapi]</dt>
         <dd>
 <span class="refAuthor">Birkholz, H.</span>, <span class="refAuthor">Geater, J.</span>, and <span class="refAuthor">A. Delignat-Lavaud</span>, <span class="refTitle">"Supply Chain Integrity, Transparency, and Trust (SCITT) Reference APIs"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-scitt-scrapi-11</span>, <time datetime="2026-06-26" class="refDate">26 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-scitt-scrapi-11">https://datatracker.ietf.org/doc/html/draft-ietf-scitt-scrapi-11</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-aauth">[I-D.draft-mcguinness-mission-aauth]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for AAuth"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
         <dd>

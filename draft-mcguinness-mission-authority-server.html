@@ -1408,8 +1408,7 @@ Decision Point (PDP) joins the credential to the Mission before
 evaluating the action (<a href="#mission-join" class="auto internal xref">Section 9</a>). Per-action enforcement then
 proceeds under the runtime profile
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span> unchanged.<a href="#section-1-3" class="pilcrow">¶</a></p>
-<p id="section-1-4">The OAuth binding remains the flagship of the family, and a
-deployment that changes its AS gets Mission-bound credentials and
+<p id="section-1-4">A deployment that changes its AS gets Mission-bound credentials and
 issuance gating, which the MAS mode does not provide
 (<a href="#limitations" class="auto internal xref">Section 11</a>). The MAS is nonetheless a peer binding, not a
 staging area: decoupling governance from token issuance is an
@@ -2423,7 +2422,11 @@ Mission-derived <code>authorization_details</code>, so it cannot identify its
 Mission. The PEP names the Mission explicitly, and the PDP joins the
 credential to it before evaluating the action. The join is this
 profile's load-bearing mechanism: it is what a permit "under this
-Mission" rests on when no cryptographic binding exists.<a href="#section-9-1" class="pilcrow">¶</a></p>
+Mission" rests on when no cryptographic binding exists. This section
+defines the baseline mapping join; the Mission Join Assertion
+(<a href="#join-assertion" class="auto internal xref">Section 10</a>) is the enterprise-mode join built on it, and the
+Enterprise profile requires it for the high-consequence classes
+(<a href="#enterprise-profile" class="auto internal xref">Section 13</a>).<a href="#section-9-1" class="pilcrow">¶</a></p>
 <p id="section-9-2">A Mission-joining PDP and its PEPs <span class="bcp14">MUST</span> observe the following:<a href="#section-9-2" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-9-3">
 <li id="section-9-3.1">
@@ -2796,7 +2799,7 @@ them. The mode is a <strong>partial-provision binding</strong> in the substrate'
 terms (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>): it provides the
 Mission record, anchors, and lifecycle but not the Mission-bound
 credential, so enforcement composes entirely through the runtime join
-and PEP coverage. Under the maturity ladder this is the Runtime-Enforced rung reached
+and PEP coverage. Among the Mission Assurance Levels this is the Runtime-Enforced level reached
 through the MAS binding, which provides no Mission-bound credential
 and no issuance gating
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-11-1" class="pilcrow">¶</a></p>
@@ -2962,7 +2965,7 @@ the operating profile for a MAS used as an estate's Mission control
 plane: it turns the floor's SHOULDs and OPTIONALs into the guarantees
 an enterprise deployment needs. A deployment claims the Enterprise
 Mission Authority Profile only when all of the following hold; it is
-the Runtime-Enforced rung of the maturity ladder under the MAS
+the Runtime-Enforced level of the Mission Assurance Levels under the MAS
 binding, with the obligations below (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-13-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-13-2.1">
@@ -3008,6 +3011,9 @@ evidence retained for the audit horizon
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-13-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
+<p id="section-13-3">A deployment claiming this profile <span class="bcp14">SHOULD</span> publish its claims,
+coverage, and residual risks as a Mission Deployment Profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-13-3" class="pilcrow">¶</a></p>
 <div id="mapping-contract">
 <section id="section-13.1">
         <h3 id="name-the-enterprise-mapping-cont">
@@ -3150,23 +3156,28 @@ the runtime profile's Enforcement Scope Statement must state
         <h3 id="name-progressive-adoption">
 <a href="#section-14.3" class="section-number selfRef">14.3. </a><a href="#name-progressive-adoption" class="section-name selfRef">Progressive Adoption</a>
         </h3>
-<p id="section-14.3-1">A MAS is adopted in phases, each independently useful:<a href="#section-14.3-1" class="pilcrow">¶</a></p>
+<p id="section-14.3-1">A MAS is adopted level by level across the Mission Assurance Levels
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>), each phase
+independently useful:<a href="#section-14.3-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-14.3-2">
 <li id="section-14.3-2.1">
             <p id="section-14.3-2.1.1">The MAS records Missions and approvals: governance and audit of
-what tasks were approved, with no enforcement change yet.<a href="#section-14.3-2.1.1" class="pilcrow">¶</a></p>
+what tasks were approved, with no enforcement change yet
+(Baseline Issuance under the MAS binding).<a href="#section-14.3-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-14.3-2.2">
             <p id="section-14.3-2.2.1">Mission Status and lifecycle become the estate-wide kill switch:
-consumers fail safe on non-<code>active</code> state.<a href="#section-14.3-2.2.1" class="pilcrow">¶</a></p>
+consumers fail safe on non-<code>active</code> state (the state-aware
+half-step).<a href="#section-14.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-14.3-2.3">
             <p id="section-14.3-2.3.1">PEP/PDP runtime enforcement gates consequential actions per the
-runtime profile.<a href="#section-14.3-2.3.1" class="pilcrow">¶</a></p>
+runtime profile (the Runtime-Enforced level).<a href="#section-14.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-14.3-2.4">
             <p id="section-14.3-2.4.1">Join Assertions and instance-bound joins harden the join for the
-high-consequence classes (the Enterprise profile).<a href="#section-14.3-2.4.1" class="pilcrow">¶</a></p>
+high-consequence classes (the Enterprise profile,
+<a href="#enterprise-profile" class="auto internal xref">Section 13</a>).<a href="#section-14.3-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-14.3-2.5">
             <p id="section-14.3-2.5.1">Where a particular AS later becomes Mission-aware, it adds
@@ -3176,7 +3187,10 @@ govern the rest of the estate.<a href="#section-14.3-2.5.1" class="pilcrow">¶</
 </li>
         </ol>
 <p id="section-14.3-3">A deployment stops at the phase its risk warrants; nothing above the
-floor is required to begin.<a href="#section-14.3-3" class="pilcrow">¶</a></p>
+floor is required to begin. The MAS is not a throwaway bridge but the
+enduring control plane of the family's delegated-authority layer
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>), which a deployment
+keeps even as individual Authorization Servers become Mission-aware.<a href="#section-14.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
