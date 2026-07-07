@@ -98,6 +98,7 @@ Table of Contents
    11. Conformance
    12. Security Considerations
    13. Privacy Considerations
+     13.1.  Evidence Minimization
    14. IANA Considerations
    15. References
      15.1.  Normative References
@@ -839,6 +840,38 @@ Table of Contents
    request or a retention limit, weighs this before registering.
    Registration does not prevent erasure; it converts an erased record
    into a permanent, visible gap rather than a silent one.
+
+13.1.  Evidence Minimization
+
+   The evidence layer is an accountability substrate, and unbounded it
+   becomes a surveillance substrate.  A deployment SHOULD apply these
+   minimizations to the evidence it produces and registers, across this
+   profile and the runtime and consent-evidence records it aggregates:
+
+   *  *Data minimization.* Record the action class, resource, and bound
+      parameters a decision turned on, not full user content or model
+      input, unless the content is itself the audited artifact.
+
+   *  *Separation.* Keep operational logs distinct from audit-grade
+      evidence, so verbose debugging data is not retained at the audit
+      horizon or committed to a transparency log.
+
+   *  *Access control.* Evidence access is itself policy-governed;
+      reading a Mission's evidence is a privileged operation, not a
+      byproduct of holding a Mission reference.
+
+   *  *Retention.* Retain for the declared audit horizon and no longer;
+      the horizon is per-Mission, not indefinite.
+
+   *  *Identifier strategy.* The durable per-Mission sub is a cross-
+      audience correlator; a deployment that needs to limit correlation
+      adopts the directed or audience-pairwise Mission references named
+      as future work by the issuance profile and the AAuth binding, when
+      available ([I-D.draft-mcguinness-oauth-mission]).
+
+   *  *Export.* An evidence export preserves integrity (the commitments
+      and their salts) without over-sharing the raw committed content
+      beyond the recipient's need.
 
 14.  IANA Considerations
 

@@ -81,10 +81,11 @@ Table of Contents
      5.2.  The Lifecycle State Space
      5.3.  The Authority Set Representation
      5.4.  The Integrity-Anchor Envelope
-     5.5.  The Mission-Bound Credential
-     5.6.  The Audit Horizon
-     5.7.  The Validity Model
-     5.8.  The Binding Checklist
+     5.5.  Token Classes
+     5.6.  The Mission-Bound Credential
+     5.7.  The Audit Horizon
+     5.8.  The Validity Model
+     5.9.  The Binding Checklist
    6.  Mission Layers
      6.1.  Propose
      6.2.  Approve and Record
@@ -97,17 +98,18 @@ Table of Contents
    7.  Mission Deployment Patterns
      7.1.  The Adoption Ladder
      7.2.  Assurance Tiers
-   8.  Prevention, Detection, and Residue
-   9.  The Authority Derivation Boundary
-   10. Mission Requirements
-     10.1.  Context and Intent
-     10.2.  Consent and Approval
-     10.3.  Lifecycle
-     10.4.  Delegated and Enforced Execution
-   11. Mission Document Map
-   12. Security Considerations
-   13. IANA Considerations
-   14. Informative References
+   8.  The Mission Deployment Profile
+   9.  Prevention, Detection, and Residue
+   10. The Authority Derivation Boundary
+   11. Mission Requirements
+     11.1.  Context and Intent
+     11.2.  Consent and Approval
+     11.3.  Lifecycle
+     11.4.  Delegated and Enforced Execution
+   12. Mission Document Map
+   13. Security Considerations
+   14. IANA Considerations
+   15. Informative References
    Acknowledgments
    Author's Address
 
@@ -387,16 +389,40 @@ Table of Contents
    A committed object is hashed over an envelope domain-separated by typ
    and issuer-bound by iss, canonicalized by fixed rules, and encoded
    with an algorithm prefix a verifier recognizes or rejects; the typ
-   space is an extension point for new committed objects.  Home: the
-   core's Integrity Anchors and Canonicalization Rules sections, with
-   the extension rule in its Extensibility section.  Consumed by Consent
-   Evidence (consent_rendering_hash), Shaping (Shaping Evidence), the
-   runtime layer and AuthZEN binding (mission-policy-view),
-   Orchestration (unwind_plan_hash), the Mandate (the encoded digest
-   form), and Audit Transparency (the committed evidence types it
+   space is an extension point for new committed objects.  These are
+   *commitment anchors*, not enforcement proofs: intent_hash and
+   authority_hash prove what was approved and committed, not that the
+   derivation was the semantically correct reading of the intent, and a
+   narrowed-token Resource Server enforces the authority it receives
+   rather than reconstructing authority from a hash of a full set it
+   does not hold ([I-D.draft-mcguinness-mission-security-model]).  Home:
+   the core's Integrity Anchors and Canonicalization Rules sections,
+   with the extension rule in its Extensibility section.  Consumed by
+   Consent Evidence (consent_rendering_hash), Shaping (Shaping
+   Evidence), the runtime layer and AuthZEN binding (mission-policy-
+   view), Orchestration (unwind_plan_hash), the Mandate (the encoded
+   digest form), and Audit Transparency (the committed evidence types it
    registers).
 
-5.5.  The Mission-Bound Credential
+5.5.  Token Classes
+
+   "Mission-bound" is a specific claim, and three token shapes are worth
+   distinguishing so a weak one is not read as the strong one:
+
+   *  a *Mission-referenced token* carries a Mission identifier only;
+
+   *  a *Mission-derived token* carries authority derived from an active
+      Mission; and
+
+   *  a *Mission-bound token* is Mission-derived and additionally
+      active-state gated, subset-constrained, and refresh-gated (the
+      core's conformance rule).
+
+   Only the third earns the term: a mission claim alone is a reference,
+   not Mission-bound authorization.  The family reserves "Mission-bound"
+   for that class.
+
+5.6.  The Mission-Bound Credential
 
    A credential carrying the mission claim (id, issuer, authority_hash)
    and Mission-derived authorization details, issued only while the
@@ -422,7 +448,7 @@ Table of Contents
    layer and the harness) route through the binding establishment step,
    which is what makes the standalone binding possible.
 
-5.6.  The Audit Horizon
+5.7.  The Audit Horizon
 
    The deployment-declared retention window for the Mission record and
    its evidence: at least the Mission's lifetime plus a declared post-
@@ -431,7 +457,7 @@ Table of Contents
    retention; by the MAS for record retention; and by the security
    model's retention analysis.
 
-5.7.  The Validity Model
+5.8.  The Validity Model
 
    Five validity horizons govern reliance, each with its own setter,
    checker, and consequence; implementations most often err by
@@ -460,7 +486,7 @@ Table of Contents
    every applicable horizon to be open, and no horizon substitutes for
    another.
 
-5.8.  The Binding Checklist
+5.9.  The Binding Checklist
 
    For a new binding this checklist is now normatively stated by Mission
    Substrate Requirements ([I-D.draft-mcguinness-mission-substrate]);
@@ -846,7 +872,75 @@ Table of Contents
    control limit into a deployment architecture rather than an
    unmitigated gap.
 
-8.  Prevention, Detection, and Residue
+8.  The Mission Deployment Profile
+
+   The Adoption Ladder says what to deploy and the Assurance Tiers say
+   what may be claimed, but a claim is only checkable if a deployment
+   states, concretely, what it enforces and what it leaves outside the
+   boundary.  The *Mission Deployment Profile* is that system-level
+   artifact: a single publishable manifest that composes the per-layer
+   scope statements (the runtime profile's Enforcement Scope Statement,
+   the harness execution-environment scope statement, the MAS mapping
+   contract where used) into one object an auditor, a procurement, or a
+   security review can read.  It is non-normative in shape here; a
+   profile or deployment fixes the exact serialization.
+
+   Its distinguishing field is residual_risks: the profile is not
+   credible unless it states, in the same object as its guarantees, what
+   it does not cover.  An illustrative shape:
+
+   {
+     "profile": "mission-governed-agent-runtime",
+     "assurance_tier": "agent-compromise-resistant",
+     "mission_issuer": "https://mas.example.com",
+     "state_sources": [
+       { "type": "status_endpoint", "max_staleness_seconds": 30 }
+     ],
+     "issuance": {
+       "binding": "oauth-core",
+       "mission_claim_required": true,
+       "refresh_gated_on_active_state": true
+     },
+     "runtime": {
+       "pdp": "authzen",
+       "pep_locations": ["tool-gateway", "browser-action-proxy"],
+       "mediated_action_classes": [
+         "irreversible_action", "external_commitment"
+       ],
+       "unmediated_exclusions": [
+         "internal_reasoning", "local_cache_read"
+       ]
+     },
+     "credential_custody": {
+       "held_by": "pep",
+       "sender_constrained": true,
+       "agent_receives_bearer_token": false
+     },
+     "harness": {
+       "subagent_inheritance": "explicit_delegation_only",
+       "resume_requires_active_state": true,
+       "cached_credentials_revalidated": true,
+       "secondary_egress_enumerated": true
+     },
+     "evidence": {
+       "decision_evidence": true,
+       "execution_evidence": true,
+       "retention_days": 365
+     },
+     "residual_risks": [
+       "unmediated local reasoning is outside enforcement",
+       "revocation latency up to 30 seconds",
+       "PEP compromise is not prevented"
+     ]
+   }
+
+   Two deployments that both "support Mission" but publish different
+   Deployment Profiles provide different security properties, and the
+   profile is what makes that difference legible.  A deployment claiming
+   an Assurance Tier (Section 7.2) states the tier here and lists the
+   residuals that tier leaves.
+
+9.  Prevention, Detection, and Residue
 
    Each layer earns a specific property and leaves a specific residue.
    Stated as a table so a claim cannot be read as more than it is:
@@ -891,7 +985,7 @@ Table of Contents
    residues the assurance tiers (Section 7.2) and the security model
    make a deployment state rather than assume.
 
-9.  The Authority Derivation Boundary
+10.  The Authority Derivation Boundary
 
    Deriving the Authority Set from the Mission Intent is the semantic
    heart of the model and the one step the family deliberately does not
@@ -910,14 +1004,39 @@ Table of Contents
    of it and reproducible, which is the closest the family comes to
    portable derivation.
 
-10.  Mission Requirements
+   The derivation modes rank by how portable their result is:
+
+      +==========================+=================================+
+      | Derivation mode          | Portability status              |
+      +==========================+=================================+
+      | Client proposes concrete | Interoperable default           |
+      | authority; AS narrows    |                                 |
+      +--------------------------+---------------------------------+
+      | AS derives from          | Profile-specific                |
+      | structured Intent fields |                                 |
+      +--------------------------+---------------------------------+
+      | AS derives from free     | Local, non-portable unless      |
+      | text                     | profiled                        |
+      +--------------------------+---------------------------------+
+      | LLM-assisted derivation  | Advisory unless a deterministic |
+      |                          | policy commits the output       |
+      +--------------------------+---------------------------------+
+
+                                 Table 2
+
+   A deployment seeking interoperable authority uses the first; free-
+   text and model-assisted derivation are local policy unless a profile
+   pins them with a published policy identifier, version, and test
+   fixtures.
+
+11.  Mission Requirements
 
    The requirements the family answers, stated implementation-neutrally;
-   each names its answering documents by short form (Section 11).  They
+   each names its answering documents by short form (Section 12).  They
    stand on their own: a reader evaluating another design can use them
    as a checklist.
 
-10.1.  Context and Intent
+11.1.  Context and Intent
 
    *  *R1*: The task an agent pursues is a durable, structured, approved
       object (oauth-mission; mission-authority-server).
@@ -929,7 +1048,7 @@ Table of Contents
       influence never derive, widen, or gate authority (oauth-mission;
       mission-shaping).
 
-10.2.  Consent and Approval
+11.2.  Consent and Approval
 
    *  *R4*: The derived authority is disclosed to the Approver before it
       takes effect, and the approval covers it (oauth-mission).
@@ -944,7 +1063,7 @@ Table of Contents
       only narrows (oauth-mission-approval; the experimental oauth-
       mission-approval-revision).
 
-10.3.  Lifecycle
+11.3.  Lifecycle
 
    *  *R8*: Reliance is gated on task state: only active permits it, and
       unrecognized states fail safe (oauth-mission).
@@ -962,7 +1081,7 @@ Table of Contents
    *  *R12*: Authority retires per entry when the work an entry served
       is done (oauth-mission-completion).
 
-10.4.  Delegated and Enforced Execution
+11.4.  Delegated and Enforced Execution
 
    *  *R13*: Derived and delegated authority only narrows (oauth-
       mission; oauth-mission-attenuation).
@@ -982,7 +1101,7 @@ Table of Contents
    *  *R17*: Task evidence is tamper-evident and verifiable outside the
       deployment (mission-audit; mission-mandate).
 
-11.  Mission Document Map
+12.  Mission Document Map
 
    One line per document, grouped as the family groups them; the short
    form drops the draft-mcguinness- prefix.  The naming encodes a
@@ -1095,7 +1214,7 @@ Table of Contents
    mission-security-model:  The trusted base in one view: what each
       component must achieve and what its compromise costs.
 
-12.  Security Considerations
+13.  Security Considerations
 
    This document introduces no mechanism and therefore no new security
    considerations.  The consolidated trusted base and compromise
@@ -1103,11 +1222,11 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-security-model]), and each profile's
    own Security Considerations remain normative.
 
-13.  IANA Considerations
+14.  IANA Considerations
 
    This document makes no IANA request.
 
-14.  Informative References
+15.  Informative References
 
    [I-D.draft-mcguinness-mission-aauth]
               McGuinness, K., "Mission-Bound Authorization for AAuth",

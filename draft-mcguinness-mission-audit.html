@@ -1244,6 +1244,11 @@ commit to the evidence by hash rather than carrying it.<a href="#section-abstrac
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
             <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-evidence-minimization" class="internal xref">Evidence Minimization</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
             <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
@@ -2184,6 +2189,51 @@ that may need to erase evidence, for a data-subject request or a
 retention limit, weighs this before registering. Registration does not
 prevent erasure; it converts an erased record into a permanent, visible
 gap rather than a silent one.<a href="#section-13-3" class="pilcrow">¶</a></p>
+<div id="evidence-minimization">
+<section id="section-13.1">
+        <h3 id="name-evidence-minimization">
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-evidence-minimization" class="section-name selfRef">Evidence Minimization</a>
+        </h3>
+<p id="section-13.1-1">The evidence layer is an accountability substrate, and unbounded it
+becomes a surveillance substrate. A deployment <span class="bcp14">SHOULD</span> apply these
+minimizations to the evidence it produces and registers, across this
+profile and the runtime and consent-evidence records it aggregates:<a href="#section-13.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13.1-2.1">
+            <p id="section-13.1-2.1.1"><strong>Data minimization.</strong> Record the action class, resource, and bound
+parameters a decision turned on, not full user content or model
+input, unless the content is itself the audited artifact.<a href="#section-13.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-2.2">
+            <p id="section-13.1-2.2.1"><strong>Separation.</strong> Keep operational logs distinct from audit-grade
+evidence, so verbose debugging data is not retained at the audit
+horizon or committed to a transparency log.<a href="#section-13.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-2.3">
+            <p id="section-13.1-2.3.1"><strong>Access control.</strong> Evidence access is itself policy-governed;
+reading a Mission's evidence is a privileged operation, not a
+byproduct of holding a Mission reference.<a href="#section-13.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-2.4">
+            <p id="section-13.1-2.4.1"><strong>Retention.</strong> Retain for the declared audit horizon and no longer;
+the horizon is per-Mission, not indefinite.<a href="#section-13.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-2.5">
+            <p id="section-13.1-2.5.1"><strong>Identifier strategy.</strong> The durable per-Mission <code>sub</code> is a
+cross-audience correlator; a deployment that needs to limit
+correlation adopts the directed or audience-pairwise Mission
+references named as future work by the issuance profile and the
+AAuth binding, when available
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-13.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-2.6">
+            <p id="section-13.1-2.6.1"><strong>Export.</strong> An evidence export preserves integrity (the commitments
+and their salts) without over-sharing the raw committed content
+beyond the recipient's need.<a href="#section-13.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
 </section>
 </div>
 <div id="iana">

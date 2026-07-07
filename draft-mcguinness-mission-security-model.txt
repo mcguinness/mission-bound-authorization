@@ -649,6 +649,38 @@ Table of Contents
    the mechanism it runs, or the tightest of several, to state how long
    a revoked Mission can still act.
 
+   The same window, read per assurance tier
+   ([I-D.draft-mcguinness-mission-architecture]) and per what it stops:
+
+   +======================+========+=========+===========+============+
+   | Tier                 |Further |Cached   | Runtime   | Background |
+   |                      |issuance|token use| action    | work       |
+   +======================+========+=========+===========+============+
+   | Baseline Issuance    |stopped |until    | not gated | not gated  |
+   |                      |at once |token exp|           |            |
+   +----------------------+--------+---------+-----------+------------+
+   | State-Aware Reliance |stopped |within   | not gated | not gated  |
+   |                      |at once |staleness|           |            |
+   |                      |        |bound    |           |            |
+   +----------------------+--------+---------+-----------+------------+
+   | Runtime-Enforced     |stopped |stopped  | stopped   | only if    |
+   |                      |at once |for      | within    | the        |
+   |                      |        |mediated | freshness | harness    |
+   |                      |        |actions  | bound     | re-checks  |
+   +----------------------+--------+---------+-----------+------------+
+   | Governed /           |stopped |stopped  | stopped   | stopped on |
+   | Compromise-Resistant |at once |         | within    | resume re- |
+   |                      |        |         | freshness | check      |
+   |                      |        |         | bound     |            |
+   +----------------------+--------+---------+-----------+------------+
+
+                                 Table 3
+
+   Background work is bounded only where the harness re-checks Mission
+   state on resume, retry, and dispatch
+   ([I-D.draft-mcguinness-mission-harness]); without it, a resumed job
+   acts on the authority its cached credential still carries.
+
 11.  Documenting the Trusted Base
 
    A deployment cannot be evaluated against this model without knowing
@@ -719,6 +751,12 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission.html>.
 
 16.2.  Informative References
+
+   [I-D.draft-mcguinness-mission-architecture]
+              McGuinness, K., "Mission-Bound Authorization
+              Architecture", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-mission-
+              architecture.html>.
 
    [I-D.draft-mcguinness-mission-audit]
               McGuinness, K., "Mission Audit Transparency", 2026,

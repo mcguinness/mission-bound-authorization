@@ -1858,6 +1858,55 @@ layer the deployment enforces for that class.<a href="#section-10-1" class="pilc
 as their own profile defines. A deployment reads the row for the
 mechanism it runs, or the tightest of several, to state how long a
 revoked Mission can still act.<a href="#section-10-3" class="pilcrow">¶</a></p>
+<p id="section-10-4">The same window, read per assurance tier
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>) and per what it stops:<a href="#section-10-4" class="pilcrow">¶</a></p>
+<table class="center" id="table-3">
+        <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Tier</th>
+            <th class="text-left" rowspan="1" colspan="1">Further issuance</th>
+            <th class="text-left" rowspan="1" colspan="1">Cached token use</th>
+            <th class="text-left" rowspan="1" colspan="1">Runtime action</th>
+            <th class="text-left" rowspan="1" colspan="1">Background work</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Baseline Issuance</td>
+            <td class="text-left" rowspan="1" colspan="1">stopped at once</td>
+            <td class="text-left" rowspan="1" colspan="1">until token <code>exp</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">not gated</td>
+            <td class="text-left" rowspan="1" colspan="1">not gated</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">State-Aware Reliance</td>
+            <td class="text-left" rowspan="1" colspan="1">stopped at once</td>
+            <td class="text-left" rowspan="1" colspan="1">within staleness bound</td>
+            <td class="text-left" rowspan="1" colspan="1">not gated</td>
+            <td class="text-left" rowspan="1" colspan="1">not gated</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Runtime-Enforced</td>
+            <td class="text-left" rowspan="1" colspan="1">stopped at once</td>
+            <td class="text-left" rowspan="1" colspan="1">stopped for mediated actions</td>
+            <td class="text-left" rowspan="1" colspan="1">stopped within freshness bound</td>
+            <td class="text-left" rowspan="1" colspan="1">only if the harness re-checks</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Governed / Compromise-Resistant</td>
+            <td class="text-left" rowspan="1" colspan="1">stopped at once</td>
+            <td class="text-left" rowspan="1" colspan="1">stopped</td>
+            <td class="text-left" rowspan="1" colspan="1">stopped within freshness bound</td>
+            <td class="text-left" rowspan="1" colspan="1">stopped on resume re-check</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-10-6">Background work is bounded only where the harness re-checks Mission
+state on resume, retry, and dispatch
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>); without it, a resumed job
+acts on the authority its cached credential still carries.<a href="#section-10-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="documenting">
@@ -1962,6 +2011,10 @@ handles.<a href="#section-14-1" class="pilcrow">¶</a></p>
 <a href="#section-16.2" class="section-number selfRef">16.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization Architecture"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-audit">[I-D.draft-mcguinness-mission-audit]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Audit Transparency"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html</a>&gt;</span>. </dd>
