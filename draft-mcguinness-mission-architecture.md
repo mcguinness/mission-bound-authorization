@@ -857,6 +857,88 @@ guidance, not a conformance class.
   no Mission-bound tokens and no issuance gating, so enforcement
   rests entirely on PEP coverage.
 
+## Assurance Tiers {#assurance-tiers}
+
+The Adoption Ladder says what to deploy; the assurance tiers say what
+a deployment MAY claim and what it MUST be able to show to claim it.
+The distinction matters because the family's strongest properties are
+deployment properties, not protocol properties: complete PEP
+placement, a trusted freshness source, and credential custody are
+things a deployment does, not things a token proves. A tier is
+therefore a claim, verifiable in the sense the runtime profile fixes
+({{I-D.draft-mcguinness-mission-runtime}}), not a label; a deployment
+states the highest tier it has earned in its enforcement-scope
+statement, and a consumer treats an unstated or unproven tier as not
+claimed.
+
+The tiers are cumulative except where noted, and each rests on
+proof obligations defined normatively by the profile named:
+
+**Mission-Bound Issuance**:
+: authority derived and committed at an approval event with the
+  integrity anchors, issuance bounded by the subset rule, and
+  derivation gated on Mission state (the core). Grants task-bound,
+  auditable authority and a possession-independent kill switch at the
+  issuance gate; it does not grant per-action control, and outstanding
+  tokens run to their own expiry.
+
+**Mission Runtime-Enforced**:
+: adds a PEP/PDP decision on every consequential action, a trusted
+  state source with a published staleness bound, parameter binding,
+  and runtime evidence
+  ({{I-D.draft-mcguinness-mission-runtime}}). Grants per-action
+  enforcement and revocation bounded by the staleness bound plus token
+  lifetime. Its proof obligations are PEP-placement completeness and
+  the declared freshness source and bound.
+
+**Agent-Compromise-Resistant**:
+: adds the runtime profile's four named conditions, mediated
+  credential custody, no unmediated path, action-bound approval for
+  the high-consequence classes, and an active-freshness state source
+  ({{I-D.draft-mcguinness-mission-runtime}}). A compromised agent
+  cannot unilaterally take a high-consequence action for which it does
+  not hold a mediated credential. This is a named high bar, never
+  implied by basic Mission adoption.
+
+**Trifecta-Contained**:
+: adds least exposure, the harness taint rule enforced as a MUST, and
+  full mediation of the external-communication and external-commitment
+  classes with the egress-channel enumeration
+  ({{I-D.draft-mcguinness-mission-runtime}},
+  {{I-D.draft-mcguinness-mission-harness}}). An injected agent cannot
+  egress on the strength of untrusted content alone. It composes with
+  Agent-Compromise-Resistant rather than extending it.
+
+**MAS-Joined Governance**:
+: not a rung above the others but a deliberately weaker peer of
+  Mission Runtime-Enforced, reached through the standalone binding
+  ({{I-D.draft-mcguinness-mission-authority-server}}). Tokens carry no
+  `mission` claim, no Mission authority, and no issuance gating;
+  governance rests entirely on the runtime join and PEP coverage, and
+  the join proves the credential belongs to the same subject and
+  client the Mission names, not that it was issued under the Mission.
+  Revoking a Mission stops nothing at the token layer. This is a
+  material downgrade from the OAuth binding's issuance gate, taken for
+  zero-AS-change adoption, and a deployment claiming it states that
+  the token-layer kill switch is absent.
+
+Every tier above Mission-Bound Issuance also carries the cross-cutting
+obligations its mechanisms imply: operation-profile normalization
+where duration or parameter digests are metered
+({{I-D.draft-mcguinness-mission-metering}},
+{{I-D.draft-mcguinness-mission-authzen}}), evidence retention for the
+audit horizon, and a registration schedule where audit transparency is
+run ({{I-D.draft-mcguinness-mission-audit}}). The evidence tiers are
+accountability, not prevention: they make what was recorded
+tamper-evident, not what was perceived true or what was never recorded
+present.
+
+A deployment attests these obligations in prose by default; where it
+claims Agent-Compromise-Resistant or Trifecta-Contained, it MAY bind
+the enforcement-scope statement to execution-environment attestation
+({{I-D.draft-mcguinness-mission-runtime}}), so the tier is a technical
+claim rather than an organizational one.
+
 The quarantine pattern removes a leg of the injection-to-exfiltration
 chain instead of gating it. Work that ingests untrusted content (web
 pages, inbound mail, third-party documents) runs under a Mission
