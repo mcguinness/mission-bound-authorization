@@ -25,6 +25,14 @@ author:
     email: public@karlmcguinness.com
 
 informative:
+  I-D.draft-mcguinness-mission-metering:
+    title: "Mission Consumption Metering"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC6749:
   RFC9126:
   RFC9396:

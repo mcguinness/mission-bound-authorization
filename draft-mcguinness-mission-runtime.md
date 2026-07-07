@@ -1111,19 +1111,8 @@ is the deployment's accepted state lease.
   acceptable latency is deployment- and consequence-specific, but the
   bound is the number that determines the profile's headline
   revocation property, so publishing it without its latency
-  consequence is non-conformant. The recommended budgets per class,
-  non-normative, are:
-
-  | Class | Recommended freshness budget |
-  |---|---|
-  | Irreversible, external commitment, privileged administration | active source required; seconds to minutes (target <= 300 s) |
-  | External communication (any class) | active source required, plus an egress PEP |
-  | Reversible consequential write | short lease |
-  | Consequential read | token lifetime or lease, by sensitivity |
-  | Audit-only | no active freshness required |
-
-  A deployment justifies any looser value for a high-consequence class
-  in its Enforcement Scope Statement.
+  consequence is non-conformant. The per-class budgets recommended
+  below are the non-normative guidance for the value.
 - For the high-consequence classes, the state source MUST be an active
   freshness mechanism that can reflect a revocation within the staleness
   bound: token introspection at the issuer ({{RFC7662}}), the Mission Status
@@ -1141,9 +1130,13 @@ are likely to match the risk of common action classes:
 |---|---|
 | Consequential read | Token lifetime or a short state lease; tighter for privacy-sensitive, cross-tenant, or bulk reads |
 | Consequential write | A short state lease, typically measured in minutes |
-| Irreversible action | Immediate check or single-use permit |
-| External commitment | Immediate check or single-use permit |
-| Privileged administration | Immediate check, suitable for composition with local step-up |
+| Irreversible action | Active source required; immediate check or single-use permit, target under 300 s |
+| External commitment | Active source required; immediate check or single-use permit, plus an egress PEP for external communication, target under 300 s |
+| Privileged administration | Active source required; immediate check, suitable for composition with local step-up, target under 300 s |
+| Audit-only | No active freshness required |
+
+A deployment justifies any looser value for a high-consequence class
+in its Enforcement Scope Statement.
 
 ## Materialized policy view {#policy-view}
 
