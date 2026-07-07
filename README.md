@@ -179,17 +179,21 @@ assume from "Mission-bound agents" (action-time checks, prompt stop,
 unwinding, consent evidence) only arrive when several are deployed
 together. Most agent deployments therefore want a bundle, not the core
 alone. These bundles name what to deploy for a given goal; the
-Architecture document defines them citably as the Adoption Ladder. The short
+Architecture document defines them citably as the Maturity Ladder. The short
 names in the table are the drafts' nicknames; each maps to a document
 described under "The documents" below (mission is the core; the rest
 are the companion profiles of the same names).
 
-| Bundle | Drafts | What you get |
+The rung is one axis; the binding (OAuth AS, standalone Mission
+Authority Server, or AAuth Person Server) is orthogonal and described
+below the table.
+
+| Rung | Drafts | What you get |
 |---|---|---|
-| **Baseline issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Enforced bundle). Audit, not action-time defense. |
-| **Enforced agent** | mission + runtime + authzen + a freshness source (status or issuer token introspection; signals, experimental, adds push) | Per-action enforcement at the point of use, and prompt revocation (pull via status or introspection; the experimental signals profile adds push). The minimum for an agent that takes consequential actions. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
-| **Governed agent (recommended for AI agents)** | Enforced agent + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. For protection against a compromised agent, claim runtime's named agent-compromise-resistant enforcement (see the note below the table). Add child-delegation for sub-agents and expansion for mid-task growth, and orchestration (experimental) for safe unwinding of in-flight work. |
-| **Standalone governance (AS-optional)** | authority-server (experimental) + runtime + authzen (+ consent-evidence and harness for the Governed equivalents) | Mission governance and per-action enforcement with an unmodified OAuth Authorization Server; the authority server serves the status and lifecycle surfaces itself and is the freshness source. No Mission-bound tokens and no issuance gating: revoking a Mission stops nothing at the token layer, so enforcement rests entirely on PEP coverage. Expansion and sub-agent (Child Mission) creation ride the authority server's own submission surface, with an authenticated-client binding in place of the OAuth wire's token possession. A peer binding chosen for governance-issuance separation, and the adoption bridge toward the Enforced and Governed bundles. |
+| **Baseline Issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Runtime-Enforced rung). Audit, not action-time defense. |
+| **Runtime-Enforced** (the Protocol MVP) | mission + runtime + authzen + a freshness source (status or issuer token introspection; signals, experimental, adds push) | Per-action enforcement at the point of use, and prompt revocation. The smallest deployment that makes a Mission-bound token more than governance metadata, and every dependency it needs is ratified. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
+| **Governed Agent** (recommended for AI agents) | Runtime-Enforced + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. Add child-delegation for sub-agents and expansion for mid-task growth, and orchestration (experimental) for safe unwinding of in-flight work. |
+| **High-Assurance Agent** | Governed Agent + mediated custody, no unmediated path, action-bound approval, active freshness | Resistance to a compromised agent: the runtime profile's named agent-compromise-resistant enforcement and trifecta containment claims (see the note below the table), optionally bound to execution-environment attestation. |
 
 The model deploys through three bindings. The OAuth binding is the
 normative adoption path: the Authorization Server implements the

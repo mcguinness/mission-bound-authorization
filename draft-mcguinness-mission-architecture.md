@@ -793,6 +793,19 @@ switch is the runtime state re-check. Both
 build on the actor chain of the core's Delegation Within a Mission
 section.
 
+## Project
+
+The question: how is one Mission honored in another trust domain? The
+boundary: a trust boundary the origin does not control, where the
+verifier holds no session with the issuer. Owner: Cross-Domain
+Projection, a single-hop grant that carries the Mission's identifier,
+issuer, and authority hash into a partner domain unchanged, where a
+Resource AS mints a local token bounded by the projected authority
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). Projection
+preserves authority across the boundary rather than narrowing it to a
+sub-actor, which is why it is a distinct verb from Delegate;
+downstream revocation latency is the local token lifetime.
+
 ## Prove
 
 The question: what can a party outside the deployment verify about
@@ -872,129 +885,96 @@ MAS's Mission Join section), and the MAS's staged walkthrough of the
 same flow is its end-to-end appendix
 ({{I-D.draft-mcguinness-mission-authority-server}}).
 
-## The Adoption Ladder {#adoption-ladder}
+## The Maturity Ladder {#maturity-ladder}
 
-The bundles progress cumulatively, and this section names them so a
-deployment, a procurement, or a review can cite one rung instead of
-enumerating documents. Throughout, every companion is optional; each
-profile states its own scoped conformance, and the rungs are
-guidance, not a conformance class.
+Two questions get asked of a Mission deployment: what to deploy for a
+goal, and what guarantee it has earned. They share one progression, so
+this document states a single ladder whose rungs carry both facets,
+the document set and the proof obligations, and names them so a
+deployment, a procurement, or a review can cite one rung. The rungs
+are guidance, not a conformance class; every companion is optional and
+states its own scoped conformance. Because the family's strongest
+properties are deployment properties, not protocol properties
+(complete PEP placement, a trusted freshness source, and credential
+custody are things a deployment does, not things a token proves), a
+rung is a claim, verifiable in the sense the runtime profile fixes
+({{I-D.draft-mcguinness-mission-runtime}}), not a label: a deployment
+states its highest earned rung in its Enforcement Scope Statement, and
+a consumer treats an unstated or unproven rung as not claimed.
+
+The ladder is one axis; the **binding** is an orthogonal one. Every
+rung is reached under any of the three Mission Issuer bindings, the
+OAuth Authorization Server, the standalone Mission Authority Server,
+or the AAuth Person Server, and a deployment names its binding
+separately from its rung. The standalone MAS binding is the case that
+matters most: it provides the Mission record, lifecycle, and authority
+but no Mission-bound credential and no issuance gating, so under it the
+kill switch is the runtime layer alone, not the token gate, and a
+deployment states that. Binding is not a rung.
+
+The rungs, cumulative:
 
 **Baseline Issuance**:
-: the core alone. Approved, integrity-bound Missions, state-gated
-  issuance, a possession-independent kill switch; audit, not
-  action-time defense.
-
-**Enforced Agent**:
-: Baseline Issuance plus the runtime profile, its AuthZEN binding,
-  and a freshness source (Status, or issuer token introspection).
-  Per-action permits and prompt revocation: the minimum for an agent
-  taking consequential actions.
-
-**Governed Agent** (recommended for AI agents):
-: Enforced Agent plus Consent Evidence and the harness, growing with
-  Child Delegation, Expansion, and Orchestration as needed.
-  Resistance to a compromised agent comes not from the rung but from
-  meeting all four conditions of the runtime profile's
-  agent-compromise-resistant enforcement; input-side containment is
-  the runtime profile's trifecta containment claim.
-
-**Standalone Governance**:
-: the same progression entered through the MAS with an unmodified
-  Authorization Server, the runtime layer mandatory from the start:
-  no Mission-bound tokens and no issuance gating, so enforcement
-  rests entirely on PEP coverage.
-
-## Assurance Tiers {#assurance-tiers}
-
-The Adoption Ladder says what to deploy; the assurance tiers say what
-a deployment MAY claim and what it MUST be able to show to claim it.
-The distinction matters because the family's strongest properties are
-deployment properties, not protocol properties: complete PEP
-placement, a trusted freshness source, and credential custody are
-things a deployment does, not things a token proves. A tier is
-therefore a claim, verifiable in the sense the runtime profile fixes
-({{I-D.draft-mcguinness-mission-runtime}}), not a label; a deployment
-states the highest tier it has earned in its enforcement-scope
-statement, and a consumer treats an unstated or unproven tier as not
-claimed.
-
-The tiers are cumulative except where noted, and each rests on
-proof obligations defined normatively by the profile named:
-
-**Mission-Bound Issuance**:
-: authority derived and committed at an approval event with the
+: authority derived and committed at the approval event with the
   integrity anchors, issuance bounded by the subset rule, and
   derivation gated on Mission state (the core). Grants task-bound,
   auditable authority and a possession-independent kill switch at the
-  issuance gate; it does not grant per-action control, and outstanding
-  tokens run to their own expiry.
+  issuance gate; it grants no per-action control, and outstanding
+  tokens run to their own expiry. Proof obligations: the anchored
+  approval and the subset rule. A deployment that adds only a freshness
+  surface, Mission Status or introspection with a published staleness
+  bound ({{I-D.draft-mcguinness-oauth-mission-status}}), gains
+  state-aware reliance, a revocation cutoff within that bound, without
+  per-action enforcement: a half-step into the next rung, not a rung of
+  its own.
 
-**Mission-State-Aware Reliance**:
-: adds a freshness surface, the Mission Status operation or token
-  introspection with a published staleness bound
-  ({{I-D.draft-mcguinness-oauth-mission-status}}), so a consumer can
-  cut off a revoked or expired Mission within that bound instead of
-  waiting out the token lifetime. It adds no per-action decision; a
-  consumer relies on reported Mission state, not on a permit. Its
-  proof obligation is the declared state source and staleness bound.
-
-**Mission Runtime-Enforced**:
+**Runtime-Enforced** (the Protocol MVP):
 : adds a PEP/PDP decision on every consequential action, a trusted
-  state source with a published staleness bound, parameter binding,
-  and runtime evidence
-  ({{I-D.draft-mcguinness-mission-runtime}}). Grants per-action
-  enforcement and revocation bounded by the staleness bound plus token
-  lifetime. Its proof obligations are PEP-placement completeness and
-  the declared freshness source and bound.
+  state source with a published staleness bound, parameter binding, and
+  runtime evidence ({{I-D.draft-mcguinness-mission-runtime}} and its
+  AuthZEN binding). Grants per-action enforcement and revocation
+  bounded by the staleness bound plus token lifetime. This is the
+  family's adoption wedge, the **Protocol MVP**: the smallest
+  deployment that makes a Mission-bound token more than governance
+  metadata, and every normative dependency it needs is ratified. Proof
+  obligations: PEP-placement completeness and the declared freshness
+  source and bound. Documents: Baseline plus runtime, its AuthZEN
+  binding, and a freshness source.
 
-**Agent-Compromise-Resistant**:
-: adds the runtime profile's four named conditions, mediated
-  credential custody, no unmediated path, action-bound approval for
-  the high-consequence classes, and an active-freshness state source
-  ({{I-D.draft-mcguinness-mission-runtime}}). A compromised agent
-  cannot unilaterally take a high-consequence action for which it does
-  not hold a mediated credential. This is a named high bar, never
-  implied by basic Mission adoption.
+**Governed Agent** (recommended for AI agents):
+: adds Consent Evidence and the harness, growing with Child Delegation,
+  Expansion, and Orchestration as needed. Grants consent-rendering
+  evidence and session-continuity discipline. Documents: Runtime-
+  Enforced plus consent-evidence and the harness.
 
-**Trifecta-Contained**:
-: adds least exposure, the harness taint rule enforced as a MUST, and
-  full mediation of the external-communication and external-commitment
-  classes with the egress-channel enumeration
-  ({{I-D.draft-mcguinness-mission-runtime}},
-  {{I-D.draft-mcguinness-mission-harness}}). An injected agent cannot
-  egress on the strength of untrusted content alone. It composes with
-  Agent-Compromise-Resistant rather than extending it.
+**High-Assurance Agent**:
+: adds the guarantees that resist a compromised agent. Two named claims
+  live at this rung, each with proof obligations the runtime profile
+  fixes. **Agent-compromise-resistant enforcement**: mediated
+  credential custody, no unmediated path, action-bound approval for the
+  high-consequence classes, and an active-freshness state source, so a
+  compromised agent cannot unilaterally take a high-consequence action
+  for which it does not hold a mediated credential. **Trifecta
+  containment**: least exposure, the harness taint rule enforced as a
+  MUST, and full mediation of the external-communication and
+  external-commitment classes with the egress-channel enumeration, so
+  an injected agent cannot egress on the strength of untrusted content
+  alone. These are named high bars, never implied by basic adoption; a
+  deployment MAY bind its Enforcement Scope Statement to
+  execution-environment attestation so a claim is technical rather than
+  organizational ({{I-D.draft-mcguinness-mission-runtime}},
+  {{I-D.draft-mcguinness-mission-harness}}).
 
-**MAS-Joined Governance**:
-: not a rung above the others but a deliberately weaker peer of
-  Mission Runtime-Enforced, reached through the standalone binding
-  ({{I-D.draft-mcguinness-mission-authority-server}}). Tokens carry no
-  `mission` claim, no Mission authority, and no issuance gating;
-  governance rests entirely on the runtime join and PEP coverage, and
-  the join proves the credential belongs to the same subject and
-  client the Mission names, not that it was issued under the Mission.
-  Revoking a Mission stops nothing at the token layer. This is a
-  material downgrade from the OAuth binding's issuance gate, taken for
-  zero-AS-change adoption, and a deployment claiming it states that
-  the token-layer kill switch is absent.
-
-Every tier above Mission-Bound Issuance also carries the cross-cutting
+Every rung above Baseline Issuance also carries the cross-cutting
 obligations its mechanisms imply: operation-profile normalization
 where duration or parameter digests are metered
 ({{I-D.draft-mcguinness-mission-metering}},
 {{I-D.draft-mcguinness-mission-authzen}}), evidence retention for the
 audit horizon, and a registration schedule where audit transparency is
-run ({{I-D.draft-mcguinness-mission-audit}}). The evidence tiers are
+run ({{I-D.draft-mcguinness-mission-audit}}). The evidence rungs are
 accountability, not prevention: they make what was recorded
 tamper-evident, not what was perceived true or what was never recorded
 present.
-
-A deployment attests these obligations in prose by default; where it
-claims Agent-Compromise-Resistant or Trifecta-Contained, it MAY bind
-the enforcement-scope statement to execution-environment attestation
-({{I-D.draft-mcguinness-mission-runtime}}), so the tier is a technical
-claim rather than an organizational one.
 
 The quarantine pattern removes a leg of the injection-to-exfiltration
 chain instead of gating it. Work that ingests untrusted content (web
@@ -1022,8 +1002,8 @@ limit into a deployment architecture rather than an unmitigated gap.
 
 # The Mission Deployment Profile {#deployment-profile}
 
-The Adoption Ladder says what to deploy and the Assurance Tiers say
-what may be claimed, but a claim is only checkable if a deployment
+The Maturity Ladder ({{maturity-ladder}}) names both what to deploy
+and what may be claimed, but a claim is only checkable if a deployment
 states, concretely, what it enforces and what it leaves outside the
 boundary. The **Mission Deployment Profile** is that system-level
 artifact: a single publishable manifest that composes the per-layer
@@ -1040,7 +1020,7 @@ it does not cover. An illustrative shape:
 ~~~ json
 {
   "profile": "mission-governed-agent-runtime",
-  "assurance_tier": "agent-compromise-resistant",
+  "maturity_rung": "high-assurance-agent",
   "mission_issuer": "https://mas.example.com",
   "state_sources": [
     { "type": "status_endpoint", "max_staleness_seconds": 30 }
@@ -1087,8 +1067,8 @@ it does not cover. An illustrative shape:
 Two deployments that both "support Mission" but publish different
 Deployment Profiles provide different security properties, and the
 profile is what makes that difference legible. A deployment claiming
-an Assurance Tier ({{assurance-tiers}}) states the tier here and lists
-the residuals that tier leaves.
+a rung ({{maturity-ladder}}) states it here and lists the residuals
+that rung leaves.
 
 # Prevention, Detection, and Residue {#prevention-detection}
 
@@ -1106,7 +1086,7 @@ Stated as a table so a claim cannot be read as more than it is:
 The pattern is uniform: the family commits and checks what a party
 was shown, decided, or did; it does not make the human attentive, the
 producer honest, or the unmediated path disappear. Those are the
-residues the assurance tiers ({{assurance-tiers}}) and the security
+residues the maturity ladder ({{maturity-ladder}}) and the security
 model make a deployment state rather than assume.
 
 # The Authority Derivation Boundary {#derivation-boundary}
