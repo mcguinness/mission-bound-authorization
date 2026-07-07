@@ -1,7 +1,7 @@
 ---
 title: "Mission Approval Revision for OAuth 2.0"
 abbrev: "OAuth Mission Approval Revision"
-category: std
+category: exp
 
 docname: draft-mcguinness-oauth-mission-approval-revision-latest
 submissiontype: IETF
@@ -451,7 +451,7 @@ worked disclosure and test vector:
     ]
   },
   "policy_version": "approval-policy:v12",
-  "sequence": 88126,
+  "sequence": 91427,
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
     "consent_rendering_hash":
@@ -502,7 +502,7 @@ Cache-Control: no-store
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
       "constraints": { "period": "2026-Q3" } } ],
-  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-" }
+  "mission_id": "msn_5Jt9wX4kP7rN2vQ8yL3sD6zB0mF1hG-" }
 ~~~
 
 The token carries the `mission` claim and its `authority_hash` as the

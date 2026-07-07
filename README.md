@@ -487,7 +487,8 @@ action a Policy Enforcement Point obtains a permit from a Policy
 Decision Point that evaluates the action against the Mission. Covers
 action classification, where the enforcement point sits, the binding of
 a permit to concrete request parameters to close the time-of-check to
-time-of-use gap, consumption metering, and fail-closed behavior. For the
+time-of-use gap, the fail-closed posture for consumption bounds, and
+fail-closed behavior generally. For the
 high-consequence classes it adds credential custody and mediated
 execution (the enforcement point, not the agent, holds the token's
 sender-constraint key, so a compromised agent cannot act off-path) and

@@ -1,7 +1,7 @@
 ---
 title: "Mission Offline Attenuation for OAuth 2.0"
 abbrev: "OAuth Mission Offline Attenuation"
-category: std
+category: exp
 
 docname: draft-mcguinness-oauth-mission-attenuation-latest
 submissiontype: IETF
@@ -384,8 +384,8 @@ levels of offline narrowing. Decoded root token:
   "sub": "user_3p2q8mN1a0kV7tR",
   "client_id": "s6BhdRkqt3",
   "aud": "https://erp.example.com",
-  "iat": 1797840000,
-  "exp": 1797840300,
+  "iat": 1793606400,
+  "exp": 1793606700,
   "jti": "aat_root_7M2R4kP9sT1x",
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "del_depth": 0,
@@ -429,8 +429,8 @@ is one line, wrapped here for display):
      DWpqq30jZyJGHTN0d2HglBV3uiguA4I",
   "sub": "user_3p2q8mN1a0kV7tR",
   "aud": "https://erp.example.com",
-  "iat": 1797840030,
-  "exp": 1797840240,
+  "iat": 1793606430,
+  "exp": 1793606640,
   "jti": "aat_child_2Yt7Qv9Lq",
   "cnf": { "jkt": "kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t" },
   "par_hash": "9XbVt2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQ",
@@ -453,7 +453,7 @@ is one line, wrapped here for display):
 ~~~
 
 The `mission` claim is unchanged, the child's `aud` equals the root's,
-its `exp` (1797840240) ends before the root's (1797840300), within the
+its `exp` (1793606640) ends before the root's (1793606700), within the
 per-hop bound, the write tool is gone, and the read constraint is
 unchanged (a permitted narrowing). The child's `cnf.jkt` is the JWK
 thumbprint {{RFC7638}} of the delegate extractor's own key, which its
@@ -477,7 +477,7 @@ chain stops, even though no issuer ever saw the child and the child's
 `exp` has not passed.
 
 For contrast, suppose the extractor presents a chain whose child
-carries `"exp": 1797840360`, sixty seconds past the root's. The
+carries `"exp": 1793606760`, sixty seconds past the root's. The
 per-hop bound check ({{mission-binding-check}}) fails before any tool
 or Mission-state evaluation: a child that outlives its parent breaks
 the chain's transitive expiry bound, so the gateway refuses the whole

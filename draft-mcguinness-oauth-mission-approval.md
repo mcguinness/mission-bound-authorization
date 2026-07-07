@@ -318,7 +318,7 @@ Cache-Control: no-store
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
       "constraints": { "period": "2026-Q3" } } ],
-  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-" }
+  "mission_id": "msn_7Wq3nR8tV2xK5pL9yD4sB6zE1mC0fJ-" }
 ~~~
 
 The token carries the `mission` claim and its `authority_hash` as the

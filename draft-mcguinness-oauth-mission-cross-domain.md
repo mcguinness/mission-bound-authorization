@@ -231,11 +231,14 @@ any other derivation ({{I-D.draft-mcguinness-oauth-mission}}, Section
   Access Tokens");
 - MUST be sender-constrained ({{RFC7800}}) to the presenting client by
   the proof-of-possession mechanism the cross-domain grant profile
-  defines (for the ID-JAG profile, as that specification defines). This
+  defines, where it defines one. This
   document does not define a new PoP mechanism; the originating AS and
   the Resource AS MUST use the mechanism of the profile in use, so that
   binding and verification interoperate. When the grant profile in use
-  defines no proof-of-possession, the grant carries a `cnf` claim
+  defines no proof-of-possession, as the ID-JAG profile does not (the
+  ID-JAG is a bearer authorization grant, protected by audience
+  restriction, short lifetime, and client authentication at
+  redemption), the grant carries a `cnf` claim
   ({{RFC7800}}) binding the presenting client's DPoP key (`jkt`,
   {{RFC9449}}) or mTLS certificate (`x5t#S256`, {{RFC8705}}), and the
   Resource AS MUST verify possession at redemption
@@ -261,7 +264,12 @@ The client obtains the grant with an {{RFC8693}} token exchange. The
 `subject_token` MUST be the Mission's refresh token, with
 `subject_token_type` of
 `urn:ietf:params:oauth:token-type:refresh_token`, and the `audience`
-identifies the target Resource AS. This refresh-token mode is what
+identifies the target Resource AS. The refresh-token subject is this
+profile's deviation from the ID-JAG issuance request, which that
+specification defines over an identity-assertion `subject_token`
+(`id_token` or `saml2`); a Mission-bound deployment substitutes the
+Mission's grant so the exchange resolves a Mission rather than a bare
+subject assertion. This refresh-token mode is what
 binds the request to a Mission: the AS resolves the Mission from the
 presented grant per the base profile's grant binding
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Binding the Mission
@@ -588,9 +596,11 @@ additionally carries, for that resource, an `invoices.read` entry
 `journal-entries.write` entry capped at a `max_amount` of 500.00
 USD. The
 Mission was recorded `active` with `authority_hash`
-`sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ` and
+`sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ` and
 `intent_hash`
-`sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY`. The partner ERP
+`sha-256:Zb8mR3nX5pV4lE6sQqYwQ7p4LHnX9Md0LqJ6sZJ2xT5f` (illustrative;
+this Mission's Intent and Authority Set extend the single-domain
+walkthrough's, so its anchors differ from that example's). The partner ERP
 is behind the Resource AS `ras.partner.example.com`, so the agent's
 next step is a cross-domain projection rather than a home-domain
 access token.
@@ -611,8 +621,8 @@ audience-scoped authority for the ERP:
   "aud": "https://ras.partner.example.com",
   "sub": "user_3p2q8mN1a0kV7tR",
   "client_id": "s6BhdRkqt3",
-  "iat": 1797840000,
-  "exp": 1797840300,
+  "iat": 1793606400,
+  "exp": 1793606700,
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "authorization_details": [
     { "type": "mission_resource_access",
@@ -632,7 +642,7 @@ audience-scoped authority for the ERP:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ"
   }
 }
 ~~~
@@ -657,8 +667,8 @@ ID-JAG's `exp`:
   "aud": "https://erp.partner.example.com",
   "sub": "partner-user_7Kp4QnZ2vR9s",
   "client_id": "s6BhdRkqt3",
-  "iat": 1797840030,
-  "exp": 1797840290,
+  "iat": 1793606430,
+  "exp": 1793606690,
   "jti": "at_7Kp4QnZ2vR9sT1mX8b3N",
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "authorization_details": [
@@ -679,14 +689,14 @@ ID-JAG's `exp`:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ"
   }
 }
 ~~~
 
 The issuing `iss` is now the Resource AS, but `mission.issuer` remains
-the home AS. The token's `exp` (1797840290) is below the ID-JAG's
-(1797840300) and far below the Mission's `expires_at`. The Resource
+the home AS. The token's `exp` (1793606690) is below the ID-JAG's
+(1793606700) and far below the Mission's `expires_at`. The Resource
 AS-local `sub` is illustrative; its value is determined by the
 subject-resolution rules of the ID-JAG and identity chaining profiles,
 not by this document.
@@ -750,8 +760,8 @@ operation:
   "aud": "https://ledger.partner.example.com",
   "sub": "partner-user_7Kp4QnZ2vR9s",
   "tid": "txn_5kQ9pX2vN7sR1tY8mZ3",
-  "iat": 1797840060,
-  "exp": 1797840120,
+  "iat": 1793606460,
+  "exp": 1793606520,
   "txn_authorization": {
     "source_resource": "https://erp.partner.example.com",
     "source_actions": ["invoices.read"],
@@ -762,7 +772,7 @@ operation:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ"
   }
 }
 ~~~
@@ -786,9 +796,9 @@ no call to `mission.issuer`.
 
 | Hop (mechanism) | Mission anchor | Authority or context | Expiry |
 |---|---|---|---|
-| ID-JAG (between domains) | unchanged | ERP: read + write | 1797840300 |
-| Resource AS token | unchanged | ERP: read + write | 1797840290 |
-| Txn Token (within domain) | unchanged | one ledger lookup | 1797840120 |
+| ID-JAG (between domains) | unchanged | ERP: read + write | 1793606700 |
+| Resource AS token | unchanged | ERP: read + write | 1793606690 |
+| Txn Token (within domain) | unchanged | one ledger lookup | 1793606520 |
 
 The Mission anchor (`id`, `issuer`, `authority_hash`) is constant end
 to end. OAuth authority is preserved or narrowed at the cross-domain

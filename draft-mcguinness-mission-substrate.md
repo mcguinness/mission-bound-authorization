@@ -139,7 +139,8 @@ decision API bindings, the harness, orchestration, intent shaping,
 consent evidence, the Mandate, audit transparency, and the security
 model) are written against Mission primitives rather than against
 OAuth mechanics; each names what it consumes in a Mission Substrate
-section of its own. The architecture document consolidates that
+section of its own, except consent evidence, whose consumption is
+stated by its approval binding. The architecture document consolidates that
 interface informationally, ending in a Binding Checklist
 ({{I-D.draft-mcguinness-mission-architecture}}). This document is the
 checklist's normative home, written for the author of a new binding:
@@ -301,8 +302,11 @@ the Mission. The MAS's Mission Join is the profiled example
 
 Profiles that ride the credential itself (offline attenuation, and the
 token-carriage aspects of delegation) apply only under full provision.
-Every other substrate-neutral profile routes through the binding
-establishment step, which is what makes partial provision possible.
+Of the substrate-neutral profiles, those that need a
+credential-to-Mission association (the runtime layer and the harness)
+route through the binding establishment step, which is what makes
+partial provision possible; the rest consume no credential at all
+(the composition table's credential column).
 
 Home: the Mission-Bound Access Tokens and The Mission Claim sections
 of {{I-D.draft-mcguinness-oauth-mission}}; the seam is the Mission
@@ -359,7 +363,8 @@ steps, whatever its native ceremony:
 
 Home: the Mission Approval section of
 {{I-D.draft-mcguinness-oauth-mission}}. The MAS shows the steps
-re-sequenced for an asynchronous surface; the AAuth binding shows them
+re-shaped for an asynchronous surface, approval bound to the
+submission rather than an authorization code; the AAuth binding shows them
 profiled onto a propose-clarify-approve interaction.
 
 Consumers: consent evidence binds to this event; every downstream

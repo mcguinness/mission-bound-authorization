@@ -460,6 +460,17 @@ use classification to evade the floor or a Resource-policy minimum, and
 once an action is a consequential write or higher it MUST be gated and
 bound as the table requires.
 
+One predicate cuts across the classes. An **external-communication
+action** is a consequential action, of any class, whose effect
+carries data to a recipient outside the deployment's trust boundary
+(sending a message or mail, posting to an external service,
+publishing, or any equivalent egress). The term names the egress
+property, not a sixth class: an external-communication action keeps
+its class and that class's requirements, and rules stated over
+"external-communication and external-commitment actions" (the taint
+rule, trifecta containment, egress metering) apply to any action
+satisfying the predicate or classified `external_commitment`.
+
 The three highest classes are defined by predicates; the table's
 examples illustrate them:
 

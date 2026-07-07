@@ -113,7 +113,7 @@ integrity-bound task whose authority bounds and outlives every token
 an agent derives. It commits the Authority Set once, at the approval
 event, and deliberately defines no mid-stream authorization upgrade.
 As that profile states, widening authority requires a new approval, a
-successor Mission; just-in-time expansion is named as future work.
+successor Mission, as specified by this companion profile.
 
 This document is that successor mechanism. A task an agent pursues
 does not always stay within the authority approved for it: the agent
@@ -795,7 +795,7 @@ member:
 ~~~ json
 {
   "mission": {
-    "id": "msn_3vK9pLqT2mX7wR4nB1sZ8YfC",
+    "id": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX",
     "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",

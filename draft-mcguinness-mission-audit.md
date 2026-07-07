@@ -43,6 +43,7 @@ normative:
     date: 2026
 
 informative:
+  RFC8610:
   I-D.draft-ietf-scitt-scrapi:
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
     title: "Mission Consent Evidence for OAuth 2.0"
@@ -210,7 +211,9 @@ This profile is defined against the Mission model rather than against
 OAuth 2.0 mechanics. It consumes these substrate primitives: the
 Mission identifier and issuer, from which the statement subject is
 constructed; the evidence types and their canonical bytes; the
-integrity-anchor envelope; and each producer's published key material.
+integrity-anchor envelope; each producer's published key material;
+and the audit horizon, the retention window the registered evidence
+must survive.
 The issuance profile {{I-D.draft-mcguinness-oauth-mission}} is this
 version's normative substrate. Evidence produced under another Mission
 substrate registers and verifies the same way once its types and
@@ -249,7 +252,7 @@ canonical bytes. The protected header carries:
 
 - `payload-hash-alg` (label 258): the COSE algorithm of the hash, `-16`
   for SHA-256 {{I-D.draft-ietf-cose-hash-envelope}}; and
-- `preimage-content-type` (label 259): the media type of the evidence
+- `payload-preimage-content-type` (label 259): the media type of the evidence
   that was hashed, from {{evidence-types}}.
 
 The log then proves a specific record was registered at a time; the
@@ -260,13 +263,13 @@ canonical bytes are rehashed and checked against the committed digest
 ## Evidence Types {#evidence-types}
 
 Each registrable evidence type fixes the exact bytes that are hashed,
-the media type carried in `preimage-content-type`, and the producer
+the media type carried in `payload-preimage-content-type`, and the producer
 authoritative for it. A producer MUST commit to the canonical bytes
 named here, and a relying party MUST verify the producer is
 authoritative for the type ({{registration-policy}}) before treating a
 record as part of the Mission's feed.
 
-| Evidence type | Canonical bytes (hashed) | `preimage-content-type` | Producer |
+| Evidence type | Canonical bytes (hashed) | `payload-preimage-content-type` | Producer |
 |---|---|---|---|
 | Approval event | Mission record at creation, `state` excluded, canonicalized | `application/mission-approval-record+json` | `issuer` |
 | Lifecycle transition | Signals SET as issued; else {{transition-object}} (JCS) | `application/secevent+jwt`, else `application/mission-lifecycle-transition+json` | `issuer` |
@@ -278,7 +281,7 @@ record as part of the Mission's feed.
 
 The table is extensible by specification: a profile MAY define an
 additional evidence type by fixing its canonical bytes, its
-`preimage-content-type`, and its authoritative producer, as the
+`payload-preimage-content-type`, and its authoritative producer, as the
 Mandate profile does for the Mission Mandate
 ({{I-D.draft-mcguinness-mission-mandate}}). A relying party admits an
 extension type it implements; it ignores records of a type it does
@@ -358,7 +361,7 @@ protected header ({{hash-commitment}}, {{feed}}):
 {
   / alg /                    1: -7,   / ES256 /
   / payload-hash-alg /     258: -16,  / SHA-256 /
-  / preimage-content-type / 259:
+  / payload-preimage-content-type / 259:
       "application/mission-lifecycle-transition+json",
   / kid /                    4: h'61732d6b65792d323032362d7133',
   / CWT Claims /            15: {
@@ -453,7 +456,7 @@ mzHlvkGr7hEA1rUoJMuj00y0q-eE"}
 The committed digest is the SHA-256 of those bytes; its base64url
 form is `_cM7GYYiV3VI-QrtRWSogl5Wz1-sB90GM4ZHxuPC3j0`. The Signed
 Statement carries the digest bytes inline as its payload, with
-`preimage-content-type` `application/mission-derivation-record+json`
+`payload-preimage-content-type` `application/mission-derivation-record+json`
 and the same `iss` and `sub` as {{transition-vector}}.
 
 ## Registration Policy and Authoritative Producers {#registration-policy}
@@ -643,13 +646,14 @@ log; it signs a Signed Statement whose payload is the hash of the Consent
 Evidence, carried inline, with the hash algorithm and the evidence media
 type in the protected header ({{hash-commitment}}). The `sub` is the
 Mission feed, derived from the Mission `issuer` and `id`; the `iss` is
-the Mission Issuer. Protected header, in COSE EDN ({{RFC9052}}):
+the Mission Issuer. Protected header, in CBOR extended diagnostic notation
+({{RFC8610}}, Appendix G):
 
 ~~~ cbor-diag
 {
   / alg /                    1: -7,   / ES256 /
   / payload-hash-alg /     258: -16,  / SHA-256 /
-  / preimage-content-type / 259:
+  / payload-preimage-content-type / 259:
       "application/mission-consent-evidence+json",
   / kid /                    4: h'61732d6b65792d323032362d7133',
   / CWT Claims /            15: {

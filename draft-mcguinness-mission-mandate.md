@@ -346,7 +346,7 @@ Payload:
 ~~~ json
 {
   "iss": "https://as.example.com",
-  "iat": 1797841000,
+  "iat": 1793607400,
   "jti": "mnd_4Xq7vB2kR9sT1mZ6pL3n",
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
@@ -396,9 +396,9 @@ Jhcy1rZXktMjAyNi1xMyJ9
 Payload, base64url:
 
 ~~~ text
-eyJpc3MiOiJodHRwczovL2FzLmV4YW1wbGUuY29tIiwiaWF0IjoxNzk3ODQxMDAwLC
+eyJpc3MiOiJodHRwczovL2FzLmV4YW1wbGUuY29tIiwiaWF0IjoxNzkzNjA3NDAwLC
 JqdGkiOiJtbmRfNFhxN3ZCMmtSOXNUMW1aNnBMM24iLCJtaXNzaW9uIjp7ImlkIjoi
-bXNuXzhSZlgyTHF2OVRxTXY0ejdzQTJiTjFrMFlwRWRIYzktIiwib3JpZ2luIjoiaH
+bXNuXzhSZlgyTHF2OVRxTXY0ejdzQTJiTjFrMFlwRWRIYzktIiwiaXNzdWVyIjoiaH
 R0cHM6Ly9hcy5leGFtcGxlLmNvbSIsImF1dGhvcml0eV9oYXNoIjoic2hhLTI1Njps
 M0t2WjRtUDV4MHdRclI2dFkybkQ5Yk03c1gxY0Y4Z0gydko0a0U1cE5RIiwiaW50ZW
 50X2hhc2giOiJzaGEtMjU2OndRN3A0TEhuWDlNZDBMcUo2c1pKOGI4bVozck4yeFQ1
@@ -423,9 +423,9 @@ JWS signing input, the two segments joined by `.`:
 ~~~ text
 eyJ0eXAiOiJtaXNzaW9uLW1hbmRhdGUrand0IiwiYWxnIjoiRVMyNTYiLCJraWQiOi
 Jhcy1rZXktMjAyNi1xMyJ9.eyJpc3MiOiJodHRwczovL2FzLmV4YW1wbGUuY29tIiw
-iaWF0IjoxNzk3ODQxMDAwLCJqdGkiOiJtbmRfNFhxN3ZCMmtSOXNUMW1aNnBMM24iL
+iaWF0IjoxNzkzNjA3NDAwLCJqdGkiOiJtbmRfNFhxN3ZCMmtSOXNUMW1aNnBMM24iL
 CJtaXNzaW9uIjp7ImlkIjoibXNuXzhSZlgyTHF2OVRxTXY0ejdzQTJiTjFrMFlwRWR
-IYzktIiwib3JpZ2luIjoiaHR0cHM6Ly9hcy5leGFtcGxlLmNvbSIsImF1dGhvcml0e
+IYzktIiwiaXNzdWVyIjoiaHR0cHM6Ly9hcy5leGFtcGxlLmNvbSIsImF1dGhvcml0e
 V9oYXNoIjoic2hhLTI1NjpsM0t2WjRtUDV4MHdRclI2dFkybkQ5Yk03c1gxY0Y4Z0g
 ydko0a0U1cE5RIiwiaW50ZW50X2hhc2giOiJzaGEtMjU2OndRN3A0TEhuWDlNZDBMc
 Uo2c1pKOGI4bVozck4yeFQ1cFY0bEU2c1FxWVkifSwic3ViamVjdCI6eyJpc3MiOiJ
@@ -576,7 +576,7 @@ the Mandate slots into its evidence-type pattern with these values:
 
 - **Canonical bytes**: the JWS Compact Serialization as issued, hashed
   as-is (an already-signed object is not re-canonicalized).
-- **`preimage-content-type`**: `application/mission-mandate+jwt`
+- **`payload-preimage-content-type`**: `application/mission-mandate+jwt`
   ({{iana}}).
 - **Authoritative producer**: the Mission `issuer`; the registering
   `iss` MUST equal it, which holds by construction since a Mandate's

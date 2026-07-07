@@ -224,8 +224,10 @@ credential's `mission.issuer`. The endpoint MUST be served over TLS
 The request is an HTTPS POST with an
 `application/x-www-form-urlencoded` body containing:
 
-`mission`:
-: REQUIRED. A string. The canonical `mission_id`.
+`mission_id`:
+: REQUIRED. A string. The canonical Mission Identifier, named per the
+  core's external-surface convention
+  ({{I-D.draft-mcguinness-oauth-mission}}).
 
 `audience`:
 : CONDITIONAL. A string. The audience identifier of the
@@ -274,7 +276,7 @@ Content-Type: application/x-www-form-urlencoded
 Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
-mission=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
+mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 &audience=https%3A%2F%2Ferp.example.com
 &nonce=nonce_K9pV4nT2sR7mB1xQ
 ~~~
@@ -325,8 +327,8 @@ Decoded JWS payload:
   "aud": "https://erp.example.com",
   "sub": "client_erp-recon-agent",
   "nonce": "nonce_K9pV4nT2sR7mB1xQ",
-  "iat": 1797840000,
-  "exp": 1797840060,
+  "iat": 1793606400,
+  "exp": 1793606460,
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
@@ -529,8 +531,8 @@ This extension adds the following to that projection:
   need to be verifiable independently of the transport (for example
   when the response transits intermediaries or is retained for audit),
   the AS SHOULD return it as a {{RFC9701}}-signed response, advertised
-  through the standard `introspection_signing_alg_values_supported`
-  metadata {{RFC8414}}.
+  through the `introspection_signing_alg_values_supported` metadata
+  that {{RFC9701}} registers in the {{RFC8414}} registry.
 - When the responding AS is the Mission's issuer, the projection MAY
   additionally carry `fresh_until`, an RFC 3339 {{RFC3339}} date-time
   giving the point until which the consumer MAY rely on the reported
@@ -555,24 +557,30 @@ for a token whose Mission is `active`:
 
 ~~~ json
 {
-  "iss":     "https://as.example.com",
-  "aud":     "https://erp.example.com",
-  "iat":     1797840000,
-  "exp":     1797840060,
-  "active":  true,
-  "client_id": "s6BhdRkqt3",
-  "sub":     "user_3p2q8mN1a0kV7tR",
-  "scope":   "openid",
-  "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-    "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-    "state":   "active",
-    "fresh_until": "2026-11-02T08:15:00Z"
+  "iss": "https://as.example.com",
+  "aud": "https://erp.example.com",
+  "iat": 1793606400,
+  "token_introspection": {
+    "active":  true,
+    "client_id": "s6BhdRkqt3",
+    "sub":     "user_3p2q8mN1a0kV7tR",
+    "scope":   "invoices.read",
+    "mission": {
+      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+      "issuer": "https://as.example.com",
+      "authority_hash":
+        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "state":   "active",
+      "fresh_until": "2026-11-02T08:15:00Z"
+    }
   }
 }
 ~~~
+
+Per {{RFC9701}}, the signed response is a JWT of `typ`
+`token-introspection+jwt` whose {{RFC7662}} members, including the
+`mission` projection, ride in the `token_introspection` claim; only
+`iss`, `aud`, and `iat` are top-level.
 
 A consumer holding only a `mission_id`, or one that needs signed
 evidence independent of a specific token (an auditor or a cross-domain
@@ -618,8 +626,10 @@ propagation mechanisms of {{revocation-enforcement-classes}}.
 The endpoint accepts authenticated POST requests with a
 form-urlencoded body:
 
-`mission`:
-: REQUIRED. A string. The canonical `mission_id`.
+`mission_id`:
+: REQUIRED. A string. The canonical Mission Identifier, named per the
+  core's external-surface convention
+  ({{I-D.draft-mcguinness-oauth-mission}}).
 
 `operation`:
 : REQUIRED. A string. One of `revoke`, `suspend`,
@@ -711,6 +721,7 @@ every other state is non-deriving.
 | `suspended` | `suspend_until` reached, `on_expiry` = `revoke` | expiry clock | `revoked` |
 | `active` | successor activates | expansion profile | `superseded` |
 | `active` | parent reaches a terminal state | child-delegation profile | `cascaded` |
+| `suspended` | parent reaches a terminal state | child-delegation profile | `cascaded` |
 
 `revoke` and the Mission's `expires_at` both apply in `suspended` as
 well as `active`, so a suspended Mission can still be terminated or
@@ -765,7 +776,7 @@ Content-Type: application/x-www-form-urlencoded
 Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
-mission=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
+mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 &operation=revoke
 &reason=Quarterly+reconcile+completed+early
 &nonce=nonce_8Y3vN0sM6tP1xR9bQ5
@@ -796,8 +807,8 @@ Decoded JWS payload:
   "aud": "client_erp-recon-agent",
   "sub": "client_erp-recon-agent",
   "nonce": "nonce_8Y3vN0sM6tP1xR9bQ5",
-  "iat": 1797843200,
-  "exp": 1797843260,
+  "iat": 1793609600,
+  "exp": 1793609660,
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
@@ -823,7 +834,7 @@ Content-Type: application/x-www-form-urlencoded
 Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
-mission=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
+mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 &operation=suspend
 &suspend_until=2026-11-09T08%3A15%3A00Z
 &on_expiry=revoke
@@ -841,8 +852,8 @@ and `on_expiry` in `mission` alongside `state`. Decoded JWS payload:
   "aud": "client_erp-recon-agent",
   "sub": "client_erp-recon-agent",
   "nonce": "nonce_4Dq2mV8kX1sB7nR3tW",
-  "iat": 1797841200,
-  "exp": 1797841260,
+  "iat": 1793607600,
+  "exp": 1793607660,
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
@@ -969,10 +980,12 @@ through standard {{RFC8414}} discovery.
 
 `mission_status_signing_alg_values_supported`:
 : OPTIONAL. A JSON array of strings. The JWS {{RFC7515}} algorithm
-  values the AS uses to sign the Mission Status Response
-  ({{mission-status-response}}), mirroring
+  values the AS uses to sign the Mission Status Response shape
+  ({{mission-status-response}}), on whichever surfaces of this
+  profile family serve it (the dedicated Mission Status operation,
+  the Lifecycle endpoint, and Mission Management), mirroring
   `introspection_signing_alg_values_supported`. Present when the AS
-  supports the dedicated Mission Status operation.
+  serves any such surface.
 
 `mission_lifecycle_endpoint`:
 : OPTIONAL. A string containing a URL. The URL of the

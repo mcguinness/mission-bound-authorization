@@ -481,7 +481,7 @@ A consumer MUST ignore members it does not recognize.
 | `invalid_mission_intent` | 400 | Unparseable, structurally invalid, oversized, or containing an undefined top-level member. |
 | `invalid_authority` | 400 | Well-formed Intent, but no valid Authority Set is derivable under policy. |
 | `unauthorized` | 401 | Request not authenticated. |
-| `not_found` | 404 | Submission reference does not exist OR is not visible. |
+| `not_found` | 404 | A referenced submission or Mission does not exist OR is not visible to the caller. |
 | `rate_limited` | 429 | Caller is rate-limited. |
 | `unavailable` | 503 | MAS temporarily cannot serve the request. |
 
@@ -1026,7 +1026,12 @@ the action under the Mission's Authority Set and permits:
 {
   "decision": true,
   "context": {
-    "decision_id": "dec_7mQ2sV5rL9tY3sB8zN1eF4jB0K"
+    "decision_id": "dec_7mQ2sV5rL9tY3sB8zN1eF4jB0K",
+    "policy_view_id":
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
+    "action_class": "irreversible_action",
+    "class_source": "resource_floor",
+    "permit_expires_at": "2026-11-02T08:15:30Z"
   }
 }
 ~~~
@@ -1054,6 +1059,8 @@ match the referenced Mission:
   "context": {
     "decision_id": "dec_2nP4qV9rL3tY6sB1zN0eF7jB8K",
     "denial_reason": "mission_mismatch",
+    "action_class": "irreversible_action",
+    "class_source": "resource_floor",
     "policy_view_id":
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
   }
@@ -1132,7 +1139,8 @@ The MAS verifies the join centrally:
    account and client mappings and delegate policy.
 
 A token that does not join is refused with the `join_failed` error
-(HTTP 403), in the error format of {{submission-errors}}. An unknown
+(HTTP 403), in the error format of {{submission-errors}}; like
+`conflict`, it extends that section's error code set. An unknown
 or not-visible `mission_id` returns `not_found`, preserving the
 anti-oracle property.
 
@@ -1196,8 +1204,8 @@ Example claims:
     "sha256": "rN2kQ4mZ7tP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2n",
     "jkt": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
   },
-  "iat": 1797840000,
-  "exp": 1797841800
+  "iat": 1793606400,
+  "exp": 1793608200
 }
 ~~~
 
@@ -1609,7 +1617,12 @@ re-check.
 {
   "decision": true,
   "context": {
-    "decision_id": "dec_7mQ2sV5rL9tY3sB8zN1eF4jB0K"
+    "decision_id": "dec_7mQ2sV5rL9tY3sB8zN1eF4jB0K",
+    "policy_view_id":
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
+    "action_class": "irreversible_action",
+    "class_source": "resource_floor",
+    "permit_expires_at": "2026-11-02T08:15:30Z"
   }
 }
 ~~~

@@ -432,10 +432,10 @@ parent. The decoded child access token:
   ],
   "cnf": { "jkt": "wZ5nT8qL2xV9rB4mC7sD1yF6jH3kP0aG5uE8oS2iN4w" },
   "mission": {
-    "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
+    "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
+      "sha-256:hQ2vJ4kE5pNQl3KvZ4mP5x0wRr6tY2nD9bM7sX1cF8g",
     "parent": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
@@ -556,10 +556,10 @@ Example:
 ~~~ json
 {
   "mission": {
-    "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
+    "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2",
+      "sha-256:hQ2vJ4kE5pNQl3KvZ4mP5x0wRr6tY2nD9bM7sX1cF8g",
     "parent": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
@@ -621,8 +621,9 @@ per-entry equality is permitted, so a child entry MAY equal a parent
 entry. Each child entry MUST be a subset of some parent entry under the
 core rule, and the `delegation` narrowing of {{attenuation}} applies in
 addition. A Mission Issuer MUST NOT assume any relaxation the core rule
-does not define (for example resource containment or action-family
-narrowing, which the core defers to future work).
+does not define: the core's own opt-in hierarchy forms (`prefix`
+resource containment and `.*` action families) apply as that rule
+defines them, and nothing beyond them applies.
 
 If the Mission Issuer cannot prove the child Authority Set is a strict
 subset of the parent, it MUST refuse child creation with
@@ -878,10 +879,10 @@ Example:
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
   },
   "child": {
-    "id": "msn_child_2Yt7Qv9LqMv4z7sA2bN1k0",
+    "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:Td9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2"
+      "sha-256:hQ2vJ4kE5pNQl3KvZ4mP5x0wRr6tY2nD9bM7sX1cF8g"
   },
   "child_actor": {
     "sub": "subagent-invoice-extractor",
