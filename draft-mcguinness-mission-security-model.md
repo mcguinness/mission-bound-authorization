@@ -636,10 +636,10 @@ as their own profile defines. A deployment reads the row for the
 mechanism it runs, or the tightest of several, to state how long a
 revoked Mission can still act.
 
-The same window, read per maturity-ladder rung
+The same window, read per assurance level
 ({{I-D.draft-mcguinness-mission-architecture}}) and per what it stops:
 
-| Rung | Further issuance | Cached token use | Runtime action | Background work |
+| Level | Further issuance | Cached token use | Runtime action | Background work |
 |---|---|---|---|---|
 | Baseline Issuance | stopped at once | until token `exp` | not gated | not gated |
 | Baseline + state-aware freshness | stopped at once | within staleness bound | not gated | not gated |

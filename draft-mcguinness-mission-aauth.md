@@ -855,12 +855,12 @@ trusting PS-private state.
   verification MUST serve this mode.
 
 These modes are the AAuth-specific verification axis; the family's
-maturity ladder ({{I-D.draft-mcguinness-mission-architecture}}) layers
-on top, and a runtime-enforced or agent-compromise-resistant AAuth
-deployment claims the corresponding rung there rather than a
+Mission Assurance Levels ({{I-D.draft-mcguinness-mission-architecture}})
+layer on top, and a runtime-enforced or agent-compromise-resistant AAuth
+deployment claims the corresponding level there rather than a
 binding-specific name. Full-provision Mission governance, which the
 PS gate already provides ({{gating}}), reaches the Runtime-Enforced
-rung only in the Resource-verifiable mode with the runtime decision
+level only in the Resource-verifiable mode with the runtime decision
 contract in force ({{request-binding}}).
 
 # Conformance {#conformance}
