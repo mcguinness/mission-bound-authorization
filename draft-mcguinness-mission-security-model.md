@@ -37,6 +37,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-progressive:
+    title: "Mission Progressive Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-id-assertion-framework:
   I-D.draft-mcguinness-oauth-domain-authorized-issuer:
   I-D.draft-mcguinness-oauth-client-instance-assertion:
@@ -536,12 +544,24 @@ honest part: it is what a deploying party still owns.
 | Agent fabricates results or acts on false data | Not addressed | Full: semantic and grounding verification are a non-goal; pair with a grounding layer if needed |
 | A trusted-base component is compromised | Not addressed; evidence detects it after the fact | Not prevented; degrades the specific guarantee per {{trusted-base}} |
 
-Four residuals are worth stating on their own, because they are the
+Five residuals are worth stating on their own, because they are the
 limits most likely to matter and most often overstated away elsewhere:
 
 - **Comprehension.** The suite can commit and bind what an Approver was
   shown; it cannot prove what the Approver perceived or understood. No
   electronic-consent scheme can.
+- **Consent fatigue.** The model multiplies approval moments: the
+  approval event, expansion approvals, action-bound approvals, and
+  review queues. A deployment that over-asks trains its Approvers to
+  rubber-stamp, and a rubber-stamped approval carries the same
+  commitments as a considered one; the evidence layer proves what was
+  shown and decided, not that attention was paid. The mitigations are
+  structural, not evidentiary: reserve action-bound approval for the
+  highest-consequence actions
+  ({{I-D.draft-mcguinness-mission-runtime}}), and use a pre-consented
+  ceiling with policy-adjudicated drawdown where growth is
+  anticipated ({{I-D.draft-mcguinness-oauth-mission-progressive}}),
+  so the human moments that remain are rare enough to be read.
 - **Single-service equivocation.** Transparency is non-equivocating only
   per service; a deployment that needs that property checked registers
   with more than one independent service.
