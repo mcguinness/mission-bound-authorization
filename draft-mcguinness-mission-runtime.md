@@ -1355,6 +1355,29 @@ provisioned as its own consistency domain. Fail-closed applies per
 action class ({{failure-modes}}): a PDP outage stops consequential
 work and nothing else.
 
+# Negative Conformance Tests {#negative-conformance}
+
+The agent-compromise-resistant claim ({{compromise-resistant}}) rests
+on PEP-placement completeness, which is a deployment property no
+protocol element proves. A deployment SHOULD demonstrate it with
+negative tests: each of the following bypass attempts MUST be refused
+or contained by a conforming deployment that claims the relevant
+tier, and a deployment SHOULD retain evidence that it ran them.
+
+| Bypass attempt | Required outcome |
+|---|---|
+| Agent calls a mediated tool directly, around the PEP | Blocked (no unmediated path) |
+| Agent presents a cached token after Mission revocation | Blocked within the freshness bound |
+| Agent resumes background work after Mission state went stale | Paused or refused on resume re-check |
+| Agent delegates to a sub-agent with no explicit delegation | Blocked (no inheritance by session ancestry) |
+| Agent alters action parameters after the permit is issued | Blocked by parameter-digest reverification |
+| Agent egresses over a secondary channel (DNS, logs, shared store) | Blocked if the channel is in the mediated set; otherwise declared outside the claim |
+
+These are the observable form of the requirements stated normatively
+above; a deployment's Enforcement Scope Statement
+({{runtime-conformance}}) names which it enforces and which paths it
+excludes.
+
 # Runtime enforcement evidence {#evidence}
 
 Every PDP decision on a consequential action MUST produce a runtime

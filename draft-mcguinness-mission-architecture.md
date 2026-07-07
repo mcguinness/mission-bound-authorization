@@ -534,6 +534,12 @@ A committed object is hashed over an envelope domain-separated by
 `typ` and issuer-bound by `iss`, canonicalized by fixed rules, and
 encoded with an algorithm prefix a verifier recognizes or rejects;
 the `typ` space is an extension point for new committed objects.
+These are **commitment anchors**, not enforcement proofs: `intent_hash`
+and `authority_hash` prove what was approved and committed, not that
+the derivation was the semantically correct reading of the intent,
+and a narrowed-token Resource Server enforces the authority it
+receives rather than reconstructing authority from a hash of a full
+set it does not hold ({{I-D.draft-mcguinness-mission-security-model}}).
 Home: the core's Integrity Anchors and Canonicalization Rules
 sections, with the extension rule in its Extensibility section.
 Consumed by Consent Evidence (`consent_rendering_hash`), Shaping
@@ -541,6 +547,22 @@ Consumed by Consent Evidence (`consent_rendering_hash`), Shaping
 (`mission-policy-view`), Orchestration (`unwind_plan_hash`), the
 Mandate (the encoded digest form), and Audit Transparency (the
 committed evidence types it registers).
+
+## Token Classes {#token-classes}
+
+"Mission-bound" is a specific claim, and three token shapes are worth
+distinguishing so a weak one is not read as the strong one:
+
+- a **Mission-referenced token** carries a Mission identifier only;
+- a **Mission-derived token** carries authority derived from an
+  active Mission; and
+- a **Mission-bound token** is Mission-derived and additionally
+  active-state gated, subset-constrained, and refresh-gated (the
+  core's conformance rule).
+
+Only the third earns the term: a `mission` claim alone is a reference,
+not Mission-bound authorization. The family reserves "Mission-bound"
+for that class.
 
 ## The Mission-Bound Credential
 
@@ -998,6 +1020,76 @@ two, the metering profile's exclusivity control
 apart under a single approval. This turns the no-information-flow-control
 limit into a deployment architecture rather than an unmitigated gap.
 
+# The Mission Deployment Profile {#deployment-profile}
+
+The Adoption Ladder says what to deploy and the Assurance Tiers say
+what may be claimed, but a claim is only checkable if a deployment
+states, concretely, what it enforces and what it leaves outside the
+boundary. The **Mission Deployment Profile** is that system-level
+artifact: a single publishable manifest that composes the per-layer
+scope statements (the runtime profile's Enforcement Scope Statement,
+the harness execution-environment scope statement, the MAS mapping
+contract where used) into one object an auditor, a procurement, or a
+security review can read. It is non-normative in shape here; a profile
+or deployment fixes the exact serialization.
+
+Its distinguishing field is `residual_risks`: the profile is not
+credible unless it states, in the same object as its guarantees, what
+it does not cover. An illustrative shape:
+
+~~~ json
+{
+  "profile": "mission-governed-agent-runtime",
+  "assurance_tier": "agent-compromise-resistant",
+  "mission_issuer": "https://mas.example.com",
+  "state_sources": [
+    { "type": "status_endpoint", "max_staleness_seconds": 30 }
+  ],
+  "issuance": {
+    "binding": "oauth-core",
+    "mission_claim_required": true,
+    "refresh_gated_on_active_state": true
+  },
+  "runtime": {
+    "pdp": "authzen",
+    "pep_locations": ["tool-gateway", "browser-action-proxy"],
+    "mediated_action_classes": [
+      "irreversible_action", "external_commitment"
+    ],
+    "unmediated_exclusions": [
+      "internal_reasoning", "local_cache_read"
+    ]
+  },
+  "credential_custody": {
+    "held_by": "pep",
+    "sender_constrained": true,
+    "agent_receives_bearer_token": false
+  },
+  "harness": {
+    "subagent_inheritance": "explicit_delegation_only",
+    "resume_requires_active_state": true,
+    "cached_credentials_revalidated": true,
+    "secondary_egress_enumerated": true
+  },
+  "evidence": {
+    "decision_evidence": true,
+    "execution_evidence": true,
+    "retention_days": 365
+  },
+  "residual_risks": [
+    "unmediated local reasoning is outside enforcement",
+    "revocation latency up to 30 seconds",
+    "PEP compromise is not prevented"
+  ]
+}
+~~~
+
+Two deployments that both "support Mission" but publish different
+Deployment Profiles provide different security properties, and the
+profile is what makes that difference legible. A deployment claiming
+an Assurance Tier ({{assurance-tiers}}) states the tier here and lists
+the residuals that tier leaves.
+
 # Prevention, Detection, and Residue {#prevention-detection}
 
 Each layer earns a specific property and leaves a specific residue.
@@ -1035,6 +1127,20 @@ mode ({{I-D.draft-mcguinness-oauth-mission}}) is the checkable path:
 where the client supplies candidate authority, derivation is a subset
 of it and reproducible, which is the closest the family comes to
 portable derivation.
+
+The derivation modes rank by how portable their result is:
+
+| Derivation mode | Portability status |
+|---|---|
+| Client proposes concrete authority; AS narrows | Interoperable default |
+| AS derives from structured Intent fields | Profile-specific |
+| AS derives from free text | Local, non-portable unless profiled |
+| LLM-assisted derivation | Advisory unless a deterministic policy commits the output |
+
+A deployment seeking interoperable authority uses the first;
+free-text and model-assisted derivation are local policy unless a
+profile pins them with a published policy identifier, version, and
+test fixtures.
 
 # Mission Requirements {#requirements}
 
