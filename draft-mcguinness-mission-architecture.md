@@ -570,6 +570,38 @@ Consumed by Consent Evidence, runtime evidence, and Audit
 Transparency for retention; by the MAS for record retention; and by
 the security model's retention analysis.
 
+## The Validity Model {#validity-model}
+
+Five validity horizons govern reliance, each with its own setter,
+checker, and consequence; implementations most often err by
+conflating them:
+
+Token `exp`:
+: set by the issuer AS, capped by the Mission's `expires_at`; checked
+  by every consumer of the token. Past it the credential is dead and
+  refresh re-enters the issuance gate.
+
+Mission state and `expires_at`:
+: set by the Mission Issuer; checked at the issuance gate, by the
+  PDP, and by state consumers. Off `active`, derivation stops and
+  consequential actions refuse.
+
+`fresh_until`:
+: set by the status responder; checked by status consumers. Past it a
+  cached state report may not be relied on and is re-fetched.
+
+Permit window:
+: set by the PDP; checked by the executing PEP. Past it the permit is
+  void and a new decision is required.
+
+Action-approval freshness:
+: set by the approval surface; checked by the PDP. Past it an
+  action-bound approval no longer authorizes the action it named.
+
+The horizons compose by minimum: reliance at any moment requires
+every applicable horizon to be open, and no horizon substitutes for
+another.
+
 ## The Binding Checklist {#binding-checklist}
 
 For a new binding this checklist is now normatively stated by Mission

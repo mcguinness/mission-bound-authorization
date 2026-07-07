@@ -715,6 +715,12 @@ the authority of another. On compromise of a mediating PEP's key, the
 deployment revokes the affected tokens and re-derives. Mediating-PEP
 key rotation follows the deployment's published key set.
 
+Mediated execution also places a controllable chokepoint on the
+egress path itself: content-level controls this profile does not
+define (data-loss prevention, redaction, payload policy) compose
+naturally at the mediating PEP, the one component that sees the full
+payload after the decision and before presentation.
+
 ## Least exposure {#least-exposure}
 
 Mission containment applies to exposure as well as authority. An
@@ -1014,6 +1020,16 @@ egress-volume bound is metered
 ({{I-D.draft-mcguinness-mission-metering}}), and PEP-placement
 completeness.
 
+Both this claim and agent-compromise-resistant enforcement
+({{compromise-resistant}}) rest on the execution-environment scope
+statement, a self-declared artifact. A deployment MAY bind that
+statement to execution-environment attestation, presenting Entity
+Attestation Token evidence under the AI-agent-instance profile
+({{I-D.draft-mcguinness-oauth-ai-agent-instance}}) covering the
+isolation properties the statement declares; a verifier SHOULD treat
+an unattested claim as an organizational assertion and an attested
+one as a technical one.
+
 ## Mission binding establishment {#mission-binding}
 
 Every decision evaluates one Mission: the **established Mission**. A
@@ -1258,6 +1274,35 @@ refusal.
 | Invoked capability identity outside the approved `actions` | Refuse |
 | Resource policy refuses the action | Refuse |
 | Request would broaden the Mission's authority | Refuse (expansion is out of scope) |
+
+# Deployment Considerations {#runtime-deployment}
+
+Two properties govern how this profile scales.
+
+**Token lifetime trades against the enforcement layer.** The
+issuance profile recommends short-lived tokens because, in an
+issuance-only deployment, token expiry is the revocation cutoff.
+Where this profile's enforcement covers the high-consequence classes
+with an active-freshness state source, the PDP is the cutoff for the
+actions that matter, and a deployment MAY extend token lifetimes for
+issuance-load reasons without silently losing the kill switch; where
+issuance gating is the only control, short lifetimes remain the
+control and the issuance profile's recommendation stands. The choice
+belongs in the enforcement-scope statement: what stops a revoked
+Mission, at what latency, is a fact that statement already declares
+({{runtime-conformance}}).
+
+**The consistency unit is the Mission.** Every strongly consistent
+requirement this profile and its companions impose, the atomic
+`active` check, single-use decision identifiers, and the consumption
+counters and exclusivity latches of the metering companion
+({{I-D.draft-mcguinness-mission-metering}}), is scoped to one
+Mission. A multi-node PDP therefore shards its state by the Mission
+Identifier with no cross-shard coordination; only a
+deployment-configured aggregate bound crosses that partition and is
+provisioned as its own consistency domain. Fail-closed applies per
+action class ({{failure-modes}}): a PDP outage stops consequential
+work and nothing else.
 
 # Runtime enforcement evidence {#evidence}
 
