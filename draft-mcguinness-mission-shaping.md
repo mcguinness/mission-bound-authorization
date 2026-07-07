@@ -49,6 +49,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-architecture:
+    title: "An Architecture for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -60,6 +68,38 @@ informative:
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-approval:
+    title: "Mission Deferred Approval for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-approval-revision:
+    title: "Mission Approval Revision for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval-revision.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-child-delegation:
+    title: "Mission Child Delegation for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-consent-evidence:
+    title: "Mission Consent Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
     author:
       -
         ins: K. McGuinness
@@ -77,7 +117,9 @@ turns a user prompt or upstream trigger into a candidate Mission Intent
 for submission to Mission-Bound Authorization for OAuth 2.0 (the
 "issuance profile"). It defines the shaper's role and
 trust boundary, recommended behavior for ambiguity, capability
-resolution, and refusal, and an audit artifact (Shaping Evidence). It
+resolution, and refusal, an audit artifact (Shaping Evidence), and
+re-shaping: how the shaper turns refusal, denial, and revision
+feedback into the narrowed next proposal. It
 deliberately defines no portable shaping wire protocol and claims no
 cross-vendor conformance: the shaper proposes only, and authority is
 created solely by the issuance profile's validation and approval, never
@@ -111,6 +153,14 @@ clarification, or refuses to shape. When a capability or resource is
 unknown, the shaper records that fact rather than treating natural
 language as authority to create it. When the shaper uses model output,
 that output is evidence for review, not an entitlement decision.
+
+Read with the rest of the family, shaping is the propose step of the
+delegated-authority layer the suite defines: every downstream
+guarantee (the anchored approval, the derived Authority Set, the
+per-action decision, the evidence trail) operates on the proposal the
+shaper produced. Shaping is also not one pass: when derivation is
+refused, a deferred review denies, or a reviewer requires revision,
+the shaper constructs the narrowed re-proposal ({{re-shaping}}).
 
 ## Why This Profile Is Informational {#why-informational}
 
@@ -146,9 +196,13 @@ This document describes:
   ({{processing-model}}, {{mission-intent-proposal}});
 - recommended ambiguity, refusal, and capability-resolution behavior
   ({{ambiguity}}, {{capability-resolution}});
-- Shaping Evidence, an audit artifact ({{shaping-evidence}}); and
+- Shaping Evidence, an audit artifact ({{shaping-evidence}});
 - how a shaped proposal enters the issuance flow
-  ({{composition}}).
+  ({{composition}});
+- re-shaping: how refusal, denial, and revision feedback produce the
+  narrowed next proposal ({{re-shaping}}); and
+- what shaping adds to a deployment and what it does not
+  ({{adds-and-does-not}}).
 
 This document does not define a new OAuth grant type, a new access token
 format, a policy language, a runtime authorization decision API, or a
@@ -439,6 +493,17 @@ delegated execution from the mere existence of a task graph or an agent
 harness: a child actor needs explicit authority derived by the Mission
 Issuer, not session ancestry.
 
+Where a deployment creates Child Missions
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), turning a
+sub-task into the proposed Child Mission Intent is a shaping act, and
+this profile applies to it unchanged. The Parent Mission's Authority
+Set is the ceiling ({{authority-ceiling}}): the child-delegation
+profile refuses a child that is not a strict subset of its parent, so
+a proposal that exceeds the parent cannot be approved, and a sound
+shaper narrows, clarifies, or refuses rather than emit one. Shaping
+Evidence for a child proposal SHOULD record the parent Mission
+identifier and the parent-derived ceiling it shaped under.
+
 ## Construction Guidance {#construction-guidance}
 
 The following maps a prompt or trigger onto the Mission Intent fields.
@@ -562,7 +627,12 @@ and MUST NOT be treated as authority.
 
 Shaping Evidence records how a proposal was produced. It is audit
 material: it does not grant authority and MUST NOT be used by a Resource
-Server or Policy Decision Point to permit an action. This profile
+Server or Policy Decision Point to permit an action. In the family's
+actor chain it is the artifact that keeps the intent generator a
+distinct, attributable role: the record of what the shaper emitted,
+separate from the requester who asked, the Approver who consented, and
+the agent that executes
+({{I-D.draft-mcguinness-mission-architecture}}). This profile
 defines no required schema, media type, or transport for it; the
 following members are RECOMMENDED content.
 
@@ -629,6 +699,11 @@ can cite how the proposal was produced. When it does:
   over the Shaping Evidence, for example a JWS {{RFC7515}} Compact
   Serialization over the JCS canonical bytes of the evidence with the
   envelope member removed.
+
+Where the deployment records Consent Evidence, the consent-disclosure
+object defines an OPTIONAL `shaping_evidence_hash` member; that member
+is the suite's standard carrier for this commitment
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 
 Neither the hash nor the envelope confers authority. A Resource Server
 or PDP MUST NOT treat a shaping evidence hash as proof of authority.
@@ -717,6 +792,49 @@ digest that no longer matches) SHOULD re-shape rather than submit a
 proposal built against a capability catalog or policy version that has
 since changed.
 
+# Re-Shaping {#re-shaping}
+
+A proposal is not always approved as submitted, and shaping is
+therefore a loop, not a single pass: propose, learn what was refused,
+re-propose. Three refusal surfaces feed the loop:
+
+Derivation refusal:
+: At submission, the Mission Issuer refuses a well-formed Intent from
+  which it cannot derive a valid Authority Set with
+  `invalid_authorization_details`, distinguishing an
+  authority-derivation failure from a syntax error
+  ({{I-D.draft-mcguinness-oauth-mission}}).
+
+Deferred denial:
+: Under deferred approval, a reviewer resolution of `access_denied`
+  ends the request. The shaper constructs the fresh, narrower Mission
+  Intent the client resubmits
+  ({{I-D.draft-mcguinness-oauth-mission-approval}}).
+
+Required revision:
+: Under approval revision, `rejected_scope` and
+  `rejected_authorization_details` identify the refused dimensions in
+  machine-readable form. They are the input the shaper uses to plan
+  the narrowed revision
+  ({{I-D.draft-mcguinness-oauth-mission-approval-revision}}).
+
+Re-shaping is shaping. A re-proposal passes through the full
+processing model ({{processing-model}}) and is a fresh proposal with
+fresh Shaping Evidence. Evidence for a re-proposal SHOULD record the
+refusal input that motivated it (the error, the resolution, or the
+rejected dimensions) and MAY reference the predecessor proposal's
+evidence, so an auditor can read the narrowing chain end to end.
+
+The loop narrows. A refusal is a signal to propose less, not to
+propose the same authority under different names: a shaper SHOULD NOT
+re-encode refused authority in new vocabulary, and it MUST NOT use
+iterative resubmission to probe the Mission Issuer's policy boundary
+({{silent-broadening}}). Where a narrower proposal can no longer
+complete the task, the outcomes this profile already defines apply:
+clarification or refusal ({{ambiguity}}). A task that needs more than
+was refused is a new proposal through the normal flow, not a widened
+retry.
+
 # Composition {#composition}
 
 ## Entering the Issuance Flow {#oauth-composition}
@@ -735,7 +853,8 @@ Endpoint and does not handle the authorization response. Those are
 requesting-client responsibilities ({{proposes-only}}). The shaper hands
 its output to the requesting client, which performs the OAuth flow and
 MAY also convey a `shaping_evidence_hash` as deployment extension data
-so the Mission record can cite the evidence. Conveying it does not
+so the Mission record can cite the evidence ({{evidence-hash}}).
+Conveying it does not
 require the Mission Issuer to trust the shaper.
 
 ## Runtime Enforcement {#runtime-composition}
@@ -772,6 +891,55 @@ appropriate only for public, non-sensitive tasks. Exposing the shaper
 this way does not change its role: it remains client-side machinery that
 produces an untrusted proposal ({{role-and-trust-boundary}}), and it is
 not a principal to the Authorization Server.
+
+# What Shaping Adds and Does Not {#adds-and-does-not}
+
+Shaping is easy to over-read. This section states what a sound shaper
+contributes to a deployment and what it cannot contribute, so the
+contribution is claimed at its real size.
+
+What it adds:
+
+- **A defensible proposal.** Default-deny construction, a resolution
+  basis for every resource, task-scoped Intents, and bounds expressed
+  as invariants ({{mission-intent-proposal}}).
+- **Fail-closed ambiguity handling.** Clarification, narrowing, or
+  refusal instead of silently invented authority ({{ambiguity}}).
+- **Provenance.** Shaping Evidence records how the proposal was
+  produced: attributable to a shaper version, reproducible through the
+  input digest, and citable from the Mission record and Consent
+  Evidence ({{shaping-evidence}}).
+- **A re-proposal constructor.** The component that turns refusal,
+  denial, and revision feedback into the narrowed next proposal
+  ({{re-shaping}}).
+
+What it does not add:
+
+- **Authority.** Only the Mission Issuer's validation and approval
+  create authority; nothing the shaper emits is trusted
+  ({{proposes-only}}).
+- **Consent.** The Approver consents to the Mission Issuer's rendered
+  disclosure, not to the shaper's output ({{ambiguity}}).
+- **Enforcement.** Whether an action is permitted is decided at
+  issuance and per action at runtime; shaper output reaches neither
+  decision ({{runtime-composition}}).
+- **Assurance.** Shaping appears on no rung of the Mission Assurance
+  Levels, and no level requires it: the levels are built from
+  issuer-side and runtime-side guarantees, and the shaper is
+  client-side by construction
+  ({{I-D.draft-mcguinness-mission-architecture}}). What shaping raises
+  at every level is the input: better proposals yield narrower
+  Missions, cleaner disclosures, and a reviewable trail from request
+  to authority.
+
+A deployment that runs a shaper should say so in its Mission
+Deployment Profile, the deployment-level manifest the architecture
+defines ({{I-D.draft-mcguinness-mission-architecture}}): whether
+shaping is in the submission path, the shaper version policy, whether
+Shaping Evidence is retained and for how long, and whether Mission
+records cite `shaping_evidence_hash`. The shaping posture then lives
+in the same artifact as the deployment's other claims, and its absence
+is legible rather than assumed.
 
 # Security Considerations {#security-considerations}
 
@@ -850,6 +1018,14 @@ proposal shaped against an old catalog can also resolve the wrong
 capability; capability resolutions SHOULD record source digests
 ({{capability-resolution}}) and deployments SHOULD re-shape when catalog
 data is volatile, so approval and runtime enforcement can detect drift.
+
+Re-shaping adds a loop variant of the same failure: widening by retry,
+where refused authority is resubmitted in different words until
+something passes, or successive proposals walk the Mission Issuer's
+policy boundary. The loop narrows ({{re-shaping}}); a deployment
+SHOULD monitor for a requester whose successive proposals for one task
+broaden, and Shaping Evidence chained across re-proposals is the
+record that makes such a pattern visible.
 
 ## Shaper-to-Client Integrity in a Multi-Process Client {#multi-process}
 
