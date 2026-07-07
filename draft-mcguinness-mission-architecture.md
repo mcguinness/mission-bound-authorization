@@ -792,21 +792,38 @@ MAS's Mission Join section), and the MAS's staged walkthrough of the
 same flow is its end-to-end appendix
 ({{I-D.draft-mcguinness-mission-authority-server}}).
 
-The bundles progress cumulatively. Baseline issuance is the core
-alone: approved, integrity-bound Missions, state-gated issuance, a
-possession-independent kill switch; audit, not action-time defense.
-The enforced bundle adds the runtime profile, its AuthZEN binding,
-and a freshness source: per-action permits and prompt revocation, the
-minimum for an agent taking consequential actions. The governed
-bundle, recommended for AI agents, adds Consent Evidence and the
-harness, growing with Child Delegation, Expansion, and Orchestration
-as needed; resistance to a compromised agent comes not from the
-bundle but from meeting all four conditions of the runtime profile's
-agent-compromise-resistant enforcement. Standalone governance is the
-same progression entered through the MAS, with the runtime layer
-mandatory from the start. Throughout, every companion is optional;
-each profile states its own scoped conformance, and the bundles are
+## The Adoption Ladder {#adoption-ladder}
+
+The bundles progress cumulatively, and this section names them so a
+deployment, a procurement, or a review can cite one rung instead of
+enumerating documents. Throughout, every companion is optional; each
+profile states its own scoped conformance, and the rungs are
 guidance, not a conformance class.
+
+**Baseline Issuance**:
+: the core alone. Approved, integrity-bound Missions, state-gated
+  issuance, a possession-independent kill switch; audit, not
+  action-time defense.
+
+**Enforced Agent**:
+: Baseline Issuance plus the runtime profile, its AuthZEN binding,
+  and a freshness source (Status, or issuer token introspection).
+  Per-action permits and prompt revocation: the minimum for an agent
+  taking consequential actions.
+
+**Governed Agent** (recommended for AI agents):
+: Enforced Agent plus Consent Evidence and the harness, growing with
+  Child Delegation, Expansion, and Orchestration as needed.
+  Resistance to a compromised agent comes not from the rung but from
+  meeting all four conditions of the runtime profile's
+  agent-compromise-resistant enforcement; input-side containment is
+  the runtime profile's trifecta containment claim.
+
+**Standalone Governance**:
+: the same progression entered through the MAS with an unmodified
+  Authorization Server, the runtime layer mandatory from the start:
+  no Mission-bound tokens and no issuance gating, so enforcement
+  rests entirely on PEP coverage.
 
 The quarantine pattern removes a leg of the injection-to-exfiltration
 chain instead of gating it. Work that ingests untrusted content (web
@@ -888,6 +905,15 @@ boundary: profiles extending the Authorization Server's own surfaces
 keep "oauth" in their names; profiles defined against the substrate
 of {{substrate}} are named without it. This document is named without
 it because the architecture is substrate-neutral by construction.
+
+Maturity is a dependency boundary. A Standards-Track profile never
+depends normatively on an experimental one: the experimental profiles
+(tagged below) extend the stable interface only through its declared
+seams, the `controls` extension of the core and the
+coordinated-extension rules of the evidence objects, and a
+Standards-Track document cites them informatively at most. An
+experimental profile that stabilizes crosses the boundary by
+reclassification, not by a stable document absorbing a dependency.
 
 **The model and its bindings:**
 
