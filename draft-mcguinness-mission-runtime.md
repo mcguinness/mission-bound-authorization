@@ -166,27 +166,28 @@ informative:
 
 --- abstract
 
-The Mission-Bound Authorization for OAuth 2.0 profile binds issued
-authority to a durable, approved Mission, but it governs issuance and
-derivation only: it does not evaluate individual runtime actions, so
-an active Mission can become ambient authority for the actions an
-agent takes within a token's lifetime. This document specifies the
-companion runtime layer for deployments that claim runtime Mission
-enforcement. Within a declared enforcement scope, each consequential
-action is evaluated, before it executes, against the Mission
-established for the acting credential. The evaluation checks the
-action and its parameters against the Mission's approved authority and
-constraints, the actor context from the delegation chain, the Mission
-against its current state, and the applicable Resource policy. The
-document defines where enforcement sits, how a permit is bound to
-concrete parameters to close the time-of-check to time-of-use gap, the
-materialized policy view a decision evaluates against, the fail-closed
-posture for consumption bounds a Mission carries, and
-the runtime evidence each consequential action produces. For the
-high-consequence classes it further defines action-bound approval,
-credential custody in the mediating enforcement point rather than the
-agent, and a named agent-compromise-resistant enforcement claim with
-individually verifiable conditions.
+This document specifies runtime enforcement for Mission-Bound
+Authorization: within a declared enforcement scope, no consequential
+action executes until a policy enforcement point obtains a permit
+from a policy decision point that evaluates the action and its
+concrete parameters against the Mission established for the acting
+credential. The evaluation checks the Mission's approved authority
+and constraints, the actor context from the delegation chain, the
+Mission's current state, and the applicable Resource policy. The
+companion issuance profile binds issued authority to a durable,
+approved Mission but governs issuance and derivation only; without a
+point-of-use check, an active Mission becomes ambient authority for
+the actions an agent takes within a token's lifetime. This document
+is that check. It defines where enforcement sits, how a permit is
+bound to concrete parameters to close the time-of-check to
+time-of-use gap, the materialized policy view a decision evaluates
+against, the fail-closed posture for constraints and consumption
+bounds, and the runtime evidence every decision and refusal path
+produces. For the high-consequence classes it further defines
+action-bound approval, credential custody in the mediating
+enforcement point rather than the agent, and two named enforcement
+claims with individually verifiable conditions:
+agent-compromise-resistant enforcement and trifecta containment.
 
 --- middle
 
@@ -196,42 +197,96 @@ Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") makes a
 Mission a first-class OAuth artifact: a structured, human-approved,
 integrity-bound task whose authority bounds and outlives every token
-an agent derives. But it is deliberately an issuance-and-derivation
-layer. As its security considerations state, it does not evaluate
-individual runtime actions, so an active Mission still bounds a set of
-authority an agent may exercise freely within a token's lifetime, and
-preventing that authority from becoming ambient for individual
-consequential actions requires a separate runtime enforcement layer.
+an agent derives. It is deliberately an issuance-and-derivation
+layer: it governs what authority may exist, not what an agent does
+with it. Within a token's lifetime the agent exercises the issued
+authority freely, so a Mission that is never consulted at the point
+of use functions as ambient authority for every consequential action
+inside its envelope.
 
-This document is that layer. It delivers exactly the four things the
-issuance profile names as out of scope, plus enforcement of the
-constraints that profile carries but does not evaluate:
+This document is the runtime layer that closes that gap: the
+enforcement half of the model, and the profile that makes a
+Mission-bound token more than governance metadata. Its substance is
+one contract, stated once here and elaborated by the rest of the
+document.
 
-1. evaluation of a request's parameters against the Mission at the
-   point of use ({{decision}}, {{parameter-binding}});
-2. per-action runtime enforcement evidence ({{evidence}});
-3. binding of the invoked tool or function identity to the Mission's
-   approved authority ({{decision}});
-4. execution-time re-evaluation that closes the approval-to-execution
-   (time-of-check to time-of-use) gap ({{parameter-binding}});
+## The Runtime Contract {#runtime-contract}
 
-and, additionally, the fail-closed treatment of consumption bounds
-({{metering}}). For the
-high-consequence classes it adds action-bound approval
-({{action-approval}}), credential custody in the mediating enforcement
-point rather than the agent ({{custody}}), and the named
-agent-compromise-resistant enforcement claim those mechanisms compose
-into ({{compromise-resistant}}).
+Within a declared enforcement scope, a consequential action executes
+only after a Policy Enforcement Point (PEP) at the action's last
+controllable boundary obtains, from a Policy Decision Point (PDP), a
+permit that evaluates the action and its concrete parameters against
+the established Mission: its approved authority and constraints, the
+actor context from the delegation chain, its current lifecycle
+state, and the applicable Resource policy. The permit is bound to
+the parameters the action executes with, and every decision and
+refusal path leaves evidence.
 
-The model is a Policy Enforcement Point (PEP) at each consequential
-execution boundary that, before the action runs, obtains a decision
-from a Policy Decision Point (PDP) evaluating the action against the
-Mission. Mission-bound tokens bound what authority may exist; this
-profile defines where and how that authority is re-checked before
-consequential effects occur. A deployment whose acting tokens carry no
-`mission` claim can still bind each decision to a Mission: the Mission
+Mission-bound tokens bound what authority may exist; the contract
+fixes where and how that authority is re-checked before
+consequential effects occur. The PEP is whatever component can
+actually prevent the action: a Resource Server, an MCP server, an
+egress proxy, a workflow engine, or the orchestrator itself
+({{pep-placement}}). The PDP's placement is a deployment choice
+({{decision}}). A deployment whose acting tokens carry no `mission`
+claim can still bind each decision to a Mission: the Mission
 Substrate ({{mission-substrate}}) admits an externally established
 Mission reference ({{mission-binding}}).
+
+## Enforcement Invariants {#enforcement-invariants}
+
+Seven invariants restate the contract as the properties a conforming
+deployment maintains. Each is normative in its home section, and the
+failure-mode table ({{failure-modes}}) is their operational form.
+
+**Gated at the point of use**:
+: No consequential action executes without a prior PDP permit; token
+  possession alone never suffices ({{decision}}).
+
+**Enforced at the last controllable boundary**:
+: The PEP sits where the action can still be stopped; a check
+  further upstream does not survive what happens after it
+  ({{pep-placement}}).
+
+**Bound to the bytes**:
+: A parameter-bound permit binds the normalized parameters, and the
+  executing PEP reverifies them immediately before acting; a changed
+  parameter is a refused action ({{parameter-binding}}).
+
+**Fresh or refused**:
+: A permit requires the Mission `active` within a published
+  staleness bound, and the high-consequence classes require an
+  active freshness source, not token-lifetime expiry
+  ({{state-freshness}}).
+
+**Fail closed**:
+: An unknown or unmetered constraint, an unreachable PDP, Mission
+  state that cannot be established within the staleness bound, or an
+  unsupported authorization-details type refuses the action
+  ({{failure-modes}}).
+
+**Evidenced**:
+: Every decision and every refusal path produces an
+  integrity-protected record, and a high-consequence action also
+  produces execution-outcome evidence ({{evidence}}).
+
+**Never widening**:
+: No runtime input expands authority beyond the issued Authority
+  Set; a deny is terminal for the attempted action, and widening is
+  a governance operation, never a runtime one ({{decision}}).
+
+For the high-consequence classes ({{classification}}) the profile
+goes further: action-bound approval re-consents the concrete
+parameters ({{action-approval}}), and mediated custody keeps the
+credential's sender-constraint key in the enforcing component rather
+than the agent ({{custody}}). Those mechanisms compose into the two
+named claims of {{named-claims}}, agent-compromise-resistant
+enforcement and trifecta containment: the bar a deployment meets
+before representing itself as resistant to a compromised or injected
+agent, and the High-Assurance Agent level of the Mission Assurance
+Levels ({{I-D.draft-mcguinness-mission-architecture}}).
+
+## Invariants, Not a Wire Protocol {#not-a-wire-protocol}
 
 This profile specifies enforcement invariants, not a wire protocol: it
 does not standardize a PDP decision API, an enforcement-scope discovery
@@ -248,7 +303,23 @@ wire surface is supplied by a separately specified decision API binding
 architecture and invariant layer; the binding is the interoperability
 layer.
 
-## Relationship to the issuance profile {#relationship}
+## Relationship to the Issuance Profile {#relationship}
+
+The seam between the two documents is exact. This document delivers
+the four things the issuance profile names as out of scope, plus
+enforcement of the constraints that profile carries but does not
+evaluate:
+
+1. evaluation of a request's parameters against the Mission at the
+   point of use ({{decision}}, {{parameter-binding}});
+2. per-action runtime enforcement evidence ({{evidence}});
+3. binding of the invoked tool or function identity to the Mission's
+   approved authority ({{decision}});
+4. execution-time re-evaluation that closes the approval-to-execution
+   (time-of-check to time-of-use) gap ({{parameter-binding}});
+
+and, additionally, the fail-closed treatment of consumption bounds
+({{metering}}).
 
 This document depends normatively on the issuance profile and is not
 implementable alone: it consumes the Mission-bound access tokens that
@@ -312,9 +383,19 @@ Consequential action:
 : An action that has external visibility or effect and so MUST be
   evaluated before it runs ({{classification}}).
 
+High-consequence classes:
+: The irreversible action, external commitment, and privileged
+  administration classes, to which this profile's strictest
+  requirements attach ({{classification}}).
+
 Decision:
 : A PDP's permit-or-deny result for one action, bound to the inputs
   it evaluated ({{decision}}).
+
+Established Mission:
+: The single Mission a decision is evaluated against, established
+  from the credential's `mission` claim or externally
+  ({{mission-binding}}).
 
 Policy-view version:
 : A deployment-opaque identifier the PDP emits for the materialized
@@ -383,9 +464,9 @@ it. Another authorization substrate that provides the same primitives
 with the same semantics can host this profile unchanged; such a
 binding is defined by that substrate, not here.
 
-# Runtime model {#runtime-model}
+# The Runtime Model {#runtime-model}
 
-## Enforcement flow
+## Enforcement Flow
 
 ~~~
  Agent          PEP (action boundary)        PDP
@@ -408,7 +489,7 @@ Mission's authority, the entry constraints, the actor chain, the
 Mission's current state, and Resource policy, as defined in
 {{decision}}.
 
-## Enforcement scope and conformance {#runtime-conformance}
+## Enforcement Scope and Conformance {#runtime-conformance}
 
 This profile is implemented by a runtime deployment, not by an OAuth
 Authorization Server alone. Three things conform, at different
@@ -464,7 +545,7 @@ Different deployments can document scope through configuration,
 operational policy, resource-server metadata defined elsewhere, or a
 contractual profile.
 
-## Action classification {#classification}
+## Action Classification {#classification}
 
 The boundary between consequential and non-consequential actions is
 deployment policy, bounded by the classification floor below. This
@@ -545,7 +626,7 @@ as non-consequential. A deployment
 that leaves such an action ungated does not enforce this profile for
 that action's class ({{pep-placement}}).
 
-### Resource-owner class floors {#class-floors}
+### Resource-Owner Class Floors {#class-floors}
 
 A resource owner can carry its classification minimums to any PDP
 through its protected resource metadata {{RFC9728}}:
@@ -581,7 +662,7 @@ For the ERP resource of the worked examples
 }
 ~~~
 
-## Action-bound approval {#action-approval}
+## Action-Bound Approval {#action-approval}
 
 The Mission's approval event ({{I-D.draft-mcguinness-oauth-mission}})
 consents to the task and its authority bound; it does not consent to a
@@ -624,7 +705,7 @@ bearer grant: the runtime decision of {{decision}} remains
 authoritative, and a persisted grant beyond the single action is a
 Mission expansion, not a property of the approval itself.
 
-## PEP placement {#pep-placement}
+## PEP Placement {#pep-placement}
 
 Enforcement only works at the component that can actually stop the
 action. A deployment claiming this profile MUST observe these rules:
@@ -654,7 +735,7 @@ an egress proxy. Where an action can be reached by an unmediated path
 (a debug shell, an unsanctioned egress route, a direct connector), the
 profile is not enforced for the classes that path reaches.
 
-## Credential custody and mediated execution {#custody}
+## Credential Custody and Mediated Execution {#custody}
 
 In an agentic deployment the agent component is itself part of the
 attack surface: it may be prompt-injected or compromised. The issuance
@@ -747,7 +828,7 @@ define (data-loss prevention, redaction, payload policy) compose
 naturally at the mediating PEP, the one component that sees the full
 payload after the decision and before presentation.
 
-## Least exposure {#least-exposure}
+## Least Exposure {#least-exposure}
 
 Mission containment applies to exposure as well as authority. An
 agent exceeds the Mission envelope by invoking an action outside the
@@ -770,53 +851,7 @@ laundering can draw from; it is not information-flow control, and an
 exposure filter, like a tool-catalog filter ({{classification}}),
 never replaces per-action authorization.
 
-## Agent-compromise-resistant enforcement {#compromise-resistant}
-
-"Protects against agent compromise" is a verifiable claim, not a label.
-A deployment claims **agent-compromise-resistant enforcement** only when,
-for the high-consequence classes, all of the following hold. Each
-condition below is MUST under this claim regardless of its base-profile
-level: active-state freshness for the high-consequence classes is
-already MUST in the base profile ({{state-freshness}}); the harness
-condition makes MUST the base profile's requirement that mediated
-classes have no unmediated path ({{pep-placement}}); mediated custody
-and action-bound approval are SHOULD in the base profile
-({{custody}}, {{action-approval}}) and MUST here.
-
-- the sender-constraint private key is held by the mediating PEP, not by
-  the agent component ({{custody}});
-- governed work runs under a harness conforming to the harness profile
-  ({{I-D.draft-mcguinness-mission-harness}}) whose published
-  execution-environment scope statement covers the mediated classes, so
-  there is no unmediated path to those actions;
-- each such action requires an action-bound approval
-  ({{action-approval}}); and
-- the Mission state source for those classes is an active freshness
-  mechanism, not token-lifetime expiry ({{state-freshness}}).
-
-A deployment that leaves any of these unmet MUST NOT claim
-agent-compromise-resistant enforcement; it may still claim base runtime
-conformance. The claim names exactly the set of classes it covers.
-
-The guarantee is the conjunction of these conditions, not any one of
-them. Mediated custody alone prevents only off-path presentation of
-the credential: the agent still initiates every action and supplies
-every parameter, and the mediating PEP executes any in-scope action
-the agent requests. What bounds a compromised agent is custody
-**and** complete PEP placement **and** correct classification acting
-together, so the claim is no stronger than the weakest of the three,
-and "mediated custody" on its own is not the property.
-
-Each unmet condition loses a specific property:
-
-| Condition unmet | Property lost |
-|---|---|
-| Custody in the mediating PEP | Key exfiltration |
-| Harness-established no-unmediated-path | Off-path execution |
-| Action-bound approval | Unattended high-consequence action |
-| Active-state freshness | Revocation lag bounded only by token lifetime |
-
-# Resource Server runtime profile {#rs-runtime-profile}
+# Resource Server Runtime Profile {#rs-runtime-profile}
 
 An OAuth Resource Server that claims conformance to this runtime
 profile MUST publish or otherwise make available a Resource Server
@@ -865,7 +900,7 @@ contractual deployment profile, or another deployment-specific
 mechanism. This document does not define a discovery document,
 registry, or wire format for publishing it.
 
-# Token presentation and validation {#token-validation}
+# Token Presentation and Validation {#token-validation}
 
 The runtime decision is downstream of ordinary access token validation.
 Before using a token's Mission, authority, subject, client, actor, or
@@ -910,7 +945,7 @@ sends the access token itself to the PDP, the PDP MUST treat it as a
 credential, protect it against disclosure, and MUST NOT use it outside
 the declared enforcement scope.
 
-# The decision {#decision}
+# The Runtime Decision {#decision}
 
 Before a consequential action runs, its PEP MUST obtain a permit from
 a PDP that evaluates the action against the established Mission
@@ -1015,57 +1050,7 @@ service, or a shared service); this document does not mandate one. The
 requirement is only that a PEP at each consequential boundary can
 reach an applicable PDP.
 
-## Trifecta containment {#trifecta-containment}
-
-An agent that holds private-data authority, is exposed to untrusted
-content, and can communicate externally combines the three
-ingredients of injection-driven exfiltration
-({{prompt-injection-exfiltration}}). The profiles gate each
-ingredient separately; this claim names the composite. A deployment
-claims **trifecta containment** for a Mission's governed work only
-when all of the following hold, each MUST under this claim regardless
-of its base-profile level:
-
-- **Private-data exposure.** Least exposure ({{least-exposure}}) is
-  applied: the context surfaced to the agent is scoped to the active
-  Mission, and credential material stays out of the agent for every
-  mediated class ({{custody}}).
-- **Untrusted content.** The harness taint policy
-  ({{I-D.draft-mcguinness-mission-harness}}) is in force and its
-  egress rule is enforced, not advisory: a consequential
-  external-communication or external-commitment action whose bound
-  parameters derive from tainted content (or, under session-level
-  taint, any such action in a tainted session) obtains a fresh
-  action-bound approval ({{action-approval}}) or is refused. Where
-  the decision-API binding carries taint context
-  ({{I-D.draft-mcguinness-mission-authzen}}), the PDP enforces the
-  rule; otherwise the harness does, and the scope statement says
-  which.
-- **External communication.** The external-communication and
-  external-commitment classes are mediated: no unmediated path, the
-  scope statement's egress-channel enumeration covers them
-  ({{I-D.draft-mcguinness-mission-harness}}), and the
-  sender-constraint keys are held by the mediating PEP ({{custody}}).
-
-The claim is published with the enforcement-scope conformance
-statement ({{runtime-conformance}}). It is containment, not immunity:
-the limits of {{prompt-injection-exfiltration}} stand, in particular
-within-scope laundering, bounded quantitatively where an
-egress-volume bound is metered
-({{I-D.draft-mcguinness-mission-metering}}), and PEP-placement
-completeness.
-
-Both this claim and agent-compromise-resistant enforcement
-({{compromise-resistant}}) rest on the execution-environment scope
-statement, a self-declared artifact. A deployment MAY bind that
-statement to execution-environment attestation, presenting Entity
-Attestation Token evidence under the AI-agent-instance profile
-({{I-D.draft-mcguinness-oauth-ai-agent-instance}}) covering the
-isolation properties the statement declares; a verifier SHOULD treat
-an unattested claim as an organizational assertion and an attested
-one as a technical one.
-
-## Mission binding establishment {#mission-binding}
+## Mission Binding Establishment {#mission-binding}
 
 Every decision evaluates one Mission: the **established Mission**. A
 deployment establishes it in one of two modes:
@@ -1090,7 +1075,7 @@ the Mission every input of this section (authority, Resource policy,
 parameters, actor, time, state) is evaluated against, and the Mission
 reference the permit and the evidence record bind.
 
-## Mission state and freshness {#state-freshness}
+## Mission State and Freshness {#state-freshness}
 
 A Mission-aware decision needs the Mission's current state, which a
 token alone does not convey. A runtime deployment MUST define the
@@ -1159,7 +1144,7 @@ are likely to match the risk of common action classes:
 A deployment justifies any looser value for a high-consequence class
 in its Enforcement Scope Statement.
 
-## Materialized policy view {#policy-view}
+## Materialized Policy View {#policy-view}
 
 A PDP evaluates a Mission against an action through a **materialized
 policy view**: the reproducible, evaluable form of the Mission's
@@ -1209,7 +1194,7 @@ the view yields a new `policy_view_id`, so equality on
 document defines no second canonicalization and no policy-language
 wire form for the view.
 
-# Parameter binding and time-of-check to time-of-use {#parameter-binding}
+# Parameter Binding and Time-of-Check to Time-of-Use {#parameter-binding}
 
 Parameter binding is only as consistent as the normalization behind
 it, so this profile collects that normalization into a named
@@ -1321,7 +1306,7 @@ expresses cumulative consumption and the deployment does not meter it,
 the PDP MUST refuse a consequential action governed by it. A deployment
 MUST NOT advertise consumption enforcement it does not perform.
 
-# Failure modes {#failure-modes}
+# Failure Modes {#failure-modes}
 
 Enforcement is meaningful only if failure is bounded. A PDP or PEP
 MUST behave as follows; in all cases the evidence record
@@ -1347,59 +1332,7 @@ refusal.
 | Resource policy refuses the action | Refuse |
 | Request would broaden the Mission's authority | Refuse (expansion is out of scope) |
 
-# Deployment Considerations {#runtime-deployment}
-
-Two properties govern how this profile scales.
-
-**Token lifetime trades against the enforcement layer.** The
-issuance profile recommends short-lived tokens because, in an
-issuance-only deployment, token expiry is the revocation cutoff.
-Where this profile's enforcement covers the high-consequence classes
-with an active-freshness state source, the PDP is the cutoff for the
-actions that matter, and a deployment MAY extend token lifetimes for
-issuance-load reasons without silently losing the kill switch; where
-issuance gating is the only control, short lifetimes remain the
-control and the issuance profile's recommendation stands. The choice
-belongs in the enforcement-scope statement: what stops a revoked
-Mission, at what latency, is a fact that statement already declares
-({{runtime-conformance}}).
-
-**The consistency unit is the Mission.** Every strongly consistent
-requirement this profile and its companions impose, the atomic
-`active` check, single-use decision identifiers, and the consumption
-counters and exclusivity latches of the metering companion
-({{I-D.draft-mcguinness-mission-metering}}), is scoped to one
-Mission. A multi-node PDP therefore shards its state by the Mission
-Identifier with no cross-shard coordination; only a
-deployment-configured aggregate bound crosses that partition and is
-provisioned as its own consistency domain. Fail-closed applies per
-action class ({{failure-modes}}): a PDP outage stops consequential
-work and nothing else.
-
-# Negative Conformance Tests {#negative-conformance}
-
-The agent-compromise-resistant claim ({{compromise-resistant}}) rests
-on PEP-placement completeness, which is a deployment property no
-protocol element proves. A deployment SHOULD demonstrate it with
-negative tests: each of the following bypass attempts MUST be refused
-or contained by a conforming deployment that claims the relevant
-tier, and a deployment SHOULD retain evidence that it ran them.
-
-| Bypass attempt | Required outcome |
-|---|---|
-| Agent calls a mediated tool directly, around the PEP | Blocked (no unmediated path) |
-| Agent presents a cached token after Mission revocation | Blocked within the freshness bound |
-| Agent resumes background work after Mission state went stale | Paused or refused on resume re-check |
-| Agent delegates to a sub-agent with no explicit delegation | Blocked (no inheritance by session ancestry) |
-| Agent alters action parameters after the permit is issued | Blocked by parameter-digest reverification |
-| Agent egresses over a secondary channel (DNS, logs, shared store) | Blocked if the channel is in the mediated set; otherwise declared outside the claim |
-
-These are the observable form of the requirements stated normatively
-above; a deployment's Enforcement Scope Statement
-({{runtime-conformance}}) names which it enforces and which paths it
-excludes.
-
-# Runtime enforcement evidence {#evidence}
+# Runtime Enforcement Evidence {#evidence}
 
 Every PDP decision on a consequential action MUST produce a runtime
 enforcement evidence record. A PEP refusal for a consequential action,
@@ -1413,7 +1346,7 @@ canonical byte representation, separate Decision Evidence and
 Execution Evidence object schemas, and the Mission Receipt's portable
 schema ({{mission-receipt}}) are out of scope ({{deferred}}).
 
-## Required decision evidence
+## Required Decision Evidence
 
 A record MUST contain:
 
@@ -1458,7 +1391,7 @@ originating AS's commitments, cited as anchors; the PDP does not
 recompute them and is not required to hold the full Authority Set to
 record them, consistent with {{I-D.draft-mcguinness-oauth-mission}}.
 
-## Execution-outcome evidence
+## Execution-Outcome Evidence
 
 For an action in the high-consequence classes, the executing PEP MUST
 also produce, after it acts, an
@@ -1503,7 +1436,7 @@ canonical byte representation are deferred ({{deferred}}); the
 members above are the minimum a deployment-defined Mission Receipt
 binds.
 
-## Record integrity and retention {#record-integrity}
+## Record Integrity and Retention {#record-integrity}
 
 The following requirements apply to every record:
 
@@ -1542,7 +1475,170 @@ attenuation substrate's parent-hash form
 base64url. Each exception is identified by its carrying context; the
 `sha-256:` prefix appears in neither.
 
-# Decision API binding {#authzen}
+# Named Enforcement Claims {#named-claims}
+
+The strongest properties this profile enables are deployment
+properties, not protocol properties: complete PEP placement, a
+trusted freshness source, and credential custody are things a
+deployment does, not things a token proves. This section defines
+them as named claims, each a conjunction of conditions specified
+elsewhere in this profile, each individually verifiable, and none
+implied by base conformance. A deployment publishes the claims it
+makes, and the classes each covers, in its Enforcement Scope
+Statement ({{runtime-conformance}}), and demonstrates them with the
+negative tests of {{negative-conformance}}. The two claims together
+are the High-Assurance Agent bar of the Mission Assurance Levels
+({{I-D.draft-mcguinness-mission-architecture}}).
+
+## Agent-Compromise-Resistant Enforcement {#compromise-resistant}
+
+"Protects against agent compromise" is a verifiable claim, not a label.
+A deployment claims **agent-compromise-resistant enforcement** only when,
+for the high-consequence classes, all of the following hold. Each
+condition below is MUST under this claim regardless of its base-profile
+level: active-state freshness for the high-consequence classes is
+already MUST in the base profile ({{state-freshness}}); the harness
+condition makes MUST the base profile's requirement that mediated
+classes have no unmediated path ({{pep-placement}}); mediated custody
+and action-bound approval are SHOULD in the base profile
+({{custody}}, {{action-approval}}) and MUST here.
+
+- the sender-constraint private key is held by the mediating PEP, not by
+  the agent component ({{custody}});
+- governed work runs under a harness conforming to the harness profile
+  ({{I-D.draft-mcguinness-mission-harness}}) whose published
+  execution-environment scope statement covers the mediated classes, so
+  there is no unmediated path to those actions;
+- each such action requires an action-bound approval
+  ({{action-approval}}); and
+- the Mission state source for those classes is an active freshness
+  mechanism, not token-lifetime expiry ({{state-freshness}}).
+
+A deployment that leaves any of these unmet MUST NOT claim
+agent-compromise-resistant enforcement; it may still claim base runtime
+conformance. The claim names exactly the set of classes it covers.
+
+The guarantee is the conjunction of these conditions, not any one of
+them. Mediated custody alone prevents only off-path presentation of
+the credential: the agent still initiates every action and supplies
+every parameter, and the mediating PEP executes any in-scope action
+the agent requests. What bounds a compromised agent is custody
+**and** complete PEP placement **and** correct classification acting
+together, so the claim is no stronger than the weakest of the three,
+and "mediated custody" on its own is not the property.
+
+Each unmet condition loses a specific property:
+
+| Condition unmet | Property lost |
+|---|---|
+| Custody in the mediating PEP | Key exfiltration |
+| Harness-established no-unmediated-path | Off-path execution |
+| Action-bound approval | Unattended high-consequence action |
+| Active-state freshness | Revocation lag bounded only by token lifetime |
+
+## Trifecta Containment {#trifecta-containment}
+
+An agent that holds private-data authority, is exposed to untrusted
+content, and can communicate externally combines the three
+ingredients of injection-driven exfiltration
+({{prompt-injection-exfiltration}}). The profiles gate each
+ingredient separately; this claim names the composite. A deployment
+claims **trifecta containment** for a Mission's governed work only
+when all of the following hold, each MUST under this claim regardless
+of its base-profile level:
+
+- **Private-data exposure.** Least exposure ({{least-exposure}}) is
+  applied: the context surfaced to the agent is scoped to the active
+  Mission, and credential material stays out of the agent for every
+  mediated class ({{custody}}).
+- **Untrusted content.** The harness taint policy
+  ({{I-D.draft-mcguinness-mission-harness}}) is in force and its
+  egress rule is enforced, not advisory: a consequential
+  external-communication or external-commitment action whose bound
+  parameters derive from tainted content (or, under session-level
+  taint, any such action in a tainted session) obtains a fresh
+  action-bound approval ({{action-approval}}) or is refused. Where
+  the decision-API binding carries taint context
+  ({{I-D.draft-mcguinness-mission-authzen}}), the PDP enforces the
+  rule; otherwise the harness does, and the scope statement says
+  which.
+- **External communication.** The external-communication and
+  external-commitment classes are mediated: no unmediated path, the
+  scope statement's egress-channel enumeration covers them
+  ({{I-D.draft-mcguinness-mission-harness}}), and the
+  sender-constraint keys are held by the mediating PEP ({{custody}}).
+
+The claim is published with the enforcement-scope conformance
+statement ({{runtime-conformance}}). It is containment, not immunity:
+the limits of {{prompt-injection-exfiltration}} stand, in particular
+within-scope laundering, bounded quantitatively where an
+egress-volume bound is metered
+({{I-D.draft-mcguinness-mission-metering}}), and PEP-placement
+completeness.
+
+Both this claim and agent-compromise-resistant enforcement
+({{compromise-resistant}}) rest on the execution-environment scope
+statement, a self-declared artifact. A deployment MAY bind that
+statement to execution-environment attestation, presenting Entity
+Attestation Token evidence under the AI-agent-instance profile
+({{I-D.draft-mcguinness-oauth-ai-agent-instance}}) covering the
+isolation properties the statement declares; a verifier SHOULD treat
+an unattested claim as an organizational assertion and an attested
+one as a technical one.
+
+# Negative Conformance Tests {#negative-conformance}
+
+The agent-compromise-resistant claim ({{compromise-resistant}}) rests
+on PEP-placement completeness, which is a deployment property no
+protocol element proves. A deployment SHOULD demonstrate it with
+negative tests: each of the following bypass attempts MUST be refused
+or contained by a conforming deployment that claims the relevant
+tier, and a deployment SHOULD retain evidence that it ran them.
+
+| Bypass attempt | Required outcome |
+|---|---|
+| Agent calls a mediated tool directly, around the PEP | Blocked (no unmediated path) |
+| Agent presents a cached token after Mission revocation | Blocked within the freshness bound |
+| Agent resumes background work after Mission state went stale | Paused or refused on resume re-check |
+| Agent delegates to a sub-agent with no explicit delegation | Blocked (no inheritance by session ancestry) |
+| Agent alters action parameters after the permit is issued | Blocked by parameter-digest reverification |
+| Agent egresses over a secondary channel (DNS, logs, shared store) | Blocked if the channel is in the mediated set; otherwise declared outside the claim |
+
+These are the observable form of the requirements stated normatively
+above; a deployment's Enforcement Scope Statement
+({{runtime-conformance}}) names which it enforces and which paths it
+excludes.
+
+# Deployment Considerations {#runtime-deployment}
+
+Two properties govern how this profile scales.
+
+**Token lifetime trades against the enforcement layer.** The
+issuance profile recommends short-lived tokens because, in an
+issuance-only deployment, token expiry is the revocation cutoff.
+Where this profile's enforcement covers the high-consequence classes
+with an active-freshness state source, the PDP is the cutoff for the
+actions that matter, and a deployment MAY extend token lifetimes for
+issuance-load reasons without silently losing the kill switch; where
+issuance gating is the only control, short lifetimes remain the
+control and the issuance profile's recommendation stands. The choice
+belongs in the enforcement-scope statement: what stops a revoked
+Mission, at what latency, is a fact that statement already declares
+({{runtime-conformance}}).
+
+**The consistency unit is the Mission.** Every strongly consistent
+requirement this profile and its companions impose, the atomic
+`active` check, single-use decision identifiers, and the consumption
+counters and exclusivity latches of the metering companion
+({{I-D.draft-mcguinness-mission-metering}}), is scoped to one
+Mission. A multi-node PDP therefore shards its state by the Mission
+Identifier with no cross-shard coordination; only a
+deployment-configured aggregate bound crosses that partition and is
+provisioned as its own consistency domain. Fail-closed applies per
+action class ({{failure-modes}}): a PDP outage stops consequential
+work and nothing else.
+
+# Decision API Binding {#authzen}
 
 The decision contract of {{decision}} is abstract: it fixes the inputs,
 the permit, and the invariants, not a wire format. A **decision API
@@ -1563,7 +1659,7 @@ enforcement evidence
 ({{evidence}}) are the substance, and they do not depend on the decision
 wire.
 
-# Out of scope {#deferred}
+# Out of Scope {#deferred}
 
 The following compose with this profile but are deferred to future
 work and are not required to enforce it:
@@ -1611,7 +1707,7 @@ issuance/delegation-layer primitive, not part of this runtime profile.
 
 # Security Considerations {#security-considerations}
 
-## What this layer adds, and its limits
+## What This Layer Adds, and Its Limits
 
 Gating every consequential action against the current Mission
 prevents an active Mission from acting as ambient authority: authority
@@ -1627,14 +1723,14 @@ and enforcement evidence make such behavior auditable after the fact;
 they do not prevent it in the moment. Signed, externally verifiable
 decisions are future work ({{deferred}}).
 
-## Placement and bypass
+## Placement and Bypass
 
 The strongest decision logic is void if the PEP is not at the last
 controllable boundary, or if an unmediated path can reach the action
 ({{pep-placement}}). A deployment's claim is only as strong as the set
 of execution paths it actually mediates; it MUST name that set.
 
-## Prompt injection and exfiltration {#prompt-injection-exfiltration}
+## Prompt Injection and Exfiltration {#prompt-injection-exfiltration}
 
 This profile assumes the agent can be prompt-injected and does not try
 to prevent that. It constrains what an injected agent can do by gating
@@ -1668,7 +1764,7 @@ available at the harness layer
 ({{I-D.draft-mcguinness-mission-harness}}); it raises the bar but
 is not information-flow control.
 
-## Relationship to inspection-based controls {#inspection-controls}
+## Relationship to Inspection-Based Controls {#inspection-controls}
 
 Inspection-based runtime defenses for agentic systems share this
 profile's premise that the agent application is part of the attack
@@ -1710,7 +1806,7 @@ declared reasoning against the task is an attestation problem outside
 both layers, and intent inference is not reliable enough to be
 load-bearing for high-consequence authority.
 
-## Classification integrity
+## Classification Integrity
 
 Because "consequential" is partly deployment-defined, the
 classification floor of {{classification}} is load-bearing: a
@@ -1718,7 +1814,7 @@ deployment cannot evade enforcement by classifying a high-consequence
 action as non-consequential. A `purpose` may raise a class but never lower it
 below the resource owner's floor.
 
-## Freshness and consumption honesty
+## Freshness and Consumption Honesty
 
 A permit is a lease, not a standing grant: stale Mission state MUST
 fail closed for consequential actions within the published bound
@@ -1727,7 +1823,7 @@ enforcement it does not perform ({{metering}}); where cumulative
 bounds are metered, the exactness and consistency claims of the
 metering companion apply ({{I-D.draft-mcguinness-mission-metering}}).
 
-## Resource policy remains authoritative
+## Resource Policy Remains Authoritative
 
 Mission authority is a maximum authority envelope. It does not force a
 Resource Server to perform an action, bypass local authorization, or
@@ -1737,7 +1833,7 @@ Mission-bound permit as sufficient without Resource policy evaluation
 can perform actions that the resource owner or service would otherwise
 forbid.
 
-## TOCTOU and replay
+## TOCTOU and Replay
 
 Parameter binding ({{parameter-binding}}) ties a permit to specific
 normalized parameters and a short window or single use, so a permit
@@ -1745,7 +1841,7 @@ cannot be replayed for a different request or survive a parameter
 change between check and use. The executing PEP, not an upstream
 component, MUST perform the reverification.
 
-## Confused deputy across resources
+## Confused Deputy Across Resources
 
 The permit binding of {{parameter-binding}} ties a decision to the
 Mission, the token audience or protected resource, `sub`, `client_id`,
@@ -1758,7 +1854,7 @@ deployment MUST NOT relax those bindings in a way that would let a
 permit cross a resource, audience, tenant, or operation boundary it
 was not issued for.
 
-## Decision channel and token disclosure
+## Decision Channel and Token Disclosure
 
 A separate PDP becomes part of the Resource Server's trusted
 authorization path for the operations in its enforcement scope. The
@@ -1769,7 +1865,7 @@ extends credential exposure beyond the Resource Server boundary; a
 deployment that does so needs the same credential handling, retention,
 and disclosure controls it applies at the Resource Server.
 
-## Evidence privacy and correlation
+## Evidence Privacy and Correlation
 
 Runtime enforcement evidence is intentionally durable and therefore
 sensitive. It can reveal a subject's resources, action timing,
