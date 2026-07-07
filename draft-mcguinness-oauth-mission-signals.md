@@ -1,7 +1,7 @@
 ---
 title: "Mission Lifecycle Signals for OAuth 2.0"
 abbrev: "OAuth Mission Signals"
-category: std
+category: exp
 
 docname: draft-mcguinness-oauth-mission-signals-latest
 submissiontype: IETF
@@ -194,9 +194,9 @@ profiles only the event carried, its protection, and the consumer's
 duty on receipt. The stream MUST be served over TLS 1.2 or later (TLS
 1.3 RECOMMENDED), following the recommendations of {{RFC9325}}.
 
-Delivery uses the Shared Signals Framework delivery methods, advertised
-in the SSF stream configuration's `delivery_methods_supported`
-{{OIDC-SSF}}:
+Delivery uses the Shared Signals Framework delivery methods,
+advertised in the SSF Transmitter Configuration Metadata's
+`delivery_methods_supported` {{OIDC-SSF}}:
 
 - push-based delivery, SET delivery method `urn:ietf:rfc:8935`
   {{RFC8935}}: the Mission Issuer pushes SETs {{RFC8417}} to a
@@ -206,10 +206,11 @@ in the SSF stream configuration's `delivery_methods_supported`
   to poll.
 
 A Mission Issuer that emits events MUST support at least one method,
-and a consumer discovers the supported methods from the SSF stream
-configuration rather than from a separate Authorization Server metadata
-member. The consumer's stream configuration declares the method it
-uses; the Mission Issuer MUST respect it and MUST NOT silently fall
+and a consumer discovers the supported methods from the SSF
+Transmitter Configuration Metadata rather than from a separate
+Authorization Server metadata
+member. The consumer's stream configuration declares, in its
+`delivery` object, the method it uses; the Mission Issuer MUST respect it and MUST NOT silently fall
 back to a less-timely method.
 
 ## Stream Scoping {#stream-scoping}
@@ -303,7 +304,7 @@ Example SET (decoded), for a revocation:
 {
   "iss": "https://as.example.com",
   "aud": "https://erp.example.com",
-  "iat": 1797843200,
+  "iat": 1793609600,
   "jti": "set_9Kp2vN7sR1tY8mZ3qX5b",
   "sub_id": {
     "format": "opaque",
@@ -332,7 +333,7 @@ Mission (`version` 1, no `prior_state`):
 {
   "iss": "https://as.example.com",
   "aud": "https://erp.example.com",
-  "iat": 1797836400,
+  "iat": 1793602800,
   "jti": "set_3Fw7bJ4nQ9xD2kM6vL1c",
   "sub_id": {
     "format": "opaque",
@@ -358,7 +359,7 @@ Example SET (decoded), for a supersession, carrying `successor`:
 {
   "iss": "https://as.example.com",
   "aud": "https://erp.example.com",
-  "iat": 1797846000,
+  "iat": 1793612400,
   "jti": "set_6Tn4rW8pB3zK7qC2mV5j",
   "sub_id": {
     "format": "opaque",
@@ -464,7 +465,7 @@ consumer's receiver ({{RFC8935}}). Decoded SET:
 {
   "iss": "https://as.example.com",
   "aud": "https://erp.partner.example.com",
-  "iat": 1797843600,
+  "iat": 1793610000,
   "jti": "set_5kQ8mP2vR9nT",
   "sub_id": {
     "format": "opaque",
@@ -507,7 +508,8 @@ issuance-profile and Status-profile members it already publishes:
   {{OIDC-SSF}} stream endpoint for Mission lifecycle events
   ({{event-stream}}). Present when the Mission Issuer emits events. The
   supported delivery methods are discovered from the SSF stream
-  configuration's `delivery_methods_supported`, not from a separate
+  Transmitter Configuration Metadata's `delivery_methods_supported`,
+not from a separate
   metadata member.
 
 # Security Considerations {#security-considerations}

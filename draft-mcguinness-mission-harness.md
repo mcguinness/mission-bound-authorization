@@ -520,7 +520,7 @@ because the posting is in a high-consequence action class:
     "state_source": "status",
     "stop_policy": "suppress"
   },
-  "action_class": "external_commitment",
+  "action_class": "irreversible_action",
   "not_before": "2026-11-02T02:00:00Z",
   "expires_at": "2026-11-02T06:00:00Z",
   "retry_of": "queue_journal_post_6",
@@ -849,7 +849,8 @@ A Harness Evidence object is a JSON object {{RFC8259}} with:
 `event_type`:
 : REQUIRED. One of `resume_allowed`, `resume_suppressed`,
   `queue_suppressed`, `cache_disabled`, `subagent_stopped`,
-  `subagent_continued`, or `mission_state_stale`. `event_type`
+  `subagent_continued`, `human_review_completed`, `egress_downgraded`,
+  or `mission_state_stale`. `event_type`
   categorizes the work item the record is about; the `decision` member
   records the outcome, so the two are orthogonal.
 
@@ -891,8 +892,29 @@ A Harness Evidence object is a JSON object {{RFC8259}} with:
 `reason`:
 : REQUIRED. String reason.
 
+`review`:
+: OPTIONAL. An object for a `human_review_completed` event: the
+  `outcome` (`approve`, `reject`, or `expire`), the reviewer
+  identity, and the authority basis of the review
+  ({{review-outcomes}}).
+
+`termination_outcome`:
+: OPTIONAL. For a `subagent_stopped` event: `acknowledged`,
+  `timed_out`, or `unknown` ({{subagent-stop}}).
+
+`taint`:
+: OPTIONAL. An object for an `egress_downgraded` event: the tainting
+  source class, the provenance basis (`parameter` or `session`), and
+  the applied action (a fresh action-bound approval required, or the
+  action suppressed) ({{session-taint}}).
+
 `occurred_at`:
 : REQUIRED. RFC 3339 {{RFC3339}} timestamp.
+
+The object is closed to uncoordinated extension: a companion profile
+MAY add members with coordinated short names, any other extension
+MUST use a collision-resistant name, and a consumer MUST ignore
+members it does not understand.
 
 Example:
 
@@ -912,7 +934,7 @@ Example:
   "state_source": "signal",
   "decision": "suppress",
   "reason": "mission_not_active",
-  "occurred_at": "2026-11-02T08:16:00Z"
+  "occurred_at": "2026-11-02T02:00:05Z"
 }
 ~~~
 

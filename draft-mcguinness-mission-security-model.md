@@ -417,7 +417,7 @@ that issuer.
 
 # Cross-Cutting Assumptions {#cross-cutting}
 
-Five assumptions hold across the whole model:
+Four assumptions hold across the whole model:
 
 - **Sender-constrained credentials.** Mission-bound tokens are
   sender-constrained ({{I-D.draft-mcguinness-oauth-mission}}); a token
@@ -447,11 +447,13 @@ Five assumptions hold across the whole model:
   method ({{I-D.draft-mcguinness-oauth-id-assertion-framework}},
   {{I-D.draft-mcguinness-oauth-domain-authorized-issuer}}) are
   concrete publication and evaluation mechanisms for such policy.
-- **Authority does not move on inert input.** Intent that the agent or
-  attacker-reachable content can influence (`goal`, `purpose`,
-  `success_criteria`, and disclosure-only audit material) is inert and
-  cannot derive, widen, or gate authority
-  ({{I-D.draft-mcguinness-oauth-mission}}).
+- **Authority does not move on inert input.** `purpose`,
+  `success_criteria`, and disclosure-only audit material are inert
+  and cannot derive, widen, or gate authority; `goal` shapes
+  authority only through the pre-approval derivation whose result the
+  Approver reads and consents to, and is inert once the Mission is
+  approved ({{I-D.draft-mcguinness-oauth-mission}}). Authority is
+  fixed at the approval event.
 
 # What the Model Does and Does Not Guarantee {#guarantees}
 
@@ -465,10 +467,13 @@ agent-compromise-resistant enforcement
 ({{I-D.draft-mcguinness-mission-runtime}}), the model further
 guarantees that such an agent cannot unilaterally take a high-consequence
 action it does not hold a mediated credential for. In the base profiles
-the mechanisms behind that further guarantee (mediated credential
-custody, no unmediated path, action-bound approval, and an
-active-freshness state source) are recommendations, not requirements, and
-a deployment that leaves them as recommendations does not obtain it. This
+two of the mechanisms behind that further guarantee (mediated
+credential custody and action-bound approval) are recommendations,
+not requirements, while active-state freshness for the
+high-consequence classes and the no-unmediated-path rule for mediated
+classes are already base-profile requirements; a deployment that
+leaves the recommendations as recommendations does not obtain the
+guarantee. This
 matches the suite's front-door framing: adopting the profiles does not by
 itself make a deployment resistant to a compromised agent. The model
 makes misuse bounded and, where evidence is produced, attributable. A
@@ -508,7 +513,8 @@ injection), and to capture tokens in transit. The adversary is assumed
 not to break the cryptographic primitives, not to forge an
 authenticated component's signing key, and not to compromise a
 trusted-base component; those last two are the residuals of
-{{trusted-base}}, not adversary moves this table covers.
+{{trusted-base}}, and the table's final row only restates that
+exclusion.
 
 The following maps each adversary move to the mechanism that addresses
 it and to what is explicitly not stopped. The residual column is the
@@ -517,7 +523,7 @@ honest part: it is what a deploying party still owns.
 | Adversary move | Addressed by | Residual: not stopped |
 |---|---|---|
 | Compromised or injected agent acts beyond its task | Authority fixed at the approval event (issuance); per-action PDP check (runtime) | Misuse within the approved scope; low-consequence authority the agent legitimately holds |
-| Prompt injection tries to widen authority | Inert intent: `goal`, `purpose`, `success_criteria` never derive, widen, or gate authority | Injected text can still drive actions already in scope |
+| Prompt injection tries to widen authority | Authority fixed at approval: `purpose` and `success_criteria` are inert, and `goal` shapes authority only through the pre-approval derivation the Approver consents to | Injected text can still drive actions already in scope |
 | Stolen or exfiltrated token | Sender-constraint (proof-of-possession); the high-consequence key is held by the PEP, not the agent (mediated execution) | A token stolen together with its key; soundness of the PoP mechanism |
 | Token replayed at another resource (confused deputy) | Permit bound to audience, resource, `sub`, `client_id`, and action; cross-domain grant single-use and audienced | Correct binding configuration is the deployment's |
 | Parameters change between decision and use (TOCTOU) | Parameter binding; the digest is reverified at the executing PEP immediately before acting | The PEP must sit at the last controllable boundary |

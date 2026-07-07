@@ -1,7 +1,7 @@
 ---
 title: "Mission Progressive Authorization for OAuth 2.0"
 abbrev: "OAuth Mission Progressive Authorization"
-category: std
+category: exp
 
 docname: draft-mcguinness-oauth-mission-progressive-latest
 submissiontype: IETF

@@ -565,6 +565,12 @@ absent.
 
 ## Worked PDP request
 
+The `policy_view_id` values in this document's examples
+(`sha-256:kP3xR9sQ...`) differ from the runtime profile's worked
+materialized-view value (`sha-256:fuMqn6Nb...`): this deployment's
+view payload includes the engine-evaluable form, so it hashes
+differently. Both are valid views of the same Mission.
+
 For the ERP reconciliation Mission:
 
 ~~~ http-message
@@ -842,10 +848,13 @@ canonicalization, and integrity envelope an AuthZEN deployment emits.
 `mission`:
 : REQUIRED. An object. the PDP request's `context.mission`
   object (`id`, `issuer`, `authority_hash`, and, when known,
-  `policy_version` and `policy_view_id`), extended with `intent_hash`
+  `policy_version`), extended with the PDP's own `policy_view_id`,
+  with `intent_hash`,
   and, when known, a consent-disclosure commitment, so the evidence
   chains back to the exact approved Mission. Within `mission`, `id`,
-  `issuer`, and `authority_hash` are REQUIRED; `intent_hash` is OPTIONAL
+  `issuer`, `authority_hash`, and `policy_view_id` are REQUIRED
+  (the PDP always knows and populates its own view identifier,
+  whatever the request carried); `intent_hash` is OPTIONAL
   (it is carried in neither the `mission` claim nor introspection, so
   only a PDP with direct Mission-record access can record it), and the
   remaining members are OPTIONAL. These hashes are the issuing AS's
@@ -947,13 +956,35 @@ canonicalization, and integrity envelope an AuthZEN deployment emits.
 `evaluated_at`:
 : REQUIRED. An RFC 3339 {{RFC3339}} timestamp.
 
+`authorizing_entry`:
+: OPTIONAL. An object. the `authorization_details` entry the decision
+  was evaluated against.
+
+`entry_digest`:
+: OPTIONAL. A string. the integrity-anchor encoded digest
+  ({{I-D.draft-mcguinness-oauth-mission}}) of that entry, for a
+  deployment that does not record the entry in full. A record of a
+  permit MUST carry `authorizing_entry` or `entry_digest`, per the
+  runtime record requirements
+  ({{I-D.draft-mcguinness-mission-runtime}}).
+
+`taint`:
+: OPTIONAL. An object. the presented taint context
+  ({{context-taint}}), recorded as supplied. REQUIRED when the
+  decision request carried `context.taint`.
+
 `evidence_envelope`:
 : REQUIRED. An object. integrity protection
   ({{decision-evidence-integrity}}), carrying a `format` (string,
   required) and a `value` (string, required).
 
-A Decision Evidence Object is a closed object: it MUST NOT contain
-members other than those defined above.
+A Decision Evidence Object is closed to uncoordinated extension: a
+companion profile of the runtime contract MAY add members with short
+names coordinated with this profile (for example, the metering
+companion's consumption and settlement members), any other extension
+MUST use a collision-resistant name, and a consumer MUST ignore
+members it does not understand and MUST NOT derive authority from any
+member.
 
 ## Pre-decision refusal records {#pre-decision-refusal}
 
@@ -967,6 +998,9 @@ refusal has no PDP decision and cannot populate the PDP-derived members
 above. An AuthZEN deployment records it not as a Decision Evidence
 Object but as a refusal record carrying only the fields the PEP
 verified, at least `audience`, an action descriptor, `evaluated_at`,
+the `parameter_digest` for a parameter-bound class (or a
+privacy-preserving digest of the refused request otherwise, per the
+runtime record minimum),
 `decision` of `deny`, and a `denial_reason` from this pre-decision set:
 `token_invalid`, `mission_claim_missing`, `channel_failure`,
 `pdp_unreachable`, or `state_unavailable` (the PEP cannot establish
@@ -1191,8 +1225,11 @@ linked to the Decision Evidence by `decision_id`.
   carrying a `format` (string, required) and a `value` (string,
   required).
 
-An Execution Evidence Object is a closed object: it MUST NOT contain
-members other than those defined above.
+An Execution Evidence Object is closed to uncoordinated extension
+under the same rule as Decision Evidence: coordinated companion
+members (for example, the metering companion's `measured_duration`)
+are permitted, any other extension MUST use a collision-resistant
+name, and a consumer MUST ignore members it does not understand.
 
 ## Worked example
 
@@ -1466,8 +1503,10 @@ identity that requested it, and MUST NOT be relayed to another
 component as a bearer grant. Where the requesting component and the
 executing PEP differ, the executor MUST receive the signed Decision
 Evidence ({{decision-evidence-object}}) and verify the runtime's binding
-fields (the Mission reference, `audience`, `subject`, `client_id`, actor
-context, action, resource, and `parameter_digest`) from it before
+fields (the Mission reference and `policy_view_id`, `audience`,
+`subject`, `client_id`, actor
+context, action, resource, the authorizing entry or `entry_digest`,
+and `parameter_digest`) from it before
 acting, rather than trusting a relayed `decision: true`. A PEP permit
 cache MUST key on the complete request envelope, so a cached permit
 cannot be reused for a request whose envelope differs in any bound
@@ -1489,10 +1528,11 @@ A Resource Server that logs the received `decision_id` with the access
 it serves closes the decision-to-access join: the Decision Evidence,
 the Execution Evidence, and the Resource Server's access log then share
 one identifier, so an access is joined to the decision that permitted
-it without timestamp correlation. This is the wire realization of the
-issuance profile's recommendation that a Resource Server log the
-decision identifier accompanying a Mission-governed request
-({{I-D.draft-mcguinness-oauth-mission}}).
+it without timestamp correlation. This extends the issuance profile's
+recommendation that a Resource Server log the `mission` claim's `id`
+and the token `jti` with each decision
+({{I-D.draft-mcguinness-oauth-mission}}): the decision identifier is
+this profile's addition to that correlation set.
 
 The field is a correlation aid, not an authorization. Its presence or
 value grants nothing, the Resource Server's token validation and PEP
@@ -1980,7 +2020,8 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 
 The `context.mission`, `context.actor`, `context.credential`,
 `context.parameters`, `context.parameter_digest`, `context.audience`,
-`context.freshness`, and `context.capability_source` members carried
+`context.freshness`, `context.taint`, and `context.capability_source`
+members carried
 inside the AuthZEN request
 `context` object ({{pdp-request}}) are
 AuthZEN extension data and are not registered in an IETF registry.

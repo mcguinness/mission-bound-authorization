@@ -711,8 +711,8 @@ in the PS-asserted mode, narrowed to read-only authority:
   "cnf": { "jwk": { "kty": "OKP", "crv": "Ed25519", "x": "..." } },
   "scope": "invoices.read",
   "jti": "at_9Kp2vN7sR1tY8mZ3qX5b",
-  "iat": 1797840000,
-  "exp": 1797843600,
+  "iat": 1793606400,
+  "exp": 1793610000,
   "mission": {
     "approver": "https://ps.example.com",
     "s256": "sN5v0poiLW85zY6tKSlxkR10yPkIr-JUr9ttwhiOc0w",

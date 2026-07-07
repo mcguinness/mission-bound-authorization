@@ -332,7 +332,9 @@ A Mission Intent proposal MUST satisfy the syntactic requirements of the
 issuance profile's `mission_intent` object
 ({{I-D.draft-mcguinness-oauth-mission}}): a `goal`, `resources` (each an
 absolute URI), optional free-text `constraints`, optional
-`success_criteria`, an optional `purpose`, an `expires_at`, and an
+`success_criteria`, an optional `purpose`, an optional
+`proposed_authority` array of candidate Authority Set entries, an
+`expires_at`, and an
 optional `controls` object. The shaper proposes the resources and
 describes the desired bounds in free-text `constraints` and
 `success_criteria`; it does not author actions, structured constraints,
@@ -342,12 +344,17 @@ computes ({{I-D.draft-mcguinness-oauth-mission}}). The proposal MUST be
 bounded enough for the Mission Issuer to derive an Authority Set without
 interpreting natural language as authority.
 
-The proposal MUST NOT carry an Authority Set or its derived members:
-`actions`, structured (object) constraints such as `max_amount`, or
-`delegation`. Those are products of the Mission Issuer's derivation, not
-inputs from the shaper. A shaper that has resolved such facts (for
+The proposal MUST NOT present issuer outputs as approved authority:
+the derived Authority Set is the Mission Issuer's product, and nothing
+the shaper emits carries authority. Concrete candidate authority
+(actions, structured constraints such as `max_amount`, delegation)
+belongs in the Intent's `proposed_authority` member, where the core
+treats it as untrusted proposal input and bounds the derivation to a
+subset of it ({{I-D.draft-mcguinness-oauth-mission}}). A shaper that
+has resolved such facts (for
 example, the actions a resource supports, or that the task implies
-delegated execution) records them in Shaping Evidence
+delegated execution) proposes them there and records them in Shaping
+Evidence
 ({{shaping-evidence}}), where the Mission Issuer MAY consult them, rather
 than placing them in the proposal.
 
@@ -383,10 +390,12 @@ task-scoped Mission Intents rather than one broad proposal, so each
 resulting Mission stays narrow, separately approved, and separately
 revocable.
 
-Where cross-vendor interoperability matters, the shaper should record in
-Shaping Evidence the concrete candidate authority it proposes (the
-resources, actions, and constraints), so the Mission Issuer can derive
-the Authority Set by narrowing that proposal under its subset rule
+Where cross-vendor interoperability matters, the shaper SHOULD carry
+the concrete candidate authority it proposes (the resources, actions,
+and constraints) in the Intent's `proposed_authority` member, and
+record the same proposal in Shaping Evidence, so the Mission Issuer
+derives the Authority Set by narrowing `proposed_authority` under its
+subset rule, with the deterministic-reproducibility rule applying,
 rather than generating authority from free text
 ({{I-D.draft-mcguinness-oauth-mission}}). Narrowing is the portable
 derivation path: the proposal format and the narrowing rule are

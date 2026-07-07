@@ -1,7 +1,7 @@
 ---
 title: "Mission Consumption Metering"
 abbrev: "Mission Metering"
-category: std
+category: exp
 
 docname: draft-mcguinness-mission-metering-latest
 submissiontype: IETF
@@ -221,7 +221,8 @@ The bounds are carried on the Mission and committed by `intent_hash`.
 They are not enforced by the Authorization Server at issuance; they are
 enforced by the runtime layer at the point of use ({{metering}}).
 
-Example Mission Intent `controls` carrying all three bounds alongside
+Example Mission Intent `controls` carrying three of the four bounds
+alongside
 the issuance profile's members:
 
 ~~~ json

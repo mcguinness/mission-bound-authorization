@@ -119,6 +119,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-progressive:
+    title: "Mission Progressive Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
@@ -548,7 +556,9 @@ without it supplies an externally established reference, verified
 under a join the binding defines, which the MAS profiles as its
 Mission Join. Offline Attenuation attenuates this credential and the
 token-carriage aspects of delegation ride it, so both require it;
-every other companion routes through the binding establishment step,
+the companions that need a credential-to-Mission association (the
+runtime layer and the harness) route through the binding
+establishment step,
 which is what makes the standalone binding possible.
 
 ## The Audit Horizon
@@ -586,10 +596,14 @@ unchanged when it provides:
 
 Individual profiles name further inputs in their Mission Substrate
 sections: the evidence types and their canonical bytes for audit
-transparency, and the intent submission channel for shaping. The
+transparency, and the intent submission channel for shaping. A
+binding also owes the substrate's approval-fidelity requirement: the
+approval event it runs must produce the record, anchors, and
+disclosure with the fidelity the substrate requirements fix
+({{I-D.draft-mcguinness-mission-substrate}}). The
 per-profile Mission Substrate sections remain the authoritative
 per-consumer statements of this interface; this section consolidates
-them and adds nothing.
+them and adds nothing further.
 
 # Mission Layers {#layers}
 
@@ -629,8 +643,8 @@ The question: how does a user's request become a candidate Mission
 Intent? The boundary: the client side; output is untrusted until the
 Mission Issuer validates and narrows it. Owner: Intent Shaping
 ({{I-D.draft-mcguinness-mission-shaping}}); the proposal enters via
-Pushed Authorization Requests {{RFC9126}} or the MAS submission
-endpoint.
+Pushed Authorization Requests {{RFC9126}}, the MAS submission
+endpoint, or the AAuth Person Server's mission endpoint.
 
 ## Approve and Record
 
@@ -648,7 +662,7 @@ in-review narrowing negotiation; the
 standalone and AAuth bindings are natively asynchronous. Where the experimental
 progressive authorization companion is used, the initial approval also
 consents an authority ceiling for later staged widening
-({{I-D.draft-mcguinness-oauth-mission-expansion}}).
+({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
 ## Govern
 
@@ -960,7 +974,8 @@ it because the architecture is substrate-neutral by construction.
   the mediated environment.
 
 `mission-orchestration`:
-: Reversibility classes, unwind plans, and compensation after a stop.
+: Experimental: reversibility classes, unwind plans, and compensation
+  after a stop.
 
 **Sub-agents:**
 
@@ -969,8 +984,8 @@ it because the architecture is substrate-neutral by construction.
   revocation.
 
 `oauth-mission-attenuation`:
-: Narrower Mission-bound tokens minted offline; the kill switch
-  preserved by runtime re-check.
+: Experimental: narrower Mission-bound tokens minted offline; the
+  kill switch preserved by runtime re-check.
 
 **Proof and portability:**
 
