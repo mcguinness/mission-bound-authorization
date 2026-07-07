@@ -636,15 +636,15 @@ as their own profile defines. A deployment reads the row for the
 mechanism it runs, or the tightest of several, to state how long a
 revoked Mission can still act.
 
-The same window, read per assurance tier
+The same window, read per maturity-ladder rung
 ({{I-D.draft-mcguinness-mission-architecture}}) and per what it stops:
 
-| Tier | Further issuance | Cached token use | Runtime action | Background work |
+| Rung | Further issuance | Cached token use | Runtime action | Background work |
 |---|---|---|---|---|
 | Baseline Issuance | stopped at once | until token `exp` | not gated | not gated |
-| State-Aware Reliance | stopped at once | within staleness bound | not gated | not gated |
+| Baseline + state-aware freshness | stopped at once | within staleness bound | not gated | not gated |
 | Runtime-Enforced | stopped at once | stopped for mediated actions | stopped within freshness bound | only if the harness re-checks |
-| Governed / Compromise-Resistant | stopped at once | stopped | stopped within freshness bound | stopped on resume re-check |
+| Governed / High-Assurance Agent | stopped at once | stopped | stopped within freshness bound | stopped on resume re-check |
 
 Background work is bounded only where the harness re-checks Mission
 state on resume, retry, and dispatch
