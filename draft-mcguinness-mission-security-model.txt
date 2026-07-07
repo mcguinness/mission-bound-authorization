@@ -649,30 +649,30 @@ Table of Contents
    the mechanism it runs, or the tightest of several, to state how long
    a revoked Mission can still act.
 
-   The same window, read per assurance tier
+   The same window, read per maturity-ladder rung
    ([I-D.draft-mcguinness-mission-architecture]) and per what it stops:
 
-   +======================+========+=========+===========+============+
-   | Tier                 |Further |Cached   | Runtime   | Background |
-   |                      |issuance|token use| action    | work       |
-   +======================+========+=========+===========+============+
-   | Baseline Issuance    |stopped |until    | not gated | not gated  |
-   |                      |at once |token exp|           |            |
-   +----------------------+--------+---------+-----------+------------+
-   | State-Aware Reliance |stopped |within   | not gated | not gated  |
-   |                      |at once |staleness|           |            |
-   |                      |        |bound    |           |            |
-   +----------------------+--------+---------+-----------+------------+
-   | Runtime-Enforced     |stopped |stopped  | stopped   | only if    |
-   |                      |at once |for      | within    | the        |
-   |                      |        |mediated | freshness | harness    |
-   |                      |        |actions  | bound     | re-checks  |
-   +----------------------+--------+---------+-----------+------------+
-   | Governed /           |stopped |stopped  | stopped   | stopped on |
-   | Compromise-Resistant |at once |         | within    | resume re- |
-   |                      |        |         | freshness | check      |
-   |                      |        |         | bound     |            |
-   +----------------------+--------+---------+-----------+------------+
+   +==================+==========+===========+===========+============+
+   | Rung             | Further  | Cached    | Runtime   | Background |
+   |                  | issuance | token use | action    | work       |
+   +==================+==========+===========+===========+============+
+   | Baseline         | stopped  | until     | not gated | not gated  |
+   | Issuance         | at once  | token exp |           |            |
+   +------------------+----------+-----------+-----------+------------+
+   | Baseline +       | stopped  | within    | not gated | not gated  |
+   | state-aware      | at once  | staleness |           |            |
+   | freshness        |          | bound     |           |            |
+   +------------------+----------+-----------+-----------+------------+
+   | Runtime-Enforced | stopped  | stopped   | stopped   | only if    |
+   |                  | at once  | for       | within    | the        |
+   |                  |          | mediated  | freshness | harness    |
+   |                  |          | actions   | bound     | re-checks  |
+   +------------------+----------+-----------+-----------+------------+
+   | Governed / High- | stopped  | stopped   | stopped   | stopped on |
+   | Assurance Agent  | at once  |           | within    | resume re- |
+   |                  |          |           | freshness | check      |
+   |                  |          |           | bound     |            |
+   +------------------+----------+-----------+-----------+------------+
 
                                  Table 3
 

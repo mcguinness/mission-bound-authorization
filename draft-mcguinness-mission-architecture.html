@@ -1234,10 +1234,13 @@ every mechanism it names is defined by the profile it points to.<a href="#sectio
                 <p id="section-toc.1-1.6.2.6.1"><a href="#section-6.6" class="auto internal xref">6.6</a>.  <a href="#name-delegate" class="internal xref">Delegate</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.7">
-                <p id="section-toc.1-1.6.2.7.1"><a href="#section-6.7" class="auto internal xref">6.7</a>.  <a href="#name-prove" class="internal xref">Prove</a></p>
+                <p id="section-toc.1-1.6.2.7.1"><a href="#section-6.7" class="auto internal xref">6.7</a>.  <a href="#name-project" class="internal xref">Project</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.8">
-                <p id="section-toc.1-1.6.2.8.1"><a href="#section-6.8" class="auto internal xref">6.8</a>.  <a href="#name-analyze" class="internal xref">Analyze</a></p>
+                <p id="section-toc.1-1.6.2.8.1"><a href="#section-6.8" class="auto internal xref">6.8</a>.  <a href="#name-prove" class="internal xref">Prove</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.9">
+                <p id="section-toc.1-1.6.2.9.1"><a href="#section-6.9" class="auto internal xref">6.9</a>.  <a href="#name-analyze" class="internal xref">Analyze</a></p>
 </li>
             </ul>
 </li>
@@ -1245,10 +1248,7 @@ every mechanism it names is defined by the profile it points to.<a href="#sectio
             <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-mission-deployment-patterns" class="internal xref">Mission Deployment Patterns</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
-                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-the-adoption-ladder" class="internal xref">The Adoption Ladder</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
-                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-assurance-tiers" class="internal xref">Assurance Tiers</a></p>
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-the-maturity-ladder" class="internal xref">The Maturity Ladder</a></p>
 </li>
             </ul>
 </li>
@@ -2004,12 +2004,29 @@ build on the actor chain of the core's Delegation Within a Mission
 section.<a href="#section-6.6-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="prove">
+<div id="project">
 <section id="section-6.7">
-        <h3 id="name-prove">
-<a href="#section-6.7" class="section-number selfRef">6.7. </a><a href="#name-prove" class="section-name selfRef">Prove</a>
+        <h3 id="name-project">
+<a href="#section-6.7" class="section-number selfRef">6.7. </a><a href="#name-project" class="section-name selfRef">Project</a>
         </h3>
-<p id="section-6.7-1">The question: what can a party outside the deployment verify about
+<p id="section-6.7-1">The question: how is one Mission honored in another trust domain? The
+boundary: a trust boundary the origin does not control, where the
+verifier holds no session with the issuer. Owner: Cross-Domain
+Projection, a single-hop grant that carries the Mission's identifier,
+issuer, and authority hash into a partner domain unchanged, where a
+Resource AS mints a local token bounded by the projected authority
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>). Projection
+preserves authority across the boundary rather than narrowing it to a
+sub-actor, which is why it is a distinct verb from Delegate;
+downstream revocation latency is the local token lifetime.<a href="#section-6.7-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="prove">
+<section id="section-6.8">
+        <h3 id="name-prove">
+<a href="#section-6.8" class="section-number selfRef">6.8. </a><a href="#name-prove" class="section-name selfRef">Prove</a>
+        </h3>
+<p id="section-6.8-1">The question: what can a party outside the deployment verify about
 what was approved and done? The boundary: across trust domains and
 time; the verifier holds no session with the issuer. Owners: Consent
 Evidence (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>);
@@ -2017,18 +2034,18 @@ the Mandate, a signed, portable statement that authorizes nothing
 (<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>); the Mission Receipt,
 portable evidence of an action taken under a Mission
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); Audit Transparency, the
-append-only evidence log (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-6.7-1" class="pilcrow">¶</a></p>
+append-only evidence log (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-6.8-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="analyze">
-<section id="section-6.8">
+<section id="section-6.9">
         <h3 id="name-analyze">
-<a href="#section-6.8" class="section-number selfRef">6.8. </a><a href="#name-analyze" class="section-name selfRef">Analyze</a>
+<a href="#section-6.9" class="section-number selfRef">6.9. </a><a href="#name-analyze" class="section-name selfRef">Analyze</a>
         </h3>
-<p id="section-6.8-1">The question: which components must be trusted, and what does each
+<p id="section-6.9-1">The question: which components must be trusted, and what does each
 one's compromise cost? The boundary: the whole system. Owner: the
 Mission Security Model
-(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-6.8-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-6.9-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2093,168 +2110,111 @@ steps 8 through 10 are the Mission Join and the runtime decision (the
 MAS's Mission Join section), and the MAS's staged walkthrough of the
 same flow is its end-to-end appendix
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-7-5" class="pilcrow">¶</a></p>
-<div id="adoption-ladder">
+<div id="maturity-ladder">
 <section id="section-7.1">
-        <h3 id="name-the-adoption-ladder">
-<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-the-adoption-ladder" class="section-name selfRef">The Adoption Ladder</a>
+        <h3 id="name-the-maturity-ladder">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-the-maturity-ladder" class="section-name selfRef">The Maturity Ladder</a>
         </h3>
-<p id="section-7.1-1">The bundles progress cumulatively, and this section names them so a
-deployment, a procurement, or a review can cite one rung instead of
-enumerating documents. Throughout, every companion is optional; each
-profile states its own scoped conformance, and the rungs are
-guidance, not a conformance class.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-7.1-2">
-          <dt id="section-7.1-2.1">
+<p id="section-7.1-1">Two questions get asked of a Mission deployment: what to deploy for a
+goal, and what guarantee it has earned. They share one progression, so
+this document states a single ladder whose rungs carry both facets,
+the document set and the proof obligations, and names them so a
+deployment, a procurement, or a review can cite one rung. The rungs
+are guidance, not a conformance class; every companion is optional and
+states its own scoped conformance. Because the family's strongest
+properties are deployment properties, not protocol properties
+(complete PEP placement, a trusted freshness source, and credential
+custody are things a deployment does, not things a token proves), a
+rung is a claim, verifiable in the sense the runtime profile fixes
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), not a label: a deployment
+states its highest earned rung in its Enforcement Scope Statement, and
+a consumer treats an unstated or unproven rung as not claimed.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.1-2">The ladder is one axis; the <strong>binding</strong> is an orthogonal one. Every
+rung is reached under any of the three Mission Issuer bindings, the
+OAuth Authorization Server, the standalone Mission Authority Server,
+or the AAuth Person Server, and a deployment names its binding
+separately from its rung. The standalone MAS binding is the case that
+matters most: it provides the Mission record, lifecycle, and authority
+but no Mission-bound credential and no issuance gating, so under it the
+kill switch is the runtime layer alone, not the token gate, and a
+deployment states that. Binding is not a rung.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
+<p id="section-7.1-3">The rungs, cumulative:<a href="#section-7.1-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-7.1-4">
+          <dt id="section-7.1-4.1">
 <strong>Baseline Issuance</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-7.1-2.2">
-            <p id="section-7.1-2.2.1">the core alone. Approved, integrity-bound Missions, state-gated
-issuance, a possession-independent kill switch; audit, not
-action-time defense.<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-7.1-2.3">
-<strong>Enforced Agent</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-7.1-2.4">
-            <p id="section-7.1-2.4.1">Baseline Issuance plus the runtime profile, its AuthZEN binding,
-and a freshness source (Status, or issuer token introspection).
-Per-action permits and prompt revocation: the minimum for an agent
-taking consequential actions.<a href="#section-7.1-2.4.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-7.1-2.5">
-<strong>Governed Agent</strong> (recommended for AI agents):</dt>
-          <dd style="margin-left: 1.5em" id="section-7.1-2.6">
-            <p id="section-7.1-2.6.1">Enforced Agent plus Consent Evidence and the harness, growing with
-Child Delegation, Expansion, and Orchestration as needed.
-Resistance to a compromised agent comes not from the rung but from
-meeting all four conditions of the runtime profile's
-agent-compromise-resistant enforcement; input-side containment is
-the runtime profile's trifecta containment claim.<a href="#section-7.1-2.6.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-7.1-2.7">
-<strong>Standalone Governance</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-7.1-2.8">
-            <p id="section-7.1-2.8.1">the same progression entered through the MAS with an unmodified
-Authorization Server, the runtime layer mandatory from the start:
-no Mission-bound tokens and no issuance gating, so enforcement
-rests entirely on PEP coverage.<a href="#section-7.1-2.8.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-</dl>
-</section>
-</div>
-<div id="assurance-tiers">
-<section id="section-7.2">
-        <h3 id="name-assurance-tiers">
-<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-assurance-tiers" class="section-name selfRef">Assurance Tiers</a>
-        </h3>
-<p id="section-7.2-1">The Adoption Ladder says what to deploy; the assurance tiers say what
-a deployment MAY claim and what it MUST be able to show to claim it.
-The distinction matters because the family's strongest properties are
-deployment properties, not protocol properties: complete PEP
-placement, a trusted freshness source, and credential custody are
-things a deployment does, not things a token proves. A tier is
-therefore a claim, verifiable in the sense the runtime profile fixes
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), not a label; a deployment
-states the highest tier it has earned in its enforcement-scope
-statement, and a consumer treats an unstated or unproven tier as not
-claimed.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
-<p id="section-7.2-2">The tiers are cumulative except where noted, and each rests on
-proof obligations defined normatively by the profile named:<a href="#section-7.2-2" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-7.2-3">
-          <dt id="section-7.2-3.1">
-<strong>Mission-Bound Issuance</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-7.2-3.2">
-            <p id="section-7.2-3.2.1">authority derived and committed at an approval event with the
+          <dd style="margin-left: 1.5em" id="section-7.1-4.2">
+            <p id="section-7.1-4.2.1">authority derived and committed at the approval event with the
 integrity anchors, issuance bounded by the subset rule, and
 derivation gated on Mission state (the core). Grants task-bound,
 auditable authority and a possession-independent kill switch at the
-issuance gate; it does not grant per-action control, and outstanding
-tokens run to their own expiry.<a href="#section-7.2-3.2.1" class="pilcrow">¶</a></p>
+issuance gate; it grants no per-action control, and outstanding
+tokens run to their own expiry. Proof obligations: the anchored
+approval and the subset rule. A deployment that adds only a freshness
+surface, Mission Status or introspection with a published staleness
+bound (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), gains
+state-aware reliance, a revocation cutoff within that bound, without
+per-action enforcement: a half-step into the next rung, not a rung of
+its own.<a href="#section-7.1-4.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-7.2-3.3">
-<strong>Mission-State-Aware Reliance</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-7.2-3.4">
-            <p id="section-7.2-3.4.1">adds a freshness surface, the Mission Status operation or token
-introspection with a published staleness bound
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), so a consumer can
-cut off a revoked or expired Mission within that bound instead of
-waiting out the token lifetime. It adds no per-action decision; a
-consumer relies on reported Mission state, not on a permit. Its
-proof obligation is the declared state source and staleness bound.<a href="#section-7.2-3.4.1" class="pilcrow">¶</a></p>
+<dt id="section-7.1-4.3">
+<strong>Runtime-Enforced</strong> (the Protocol MVP):</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-4.4">
+            <p id="section-7.1-4.4.1">adds a PEP/PDP decision on every consequential action, a trusted
+state source with a published staleness bound, parameter binding, and
+runtime evidence (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span> and its
+AuthZEN binding). Grants per-action enforcement and revocation
+bounded by the staleness bound plus token lifetime. This is the
+family's adoption wedge, the <strong>Protocol MVP</strong>: the smallest
+deployment that makes a Mission-bound token more than governance
+metadata, and every normative dependency it needs is ratified. Proof
+obligations: PEP-placement completeness and the declared freshness
+source and bound. Documents: Baseline plus runtime, its AuthZEN
+binding, and a freshness source.<a href="#section-7.1-4.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-7.2-3.5">
-<strong>Mission Runtime-Enforced</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-7.2-3.6">
-            <p id="section-7.2-3.6.1">adds a PEP/PDP decision on every consequential action, a trusted
-state source with a published staleness bound, parameter binding,
-and runtime evidence
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Grants per-action
-enforcement and revocation bounded by the staleness bound plus token
-lifetime. Its proof obligations are PEP-placement completeness and
-the declared freshness source and bound.<a href="#section-7.2-3.6.1" class="pilcrow">¶</a></p>
+<dt id="section-7.1-4.5">
+<strong>Governed Agent</strong> (recommended for AI agents):</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-4.6">
+            <p id="section-7.1-4.6.1">adds Consent Evidence and the harness, growing with Child Delegation,
+Expansion, and Orchestration as needed. Grants consent-rendering
+evidence and session-continuity discipline. Documents: Runtime-
+Enforced plus consent-evidence and the harness.<a href="#section-7.1-4.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-7.2-3.7">
-<strong>Agent-Compromise-Resistant</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-7.2-3.8">
-            <p id="section-7.2-3.8.1">adds the runtime profile's four named conditions, mediated
-credential custody, no unmediated path, action-bound approval for
-the high-consequence classes, and an active-freshness state source
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). A compromised agent
-cannot unilaterally take a high-consequence action for which it does
-not hold a mediated credential. This is a named high bar, never
-implied by basic Mission adoption.<a href="#section-7.2-3.8.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-7.2-3.9">
-<strong>Trifecta-Contained</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-7.2-3.10">
-            <p id="section-7.2-3.10.1">adds least exposure, the harness taint rule enforced as a MUST, and
-full mediation of the external-communication and external-commitment
-classes with the egress-channel enumeration
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>). An injected agent cannot
-egress on the strength of untrusted content alone. It composes with
-Agent-Compromise-Resistant rather than extending it.<a href="#section-7.2-3.10.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-7.2-3.11">
-<strong>MAS-Joined Governance</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-7.2-3.12">
-            <p id="section-7.2-3.12.1">not a rung above the others but a deliberately weaker peer of
-Mission Runtime-Enforced, reached through the standalone binding
-(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>). Tokens carry no
-<code>mission</code> claim, no Mission authority, and no issuance gating;
-governance rests entirely on the runtime join and PEP coverage, and
-the join proves the credential belongs to the same subject and
-client the Mission names, not that it was issued under the Mission.
-Revoking a Mission stops nothing at the token layer. This is a
-material downgrade from the OAuth binding's issuance gate, taken for
-zero-AS-change adoption, and a deployment claiming it states that
-the token-layer kill switch is absent.<a href="#section-7.2-3.12.1" class="pilcrow">¶</a></p>
+<dt id="section-7.1-4.7">
+<strong>High-Assurance Agent</strong>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-4.8">
+            <p id="section-7.1-4.8.1">adds the guarantees that resist a compromised agent. Two named claims
+live at this rung, each with proof obligations the runtime profile
+fixes. <strong>Agent-compromise-resistant enforcement</strong>: mediated
+credential custody, no unmediated path, action-bound approval for the
+high-consequence classes, and an active-freshness state source, so a
+compromised agent cannot unilaterally take a high-consequence action
+for which it does not hold a mediated credential. <strong>Trifecta
+containment</strong>: least exposure, the harness taint rule enforced as a
+MUST, and full mediation of the external-communication and
+external-commitment classes with the egress-channel enumeration, so
+an injected agent cannot egress on the strength of untrusted content
+alone. These are named high bars, never implied by basic adoption; a
+deployment MAY bind its Enforcement Scope Statement to
+execution-environment attestation so a claim is technical rather than
+organizational (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-7.1-4.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-7.2-4">Every tier above Mission-Bound Issuance also carries the cross-cutting
+<p id="section-7.1-5">Every rung above Baseline Issuance also carries the cross-cutting
 obligations its mechanisms imply: operation-profile normalization
 where duration or parameter digests are metered
 (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), evidence retention for the
 audit horizon, and a registration schedule where audit transparency is
-run (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). The evidence tiers are
+run (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). The evidence rungs are
 accountability, not prevention: they make what was recorded
 tamper-evident, not what was perceived true or what was never recorded
-present.<a href="#section-7.2-4" class="pilcrow">¶</a></p>
-<p id="section-7.2-5">A deployment attests these obligations in prose by default; where it
-claims Agent-Compromise-Resistant or Trifecta-Contained, it MAY bind
-the enforcement-scope statement to execution-environment attestation
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), so the tier is a technical
-claim rather than an organizational one.<a href="#section-7.2-5" class="pilcrow">¶</a></p>
-<p id="section-7.2-6">The quarantine pattern removes a leg of the injection-to-exfiltration
+present.<a href="#section-7.1-5" class="pilcrow">¶</a></p>
+<p id="section-7.1-6">The quarantine pattern removes a leg of the injection-to-exfiltration
 chain instead of gating it. Work that ingests untrusted content (web
 pages, inbound mail, third-party documents) runs under a Mission
 whose Authority Set carries no external-communication or
@@ -2276,7 +2236,7 @@ wants the separation enforced within one Mission rather than across
 two, the metering profile's exclusivity control
 (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>) latches read-and-egress
 apart under a single approval. This turns the no-information-flow-control
-limit into a deployment architecture rather than an unmitigated gap.<a href="#section-7.2-6" class="pilcrow">¶</a></p>
+limit into a deployment architecture rather than an unmitigated gap.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2286,8 +2246,8 @@ limit into a deployment architecture rather than an unmitigated gap.<a href="#se
       <h2 id="name-the-mission-deployment-prof">
 <a href="#section-8" class="section-number selfRef">8. </a><a href="#name-the-mission-deployment-prof" class="section-name selfRef">The Mission Deployment Profile</a>
       </h2>
-<p id="section-8-1">The Adoption Ladder says what to deploy and the Assurance Tiers say
-what may be claimed, but a claim is only checkable if a deployment
+<p id="section-8-1">The Maturity Ladder (<a href="#maturity-ladder" class="auto internal xref">Section 7.1</a>) names both what to deploy
+and what may be claimed, but a claim is only checkable if a deployment
 states, concretely, what it enforces and what it leaves outside the
 boundary. The <strong>Mission Deployment Profile</strong> is that system-level
 artifact: a single publishable manifest that composes the per-layer
@@ -2303,7 +2263,7 @@ it does not cover. An illustrative shape:<a href="#section-8-2" class="pilcrow">
 <pre>
 {
   "profile": "mission-governed-agent-runtime",
-  "assurance_tier": "agent-compromise-resistant",
+  "maturity_rung": "high-assurance-agent",
   "mission_issuer": "https://mas.example.com",
   "state_sources": [
     { "type": "status_endpoint", "max_staleness_seconds": 30 }
@@ -2350,8 +2310,8 @@ it does not cover. An illustrative shape:<a href="#section-8-2" class="pilcrow">
 <p id="section-8-4">Two deployments that both "support Mission" but publish different
 Deployment Profiles provide different security properties, and the
 profile is what makes that difference legible. A deployment claiming
-an Assurance Tier (<a href="#assurance-tiers" class="auto internal xref">Section 7.2</a>) states the tier here and lists
-the residuals that tier leaves.<a href="#section-8-4" class="pilcrow">¶</a></p>
+a rung (<a href="#maturity-ladder" class="auto internal xref">Section 7.1</a>) states it here and lists the residuals
+that rung leaves.<a href="#section-8-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="prevention-detection">
@@ -2407,7 +2367,7 @@ Stated as a table so a claim cannot be read as more than it is:<a href="#section
 <p id="section-9-3">The pattern is uniform: the family commits and checks what a party
 was shown, decided, or did; it does not make the human attentive, the
 producer honest, or the unmediated path disappear. Those are the
-residues the assurance tiers (<a href="#assurance-tiers" class="auto internal xref">Section 7.2</a>) and the security
+residues the maturity ladder (<a href="#maturity-ladder" class="auto internal xref">Section 7.1</a>) and the security
 model make a deployment state rather than assume.<a href="#section-9-3" class="pilcrow">¶</a></p>
 </section>
 </div>

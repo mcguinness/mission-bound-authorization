@@ -1858,13 +1858,13 @@ layer the deployment enforces for that class.<a href="#section-10-1" class="pilc
 as their own profile defines. A deployment reads the row for the
 mechanism it runs, or the tightest of several, to state how long a
 revoked Mission can still act.<a href="#section-10-3" class="pilcrow">¶</a></p>
-<p id="section-10-4">The same window, read per assurance tier
+<p id="section-10-4">The same window, read per maturity-ladder rung
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>) and per what it stops:<a href="#section-10-4" class="pilcrow">¶</a></p>
 <table class="center" id="table-3">
         <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
 <thead>
           <tr>
-            <th class="text-left" rowspan="1" colspan="1">Tier</th>
+            <th class="text-left" rowspan="1" colspan="1">Rung</th>
             <th class="text-left" rowspan="1" colspan="1">Further issuance</th>
             <th class="text-left" rowspan="1" colspan="1">Cached token use</th>
             <th class="text-left" rowspan="1" colspan="1">Runtime action</th>
@@ -1881,7 +1881,7 @@ revoked Mission can still act.<a href="#section-10-3" class="pilcrow">¶</a></p>
             <td class="text-left" rowspan="1" colspan="1">not gated</td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">State-Aware Reliance</td>
+            <td class="text-left" rowspan="1" colspan="1">Baseline + state-aware freshness</td>
             <td class="text-left" rowspan="1" colspan="1">stopped at once</td>
             <td class="text-left" rowspan="1" colspan="1">within staleness bound</td>
             <td class="text-left" rowspan="1" colspan="1">not gated</td>
@@ -1895,7 +1895,7 @@ revoked Mission can still act.<a href="#section-10-3" class="pilcrow">¶</a></p>
             <td class="text-left" rowspan="1" colspan="1">only if the harness re-checks</td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">Governed / Compromise-Resistant</td>
+            <td class="text-left" rowspan="1" colspan="1">Governed / High-Assurance Agent</td>
             <td class="text-left" rowspan="1" colspan="1">stopped at once</td>
             <td class="text-left" rowspan="1" colspan="1">stopped</td>
             <td class="text-left" rowspan="1" colspan="1">stopped within freshness bound</td>

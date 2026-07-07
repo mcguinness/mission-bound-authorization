@@ -1205,8 +1205,9 @@ Table of Contents
    terms ([I-D.draft-mcguinness-mission-substrate]): it provides the
    Mission record, anchors, and lifecycle but not the Mission-bound
    credential, so enforcement composes entirely through the runtime join
-   and PEP coverage.  The Adoption Ladder names it MAS-Joined
-   Governance, a deliberately weaker peer of the runtime-enforced tier
+   and PEP coverage.  Under the maturity ladder this is the Runtime-
+   Enforced rung reached through the MAS binding, which provides no
+   Mission-bound credential and no issuance gating
    ([I-D.draft-mcguinness-mission-architecture]).
 
    A deployment claiming this profile MUST state, alongside its
@@ -1341,9 +1342,9 @@ Table of Contents
    the operating profile for a MAS used as an estate's Mission control
    plane: it turns the floor's SHOULDs and OPTIONALs into the guarantees
    an enterprise deployment needs.  A deployment claims the Enterprise
-   Mission Authority Profile only when all of the following hold; it
-   maps to the family's MAS-Joined Governance tier raised to Runtime-
-   Enforced with the obligations below
+   Mission Authority Profile only when all of the following hold; it is
+   the Runtime-Enforced rung of the maturity ladder under the MAS
+   binding, with the obligations below
    ([I-D.draft-mcguinness-mission-architecture]).
 
    *  *Status and lifecycle.* The MAS MUST serve the Mission Status
