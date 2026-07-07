@@ -46,6 +46,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-security-model:
+    title: "Mission Security Model"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -98,7 +106,14 @@ Mission Expansion for OAuth 2.0
 profile") defines the governed path from an authority shortfall to a
 new approval: a successor Mission, freshly consented, that supersedes
 its predecessor. Every expansion under that profile is adjudicated by a
-fresh human approval.
+fresh human approval. For a task whose growth is anticipated, that
+discipline has a human cost: each expansion is another approval
+moment, and an Approver asked too often stops reading what is asked
+(the consent-fatigue residual of
+{{I-D.draft-mcguinness-mission-security-model}}). This profile is the
+structural mitigation: one considered consent to a ceiling replaces
+many hurried consents to increments, without widening what any single
+Mission actively holds.
 
 An open-ended agentic task often cannot have its full authority
 enumerated at the initial approval, which leaves a deployment choosing

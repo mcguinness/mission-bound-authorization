@@ -46,6 +46,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-security-model:
+    title: "Mission Security Model"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC9470:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   I-D.draft-mcguinness-oauth-client-instance-assertion:
@@ -555,7 +563,12 @@ specific action's concrete parameters at the point of use. For the
 highest-consequence classes, a deployment can require a second,
 **action-bound approval**: a fresh approval bound to the concrete
 action and the parameters the PEP is about to permit, distinct from the
-Mission's initial approval.
+Mission's initial approval. A deployment SHOULD reserve action-bound
+approval for the actions whose consequence genuinely warrants a human
+pause: applied broadly it trains the Approver to rubber-stamp, and a
+rubber-stamped approval binds like a considered one (the
+consent-fatigue residual of
+{{I-D.draft-mcguinness-mission-security-model}}).
 
 An action-bound approval is an approval event under the issuance profile
 bound to the action: it is obtained from an independent Approver or
