@@ -772,6 +772,15 @@ A deployment that leaves any of these unmet MUST NOT claim
 agent-compromise-resistant enforcement; it may still claim base runtime
 conformance. The claim names exactly the set of classes it covers.
 
+The guarantee is the conjunction of these conditions, not any one of
+them. Mediated custody alone prevents only off-path presentation of
+the credential: the agent still initiates every action and supplies
+every parameter, and the mediating PEP executes any in-scope action
+the agent requests. What bounds a compromised agent is custody
+**and** complete PEP placement **and** correct classification acting
+together, so the claim is no stronger than the weakest of the three,
+and "mediated custody" on its own is not the property.
+
 Each unmet condition loses a specific property:
 
 | Condition unmet | Property lost |
@@ -1088,8 +1097,18 @@ is the deployment's accepted state lease.
   Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}), or an
   out-of-band trusted status feed.
 - Each enforcement scope MUST publish its maximum staleness bound per
-  action class and state source. This document does not impose one
-  universal value.
+  action class and state source, together with the revocation latency
+  that bound implies: a Mission's revocation takes effect, in the
+  worst case, after the staleness bound plus the derived token's
+  lifetime. This document imposes no universal value because the
+  acceptable latency is deployment- and consequence-specific, but the
+  bound is the number that determines the profile's headline
+  revocation property, so publishing it without its latency
+  consequence is non-conformant. As non-normative guidance, deployments
+  target a staleness bound no greater than 300 seconds for the
+  irreversible-action, external-commitment, and privileged-administration
+  classes, and justify any larger value in the enforcement-scope
+  statement; the lower-consequence classes may run looser.
 - For the high-consequence classes, the state source MUST be an active
   freshness mechanism that can reflect a revocation within the staleness
   bound: token introspection at the issuer ({{RFC7662}}), the Mission Status
