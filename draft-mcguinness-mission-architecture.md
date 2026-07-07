@@ -900,6 +900,15 @@ proof obligations defined normatively by the profile named:
   issuance gate; it does not grant per-action control, and outstanding
   tokens run to their own expiry.
 
+**Mission-State-Aware Reliance**:
+: adds a freshness surface, the Mission Status operation or token
+  introspection with a published staleness bound
+  ({{I-D.draft-mcguinness-oauth-mission-status}}), so a consumer can
+  cut off a revoked or expired Mission within that bound instead of
+  waiting out the token lifetime. It adds no per-action decision; a
+  consumer relies on reported Mission state, not on a permit. Its
+  proof obligation is the declared state source and staleness bound.
+
 **Mission Runtime-Enforced**:
 : adds a PEP/PDP decision on every consequential action, a trusted
   state source with a published staleness bound, parameter binding,
@@ -968,7 +977,56 @@ under the harness taint policy
 runtime profile's trifecta containment
 ({{I-D.draft-mcguinness-mission-runtime}}). Per-task Missions already
 shrink blast radius; this composition uses them so that no single
-Mission ever holds untrusted input and an egress path at once.
+Mission ever holds untrusted input and an egress path at once. Named
+concretely: a **quarantined ingestion Mission** may read untrusted
+content but carries no external-communication authority; a **clean
+output Mission** may communicate but only over reviewed or derived
+artifacts, not the raw ingested content; and a **bridge**, a human
+review or a deterministic transformation between them, is recorded as
+evidence so the boundary crossing is auditable. Where a deployment
+wants the separation enforced within one Mission rather than across
+two, the metering profile's exclusivity control
+({{I-D.draft-mcguinness-mission-metering}}) latches read-and-egress
+apart under a single approval. This turns the no-information-flow-control
+limit into a deployment architecture rather than an unmitigated gap.
+
+# Prevention, Detection, and Residue {#prevention-detection}
+
+Each layer earns a specific property and leaves a specific residue.
+Stated as a table so a claim cannot be read as more than it is:
+
+| Mechanism | Prevents | Detects | Does not solve |
+|---|---|---|---|
+| Core issuance | over-issuance beyond the approved authority; issuance after revocation or expiry | the approved authority (anchored) | action-time misuse within scope |
+| Runtime enforcement | an unauthorized action on a mediated path | each PDP/PEP decision (evidence) | actions on an unmediated path |
+| Consent Evidence | silent divergence between what was shown and what was committed | the rendered disclosure | whether a human perceived or understood it |
+| Audit Transparency | undetectable log tampering or omission (under expected registration) | the evidence timeline | a producer logging a false record |
+| Mandate | reliance on unverifiable committed facts | portable Mission facts | authority (it grants none) |
+
+The pattern is uniform: the family commits and checks what a party
+was shown, decided, or did; it does not make the human attentive, the
+producer honest, or the unmediated path disappear. Those are the
+residues the assurance tiers ({{assurance-tiers}}) and the security
+model make a deployment state rather than assume.
+
+# The Authority Derivation Boundary {#derivation-boundary}
+
+Deriving the Authority Set from the Mission Intent is the semantic
+heart of the model and the one step the family deliberately does not
+standardize. The consequence is a trust boundary worth stating
+plainly: interoperability begins at the committed result, not at the
+Intent. A Mission Intent has no portable semantics; two conforming
+Authorization Servers MAY derive different Authority Sets from the
+same Intent, and audit can establish what was derived (against
+`intent_hash` and `policy_version`), never whether it was the right
+reading of the task. A deployment whose partners must reason about
+its derivations SHOULD publish a derivation policy identifier and
+test fixtures that pin Intent-to-Authority-Set outcomes, so the local
+policy becomes reviewable even though it does not travel. Narrowing
+mode ({{I-D.draft-mcguinness-oauth-mission}}) is the checkable path:
+where the client supplies candidate authority, derivation is a subset
+of it and reproducible, which is the closest the family comes to
+portable derivation.
 
 # Mission Requirements {#requirements}
 
