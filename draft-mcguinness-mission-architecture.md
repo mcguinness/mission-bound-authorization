@@ -326,6 +326,23 @@ than the exact value `active`, including one it does not recognize,
 as non-active, so an unrecognized state fails safe (the core's
 Mission Lifecycle and Gating section).
 
+The Mission model is the beginning of a distinct layer. Authentication
+and token issuance answer who is acting and what a single credential
+carries; governance of standing entitlements answers what access a
+principal should hold over time. Neither governs the approved task a
+delegate or agent performs on a principal's behalf: its bounded
+authority, its lifecycle, the per-action check that execution stays
+inside that boundary, and the evidence that binds back to it. That is
+the delegated-authority layer this family defines, and it composes
+with the layers below rather than replacing them. The Mission
+Authority Server ({{I-D.draft-mcguinness-mission-authority-server}})
+is that layer's binding-independent control plane: it holds the
+approved task, its lifecycle, and its authority across an estate of
+Authorization Servers, resources, and tools, whichever of them issues
+a given token. The near-term deployment is a control plane beside an
+unchanged OAuth estate; the direction is delegated authority
+management as a layer of its own.
+
 # Mission Roles and Components {#components}
 
 For each component: what it does, what it holds, and which document
@@ -885,34 +902,39 @@ MAS's Mission Join section), and the MAS's staged walkthrough of the
 same flow is its end-to-end appendix
 ({{I-D.draft-mcguinness-mission-authority-server}}).
 
-## The Maturity Ladder {#maturity-ladder}
+## Mission Assurance Levels {#assurance-levels}
 
 Two questions get asked of a Mission deployment: what to deploy for a
 goal, and what guarantee it has earned. They share one progression, so
-this document states a single ladder whose rungs carry both facets,
-the document set and the proof obligations, and names them so a
-deployment, a procurement, or a review can cite one rung. The rungs
-are guidance, not a conformance class; every companion is optional and
+this document states a single set of levels, each carrying both
+facets, the document set and the proof obligations, and names them so
+a deployment, a procurement, or a review can cite one level. The
+levels are guidance, not a conformance class; every companion is optional and
 states its own scoped conformance. Because the family's strongest
 properties are deployment properties, not protocol properties
 (complete PEP placement, a trusted freshness source, and credential
 custody are things a deployment does, not things a token proves), a
-rung is a claim, verifiable in the sense the runtime profile fixes
+level is a claim, verifiable in the sense the runtime profile fixes
 ({{I-D.draft-mcguinness-mission-runtime}}), not a label: a deployment
-states its highest earned rung in its Enforcement Scope Statement, and
-a consumer treats an unstated or unproven rung as not claimed.
+states the highest level it has earned in its Enforcement Scope
+Statement, and a consumer treats an unstated or unproven level as not
+claimed. The levels build on one another: a deployment adopts
+recording and governing the approved task (Baseline Issuance), then
+per-action enforcement (Runtime-Enforced, the Protocol MVP), then full
+agent safety (Governed and High-Assurance Agent), advancing to the
+level its risk warrants and stopping there.
 
-The ladder is one axis; the **binding** is an orthogonal one. Every
-rung is reached under any of the three Mission Issuer bindings, the
+The levels are one axis; the **binding** is an orthogonal one. Every
+level is reached under any of the three Mission Issuer bindings, the
 OAuth Authorization Server, the standalone Mission Authority Server,
 or the AAuth Person Server, and a deployment names its binding
-separately from its rung. The standalone MAS binding is the case that
+separately from its level. The standalone MAS binding is the case that
 matters most: it provides the Mission record, lifecycle, and authority
 but no Mission-bound credential and no issuance gating, so under it the
 kill switch is the runtime layer alone, not the token gate, and a
-deployment states that. Binding is not a rung.
+deployment states that. Binding is not a level.
 
-The rungs, cumulative:
+The levels, cumulative:
 
 **Baseline Issuance**:
 : authority derived and committed at the approval event with the
@@ -925,8 +947,8 @@ The rungs, cumulative:
   surface, Mission Status or introspection with a published staleness
   bound ({{I-D.draft-mcguinness-oauth-mission-status}}), gains
   state-aware reliance, a revocation cutoff within that bound, without
-  per-action enforcement: a half-step into the next rung, not a rung of
-  its own.
+  per-action enforcement: a half-step into the next level, not a level
+  of its own.
 
 **Runtime-Enforced** (the Protocol MVP):
 : adds a PEP/PDP decision on every consequential action, a trusted
@@ -949,7 +971,7 @@ The rungs, cumulative:
 
 **High-Assurance Agent**:
 : adds the guarantees that resist a compromised agent. Two named claims
-  live at this rung, each with proof obligations the runtime profile
+  live at this level, each with proof obligations the runtime profile
   fixes. **Agent-compromise-resistant enforcement**: mediated
   credential custody, no unmediated path, action-bound approval for the
   high-consequence classes, and an active-freshness state source, so a
@@ -965,13 +987,13 @@ The rungs, cumulative:
   organizational ({{I-D.draft-mcguinness-mission-runtime}},
   {{I-D.draft-mcguinness-mission-harness}}).
 
-Every rung above Baseline Issuance also carries the cross-cutting
+Every level above Baseline Issuance also carries the cross-cutting
 obligations its mechanisms imply: operation-profile normalization
 where duration or parameter digests are metered
 ({{I-D.draft-mcguinness-mission-metering}},
 {{I-D.draft-mcguinness-mission-authzen}}), evidence retention for the
 audit horizon, and a registration schedule where audit transparency is
-run ({{I-D.draft-mcguinness-mission-audit}}). The evidence rungs are
+run ({{I-D.draft-mcguinness-mission-audit}}). The evidence levels are
 accountability, not prevention: they make what was recorded
 tamper-evident, not what was perceived true or what was never recorded
 present.
@@ -1002,8 +1024,9 @@ limit into a deployment architecture rather than an unmitigated gap.
 
 # The Mission Deployment Profile {#deployment-profile}
 
-The Maturity Ladder ({{maturity-ladder}}) names both what to deploy
-and what may be claimed, but a claim is only checkable if a deployment
+The Mission Assurance Levels ({{assurance-levels}}) name both what to
+deploy and what may be claimed, but a claim is only checkable if a
+deployment
 states, concretely, what it enforces and what it leaves outside the
 boundary. The **Mission Deployment Profile** is that system-level
 artifact: a single publishable manifest that composes the per-layer
@@ -1020,7 +1043,7 @@ it does not cover. An illustrative shape:
 ~~~ json
 {
   "profile": "mission-governed-agent-runtime",
-  "maturity_rung": "high-assurance-agent",
+  "assurance_level": "high-assurance-agent",
   "mission_issuer": "https://mas.example.com",
   "state_sources": [
     { "type": "status_endpoint", "max_staleness_seconds": 30 }
@@ -1067,8 +1090,8 @@ it does not cover. An illustrative shape:
 Two deployments that both "support Mission" but publish different
 Deployment Profiles provide different security properties, and the
 profile is what makes that difference legible. A deployment claiming
-a rung ({{maturity-ladder}}) states it here and lists the residuals
-that rung leaves.
+a level ({{assurance-levels}}) states it here and lists the residuals
+that level leaves.
 
 # Prevention, Detection, and Residue {#prevention-detection}
 
@@ -1086,7 +1109,7 @@ Stated as a table so a claim cannot be read as more than it is:
 The pattern is uniform: the family commits and checks what a party
 was shown, decided, or did; it does not make the human attentive, the
 producer honest, or the unmediated path disappear. Those are the
-residues the maturity ladder ({{maturity-ladder}}) and the security
+residues the Mission Assurance Levels ({{assurance-levels}}) and the security
 model make a deployment state rather than assume.
 
 # The Authority Derivation Boundary {#derivation-boundary}

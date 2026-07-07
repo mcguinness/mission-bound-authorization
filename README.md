@@ -179,18 +179,18 @@ assume from "Mission-bound agents" (action-time checks, prompt stop,
 unwinding, consent evidence) only arrive when several are deployed
 together. Most agent deployments therefore want a bundle, not the core
 alone. These bundles name what to deploy for a given goal; the
-Architecture document defines them citably as the Maturity Ladder. The short
+Architecture document defines them citably as the Mission Assurance Levels. The short
 names in the table are the drafts' nicknames; each maps to a document
 described under "The documents" below (mission is the core; the rest
 are the companion profiles of the same names).
 
-The rung is one axis; the binding (OAuth AS, standalone Mission
+The level is one axis; the binding (OAuth AS, standalone Mission
 Authority Server, or AAuth Person Server) is orthogonal and described
 below the table.
 
-| Rung | Drafts | What you get |
+| Level | Drafts | What you get |
 |---|---|---|
-| **Baseline Issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Runtime-Enforced rung). Audit, not action-time defense. |
+| **Baseline Issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Runtime-Enforced level). Audit, not action-time defense. |
 | **Runtime-Enforced** (the Protocol MVP) | mission + runtime + authzen + a freshness source (status or issuer token introspection; signals, experimental, adds push) | Per-action enforcement at the point of use, and prompt revocation. The smallest deployment that makes a Mission-bound token more than governance metadata, and every dependency it needs is ratified. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
 | **Governed Agent** (recommended for AI agents) | Runtime-Enforced + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. Add child-delegation for sub-agents and expansion for mid-task growth, and orchestration (experimental) for safe unwinding of in-flight work. |
 | **High-Assurance Agent** | Governed Agent + mediated custody, no unmediated path, action-bound approval, active freshness | Resistance to a compromised agent: the runtime profile's named agent-compromise-resistant enforcement and trifecta containment claims (see the note below the table), optionally bound to execution-environment attestation. |

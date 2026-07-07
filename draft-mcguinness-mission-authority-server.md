@@ -1265,7 +1265,7 @@ them. The mode is a **partial-provision binding** in the substrate's
 terms ({{I-D.draft-mcguinness-mission-substrate}}): it provides the
 Mission record, anchors, and lifecycle but not the Mission-bound
 credential, so enforcement composes entirely through the runtime join
-and PEP coverage. Under the maturity ladder this is the Runtime-Enforced rung reached
+and PEP coverage. Among the Mission Assurance Levels this is the Runtime-Enforced level reached
 through the MAS binding, which provides no Mission-bound credential
 and no issuance gating
 ({{I-D.draft-mcguinness-mission-architecture}}).
@@ -1390,7 +1390,7 @@ the operating profile for a MAS used as an estate's Mission control
 plane: it turns the floor's SHOULDs and OPTIONALs into the guarantees
 an enterprise deployment needs. A deployment claims the Enterprise
 Mission Authority Profile only when all of the following hold; it is
-the Runtime-Enforced rung of the maturity ladder under the MAS
+the Runtime-Enforced level of the Mission Assurance Levels under the MAS
 binding, with the obligations below ({{I-D.draft-mcguinness-mission-architecture}}).
 
 - **Status and lifecycle.** The MAS MUST serve the Mission Status
@@ -1505,7 +1505,9 @@ the runtime profile's Enforcement Scope Statement must state
 
 ## Progressive Adoption {#deployment-adoption}
 
-A MAS is adopted in phases, each independently useful:
+A MAS is adopted level by level across the Mission Assurance Levels
+({{I-D.draft-mcguinness-mission-architecture}}), each phase
+independently useful:
 
 1. The MAS records Missions and approvals: governance and audit of
    what tasks were approved, with no enforcement change yet.
@@ -1521,7 +1523,10 @@ A MAS is adopted in phases, each independently useful:
    govern the rest of the estate.
 
 A deployment stops at the phase its risk warrants; nothing above the
-floor is required to begin.
+floor is required to begin. The MAS is not a throwaway bridge but the
+enduring control plane of the family's delegated-authority layer
+({{I-D.draft-mcguinness-mission-architecture}}), which a deployment
+keeps even as individual Authorization Servers become Mission-aware.
 
 # Security Considerations
 
