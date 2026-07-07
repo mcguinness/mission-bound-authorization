@@ -103,15 +103,18 @@ informative:
 
 --- abstract
 
-The Mission model is bound to three authorization substrates: the
-OAuth 2.0 issuance profile that defines it, the standalone Mission
-Authority Server, and the AAuth Person Server. Its substrate-neutral
-companion profiles are written against Mission primitives rather than
-against any one binding, so a further binding that provides the same
-primitives hosts them unchanged. This document is for authors of such
-further bindings: it consolidates the primitives a binding provides,
-points at where each is normatively defined, and shows which profiles
-consume each one, changing nothing for the existing bindings and
+The Mission model's substrate-neutral profiles are written against
+Mission primitives rather than against any one binding, so a binding
+of the model to a further authorization substrate hosts them
+unchanged, provided it supplies the primitives they consume. This
+document states those primitives normatively for the author of such a
+binding: the Mission record, identifier, and issuer; the lifecycle
+state space; the Authority Set representation; the integrity anchors;
+issuer key material; the audit horizon; approval-event fidelity; and
+either a Mission-bound credential or a defined join in its place.
+Each requirement points at the definition that owns it, each is
+checkable against the Mission Substrate Statement a conforming
+binding publishes, and nothing changes for the existing bindings and
 profiles.
 
 --- middle
@@ -124,15 +127,14 @@ derived for, bound to, and gated on. Mission-Bound Authorization for
 OAuth 2.0 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance
 profile", here "the core") defines the object and every primitive of
 the model, bound to the OAuth 2.0 Authorization Server. Two further
-bindings exist: the Mission Authority Server (MAS), a standalone
-Mission Issuer beside an unchanged Authorization Server
-({{I-D.draft-mcguinness-mission-authority-server}}), and the AAuth
-binding, which gives that protocol's native mission concept the
-model's structure ({{I-D.draft-mcguinness-mission-aauth}}). The core
-provides every primitive by construction; the MAS provides all but the
-Mission-bound credential and issuance gating, profiling the join for
-that gap as its Mission Join; the AAuth binding provides all of them;
-their substrate statements remain their own.
+bindings exist. The Mission Authority Server (MAS) is a standalone
+Mission Issuer beside an unchanged Authorization Server; it provides
+every primitive except the Mission-bound credential and issuance
+gating, and profiles the join that fills that gap as its Mission Join
+({{I-D.draft-mcguinness-mission-authority-server}}). The AAuth
+binding gives that protocol's native mission concept the model's
+structure and provides every primitive
+({{I-D.draft-mcguinness-mission-aauth}}).
 
 The family's substrate-neutral profiles (runtime enforcement and its
 decision API bindings, the harness, orchestration, intent shaping,
@@ -140,15 +142,18 @@ consent evidence, the Mandate, audit transparency, and the security
 model) are written against Mission primitives rather than against
 OAuth mechanics; each names what it consumes in a Mission Substrate
 section of its own, except consent evidence, whose consumption is
-stated by its approval binding. The architecture document consolidates that
-interface informationally, ending in a Binding Checklist
+stated by its approval binding. A binding that provides the
+primitives therefore hosts these profiles as written.
+
+The architecture document consolidates that interface
+informationally, ending in a Binding Checklist
 ({{I-D.draft-mcguinness-mission-architecture}}). This document is the
 checklist's normative home, written for the author of a new binding:
-what a binding of the Mission model to another authorization substrate
-provides so that the substrate-neutral profiles apply as written, with
-the binding supplying the primitives their Mission Substrate sections
-consume. It restates no definition: each requirement points at the
-core section that owns it.
+eight requirements ({{requirements}}), a composition table showing
+which profiles consume which primitives ({{composition}}), and a
+conformance role claimed through a published Mission Substrate
+Statement ({{conformance}}). It restates no definition: each
+requirement points at the core section that owns it.
 
 ## Status: A Profile for New Bindings {#status}
 
@@ -187,19 +192,28 @@ Partial provision:
   Mission-bound credential, with a defined join in its place
   ({{credential}}).
 
+Mission Substrate Statement:
+: The published section of a Mission Substrate Binding that states,
+  item by item, how the binding provides each primitive
+  ({{statement}}).
+
 # Mission Substrate Requirements {#requirements}
 
 Each subsection states the requirement on the binding, the home of the
 normative definition (a section of the core), and the consuming
 profiles; a summary here never overrides its home.
 
-## Mission Identifier and Issuer {#identifier}
+## Mission Record, Identifier, and Issuer {#identifier}
 
-A binding MUST provide a Mission identifier that is opaque, carries no
-semantic content, has at least 128 bits of entropy, and is never
-reused, together with an `issuer`: an issuer identifier naming the
-approving Mission Issuer, from which consumers resolve the binding's
-state and key surfaces; together they name exactly one Mission.
+A binding MUST maintain the Mission record as the core defines it:
+the durable object created at the approval event, immutable after
+creation except its lifecycle state, and retained per the audit
+horizon ({{audit-horizon}}). A binding MUST provide a Mission
+Identifier that is opaque, carries no semantic content, has at least
+128 bits of entropy, and is never reused, together with an `issuer`:
+an issuer identifier naming the approving Mission Issuer, from which
+consumers resolve the binding's state and key surfaces; together they
+name exactly one Mission.
 
 A binding MAY define a substrate-native reference to the same Mission,
 as the AAuth binding does with its (`approver`, `s256`) pair; the
@@ -210,7 +224,8 @@ Home: the Mission Record and Mission Identifier Format sections of
 
 Consumers: every substrate-neutral profile keys on the pair, from
 enforcement decisions and evidence through harness work-item bindings
-to the audit statement subject and the Mandate.
+to the audit statement subject and the Mandate, whose committed
+members assume the record's immutability.
 
 ## Mission Lifecycle States {#lifecycle}
 
@@ -261,9 +276,12 @@ carriage).
 ## Mission Integrity Anchors {#anchors}
 
 A binding MUST compute `intent_hash` and `authority_hash` over the
-core's domain-separated, issuer-bound envelope, with the binding's
-issuer identifier as the envelope `iss`, under the core's
-canonicalization rules. A verifier MUST reject an anchor whose
+core's domain-separated, issuer-bound envelope (`typ` names the
+committed object, `iss` carries the binding's issuer identifier,
+`value` is the committed object), under the core's canonicalization
+rules. The computation is the core's byte for byte: the core's test
+vectors verify a binding's implementation, and only the envelope
+`iss` is the binding's own. A verifier MUST reject an anchor whose
 algorithm prefix it does not recognize and MUST NOT treat an
 unrecognized prefix as `sha-256`. A new committed object uses the same
 envelope with a new `typ` under the core's extension rule.
@@ -334,7 +352,7 @@ and audit statements ({{I-D.draft-mcguinness-mission-audit}}).
 
 A binding MUST declare an audit horizon: the retention window for the
 Mission record and its evidence, at least the Mission's lifetime plus
-a declared post-terminal period. After a Mission reaches a terminal
+a declared post-expiry period. After a Mission reaches a terminal
 state, its record MUST be retained for the audit horizon.
 
 Home: the Mission Record section of
@@ -360,6 +378,10 @@ steps, whatever its native ceremony:
    the approved Intent ({{anchors}}); and
 5. create the Mission record in the `active` state atomically with the
    approval decision.
+
+If the derived Authority Set changes between rendering and consent,
+the binding MUST recompute the anchors and MUST NOT create the
+Mission without the Approver's consent to the changed set.
 
 Home: the Mission Approval section of
 {{I-D.draft-mcguinness-oauth-mission}}. The MAS shows the steps
@@ -422,7 +444,8 @@ binding's own conformance clauses.
 
 A **Mission Substrate Binding**:
 
-1. provides the Mission identifier and `issuer` ({{identifier}});
+1. maintains the Mission record, immutable except its state, and
+   provides the Mission Identifier and `issuer` ({{identifier}});
 2. provides the lifecycle state space with the only-`active` rule,
    fail-safe treatment of unrecognized states, verbatim extension
    states, and a state source with a stated staleness bound
@@ -444,11 +467,29 @@ A **Mission Substrate Binding**:
 8. realizes the approval-event steps on its approval surface
    ({{approval-fidelity}}).
 
-A Mission Substrate Binding MUST state its provision level: full
-provision, or partial provision with the section defining its join,
-naming the profiles that consequently do not apply. It SHOULD publish
-this as a Mission Substrate section following the existing bindings'
-pattern, so each item is checkable against its text.
+## Mission Substrate Statement {#statement}
+
+A Mission Substrate Binding MUST publish a Mission Substrate
+Statement: a section of the binding, following the existing bindings'
+pattern, that states how the binding provides each primitive of
+{{requirements}}. The statement names:
+
+1. the provision level: full provision, or partial provision with the
+   section defining its join and the profiles that consequently do
+   not apply ({{credential}});
+2. the identifier mapping and any substrate-native Mission reference
+   ({{identifier}});
+3. each state source and its staleness bound ({{lifecycle}});
+4. the value its anchors bind as the envelope `iss`, and the
+   relationship of any native commitment to the anchors
+   ({{anchors}});
+5. the discovery surface for issuer key material ({{keys}});
+6. the audit horizon ({{audit-horizon}}); and
+7. the surface that realizes each approval-event step
+   ({{approval-fidelity}}).
+
+Each item is checkable against the binding's own text; a claim its
+text does not support is a conformance failure.
 
 # Security Considerations
 
@@ -480,6 +521,18 @@ the credential belongs to the subject and client the Mission names, no
 mechanism in that mode proves the credential was derived under the
 Mission, and mapping coarseness and same-party misattribution remain
 as residuals.
+
+## State Source Fidelity
+
+Revocation reaches a consumer only through a state source, so the
+staleness bound stated for each source ({{lifecycle}}) is what the
+runtime profile computes its freshness rules and permit lifetimes
+from ({{I-D.draft-mcguinness-mission-runtime}}). A source that
+cannot meet its stated bound turns those fail-closed rules into
+fail-open in effect: consumers rely on state the binding reports as
+fresher than it is. The bound is a fidelity claim about the binding's
+infrastructure, of the same kind as the join's assurance statement,
+and belongs in the Mission Substrate Statement with the same honesty.
 
 # Privacy Considerations
 
