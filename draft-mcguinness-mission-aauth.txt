@@ -97,17 +97,18 @@ Table of Contents
      7.5.  Worked Example
    8.  Mission Substrate
    9.  Limitations
-   10. Conformance
-   11. Security Considerations
-     11.1.  Rendering the Mission Description
-     11.2.  Two Commitments, Neither Substitutes
-     11.3.  Person Server Compromise
-     11.4.  The Mission Log as Evidence
-   12. Privacy Considerations
-   13. IANA Considerations
-   14. References
-     14.1.  Normative References
-     14.2.  Informative References
+   10. Mission Verification Modes
+   11. Conformance
+   12. Security Considerations
+     12.1.  Rendering the Mission Description
+     12.2.  Two Commitments, Neither Substitutes
+     12.3.  Person Server Compromise
+     12.4.  The Mission Log as Evidence
+   13. Privacy Considerations
+   14. IANA Considerations
+   15. References
+     15.1.  Normative References
+     15.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -190,11 +191,11 @@ Table of Contents
 
    Mission-Bound Person Server:  A Person Server conforming to this
       profile: it implements the Mission Issuer role over AAuth's
-      mission surfaces (Section 10).
+      mission surfaces (Section 11).
 
    Mission-Bound Agent:  An AAuth agent that proposes structured intent,
       carries the Mission reference, and respects the Mission lifecycle
-      (Section 10).
+      (Section 11).
 
 2.  Mission Roles
 
@@ -282,7 +283,7 @@ Table of Contents
    intent and authority_set alone, independent of blob serialization.
    The s256 therefore commits the blob that contains the anchors; a
    verifier holding the blob can check both, and neither commitment
-   substitutes for the other (Section 11.2).
+   substitutes for the other (Section 12.2).
 
 3.2.  Mission Reference and Resolution
 
@@ -447,7 +448,7 @@ Table of Contents
        attacker-influenceable text: the PS MUST render them inert and
        sanitized, mitigate direction-override and confusable
        presentation, and visually distinguish the derived Authority Set
-       from client-supplied text (Section 11.1).
+       from client-supplied text (Section 12.1).
 
    4.  Compute the integrity anchors with the PS's issuer URL as the
        envelope iss.
@@ -552,8 +553,13 @@ Table of Contents
    operation of [I-D.draft-mcguinness-oauth-mission-status], with its
    signed responses, authentication, anti-oracle property, and caching
    rules, and MAY serve that profile's Mission Lifecycle endpoint as its
-   management surface.  It MAY emit Mission Lifecycle Signals, with the
-   PS as the transmitting Mission Issuer
+   management surface.  A PS whose deployment claims runtime enforcement
+   of the high-consequence classes MUST serve signed Mission Status as
+   an active freshness source with a published staleness bound: this is
+   the runtime profile's active-freshness requirement for those classes
+   ([I-D.draft-mcguinness-mission-runtime]), and auth-token-lifetime
+   expiry alone does not meet it.  It MAY emit Mission Lifecycle
+   Signals, with the PS as the transmitting Mission Issuer
    ([I-D.draft-mcguinness-oauth-mission-signals]).
 
    A PS that serves these surfaces publishes the corresponding members
@@ -640,9 +646,17 @@ Table of Contents
    mission context on every token request.
 
    The PS's evaluation of each token and permission request against the
-   mission context and log history is a PDP-shaped decision point.  A PS
-   MAY implement the runtime profile's decision contract at these
-   endpoints, with the mission log as its evidence trail (Section 11.4).
+   mission context and log history is a PDP-shaped decision point.  A
+   runtime-enforced AAuth deployment implements the runtime profile's
+   decision contract ([I-D.draft-mcguinness-mission-runtime]) at these
+   endpoints with the PS as the PDP, rather than restating that contract
+   here: the decision inputs, parameter binding, denial reasons, and
+   freshness rules are the runtime profile's, and the mission log is the
+   PS's runtime evidence trail (Section 12.4).  This binding adds only
+   the AAuth-specific mapping: the token or permission request is the
+   decision request, the aauth-mission reference resolves the
+   established Mission, and each logged decision is a runtime decision
+   record.
 
 7.5.  Worked Example
 
@@ -765,9 +779,51 @@ Table of Contents
    arbitrary minting, and false state
    ([I-D.draft-mcguinness-mission-security-model]).  Consent evidence
    and audit transparency make forgery detectable after the fact; they
-   do not prevent it (Section 11.3).
+   do not prevent it (Section 12.3).
 
-10.  Conformance
+10.  Mission Verification Modes
+
+   AAuth's default keeps the mission blob with the agent and the PS, so
+   a Resource verifies from the reference and token claims, not by
+   recomputing the anchors (Section 9).  That makes resource-side
+   verifiability an explicit axis this binding must name, one the OAuth
+   binding does not have because its tokens always carry the authority
+   payload.  A deployment declares which of three modes it serves; the
+   modes are cumulative in what a Resource or auditor can check without
+   trusting PS-private state.
+
+   *Reference-only* (the default):  the credential names the Mission by
+      (approver, s256) and carries the granted scope.  The PS gate holds
+      (Section 6.1), but a Resource cannot independently verify the
+      Mission's authority; it trusts the PS's evaluation.  Federated
+      mode (Section 7.1) is at most this when the Access Server does not
+      carry the family members.
+
+   *Credential-carried*:  the auth token additionally carries the
+      mission claim family members (id, issuer, authority_hash), so a
+      Resource can bind the token to a named Mission and its consent
+      anchor, though it still holds no Authority Set to check a specific
+      action against.
+
+   *Resource-verifiable*:  the PS additionally provides either token-
+      carried authorization_details or a signed Mission Mandate
+      ([I-D.draft-mcguinness-mission-mandate]) carrying the committed
+      facts, so a Resource or an auditor can verify that a given token
+      or request is within the approved Mission's authority without
+      trusting opaque PS policy or private blob state.  A deployment
+      that needs independent resource-side or third-party authority
+      verification MUST serve this mode.
+
+   These modes are the AAuth-specific verification axis; the family's
+   assurance tiers ([I-D.draft-mcguinness-mission-architecture]) layer
+   on top, and a runtime-enforced or agent-compromise-resistant AAuth
+   deployment claims the corresponding tier there rather than a binding-
+   specific name.  Full-provision Mission governance, which the PS gate
+   already provides (Section 6.1), reaches the Runtime-Enforced tier
+   only in the Resource-verifiable mode with the runtime decision
+   contract in force (Section 7.4).
+
+11.  Conformance
 
    An implementation conforms in one of two roles.
 
@@ -809,9 +865,9 @@ Table of Contents
    *  treats mission_id and the Mission reference as references, never
       as credentials.
 
-11.  Security Considerations
+12.  Security Considerations
 
-11.1.  Rendering the Mission Description
+12.1.  Rendering the Mission Description
 
    The Markdown description, the proposal, and every justification are
    attacker-influenceable text that the PS renders to the person at the
@@ -824,7 +880,7 @@ Table of Contents
    the consent surface MUST also make clear which rendered content is
    authority and which is the agent's narrative.
 
-11.2.  Two Commitments, Neither Substitutes
+12.2.  Two Commitments, Neither Substitutes
 
    s256 commits the session-specific blob bytes, including members the
    anchors do not cover, but it has no domain separation and no issuer
@@ -839,7 +895,7 @@ Table of Contents
    that were approved".  A party without the blob relies on the signed
    status surfaces or a Mandate.
 
-11.3.  Person Server Compromise
+12.3.  Person Server Compromise
 
    A compromised PS is a compromised Mission Issuer: it can forge
    approvals, alter records before activation, issue credentials against
@@ -852,7 +908,7 @@ Table of Contents
    custody and the status profile's key-retention rules keep archived
    state evidence verifiable.
 
-11.4.  The Mission Log as Evidence
+12.4.  The Mission Log as Evidence
 
    The mission log is the PS's evidence trail: token requests with their
    justifications, permission requests and outcomes, audit records, and
@@ -863,7 +919,20 @@ Table of Contents
    recorded before the authority it grants is used
    ([I-D.draft-mcguinness-mission-runtime]).
 
-12.  Privacy Considerations
+   For a runtime-enforced deployment the log MUST record, in commit
+   order, at least: the Mission Intent proposal; any clarification
+   exchange; the approval rendering and the approval decision with the
+   committed authority_hash; each auth-token request and the token
+   issued; each permission request and its decision (permit or the
+   denial reason); and each lifecycle transition (revocation,
+   completion, or expiry).  Ordering MUST place a grant before any use
+   of the authority it grants, so the log reconstructs what was
+   authorized, by what decision, under what Mission state, and to what
+   outcome.  A deployment MAY map these to the runtime profile's
+   decision and execution evidence records, which is the interoperable
+   form.
+
+13.  Privacy Considerations
 
    *The blob stays with the agent and the PS.* Task text, constraints,
    and the full Authority Set do not travel in credentials unless a
@@ -884,7 +953,16 @@ Table of Contents
    it implies.  AAuth's directed sub limits subject correlation; the
    Mission reference is not directed, because it is the anchor.
 
-13.  IANA Considerations
+   Directed Mission references, in which the PS presents a distinct per-
+   audience reference that still verifies back to the same Mission
+   through PS-signed evidence, would limit this cross-resource
+   correlation as AAuth's directed sub limits subject correlation.  They
+   are future work here, parallel to the audience-pairwise references
+   the issuance profile defers ([I-D.draft-mcguinness-oauth-mission]):
+   both trade the stable audit anchor for unlinkability, and neither is
+   a v1 property.
+
+14.  IANA Considerations
 
    This document has no IANA actions.  The registries AAuth establishes
    belong to that specification, and this binding defines no new AAuth
@@ -896,9 +974,9 @@ Table of Contents
    Should AAuth establish registries for those members, the members this
    document defines would be registered there.
 
-14.  References
+15.  References
 
-14.1.  Normative References
+15.1.  Normative References
 
    [I-D.draft-hardt-oauth-aauth-protocol]
               Hardt, D., "AAuth Protocol", Work in Progress, Internet-
@@ -928,7 +1006,7 @@ Table of Contents
               Message Signatures", RFC 9421, DOI 10.17487/RFC9421,
               February 2024, <https://www.rfc-editor.org/rfc/rfc9421>.
 
-14.2.  Informative References
+15.2.  Informative References
 
    [I-D.draft-mcguinness-mission-architecture]
               McGuinness, K., "An Architecture for Mission-Bound
