@@ -364,13 +364,21 @@ Table of Contents
    profile only for the resources, action classes, execution paths, and
    authorization-detail types named in its enforcement scope.
 
-   A deployment that claims conformance to this profile MUST document
-   its enforcement scope, including:
+   A deployment that claims conformance to this profile MUST publish an
+   *Enforcement Scope Statement*: the structured, referenceable
+   declaration of its enforcement scope that auditors, procurement, and
+   interop tests key on.  It MUST include:
 
    *  the protected resources, action classes, and execution paths it
       mediates;
 
-   *  the PEP locations that can prevent those actions;
+   *  the PEP locations that can prevent those actions, and the
+      unmediated paths explicitly excluded from the claim (the harness
+      profile's execution-environment scope statement supplies these for
+      a harness-run deployment, [I-D.draft-mcguinness-mission-harness]);
+
+   *  the credential custody mode for each mediated class (mediated
+      custody in the PEP, or agent-held, Section 4.6);
 
    *  the PDP or PDPs that evaluate Mission-bound decisions;
 
@@ -763,6 +771,15 @@ Table of Contents
    compromise-resistant enforcement; it may still claim base runtime
    conformance.  The claim names exactly the set of classes it covers.
 
+   The guarantee is the conjunction of these conditions, not any one of
+   them.  Mediated custody alone prevents only off-path presentation of
+   the credential: the agent still initiates every action and supplies
+   every parameter, and the mediating PEP executes any in-scope action
+   the agent requests.  What bounds a compromised agent is custody *and*
+   complete PEP placement *and* correct classification acting together,
+   so the claim is no stronger than the weakest of the three, and
+   "mediated custody" on its own is not the property.
+
    Each unmet condition loses a specific property:
 
     +========================================+========================+
@@ -1106,8 +1123,15 @@ Table of Contents
       of-band trusted status feed.
 
    *  Each enforcement scope MUST publish its maximum staleness bound
-      per action class and state source.  This document does not impose
-      one universal value.
+      per action class and state source, together with the revocation
+      latency that bound implies: a Mission's revocation takes effect,
+      in the worst case, after the staleness bound plus the derived
+      token's lifetime.  This document imposes no universal value
+      because the acceptable latency is deployment- and consequence-
+      specific, but the bound is the number that determines the
+      profile's headline revocation property, so publishing it without
+      its latency consequence is non-conformant.  The per-class budgets
+      recommended below are the non-normative guidance for the value.
 
    *  For the high-consequence classes, the state source MUST be an
       active freshness mechanism that can reflect a revocation within
@@ -1123,27 +1147,34 @@ Table of Contents
    The following non-normative guidance illustrates freshness bounds
    that are likely to match the risk of common action classes:
 
-        +================+=======================================+
-        | Class          | Suggested freshness posture           |
-        +================+=======================================+
-        | Consequential  | Token lifetime or a short state       |
-        | read           | lease; tighter for privacy-sensitive, |
-        |                | cross-tenant, or bulk reads           |
-        +----------------+---------------------------------------+
-        | Consequential  | A short state lease, typically        |
-        | write          | measured in minutes                   |
-        +----------------+---------------------------------------+
-        | Irreversible   | Immediate check or single-use permit  |
-        | action         |                                       |
-        +----------------+---------------------------------------+
-        | External       | Immediate check or single-use permit  |
-        | commitment     |                                       |
-        +----------------+---------------------------------------+
-        | Privileged     | Immediate check, suitable for         |
-        | administration | composition with local step-up        |
-        +----------------+---------------------------------------+
+      +================+============================================+
+      | Class          | Suggested freshness posture                |
+      +================+============================================+
+      | Consequential  | Token lifetime or a short state lease;     |
+      | read           | tighter for privacy-sensitive, cross-      |
+      |                | tenant, or bulk reads                      |
+      +----------------+--------------------------------------------+
+      | Consequential  | A short state lease, typically measured in |
+      | write          | minutes                                    |
+      +----------------+--------------------------------------------+
+      | Irreversible   | Active source required; immediate check or |
+      | action         | single-use permit, target under 300 s      |
+      +----------------+--------------------------------------------+
+      | External       | Active source required; immediate check or |
+      | commitment     | single-use permit, plus an egress PEP for  |
+      |                | external communication, target under 300 s |
+      +----------------+--------------------------------------------+
+      | Privileged     | Active source required; immediate check,   |
+      | administration | suitable for composition with local step-  |
+      |                | up, target under 300 s                     |
+      +----------------+--------------------------------------------+
+      | Audit-only     | No active freshness required               |
+      +----------------+--------------------------------------------+
 
-                                 Table 3
+                                  Table 3
+
+   A deployment justifies any looser value for a high-consequence class
+   in its Enforcement Scope Statement.
 
 7.4.  Materialized policy view
 
@@ -1196,6 +1227,37 @@ Table of Contents
    view.
 
 8.  Parameter binding and time-of-check to time-of-use
+
+   Parameter binding is only as consistent as the normalization behind
+   it, so this profile collects that normalization into a named
+   *Operation Profile*: the per-operation (or per-operation-family)
+   statement, part of the Resource Server runtime profile (Section 5),
+   that MUST fix all of the following, so two implementers of the same
+   operation bind the same bytes:
+
+   *  the action identifier and how it maps to a resource;
+
+   *  the parameter schema: which parameters exist and their types;
+
+   *  default insertion and omitted-optional-field rules applied before
+      canonicalization;
+
+   *  set-like array handling and any other canonicalization beyond the
+      issuance profile's rules;
+
+   *  exactly which fields enter the parameter_digest;
+
+   *  whether a single-use decision identifier is required (versus a
+      validity window plus idempotency key);
+
+   *  whether an execution lease is required; and
+
+   *  the evidence fields the decision and execution records carry for
+      the operation.
+
+   The rules below are the normative requirements the Operation Profile
+   records; a deployment that leaves any of them unstated for a mediated
+   operation has not specified that operation's binding.
 
    A permit for an operation does not authorize arbitrary parameter
    values.  For consequential writes, irreversible actions, external

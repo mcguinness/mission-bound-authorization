@@ -96,15 +96,18 @@ Table of Contents
      6.8.  Analyze
    7.  Mission Deployment Patterns
      7.1.  The Adoption Ladder
-   8.  Mission Requirements
-     8.1.  Context and Intent
-     8.2.  Consent and Approval
-     8.3.  Lifecycle
-     8.4.  Delegated and Enforced Execution
-   9.  Mission Document Map
-   10. Security Considerations
-   11. IANA Considerations
-   12. Informative References
+     7.2.  Assurance Tiers
+   8.  Prevention, Detection, and Residue
+   9.  The Authority Derivation Boundary
+   10. Mission Requirements
+     10.1.  Context and Intent
+     10.2.  Consent and Approval
+     10.3.  Lifecycle
+     10.4.  Delegated and Enforced Execution
+   11. Mission Document Map
+   12. Security Considerations
+   13. IANA Considerations
+   14. Informative References
    Acknowledgments
    Author's Address
 
@@ -501,6 +504,25 @@ Table of Contents
 
 6.  Mission Layers
 
+   One tension organizes the whole family.  A Mission commits its
+   authority and intent once, at approval, but an agent's work is open-
+   ended: the actions a task will take are not known when it is
+   approved.  "Reconcile Q3 invoices" must authorize reading any invoice
+   and posting any adjustment under the cap, because the specific ones
+   cannot be enumerated in advance.  So the Authority Set an Approver
+   consents to is a *capability envelope, not a task specification*, and
+   the gap between that envelope and what a given run actually does is
+   where agent risk lives.  Every layer below is a lever that narrows
+   that gap: constraint-bounding and the subset rule shrink the envelope
+   at issuance; runtime enforcement checks each action against it at the
+   point of use; action-bound approval re-consents the highest-
+   consequence actions with their concrete parameters; progressive
+   authorization trades many increment approvals for one bounded
+   ceiling; metering caps cumulative consumption; and completion retires
+   authority as the task finishes.  The family is that set of levers; no
+   single one closes the gap, and a deployment composes the ones its
+   risk warrants.
+
    The family organizes along a verb spine: each layer answers one
    question, sits on one trust boundary, and is owned by named
    documents.
@@ -711,6 +733,95 @@ Table of Contents
       mandatory from the start: no Mission-bound tokens and no issuance
       gating, so enforcement rests entirely on PEP coverage.
 
+7.2.  Assurance Tiers
+
+   The Adoption Ladder says what to deploy; the assurance tiers say what
+   a deployment MAY claim and what it MUST be able to show to claim it.
+   The distinction matters because the family's strongest properties are
+   deployment properties, not protocol properties: complete PEP
+   placement, a trusted freshness source, and credential custody are
+   things a deployment does, not things a token proves.  A tier is
+   therefore a claim, verifiable in the sense the runtime profile fixes
+   ([I-D.draft-mcguinness-mission-runtime]), not a label; a deployment
+   states the highest tier it has earned in its enforcement-scope
+   statement, and a consumer treats an unstated or unproven tier as not
+   claimed.
+
+   The tiers are cumulative except where noted, and each rests on proof
+   obligations defined normatively by the profile named:
+
+   *Mission-Bound Issuance*:  authority derived and committed at an
+      approval event with the integrity anchors, issuance bounded by the
+      subset rule, and derivation gated on Mission state (the core).
+      Grants task-bound, auditable authority and a possession-
+      independent kill switch at the issuance gate; it does not grant
+      per-action control, and outstanding tokens run to their own
+      expiry.
+
+   *Mission-State-Aware Reliance*:  adds a freshness surface, the
+      Mission Status operation or token introspection with a published
+      staleness bound ([I-D.draft-mcguinness-oauth-mission-status]), so
+      a consumer can cut off a revoked or expired Mission within that
+      bound instead of waiting out the token lifetime.  It adds no per-
+      action decision; a consumer relies on reported Mission state, not
+      on a permit.  Its proof obligation is the declared state source
+      and staleness bound.
+
+   *Mission Runtime-Enforced*:  adds a PEP/PDP decision on every
+      consequential action, a trusted state source with a published
+      staleness bound, parameter binding, and runtime evidence
+      ([I-D.draft-mcguinness-mission-runtime]).  Grants per-action
+      enforcement and revocation bounded by the staleness bound plus
+      token lifetime.  Its proof obligations are PEP-placement
+      completeness and the declared freshness source and bound.
+
+   *Agent-Compromise-Resistant*:  adds the runtime profile's four named
+      conditions, mediated credential custody, no unmediated path,
+      action-bound approval for the high-consequence classes, and an
+      active-freshness state source
+      ([I-D.draft-mcguinness-mission-runtime]).  A compromised agent
+      cannot unilaterally take a high-consequence action for which it
+      does not hold a mediated credential.  This is a named high bar,
+      never implied by basic Mission adoption.
+
+   *Trifecta-Contained*:  adds least exposure, the harness taint rule
+      enforced as a MUST, and full mediation of the external-
+      communication and external-commitment classes with the egress-
+      channel enumeration ([I-D.draft-mcguinness-mission-runtime],
+      [I-D.draft-mcguinness-mission-harness]).  An injected agent cannot
+      egress on the strength of untrusted content alone.  It composes
+      with Agent-Compromise-Resistant rather than extending it.
+
+   *MAS-Joined Governance*:  not a rung above the others but a
+      deliberately weaker peer of Mission Runtime-Enforced, reached
+      through the standalone binding
+      ([I-D.draft-mcguinness-mission-authority-server]).  Tokens carry
+      no mission claim, no Mission authority, and no issuance gating;
+      governance rests entirely on the runtime join and PEP coverage,
+      and the join proves the credential belongs to the same subject and
+      client the Mission names, not that it was issued under the
+      Mission.  Revoking a Mission stops nothing at the token layer.
+      This is a material downgrade from the OAuth binding's issuance
+      gate, taken for zero-AS-change adoption, and a deployment claiming
+      it states that the token-layer kill switch is absent.
+
+   Every tier above Mission-Bound Issuance also carries the cross-
+   cutting obligations its mechanisms imply: operation-profile
+   normalization where duration or parameter digests are metered
+   ([I-D.draft-mcguinness-mission-metering],
+   [I-D.draft-mcguinness-mission-authzen]), evidence retention for the
+   audit horizon, and a registration schedule where audit transparency
+   is run ([I-D.draft-mcguinness-mission-audit]).  The evidence tiers
+   are accountability, not prevention: they make what was recorded
+   tamper-evident, not what was perceived true or what was never
+   recorded present.
+
+   A deployment attests these obligations in prose by default; where it
+   claims Agent-Compromise-Resistant or Trifecta-Contained, it MAY bind
+   the enforcement-scope statement to execution-environment attestation
+   ([I-D.draft-mcguinness-mission-runtime]), so the tier is a technical
+   claim rather than an organizational one.
+
    The quarantine pattern removes a leg of the injection-to-exfiltration
    chain instead of gating it.  Work that ingests untrusted content (web
    pages, inbound mail, third-party documents) runs under a Mission
@@ -721,16 +832,92 @@ Table of Contents
    where claimed, the runtime profile's trifecta containment
    ([I-D.draft-mcguinness-mission-runtime]).  Per-task Missions already
    shrink blast radius; this composition uses them so that no single
-   Mission ever holds untrusted input and an egress path at once.
+   Mission ever holds untrusted input and an egress path at once.  Named
+   concretely: a *quarantined ingestion Mission* may read untrusted
+   content but carries no external-communication authority; a *clean
+   output Mission* may communicate but only over reviewed or derived
+   artifacts, not the raw ingested content; and a *bridge*, a human
+   review or a deterministic transformation between them, is recorded as
+   evidence so the boundary crossing is auditable.  Where a deployment
+   wants the separation enforced within one Mission rather than across
+   two, the metering profile's exclusivity control
+   ([I-D.draft-mcguinness-mission-metering]) latches read-and-egress
+   apart under a single approval.  This turns the no-information-flow-
+   control limit into a deployment architecture rather than an
+   unmitigated gap.
 
-8.  Mission Requirements
+8.  Prevention, Detection, and Residue
+
+   Each layer earns a specific property and leaves a specific residue.
+   Stated as a table so a claim cannot be read as more than it is:
+
+    +==============+=====================+============+==============+
+    | Mechanism    | Prevents            | Detects    | Does not     |
+    |              |                     |            | solve        |
+    +==============+=====================+============+==============+
+    | Core         | over-issuance       | the        | action-time  |
+    | issuance     | beyond the approved | approved   | misuse       |
+    |              | authority; issuance | authority  | within scope |
+    |              | after revocation or | (anchored) |              |
+    |              | expiry              |            |              |
+    +--------------+---------------------+------------+--------------+
+    | Runtime      | an unauthorized     | each PDP/  | actions on   |
+    | enforcement  | action on a         | PEP        | an           |
+    |              | mediated path       | decision   | unmediated   |
+    |              |                     | (evidence) | path         |
+    +--------------+---------------------+------------+--------------+
+    | Consent      | silent divergence   | the        | whether a    |
+    | Evidence     | between what was    | rendered   | human        |
+    |              | shown and what was  | disclosure | perceived or |
+    |              | committed           |            | understood   |
+    |              |                     |            | it           |
+    +--------------+---------------------+------------+--------------+
+    | Audit        | undetectable log    | the        | a producer   |
+    | Transparency | tampering or        | evidence   | logging a    |
+    |              | omission (under     | timeline   | false record |
+    |              | expected            |            |              |
+    |              | registration)       |            |              |
+    +--------------+---------------------+------------+--------------+
+    | Mandate      | reliance on         | portable   | authority    |
+    |              | unverifiable        | Mission    | (it grants   |
+    |              | committed facts     | facts      | none)        |
+    +--------------+---------------------+------------+--------------+
+
+                                 Table 1
+
+   The pattern is uniform: the family commits and checks what a party
+   was shown, decided, or did; it does not make the human attentive, the
+   producer honest, or the unmediated path disappear.  Those are the
+   residues the assurance tiers (Section 7.2) and the security model
+   make a deployment state rather than assume.
+
+9.  The Authority Derivation Boundary
+
+   Deriving the Authority Set from the Mission Intent is the semantic
+   heart of the model and the one step the family deliberately does not
+   standardize.  The consequence is a trust boundary worth stating
+   plainly: interoperability begins at the committed result, not at the
+   Intent.  A Mission Intent has no portable semantics; two conforming
+   Authorization Servers MAY derive different Authority Sets from the
+   same Intent, and audit can establish what was derived (against
+   intent_hash and policy_version), never whether it was the right
+   reading of the task.  A deployment whose partners must reason about
+   its derivations SHOULD publish a derivation policy identifier and
+   test fixtures that pin Intent-to-Authority-Set outcomes, so the local
+   policy becomes reviewable even though it does not travel.  Narrowing
+   mode ([I-D.draft-mcguinness-oauth-mission]) is the checkable path:
+   where the client supplies candidate authority, derivation is a subset
+   of it and reproducible, which is the closest the family comes to
+   portable derivation.
+
+10.  Mission Requirements
 
    The requirements the family answers, stated implementation-neutrally;
-   each names its answering documents by short form (Section 9).  They
+   each names its answering documents by short form (Section 11).  They
    stand on their own: a reader evaluating another design can use them
    as a checklist.
 
-8.1.  Context and Intent
+10.1.  Context and Intent
 
    *  *R1*: The task an agent pursues is a durable, structured, approved
       object (oauth-mission; mission-authority-server).
@@ -742,7 +929,7 @@ Table of Contents
       influence never derive, widen, or gate authority (oauth-mission;
       mission-shaping).
 
-8.2.  Consent and Approval
+10.2.  Consent and Approval
 
    *  *R4*: The derived authority is disclosed to the Approver before it
       takes effect, and the approval covers it (oauth-mission).
@@ -757,7 +944,7 @@ Table of Contents
       only narrows (oauth-mission-approval; the experimental oauth-
       mission-approval-revision).
 
-8.3.  Lifecycle
+10.3.  Lifecycle
 
    *  *R8*: Reliance is gated on task state: only active permits it, and
       unrecognized states fail safe (oauth-mission).
@@ -775,7 +962,7 @@ Table of Contents
    *  *R12*: Authority retires per entry when the work an entry served
       is done (oauth-mission-completion).
 
-8.4.  Delegated and Enforced Execution
+10.4.  Delegated and Enforced Execution
 
    *  *R13*: Derived and delegated authority only narrows (oauth-
       mission; oauth-mission-attenuation).
@@ -795,7 +982,7 @@ Table of Contents
    *  *R17*: Task evidence is tamper-evident and verifiable outside the
       deployment (mission-audit; mission-mandate).
 
-9.  Mission Document Map
+11.  Mission Document Map
 
    One line per document, grouped as the family groups them; the short
    form drops the draft-mcguinness- prefix.  The naming encodes a
@@ -908,7 +1095,7 @@ Table of Contents
    mission-security-model:  The trusted base in one view: what each
       component must achieve and what its compromise costs.
 
-10.  Security Considerations
+12.  Security Considerations
 
    This document introduces no mechanism and therefore no new security
    considerations.  The consolidated trusted base and compromise
@@ -916,11 +1103,11 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-security-model]), and each profile's
    own Security Considerations remain normative.
 
-11.  IANA Considerations
+13.  IANA Considerations
 
    This document makes no IANA request.
 
-12.  Informative References
+14.  Informative References
 
    [I-D.draft-mcguinness-mission-aauth]
               McGuinness, K., "Mission-Bound Authorization for AAuth",
@@ -952,6 +1139,11 @@ Table of Contents
               McGuinness, K., "Mission Mandate", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-mandate.html>.
+
+   [I-D.draft-mcguinness-mission-metering]
+              McGuinness, K., "Mission Consumption Metering", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-metering.html>.
 
    [I-D.draft-mcguinness-mission-orchestration]
               McGuinness, K., "Mission Orchestration and Unwinding",

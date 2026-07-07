@@ -1727,7 +1727,7 @@ honest part: it is what a deploying party still owns.<a href="#section-9-2" clas
           </tr>
         </tbody>
       </table>
-<p id="section-9-4">Five residuals are worth stating on their own, because they are the
+<p id="section-9-4">Seven residuals are worth stating on their own, because they are the
 limits most likely to matter and most often overstated away elsewhere:<a href="#section-9-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9-5.1">
@@ -1736,7 +1736,34 @@ shown; it cannot prove what the Approver perceived or understood. No
 electronic-consent scheme can.<a href="#section-9-5.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-5.2">
-          <p id="section-9-5.2.1"><strong>Consent fatigue.</strong> The model multiplies approval moments: the
+          <p id="section-9-5.2.1"><strong>Anchor semantics.</strong> The two integrity anchors commit two objects,
+not the relationship between them: <code>intent_hash</code> commits the
+approved intent, <code>authority_hash</code> the consented Authority Set, and
+that the authority faithfully serves the intent is a derivation
+policy fact (a SHOULD, auditable via <code>policy_version</code>), not
+something either hash proves. And <code>authority_hash</code> commits the full
+consented set, which a per-Resource-Server token, carrying a
+narrowed subset, does not contain: at such a Resource Server the
+anchor is an audit correlator, not an enforcement input, and the
+subset relationship it stands for is trust in the issuer's
+signature, not a per-token cryptographic proof. Enforcement value
+from the anchor accrues only to a full-set holder (an auditor, a
+Mandate verifier, a full-set Resource Server).<a href="#section-9-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-5.3">
+          <p id="section-9-5.3.1"><strong>Narrowing is typed.</strong> The subset rule, the "authority only
+narrows" guarantee, is defined over <code>mission_resource_access</code> and
+its Common Constraints. Authority expressed in another
+<code>authorization_details</code> type, including an opaque policy-language
+entry, has no defined subset relation: it is carried as approved and
+is neither narrowed nor delegated nor projected across a trust
+boundary. The strong narrowing guarantee therefore weakens exactly
+as a deployment moves authority into expressive policy-language
+entries, which is a design trade a deployment should make
+knowingly.<a href="#section-9-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-5.4">
+          <p id="section-9-5.4.1"><strong>Consent fatigue.</strong> The model multiplies approval moments: the
 approval event, expansion approvals, action-bound approvals, and
 review queues. A deployment that over-asks trains its Approvers to
 rubber-stamp, and a rubber-stamped approval carries the same
@@ -1747,29 +1774,29 @@ highest-consequence actions
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and use a pre-consented
 ceiling with policy-adjudicated drawdown where growth is
 anticipated (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>),
-so the human moments that remain are rare enough to be read.<a href="#section-9-5.2.1" class="pilcrow">¶</a></p>
+so the human moments that remain are rare enough to be read.<a href="#section-9-5.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-5.3">
-          <p id="section-9-5.3.1"><strong>Single-service equivocation.</strong> Transparency is non-equivocating only
+        <li class="normal" id="section-9-5.5">
+          <p id="section-9-5.5.1"><strong>Single-service equivocation.</strong> Transparency is non-equivocating only
 per service; a deployment that needs that property checked registers
-with more than one independent service.<a href="#section-9-5.3.1" class="pilcrow">¶</a></p>
+with more than one independent service.<a href="#section-9-5.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-5.4">
-          <p id="section-9-5.4.1"><strong>Offline breadth.</strong> Offline attenuation
+        <li class="normal" id="section-9-5.6">
+          <p id="section-9-5.6.1"><strong>Offline breadth.</strong> Offline attenuation
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>) bounds each child
 to a narrowing of its parent, but the issuer does not observe how many
 children are minted; breadth is bounded by depth and policy, not by the
-issuer.<a href="#section-9-5.4.1" class="pilcrow">¶</a></p>
+issuer.<a href="#section-9-5.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-5.5">
-          <p id="section-9-5.5.1"><strong>Availability.</strong> The model fails closed everywhere a trusted component
+        <li class="normal" id="section-9-5.7">
+          <p id="section-9-5.7.1"><strong>Availability.</strong> The model fails closed everywhere a trusted component
 cannot establish the fact it needs (<a href="#cross-cutting" class="auto internal xref">Section 7</a>), which trades
 availability for safety. An attacker who degrades a state source, an
 event stream, or a PDP does not gain unauthorized action, but converts
 the attack into work stoppage and, for in-flight work, unwind activity.
 A deployment provisions state-source, event-stream, and PDP
 availability accordingly, because under this model their outage stops
-governed work rather than loosening it.<a href="#section-9-5.5.1" class="pilcrow">¶</a></p>
+governed work rather than loosening it.<a href="#section-9-5.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

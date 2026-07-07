@@ -538,13 +538,38 @@ Table of Contents
 
                                  Table 1
 
-   Five residuals are worth stating on their own, because they are the
+   Seven residuals are worth stating on their own, because they are the
    limits most likely to matter and most often overstated away
    elsewhere:
 
    *  *Comprehension.* The suite can commit and bind what an Approver
       was shown; it cannot prove what the Approver perceived or
       understood.  No electronic-consent scheme can.
+
+   *  *Anchor semantics.* The two integrity anchors commit two objects,
+      not the relationship between them: intent_hash commits the
+      approved intent, authority_hash the consented Authority Set, and
+      that the authority faithfully serves the intent is a derivation
+      policy fact (a SHOULD, auditable via policy_version), not
+      something either hash proves.  And authority_hash commits the full
+      consented set, which a per-Resource-Server token, carrying a
+      narrowed subset, does not contain: at such a Resource Server the
+      anchor is an audit correlator, not an enforcement input, and the
+      subset relationship it stands for is trust in the issuer's
+      signature, not a per-token cryptographic proof.  Enforcement value
+      from the anchor accrues only to a full-set holder (an auditor, a
+      Mandate verifier, a full-set Resource Server).
+
+   *  *Narrowing is typed.* The subset rule, the "authority only
+      narrows" guarantee, is defined over mission_resource_access and
+      its Common Constraints.  Authority expressed in another
+      authorization_details type, including an opaque policy-language
+      entry, has no defined subset relation: it is carried as approved
+      and is neither narrowed nor delegated nor projected across a trust
+      boundary.  The strong narrowing guarantee therefore weakens
+      exactly as a deployment moves authority into expressive policy-
+      language entries, which is a design trade a deployment should make
+      knowingly.
 
    *  *Consent fatigue.* The model multiplies approval moments: the
       approval event, expansion approvals, action-bound approvals, and
