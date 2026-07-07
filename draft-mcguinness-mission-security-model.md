@@ -185,30 +185,77 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-shaping:
+    title: "Mission Intent Shaping"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-metering:
+    title: "Mission Consumption Metering"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-child-delegation:
+    title: "Mission Child Delegation for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-approval-revision:
+    title: "Mission Approval Revision for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval-revision.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-management:
+    title: "Mission Management for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-management.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
 Mission-Bound Authorization for OAuth 2.0 and its companion profiles
-spread enforcement across several components: a Mission Issuer derives
-authority and, where it also issues tokens, gates issuance (an OAuth
-Authorization Server, a standalone Mission Authority Server that
-records and serves Missions without issuing tokens, or an AAuth
-Person Server hosting that protocol's native missions); a Policy
-Enforcement Point and Policy Decision Point evaluate each action; a
-harness establishes a mediated execution environment; a consent
-rendering layer discloses authority to an Approver; an orchestrator
-unwinds in-flight work; and optional services report Mission state,
-adjudicate requested authority, log evidence, and report completion
-events. In cross-domain use, a resource-side Authorization Server
-joins this base. Each
-profile states its own security considerations, but no single document
-says which components must be trusted, what each assumes of the others,
-and how the compromise of each degrades the guarantees. This document
-provides that consolidated view. It is an Informational security model
-for the Mission suite: it defines the trusted base, the cross-cutting
-assumptions, and the consequence of each component's compromise, and it
-points to the normative security considerations of each profile rather
-than restating them.
+spread enforcement across several components: a Mission Issuer, in one
+of three bindings (OAuth Authorization Server, standalone Mission
+Authority Server, AAuth Person Server), derives authority and, where
+it also issues tokens, gates issuance; a Policy Enforcement Point and
+Policy Decision Point evaluate each action; a harness establishes a
+mediated execution environment; a consent rendering layer discloses
+authority to an Approver; an orchestrator unwinds in-flight work; and
+optional services report Mission state, adjudicate requested
+authority, meter consumption, manage the Mission fleet, log evidence,
+and report completion events. In cross-domain use, a resource-side
+Authorization Server joins this base. Each profile states its own security
+considerations, but no single document says which components must be
+trusted, what each assumes of the others, and how the compromise of
+each degrades the guarantees. This document provides that consolidated
+view. It is an Informational security model for the Mission suite: it
+defines the trusted base, the cross-cutting assumptions, the named
+guarantees with the components each rests on, and the residual risks a
+deployment still owns, and it points to the normative security
+considerations of each profile rather than restating them.
 
 --- middle
 
@@ -224,8 +271,12 @@ Authorization Server, a standalone Mission Authority Server, or an
 AAuth Person Server), the enforcement
 points that evaluate each action,
 the harness that removes unmediated paths, and a set of optional
-services. Those components are the **trusted base**: the parts that, if
-compromised, degrade or void the guarantees the suite otherwise provides.
+services. Those components are the **trusted base** of the family's
+delegated-authority layer: the parts that, if
+compromised, degrade or void the guarantees the suite otherwise
+provides. Everything on the other side of that line, the agent that
+executes the task and the shaper that authors its proposal, is
+untrusted ({{untrusted-agent}}).
 
 Each profile documents the security considerations local to its own
 mechanism. What no single profile provides, and what a reviewer or a
@@ -256,7 +307,11 @@ binding; the AAuth Person Server in the AAuth binding,
 Enforcement Point (PEP), Policy Decision Point (PDP), Approver, Subject,
 agent, Authority Set, and Mission state as defined in
 {{I-D.draft-mcguinness-oauth-mission}} and
-{{I-D.draft-mcguinness-mission-runtime}}.
+{{I-D.draft-mcguinness-mission-runtime}}. It uses Mission Shaper as
+defined in {{I-D.draft-mcguinness-mission-shaping}}, Management Client
+as defined in {{I-D.draft-mcguinness-oauth-mission-management}}, and
+Mission Assurance Levels as defined in
+{{I-D.draft-mcguinness-mission-architecture}}.
 
 # Mission Substrate {#mission-substrate}
 
@@ -274,6 +329,9 @@ profile's Mission binding establishment step
 those primitives and the substrate the profiles' security
 considerations assume; a different binding re-derives only the
 substrate-specific entries of this model.
+{{I-D.draft-mcguinness-mission-substrate}} consolidates the primitives
+a further binding provides and points at where each is normatively
+defined.
 
 # The Untrusted Agent {#untrusted-agent}
 
@@ -305,6 +363,17 @@ agent-compromise-resistant enforcement therefore isolates the mediating
 PEP and its key custody from agent-facing components; the harness profile
 requires this separation
 ({{I-D.draft-mcguinness-mission-harness}}).
+
+The untrusted side extends to everything that authors the task. Where
+a Mission Shaper turns a prompt or an upstream trigger into a
+candidate Mission Intent
+({{I-D.draft-mcguinness-mission-shaping}}), the shaper is client-side
+machinery on the agent's side of the trust boundary: its proposal
+reaches the Mission Issuer as untrusted input, authority is created
+solely by the issuer's validation and the approval event, and Shaping
+Evidence is inert audit material. A compromised or manipulated shaper
+can propose a hostile Mission; it cannot approve one, and what it
+proposed is what the derivation bounds and the Approver reads.
 
 # The Trusted Base {#trusted-base}
 
@@ -406,6 +475,35 @@ Orchestrator:
   converts the kill switch into a channel for unauthorized remedial
   actions, driving compensating writes under the guise of unwinding.
 
+Metering state:
+: When consumption metering is used, the PDP and the metering state
+  behind it enforce the consented consumption bounds by atomic
+  check-and-decrement, with reserve-and-commit postures and duration
+  leases. The metering must count every governed action exactly once
+  across the deployment's decision points, and a deployment that
+  cannot meter a consented bound must refuse rather than render it as
+  enforced. Its compromise voids the volume bound but not the
+  authority bound: a drained, reset, or bypassed meter lets a Mission
+  consume without limit inside its approved scope, and a falsely
+  exhausted meter is a denial of service. Under a multi-PDP topology
+  the published consistency bound is the honest statement of the
+  undercounting exposure
+  ({{I-D.draft-mcguinness-mission-metering}}).
+
+Management Client and endpoint:
+: When fleet management is used, an authorized Management Client
+  enumerates the Missions a Mission Issuer holds and applies bulk
+  lifecycle operations through a dry-run-then-execute exchange whose
+  bulk token pins the evaluated membership. The endpoint must
+  authenticate and authorize the Management Client, audit every call,
+  and never expose the surface to the agents whose Missions it
+  manages. Its compromise cannot mint authority, but it reaches the
+  whole fleet: bulk revoke or suspend is fleet-wide work stoppage,
+  bulk resume re-enables suspended authority wholesale, and
+  enumeration yields the existence knowledge the status profile's
+  anti-oracle rules deny to ordinary consumers
+  ({{I-D.draft-mcguinness-oauth-mission-management}}).
+
 Consent rendering layer:
 : Renders the approved authority to the Approver at the approval event.
   It must render faithfully what is committed. A compromised renderer can
@@ -466,7 +564,11 @@ Four assumptions hold across the whole model:
   needs (Mission state, a completion event, a verifiable decision),
   the relying component refuses rather than proceeds; a deployment
   that fails open at any such point forfeits the guarantee that point
-  protects. Unavailability of inert evidence (a consent-evidence
+  protects. The same principle governs capability gaps: a consented
+  consumption bound the deployment cannot meter is refused, not
+  rendered as enforced
+  ({{I-D.draft-mcguinness-mission-metering}}). Unavailability of
+  inert evidence (a consent-evidence
   retrieval, the transparency feed, a Mandate) is recorded and is
   never by itself grounds for refusal
   ({{I-D.draft-mcguinness-mission-audit}}); tampered inert evidence
@@ -494,17 +596,62 @@ Four assumptions hold across the whole model:
 
 # What the Model Does and Does Not Guarantee {#guarantees}
 
-Given an intact trusted base, the model guarantees that a compromised or
-injected agent cannot exceed the approved Authority Set and cannot move
-authority by influencing inert intent; authority grows only by a fresh
-approval that supersedes the prior Mission
-({{I-D.draft-mcguinness-oauth-mission-expansion}}), not by agent action.
-In a deployment that claims the runtime profile's
-agent-compromise-resistant enforcement
-({{I-D.draft-mcguinness-mission-runtime}}), the model further
-guarantees that such an agent cannot unilaterally take a high-consequence
-action it does not hold a mediated credential for. In the base profiles
-two of the mechanisms behind that further guarantee (mediated
+Given an intact trusted base, the model's guarantees are these. Each
+is named, names the Mission Assurance Level
+({{I-D.draft-mcguinness-mission-architecture}}) at which it is earned,
+and names the components that must be intact for it to hold;
+{{trusted-base}} is the failure analysis of those dependencies, and
+{{documenting}} is where a deployment states which of them it claims.
+
+Bounded authority (Baseline Issuance):
+: A compromised or injected agent cannot exceed the approved Authority
+  Set and cannot move authority by influencing inert intent; authority
+  grows only by a fresh approval that supersedes the prior Mission
+  ({{I-D.draft-mcguinness-oauth-mission-expansion}}), not by agent
+  action. Rests on the Mission Issuer.
+
+Kill switch (Baseline Issuance for issuance; Runtime-Enforced for action):
+: Revoking or expiring a Mission stops further issuance at once and
+  stops governed action within a window this model states precisely
+  ({{revocation-latency}}). Rests on the Mission Issuer, the Mission
+  state source, and, for action, the PEP and PDP.
+
+Per-action enforcement (Runtime-Enforced):
+: Every consequential action obtains a fresh permit against current
+  Mission state and bound parameters, so an active Mission is not
+  ambient standing authority. Rests on the PEP, the PDP, the state
+  source, and the harness's no-unmediated-path condition.
+
+Bounded consumption (Runtime-Enforced plus consumption metering):
+: A Mission cannot consume beyond its consented bounds even inside its
+  approved scope ({{I-D.draft-mcguinness-mission-metering}}). Rests on
+  the PDP, its metering state, and the PEP's settlement honesty.
+
+Agent-compromise-resistant enforcement (High-Assurance Agent):
+: A compromised agent cannot unilaterally take a high-consequence
+  action it does not hold a mediated credential for
+  ({{I-D.draft-mcguinness-mission-runtime}}). Rests on PEP key
+  custody, the agent and harness isolation boundary, and an
+  active-freshness state source.
+
+Trifecta containment (High-Assurance Agent):
+: An injected agent cannot egress on the strength of untrusted content
+  alone: least exposure and the harness taint rule are enforced as
+  MUSTs, and the external-communication and external-commitment
+  classes are fully mediated
+  ({{I-D.draft-mcguinness-mission-runtime}},
+  {{I-D.draft-mcguinness-mission-harness}}). Rests on the harness and
+  on PEP coverage of every egress channel.
+
+Attributable action (any level, per the evidence deployed):
+: What was proposed, approved, decided, and executed is recorded and,
+  where audit transparency is used, tamper-evident
+  ({{I-D.draft-mcguinness-mission-audit}}). This is accountability,
+  not prevention. Rests on the evidence producers and, for
+  non-equivocation, the Transparency Service.
+
+The strong claims are earned, not implied. In the base profiles two of
+the mechanisms behind agent-compromise-resistant enforcement (mediated
 credential custody and action-bound approval) are recommendations,
 not requirements, while active-state freshness for the
 high-consequence classes and the no-unmediated-path rule for mediated
@@ -513,11 +660,7 @@ leaves the recommendations as recommendations does not obtain the
 guarantee. This
 matches the suite's front-door framing: adopting the profiles does not by
 itself make a deployment resistant to a compromised agent. The model
-makes misuse bounded and, where evidence is produced, attributable. A
-deployment that additionally claims the runtime profile's trifecta
-containment enforces least exposure and the harness taint rule as
-MUSTs, so an injected agent cannot egress on the strength of
-untrusted content alone.
+makes misuse bounded and, where evidence is produced, attributable.
 
 It does not make a compromised trusted component safe. The compromise of
 each component degrades a specific guarantee, as listed in
@@ -544,7 +687,9 @@ standing cannot be laundered out of a narrow approval.
 # Adversary Model and Coverage {#adversary-model}
 
 The trusted base ({{trusted-base}}) is the component view; this is the
-adversary view. The adversary is assumed to control the agent, to reach
+adversary view. The adversary is assumed to control the agent and the
+task proposal it submits (including a shaper's output,
+{{untrusted-agent}}), to reach
 the content and inputs the agent processes (so it can attempt prompt
 injection), and to capture tokens in transit. The adversary is assumed
 not to break the cryptographic primitives, not to forge an
@@ -561,19 +706,23 @@ honest part: it is what a deploying party still owns.
 |---|---|---|
 | Compromised or injected agent acts beyond its task | Authority fixed at the approval event (issuance); per-action PDP check (runtime) | Misuse within the approved scope; low-consequence authority the agent legitimately holds |
 | Prompt injection tries to widen authority | Authority fixed at approval: `purpose` and `success_criteria` are inert, and `goal` shapes authority only through the pre-approval derivation the Approver consents to | Injected text can still drive actions already in scope |
+| Agent escalates through the request path (expansion, requestable denial, deferred approval) | Every widening is a fresh approval event: expansion supersedes rather than amends, access-request adjudication routes high-consequence escalation to an independent approver, and an approval revision can only narrow ({{I-D.draft-mcguinness-oauth-mission-approval-revision}}) | Rubber-stamping: an over-asked Approver approves an escalation like a considered one (the consent-fatigue residual) |
+| In-scope volume abuse (budget drain, call flooding, egress volume) | Consumption metering where deployed: atomic check-and-decrement, reserve and commit, duration leases; a bound that cannot be metered is refused, not rendered as enforced | Without metering, volume inside the approved scope is bounded only by Mission expiry; with it, the published multi-PDP consistency bound |
 | Stolen or exfiltrated token | Sender-constraint (proof-of-possession); the high-consequence key is held by the PEP, not the agent (mediated execution) | A token stolen together with its key; soundness of the PoP mechanism |
 | Token replayed at another resource (confused deputy) | Permit bound to audience, resource, `sub`, `client_id`, and action; cross-domain grant single-use and audienced | Correct binding configuration is the deployment's |
 | Parameters change between decision and use (TOCTOU) | Parameter binding; the digest is reverified at the executing PEP immediately before acting | The PEP must sit at the last controllable boundary |
 | Active Mission used as ambient standing authority | Per-action runtime enforcement, state re-check, fail-closed on stale state | An issuance-only deployment gets audit, not action-time defense |
 | Revoked or expired Mission still acts (kill switch) | Issuance gating; runtime state re-check within the staleness bound; short token lifetimes | A window up to the staleness bound or token TTL; a spoofed state source (a trusted component) |
 | Approver approves more than was shown | The rendered disclosure is committed; rendering-assurance ladder up to an authenticator-signed commitment | Comprehension: no server-side commitment proves what a human perceived or understood |
-| Exfiltration of private data (the third leg of the lethal trifecta) | External communication is a gated consequential action; harness leaves no unmediated path; session taint downgrades egress after untrusted input (optional; recommended, not required); least-exposure context minimization narrows what an injected agent sees (runtime, harness); the composite is claimable as trifecta containment (runtime) | PEP-placement completeness; no information-flow control, so a sequence of in-scope steps can launder data |
+| Exfiltration of private data (the third leg of the lethal trifecta) | External communication is a gated consequential action; harness leaves no unmediated path; session taint downgrades egress after untrusted input (optional; recommended, not required); least-exposure context minimization narrows what an injected agent sees (runtime, harness); the composite is claimable as trifecta containment (runtime) | PEP-placement completeness; no information-flow control, so a sequence of in-scope steps can launder data; the quarantine pattern (separate ingestion and egress Missions) turns that limit into a deployment architecture ({{I-D.draft-mcguinness-mission-architecture}}) |
+| Sub-agent fan-out abuse (Child Missions) | Child creation is issuer-adjudicated: strict-subset authority, expiry no later than the parent, fan-out controls, separate child actor identity, cascade termination when the parent ends, and child credentials never transit the parent | Breadth within the fan-out policy is the deployment's; a permissive delegation policy is consented but wide |
 | Offline sub-agent fan-out abuse | Capability monotonicity (narrow-only) and the runtime kill-switch re-check on the carried chain | Fan-out breadth is unobserved by the issuer; bounded by depth and policy, not by the issuer |
+| Operator surface abused (fleet management) | Management Client authorization; dry-run-then-execute with a bulk token pinning the evaluated membership; every call audited; never agent-facing | A compromised Management Client stops or resumes Missions fleet-wide and learns Mission existence; it cannot mint or widen authority |
 | Audit tampered, dropped, or reordered | Transparency: append-only log, inclusion receipts, non-equivocation | Single-service equivocation (per-service only; register with several); a producer can still log a false record (accountability, not prevention) |
 | Agent fabricates results or acts on false data | Not addressed | Full: semantic and grounding verification are a non-goal; pair with a grounding layer if needed |
 | A trusted-base component is compromised | Not addressed; evidence detects it after the fact | Not prevented; degrades the specific guarantee per {{trusted-base}} |
 
-Seven residuals are worth stating on their own, because they are the
+Eight residuals are worth stating on their own, because they are the
 limits most likely to matter and most often overstated away elsewhere:
 
 - **Comprehension.** The suite can commit and bind what an Approver was
@@ -602,6 +751,12 @@ limits most likely to matter and most often overstated away elsewhere:
   as a deployment moves authority into expressive policy-language
   entries, which is a design trade a deployment should make
   knowingly.
+- **In-scope volume.** The Authority Set bounds what a Mission may
+  touch, not how much. Consumption metering
+  ({{I-D.draft-mcguinness-mission-metering}}) is the extension that
+  bounds volume; where it is not deployed, an agent whose every action
+  individually passes is limited only by Mission expiry, and the first
+  row of the coverage table is unbounded in this dimension.
 - **Consent fatigue.** The model multiplies approval moments: the
   approval event, expansion approvals, action-bound approvals, and
   review queues. A deployment that over-asks trains its Approvers to
@@ -621,7 +776,12 @@ limits most likely to matter and most often overstated away elsewhere:
   ({{I-D.draft-mcguinness-oauth-mission-attenuation}}) bounds each child
   to a narrowing of its parent, but the issuer does not observe how many
   children are minted; breadth is bounded by depth and policy, not by the
-  issuer.
+  issuer. Child Delegation
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) is the
+  observed alternative: creation is issuer-adjudicated, fan-out is
+  controlled, and termination cascades. The trade between the two is
+  availability against observation, and a deployment that chooses
+  offline minting accepts the unobserved breadth.
 - **Availability.** The model fails closed everywhere a trusted component
   cannot establish the fact it needs ({{cross-cutting}}), which trades
   availability for safety. An attacker who degrades a state source, an
@@ -655,17 +815,21 @@ The token lifetime and introspection layers are the issuance profile's
 ({{I-D.draft-mcguinness-mission-runtime}}) each tighten the window
 as their own profile defines. A deployment reads the row for the
 mechanism it runs, or the tightest of several, to state how long a
-revoked Mission can still act.
+revoked Mission can still act. Where Child Delegation is used, a
+parent's terminal state cascades to its Child Missions
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), and each
+child's own window then runs under the same table.
 
-The same window, read per assurance level
+The same window, read per Mission Assurance Level
 ({{I-D.draft-mcguinness-mission-architecture}}) and per what it stops:
 
 | Level | Further issuance | Cached token use | Runtime action | Background work |
 |---|---|---|---|---|
 | Baseline Issuance | stopped at once | until token `exp` | not gated | not gated |
-| Baseline + state-aware freshness | stopped at once | within staleness bound | not gated | not gated |
+| Baseline plus a freshness surface (the half-step) | stopped at once | within staleness bound | not gated | not gated |
 | Runtime-Enforced | stopped at once | stopped for mediated actions | stopped within freshness bound | only if the harness re-checks |
-| Governed / High-Assurance Agent | stopped at once | stopped | stopped within freshness bound | stopped on resume re-check |
+| Governed Agent | stopped at once | stopped for mediated actions | stopped within freshness bound | stopped on resume re-check |
+| High-Assurance Agent | stopped at once | stopped (mediated credential custody) | stopped within the active-freshness bound | stopped on resume re-check |
 
 Background work is bounded only where the harness re-checks Mission
 state on resume, retry, and dispatch
@@ -687,13 +851,25 @@ This documentation is what lets a relying party or auditor reason about
 the deployment's actual security posture rather than the model's
 idealized one.
 
+The Mission Deployment Profile
+({{I-D.draft-mcguinness-mission-architecture}}) is the artifact this
+statement belongs in: one publishable manifest that composes the
+per-layer scope statements and states its residual risks alongside its
+claims. The named guarantees of {{guarantees}} are the vocabulary for
+the claims, and the residuals of {{adversary-model}} are the
+vocabulary for `residual_risks`: a deployment names which residuals it
+accepts, which it mitigates, and how.
+
 # Retention and the Audit Horizon {#retention}
 
 The guarantees this model states at audit time depend on artifacts that
 several profiles retain independently: Consent Evidence
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), runtime
 decision and execution evidence
-({{I-D.draft-mcguinness-mission-runtime}}), and, where audit
+({{I-D.draft-mcguinness-mission-runtime}}), Shaping Evidence where a
+shaper is deployed ({{I-D.draft-mcguinness-mission-shaping}}),
+metering and settlement records where consumption metering is deployed
+({{I-D.draft-mcguinness-mission-metering}}), and, where audit
 transparency is used, the receipts that stand over evidence a deployment
 may later erase ({{I-D.draft-mcguinness-mission-audit}}). Each of
 those profiles anchors its retention on the Mission's audit horizon, the
@@ -723,6 +899,15 @@ Mission Identifier is a durable cross-audience correlator the suite
 acknowledges and does not yet narrow
 ({{I-D.draft-mcguinness-oauth-mission}}); unlinkable or per-audience
 presentation of Mission-bound authority is out of scope across the suite.
+Two of the newer surfaces concentrate observation and are handled
+accordingly: metering state is a fine-grained record of Mission
+activity over time, disclosed in decision responses only as refusals,
+never as remaining-balance oracles
+({{I-D.draft-mcguinness-mission-metering}}), and the management
+endpoint holds the fleet-wide existence knowledge the status profile's
+anti-oracle rules deny to ordinary consumers, which is why it is
+authorized and audited as an operator surface
+({{I-D.draft-mcguinness-oauth-mission-management}}).
 Each profile's Privacy Considerations govern the data its own component
 handles.
 
