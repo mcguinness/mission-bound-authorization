@@ -601,7 +601,12 @@ A Mission-Bound Person Server SHOULD serve the Mission Status
 operation of {{I-D.draft-mcguinness-oauth-mission-status}}, with its
 signed responses, authentication, anti-oracle property, and caching
 rules, and MAY serve that profile's Mission Lifecycle endpoint as its
-management surface. It MAY emit Mission Lifecycle Signals, with the PS
+management surface. A PS whose deployment claims runtime enforcement
+of the high-consequence classes MUST serve signed Mission Status as
+an active freshness source with a published staleness bound: this is
+the runtime profile's active-freshness requirement for those classes
+({{I-D.draft-mcguinness-mission-runtime}}), and auth-token-lifetime
+expiry alone does not meet it. It MAY emit Mission Lifecycle Signals, with the PS
 as the transmitting Mission Issuer
 ({{I-D.draft-mcguinness-oauth-mission-signals}}).
 
@@ -689,10 +694,17 @@ the resource token unchanged, per AAuth, so the PS receives the
 mission context on every token request.
 
 The PS's evaluation of each token and permission request against the
-mission context and log history is a PDP-shaped decision point. A PS
-MAY implement the runtime profile's decision contract at these
-endpoints, with the mission log as its evidence trail
-({{security-mission-log}}).
+mission context and log history is a PDP-shaped decision point. A
+runtime-enforced AAuth deployment implements the runtime profile's
+decision contract ({{I-D.draft-mcguinness-mission-runtime}}) at these
+endpoints with the PS as the PDP, rather than restating that contract
+here: the decision inputs, parameter binding, denial reasons, and
+freshness rules are the runtime profile's, and the mission log is the
+PS's runtime evidence trail ({{security-mission-log}}). This binding
+adds only the AAuth-specific mapping: the token or permission request
+is the decision request, the `aauth-mission` reference resolves the
+established Mission, and each logged decision is a runtime decision
+record.
 
 ## Worked Example {#credential-example}
 
@@ -808,6 +820,49 @@ arbitrary minting, and false state
 and audit transparency make forgery detectable after the fact; they do
 not prevent it ({{security-ps-compromise}}).
 
+# Mission Verification Modes {#verification-modes}
+
+AAuth's default keeps the mission blob with the agent and the PS, so
+a Resource verifies from the reference and token claims, not by
+recomputing the anchors ({{limitations}}). That makes resource-side
+verifiability an explicit axis this binding must name, one the OAuth
+binding does not have because its tokens always carry the authority
+payload. A deployment declares which of three modes it serves; the
+modes are cumulative in what a Resource or auditor can check without
+trusting PS-private state.
+
+**Reference-only** (the default):
+: the credential names the Mission by (`approver`, `s256`) and carries
+  the granted scope. The PS gate holds ({{gating}}), but a Resource
+  cannot independently verify the Mission's authority; it trusts the
+  PS's evaluation. Federated mode ({{mission-claim}}) is at most this
+  when the Access Server does not carry the family members.
+
+**Credential-carried**:
+: the auth token additionally carries the `mission` claim family
+  members (`id`, `issuer`, `authority_hash`), so a Resource can bind
+  the token to a named Mission and its consent anchor, though it still
+  holds no Authority Set to check a specific action against.
+
+**Resource-verifiable**:
+: the PS additionally provides either token-carried
+  `authorization_details` or a signed Mission Mandate
+  ({{I-D.draft-mcguinness-mission-mandate}}) carrying the committed
+  facts, so a Resource or an auditor can verify that a given
+  token or request is within the approved Mission's authority without
+  trusting opaque PS policy or private blob state. A deployment that
+  needs independent resource-side or third-party authority
+  verification MUST serve this mode.
+
+These modes are the AAuth-specific verification axis; the family's
+assurance tiers ({{I-D.draft-mcguinness-mission-architecture}}) layer
+on top, and a runtime-enforced or agent-compromise-resistant AAuth
+deployment claims the corresponding tier there rather than a
+binding-specific name. Full-provision Mission governance, which the
+PS gate already provides ({{gating}}), reaches the Runtime-Enforced
+tier only in the Resource-verifiable mode with the runtime decision
+contract in force ({{request-binding}}).
+
 # Conformance {#conformance}
 
 An implementation conforms in one of two roles.
@@ -896,6 +951,18 @@ apply: tamper-evident storage, retention for the audit horizon, and a
 grant recorded before the authority it grants is used
 ({{I-D.draft-mcguinness-mission-runtime}}).
 
+For a runtime-enforced deployment the log MUST record, in commit
+order, at least: the Mission Intent proposal; any clarification
+exchange; the approval rendering and the approval decision with the
+committed `authority_hash`; each auth-token request and the token
+issued; each permission request and its decision (permit or the
+denial reason); and each lifecycle transition (revocation,
+completion, or expiry). Ordering MUST place a grant before any use of
+the authority it grants, so the log reconstructs what was authorized,
+by what decision, under what Mission state, and to what outcome. A
+deployment MAY map these to the runtime profile's decision and
+execution evidence records, which is the interoperable form.
+
 # Privacy Considerations
 
 **The blob stays with the agent and the PS.** Task text, constraints,
@@ -917,6 +984,15 @@ and governance key on, and a deployment SHOULD document the
 correlation it implies. AAuth's directed `sub` limits subject
 correlation; the Mission reference is not directed, because it is
 the anchor.
+
+Directed Mission references, in which the PS presents a distinct
+per-audience reference that still verifies back to the same Mission
+through PS-signed evidence, would limit this cross-resource
+correlation as AAuth's directed `sub` limits subject correlation.
+They are future work here, parallel to the audience-pairwise
+references the issuance profile defers
+({{I-D.draft-mcguinness-oauth-mission}}): both trade the stable audit
+anchor for unlinkability, and neither is a v1 property.
 
 # IANA Considerations {#iana}
 
