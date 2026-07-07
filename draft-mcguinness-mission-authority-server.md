@@ -1239,7 +1239,27 @@ per the family rule that references and binding proofs grant nothing.
 This section states what MAS-only deployment does not provide. These
 are structural properties of the mode, not implementation quality
 issues, and a deployment claiming this profile MUST NOT overstate
-them.
+them. The mode is a **partial-provision binding** in the substrate's
+terms ({{I-D.draft-mcguinness-mission-substrate}}): it provides the
+Mission record, anchors, and lifecycle but not the Mission-bound
+credential, so enforcement composes entirely through the runtime join
+and PEP coverage. The Adoption Ladder names it MAS-Joined Governance,
+a deliberately weaker peer of the runtime-enforced tier
+({{I-D.draft-mcguinness-mission-architecture}}).
+
+A deployment claiming this profile MUST state, alongside its
+enforcement-scope statement:
+
+- what the join proves (that the credential belongs to the Mission's
+  subject and client) and what it does not (that the credential was
+  issued under the Mission);
+- the subject and client mapping granularity, and whether instance
+  identity is included in the join
+  ({{I-D.draft-mcguinness-oauth-client-instance-assertion}});
+- whether Mission Join Assertions are required, which they SHOULD be
+  for the high-consequence classes ({{join-assertion}}); and
+- which action paths are covered by runtime enforcement, since nothing
+  at the token layer covers the rest.
 
 **No Mission-bound credentials.** Tokens carry no `mission` claim and
 no Mission-derived `authorization_details`. Nothing cryptographically

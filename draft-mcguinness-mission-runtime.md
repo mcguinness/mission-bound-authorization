@@ -405,12 +405,19 @@ conforms to this profile only for the resources, action classes,
 execution paths, and authorization-detail types named in its
 enforcement scope.
 
-A deployment that claims conformance to this profile MUST document its
-enforcement scope, including:
+A deployment that claims conformance to this profile MUST publish an
+**Enforcement Scope Statement**: the structured, referenceable
+declaration of its enforcement scope that auditors, procurement, and
+interop tests key on. It MUST include:
 
 - the protected resources, action classes, and execution paths it
   mediates;
-- the PEP locations that can prevent those actions;
+- the PEP locations that can prevent those actions, and the unmediated
+  paths explicitly excluded from the claim (the harness profile's
+  execution-environment scope statement supplies these for a
+  harness-run deployment, {{I-D.draft-mcguinness-mission-harness}});
+- the credential custody mode for each mediated class (mediated
+  custody in the PEP, or agent-held, {{custody}});
 - the PDP or PDPs that evaluate Mission-bound decisions;
 - the `authorization_details` types, action identifiers, and constraint
   vocabularies it supports;
@@ -1104,11 +1111,19 @@ is the deployment's accepted state lease.
   acceptable latency is deployment- and consequence-specific, but the
   bound is the number that determines the profile's headline
   revocation property, so publishing it without its latency
-  consequence is non-conformant. As non-normative guidance, deployments
-  target a staleness bound no greater than 300 seconds for the
-  irreversible-action, external-commitment, and privileged-administration
-  classes, and justify any larger value in the enforcement-scope
-  statement; the lower-consequence classes may run looser.
+  consequence is non-conformant. The recommended budgets per class,
+  non-normative, are:
+
+  | Class | Recommended freshness budget |
+  |---|---|
+  | Irreversible, external commitment, privileged administration | active source required; seconds to minutes (target <= 300 s) |
+  | External communication (any class) | active source required, plus an egress PEP |
+  | Reversible consequential write | short lease |
+  | Consequential read | token lifetime or lease, by sensitivity |
+  | Audit-only | no active freshness required |
+
+  A deployment justifies any looser value for a high-consequence class
+  in its Enforcement Scope Statement.
 - For the high-consequence classes, the state source MUST be an active
   freshness mechanism that can reflect a revocation within the staleness
   bound: token introspection at the issuer ({{RFC7662}}), the Mission Status
@@ -1181,6 +1196,30 @@ document defines no second canonicalization and no policy-language
 wire form for the view.
 
 # Parameter binding and time-of-check to time-of-use {#parameter-binding}
+
+Parameter binding is only as consistent as the normalization behind
+it, so this profile collects that normalization into a named
+**Operation Profile**: the per-operation (or per-operation-family)
+statement, part of the Resource Server runtime profile
+({{rs-runtime-profile}}), that MUST fix all of the following, so two
+implementers of the same operation bind the same bytes:
+
+- the action identifier and how it maps to a `resource`;
+- the parameter schema: which parameters exist and their types;
+- default insertion and omitted-optional-field rules applied before
+  canonicalization;
+- set-like array handling and any other canonicalization beyond the
+  issuance profile's rules;
+- exactly which fields enter the `parameter_digest`;
+- whether a single-use decision identifier is required (versus a
+  validity window plus idempotency key);
+- whether an execution lease is required; and
+- the evidence fields the decision and execution records carry for the
+  operation.
+
+The rules below are the normative requirements the Operation Profile
+records; a deployment that leaves any of them unstated for a mediated
+operation has not specified that operation's binding.
 
 A permit for an operation does not authorize arbitrary parameter
 values. For consequential writes, irreversible actions, external
