@@ -1452,11 +1452,9 @@ makes the blob the carrier of the Mission record.<a href="#section-3-1" class="p
 issuance profile's Mission Record section defines it, for every
 mission it approves, with <code>issuer</code> equal to the <code>approver</code> URL. The
 blob <span class="bcp14">MUST</span> include a <code>mission_record</code> member: a JSON object carrying
-the record's immutable members, <code>id</code>, <code>issuer</code>,
-<code>intent</code>, <code>authority_set</code>, <code>authority_hash</code>, <code>intent_hash</code>,
-<code>subject</code>, <code>approver</code>, <code>client_id</code>, <code>policy_version</code>,
-<code>approval_event_id</code>, <code>created_at</code>, and <code>expires_at</code>, each as the
-issuance profile defines it. The record's <code>state</code> <span class="bcp14">MUST NOT</span> appear in
+every immutable member of the Mission record, each as the issuance
+profile's Mission Record section defines it; that section's member
+list is authoritative and is not restated here. The record's <code>state</code> <span class="bcp14">MUST NOT</span> appear in
 the blob: the blob is immutable under <code>s256</code>, and state is served by
 the lifecycle surfaces (<a href="#lifecycle" class="auto internal xref">Section 6</a>).<a href="#section-3-2" class="pilcrow">¶</a></p>
 <p id="section-3-3">The mapping into AAuth's vocabulary is fixed as follows:<a href="#section-3-3" class="pilcrow">¶</a></p>

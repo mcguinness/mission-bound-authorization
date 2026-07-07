@@ -14,6 +14,7 @@ Neither bounds how much of an approved authority a Mission may consume.
 This document defines an experimental consumption-metering extension:
 four cumulative consumption bounds a Mission Intent may carry
 ( max_budget ,  max_calls ,  max_duration , and  max_egress_volume ),
+an exclusivity control ( exclusive , separation of duty),
 the runtime metering
 semantics that enforce them (atomic check-and-decrement, reserve and
 commit postures, duration leases, and settlement), and the AuthZEN wire
@@ -1104,6 +1105,7 @@ Neither bounds how much of an approved authority a Mission may consume.
 This document defines an experimental consumption-metering extension:
 four cumulative consumption bounds a Mission Intent may carry
 (<code>max_budget</code>, <code>max_calls</code>, <code>max_duration</code>, and <code>max_egress_volume</code>),
+an exclusivity control (<code>exclusive</code>, separation of duty),
 the runtime metering
 semantics that enforce them (atomic check-and-decrement, reserve and
 commit postures, duration leases, and settlement), and the AuthZEN wire
@@ -1206,41 +1208,47 @@ refuse rather than silently ignore it.<a href="#section-abstract-1" class="pilcr
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
-            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-authzen-binding" class="internal xref">AuthZEN Binding</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
-                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-settlement-exchange" class="internal xref">Settlement Exchange</a></p>
-</li>
-            </ul>
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-exclusivity-and-separation-" class="internal xref">Exclusivity and Separation of Duty</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
-            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-conformance" class="internal xref">Conformance</a></p>
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-aggregate-bounds" class="internal xref">Aggregate Bounds</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
-            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
-</li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
-            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
-</li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
-            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
-</li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
-            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-references" class="internal xref">References</a></p>
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-authzen-binding" class="internal xref">AuthZEN Binding</a></p>
 <ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
-                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
-                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-settlement-exchange" class="internal xref">Settlement Exchange</a></p>
 </li>
             </ul>
 </li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
-            <p id="section-toc.1-1.14.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
-            <p id="section-toc.1-1.15.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.1">
+                <p id="section-toc.1-1.15.2.1.1"><a href="#section-15.1" class="auto internal xref">15.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.2">
+                <p id="section-toc.1-1.15.2.2.1"><a href="#section-15.2" class="auto internal xref">15.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1427,6 +1435,18 @@ bytes of those actions' bound payload parameters and the count of
 such actions. It bounds the volume of within-scope laundering; it
 does not detect it.<a href="#section-6-2.8.1" class="pilcrow">¶</a></p>
 </dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.9">
+<code>exclusive</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.10">
+          <p id="section-6-2.10.1"><span class="bcp14">OPTIONAL</span>. An array of exclusivity groups, each an array of two or
+more selectors. A selector is an object with <code>resource</code> (<span class="bcp14">REQUIRED</span>,
+a string) and <code>actions</code> (<span class="bcp14">OPTIONAL</span>, an array of strings); it matches
+a consequential action whose resource equals <code>resource</code> and, when
+<code>actions</code> is present, whose invoked action is within it. Within a
+group, the selectors name authority the Approver consents <span class="bcp14">MUST NOT</span>
+be combined under this Mission (<a href="#exclusivity" class="auto internal xref">Section 8</a>).<a href="#section-6-2.10.1" class="pilcrow">¶</a></p>
+</dd>
       <dd class="break"></dd>
 </dl>
 <p id="section-6-3">The bounds are carried on the Mission and committed by <code>intent_hash</code>.
@@ -1564,16 +1584,71 @@ documented reserve/commit posture.<a href="#section-7.2-1" class="pilcrow">¶</a
 </div>
 </section>
 </div>
-<div id="authzen-binding">
+<div id="exclusivity">
 <section id="section-8">
-      <h2 id="name-authzen-binding">
-<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-authzen-binding" class="section-name selfRef">AuthZEN Binding</a>
+      <h2 id="name-exclusivity-and-separation-">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-exclusivity-and-separation-" class="section-name selfRef">Exclusivity and Separation of Duty</a>
       </h2>
-<p id="section-8-1">Where the runtime deployment uses the AuthZEN binding
+<p id="section-8-1">The <code>exclusive</code> control (<a href="#bounds" class="auto internal xref">Section 6</a>) is not a consumption bound: it
+is a stateful separation-of-duty rule enforced with the same
+machinery. Within an exclusivity group, the first permitted
+consequential action matching a selector latches the group to that
+selector, atomically with the permit; for the Mission's remaining
+lifetime the PDP <span class="bcp14">MUST</span> refuse a consequential action matching any
+other selector of the same group. The latch is per group and per
+Mission, is PDP-side operational state like a consumption counter
+(<a href="#metering" class="auto internal xref">Section 7</a>), and never unlatches: narrowing by exercise is
+monotonic, like every other narrowing in the family.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-2">Exclusivity turns the quarantine deployment pattern
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>) into consented,
+enforceable structure: an Approver can approve a Mission that may
+read a sensitive store or communicate externally, but never both.
+The groups are consented at the approval event, committed by
+<code>intent_hash</code> with the other <code>controls</code> members, and rendered in the
+consent disclosure (<a href="#consent" class="auto internal xref">Section 6.1</a> applies unchanged).<a href="#section-8-2" class="pilcrow">¶</a></p>
+<p id="section-8-3">In the AuthZEN binding, a refusal under a latched group is denied
+with <code>exclusivity_latched</code>, an extension of the runtime denial set
+under the AuthZEN profile's coordinated-extension conventions
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), and recorded as the
+<code>denial_reason</code> in Decision Evidence. A PDP that cannot establish a
+group's latch state fails closed for the actions the group covers,
+per the runtime profile's availability posture.<a href="#section-8-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="aggregate-bounds">
+<section id="section-9">
+      <h2 id="name-aggregate-bounds">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-aggregate-bounds" class="section-name selfRef">Aggregate Bounds</a>
+      </h2>
+<p id="section-9-1">The bounds of this document are Mission-keyed. A deployment <span class="bcp14">MAY</span>
+additionally meter the same bound classes across Missions, keyed by
+the Mission's <code>subject</code> or by the approved <code>client_id</code>, so a fleet
+operator can cap what an agent identity or a Subject consumes in
+total rather than per task. The counter semantics, reserve/commit
+postures, and refusal behavior are unchanged; only the key differs.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">An aggregate bound is deployment policy: it is carried on no single
+Mission Intent, is committed by no <code>intent_hash</code>, and is disclosed
+through the deployment's enforcement-scope statement rather than the
+approval event. A refusal under an aggregate bound is carried as
+<code>quota_exceeded</code>, and Decision Evidence records the
+deployment-defined aggregate key class.<a href="#section-9-2" class="pilcrow">¶</a></p>
+<p id="section-9-3">Aggregate keying crosses the family's per-Mission consistency
+domains: a subject-keyed counter is shared by every Mission the
+subject holds, so it cannot be sharded by Mission Identifier and is
+provisioned as its own consistency domain
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-9-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authzen-binding">
+<section id="section-10">
+      <h2 id="name-authzen-binding">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-authzen-binding" class="section-name selfRef">AuthZEN Binding</a>
+      </h2>
+<p id="section-10-1">Where the runtime deployment uses the AuthZEN binding
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), this section defines the
 wire representation of metering. It defines no new metering semantics
-and no new constraint.<a href="#section-8-1" class="pilcrow">¶</a></p>
-<p id="section-8-2">When metering a bound would exceed it, the PDP <span class="bcp14">MUST</span> deny with
+and no new constraint.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<p id="section-10-2">When metering a bound would exceed it, the PDP <span class="bcp14">MUST</span> deny with
 <code>quota_exceeded</code> (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) instead of
 returning a permit, and <span class="bcp14">MUST</span> record <code>quota_exceeded</code> as the
 <code>denial_reason</code> in Decision Evidence. Whether a metered permit is
@@ -1582,50 +1657,50 @@ decision time, follows the deployment's documented reserve/commit
 posture (<a href="#retry" class="auto internal xref">Section 7.2</a>); this binding fixes neither. In a batch (boxcar)
 evaluation, consumption metering applies per item in request order. The
 exactness of the bound is the consistency bound of <a href="#topology" class="auto internal xref">Section 7.1</a>, not a
-property of this wire binding.<a href="#section-8-2" class="pilcrow">¶</a></p>
+property of this wire binding.<a href="#section-10-2" class="pilcrow">¶</a></p>
 <div id="settlement-exchange">
-<section id="section-8.1">
+<section id="section-10.1">
         <h3 id="name-settlement-exchange">
-<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-settlement-exchange" class="section-name selfRef">Settlement Exchange</a>
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-settlement-exchange" class="section-name selfRef">Settlement Exchange</a>
         </h3>
-<p id="section-8.1-1">The metering rules require the PEP to signal actual use so the PDP
+<p id="section-10.1-1">The metering rules require the PEP to signal actual use so the PDP
 commits consumption and releases any reservation. In the AuthZEN
 binding, delivery of the Execution Evidence Object
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) to the PDP is that
 commit-or-release signal: on receipt the PDP commits the consumption
 the linked action used and releases any reserved excess, keyed to the
-Execution Evidence's <code>decision_id</code>.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
-<p id="section-8.1-2">For a duration-metered action the PEP reports the measured duration in
+Execution Evidence's <code>decision_id</code>.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<p id="section-10.1-2">For a duration-metered action the PEP reports the measured duration in
 the Execution Evidence <code>measured_duration</code> member, and the PDP commits
 that duration against <code>max_duration</code>. A duration-lease renewal is a new
 re-evaluation request that carries the prior permit's <code>decision_id</code> in
 <code>context.prior_decision_id</code>, so the PDP continues the same metered
 activity rather than opening a new reservation. This exchange requires
-one request member and one evidence member:<a href="#section-8.1-2" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-8.1-3">
-          <dt id="section-8.1-3.1">
+one request member and one evidence member:<a href="#section-10.1-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10.1-3">
+          <dt id="section-10.1-3.1">
 <code>context.prior_decision_id</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-8.1-3.2">
-            <p id="section-8.1-3.2.1"><span class="bcp14">OPTIONAL</span>. A string. Present on a duration-lease renewal request,
+          <dd style="margin-left: 1.5em" id="section-10.1-3.2">
+            <p id="section-10.1-3.2.1"><span class="bcp14">OPTIONAL</span>. A string. Present on a duration-lease renewal request,
 carrying the <code>decision_id</code> of the permit being renewed. Absent on an
-initial request.<a href="#section-8.1-3.2.1" class="pilcrow">¶</a></p>
+initial request.<a href="#section-10.1-3.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-8.1-3.3">
+<dt id="section-10.1-3.3">
 <code>measured_duration</code> (Execution Evidence):</dt>
-          <dd style="margin-left: 1.5em" id="section-8.1-3.4">
-            <p id="section-8.1-3.4.1"><span class="bcp14">REQUIRED</span> for a duration-metered action, otherwise absent. A string
+          <dd style="margin-left: 1.5em" id="section-10.1-3.4">
+            <p id="section-10.1-3.4.1"><span class="bcp14">REQUIRED</span> for a duration-metered action, otherwise absent. A string
 containing an ISO 8601 duration (the <code>duration</code> rule in Appendix A of
-<span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>): the PEP's measured duration for the executed action.<a href="#section-8.1-3.4.1" class="pilcrow">¶</a></p>
+<span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>): the PEP's measured duration for the executed action.<a href="#section-10.1-3.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-8.1-4">A renewal repeats the evaluation-request envelope for the same
+<p id="section-10.1-4">A renewal repeats the evaluation-request envelope for the same
 activity and adds <code>context.prior_decision_id</code>. Here a long-running,
 duration-metered ledger reconciliation renews its lease before the
 prior permit expires; the action is not parameter-bound, so no
-<code>parameter_digest</code> is carried:<a href="#section-8.1-4" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-8.1-5">
+<code>parameter_digest</code> is carried:<a href="#section-10.1-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-10.1-5">
 <pre>
 {
   "subject": {
@@ -1661,121 +1736,130 @@ prior permit expires; the action is not parameter-bound, so no
     "prior_decision_id": "dec_0Rt5nB8xW2qK7mJ4vS1pL9eYc"
   }
 }
-</pre><a href="#section-8.1-5" class="pilcrow">¶</a>
+</pre><a href="#section-10.1-5" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
 </section>
 </div>
 <div id="conformance">
-<section id="section-9">
+<section id="section-11">
       <h2 id="name-conformance">
-<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
       </h2>
-<p id="section-9-1">A runtime deployment that claims this profile <span class="bcp14">MUST</span>:<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-11-1">A runtime deployment that claims this profile <span class="bcp14">MUST</span>:<a href="#section-11-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-9-2.1">
-          <p id="section-9-2.1.1">meter every consumption bound a governed Mission carries per
+<li class="normal" id="section-11-2.1">
+          <p id="section-11-2.1.1">meter every consumption bound a governed Mission carries per
 <a href="#metering" class="auto internal xref">Section 7</a>, within its documented runtime enforcement scope
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>);<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>);<a href="#section-11-2.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-2.2">
-          <p id="section-9-2.2.1">refuse a consequential action that would exceed a bound, and refuse
-on any bound it cannot meter;<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-2.2">
+          <p id="section-11-2.2.1">refuse a consequential action that would exceed a bound, and refuse
+on any bound it cannot meter;<a href="#section-11-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-2.3">
-          <p id="section-9-2.3.1">publish its consistency bound under a multi-PDP topology
-(<a href="#topology" class="auto internal xref">Section 7.1</a>);<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-2.3">
+          <p id="section-11-2.3.1">enforce every consented exclusivity group with a latch atomic with
+the permit (<a href="#exclusivity" class="auto internal xref">Section 8</a>);<a href="#section-11-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-2.4">
-          <p id="section-9-2.4.1">define and document its retry, idempotency, and reserve/commit
-posture (<a href="#retry" class="auto internal xref">Section 7.2</a>); and<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-2.4">
+          <p id="section-11-2.4.1">where aggregate bounds are configured, meter and disclose them per
+<a href="#aggregate-bounds" class="auto internal xref">Section 9</a>;<a href="#section-11-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-2.5">
-          <p id="section-9-2.5.1">where the AuthZEN binding is in use, implement the settlement
-exchange of <a href="#settlement-exchange" class="auto internal xref">Section 8.1</a>.<a href="#section-9-2.5.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-2.5">
+          <p id="section-11-2.5.1">publish its consistency bound under a multi-PDP topology
+(<a href="#topology" class="auto internal xref">Section 7.1</a>);<a href="#section-11-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.6">
+          <p id="section-11-2.6.1">define and document its retry, idempotency, and reserve/commit
+posture (<a href="#retry" class="auto internal xref">Section 7.2</a>); and<a href="#section-11-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.7">
+          <p id="section-11-2.7.1">where the AuthZEN binding is in use, implement the settlement
+exchange of <a href="#settlement-exchange" class="auto internal xref">Section 10.1</a>.<a href="#section-11-2.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-9-3">A Mission Issuer in a deployment claiming this profile <span class="bcp14">MUST</span> carry the
+<p id="section-11-3">A Mission Issuer in a deployment claiming this profile <span class="bcp14">MUST</span> carry the
 consented bounds on the Mission record committed by <code>intent_hash</code>, and
-<span class="bcp14">MUST</span> render them at the approval event per <a href="#consent" class="auto internal xref">Section 6.1</a>.<a href="#section-9-3" class="pilcrow">¶</a></p>
+<span class="bcp14">MUST</span> render them at the approval event per <a href="#consent" class="auto internal xref">Section 6.1</a>.<a href="#section-11-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
-<section id="section-10">
+<section id="section-12">
       <h2 id="name-security-considerations">
-<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
       </h2>
-<p id="section-10-1">Consumption bounds limit the blast radius of a compromised or runaway
+<p id="section-12-1">Consumption bounds limit the blast radius of a compromised or runaway
 agent in a dimension authority narrowing cannot: a Mission whose every
 action is individually authorized can still be drained by volume.
-Their enforcement, however, is only as good as the metering:<a href="#section-10-1" class="pilcrow">¶</a></p>
+Their enforcement, however, is only as good as the metering:<a href="#section-12-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-10-2.1">
-          <p id="section-10-2.1.1"><strong>Unenforced bounds are consent theater.</strong> A bound rendered at
+<li class="normal" id="section-12-2.1">
+          <p id="section-12-2.1.1"><strong>Unenforced bounds are consent theater.</strong> A bound rendered at
 approval but not metered anywhere misleads the Approver about the
 Mission's exposure. The consent-integrity rule (<a href="#consent" class="auto internal xref">Section 6.1</a>) exists
 for this; a deployment that cannot meter <span class="bcp14">MUST NOT</span> render the bound as
-enforced.<a href="#section-10-2.1.1" class="pilcrow">¶</a></p>
+enforced.<a href="#section-12-2.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-10-2.2">
-          <p id="section-10-2.2.1"><strong>Distributed undercounting.</strong> Under a multi-PDP topology, an
+        <li class="normal" id="section-12-2.2">
+          <p id="section-12-2.2.1"><strong>Distributed undercounting.</strong> Under a multi-PDP topology, an
 attacker who can spread actions across decision points exploits the
 consistency gap. The published consistency bound (<a href="#topology" class="auto internal xref">Section 7.1</a>) is
 the honest statement of that exposure; per-PDP sub-budgets bound it
-structurally.<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
+structurally.<a href="#section-12-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-10-2.3">
-          <p id="section-10-2.3.1"><strong>Settlement honesty.</strong> The PDP commits what the PEP reports.
+        <li class="normal" id="section-12-2.3">
+          <p id="section-12-2.3.1"><strong>Settlement honesty.</strong> The PDP commits what the PEP reports.
 Execution Evidence is integrity-protected and signed by the PEP
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); a compromised PEP can
 under-report duration or spend, which is within the runtime profile's
-trusted-base assumptions for PEPs.<a href="#section-10-2.3.1" class="pilcrow">¶</a></p>
+trusted-base assumptions for PEPs.<a href="#section-12-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-10-2.4">
-          <p id="section-10-2.4.1"><strong>Lease abandonment.</strong> An agent that stops renewing a duration lease
+        <li class="normal" id="section-12-2.4">
+          <p id="section-12-2.4.1"><strong>Lease abandonment.</strong> An agent that stops renewing a duration lease
 and keeps acting is stopped by the PEP, which <span class="bcp14">MUST</span> stop the action or
-obtain a new permit before the lease is exhausted (<a href="#metering" class="auto internal xref">Section 7</a>).<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
+obtain a new permit before the lease is exhausted (<a href="#metering" class="auto internal xref">Section 7</a>).<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
 </div>
 <div id="privacy-considerations">
-<section id="section-11">
+<section id="section-13">
       <h2 id="name-privacy-considerations">
-<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
-<p id="section-11-1">Metering state (spend, call counts, activity durations) is a
+<p id="section-13-1">Metering state (spend, call counts, activity durations) is a
 fine-grained record of Mission activity over time. It <span class="bcp14">SHOULD</span> be
 retained under the same access controls and retention windows as
 runtime enforcement evidence
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and disclosed in decision
-responses only as refusals, not as remaining-balance oracles.<a href="#section-11-1" class="pilcrow">¶</a></p>
+responses only as refusals, not as remaining-balance oracles.<a href="#section-13-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana">
-<section id="section-12">
+<section id="section-14">
       <h2 id="name-iana-considerations">
-<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-12-1">This document has no IANA actions. <code>max_budget</code>, <code>max_calls</code>,
-<code>max_duration</code>, and <code>max_egress_volume</code> are Mission Intent <code>controls</code>
+<p id="section-14-1">This document has no IANA actions. <code>max_budget</code>, <code>max_calls</code>,
+<code>max_duration</code>, <code>max_egress_volume</code>, and <code>exclusive</code> are Mission
+Intent <code>controls</code>
 members defined by this
 profile under the issuance profile's controls extension seam;
 <code>context.prior_decision_id</code> and <code>measured_duration</code> are AuthZEN
 extension data carried per the AuthZEN profile's conventions
-(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-12-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-14-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
-<section id="section-13">
+<section id="section-15">
       <h2 id="name-references">
-<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-references" class="section-name selfRef">References</a>
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-references" class="section-name selfRef">References</a>
       </h2>
 <div id="sec-normative-references">
-<section id="section-13.1">
+<section id="section-15.1">
         <h3 id="name-normative-references">
-<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+<a href="#section-15.1" class="section-number selfRef">15.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
@@ -1802,11 +1886,15 @@ extension data carried per the AuthZEN profile's conventions
 </section>
 </div>
 <div id="sec-informative-references">
-<section id="section-13.2">
+<section id="section-15.2">
         <h3 id="name-informative-references">
-<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+<a href="#section-15.2" class="section-number selfRef">15.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization Architecture"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>

@@ -20,13 +20,13 @@ Abstract
    consume.  This document defines an experimental consumption-metering
    extension: four cumulative consumption bounds a Mission Intent may
    carry (max_budget, max_calls, max_duration, and max_egress_volume),
-   the runtime metering semantics that enforce them (atomic check-and-
-   decrement, reserve and commit postures, duration leases, and
-   settlement), and the AuthZEN wire binding for lease renewal and
-   settlement.  A consumption bound is consented at approval and
-   enforced only by a runtime deployment that implements this profile; a
-   deployment that does not meter a bound must refuse rather than
-   silently ignore it.
+   an exclusivity control (exclusive, separation of duty), the runtime
+   metering semantics that enforce them (atomic check-and-decrement,
+   reserve and commit postures, duration leases, and settlement), and
+   the AuthZEN wire binding for lease renewal and settlement.  A
+   consumption bound is consented at approval and enforced only by a
+   runtime deployment that implements this profile; a deployment that
+   does not meter a bound must refuse rather than silently ignore it.
 
 About This Document
 
@@ -84,15 +84,17 @@ Table of Contents
    7.  Consumption Metering
      7.1.  Exactness and Topology
      7.2.  Retry, Idempotency, and Reserve/Commit Posture
-   8.  AuthZEN Binding
-     8.1.  Settlement Exchange
-   9.  Conformance
-   10. Security Considerations
-   11. Privacy Considerations
-   12. IANA Considerations
-   13. References
-     13.1.  Normative References
-     13.2.  Informative References
+   8.  Exclusivity and Separation of Duty
+   9.  Aggregate Bounds
+   10. AuthZEN Binding
+     10.1.  Settlement Exchange
+   11. Conformance
+   12. Security Considerations
+   13. Privacy Considerations
+   14. IANA Considerations
+   15. References
+     15.1.  Normative References
+     15.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -218,6 +220,14 @@ Table of Contents
       such actions.  It bounds the volume of within-scope laundering; it
       does not detect it.
 
+   exclusive:  OPTIONAL.  An array of exclusivity groups, each an array
+      of two or more selectors.  A selector is an object with resource
+      (REQUIRED, a string) and actions (OPTIONAL, an array of strings);
+      it matches a consequential action whose resource equals resource
+      and, when actions is present, whose invoked action is within it.
+      Within a group, the selectors name authority the Approver consents
+      MUST NOT be combined under this Mission (Section 8).
+
    The bounds are carried on the Mission and committed by intent_hash.
    They are not enforced by the Authorization Server at issuance; they
    are enforced by the runtime layer at the point of use (Section 7).
@@ -326,7 +336,58 @@ Table of Contents
    decrement ambiguous.  A failed attempt releases any reserved
    consumption per the deployment's documented reserve/commit posture.
 
-8.  AuthZEN Binding
+8.  Exclusivity and Separation of Duty
+
+   The exclusive control (Section 6) is not a consumption bound: it is a
+   stateful separation-of-duty rule enforced with the same machinery.
+   Within an exclusivity group, the first permitted consequential action
+   matching a selector latches the group to that selector, atomically
+   with the permit; for the Mission's remaining lifetime the PDP MUST
+   refuse a consequential action matching any other selector of the same
+   group.  The latch is per group and per Mission, is PDP-side
+   operational state like a consumption counter (Section 7), and never
+   unlatches: narrowing by exercise is monotonic, like every other
+   narrowing in the family.
+
+   Exclusivity turns the quarantine deployment pattern
+   ([I-D.draft-mcguinness-mission-architecture]) into consented,
+   enforceable structure: an Approver can approve a Mission that may
+   read a sensitive store or communicate externally, but never both.
+   The groups are consented at the approval event, committed by
+   intent_hash with the other controls members, and rendered in the
+   consent disclosure (Section 6.1 applies unchanged).
+
+   In the AuthZEN binding, a refusal under a latched group is denied
+   with exclusivity_latched, an extension of the runtime denial set
+   under the AuthZEN profile's coordinated-extension conventions
+   ([I-D.draft-mcguinness-mission-authzen]), and recorded as the
+   denial_reason in Decision Evidence.  A PDP that cannot establish a
+   group's latch state fails closed for the actions the group covers,
+   per the runtime profile's availability posture.
+
+9.  Aggregate Bounds
+
+   The bounds of this document are Mission-keyed.  A deployment MAY
+   additionally meter the same bound classes across Missions, keyed by
+   the Mission's subject or by the approved client_id, so a fleet
+   operator can cap what an agent identity or a Subject consumes in
+   total rather than per task.  The counter semantics, reserve/commit
+   postures, and refusal behavior are unchanged; only the key differs.
+
+   An aggregate bound is deployment policy: it is carried on no single
+   Mission Intent, is committed by no intent_hash, and is disclosed
+   through the deployment's enforcement-scope statement rather than the
+   approval event.  A refusal under an aggregate bound is carried as
+   quota_exceeded, and Decision Evidence records the deployment-defined
+   aggregate key class.
+
+   Aggregate keying crosses the family's per-Mission consistency
+   domains: a subject-keyed counter is shared by every Mission the
+   subject holds, so it cannot be sharded by Mission Identifier and is
+   provisioned as its own consistency domain
+   ([I-D.draft-mcguinness-mission-runtime]).
+
+10.  AuthZEN Binding
 
    Where the runtime deployment uses the AuthZEN binding
    ([I-D.draft-mcguinness-mission-authzen]), this section defines the
@@ -344,7 +405,7 @@ Table of Contents
    order.  The exactness of the bound is the consistency bound of
    Section 7.1, not a property of this wire binding.
 
-8.1.  Settlement Exchange
+10.1.  Settlement Exchange
 
    The metering rules require the PEP to signal actual use so the PDP
    commits consumption and releases any reservation.  In the AuthZEN
@@ -412,7 +473,7 @@ Table of Contents
      }
    }
 
-9.  Conformance
+11.  Conformance
 
    A runtime deployment that claims this profile MUST:
 
@@ -423,6 +484,12 @@ Table of Contents
    *  refuse a consequential action that would exceed a bound, and
       refuse on any bound it cannot meter;
 
+   *  enforce every consented exclusivity group with a latch atomic with
+      the permit (Section 8);
+
+   *  where aggregate bounds are configured, meter and disclose them per
+      Section 9;
+
    *  publish its consistency bound under a multi-PDP topology
       (Section 7.1);
 
@@ -430,13 +497,13 @@ Table of Contents
       posture (Section 7.2); and
 
    *  where the AuthZEN binding is in use, implement the settlement
-      exchange of Section 8.1.
+      exchange of Section 10.1.
 
    A Mission Issuer in a deployment claiming this profile MUST carry the
    consented bounds on the Mission record committed by intent_hash, and
    MUST render them at the approval event per Section 6.1.
 
-10.  Security Considerations
+12.  Security Considerations
 
    Consumption bounds limit the blast radius of a compromised or runaway
    agent in a dimension authority narrowing cannot: a Mission whose
@@ -465,7 +532,7 @@ Table of Contents
       and keeps acting is stopped by the PEP, which MUST stop the action
       or obtain a new permit before the lease is exhausted (Section 7).
 
-11.  Privacy Considerations
+13.  Privacy Considerations
 
    Metering state (spend, call counts, activity durations) is a fine-
    grained record of Mission activity over time.  It SHOULD be retained
@@ -474,18 +541,18 @@ Table of Contents
    disclosed in decision responses only as refusals, not as remaining-
    balance oracles.
 
-12.  IANA Considerations
+14.  IANA Considerations
 
    This document has no IANA actions. max_budget, max_calls,
-   max_duration, and max_egress_volume are Mission Intent controls
-   members defined by this profile under the issuance profile's controls
-   extension seam; context.prior_decision_id and measured_duration are
-   AuthZEN extension data carried per the AuthZEN profile's conventions
-   ([I-D.draft-mcguinness-mission-authzen]).
+   max_duration, max_egress_volume, and exclusive are Mission Intent
+   controls members defined by this profile under the issuance profile's
+   controls extension seam; context.prior_decision_id and
+   measured_duration are AuthZEN extension data carried per the AuthZEN
+   profile's conventions ([I-D.draft-mcguinness-mission-authzen]).
 
-13.  References
+15.  References
 
-13.1.  Normative References
+15.1.  Normative References
 
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
@@ -510,7 +577,13 @@ Table of Contents
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
-13.2.  Informative References
+15.2.  Informative References
+
+   [I-D.draft-mcguinness-mission-architecture]
+              McGuinness, K., "Mission-Bound Authorization
+              Architecture", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-mission-
+              architecture.html>.
 
    [I-D.draft-mcguinness-mission-authzen]
               McGuinness, K., "Mission-Bound Runtime Enforcement:

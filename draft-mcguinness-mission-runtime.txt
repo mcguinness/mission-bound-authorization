@@ -105,30 +105,31 @@ Table of Contents
    8.  Parameter binding and time-of-check to time-of-use
    9.  Consumption Bounds Fail Closed
    10. Failure modes
-   11. Runtime enforcement evidence
-     11.1.  Required decision evidence
-     11.2.  Execution-outcome evidence
-     11.3.  Mission Receipt
-     11.4.  Record integrity and retention
-   12. Decision API binding
-   13. Out of scope
-   14. Security Considerations
-     14.1.  What this layer adds, and its limits
-     14.2.  Placement and bypass
-     14.3.  Prompt injection and exfiltration
-     14.4.  Relationship to inspection-based controls
-     14.5.  Classification integrity
-     14.6.  Freshness and consumption honesty
-     14.7.  Resource policy remains authoritative
-     14.8.  TOCTOU and replay
-     14.9.  Confused deputy across resources
-     14.10. Decision channel and token disclosure
-     14.11. Evidence privacy and correlation
-   15. IANA Considerations
-     15.1.  OAuth Protected Resource Metadata Registration
-   16. References
-     16.1.  Normative References
-     16.2.  Informative References
+   11. Deployment Considerations
+   12. Runtime enforcement evidence
+     12.1.  Required decision evidence
+     12.2.  Execution-outcome evidence
+     12.3.  Mission Receipt
+     12.4.  Record integrity and retention
+   13. Decision API binding
+   14. Out of scope
+   15. Security Considerations
+     15.1.  What this layer adds, and its limits
+     15.2.  Placement and bypass
+     15.3.  Prompt injection and exfiltration
+     15.4.  Relationship to inspection-based controls
+     15.5.  Classification integrity
+     15.6.  Freshness and consumption honesty
+     15.7.  Resource policy remains authoritative
+     15.8.  TOCTOU and replay
+     15.9.  Confused deputy across resources
+     15.10. Decision channel and token disclosure
+     15.11. Evidence privacy and correlation
+   16. IANA Considerations
+     16.1.  OAuth Protected Resource Metadata Registration
+   17. References
+     17.1.  Normative References
+     17.2.  Informative References
    Appendix A.  Parameter Digest Worked Example
    Appendix B.  Policy View Worked Example
    Appendix C.  Runtime Evidence Worked Examples
@@ -155,7 +156,7 @@ Table of Contents
    1.  evaluation of a request's parameters against the Mission at the
        point of use (Section 7, Section 8);
 
-   2.  per-action runtime enforcement evidence (Section 11);
+   2.  per-action runtime enforcement evidence (Section 12);
 
    3.  binding of the invoked tool or function identity to the Mission's
        approved authority (Section 7);
@@ -185,12 +186,12 @@ Table of Contents
    discovery format, a Mission Status endpoint, or a portable audit
    receipt.  It defines what a deployment MUST satisfy when it claims
    runtime Mission enforcement; the surfaces it deliberately leaves to
-   deployments or future work are collected in Section 13.
+   deployments or future work are collected in Section 14.
 
    Because the invariants are not a wire format, two conforming
    deployments do not thereby interoperate at the PEP-PDP boundary; the
    interoperable wire surface is supplied by a separately specified
-   decision API binding (Section 12), the AuthZEN binding being
+   decision API binding (Section 13), the AuthZEN binding being
    [I-D.draft-mcguinness-mission-authzen].  This document is the
    architecture and invariant layer; the binding is the interoperability
    layer.
@@ -282,7 +283,7 @@ Table of Contents
       addressed policy_view_id are defined in Section 7.4.
 
    Runtime enforcement evidence:  The record a consequential action
-      produces for a PDP decision or a PEP refusal path (Section 11).
+      produces for a PDP decision or a PEP refusal path (Section 12).
 
    Enforcement scope:  The set of resources, action classes, execution
       paths, PEP placements, supported authorization details, state
@@ -383,12 +384,12 @@ Table of Contents
       action class (Section 7.3);
 
    *  the runtime enforcement evidence mechanism and retention window
-      (Section 11);
+      (Section 12);
 
    *  the reconciliation window for matching execution-outcome evidence
       to decisions, the component responsible for orphaned-evidence and
       sequence-gap detection, and that component's alerting obligation
-      (Section 11).
+      (Section 12).
 
    A deployment MUST NOT claim runtime enforcement for a resource,
    action class, authorization_details type, or execution path outside
@@ -493,7 +494,7 @@ Table of Contents
    classes*, to which this profile's strictest requirements attach
    (action-bound approval (Section 4.4), mediated custody (Section 4.6),
    active-state freshness (Section 7.3), and execution-outcome evidence
-   (Section 11), each as specified in its own section).  A Mission's
+   (Section 12), each as specified in its own section).  A Mission's
    purpose, or deployment policy, MAY raise an action to a stricter
    class; it MUST NOT lower an action below any minimum classification
    the Resource policy (Section 7) sets for it, including a floor the
@@ -543,7 +544,12 @@ Table of Contents
    highest-consequence classes, a deployment can require a second,
    *action-bound approval*: a fresh approval bound to the concrete
    action and the parameters the PEP is about to permit, distinct from
-   the Mission's initial approval.
+   the Mission's initial approval.  A deployment SHOULD reserve action-
+   bound approval for the actions whose consequence genuinely warrants a
+   human pause: applied broadly it trains the Approver to rubber-stamp,
+   and a rubber-stamped approval binds like a considered one (the
+   consent-fatigue residual of
+   [I-D.draft-mcguinness-mission-security-model]).
 
    An action-bound approval is an approval event under the issuance
    profile bound to the action: it is obtained from an independent
@@ -569,7 +575,7 @@ Table of Contents
    through a standardized access-request and approval workflow and carry
    the resulting approval back as decision input; the AuthZEN binding
    composes with the AuthZEN Access Request and Approval Profile for
-   exactly this (Section 12).  However obtained, the approval is
+   exactly this (Section 13).  However obtained, the approval is
    decision input, not a bearer grant: the runtime decision of Section 7
    remains authoritative, and a persisted grant beyond the single action
    is a Mission expansion, not a property of the approval itself.
@@ -676,7 +682,7 @@ Table of Contents
 
    This narrows, and does not eliminate, the compromised-agent exposure.
    The mediating PEP becomes a trusted component whose compromise is out
-   of scope here (Section 14); a compromised agent can still request
+   of scope here (Section 15); a compromised agent can still request
    mediated actions, which are gated, and can still misuse any low-
    consequence authority it legitimately holds directly.  The aim is
    that the agent is structurally unable to take a high-consequence
@@ -696,6 +702,12 @@ Table of Contents
    key, the deployment revokes the affected tokens and re-derives.
    Mediating-PEP key rotation follows the deployment's published key
    set.
+
+   Mediated execution also places a controllable chokepoint on the
+   egress path itself: content-level controls this profile does not
+   define (data-loss prevention, redaction, payload policy) compose
+   naturally at the mediating PEP, the one component that sees the full
+   payload after the decision and before presentation.
 
 4.7.  Least exposure
 
@@ -878,7 +890,7 @@ Table of Contents
    a PDP that evaluates the action against the established Mission
    (Section 7.2).  This is the normative contract.  The decision API
    wire format is a deployment choice; a binding maps this contract onto
-   a concrete API (Section 12).
+   a concrete API (Section 13).
 
    The PEP MUST supply the inputs the PDP needs for the Mission-bound
    decision.  Runtime enforcement MUST evaluate:
@@ -903,7 +915,7 @@ Table of Contents
       derivation, the PDP MUST also refuse the action when the digest of
       the capability's current extracted definition differs from the
       recorded digest (capability drift); the extraction rule per source
-      format is the decision-API binding's (Section 12).  A source
+      format is the decision-API binding's (Section 13).  A source
       change that leaves the extracted definition byte-identical does
       not by itself refuse; where the deployment also recorded a whole-
       source digest, that digest's stricter semantics apply and any
@@ -912,10 +924,10 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission]).  The identity of the
       executing component that serves a capability (for example, an MCP
       server instance) is a request-time fact the decision-API binding
-      MAY carry (Section 12); Resource policy MAY refuse an executor
+      MAY carry (Section 13); Resource policy MAY refuse an executor
       outside the deployment's trusted set.  Cross-format
       canonicalization, signed capability manifests, and cross-catalog
-      identity remain out of scope (Section 13).
+      identity remain out of scope (Section 14).
 
    *  *Resource policy.* The runtime decision MUST include any
       applicable Resource policy.  A Mission-bound token and runtime
@@ -970,7 +982,7 @@ Table of Contents
    attempted action.  A deny need not end the task, however: a decision-
    API binding MAY mark a denial requestable and route it through an
    access-request and approval workflow, and an approved request MAY be
-   realized as a durable Mission expansion (Section 4.4, Section 12).
+   realized as a durable Mission expansion (Section 4.4, Section 13).
    This profile defines the runtime decision; it leaves that request-
    approval loop, and the expansion that persists an approved request,
    to the decision-API binding and the issuance profile's expansion
@@ -986,7 +998,7 @@ Table of Contents
 
    An agent that holds private-data authority, is exposed to untrusted
    content, and can communicate externally combines the three
-   ingredients of injection-driven exfiltration (Section 14.3).  The
+   ingredients of injection-driven exfiltration (Section 15.3).  The
    profiles gate each ingredient separately; this claim names the
    composite.  A deployment claims *trifecta containment* for a
    Mission's governed work only when all of the following hold, each
@@ -1017,10 +1029,20 @@ Table of Contents
 
    The claim is published with the enforcement-scope conformance
    statement (Section 4.2).  It is containment, not immunity: the limits
-   of Section 14.3 stand, in particular within-scope laundering, bounded
+   of Section 15.3 stand, in particular within-scope laundering, bounded
    quantitatively where an egress-volume bound is metered
    ([I-D.draft-mcguinness-mission-metering]), and PEP-placement
    completeness.
+
+   Both this claim and agent-compromise-resistant enforcement
+   (Section 4.8) rest on the execution-environment scope statement, a
+   self-declared artifact.  A deployment MAY bind that statement to
+   execution-environment attestation, presenting Entity Attestation
+   Token evidence under the AI-agent-instance profile
+   ([I-D.draft-mcguinness-oauth-ai-agent-instance]) covering the
+   isolation properties the statement declares; a verifier SHOULD treat
+   an unattested claim as an organizational assertion and an attested
+   one as a technical one.
 
 7.2.  Mission binding establishment
 
@@ -1134,7 +1156,7 @@ Table of Contents
    trust domain and its output is bound by the content-addressed
    policy_view_id below.  The view is substrate-independent runtime
    machinery; a decision-API binding carries only its identifier on the
-   wire (Section 12).
+   wire (Section 13).
 
    The materialized policy view MUST satisfy three properties:
 
@@ -1239,7 +1261,7 @@ Table of Contents
    also prevents repeat execution of the same normalized action.
    Consequential reads do not require a parameter digest by default; the
    evaluation request still appears in the evidence record, by digest
-   where the parameters are sensitive (Section 11).
+   where the parameters are sensitive (Section 12).
 
    Deployments MUST require parameter binding for consequential reads
    when read parameters materially change the effective resource set or
@@ -1274,7 +1296,7 @@ Table of Contents
 10.  Failure modes
 
    Enforcement is meaningful only if failure is bounded.  A PDP or PEP
-   MUST behave as follows; in all cases the evidence record (Section 11)
+   MUST behave as follows; in all cases the evidence record (Section 12)
    MUST be sufficient to reconstruct which path produced a refusal.
 
    +=========================+=========================================+
@@ -1345,7 +1367,35 @@ Table of Contents
 
                                   Table 4
 
-11.  Runtime enforcement evidence
+11.  Deployment Considerations
+
+   Two properties govern how this profile scales.
+
+   *Token lifetime trades against the enforcement layer.* The issuance
+   profile recommends short-lived tokens because, in an issuance-only
+   deployment, token expiry is the revocation cutoff.  Where this
+   profile's enforcement covers the high-consequence classes with an
+   active-freshness state source, the PDP is the cutoff for the actions
+   that matter, and a deployment MAY extend token lifetimes for
+   issuance-load reasons without silently losing the kill switch; where
+   issuance gating is the only control, short lifetimes remain the
+   control and the issuance profile's recommendation stands.  The choice
+   belongs in the enforcement-scope statement: what stops a revoked
+   Mission, at what latency, is a fact that statement already declares
+   (Section 4.2).
+
+   *The consistency unit is the Mission.* Every strongly consistent
+   requirement this profile and its companions impose, the atomic active
+   check, single-use decision identifiers, and the consumption counters
+   and exclusivity latches of the metering companion
+   ([I-D.draft-mcguinness-mission-metering]), is scoped to one Mission.
+   A multi-node PDP therefore shards its state by the Mission Identifier
+   with no cross-shard coordination; only a deployment-configured
+   aggregate bound crosses that partition and is provisioned as its own
+   consistency domain.  Fail-closed applies per action class
+   (Section 10): a PDP outage stops consequential work and nothing else.
+
+12.  Runtime enforcement evidence
 
    Every PDP decision on a consequential action MUST produce a runtime
    enforcement evidence record.  A PEP refusal for a consequential
@@ -1357,10 +1407,10 @@ Table of Contents
    integrity requirements.  The concrete record schema, any
    interoperable canonical byte representation, separate Decision
    Evidence and Execution Evidence object schemas, and the Mission
-   Receipt's portable schema (Section 11.3) are out of scope
-   (Section 13).
+   Receipt's portable schema (Section 12.3) are out of scope
+   (Section 14).
 
-11.1.  Required decision evidence
+12.1.  Required decision evidence
 
    A record MUST contain:
 
@@ -1414,7 +1464,7 @@ Table of Contents
    and is not required to hold the full Authority Set to record them,
    consistent with [I-D.draft-mcguinness-oauth-mission].
 
-11.2.  Execution-outcome evidence
+12.2.  Execution-outcome evidence
 
    For an action in the high-consequence classes, the executing PEP MUST
    also produce, after it acts, an execution-outcome record keyed to the
@@ -1423,17 +1473,17 @@ Table of Contents
    its execution be reconciled one to one, so a permit that was obtained
    but executed more than once, or executed for different parameters, is
    detectable after the fact.  The detailed object schema is deferred
-   (Section 13).
+   (Section 14).
 
    Reconciliation is bounded in time.  The enforcement scope MUST
    publish a reconciliation window within which an execution-outcome
    record is expected for each decision, and MUST name the component
    responsible for detecting orphaned evidence (a decision with no
    matching execution-outcome record within that window) and sequence
-   gaps in a Mission's records (Section 11.4), and that component's
+   gaps in a Mission's records (Section 12.4), and that component's
    alerting obligation when it detects either.
 
-11.3.  Mission Receipt
+12.3.  Mission Receipt
 
    A *Mission Receipt* is the portable, tamper-evident projection of a
    runtime enforcement evidence record and, for a high-consequence
@@ -1455,10 +1505,10 @@ Table of Contents
    substitutes for a transparency feed
    ([I-D.draft-mcguinness-mission-audit]), the digest of the previous
    Mission Receipt.  The portable schema and canonical byte
-   representation are deferred (Section 13); the members above are the
+   representation are deferred (Section 14); the members above are the
    minimum a deployment-defined Mission Receipt binds.
 
-11.4.  Record integrity and retention
+12.4.  Record integrity and retention
 
    The following requirements apply to every record:
 
@@ -1501,7 +1551,7 @@ Table of Contents
    base64url.  Each exception is identified by its carrying context; the
    sha-256: prefix appears in neither.
 
-12.  Decision API binding
+13.  Decision API binding
 
    The decision contract of Section 7 is abstract: it fixes the inputs,
    the permit, and the invariants, not a wire format.  A *decision API
@@ -1519,10 +1569,10 @@ Table of Contents
    enforcement contract, action classification (Section 4.3), PEP
    placement (Section 4.5), parameter binding (Section 8), the
    consumption-bound failure posture (Section 9), and runtime
-   enforcement evidence (Section 11) are the substance, and they do not
+   enforcement evidence (Section 12) are the substance, and they do not
    depend on the decision wire.
 
-13.  Out of scope
+14.  Out of scope
 
    The following compose with this profile but are deferred to future
    work and are not required to enforce it:
@@ -1535,7 +1585,7 @@ Table of Contents
       catalog identity);
 
    *  the Mission Receipt's portable schema and canonical byte
-      representation (Section 11.3: this profile fixes the term, its
+      representation (Section 12.3: this profile fixes the term, its
       minimum binding, and the local runtime enforcement evidence
       record);
 
@@ -1567,20 +1617,20 @@ Table of Contents
       [I-D.draft-mcguinness-oauth-mission]);
 
    *  risk-signal and semantic intent-alignment inputs to the decision,
-      which are advisory and deployment-defined (Section 14.4); and
+      which are advisory and deployment-defined (Section 15.4); and
 
    *  integrity of the result a tool returns as the application relays
       it to the agent's model, and binding an executed action to the
-      model's own decision (Section 14.4).
+      model's own decision (Section 15.4).
 
    Structured per-argument attenuation of tool grants
    ([I-D.draft-niyikiza-oauth-attenuating-agent-tokens]) is a related
    issuance/delegation-layer primitive, not part of this runtime
    profile.
 
-14.  Security Considerations
+15.  Security Considerations
 
-14.1.  What this layer adds, and its limits
+15.1.  What this layer adds, and its limits
 
    Gating every consequential action against the current Mission
    prevents an active Mission from acting as ambient authority:
@@ -1593,16 +1643,16 @@ Table of Contents
    decision; a compromised PDP can return whatever decisions it chooses.
    Decision and enforcement evidence make such behavior auditable after
    the fact; they do not prevent it in the moment.  Signed, externally
-   verifiable decisions are future work (Section 13).
+   verifiable decisions are future work (Section 14).
 
-14.2.  Placement and bypass
+15.2.  Placement and bypass
 
    The strongest decision logic is void if the PEP is not at the last
    controllable boundary, or if an unmediated path can reach the action
    (Section 4.5).  A deployment's claim is only as strong as the set of
    execution paths it actually mediates; it MUST name that set.
 
-14.3.  Prompt injection and exfiltration
+15.3.  Prompt injection and exfiltration
 
    This profile assumes the agent can be prompt-injected and does not
    try to prevent that.  It constrains what an injected agent can do by
@@ -1636,7 +1686,7 @@ Table of Contents
    layer ([I-D.draft-mcguinness-mission-harness]); it raises the bar but
    is not information-flow control.
 
-14.4.  Relationship to inspection-based controls
+15.4.  Relationship to inspection-based controls
 
    Inspection-based runtime defenses for agentic systems share this
    profile's premise that the agent application is part of the attack
@@ -1649,12 +1699,12 @@ Table of Contents
    kind.  Parameter binding (Section 8) ties a permit to the concrete
    parameters the action executes with, so an application cannot alter a
    tool call's arguments after the decision.  Capability-source binding,
-   in the AuthZEN binding (Section 12), ties an approved action to the
+   in the AuthZEN binding (Section 13), ties an approved action to the
    digest of the capability definition it was derived from, so a swapped
    or poisoned tool definition fails the decision.  Both refuse the
    action; neither inspects the agent's reasoning.
 
-   Two adjacent checks are out of scope (Section 13).  This profile
+   Two adjacent checks are out of scope (Section 14).  This profile
    evaluates the request path: it does not verify the integrity of the
    result a tool returns as the application relays it back to the
    agent's model, so an application can still falsify what the model
@@ -1678,7 +1728,7 @@ Table of Contents
    both layers, and intent inference is not reliable enough to be load-
    bearing for high-consequence authority.
 
-14.5.  Classification integrity
+15.5.  Classification integrity
 
    Because "consequential" is partly deployment-defined, the
    classification floor of Section 4.3 is load-bearing: a deployment
@@ -1686,7 +1736,7 @@ Table of Contents
    non-consequential.  A purpose may raise a class but never lower it
    below the resource owner's floor.
 
-14.6.  Freshness and consumption honesty
+15.6.  Freshness and consumption honesty
 
    A permit is a lease, not a standing grant: stale Mission state MUST
    fail closed for consequential actions within the published bound
@@ -1695,7 +1745,7 @@ Table of Contents
    are metered, the exactness and consistency claims of the metering
    companion apply ([I-D.draft-mcguinness-mission-metering]).
 
-14.7.  Resource policy remains authoritative
+15.7.  Resource policy remains authoritative
 
    Mission authority is a maximum authority envelope.  It does not force
    a Resource Server to perform an action, bypass local authorization,
@@ -1705,7 +1755,7 @@ Table of Contents
    can perform actions that the resource owner or service would
    otherwise forbid.
 
-14.8.  TOCTOU and replay
+15.8.  TOCTOU and replay
 
    Parameter binding (Section 8) ties a permit to specific normalized
    parameters and a short window or single use, so a permit cannot be
@@ -1713,7 +1763,7 @@ Table of Contents
    between check and use.  The executing PEP, not an upstream component,
    MUST perform the reverification.
 
-14.9.  Confused deputy across resources
+15.9.  Confused deputy across resources
 
    The permit binding of Section 8 ties a decision to the Mission, the
    token audience or protected resource, sub, client_id, actor context,
@@ -1726,7 +1776,7 @@ Table of Contents
    a resource, audience, tenant, or operation boundary it was not issued
    for.
 
-14.10.  Decision channel and token disclosure
+15.10.  Decision channel and token disclosure
 
    A separate PDP becomes part of the Resource Server's trusted
    authorization path for the operations in its enforcement scope.  The
@@ -1737,7 +1787,7 @@ Table of Contents
    the same credential handling, retention, and disclosure controls it
    applies at the Resource Server.
 
-14.11.  Evidence privacy and correlation
+15.11.  Evidence privacy and correlation
 
    Runtime enforcement evidence is intentionally durable and therefore
    sensitive.  It can reveal a subject's resources, action timing,
@@ -1745,7 +1795,7 @@ Table of Contents
    action parameters are not stored.  Deployments SHOULD minimize
    recorded authority entries, store entry and parameter digests where
    full values are not needed for audit, restrict access to evidence by
-   role, and document the retention window declared under Section 11.
+   role, and document the retention window declared under Section 12.
    Evidence shared across resource boundaries can also correlate
    activity by mission.id and authority_hash; deployments that require
    unlinkability need an additional privacy design outside this profile.
@@ -1753,9 +1803,9 @@ Table of Contents
    General OAuth security guidance [RFC9700] applies to the underlying
    credentials.
 
-15.  IANA Considerations
+16.  IANA Considerations
 
-15.1.  OAuth Protected Resource Metadata Registration
+16.1.  OAuth Protected Resource Metadata Registration
 
    This document registers the following in the "OAuth Protected
    Resource Metadata" registry ([RFC9728]):
@@ -1771,12 +1821,12 @@ Table of Contents
 
    The Mission-bound token claims this profile consumes are registered
    by [I-D.draft-mcguinness-oauth-mission]; any decision-API wire
-   members are defined by the binding (Section 12,
+   members are defined by the binding (Section 13,
    [I-D.draft-mcguinness-mission-authzen]).
 
-16.  References
+17.  References
 
-16.1.  Normative References
+17.1.  Normative References
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
@@ -1833,7 +1883,7 @@ Table of Contents
               DOI 10.17487/RFC9728, April 2025,
               <https://www.rfc-editor.org/rfc/rfc9728>.
 
-16.2.  Informative References
+17.2.  Informative References
 
    [AUTHZEN]  OpenID Foundation, "OpenID AuthZEN Authorization API 1.0",
               2026, <https://openid.net/specs/authorization-api-
@@ -1869,6 +1919,11 @@ Table of Contents
               McGuinness, K., "Mission Consumption Metering", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-metering.html>.
+
+   [I-D.draft-mcguinness-mission-security-model]
+              McGuinness, K., "Mission Security Model", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-security-model.html>.
 
    [I-D.draft-mcguinness-oauth-actor-proofs]
               McGuinness, K., "OAuth Actor-Signed Hop Proofs", Work in
@@ -2006,9 +2061,9 @@ Appendix B.  Policy View Worked Example
 Appendix C.  Runtime Evidence Worked Examples
 
    These non-normative records illustrate the minimum record content of
-   Section 11 for the operation of Appendix A.  They show substrate-
+   Section 12 for the operation of Appendix A.  They show substrate-
    level record content only: the concrete schema, serialization, and
-   integrity mechanism are the deployment's (Section 11.4), and a
+   integrity mechanism are the deployment's (Section 12.4), and a
    decision-API binding defines concrete evidence objects
    ([I-D.draft-mcguinness-mission-authzen]).  In this deployment, the
    Resource Server runtime profile classifies journal-entries.write as
@@ -2050,7 +2105,7 @@ Appendix C.  Runtime Evidence Worked Examples
    }
 
    The execution-outcome record the executing PEP produces after it
-   acts, keyed to the permit's decision identifier (Section 11):
+   acts, keyed to the permit's decision identifier (Section 12):
 
    {
      "result": "executed",
