@@ -1068,9 +1068,11 @@ complement ({{I-D.draft-mcguinness-oauth-mission-signals}});
 Expansion, widening only via an approved successor
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}); Completion,
 per-entry discharge
-({{I-D.draft-mcguinness-oauth-mission-completion}}); and Management,
+({{I-D.draft-mcguinness-oauth-mission-completion}}); Management,
 fleet enumeration and bulk lifecycle for operators
-({{I-D.draft-mcguinness-oauth-mission-management}}).
+({{I-D.draft-mcguinness-oauth-mission-management}}); and Discovery,
+experimental, binding encountered resources within a pre-consented
+ceiling ({{I-D.draft-mcguinness-mission-discovery}}).
 
 ## Enforce Each Action
 
