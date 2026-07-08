@@ -22,7 +22,7 @@ management surfaces.
 
 At a glance:
 
-- **26 drafts, deliberately decomposed.** One mandatory core (the
+- **27 drafts, deliberately decomposed.** One mandatory core (the
   OAuth 2.0 issuance profile, [on the
   datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/)),
   two further bindings and normative substrate requirements, optional
@@ -226,7 +226,9 @@ Authority Server: a peer binding whose architectural rationale
 (governance decoupled from token issuance; one Mission Issuer across
 many ASes) can make it the right long-term shape for some
 deployments, and which also serves as the adoption bridge where the
-AS cannot yet change. The AAuth binding hosts AAuth's native missions
+AS cannot yet change. The issuance grant profile is its middle path:
+estate ASs redeem MAS-minted grants for Mission-bound, state-gated
+tokens without taking on the core's approval surfaces. The AAuth binding hosts AAuth's native missions
 at the Person Server, which issues or gates every AAuth auth token,
 so issuance gating holds there as it does at a Mission-aware AS. The Mission Mandate makes a Mission portable
 across all of them: a signed, verifiable statement of what was
@@ -278,7 +280,9 @@ facts are the next subsection.
    (the standalone binding and estate control plane, where the AS
    cannot change or one Mission Issuer governs many systems; its PDP
    join is the family's newest mechanism), **aauth** (where the
-   substrate is AAuth), **substrate** (for authors of new bindings).
+   substrate is AAuth), **issuance-grant** (the issuance join:
+   estate ASs redeem MAS-minted grants for Mission-bound,
+   state-gated tokens), **substrate** (for authors of new bindings).
 5. **Advanced, when the use case arrives**: **approval** (asynchronous
    approvals), **expansion**, **completion**, **child-delegation**,
    **cross-domain**, **management**, **mandate**, **audit**,
@@ -540,6 +544,21 @@ adds Mission-bound tokens for its resources while the MAS continues
 to govern the estate.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authority-server.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-mission-authority-server) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authority-server) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authority-server.diff)
+
+#### Mission Issuance Grant for OAuth 2.0
+
+The issuance join: the middle integration between the standalone
+binding and a natively Mission-aware AS. A short-lived, one-time,
+audience-bound assertion minted by the Mission Authority Server for
+an active Mission; an estate Authorization Server redeems it at its
+token endpoint (RFC 7523 JWT authorization grant) and mints
+Mission-bound tokens bounded by the grant's authority subset, capped
+at Mission expiry, with refresh gated on Mission state. Restores
+Mission-bound credentials and the issuance-gate kill switch without
+the AS implementing the core's intake, approval, or derivation
+surfaces.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-issuance-grant.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-issuance-grant) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-issuance-grant) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-issuance-grant.diff)
 
 #### Mission-Bound Authorization for AAuth
 

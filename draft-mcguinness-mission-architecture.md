@@ -55,6 +55,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-issuance-grant:
+    title: "Mission Issuance Grant for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -833,7 +841,12 @@ token-carriage aspects of delegation ride it, so both require it;
 the companions that need a credential-to-Mission association (the
 runtime layer and the harness) route through the binding
 establishment step,
-which is what makes the standalone binding possible.
+which is what makes the standalone binding possible. The
+issuance-grant companion
+({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) composes the
+two: the standalone Mission Issuer mints a Mission Issuance Grant
+that a consuming Authorization Server redeems for Mission-bound
+tokens, providing this primitive compositely.
 
 ## The Audit Horizon
 
@@ -1119,6 +1132,11 @@ nothing at the token layer, and enforcement rests entirely on PEP
 coverage, so a token exercised outside that coverage is ungoverned
 (the MAS's Limitations section). The upgrade path is the issuance
 profile; the record, anchors, and lifecycle carry over unchanged.
+Between the two sits the issuance join
+({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}): the MAS
+remains the Mission Issuer while estate Authorization Servers redeem
+Mission Issuance Grants for Mission-bound, state-gated tokens,
+restoring the token-layer chokepoint without moving approval.
 
 In sequence, the standalone mode runs submit, poll, approve, join,
 permit:
@@ -1229,7 +1247,10 @@ The levels, cumulative:
   partial-provision binding (the standalone MAS), Baseline grants
   governance and audit; no kill switch of any kind exists until a
   freshness surface (the half-step) and runtime enforcement (the next
-  level) arrive, and a deployment states that. Proof obligations: the
+  level) arrive, and a deployment states that; the issuance join
+  ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) restores
+  gated issuance at each consuming Authorization Server, and Baseline
+  with it. Proof obligations: the
   anchored approval and, where credentials are issued, the subset
   rule. A deployment that adds only a freshness
   surface, Mission Status or introspection with a published staleness
@@ -1478,6 +1499,11 @@ reclassification, not by a stable document absorbing a dependency.
 `mission-authority-server`:
 : The standalone Mission Issuer and the PDP join of ordinary
   credentials to Missions.
+
+`oauth-mission-issuance-grant`:
+: The issuance join: MAS-minted grants an estate Authorization
+  Server redeems at its token endpoint for Mission-bound,
+  state-gated tokens.
 
 `mission-aauth`:
 : The AAuth binding: the Person Server as Mission Issuer, the mission

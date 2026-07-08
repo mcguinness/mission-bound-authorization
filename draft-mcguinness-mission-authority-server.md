@@ -84,6 +84,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-issuance-grant:
+    title: "Mission Issuance Grant for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-substrate:
     title: "Mission Substrate Requirements"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
@@ -197,7 +205,8 @@ is the standalone binding, the AS-optional
 deployment mode: Mission governance and per-action enforcement with no
 change to the deployment's Authorization Server, forgoing the
 Mission-bound credentials and issuance gating that only the issuance
-profile provides. Beyond a single-AS workaround, the Mission
+profile provides (the issuance-grant companion restores both at
+Authorization Servers that redeem its grants). Beyond a single-AS workaround, the Mission
 Authority Server is the standalone Mission Issuer for an estate whose
 task governance must span many Authorization Servers, SaaS systems,
 APIs, local tools, and agent runtimes at once: a control plane for
@@ -404,7 +413,10 @@ codes ({{submission-errors}}):
   can distinguish a syntax error from an authority-derivation failure.
 
 A MAS has no derivation event: no token is issued under the Mission,
-so `controls.max_derivations` binds nothing here. A MAS SHOULD refuse
+so `controls.max_derivations` binds nothing here (a MAS
+implementing the issuance-grant companion has one, each grant
+minted, and applies that profile's counting rule,
+{{I-D.draft-mcguinness-oauth-mission-issuance-grant}}). A MAS SHOULD refuse
 an Intent that carries it, or record it and ensure the approval
 rendering marks it non-binding, per the issuance profile's rule that
 consent is not given to a limit that binds nowhere. The same
@@ -1359,6 +1371,16 @@ over unchanged, because a MAS operates the issuance profile's own
 definitions of all three; the enforcement join becomes unnecessary for
 newly issued tokens, which carry the `mission` claim.
 
+These are the limitations of MAS-only deployment. The Mission
+Issuance Grant companion
+({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) defines the
+issuance join: a grant this MAS mints for an active Mission and an
+estate Authorization Server redeems at its token endpoint for
+Mission-bound tokens, state-gated at minting and at refresh. Where
+deployed, it removes the credential and issuance-gating limitations
+for the resources of each consuming Authorization Server, while
+approval, the record, and the lifecycle remain here.
+
 # Conformance {#conformance}
 
 An implementation conforms in one of two roles.
@@ -1559,10 +1581,15 @@ independently useful:
 4. Join Assertions and instance-bound joins harden the join for the
    high-consequence classes (the Enterprise profile,
    {{enterprise-profile}}).
-5. Where a particular AS later becomes Mission-aware, it adds
-   Mission-bound tokens and issuance gating for its own resources,
-   while the MAS record, lifecycle, and authority model continue to
-   govern the rest of the estate.
+5. Estate Authorization Servers adopt the issuance join
+   ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), redeeming
+   MAS-minted grants for Mission-bound, state-gated tokens: the
+   token-layer kill switch returns without moving approval into the
+   AS.
+6. Where a particular AS later becomes natively Mission-aware, it
+   adds the core's own issuance for its resources, while the MAS
+   record, lifecycle, and authority model continue to govern the
+   rest of the estate.
 
 A deployment stops at the phase its risk warrants; nothing above the
 floor is required to begin. The MAS is not a throwaway bridge but the

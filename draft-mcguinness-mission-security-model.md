@@ -177,6 +177,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-issuance-grant:
+    title: "Mission Issuance Grant for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -417,7 +425,11 @@ Mission Authority Server (standalone binding):
   trust concentrates in one MAS signature, and the MAS may hold
   introspection credentials at the Authorization Server, a
   cross-component channel whose compromise forges joins
-  ({{I-D.draft-mcguinness-mission-authority-server}}).
+  ({{I-D.draft-mcguinness-mission-authority-server}}). Where
+  consuming Authorization Servers redeem its issuance grants
+  ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), a
+  compromised MAS additionally mints authority those servers honor,
+  reaching token issuance across the estate.
 
 AAuth Person Server (AAuth binding):
 : When the AAuth binding is used, the AAuth Person Server implements
@@ -906,7 +918,12 @@ section read on the credential-issuing bindings (the OAuth
 Authorization Server and the AAuth Person Server); under the
 standalone MAS binding the unchanged Authorization Server keeps
 issuing valid tokens after revocation, and the cutoff for every
-column is the runtime layer's state re-check.
+column is the runtime layer's state re-check. Where the issuance
+join is deployed
+({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), the
+further-issuance column returns for consuming Authorization
+Servers: new grants stop at the MAS commit, and refresh is gated
+within each server's published staleness bound.
 
 | Configuration | Worst-case window | Governing parameter |
 |---|---|---|
