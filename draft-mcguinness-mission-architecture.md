@@ -423,6 +423,30 @@ facts a decision can gate on. A content evaluator a deployment adds
 composes as Resource policy at the decision point and only ever
 narrows.
 
+The envelope meets its hardest case in the open world. The family
+inherits OAuth's ontology: authority is client-proposed and
+enumerated at approval, which presumes the resources a task touches
+are knowable when it is approved. An agent that discovers resources
+at encounter time breaks that premise, and some substrates invert
+the ontology outright: the resource declares its own operations,
+meaning, and consequences, and that declaration, not the client's
+proposal, is the semantic material an approver or a policy needs
+(the AAuth binding composes one such substrate,
+{{I-D.draft-mcguinness-mission-aauth}}). The family routes the
+encounter through its existing levers: a resource within a
+pre-consented ceiling binds by policy drawdown
+({{I-D.draft-mcguinness-oauth-mission-progressive}}); a tool from a
+catalog binds through the capability-source binding
+({{I-D.draft-mcguinness-mission-authzen}}); a resource in a partner
+domain binds through projection
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}); anything else
+requires a fresh approval
+({{I-D.draft-mcguinness-oauth-mission-expansion}}). Where the
+resource self-declares, the declaration's digest is committed with
+the binding evidence, a third commitment beside `intent_hash` (what
+the client asked) and `authority_hash` (what was consented): what
+the resource claimed to be at the moment authority bound to it.
+
 # A Mission's Life {#mission-life}
 
 The structure is easiest to see by following one Mission end to end
