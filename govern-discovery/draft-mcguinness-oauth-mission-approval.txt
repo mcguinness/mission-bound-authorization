@@ -1,0 +1,458 @@
+
+
+
+
+Web Authorization Protocol                                 K. McGuinness
+Internet-Draft                                               Independent
+Intended status: Standards Track                             8 July 2026
+Expires: 9 January 2027
+
+
+                Mission Deferred Approval for OAuth 2.0
+             draft-mcguinness-oauth-mission-approval-latest
+
+Abstract
+
+   Mission-Bound Authorization for OAuth 2.0 (the "issuance profile")
+   records an approval event at which an Approver consents to a
+   Mission's derived Authority Set, but it treats that event as
+   immediate.  A human review of an agent's proposed Mission is often
+   asynchronous.  This document defines an optional Mission Deferred
+   Approval profile.  It profiles OAuth Deferred Token Response so a
+   Mission approval can be deferred and polled.  Deferral explicitly
+   overrides the issuance profile's approval-event sequencing: the
+   approval event moves to the asynchronous review surface, and the
+   Mission record is created atomically with that decision rather than
+   with the authorization code.
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://mcguinness.github.io/mission-bound-authorization/draft-
+   mcguinness-oauth-mission-approval.html.  Status information for this
+   document may be found at https://datatracker.ietf.org/doc/draft-
+   mcguinness-oauth-mission-approval/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/mcguinness/mission-bound-authorization.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 9 January 2027.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+   2.  Status: An OPTIONAL Extension
+   3.  Relationship to the Issuance Profile
+   4.  Conventions and Terminology
+   5.  Deferred Mission Approval
+     5.1.  Sequencing the Approval Event
+     5.2.  Deferred Approval State Machine
+     5.3.  Pending Lifetime and Staleness
+     5.4.  Queue Pressure
+   6.  Integration with the Mission Suite
+   7.  Worked Example
+   8.  Conformance
+   9.  Security Considerations
+   10. Privacy Considerations
+   11. IANA Considerations
+   12. References
+     12.1.  Normative References
+     12.2.  Informative References
+   Acknowledgments
+   Author's Address
+
+1.  Introduction
+
+   Mission-Bound Authorization for OAuth 2.0
+   [I-D.draft-mcguinness-oauth-mission] (the "issuance profile") derives
+   an Authority Set from a submitted Mission Intent and records an
+   approval event at which an Approver consents to that authority.  It
+   specifies what the approval commits, not how the approval is obtained
+   over time.  One fact about agent approval is left unspecified: a
+   human Approver review is asynchronous.  The agent submits a proposed
+   Mission and must wait, sometimes for a long time, for a decision.
+
+   This document supplies that.  It profiles OAuth Deferred Token
+   Response [I-D.draft-gerber-oauth-deferred-token-response] (the
+   "deferred substrate") so a Mission approval can be deferred and
+   polled.
+
+   A reviewer that will grant only a narrowed subset of the proposed
+   Mission resolves the deferral to access_denied, and the client
+   submits a fresh, narrower Mission Intent; an experimental companion
+   defines an in-place narrowing-revision handshake over this profile
+   ([I-D.draft-mcguinness-oauth-mission-approval-revision]).  Widening
+   an approved Mission is a different operation with its own fresh
+   approval ([I-D.draft-mcguinness-oauth-mission-expansion]).
+
+2.  Status: An OPTIONAL Extension
+
+   This document is OPTIONAL.  A deployment that obtains Mission
+   approvals synchronously is fully conformant to the issuance profile
+   and is unaffected by this document.  It places no new requirement on
+   the issuance profile.
+
+   A deployment claims this profile only when it defers Mission
+   approvals under the deferred substrate.  The approval event, the
+   Authority Set, the subset rule, and the integrity anchors are
+   unchanged; this document governs only how the approval is reached
+   over time.
+
+   This profile is specific to the OAuth binding's authorization-code
+   ceremony.  Under the standalone Mission Authority Server binding
+   ([I-D.draft-mcguinness-mission-authority-server]), approval is
+   natively asynchronous and this re-sequencing is not needed.
+
+   This profile tracks an in-progress substrate.  It depends normatively
+   on OAuth Deferred Token Response
+   ([I-D.draft-gerber-oauth-deferred-token-response]), an early
+   Internet-Draft that is not ratified and whose details may change, so
+   this profile is not yet a stable interface and will track the
+   substrate as it evolves.  Synchronous Mission approval, which needs
+   only the issuance profile, is the stable path; deploy deferred
+   approval for evaluation rather than as a stable interface.  This
+   document is Standards Track despite that posture because it tracks
+   its substrate and stabilizes with it.
+
+3.  Relationship to the Issuance Profile
+
+   This document depends normatively on the issuance profile and on the
+   deferred substrate, and is not implementable alone.  It reuses,
+   without restating, the issuance profile's Mission Intent, submission
+   via PAR [RFC9126], authority derivation, approval event, subset rule,
+   and integrity anchors, and the deferred substrate's deferral
+   response, continuation polling, cancellation, and sender-constraint
+   rules.  It uses the terms Agent (Client), Approver, Mission Issuer,
+   Mission Intent, and Authority Set as the issuance profile defines
+   them, and completion_mode, deferral_code, and the deferred grant type
+   as the deferred substrate defines them.
+
+4.  Conventions and Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   Proposed Mission:  The Mission Intent and the Authority Set the
+      Mission Issuer derived from it, pending an approval decision.
+
+5.  Deferred Mission Approval
+
+   A Mission approval MAY be deferred.  The client submits the Mission
+   Intent through PAR as the issuance profile requires, and includes
+   deferred among the completion_mode values on the resulting token
+   request, opting in to the deferred substrate
+   ([I-D.draft-gerber-oauth-deferred-token-response]).  When the Mission
+   Issuer cannot decide the approval immediately, for example because it
+   routes the proposed Mission to a human reviewer, it returns the
+   substrate's deferred response (authorization_pending with a
+   deferral_code) instead of a token, and the client polls with the
+   deferred grant type until the approval resolves to a Mission-bound
+   token response, access_denied, or expired_token.
+
+5.1.  Sequencing the Approval Event
+
+   The issuance profile treats the approval event as immediate: the
+   Approver consents and the Mission record is created atomically with
+   issuance of the authorization code
+   ([I-D.draft-mcguinness-oauth-mission]).  This profile is an explicit
+   override of that sequencing for a deferred approval, and it moves the
+   approval event without weakening it:
+
+   1.  The client submits the proposed Mission via PAR [RFC9126] and the
+       authorization request completes into a deferred state per the
+       deferred substrate
+       ([I-D.draft-gerber-oauth-deferred-token-response]).
+
+   2.  Before approval only the pending request exists.  The
+       authorization artifact represents a pending authorization, never
+       authority, and no Mission exists.  A deferral_code and any PAR
+       request_uri are pending-request state, not a grant.
+
+   3.  The approval event executes on the asynchronous review surface.
+       That surface MUST authenticate the Approver and MUST satisfy the
+       Mission Intent's controls.acr, exactly as the synchronous
+       approval event requires ([I-D.draft-mcguinness-oauth-mission]).
+
+   4.  The Mission record is created in the active state atomically with
+       the approval decision, preserving the issuance profile's
+       atomicity at the moved point.
+
+   5.  Issuance then completes per the deferred substrate: the next poll
+       resolves to a Mission-bound token response.
+
+   Deferral changes only the timing of the approval event.  The
+   Authority Set the token is issued against, its authority_hash, and
+   the recorded consent are exactly as in a synchronous approval.  A
+   Mission revoked between the approval decision and the resolving poll
+   yields no token: issuance gating derives only from an active Mission
+   ([I-D.draft-mcguinness-oauth-mission]).
+
+5.2.  Deferred Approval State Machine
+
+   A deferred approval is in one of three states: pending, approved, or
+   denied.  The Mission Issuer starts a deferred approval in pending and
+   MAY move it to approved or denied; both are terminal.
+
+          submit (PAR + deferred)
+                   |
+                   v
+              +---------+
+              | pending |
+              +---------+
+                |     |
+      approve   |     +-------------> denied  (terminal)
+                v
+             approved  (terminal; Mission created active)
+
+   An experimental companion extends this state machine with a
+   revision_required state and a narrowing-revision handshake
+   ([I-D.draft-mcguinness-oauth-mission-approval-revision]).  Without
+   it, a proposal the reviewer will grant only in narrowed form resolves
+   to access_denied, and the client submits a fresh, narrower Mission
+   Intent via PAR [RFC9126].
+
+5.3.  Pending Lifetime and Staleness
+
+   A deferred approval MUST carry a deployment-set maximum pending
+   lifetime, after which it resolves to expired_token per the deferred
+   substrate.  A decision made after a change to the derivation
+   policy_version, or to the applicable capability catalog, MUST be made
+   over a proposal that has been re-derived and re-rendered under the
+   current policy and catalog; the Mission Issuer MUST NOT commit an
+   approval over a proposal derived under superseded policy.
+
+5.4.  Queue Pressure
+
+   Deferral turns the review surface into a queue a client can flood.
+   The Mission Issuer MUST bound the number of concurrent pending
+   proposals per (client, Approver) pair, refusing further submissions
+   until the queue drains.  It SHOULD collapse pending proposals
+   carrying an identical intent_hash into a single review item, SHOULD
+   rate-limit reviewer notifications, and SHOULD log a queue flood as a
+   security event, alongside the decline-suppression detection the
+   consent evidence profile describes
+   ([I-D.draft-mcguinness-oauth-mission-consent-evidence]).
+
+6.  Integration with the Mission Suite
+
+   Consent evidence:  Where a deployment records Consent Evidence
+      ([I-D.draft-mcguinness-oauth-mission-consent-evidence]), a
+      deferred approval produces evidence exactly as a synchronous one:
+      an approval yields evidence with decision approved bound to the
+      created Mission's anchors, and a denial yields evidence with
+      decision declined over the proposal's anchors.  The rendering the
+      reviewer approved on the asynchronous surface is the disclosure
+      the evidence commits.
+
+   Shaping:  A client-side shaper
+      ([I-D.draft-mcguinness-mission-shaping]) narrows a proposal before
+      submission, which reduces the chance a deferred review is refused.
+      After an access_denied resolution, the shaper constructs the
+      fresh, narrower Mission Intent the client resubmits.
+
+   Integrity anchors:  The approval commits the proposal actually
+      approved.  The intent_hash and authority_hash are computed over
+      the Mission Intent and Authority Set the Approver decided on.
+
+7.  Worked Example
+
+   Agent s6BhdRkqt3, acting for alice, proposes a Mission to reconcile
+   Q3 invoices with read access to the ERP.  It submits the Mission
+   Intent through PAR and opts in to deferral on the token request:
+
+   POST /token HTTP/1.1
+   Host: as.example.com
+   Content-Type: application/x-www-form-urlencoded
+
+   grant_type=authorization_code&code=SplxlOBeZQQYbYS6WxSbIA&
+   client_id=s6BhdRkqt3&
+   completion_mode=deferred
+
+   The Mission Issuer routes the proposed Mission to alice for review
+   and defers:
+
+   HTTP/1.1 400 Bad Request
+   Content-Type: application/json
+   Cache-Control: no-store
+
+   { "error": "authorization_pending",
+     "deferral_code": "dfc_7M2R4kP9sT1x",
+     "expires_in": 600, "interval": 5 }
+
+   The agent polls with the deferred grant type.  On review alice
+   approves the proposal.  The Mission record is created active
+   atomically with her decision, and the next poll resolves to a
+   Mission-bound token:
+
+   HTTP/1.1 200 OK
+   Content-Type: application/json
+   Cache-Control: no-store
+
+   { "access_token": "eyJ...",
+     "token_type": "DPoP",
+     "expires_in": 300,
+     "authorization_details": [
+       { "type": "mission_resource_access",
+         "resource": "https://erp.example.com",
+         "actions": ["invoices.read"],
+         "constraints": { "period": "2026-Q3" } } ],
+     "mission_id": "msn_7Wq3nR8tV2xK5pL9yD4sB6zE1mC0fJ-" }
+
+   The token carries the mission claim and its authority_hash as the
+   issuance profile defines; the response also surfaces the optional
+   mission_id parameter ([I-D.draft-mcguinness-oauth-mission]) for
+   correlation.  Had alice approved only a subset, the deferral would
+   resolve to access_denied and the agent would submit a fresh, narrower
+   Mission Intent, unless the deployment runs the experimental revision
+   companion ([I-D.draft-mcguinness-oauth-mission-approval-revision]).
+
+8.  Conformance
+
+   A Mission Issuer conforming to this profile MUST:
+
+   *  support the deferred substrate for Mission approvals it defers;
+
+   *  execute the approval event on the asynchronous review surface with
+      the authentication the issuance profile requires (Section 5.1);
+
+   *  create the Mission record active atomically with the approval
+      decision; and
+
+   *  enforce the pending lifetime and staleness rules of Section 5.3
+      and the queue bounds of Section 5.4.
+
+   A client conforming to this profile MUST treat every pending response
+   as unapproved and poll the deferral_code per the deferred substrate.
+
+9.  Security Considerations
+
+   The deferred substrate's security considerations apply in full,
+   including deferral-code entropy, sender-constraint continuity,
+   cancellation, and oracle resistance.
+
+   The asynchronous review surface is part of the consent path.  It MUST
+   meet the approval event's authentication requirements, authenticating
+   the Approver and satisfying the Mission Intent's controls.acr
+   (Section 5.1); deferring an approval does not lower the bar the
+   synchronous event sets.  Approver routing and notification, how a
+   proposed Mission reaches a reviewer and how the reviewer is alerted,
+   are deployment matters and are named as such here rather than
+   specified.
+
+10.  Privacy Considerations
+
+   A pending proposed Mission reveals what authority an agent sought
+   before any approval exists.  A Mission Issuer SHOULD treat pending
+   proposals and their resolutions as sensitive and retain them under
+   the same controls as other approval-event records.
+
+11.  IANA Considerations
+
+   This document has no IANA actions.  The deferred completion mode and
+   the deferred grant type are registered by the deferred substrate
+   ([I-D.draft-gerber-oauth-deferred-token-response]).
+
+12.  References
+
+12.1.  Normative References
+
+   [I-D.draft-gerber-oauth-deferred-token-response]
+              Jacobsen, F. K., de Oliveira Niero, G., and M. Gerber,
+              "Deferred Token Response", Work in Progress, Internet-
+              Draft, draft-gerber-oauth-deferred-token-response-00, 23
+              June 2026, <https://datatracker.ietf.org/doc/html/draft-
+              gerber-oauth-deferred-token-response-00>.
+
+   [I-D.draft-mcguinness-oauth-mission]
+              McGuinness, K., "Mission-Bound Authorization for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission.html>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC9126]  Lodderstedt, T., Campbell, B., Sakimura, N., Tonge, D.,
+              and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",
+              RFC 9126, DOI 10.17487/RFC9126, September 2021,
+              <https://www.rfc-editor.org/rfc/rfc9126>.
+
+12.2.  Informative References
+
+   [I-D.draft-mcguinness-mission-authority-server]
+              McGuinness, K., "Mission Authority Server", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-authority-server.html>.
+
+   [I-D.draft-mcguinness-mission-shaping]
+              McGuinness, K., "Mission Intent Shaping", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-shaping.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-approval-revision]
+              McGuinness, K., "Mission Approval Revision for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-approval-
+              revision.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-consent-evidence]
+              McGuinness, K., "Mission Consent Evidence for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-consent-
+              evidence.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-expansion]
+              McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-expansion.html>.
+
+Acknowledgments
+
+   This document is part of the Mission-Bound Authorization for OAuth
+   2.0 work and profiles OAuth Deferred Token Response for asynchronous
+   Mission approval.
+
+Author's Address
+
+   Karl McGuinness
+   Independent
+   Email: public@karlmcguinness.com
