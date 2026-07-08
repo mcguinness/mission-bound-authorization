@@ -1584,7 +1584,10 @@ agent harness, an edge API gateway, a service-mesh sidecar)
 validates offline too: the signature chain to the root, capability
 monotonicity, audience and expiry nesting, and the holder's proof
 of possession are all facts of the presented chain
-(<a href="#mission-binding-check" class="auto internal xref">Section 8</a>), checkable locally at memory speed.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+(<a href="#mission-binding-check" class="auto internal xref">Section 8</a>), checkable locally at memory speed.
+Where the root's <code>mission</code> claim carries the <code>expires_at</code> member
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>), the Mission
+ceiling is offline-checkable too.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
 <p id="section-8.1-2">The kill switch is the one non-local fact. For ordinary
 consequential classes the validating PEP relies on cached Mission
 state within the published staleness bound, so the state cost is
@@ -1974,6 +1977,10 @@ this document, <a href="#request-discovery" class="auto internal xref">Section 6
 <dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-issuance-grant">[I-D.draft-mcguinness-oauth-mission-issuance-grant]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Issuance Grant for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC7638">[RFC7638]</dt>
       <dd>

@@ -1494,7 +1494,10 @@ that names exactly one Mission, through the <code>mission</code> claim (<code>id
 Mission record binds (<a href="#identifier" class="auto internal xref">Section 2.1</a>), issued only while the
 referenced Mission is <code>active</code>: credential issuance is gated on
 Mission state. The <code>mission</code> claim shape is the interoperable
-default.<a href="#section-2.5-2" class="pilcrow">¶</a></p>
+default. Provision may be composite: the standalone MAS binding
+together with Authorization Servers consuming its issuance grants
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>) provides
+this credential jointly.<a href="#section-2.5-2" class="pilcrow">¶</a></p>
 <p id="section-2.5-3">Under partial provision, the binding issues no such credential. It
 <span class="bcp14">MUST</span> define a join per the externally established mode of the runtime
 profile's Mission binding establishment step: how a PDP verifies a
@@ -1995,6 +1998,10 @@ the Mission Issuer; each hosted profile's own apply unchanged.<a href="#section-
 <dt id="I-D.draft-mcguinness-mission-security-model">[I-D.draft-mcguinness-mission-security-model]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Security Model"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-issuance-grant">[I-D.draft-mcguinness-oauth-mission-issuance-grant]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Issuance Grant for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
       <dd>

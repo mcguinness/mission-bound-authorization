@@ -292,10 +292,15 @@ Table of Contents
    minimum DNS resolution, log and error output, and shared stores
    another process reads, stating for each whether it is mediated,
    excluded by the isolation mechanism, or outside the claim.  The
-   statement also declares the deployment's taint policy (Section 14).
-   Verifying that no unmediated path exists is a deployment audit
-   obligation, not a protocol property: this profile fixes what the
-   statement declares, not how a deployment proves it.
+   enumeration is not static where open-world discovery is deployed: a
+   channel created by a discovery binding enters it at binding, recorded
+   in Harness Evidence, and an egress channel that entered neither way
+   is a mediated-environment violation, not a discovery
+   ([I-D.draft-mcguinness-mission-discovery]).  The statement also
+   declares the deployment's taint policy (Section 14).  Verifying that
+   no unmediated path exists is a deployment audit obligation, not a
+   protocol property: this profile fixes what the statement declares,
+   not how a deployment proves it.
 
    Mediation governs the agent's outputs; the same duty applies to its
    inputs.  A Mission-aware harness SHOULD surface to the agent only the
@@ -1195,6 +1200,11 @@ Table of Contents
               AuthZEN Profile", 2026, <https://mcguinness.github.io/
               mission-bound-authorization/draft-mcguinness-mission-
               authzen.html>.
+
+   [I-D.draft-mcguinness-mission-discovery]
+              McGuinness, K., "Mission Open-World Discovery", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-discovery.html>.
 
    [I-D.draft-mcguinness-mission-orchestration]
               McGuinness, K., "Mission Orchestration and Unwinding",

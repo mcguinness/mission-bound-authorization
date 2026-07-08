@@ -379,7 +379,10 @@ Table of Contents
    offline too: the signature chain to the root, capability
    monotonicity, audience and expiry nesting, and the holder's proof of
    possession are all facts of the presented chain (Section 8),
-   checkable locally at memory speed.
+   checkable locally at memory speed.  Where the root's mission claim
+   carries the expires_at member
+   ([I-D.draft-mcguinness-oauth-mission-issuance-grant]), the Mission
+   ceiling is offline-checkable too.
 
    The kill switch is the one non-local fact.  For ordinary
    consequential classes the validating PEP relies on cached Mission
@@ -732,6 +735,12 @@ Table of Contents
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-cross-
               domain.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-issuance-grant]
+              McGuinness, K., "Mission Issuance Grant for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-issuance-
+              grant.html>.
 
    [RFC7638]  Jones, M. and N. Sakimura, "JSON Web Key (JWK)
               Thumbprint", RFC 7638, DOI 10.17487/RFC7638, September

@@ -3153,7 +3153,8 @@ required) and a <code>value</code> (string, required).<a href="#section-7.1-1.46
 <p id="section-7.1-2">A Decision Evidence Object is closed to uncoordinated extension: a
 companion profile of the runtime contract <span class="bcp14">MAY</span> add members with short
 names coordinated with this profile (for example, the metering
-companion's consumption and settlement members), any other extension
+companion's consumption and settlement members, or a discovery
+adjudication's <code>resource_declaration_digest</code>), any other extension
 <span class="bcp14">MUST</span> use a collision-resistant name, and a consumer <span class="bcp14">MUST</span> ignore
 members it does not understand and <span class="bcp14">MUST NOT</span> derive authority from any
 member.<a href="#section-7.1-2" class="pilcrow">¶</a></p>

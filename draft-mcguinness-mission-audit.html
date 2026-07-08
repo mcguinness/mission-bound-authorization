@@ -1548,6 +1548,16 @@ record as part of the Mission's feed.<a href="#section-6.2-1" class="pilcrow">¶
                 <code>issuer</code>
 </td>
             </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Discovery Evidence</td>
+              <td class="text-left" rowspan="1" colspan="1">Discovery Evidence object (JCS), as the discovery profile fixes</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>application/mission-discovery-evidence+json</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>issuer</code>
+</td>
+            </tr>
           </tbody>
         </table>
 <p id="section-6.2-3">The table is extensible by specification: a profile <span class="bcp14">MAY</span> define an
@@ -1580,9 +1590,11 @@ the profiles that define those objects
 media type by the Signals profile it is carried in
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), the Mandate
 media type by the Mandate profile
-(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>), and the Child Evidence
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>), the Child Evidence
 canonical bytes and type identifier by the child-delegation profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).<a href="#section-6.2-5" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), and the
+Discovery Evidence canonical bytes and type identifier by the
+discovery profile (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>).<a href="#section-6.2-5" class="pilcrow">¶</a></p>
 <p id="section-6.2-6">A Child Evidence record registers on the Parent Mission's feed: the
 <code>sub</code> is the parent's (<a href="#feed" class="auto internal xref">Section 7</a>), its producer is the <code>issuer</code>, and
 the child Mission's <code>id</code> inside the evidence makes the delegation
@@ -2378,6 +2390,10 @@ identifier.<a href="#section-14-2" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-discovery">[I-D.draft-mcguinness-mission-discovery]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Open-World Discovery"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-mandate">[I-D.draft-mcguinness-mission-mandate]</dt>
         <dd>

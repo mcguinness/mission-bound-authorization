@@ -1511,6 +1511,33 @@ bounds, separation of duty, and re-consent turn that question into
 facts a decision can gate on. A content evaluator a deployment adds
 composes as Resource policy at the decision point and only ever
 narrows.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-4">The envelope meets its hardest case in the open world. The family
+inherits OAuth's ontology: authority is client-proposed and
+enumerated at approval, which presumes the resources a task touches
+are knowable when it is approved. An agent that discovers resources
+at encounter time breaks that premise, and some substrates invert
+the ontology outright: the resource declares its own operations,
+meaning, and consequences, and that declaration, not the client's
+proposal, is the semantic material an approver or a policy needs
+(the AAuth binding composes one such substrate,
+<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>). The family routes the
+encounter through its existing levers: a resource within a
+pre-consented ceiling binds by policy drawdown
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>); a tool from a
+catalog binds through the capability-source binding
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); a resource in a partner
+domain binds through projection
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>); anything else
+requires a fresh approval
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>). Where the
+resource self-declares, the declaration's digest is committed with
+the binding evidence, a third commitment beside <code>intent_hash</code> (what
+the client asked) and <code>authority_hash</code> (what was consented): what
+the resource claimed to be at the moment authority bound to it. The
+discovery companion (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>)
+gives the encounter its contract: identity pinning, ceiling
+adjudication, the lying-resource and tainted-session floors, and
+Discovery Evidence.<a href="#section-5-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-life">
@@ -2057,7 +2084,12 @@ token-carriage aspects of delegation ride it, so both require it;
 the companions that need a credential-to-Mission association (the
 runtime layer and the harness) route through the binding
 establishment step,
-which is what makes the standalone binding possible.<a href="#section-9.6-2" class="pilcrow">¶</a></p>
+which is what makes the standalone binding possible. The
+issuance-grant companion
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>) composes the
+two: the standalone Mission Issuer mints a Mission Issuance Grant
+that a consuming Authorization Server redeems for Mission-bound
+tokens, providing this primitive compositely.<a href="#section-9.6-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="the-audit-horizon">
@@ -2447,7 +2479,12 @@ structural: no <code>mission</code> claim travels, revoking a Mission stops
 nothing at the token layer, and enforcement rests entirely on PEP
 coverage, so a token exercised outside that coverage is ungoverned
 (the MAS's Limitations section). The upgrade path is the issuance
-profile; the record, anchors, and lifecycle carry over unchanged.<a href="#section-12-2" class="pilcrow">¶</a></p>
+profile; the record, anchors, and lifecycle carry over unchanged.
+Between the two sits the issuance join
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>): the MAS
+remains the Mission Issuer while estate Authorization Servers redeem
+Mission Issuance Grants for Mission-bound, state-gated tokens,
+restoring the token-layer chokepoint without moving approval.<a href="#section-12-2" class="pilcrow">¶</a></p>
 <p id="section-12-3">In sequence, the standalone mode runs submit, poll, approve, join,
 permit:<a href="#section-12-3" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-12-4">
@@ -2560,7 +2597,10 @@ and outstanding tokens run to their own expiry. Under a
 partial-provision binding (the standalone MAS), Baseline grants
 governance and audit; no kill switch of any kind exists until a
 freshness surface (the half-step) and runtime enforcement (the next
-level) arrive, and a deployment states that. Proof obligations: the
+level) arrive, and a deployment states that; the issuance join
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>) restores
+gated issuance at each consuming Authorization Server, and Baseline
+with it. Proof obligations: the
 anchored approval and, where credentials are issued, the subset
 rule. A deployment that adds only a freshness
 surface, Mission Status or introspection with a published staleness
@@ -2935,18 +2975,26 @@ credentials to Missions.<a href="#section-17-4.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-17-4.5">
-<code>mission-aauth</code>:</dt>
+<code>oauth-mission-issuance-grant</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-17-4.6">
-          <p id="section-17-4.6.1">The AAuth binding: the Person Server as Mission Issuer, the mission
-blob as the record under AAuth's <code>s256</code> commitment, issuance gating
-at the token endpoint.<a href="#section-17-4.6.1" class="pilcrow">¶</a></p>
+          <p id="section-17-4.6.1">The issuance join: MAS-minted grants an estate Authorization
+Server redeems at its token endpoint for Mission-bound,
+state-gated tokens.<a href="#section-17-4.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-17-4.7">
-<code>mission-substrate</code>:</dt>
+<code>mission-aauth</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-17-4.8">
-          <p id="section-17-4.8.1">Normative requirements on any further binding of the model; the
-existing bindings and the core are unchanged by it.<a href="#section-17-4.8.1" class="pilcrow">¶</a></p>
+          <p id="section-17-4.8.1">The AAuth binding: the Person Server as Mission Issuer, the mission
+blob as the record under AAuth's <code>s256</code> commitment, issuance gating
+at the token endpoint.<a href="#section-17-4.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-17-4.9">
+<code>mission-substrate</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-17-4.10">
+          <p id="section-17-4.10.1">Normative requirements on any further binding of the model; the
+existing bindings and the core are unchanged by it.<a href="#section-17-4.10.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -3009,23 +3057,31 @@ ceiling.<a href="#section-17-8.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-17-8.9">
-<code>oauth-mission-management</code>:</dt>
+<code>mission-discovery</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-17-8.10">
-          <p id="section-17-8.10.1">Fleet enumeration and bulk lifecycle operations for operators and
-incident response; dry-run-first, per-Mission semantics.<a href="#section-17-8.10.1" class="pilcrow">¶</a></p>
+          <p id="section-17-8.10.1">Experimental: the open-world encounter as a governed operation:
+identity pinning, ceiling adjudication with the lying-resource and
+tainted-session floors, Discovery Evidence.<a href="#section-17-8.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-17-8.11">
-<code>oauth-mission-completion</code>:</dt>
+<code>oauth-mission-management</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-17-8.12">
-          <p id="section-17-8.12.1">Per-entry discharge via the <code>terminal_when</code> constraint.<a href="#section-17-8.12.1" class="pilcrow">¶</a></p>
+          <p id="section-17-8.12.1">Fleet enumeration and bulk lifecycle operations for operators and
+incident response; dry-run-first, per-Mission semantics.<a href="#section-17-8.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-17-8.13">
-<code>oauth-mission-cross-domain</code>:</dt>
+<code>oauth-mission-completion</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-17-8.14">
-          <p id="section-17-8.14.1">Single-hop projection of a Mission to another trust domain via the
-cross-domain grant.<a href="#section-17-8.14.1" class="pilcrow">¶</a></p>
+          <p id="section-17-8.14.1">Per-entry discharge via the <code>terminal_when</code> constraint.<a href="#section-17-8.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-17-8.15">
+<code>oauth-mission-cross-domain</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-17-8.16">
+          <p id="section-17-8.16.1">Single-hop projection of a Mission to another trust domain via the
+cross-domain grant.<a href="#section-17-8.16.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -3158,6 +3214,10 @@ own Security Considerations remain normative.<a href="#section-18-1" class="pilc
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-discovery">[I-D.draft-mcguinness-mission-discovery]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Open-World Discovery"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html</a>&gt;</span>. </dd>
@@ -3229,6 +3289,10 @@ own Security Considerations remain normative.<a href="#section-18-1" class="pilc
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-issuance-grant">[I-D.draft-mcguinness-oauth-mission-issuance-grant]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Issuance Grant for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-management">[I-D.draft-mcguinness-oauth-mission-management]</dt>
       <dd>

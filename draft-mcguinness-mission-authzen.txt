@@ -1423,10 +1423,10 @@ Table of Contents
    A Decision Evidence Object is closed to uncoordinated extension: a
    companion profile of the runtime contract MAY add members with short
    names coordinated with this profile (for example, the metering
-   companion's consumption and settlement members), any other extension
-   MUST use a collision-resistant name, and a consumer MUST ignore
-   members it does not understand and MUST NOT derive authority from any
-   member.
+   companion's consumption and settlement members, or a discovery
+   adjudication's resource_declaration_digest), any other extension MUST
+   use a collision-resistant name, and a consumer MUST ignore members it
+   does not understand and MUST NOT derive authority from any member.
 
 7.2.  Refusal Record
 

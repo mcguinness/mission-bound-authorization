@@ -98,17 +98,18 @@ Table of Contents
    8.  Mission Substrate
    9.  Limitations
    10. Mission Verification Modes
-   11. Conformance
-   12. Security Considerations
-     12.1.  Rendering the Mission Description
-     12.2.  Two Commitments, Neither Substitutes
-     12.3.  Person Server Compromise
-     12.4.  The Mission Log as Evidence
-   13. Privacy Considerations
-   14. IANA Considerations
-   15. References
-     15.1.  Normative References
-     15.2.  Informative References
+   11. Resource-Declared Semantics
+   12. Conformance
+   13. Security Considerations
+     13.1.  Rendering the Mission Description
+     13.2.  Two Commitments, Neither Substitutes
+     13.3.  Person Server Compromise
+     13.4.  The Mission Log as Evidence
+   14. Privacy Considerations
+   15. IANA Considerations
+   16. References
+     16.1.  Normative References
+     16.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -191,11 +192,11 @@ Table of Contents
 
    Mission-Bound Person Server:  A Person Server conforming to this
       profile: it implements the Mission Issuer role over AAuth's
-      mission surfaces (Section 11).
+      mission surfaces (Section 12).
 
    Mission-Bound Agent:  An AAuth agent that proposes structured intent,
       carries the Mission reference, and respects the Mission lifecycle
-      (Section 11).
+      (Section 12).
 
 2.  Mission Roles
 
@@ -283,7 +284,7 @@ Table of Contents
    intent and authority_set alone, independent of blob serialization.
    The s256 therefore commits the blob that contains the anchors; a
    verifier holding the blob can check both, and neither commitment
-   substitutes for the other (Section 12.2).
+   substitutes for the other (Section 13.2).
 
 3.2.  Mission Reference and Resolution
 
@@ -448,7 +449,7 @@ Table of Contents
        attacker-influenceable text: the PS MUST render them inert and
        sanitized, mitigate direction-override and confusable
        presentation, and visually distinguish the derived Authority Set
-       from client-supplied text (Section 12.1).
+       from client-supplied text (Section 13.1).
 
    4.  Compute the integrity anchors with the PS's issuer URL as the
        envelope iss.
@@ -585,9 +586,12 @@ Table of Contents
    An auth token a Mission-Bound Person Server issues under a Mission
    MUST carry, in its mission claim, the family members id, issuer, and
    authority_hash as the issuance profile defines them, alongside
-   AAuth's native members approver and s256.  One object carries all
-   five; issuer equals approver in this binding, and both appear because
-   each specification's consumers read their own members.  AAuth parties
+   AAuth's native members approver and s256, and SHOULD carry the
+   expires_at member as the issuance-grant profile defines it
+   ([I-D.draft-mcguinness-oauth-mission-issuance-grant]): a bounding
+   commitment with no liveness.  One object carries all five; issuer
+   equals approver in this binding, and both appear because each
+   specification's consumers read their own members.  AAuth parties
    ignore members they do not recognize, and a family consumer MUST NOT
    use any mission member to grant or widen authority, per the issuance
    profile.
@@ -663,7 +667,7 @@ Table of Contents
    endpoints with the PS as the PDP, rather than restating that contract
    here: the decision inputs, parameter binding, denial reasons, and
    freshness rules are the runtime profile's, and the mission log is the
-   PS's runtime evidence trail (Section 12.4).  This binding adds only
+   PS's runtime evidence trail (Section 13.4).  This binding adds only
    the AAuth-specific mapping: the token or permission request is the
    decision request, the aauth-mission reference resolves the
    established Mission, and each logged decision is a runtime decision
@@ -799,7 +803,7 @@ Table of Contents
    arbitrary minting, and false state
    ([I-D.draft-mcguinness-mission-security-model]).  Consent evidence
    and audit transparency make forgery detectable after the fact; they
-   do not prevent it (Section 12.3).
+   do not prevent it (Section 13.3).
 
 10.  Mission Verification Modes
 
@@ -844,7 +848,51 @@ Table of Contents
    the Resource-verifiable mode with the runtime decision contract in
    force (Section 7.4).
 
-11.  Conformance
+11.  Resource-Declared Semantics
+
+   This section is informative.  AAuth's exploratory Rich Resource
+   Requests companion ([I-D.draft-hardt-aauth-r3]) inverts the authority
+   ontology this family inherits from OAuth: instead of the client
+   proposing authority, the resource publishes an R3 document declaring
+   its operations, their human meaning, and their consequences, content-
+   addressed by r3_s256, and the agent carries the hash of a declaration
+   it cannot read.  That is the descriptive half of open-world
+   discovery, and it composes with this binding's governance half
+   without new mechanism:
+
+   *  *Encounter-time adjudication at the gate that already exists.* The
+      Person Server issues or gates every auth token (Section 6.1), so
+      the moment an agent requests a token for a newly encountered
+      resource is the adjudication point: the PS evaluates the
+      resource's declared operations against the Mission's Authority
+      Set, or against a pre-consented ceiling where the progressive
+      companion is deployed
+      ([I-D.draft-mcguinness-oauth-mission-progressive]), binding in-
+      envelope encounters by policy and routing everything else to the
+      Approver.
+
+   *  *Consent composes the resource's own words.* The R3 display
+      section is resource-authored consent material; a PS that renders
+      it into a Mission's approval or expansion disclosure gives the
+      Approver the resource's stated meaning and consequences, and
+      Consent Evidence then commits what was shown
+      ([I-D.draft-mcguinness-oauth-mission-consent-evidence]).
+
+   *  *A third commitment.* r3_s256 commits what the resource declared,
+      beside intent_hash (what the client asked) and authority_hash
+      (what was consented).  Recorded with binding and decision evidence
+      (the progressive companion's resource_declaration_digest carries
+      it), it makes the encounter reproducible in audit: what the
+      resource claimed to be at the moment authority bound to it.
+
+   R3 is an exploratory draft; this section describes composition, not a
+   normative dependency, and nothing in this binding's conformance
+   requires it.  The discovery companion
+   ([I-D.draft-mcguinness-mission-discovery]) defines the encounter
+   contract, the identity pinning, and the floors the Person Server
+   applies at that gate.
+
+12.  Conformance
 
    An implementation conforms in one of two roles.
 
@@ -889,9 +937,9 @@ Table of Contents
    *  treats mission_id and the Mission reference as references, never
       as credentials.
 
-12.  Security Considerations
+13.  Security Considerations
 
-12.1.  Rendering the Mission Description
+13.1.  Rendering the Mission Description
 
    The Markdown description, the proposal, and every justification are
    attacker-influenceable text that the PS renders to the person at the
@@ -904,7 +952,7 @@ Table of Contents
    the consent surface MUST also make clear which rendered content is
    authority and which is the agent's narrative.
 
-12.2.  Two Commitments, Neither Substitutes
+13.2.  Two Commitments, Neither Substitutes
 
    s256 commits the session-specific blob bytes, including members the
    anchors do not cover, but it has no domain separation and no issuer
@@ -919,7 +967,7 @@ Table of Contents
    that were approved".  A party without the blob relies on the signed
    status surfaces or a Mandate.
 
-12.3.  Person Server Compromise
+13.3.  Person Server Compromise
 
    A compromised PS is a compromised Mission Issuer: it can forge
    approvals, alter records before activation, issue credentials against
@@ -932,7 +980,7 @@ Table of Contents
    custody and the status profile's key-retention rules keep archived
    state evidence verifiable.
 
-12.4.  The Mission Log as Evidence
+13.4.  The Mission Log as Evidence
 
    The mission log is the PS's evidence trail: token requests with their
    justifications, permission requests and outcomes, audit records, and
@@ -956,7 +1004,7 @@ Table of Contents
    decision and execution evidence records, which is the interoperable
    form.
 
-13.  Privacy Considerations
+14.  Privacy Considerations
 
    *The blob stays with the agent and the PS.* Task text, constraints,
    and the full Authority Set do not travel in credentials unless a
@@ -986,7 +1034,7 @@ Table of Contents
    both trade the stable audit anchor for unlinkability, and neither is
    a v1 property.
 
-14.  IANA Considerations
+15.  IANA Considerations
 
    This document has no IANA actions.  The registries AAuth establishes
    belong to that specification, and this binding defines no new AAuth
@@ -998,9 +1046,9 @@ Table of Contents
    Should AAuth establish registries for those members, the members this
    document defines would be registered there.
 
-15.  References
+16.  References
 
-15.1.  Normative References
+16.1.  Normative References
 
    [I-D.draft-hardt-oauth-aauth-protocol]
               Hardt, D., "AAuth Protocol", Work in Progress, Internet-
@@ -1009,6 +1057,13 @@ Table of Contents
               aauth-protocol-08>.
 
    [I-D.draft-mcguinness-oauth-mission]
+              McGuinness, K., "Mission-Bound Authorization for OAuth
+              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
+              oauth-mission-00, 6 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-00>.
+
+   [I-D.draft-mcguinness-oauth-mission-issuance-grant]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
@@ -1030,7 +1085,12 @@ Table of Contents
               Message Signatures", RFC 9421, DOI 10.17487/RFC9421,
               February 2024, <https://www.rfc-editor.org/rfc/rfc9421>.
 
-15.2.  Informative References
+16.2.  Informative References
+
+   [I-D.draft-hardt-aauth-r3]
+              Hardt, D., "AAuth Rich Resource Requests (R3)", 2026,
+              <https://dickhardt.github.io/AAuth/draft-hardt-aauth-
+              r3.html>.
 
    [I-D.draft-mcguinness-mission-architecture]
               McGuinness, K., "An Architecture for Mission-Bound
@@ -1053,6 +1113,11 @@ Table of Contents
               AuthZEN Profile", 2026, <https://mcguinness.github.io/
               mission-bound-authorization/draft-mcguinness-mission-
               authzen.html>.
+
+   [I-D.draft-mcguinness-mission-discovery]
+              McGuinness, K., "Mission Open-World Discovery", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-discovery.html>.
 
    [I-D.draft-mcguinness-mission-mandate]
               McGuinness, K., "Mission Mandate", 2026,
@@ -1107,6 +1172,12 @@ Table of Contents
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-cross-
               domain.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-progressive]
+              McGuinness, K., "Mission Progressive Authorization for
+              OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
+              bound-authorization/draft-mcguinness-oauth-mission-
+              progressive.html>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",

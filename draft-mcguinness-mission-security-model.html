@@ -1436,7 +1436,11 @@ join accepts. Where Mission Join Assertions are used, the PDP's join
 trust concentrates in one MAS signature, and the MAS may hold
 introspection credentials at the Authorization Server, a
 cross-component channel whose compromise forges joins
-(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>). Where
+consuming Authorization Servers redeem its issuance grants
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>), a
+compromised MAS additionally mints authority those servers honor,
+reaching token issuance across the estate.<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.7">AAuth Person Server (AAuth binding):</dt>
@@ -1903,42 +1907,53 @@ the fan-out policy is the deployment's; a permissive delegation policy
 is consented but wide.<a href="#section-9-3.26.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.27">Offline sub-agent fan-out abuse:</dt>
+<dt id="section-9-3.27">Injection steers discovery (the agent binds the attacker's resource):</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.28">
-          <p id="section-9-3.28.1">Addressed by capability monotonicity (narrow-only) and the runtime
-kill-switch re-check on the carried chain. Residual: fan-out breadth
-is unobserved by the issuer; bounded by depth and policy, not by the
-issuer.<a href="#section-9-3.28.1" class="pilcrow">¶</a></p>
+          <p id="section-9-3.28.1">Addressed by default-closed discovery (no consented ceiling, no
+binding), the tainted-session human floor for egress-capable
+bindings, resource identity pinning, the rule that
+self-declarations never classify consequences, and Discovery
+Evidence (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>). Residual: an
+untainted session binding within an over-broad consented family;
+ceiling breadth is a consent-time decision.<a href="#section-9-3.28.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.29">Operator surface abused (fleet management):</dt>
+<dt id="section-9-3.29">Offline sub-agent fan-out abuse:</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.30">
-          <p id="section-9-3.30.1">Addressed by management Client authorization; dry-run-then-execute
+          <p id="section-9-3.30.1">Addressed by capability monotonicity (narrow-only) and the runtime
+kill-switch re-check on the carried chain. Residual: fan-out breadth
+is unobserved by the issuer; bounded by depth and policy, not by the
+issuer.<a href="#section-9-3.30.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.31">Operator surface abused (fleet management):</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.32">
+          <p id="section-9-3.32.1">Addressed by management Client authorization; dry-run-then-execute
 with a bulk token pinning the evaluated membership; every call
 audited; never agent-facing. Residual: a compromised Management Client
 stops or resumes Missions fleet-wide and learns Mission existence; it
-cannot mint or widen authority.<a href="#section-9-3.30.1" class="pilcrow">¶</a></p>
+cannot mint or widen authority.<a href="#section-9-3.32.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.31">Audit tampered, dropped, or reordered:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.32">
-          <p id="section-9-3.32.1">Addressed by transparency: append-only log, inclusion receipts,
+<dt id="section-9-3.33">Audit tampered, dropped, or reordered:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.34">
+          <p id="section-9-3.34.1">Addressed by transparency: append-only log, inclusion receipts,
 non-equivocation. Residual: single-service equivocation (per-service
 only; register with several); a producer can still log a false record
-(accountability, not prevention).<a href="#section-9-3.32.1" class="pilcrow">¶</a></p>
+(accountability, not prevention).<a href="#section-9-3.34.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.33">Agent fabricates results or acts on false data:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.34">
-          <p id="section-9-3.34.1">Addressed by not addressed. Residual: full: semantic and grounding
-verification are a non-goal; pair with a grounding layer if needed.<a href="#section-9-3.34.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-9-3.35">A trusted-base component is compromised:</dt>
+<dt id="section-9-3.35">Agent fabricates results or acts on false data:</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.36">
-          <p id="section-9-3.36.1">Addressed by not addressed; evidence detects it after the fact.
+          <p id="section-9-3.36.1">Addressed by not addressed. Residual: full: semantic and grounding
+verification are a non-goal; pair with a grounding layer if needed.<a href="#section-9-3.36.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.37">A trusted-base component is compromised:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.38">
+          <p id="section-9-3.38.1">Addressed by not addressed; evidence detects it after the fact.
 Residual: not prevented; degrades the specific guarantee per
-<a href="#trusted-base" class="auto internal xref">Section 6</a>.<a href="#section-9-3.36.1" class="pilcrow">¶</a></p>
+<a href="#trusted-base" class="auto internal xref">Section 6</a>.<a href="#section-9-3.38.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2044,7 +2059,12 @@ section read on the credential-issuing bindings (the OAuth
 Authorization Server and the AAuth Person Server); under the
 standalone MAS binding the unchanged Authorization Server keeps
 issuing valid tokens after revocation, and the cutoff for every
-column is the runtime layer's state re-check.<a href="#section-10-1" class="pilcrow">¶</a></p>
+column is the runtime layer's state re-check. Where the issuance
+join is deployed
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>), the
+further-issuance column returns for consuming Authorization
+Servers: new grants stop at the MAS commit, and refresh is gated
+within each server's published staleness bound.<a href="#section-10-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
         <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
 <thead>
@@ -2294,6 +2314,10 @@ handles.<a href="#section-14-1" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-discovery">[I-D.draft-mcguinness-mission-discovery]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Open-World Discovery"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html</a>&gt;</span>. </dd>
@@ -2369,6 +2393,10 @@ handles.<a href="#section-14-1" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-issuance-grant">[I-D.draft-mcguinness-oauth-mission-issuance-grant]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Issuance Grant for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-management">[I-D.draft-mcguinness-oauth-mission-management]</dt>
         <dd>

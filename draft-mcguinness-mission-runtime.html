@@ -2343,13 +2343,19 @@ audience, checking token expiry, and verifying any sender-constraint
 binding (<code>cnf</code>) under the proof-of-possession rules of the issuance
 profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); this profile defines
 no proof-of-possession mechanism of its own.<a href="#section-6-1" class="pilcrow">¶</a></p>
-<p id="section-6-2">The underlying OAuth deployment <span class="bcp14">MUST</span> follow the applicable security
+<p id="section-6-2">Where the validated token's <code>mission</code> claim carries the <code>expires_at</code>
+member (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>), the
+PEP or PDP <span class="bcp14">MAY</span> refuse actions past that instant without consulting a
+state source: the value is an immutable commitment and a ceiling
+only. It carries no liveness; the only-<code>active</code> rule and the
+freshness requirements of <a href="#state-freshness" class="auto internal xref">Section 7.2</a> apply unchanged.<a href="#section-6-2" class="pilcrow">¶</a></p>
+<p id="section-6-3">The underlying OAuth deployment <span class="bcp14">MUST</span> follow the applicable security
 best current practice in <span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span>. In particular, a Resource Server
 PEP <span class="bcp14">MUST</span> refuse a token whose audience is not intended for that
 Resource Server, and <span class="bcp14">MUST</span> verify the proof-of-possession check for a
 sender-constrained token before treating its <code>cnf</code> binding as
-authenticated.<a href="#section-6-2" class="pilcrow">¶</a></p>
-<p id="section-6-3">A PEP <span class="bcp14">MUST NOT</span> ask a PDP to authorize an action from unverified token
+authenticated.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-4">A PEP <span class="bcp14">MUST NOT</span> ask a PDP to authorize an action from unverified token
 claims. If token validation fails, the PEP <span class="bcp14">MUST</span> refuse before runtime
 Mission evaluation. If the deployment requires Mission governance for
 the protected operation and the token lacks a <code>mission</code> claim, the PEP
@@ -2360,8 +2366,8 @@ the supplied Mission reference applies instead. When the PEP is an
 OAuth Resource Server, it uses the
 normal OAuth error behavior for the protected resource (for example,
 Bearer token errors under <span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>); this profile defines no new
-OAuth error code.<a href="#section-6-3" class="pilcrow">¶</a></p>
-<p id="section-6-4">Where the PEP and PDP are separate components, the decision request and
+OAuth error code.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-5">Where the PEP and PDP are separate components, the decision request and
 response <span class="bcp14">MUST</span> be integrity-protected and the parties <span class="bcp14">MUST</span> authenticate
 each other. The PDP <span class="bcp14">MUST</span> accept token-derived inputs only from a PEP
 authorized for the declared enforcement scope. A deployment can satisfy
@@ -2371,7 +2377,7 @@ The PEP <span class="bcp14">SHOULD</span> send the PDP the minimum token-derived
 the decision rather than the presented access token. If a deployment
 sends the access token itself to the PDP, the PDP <span class="bcp14">MUST</span> treat it as a
 credential, protect it against disclosure, and <span class="bcp14">MUST NOT</span> use it outside
-the declared enforcement scope.<a href="#section-6-4" class="pilcrow">¶</a></p>
+the declared enforcement scope.<a href="#section-6-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="decision">
@@ -3969,6 +3975,10 @@ any decision-API wire members are defined by the binding
 <dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-issuance-grant">[I-D.draft-mcguinness-oauth-mission-issuance-grant]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Issuance Grant for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
         <dd>

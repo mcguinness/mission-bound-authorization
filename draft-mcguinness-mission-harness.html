@@ -1544,7 +1544,12 @@ claim. For each mediated class the statement <span class="bcp14">MUST</span> als
 secondary egress channel classes the environment offers, at minimum
 DNS resolution, log and error output, and shared stores another
 process reads, stating for each whether it is mediated, excluded by
-the isolation mechanism, or outside the claim. The statement also declares the deployment's taint policy
+the isolation mechanism, or outside the claim. The enumeration is
+not static where open-world discovery is deployed: a channel created
+by a discovery binding enters it at binding, recorded in Harness
+Evidence, and an egress channel that entered neither way is a
+mediated-environment violation, not a discovery
+(<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>). The statement also declares the deployment's taint policy
 (<a href="#session-taint" class="auto internal xref">Section 14</a>). Verifying that no unmediated path exists is a
 deployment audit obligation, not a protocol property: this profile
 fixes what the statement declares, not how a deployment proves it.<a href="#section-5-3" class="pilcrow">¶</a></p>
@@ -2812,6 +2817,10 @@ Harness Evidence unless required for audit.<a href="#section-19-1" class="pilcro
 <dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-discovery">[I-D.draft-mcguinness-mission-discovery]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Open-World Discovery"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-orchestration">[I-D.draft-mcguinness-mission-orchestration]</dt>
         <dd>
