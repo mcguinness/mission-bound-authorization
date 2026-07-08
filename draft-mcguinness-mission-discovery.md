@@ -27,6 +27,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  RFC3339:
   RFC8785:
   RFC9728:
   I-D.draft-mcguinness-oauth-mission:
@@ -75,6 +76,14 @@ informative:
   I-D.draft-mcguinness-mission-aauth:
     title: "Mission-Bound Authorization for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-approval:
+    title: "Mission Deferred Approval for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html
     author:
       -
         ins: K. McGuinness
@@ -211,10 +220,17 @@ Encounter:
   Authority Set names.
 
 Discovery Adjudicator:
-: The component that decides an encounter: the Mission Issuer where
-  binding rides the drawdown path, the PDP where the encounter is a
-  catalog capability, the AAuth Person Server at its token gate
-  ({{I-D.draft-mcguinness-mission-aauth}}).
+: The component that decides an encounter. It is always the Mission
+  Issuer: the issuer of the Mission on the drawdown path, or the
+  AAuth Person Server at its token gate
+  ({{I-D.draft-mcguinness-mission-aauth}}), which is that binding's
+  Mission Issuer. A binding creates authority, and authority is
+  created only at the Mission Issuer; a PDP enforces bindings and
+  refuses the unbound, and never adjudicates one.
+
+Egress-capable:
+: Creating authority in the runtime profile's
+  external-communication or external-commitment action classes.
 
 Resource Self-Declaration:
 : A content-addressed statement a resource publishes about its own
@@ -247,14 +263,18 @@ An encounter is classified before it is adjudicated:
   is adjudicated under this profile ({{adjudication}}).
 - **A capability catalog or tool**: a tool server or catalog whose
   capabilities the agent would invoke. Its admission is adjudicated
-  under this profile; each capability then binds and drifts under
-  the capability-source rules
+  under this profile like any resource, through the Mission Issuer;
+  the binding names the catalog and its admitted `tool_id` set, and
+  each capability thereafter binds and drifts at the PDP under the
+  capability-source rules
   ({{I-D.draft-mcguinness-mission-authzen}}).
 - **A foreign trust domain**: a resource whose Authorization Server
   the deployment's trust does not cover. This profile does not bind
   it; cross-domain projection exists for domains with established
   trust ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), and
-  everything else is a fresh approval.
+  everything else is a fresh approval. The encounter is still
+  evidenced ({{discovery-evidence}}): routed or refused, a
+  foreign-domain encounter leaves the same record.
 
 The encounter request is agent-influenced input by construction: the
 agent chose what to meet, and content it ingested may have chosen
@@ -284,6 +304,22 @@ recorded:
    encounter and carried through adjudication and evidence
    ({{lying-resource}}).
 
+The pinned identity travels as one shape, the **Encountered Resource
+object**, on the wire and in evidence:
+
+`origin`:
+: REQUIRED. A string containing a URI. The TLS-authenticated origin
+  of the encountered resource.
+
+`resource_metadata_digest`:
+: CONDITIONAL. REQUIRED when a protected-resource metadata document
+  was retrieved: the integrity-anchor encoded digest of its exact
+  retrieved bytes.
+
+`issuer`:
+: CONDITIONAL. REQUIRED when the metadata names an Authorization
+  Server: the issuer identifier it names.
+
 Under the AAuth binding, the Person Server performs the equivalent
 pinning with the substrate's own material: the Access Server
 association and the R3 document's `r3_s256`
@@ -291,10 +327,13 @@ association and the R3 document's `r3_s256`
 
 # Discovery Adjudication {#adjudication}
 
-An adjudication takes, at minimum: the Mission reference; the pinned
-resource identity ({{resource-identity}}); the self-declaration
-digest where one exists; the requesting actor; and the session's
-taint state as the harness reports it. It returns exactly one of:
+An adjudication takes, at minimum: the Mission reference; the
+Encountered Resource object ({{resource-identity}}); the
+self-declaration digest where one exists; the authority sought, the
+entry or entries the binding would create, whose action classes
+under the deployment's classification drive every floor of this
+document; the requesting actor; and the session's taint state as the
+harness reports it. It returns exactly one of:
 
 **Bind.**
 : The encountered resource falls within a consented ceiling entry
@@ -313,7 +352,18 @@ taint state as the harness reports it. It returns exactly one of:
   human ({{lying-resource}}, {{injection-discovery}}), or identity
   could not be fully pinned. The encounter becomes an expansion
   proposal carrying the pinned identity and declaration digest, so
-  the Approver decides with the same facts the policy saw.
+  the Approver decides with the same facts the policy saw. The
+  proposal travels the deployment's approval surface, the
+  deferred-approval companion where deployed
+  ({{I-D.draft-mcguinness-oauth-mission-approval}}), whose
+  queue-pressure bounds apply to encounter-driven proposals
+  unchanged, or the MAS's and Person Server's natively asynchronous
+  approval otherwise. The disclosure renders the Encountered
+  Resource object, the declaration as the resource's claim and not
+  as fact, and the session's taint status; the resulting approval or
+  expansion evidence carries the `encounter_id`
+  ({{discovery-evidence}}), so the encounter and its human
+  resolution correlate.
 
 **Refuse.**
 : The encounter violates a hard rule (unpinnable identity the
@@ -325,10 +375,29 @@ encounter routes to a human or refuses. Discovery is default-closed.
 
 On the OAuth binding's drawdown path, the encounter rides the
 expansion request as two additional parameters, `encountered_resource`
-(the pinned identity, as a JSON object) and
+(the Encountered Resource object of {{resource-identity}}) and
 `resource_declaration_digest`; the progressive profile's rate bound,
 prohibited-class mapping, and audit linkage apply to
-encounter-triggered drawdowns unchanged.
+encounter-triggered drawdowns unchanged. A deployment MUST
+additionally bound the rate of encounter adjudications per Mission
+across all three outcomes: routed and refused encounters consume
+adjudicator and Approver attention, and are the probing surface of
+{{security-considerations}}.
+
+## Re-Encounter and Drift {#re-encounter}
+
+A binding persists as the authority it created. An encounter whose
+Encountered Resource object matches an existing entry, its `origin`
+within the entry's `resource` and its declaration digest equal to
+the one recorded for that binding, is not a new encounter: no
+adjudication runs, no drawdown is spent, and the runtime layer
+enforces as usual. An encounter whose declaration digest differs
+from the recorded one is a new encounter for any authority not yet
+bound, and a drift signal for what is: a deployment SHOULD
+re-adjudicate a bound resource whose declaration changed before
+further use in a consequential class, and the capability-source
+rules already refuse drifted catalog capabilities at the PDP
+({{I-D.draft-mcguinness-mission-authzen}}).
 
 # The Lying Resource {#lying-resource}
 
@@ -377,42 +446,95 @@ sensitive-read authority, so a session that has read cannot acquire
 new egress by encounter at all
 ({{I-D.draft-mcguinness-mission-metering}}).
 
+The two floors compose to a simple matrix: in an untainted session,
+policy may bind up to the high-consequence floor, external
+communication included; taint removes external communication from
+policy's reach; and the irreversible, external-commitment, and
+privileged-administration classes are never policy's to bind on any
+encounter.
+
 # Discovery Evidence {#discovery-evidence}
 
 Every adjudication, in all three outcomes, produces a Discovery
 Evidence object:
 
+`encounter_id`:
+: REQUIRED. A string, unique per adjudication at this adjudicator.
+  It correlates a routed encounter with the approval or expansion
+  evidence that resolves it.
+
 `mission`:
-: REQUIRED. The Mission's `id` and `issuer`.
+: REQUIRED. An object: the Mission's `id` and `issuer`.
 
 `outcome`:
-: REQUIRED. `bound`, `routed_to_approval`, or `refused`.
+: REQUIRED. A string: `bound`, `routed_to_approval`, or `refused`.
 
 `resource`:
-: REQUIRED. The pinned identity of {{resource-identity}}: the
-  origin, and where established, the authorization-chain metadata
-  digest and issuer.
+: REQUIRED. The Encountered Resource object of
+  {{resource-identity}}.
 
 `resource_declaration_digest`:
 : CONDITIONAL. REQUIRED when a self-declaration existed at
-  encounter; its content-addressed digest.
+  encounter: its content-addressed digest.
+
+`sought_classes`:
+: REQUIRED. An array of strings: the action classes of the authority
+  sought, under the deployment's classification
+  ({{lying-resource}}).
 
 `ceiling_entry_digest`:
 : CONDITIONAL. REQUIRED on `bound`: the integrity-anchor encoded
   digest of the ceiling entry drawn against.
 
-`actor`, `taint`, `adjudicator`, `adjudicated_at`:
-: REQUIRED. The requesting actor; the session taint state presented;
-  the adjudicating component; the time.
+`actor`:
+: REQUIRED. A string: the authenticated requesting actor.
 
-The object's canonical bytes are its JCS canonicalization
-{{RFC8785}}; its type identifier is
-`application/mission-discovery-evidence+json` (a local-use
-identifier pending registration). It is registrable in a
-transparency log on the Mission's feed
-({{I-D.draft-mcguinness-mission-audit}}), and its digest members are
-what make an encounter reproducible: what was met, what it claimed,
-what was drawn against, and who decided.
+`tainted`:
+: REQUIRED. A boolean: the session taint state the harness reported
+  at adjudication.
+
+`adjudicated_at`:
+: REQUIRED. An RFC 3339 {{RFC3339}} date-time.
+
+The adjudicator signs the object under the suite's evidence
+conventions: a JWS whose protected header carries `alg`, a `kid`
+resolvable in the Mission Issuer's published key material, and a
+`typ` of `application/mission-discovery-evidence+json` (a local-use
+identifier pending registration); the signature is what identifies
+the adjudicator, so the object carries no member for it. The
+payload's canonical bytes are its JCS canonicalization {{RFC8785}}.
+It is registrable in a transparency log on the Mission's feed
+({{I-D.draft-mcguinness-mission-audit}}), and its members make an
+encounter reproducible: what was met, what it claimed, what was
+sought, what was drawn against, and under what taint.
+
+An illustrative bound encounter (this Mission is not the core
+walkthrough's):
+
+~~~ json
+{
+  "encounter_id": "enc_4Xq9Tr2Lm8vW",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "issuer": "https://as.example.com"
+  },
+  "outcome": "bound",
+  "resource": {
+    "origin": "https://api.vendor.example",
+    "resource_metadata_digest":
+      "sha-256:mK4wZ7rQ2nX9bV5tY8cD1eF6gH3jL0pS4uA7iE2oN9M",
+    "issuer": "https://auth.vendor.example"
+  },
+  "resource_declaration_digest":
+    "sha-256:pV2nR8kQ4mZ7tX1cF5gH9jL3bD6eY0wS8uA2iE4oN7q",
+  "sought_classes": ["data_read"],
+  "ceiling_entry_digest":
+    "sha-256:tY8cD1eF6gH3jL0pS4uA7iE2oN9MmK4wZ7rQ2nX9bV5",
+  "actor": "s6BhdRkqt3",
+  "tainted": false,
+  "adjudicated_at": "2026-07-08T15:04:05Z"
+}
+~~~
 
 # Conformance {#conformance}
 
@@ -425,8 +547,10 @@ A deployment claiming this profile:
   self-declarations, with the high-consequence human floor
   ({{lying-resource}}); and no policy binding of egress-capable
   authority in tainted sessions ({{injection-discovery}});
-- produces Discovery Evidence for every adjudication
-  ({{discovery-evidence}}); and
+- bounds the rate of encounter adjudications per Mission across all
+  outcomes ({{adjudication}});
+- produces and signs Discovery Evidence for every adjudication,
+  foreign-domain encounters included ({{discovery-evidence}}); and
 - states in its enforcement-scope statement which encounter classes
   it adjudicates, the ceiling families consented for them, and the
   floors as published limits.
@@ -451,9 +575,13 @@ capability-drift rule refuses catalog capabilities whose source
 changed, and a re-encountered resource whose declaration digest
 differs is a new encounter, not a bound one.
 
-**Probing.** Encounter refusals reveal ceiling shape to whoever
-controls what the agent meets. Refusals are uniform (`refused`
-carries no ceiling detail), and the anti-oracle discipline of the
+**Probing.** The outcome trichotomy itself leaks coarse ceiling
+shape to whoever controls what the agent meets: bind, route, and
+refuse partition the world. Refusals are uniform (`refused` carries
+no ceiling detail), the adjudication rate bound of {{adjudication}}
+prices the probe, a deployment MAY collapse `refused` into
+`routed_to_approval` so a probe sees a single non-bind outcome while
+a human sees the pattern, and the anti-oracle discipline of the
 family's status surfaces applies to any encounter-facing endpoint.
 
 **Adjudicator availability.** The adjudicator sits on the discovery
