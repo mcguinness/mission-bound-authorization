@@ -46,6 +46,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-aauth:
+    title: "Mission-Bound Authorization for AAuth"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-security-model:
     title: "Mission Security Model"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html
@@ -214,7 +222,13 @@ whose successor Authority Set is within the predecessor's consented
 when every one of its entries is a subset of some `authority_ceiling`
 entry under the issuance profile's subset rule
 ({{I-D.draft-mcguinness-oauth-mission}}); a `constraints`-bounded ceiling
-uses the same subset semantics. When the predecessor consented to a
+uses the same subset semantics. A ceiling entry MAY name a resource
+family rather than a single resource, under the same
+resource-narrowing semantics the subset rule fixes: a successor
+entry's `resource` is in-ceiling when it narrows the ceiling entry's.
+This is what lets an Approver consent once to a class of resources
+an agent will only meet during execution, while every concrete
+binding stays inside the consented family. When the predecessor consented to a
 drawdown policy that authorizes the requested widening, the Mission
 Issuer MAY satisfy the adjudication's approval event by policy rather
 than by a fresh human approval, exactly as a parent Mission's Authority
@@ -350,6 +364,16 @@ deployment MUST retain the consented `authority_ceiling`,
 `drawdown_policy`, and `ceiling_hash` with every Mission record in the
 chain for the audit horizon, so an auditor can verify every drawdown
 was within the consented envelope.
+
+Where a drawdown is triggered by the agent encountering a resource
+not named at approval, and the resource self-declares its operations
+and consequences in a content-addressed form (the AAuth binding
+composes one such substrate,
+{{I-D.draft-mcguinness-mission-aauth}}), the adjudication MUST
+evaluate the declaration against the ceiling and the record MUST
+carry the declaration's digest as `resource_declaration_digest`, so
+the encounter is reproducible in audit: what the resource claimed to
+be when authority bound to it.
 
 # Conformance {#conformance}
 

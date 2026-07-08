@@ -56,6 +56,22 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-hardt-aauth-r3:
+    title: "AAuth Rich Resource Requests (R3)"
+    target: https://dickhardt.github.io/AAuth/draft-hardt-aauth-r3.html
+    author:
+      -
+        ins: D. Hardt
+        name: Dick Hardt
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-progressive:
+    title: "Mission Progressive Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -901,6 +917,46 @@ binding-specific name. Full-provision Mission governance, which the
 PS gate already provides ({{gating}}), reaches the Runtime-Enforced
 level only in the Resource-verifiable mode with the runtime decision
 contract in force ({{request-binding}}).
+
+# Resource-Declared Semantics {#resource-declared}
+
+This section is informative. AAuth's exploratory Rich Resource
+Requests companion ({{I-D.draft-hardt-aauth-r3}}) inverts the
+authority ontology this family inherits from OAuth: instead of the
+client proposing authority, the resource publishes an R3 document
+declaring its operations, their human meaning, and their
+consequences, content-addressed by `r3_s256`, and the agent carries
+the hash of a declaration it cannot read. That is the descriptive
+half of open-world discovery, and it composes with this binding's
+governance half without new mechanism:
+
+- **Encounter-time adjudication at the gate that already exists.**
+  The Person Server issues or gates every auth token ({{gating}}),
+  so the moment an agent requests a token for a newly encountered
+  resource is the adjudication point: the PS evaluates the
+  resource's declared operations against the Mission's Authority
+  Set, or against a pre-consented ceiling where the progressive
+  companion is deployed
+  ({{I-D.draft-mcguinness-oauth-mission-progressive}}), binding
+  in-envelope encounters by policy and routing everything else to
+  the Approver.
+- **Consent composes the resource's own words.** The R3 `display`
+  section is resource-authored consent material; a PS that renders
+  it into a Mission's approval or expansion disclosure gives the
+  Approver the resource's stated meaning and consequences, and
+  Consent Evidence then commits what was shown
+  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
+- **A third commitment.** `r3_s256` commits what the resource
+  declared, beside `intent_hash` (what the client asked) and
+  `authority_hash` (what was consented). Recorded with binding and
+  decision evidence (the progressive companion's
+  `resource_declaration_digest` carries it), it makes the encounter
+  reproducible in audit: what the resource claimed to be at the
+  moment authority bound to it.
+
+R3 is an exploratory draft; this section describes composition, not
+a normative dependency, and nothing in this binding's conformance
+requires it.
 
 # Conformance {#conformance}
 
