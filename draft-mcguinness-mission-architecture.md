@@ -1323,7 +1323,9 @@ The levels, cumulative:
   live at this level, each with proof obligations the runtime profile
   fixes. **Agent-compromise-resistant enforcement**: mediated
   credential custody, no unmediated path, action-bound approval for the
-  high-consequence classes, and an active-freshness state source, so a
+  high-consequence classes, an active-freshness state source, and
+  approval disclosures rendered by a component isolated from the
+  agent, so a
   compromised agent cannot unilaterally take a high-consequence action
   for which it does not hold a mediated credential. **Trifecta
   containment**: least exposure, the harness taint rule enforced as a

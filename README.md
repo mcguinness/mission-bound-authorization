@@ -222,7 +222,7 @@ below the table.
 | **Baseline Issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Runtime-Enforced level). The kill switch is binding-dependent: under the standalone MAS there is no issuance gate, and the cutoff arrives with the runtime layer. Audit, not action-time defense. |
 | **Runtime-Enforced** (the Protocol MVP) | mission + runtime + authzen + a freshness source (status or issuer token introspection; signals, experimental, adds push) | Per-action enforcement at the point of use, and prompt revocation. The smallest deployment that makes a Mission-bound token more than governance metadata, and every dependency it needs is ratified. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
 | **Governed Agent** (recommended for AI agents) | Runtime-Enforced + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. Add child-delegation for sub-agents and expansion for mid-task growth, orchestration (experimental) for safe unwinding of in-flight work, and discovery (experimental, with progressive) for agents that meet resources their approval could not name. |
-| **High-Assurance Agent** | Governed Agent + mediated custody, no unmediated path, action-bound approval, active freshness | Resistance to a compromised agent: the runtime profile's named agent-compromise-resistant enforcement and trifecta containment claims (see the note below the table), optionally bound to execution-environment attestation. |
+| **High-Assurance Agent** | Governed Agent + mediated custody, no unmediated path, action-bound approval, active freshness, agent-isolated approval rendering | Resistance to a compromised agent: the runtime profile's named agent-compromise-resistant enforcement and trifecta containment claims (see the note below the table), optionally bound to execution-environment attestation. |
 
 The model deploys through three bindings. The OAuth binding is the
 core's own: the Authorization Server implements the
@@ -260,14 +260,15 @@ guidance, not a new conformance class.
 In particular, adopting the Governed Agent level does not by itself make a
 deployment resistant to a compromised agent. That is the runtime
 profile's named *agent-compromise-resistant enforcement* claim, which
-holds only when all four of its conditions are met for the
+holds only when all five of its conditions are met for the
 high-consequence classes: mediated credential custody, no unmediated
-path to those actions, an action-bound approval, and an active-freshness
-state source. Mediated custody moves the high-consequence
+path to those actions, an action-bound approval, an active-freshness
+state source, and an approval disclosure rendered by a component
+isolated from the agent. Mediated custody moves the high-consequence
 sender-constraint key out of the agent and into the mediating Policy
 Enforcement Point; this *relocates* the credential rather than removing
 it, so the mediating PEP becomes a critical trusted component whose own
-compromise is out of scope. A deployment that leaves any of the four
+compromise is out of scope. A deployment that leaves any of the five
 conditions unmet, or that cannot place a PEP on every path to a mediated
 action, must not represent itself as resistant to agent compromise.
 
