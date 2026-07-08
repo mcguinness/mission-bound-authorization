@@ -663,7 +663,8 @@ Agent-compromise-resistant enforcement (High-Assurance Agent):
 : A compromised agent cannot unilaterally take a high-consequence
   action it does not hold a mediated credential for
   ({{I-D.draft-mcguinness-mission-runtime}}). Rests on PEP key
-  custody, the agent and harness isolation boundary, and an
+  custody, the agent and harness isolation boundary (the approval
+  disclosure included, never agent-composed), and an
   active-freshness state source.
 
 Trifecta containment (High-Assurance Agent):
