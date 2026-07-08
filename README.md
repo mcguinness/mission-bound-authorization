@@ -510,10 +510,11 @@ portable.
 
 The concrete OpenID AuthZEN binding of the runtime decision contract. It
 maps the runtime profile's abstract decision inputs onto the AuthZEN
-Authorization API request and response, defines the Decision Evidence
-and Execution Evidence objects, and specifies how runtime denials are
-carried in an AuthZEN decision. It binds the contract; it does not
-restate the enforcement semantics the runtime profile owns.
+Authorization API request and response, defines the Decision Evidence,
+Execution Evidence, and Refusal Record objects, and maps every runtime
+failure condition onto a wire-visible identifier. It binds the
+contract; it does not restate the enforcement semantics the runtime
+profile owns.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authzen.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-mission-authzen) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-authzen) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-authzen.diff)
 
