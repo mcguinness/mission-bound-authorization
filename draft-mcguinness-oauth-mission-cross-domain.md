@@ -48,6 +48,7 @@ normative:
 
 informative:
   I-D.draft-ietf-oauth-transaction-tokens:
+  I-D.draft-fletcher-transaction-token-chaining-profile:
   I-D.draft-mcguinness-oauth-id-assertion-framework:
   I-D.draft-mcguinness-oauth-domain-authorized-issuer:
   I-D.draft-mcguinness-oauth-actor-receipts:
@@ -275,6 +276,45 @@ includes only the Authority Set entries whose `resource` that
 Resource AS is authoritative for, under the deployment's
 resource-to-AS mapping ({{pre-established-trust}}). Entries for other
 Resource ASes MUST NOT be disclosed.
+
+# Relationship to Transaction Token Chaining {#txn-chaining}
+
+This section is informative. The Transaction Token chaining profile
+({{I-D.draft-fletcher-transaction-token-chaining-profile}}) is a
+sibling of this document: the same identity-chaining framework, the
+same exchange-then-redeem shape at the same boundary, the same
+short-grant discipline, a distinct `typ` (`txn-chain+jwt`). What
+crosses differs. Its grant carries the in-flight transaction's
+context, minted from a Transaction Token
+({{I-D.draft-ietf-oauth-transaction-tokens}}) that never leaves its
+domain; this document's grant carries the durable approved task. A
+hop between the same two domains may legitimately need both facts,
+and a deployment MAY run both profiles on one hop. They compose as
+follows:
+
+- **The Mission reference may ride the transaction chain as
+  evidence, never as authority.** The `mission` claim object (`id`,
+  `issuer`, `authority_hash`) MAY be carried inside that profile's
+  minimized `txn_claims`, exactly as it rides an intra-domain
+  Transaction Token in this document's end-to-end example. It is
+  inert there: a consumer MUST NOT derive, widen, or gate authority
+  from it, and a partner that needs the committed facts verifies a
+  Mission Mandate ({{I-D.draft-mcguinness-mission-mandate}}).
+  Mission-scoped authority reaches another domain only through this
+  document's grant.
+- **The transaction identifier may ride this document's evidence.**
+  A Resource AS that redeems a Mission-bound grant while
+  participating in a transaction chain MAY record the transaction
+  identifier with its redemption and derivation evidence, so the
+  transaction chain and the Mission projection correlate in audit
+  across both domains.
+- **Recursion does not extend projection.** That profile permits
+  recursive chaining: the second domain repeats the pattern toward a
+  third. A Mission's projection is single-hop by design
+  ({{what-crosses}}); a recursive transaction chain carries the
+  Mission reference onward as evidence only, and a third domain that
+  must honor the Mission needs its own projection from the
+  originating issuer.
 
 # Pre-Established Trust {#pre-established-trust}
 
