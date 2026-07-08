@@ -28,6 +28,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  RFC3339:
   RFC6749:
   RFC6838:
   RFC7515:
@@ -262,8 +263,10 @@ Claims:
   `authority_hash`, exactly as recorded.
 
 `mission_expiry`:
-: REQUIRED. NumericDate form of the Mission's `expires_at`. No token
-  issued under this grant may outlive it ({{redemption}}).
+: REQUIRED. A string. An RFC 3339 {{RFC3339}} date-time mirroring
+  the Mission record's `expires_at`, as the Mandate carries it
+  ({{I-D.draft-mcguinness-mission-mandate}}). No token issued under
+  this grant may outlive it ({{redemption}}).
 
 `authorization_details`:
 : REQUIRED. The `mission_resource_access` entries {{RFC9396}} the
@@ -293,7 +296,7 @@ the core walkthrough's):
     "authority_hash":
       "sha-256:R6tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQr"
   },
-  "mission_expiry": 1795385700,
+  "mission_expiry": "2026-12-31T23:59:59Z",
   "authorization_details": [
     {
       "type": "mission_resource_access",
