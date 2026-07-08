@@ -50,6 +50,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-issuance-grant:
+    title: "Mission Issuance Grant for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC7638:
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
@@ -365,6 +373,9 @@ validates offline too: the signature chain to the root, capability
 monotonicity, audience and expiry nesting, and the holder's proof
 of possession are all facts of the presented chain
 ({{mission-binding-check}}), checkable locally at memory speed.
+Where the root's `mission` claim carries the `expires_at` member
+({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), the Mission
+ceiling is offline-checkable too.
 
 The kill switch is the one non-local fact. For ordinary
 consequential classes the validating PEP relies on cached Mission

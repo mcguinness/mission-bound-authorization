@@ -155,6 +155,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-issuance-grant:
+    title: "Mission Issuance Grant for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-attenuation:
     title: "Mission Offline Attenuation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-attenuation.html
@@ -926,6 +934,13 @@ audience, checking token expiry, and verifying any sender-constraint
 binding (`cnf`) under the proof-of-possession rules of the issuance
 profile ({{I-D.draft-mcguinness-oauth-mission}}); this profile defines
 no proof-of-possession mechanism of its own.
+
+Where the validated token's `mission` claim carries the `expires_at`
+member ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), the
+PEP or PDP MAY refuse actions past that instant without consulting a
+state source: the value is an immutable commitment and a ceiling
+only. It carries no liveness; the only-`active` rule and the
+freshness requirements of {{state-freshness}} apply unchanged.
 
 The underlying OAuth deployment MUST follow the applicable security
 best current practice in {{RFC9700}}. In particular, a Resource Server
