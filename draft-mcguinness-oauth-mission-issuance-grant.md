@@ -259,14 +259,9 @@ Claims:
   consuming AS. Only this authenticated client redeems the grant.
 
 `mission`:
-: REQUIRED. The core's `mission` claim object: `id`, `issuer`, and
-  `authority_hash`, exactly as recorded.
-
-`mission_expiry`:
-: REQUIRED. A string. An RFC 3339 {{RFC3339}} date-time mirroring
-  the Mission record's `expires_at`, as the Mandate carries it
-  ({{I-D.draft-mcguinness-mission-mandate}}). No token issued under
-  this grant may outlive it ({{redemption}}).
+: REQUIRED. The core's `mission` claim object (`id`, `issuer`,
+  `authority_hash`), exactly as recorded, extended with the
+  `expires_at` member of {{expires-at-member}}.
 
 `authorization_details`:
 : REQUIRED. The `mission_resource_access` entries {{RFC9396}} the
@@ -294,9 +289,9 @@ the core walkthrough's):
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://mas.example.com",
     "authority_hash":
-      "sha-256:R6tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQr"
+      "sha-256:R6tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQr",
+    "expires_at": "2026-12-31T23:59:59Z"
   },
-  "mission_expiry": "2026-12-31T23:59:59Z",
   "authorization_details": [
     {
       "type": "mission_resource_access",
@@ -307,6 +302,27 @@ the core walkthrough's):
   ]
 }
 ~~~
+
+## The `expires_at` Claim Member {#expires-at-member}
+
+This profile adds one member to the `mission` claim object on the
+credentials it governs, ahead of the issuance profile's revision:
+
+`expires_at`:
+: A string. An RFC 3339 {{RFC3339}} date-time mirroring the Mission
+  record's `expires_at`, spelled identically per the issuance
+  profile's record-fact naming rule.
+
+The member is a bounding and audit commitment and carries no
+liveness: expiry says nothing about revocation, and only `active`
+permits reliance. It gives a consumer what a token's own `exp`
+cannot: the Mission's remaining horizon for planning, a
+deterministic ceiling enforceable on offline validation paths (the
+value is immutable, so a credential-carried copy is always safe),
+and a check that issuance respected the lifetime cap
+({{redemption}}). A consumer that does not recognize the member
+ignores it. A Mission Issuer under any binding MAY include the
+member with these semantics.
 
 # Obtaining a Grant {#minting}
 
@@ -366,13 +382,15 @@ validate, in an order that fails closed:
 On success the consuming AS mints tokens under these rules:
 
 - **The claim rides unchanged.** Issued tokens carry the grant's
-  `mission` object verbatim as the core's `mission` claim.
+  `mission` object verbatim as the core's `mission` claim, including
+  the `expires_at` member ({{expires-at-member}}).
 - **Subset.** Issued `authorization_details` MUST be a subset of the
   grant's; the token response SHOULD echo them as the core specifies
   for Mission-bound issuance. The consuming AS MUST NOT widen, remap,
   or supplement them from its own policy except to narrow.
 - **Lifetime.** No access or refresh token issued under the grant
-  may have an expiry later than `mission_expiry`.
+  may have an expiry later than the `mission` object's
+  `expires_at`.
 - **Refresh is state-gated.** A consuming AS MAY issue refresh
   tokens only if it gates each refresh on current Mission state,
   resolved through the Mission Status operation
@@ -454,7 +472,7 @@ minting evidence; and grants shaped exactly as {{grant}} requires.
 **Consuming Authorization Server**: implements {{redemption}} in
 full: `typ`, signature, audience, lifetime, single-use, and client
 binding validation; verbatim `mission` claim carriage;
-subset-bounded minting; `mission_expiry` capping; state-gated
+subset-bounded minting; `expires_at` capping; state-gated
 refresh or no refresh; no re-approval. The PAR carriage of
 {{par-carriage}} is OPTIONAL.
 
@@ -485,7 +503,8 @@ consuming-AS redemption logs.
 **Trust inversion.** The consuming AS accepts externally derived
 authority. Its exposure is bounded by the profile's own rules: it
 mints only within the grant's `authorization_details`, only for the
-grant's client, never longer than `mission_expiry`, and its local
+grant's client, never longer than the Mission's `expires_at`, and
+its local
 policy MAY narrow further. The AS remains free to refuse any grant
 its policy distrusts; nothing obliges issuance.
 

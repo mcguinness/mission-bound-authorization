@@ -39,6 +39,14 @@ normative:
     seriesinfo:
       Internet-Draft: draft-hardt-oauth-aauth-protocol-08
   I-D.draft-mcguinness-oauth-mission:
+  I-D.draft-mcguinness-oauth-mission-issuance-grant:
+    title: "Mission Issuance Grant for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
     author:
@@ -641,7 +649,10 @@ The AAuth auth token is this binding's Mission-bound credential.
 An auth token a Mission-Bound Person Server issues under a Mission
 MUST carry, in its `mission` claim, the family members `id`,
 `issuer`, and `authority_hash` as the issuance profile defines them,
-alongside AAuth's native members `approver` and `s256`. One object
+alongside AAuth's native members `approver` and `s256`, and SHOULD
+carry the `expires_at` member as the issuance-grant profile defines
+it ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}): a
+bounding commitment with no liveness. One object
 carries all five; `issuer` equals `approver` in this binding, and both
 appear because each specification's consumers read their own members.
 AAuth parties ignore members they do not recognize, and a family
