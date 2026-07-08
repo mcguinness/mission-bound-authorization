@@ -1607,7 +1607,11 @@ integrity envelope are defined by the runtime profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). That envelope's
 committed payload binds the Mission's <code>mission_id</code> and <code>authority_hash</code>,
 so a consistency check between a decision request and the loaded view is
-an equality test on those values (<a href="#pdp-request" class="auto internal xref">Section 5</a>).<a href="#section-4-1" class="pilcrow">¶</a></p>
+an equality test on those values (<a href="#pdp-request" class="auto internal xref">Section 5</a>). Nothing in this
+binding requires the PDP to be remote: a PDP embedded in or colocated
+with its PEP, evaluating against a loaded materialized policy view,
+is a conforming deployment, and the decision's network cost is then
+paid per freshness window rather than per action.<a href="#section-4-1" class="pilcrow">¶</a></p>
 <p id="section-4-2">This binding carries only the wire member. <code>policy_view_id</code> appears in
 the PDP request and response <code>context</code> (<a href="#context-mission" class="auto internal xref">Section 5.2</a>,
 <a href="#runtime-denial-classification" class="auto internal xref">Section 6.4</a>) as the content-addressed correlator

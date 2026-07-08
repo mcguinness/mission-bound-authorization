@@ -309,7 +309,11 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-runtime]).  That envelope's committed
    payload binds the Mission's mission_id and authority_hash, so a
    consistency check between a decision request and the loaded view is
-   an equality test on those values (Section 5).
+   an equality test on those values (Section 5).  Nothing in this
+   binding requires the PDP to be remote: a PDP embedded in or colocated
+   with its PEP, evaluating against a loaded materialized policy view,
+   is a conforming deployment, and the decision's network cost is then
+   paid per freshness window rather than per action.
 
    This binding carries only the wire member. policy_view_id appears in
    the PDP request and response context (Section 5.2, Section 6.4) as

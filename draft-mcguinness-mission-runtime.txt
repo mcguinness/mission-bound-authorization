@@ -104,6 +104,7 @@ Table of Contents
      7.1.  Mission Binding Establishment
      7.2.  Mission State and Freshness
      7.3.  Materialized Policy View
+     7.4.  Semantic Evaluators
    8.  Parameter Binding and Time-of-Check to Time-of-Use
    9.  Consumption Bounds Fail Closed
    10. Failure Modes
@@ -1214,6 +1215,47 @@ Table of Contents
    second canonicalization and no policy-language wire form for the
    view.
 
+7.4.  Semantic Evaluators
+
+   A structurally valid action can still be semantically out of bounds:
+   every schema check passes while the content betrays the task.  A
+   deployment MAY add a semantic evaluator (a data-loss-prevention
+   engine, an LLM-based content policy, an embedding-similarity check)
+   to the decision path.  This profile does not standardize the
+   evaluator; it fixes how one composes:
+
+   *  *Rubric.* The evaluator judges content against the approved task,
+      not a free-floating policy: its rubric is the recorded Mission
+      Intent, whose integrity is verifiable against intent_hash,
+      optionally with the consented Authority Set under authority_hash.
+      A rubric that cannot be tied to the committed record is ordinary
+      deployment policy, not a Mission check.
+
+   *  *Composition.* The verdict enters the decision as Resource policy,
+      carried as deployment-defined context.  It can deny, or route the
+      action to the existing step-up affordances: an action-bound human
+      approval (Section 4.4, the decision API binding's
+      action_approval_required) or an authentication step-up
+      (step_up_required).  It MUST NOT widen authority and MUST NOT
+      substitute for a structural check this profile requires.
+
+   *  *Evidence.* When a verdict contributes to a decision, the decision
+      evidence SHOULD record the evaluator's identity or version and its
+      verdict, so a semantic denial is as reconstructable as a
+      structural one.
+
+   *  *Latency.* The evaluator runs inside the invoking action class's
+      latency budget (Section 14); a deployment that cannot afford a
+      synchronous evaluation on a class routes the class to action-bound
+      approval or narrows its authority instead.
+
+   An LLM-based evaluator is itself part of the attack surface: it reads
+   the same adversarial content it judges, and can be injected by it.
+   It therefore augments the structural signals (provenance,
+   composition, enumeration, volume, re-consent) and never replaces
+   them, and a deployment that relies on one for an action class states
+   that reliance in its Enforcement Scope Statement.
+
 8.  Parameter Binding and Time-of-Check to Time-of-Use
 
    Parameter binding is only as consistent as the normalization behind
@@ -1776,7 +1818,7 @@ Table of Contents
 
 14.  Deployment Considerations
 
-   Two properties govern how this profile scales.
+   Three properties govern how this profile scales.
 
    *Token lifetime trades against the enforcement layer.* The issuance
    profile recommends short-lived tokens because, in an issuance-only
@@ -1801,6 +1843,27 @@ Table of Contents
    aggregate bound crosses that partition and is provisioned as its own
    consistency domain.  Fail-closed applies per action class
    (Section 10): a PDP outage stops consequential work and nothing else.
+
+   *Decision latency is budgeted by class.* The synchronous cost of this
+   profile is confined to the actions whose consequences warrant it.
+   Classification (Section 4.3) is the first lever: only consequential
+   actions need a permit, and only the high-consequence classes must
+   hold a synchronous gate.  For the rest of the governed surface the
+   common-case decision is local: a PDP embedded in or colocated with
+   its PEP evaluates against a materialized policy view (Section 7.3)
+   whose network cost is paid once per freshness window, not per action;
+   a permit's validity window covers the follow-through of one
+   normalized action (Section 8); the decision API's batch evaluation
+   amortizes fan-out (Section 15); and metering leases amortize the
+   metered classes ([I-D.draft-mcguinness-mission-metering]).  Offline
+   attenuation ([I-D.draft-mcguinness-oauth-mission-attenuation])
+   removes the issuer from sub-agent fan-out entirely; its Experimental
+   status tracks the maturity of its substrate, not a judgment that
+   localized offline validation is optional at machine speed.  A
+   deployment for which a synchronous gate on a low-consequence class is
+   too expensive reclassifies deliberately and records the choice in its
+   Enforcement Scope Statement, rather than weakening the gate on the
+   classes that matter.
 
 15.  Decision API Binding
 
@@ -1888,6 +1951,23 @@ Table of Contents
    authority is checked at the point of use, parameters are bound to the
    permit, and each decision or refusal path is recorded.  This closes
    the approval-to-execution gap the issuance profile leaves open.
+
+   It governs actions, not meaning.  A request can satisfy every
+   structural check while its content does harm no schema names: the
+   approved send_email whose body carries what an injection extracted.
+   The profile's answer is to convert semantic risk into structural
+   signals rather than ask the PDP to judge content: provenance (the
+   harness taint context and its default-taint polarity,
+   [I-D.draft-mcguinness-mission-harness]), composition (the quarantine
+   pattern, [I-D.draft-mcguinness-mission-architecture]), egress-channel
+   enumeration (Section 12.2), volume bounds and exclusivity
+   ([I-D.draft-mcguinness-mission-metering]), and action-bound re-
+   consent for the highest classes (Section 4.4).  A deployment that
+   additionally runs a content evaluator (data-loss prevention, an LLM-
+   based content policy) composes it as Resource policy at the PDP: the
+   verdict enters the decision as deployment-defined context, only ever
+   narrows, and its latency belongs to the action class that invokes it
+   (Section 7.4).
 
    It does not make a compromised enforcement component safe.  A
    compromised PEP can decline to consult the PDP or ignore its
@@ -2214,6 +2294,12 @@ Table of Contents
               client-instance-assertion-01, 24 June 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-client-instance-assertion-01>.
+
+   [I-D.draft-mcguinness-oauth-mission-attenuation]
+              McGuinness, K., "Mission Offline Attenuation for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-
+              attenuation.html>.
 
    [I-D.draft-mcguinness-oauth-mission-consent-evidence]
               McGuinness, K., "Mission Consent Evidence for OAuth 2.0",

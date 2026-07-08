@@ -1259,6 +1259,9 @@ agent-compromise-resistant enforcement and trifecta containment.<a href="#sectio
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
                 <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-materialized-policy-view" class="internal xref">Materialized Policy View</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.4">
+                <p id="section-toc.1-1.7.2.4.1"><a href="#section-7.4" class="auto internal xref">7.4</a>.  <a href="#name-semantic-evaluators" class="internal xref">Semantic Evaluators</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
@@ -2693,6 +2696,56 @@ document defines no second canonicalization and no policy-language
 wire form for the view.<a href="#section-7.3-6" class="pilcrow">¶</a></p>
 </section>
 </div>
+<div id="semantic-evaluators">
+<section id="section-7.4">
+        <h3 id="name-semantic-evaluators">
+<a href="#section-7.4" class="section-number selfRef">7.4. </a><a href="#name-semantic-evaluators" class="section-name selfRef">Semantic Evaluators</a>
+        </h3>
+<p id="section-7.4-1">A structurally valid action can still be semantically out of bounds:
+every schema check passes while the content betrays the task. A
+deployment <span class="bcp14">MAY</span> add a semantic evaluator (a data-loss-prevention
+engine, an LLM-based content policy, an embedding-similarity check)
+to the decision path. This profile does not standardize the
+evaluator; it fixes how one composes:<a href="#section-7.4-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.4-2.1">
+            <p id="section-7.4-2.1.1"><strong>Rubric.</strong> The evaluator judges content against the approved
+task, not a free-floating policy: its rubric is the recorded
+Mission Intent, whose integrity is verifiable against
+<code>intent_hash</code>, optionally with the consented Authority Set under
+<code>authority_hash</code>. A rubric that cannot be tied to the committed
+record is ordinary deployment policy, not a Mission check.<a href="#section-7.4-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.4-2.2">
+            <p id="section-7.4-2.2.1"><strong>Composition.</strong> The verdict enters the decision as Resource
+policy, carried as deployment-defined context. It can deny, or
+route the action to the existing step-up affordances: an
+action-bound human approval (<a href="#action-approval" class="auto internal xref">Section 4.4</a>, the decision
+API binding's <code>action_approval_required</code>) or an authentication
+step-up (<code>step_up_required</code>). It <span class="bcp14">MUST NOT</span> widen authority and
+<span class="bcp14">MUST NOT</span> substitute for a structural check this profile requires.<a href="#section-7.4-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.4-2.3">
+            <p id="section-7.4-2.3.1"><strong>Evidence.</strong> When a verdict contributes to a decision, the
+decision evidence <span class="bcp14">SHOULD</span> record the evaluator's identity or
+version and its verdict, so a semantic denial is as
+reconstructable as a structural one.<a href="#section-7.4-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.4-2.4">
+            <p id="section-7.4-2.4.1"><strong>Latency.</strong> The evaluator runs inside the invoking action
+class's latency budget (<a href="#runtime-deployment" class="auto internal xref">Section 14</a>); a deployment
+that cannot afford a synchronous evaluation on a class routes the
+class to action-bound approval or narrows its authority instead.<a href="#section-7.4-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-7.4-3">An LLM-based evaluator is itself part of the attack surface: it
+reads the same adversarial content it judges, and can be injected
+by it. It therefore augments the structural signals (provenance,
+composition, enumeration, volume, re-consent) and never replaces
+them, and a deployment that relies on one for an action class
+states that reliance in its Enforcement Scope Statement.<a href="#section-7.4-3" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="parameter-binding">
@@ -3367,7 +3420,7 @@ excludes.<a href="#section-13-3" class="pilcrow">¶</a></p>
       <h2 id="name-deployment-considerations">
 <a href="#section-14" class="section-number selfRef">14. </a><a href="#name-deployment-considerations" class="section-name selfRef">Deployment Considerations</a>
       </h2>
-<p id="section-14-1">Two properties govern how this profile scales.<a href="#section-14-1" class="pilcrow">¶</a></p>
+<p id="section-14-1">Three properties govern how this profile scales.<a href="#section-14-1" class="pilcrow">¶</a></p>
 <p id="section-14-2"><strong>Token lifetime trades against the enforcement layer.</strong> The
 issuance profile recommends short-lived tokens because, in an
 issuance-only deployment, token expiry is the revocation cutoff.
@@ -3391,6 +3444,27 @@ deployment-configured aggregate bound crosses that partition and is
 provisioned as its own consistency domain. Fail-closed applies per
 action class (<a href="#failure-modes" class="auto internal xref">Section 10</a>): a PDP outage stops consequential
 work and nothing else.<a href="#section-14-3" class="pilcrow">¶</a></p>
+<p id="section-14-4"><strong>Decision latency is budgeted by class.</strong> The synchronous cost of
+this profile is confined to the actions whose consequences warrant
+it. Classification (<a href="#classification" class="auto internal xref">Section 4.3</a>) is the first lever: only
+consequential actions need a permit, and only the high-consequence
+classes must hold a synchronous gate. For the rest of the governed
+surface the common-case decision is local: a PDP embedded in or
+colocated with its PEP evaluates against a materialized policy view
+(<a href="#policy-view" class="auto internal xref">Section 7.3</a>) whose network cost is paid once per freshness
+window, not per action; a permit's validity window covers the
+follow-through of one normalized action (<a href="#parameter-binding" class="auto internal xref">Section 8</a>); the
+decision API's batch evaluation amortizes fan-out (<a href="#authzen" class="auto internal xref">Section 15</a>); and
+metering leases amortize the metered classes
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). Offline attenuation
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>) removes the
+issuer from sub-agent fan-out entirely; its Experimental status
+tracks the maturity of its substrate, not a judgment that localized
+offline validation is optional at machine speed. A deployment for
+which a synchronous gate on a low-consequence class is too expensive
+reclassifies deliberately and records the choice in its Enforcement
+Scope Statement, rather than weakening the gate on the classes that
+matter.<a href="#section-14-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authzen">
@@ -3505,12 +3579,29 @@ is checked at the point of use, parameters are bound to the permit,
 and each decision or refusal path is recorded.
 This closes the approval-to-execution gap the issuance profile leaves
 open.<a href="#section-17.1-1" class="pilcrow">¶</a></p>
-<p id="section-17.1-2">It does not make a compromised enforcement component safe. A
+<p id="section-17.1-2">It governs actions, not meaning. A request can satisfy every
+structural check while its content does harm no schema names: the
+approved <code>send_email</code> whose body carries what an injection extracted.
+The profile's answer is to convert semantic risk into structural
+signals rather than ask the PDP to judge content: provenance (the
+harness taint context and its default-taint polarity,
+<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), composition (the
+quarantine pattern, <span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>),
+egress-channel enumeration (<a href="#trifecta-containment" class="auto internal xref">Section 12.2</a>), volume bounds
+and exclusivity (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>), and
+action-bound re-consent for the highest classes
+(<a href="#action-approval" class="auto internal xref">Section 4.4</a>). A deployment that additionally runs a content
+evaluator (data-loss prevention, an LLM-based content policy)
+composes it as Resource policy at the PDP: the verdict enters the
+decision as deployment-defined context, only ever narrows, and its
+latency belongs to the action class that invokes it
+(<a href="#semantic-evaluators" class="auto internal xref">Section 7.4</a>).<a href="#section-17.1-2" class="pilcrow">¶</a></p>
+<p id="section-17.1-3">It does not make a compromised enforcement component safe. A
 compromised PEP can decline to consult the PDP or ignore its decision;
 a compromised PDP can return whatever decisions it chooses. Decision
 and enforcement evidence make such behavior auditable after the fact;
 they do not prevent it in the moment. Signed, externally verifiable
-decisions are future work (<a href="#deferred" class="auto internal xref">Section 16</a>).<a href="#section-17.1-2" class="pilcrow">¶</a></p>
+decisions are future work (<a href="#deferred" class="auto internal xref">Section 16</a>).<a href="#section-17.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="placement-and-bypass">
@@ -3866,6 +3957,10 @@ any decision-API wire members are defined by the binding
 <dt id="I-D.draft-mcguinness-oauth-client-instance-assertion">[I-D.draft-mcguinness-oauth-client-instance-assertion]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Instance Assertion"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-assertion-01</span>, <time datetime="2026-06-24" class="refDate">24 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-attenuation">[I-D.draft-mcguinness-oauth-mission-attenuation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Offline Attenuation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-attenuation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-attenuation.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
         <dd>

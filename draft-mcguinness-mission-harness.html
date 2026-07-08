@@ -1308,10 +1308,13 @@ treats session continuity as proof that Mission authority continues.<a href="#se
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.22">
-            <p id="section-toc.1-1.22.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.22.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-mapping-to-durable-executio" class="internal xref">Mapping to Durable-Execution Engines</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.23">
-            <p id="section-toc.1-1.23.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.23.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.24">
+            <p id="section-toc.1-1.24.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1338,6 +1341,19 @@ avoid treating recoverable runtime state as authorization. That is one
 of the harness's two duties; the other is establishing the mediated
 execution environment, in which work in a mediated action class has no
 path that bypasses the enforcement point (<a href="#mediated-egress" class="auto internal xref">Section 5</a>).<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">Two ledgers coexist by design, and neither mirrors the other. The
+harness or its workflow engine keeps the execution ledger: task
+graphs, retry queues, event histories, progress. The Mission Issuer
+keeps the authorization ledger: the approved task, its lifecycle, and
+what each decision permitted. They are separated because they sit in
+different trust domains: the execution ledger lives with the
+component this profile assumes compromisable, and a kill switch
+cannot live inside the thing it kills. The only shared key is the
+Mission Binding's reference (<a href="#mission-binding" class="auto internal xref">Section 6</a>); every obligation
+this profile places on a harness is a consume-and-gate check at a
+boundary the engine already has, never a copy of Mission state into
+engine state or of engine state into the Mission record
+(<a href="#engine-mapping" class="auto internal xref">Appendix A</a>).<a href="#section-1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="scope">
@@ -2826,18 +2842,117 @@ Harness Evidence unless required for audit.<a href="#section-19-1" class="pilcro
 </div>
 </section>
 </div>
-<div id="acknowledgments">
+<div id="engine-mapping">
 <section id="appendix-A">
+      <h2 id="name-mapping-to-durable-executio">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-mapping-to-durable-executio" class="section-name selfRef">Mapping to Durable-Execution Engines</a>
+      </h2>
+<p id="appendix-A-1">This appendix is informative. Stateful agent stacks commonly run on
+a durable-execution engine or graph runtime that already keeps
+transaction logs, retry queues, and execution state; this profile
+adds no second copy of that state. Ownership splits by ledger: the
+execution ledger stays with the harness or engine, the authorization
+ledger with the Mission Issuer and its enforcement plane.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-3">
+        <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Execution ledger</th>
+            <th class="text-left" rowspan="1" colspan="1">Authorization ledger</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Step execution, retries, failure loops</td>
+            <td class="text-left" rowspan="1" colspan="1">Mission lifecycle state and expiry</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Memory, context windows, prompt state</td>
+            <td class="text-left" rowspan="1" colspan="1">The committed record: <code>intent_hash</code> and <code>authority_hash</code>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Sub-agent spawning mechanics</td>
+            <td class="text-left" rowspan="1" colspan="1">Child-Mission adjudication: lineage, subset, depth, cascade</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Tool connections and caches</td>
+            <td class="text-left" rowspan="1" colspan="1">Credential issuance and custody; counters and latches</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Scheduling and queue management</td>
+            <td class="text-left" rowspan="1" colspan="1">Per-action permits and their evidence</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="appendix-A-3">Each obligation is discharged at
+a boundary such an engine already exposes:<a href="#appendix-A-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="appendix-A-4">
+        <dt id="appendix-A-4.1">Workflow or run handle, and the context it carries:</dt>
+        <dd style="margin-left: 1.5em" id="appendix-A-4.2">
+          <p id="appendix-A-4.2.1">the Mission Binding (<a href="#mission-binding" class="auto internal xref">Section 6</a>); the reference travels
+with the work it governs.<a href="#appendix-A-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="appendix-A-4.3">Activity or tool-call boundary:</dt>
+        <dd style="margin-left: 1.5em" id="appendix-A-4.4">
+          <p id="appendix-A-4.4.1">the runtime profile's PEP consult, with freshness valid at the
+moment of submission (<a href="#resume-algorithm" class="auto internal xref">Section 7.1</a>).<a href="#appendix-A-4.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="appendix-A-4.5">Retry and backoff queue:</dt>
+        <dd style="margin-left: 1.5em" id="appendix-A-4.6">
+          <p id="appendix-A-4.6.1">the queue rule: re-establish Mission state before release
+(<a href="#queues" class="auto internal xref">Section 9</a>).<a href="#appendix-A-4.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="appendix-A-4.7">Resume or replay of a suspended run:</dt>
+        <dd style="margin-left: 1.5em" id="appendix-A-4.8">
+          <p id="appendix-A-4.8.1">the resume checks (<a href="#resume-algorithm" class="auto internal xref">Section 7.1</a>).<a href="#appendix-A-4.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="appendix-A-4.9">Sub-workflow or child-run spawn:</dt>
+        <dd style="margin-left: 1.5em" id="appendix-A-4.10">
+          <p id="appendix-A-4.10.1">sub-agent handle binding (<a href="#subagents" class="auto internal xref">Section 11</a>); child authority arrives
+only by explicit delegation, never by session ancestry.<a href="#appendix-A-4.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="appendix-A-4.11">Human-in-the-loop signal or wait point:</dt>
+        <dd style="margin-left: 1.5em" id="appendix-A-4.12">
+          <p id="appendix-A-4.12.1">carriage of an action-bound approval to the decision
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#appendix-A-4.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="appendix-A-4.13">Compensation or saga rollback:</dt>
+        <dd style="margin-left: 1.5em" id="appendix-A-4.14">
+          <p id="appendix-A-4.14.1">the orchestration profile's unwind plan
+(<span>[<a href="#I-D.draft-mcguinness-mission-orchestration" class="cite xref">I-D.draft-mcguinness-mission-orchestration</a>]</span>).<a href="#appendix-A-4.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="appendix-A-4.15">Engine event history:</dt>
+        <dd style="margin-left: 1.5em" id="appendix-A-4.16">
+          <p id="appendix-A-4.16.1">an input to execution evidence; never the authorization record.<a href="#appendix-A-4.16.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="appendix-A-5">An integration is complete when each obligation is discharged at the
+named boundary. Nothing here requires the engine to persist Mission
+state beyond the binding, or the Mission Issuer to know the engine
+exists.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-B">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-A-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
+<p id="appendix-B-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
 set and defines how agent harnesses keep runtime continuity separate
-from Mission authority.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+from Mission authority.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-B">
+<section id="appendix-C">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

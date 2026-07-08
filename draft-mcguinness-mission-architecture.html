@@ -1503,6 +1503,14 @@ retires authority as the task finishes. No single lever closes the
 gap; a deployment composes the ones its risk warrants
 (<a href="#assurance-levels" class="auto internal xref">Section 13</a>), and the verbs of <a href="#layers" class="auto internal xref">Section 11</a> organize the
 levers by the question each answers.<a href="#section-5-2" class="pilcrow">¶</a></p>
+<p id="section-5-3">The levers share one strategy: they convert semantic risk into
+structural signals. A policy decision point is never asked to judge
+whether content is harmful; provenance (the harness taint context),
+composition (the quarantine pattern), egress enumeration and volume
+bounds, separation of duty, and re-consent turn that question into
+facts a decision can gate on. A content evaluator a deployment adds
+composes as Resource policy at the decision point and only ever
+narrows.<a href="#section-5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-life">
@@ -2424,7 +2432,13 @@ layer, and an outstanding token is still stopped at the action layer.
 The AAuth binding composes the same two chokepoints: the Person
 Server issues or gates every auth token, so issuance gating holds at
 the PS, and per-action enforcement runs under the runtime composition
-the AAuth profile defines (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-12-1" class="pilcrow">¶</a></p>
+the AAuth profile defines (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).
+Per-action enforcement is budgeted, not blanket: only consequential
+actions are gated, the common-case decision is a local evaluation
+against a materialized policy view whose network cost is paid per
+freshness window, and only the high-consequence classes must hold a
+synchronous gate (the runtime profile's deployment considerations,
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-12-1" class="pilcrow">¶</a></p>
 <p id="section-12-2">The standalone mode trades the token-layer kill switch for zero
 Authorization Server changes. A MAS creates, approves, and serves
 Missions while tokens remain ordinary; the PDP joins credentials to

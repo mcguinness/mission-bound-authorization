@@ -86,6 +86,7 @@ Table of Contents
    6.  Requesting a Root and Discovery
    7.  Offline Attenuation
    8.  Verifying the Mission Binding
+     8.1.  Edge Validation
    9.  The Kill Switch Requires Runtime Enforcement
    10. Relationship to Other Delegation
    11. Worked Example
@@ -109,7 +110,15 @@ Table of Contents
    For an agent that fans out to many sub-agents, each needing a slice
    of the Mission's authority, that makes the Authorization Server a
    per-delegation latency and availability dependency on the execution
-   hot path.
+   hot path.  At machine speed that dependency is the bottleneck: a
+   swarm forking sub-agents per subtask cannot afford an issuer round
+   trip per fork, and localized, offline, cryptographically verifiable
+   narrowing is the shape that load requires from day one.  This profile
+   is the family's answer to it; its Experimental status reflects the
+   maturity of the attenuation substrate it profiles, not a judgment
+   that the capability is optional.  The stable path meanwhile is
+   issuer-mediated child delegation
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]).
 
    This document removes the issuer from that path for narrowing.  It
    profiles Attenuating Agent Tokens
@@ -358,6 +367,29 @@ Table of Contents
    consumer SHOULD bound the chain length it accepts, independently of
    the del_max_depth the chain carries, so an adversarially deep chain
    is refused rather than verified.
+
+8.1.  Edge Validation
+
+   The deployment pattern this profile exists for.  At Mission start the
+   issuer mints the attenuation root alongside issuance and hands it to
+   the orchestrating agent; from there, narrowing never touches the
+   issuer.  The agent mints children for its sub-agents offline
+   (Section 7), and the PEP fronting each tool or resource (an agent
+   harness, an edge API gateway, a service-mesh sidecar) validates
+   offline too: the signature chain to the root, capability
+   monotonicity, audience and expiry nesting, and the holder's proof of
+   possession are all facts of the presented chain (Section 8),
+   checkable locally at memory speed.
+
+   The kill switch is the one non-local fact.  For ordinary
+   consequential classes the validating PEP relies on cached Mission
+   state within the published staleness bound, so the state cost is paid
+   once per freshness window rather than per call; the high-consequence
+   classes and Mission state transitions still reach the state source
+   synchronously, under the runtime profile's active-freshness
+   requirement (Section 9).  The result is the split a machine-speed
+   swarm needs: local validation on the hot path, synchronous authority
+   only for the actions whose consequences warrant it.
 
 9.  The Kill Switch Requires Runtime Enforcement
 
