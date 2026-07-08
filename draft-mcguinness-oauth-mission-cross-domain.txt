@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             7 July 2026
-Expires: 8 January 2027
+Intended status: Standards Track                             8 July 2026
+Expires: 9 January 2027
 
 
              Mission Cross-Domain Projection for OAuth 2.0
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 January 2027.
+   This Internet-Draft will expire on 9 January 2027.
 
 Copyright Notice
 
@@ -136,12 +136,12 @@ Table of Contents
    the record, the Mission Intent, the full Authority Set, and lifecycle
    authority stay with the Mission Issuer, and the Resource AS receives
    only claim-shape facts and the entries scoped to it (Section 5).
-   Authority only narrows: a projection carries an audience-scoped
-   subset, and nothing the Resource AS mints may widen it (Section 8).
-   Honoring is session-less: the Resource AS verifies pre-established
-   issuer trust and a signature, so the Mission Issuer is never on the
-   partner's request path; the cost of that independence is a bounded
-   revocation lease (Section 12.1).
+   Authority never widens: the projection carries the agent's authority
+   preserved and scoped to the audience, and nothing the Resource AS
+   mints may widen it (Section 8).  Honoring is session-less: the
+   Resource AS verifies pre-established issuer trust and a signature, so
+   the Mission Issuer is never on the partner's request path; the cost
+   of that independence is a bounded revocation lease (Section 12.1).
 
 2.  Status: An OPTIONAL Extension
 
@@ -312,8 +312,13 @@ Table of Contents
    Mission's derivation budget, however many local tokens the partner
    domain later mints: the issuer cannot observe those tokens and does
    not count them, and the Resource AS bounds its own minting by the
-   grant and by local policy (Section 8).  A Mission-bound cross-domain
-   grant:
+   grant and by local policy (Section 8).  Because each grant lives at
+   most 300 seconds, steady-state partner work re-issues grants on a
+   lease cadence and consumes at least 12 derivations per hour per
+   audience; a deployment sizes the Mission's max_derivations control
+   ([I-D.draft-mcguinness-oauth-mission]) as a function of that cadence
+   times the projected audiences times the Mission's duration.  A
+   Mission-bound cross-domain grant:
 
    *  MUST be a JWT authorization grant issued and signed by the Mission
       issuer, redeemable at the target Resource AS through the [RFC7523]
@@ -528,6 +533,14 @@ Table of Contents
       token to the grant it was minted from and showing its authority
       did not widen.
 
+   A grant that carries no mission claim is outside this profile: the
+   Resource AS processes it, or refuses it, under plain identity
+   chaining, and MUST NOT grant Mission-scoped resources on it.  Where
+   the deployment's pre-established trust (Section 6) requires Mission
+   binding for the requested resources, the Resource AS refuses such a
+   grant with invalid_grant; a mission claim that is present but
+   malformed is always invalid_grant (Section 9).
+
    A { "sub": ... } matcher in a conveyed entry's
    delegation.allowed_delegates is a client identifier in the
    originating AS's namespace and is not portable across the trust
@@ -557,7 +570,11 @@ Table of Contents
    its integrity rests on the signature chain (the originating AS signs
    the ID-JAG; the Resource AS validates issuer trust and signs its
    local token).  It is verifiable only against the originating AS,
-   which this document does not require to be exposed.
+   which this document does not require to be exposed.  A Resource AS or
+   auditor that needs to verify the conveyed entries against the
+   approved commitment MAY obtain a Mission Mandate
+   ([I-D.draft-mcguinness-mission-mandate]) and recompute authority_hash
+   per that profile.
 
 9.  Error Responses
 
@@ -595,7 +612,10 @@ Table of Contents
       | signature, audience, or expiry failure; a  |                |
       | sender-constraint absent, unverifiable, or |                |
       | bound to a different client; a replayed    |                |
-      | jti; a missing or malformed mission claim  |                |
+      | jti; a malformed mission claim, or a grant |                |
+      | carrying none where the deployment's pre-  |                |
+      | established trust requires Mission binding |                |
+      | for the requested resources (Section 8)    |                |
       +--------------------------------------------+----------------+
       | The request names a resource outside the   | invalid_target |
       | conveyed entries                           |                |

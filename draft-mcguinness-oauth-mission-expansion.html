@@ -1066,7 +1066,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 January 2027</td>
+<td class="center">Expires 9 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1079,12 +1079,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-expansion-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-07" class="published">7 July 2026</time>
+<time datetime="2026-07-08" class="published">8 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-09">9 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1143,7 +1143,7 @@ Mission is unaffected by this document.<a href="#section-abstract-1" class="pilc
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1671,7 +1671,13 @@ request <span class="bcp14">MUST</span> carry a DPoP proof bound to the PAR endp
 the PAR request satisfies the constraint. Presenting the token for
 expansion <span class="bcp14">MUST NOT</span> rotate it and <span class="bcp14">MUST NOT</span> register as a replay in the
 deployment's refresh-token replay detection: the token is used here only
-to bind and resolve the predecessor, not to refresh. The successor's
+to bind and resolve the predecessor, not to refresh. In a
+rotation-based deployment that carve-out would let a stolen bearer
+refresh token be presented repeatedly without detection, so each
+expansion presentation <span class="bcp14">MUST</span> be recorded and counted toward the
+deployment's anomaly detection, and the per-predecessor rate limit
+(<a href="#policy-probing" class="auto internal xref">Section 13.5</a>) is a <span class="bcp14">MUST</span> when the presented token is not
+sender-constrained. The successor's
 authority still comes only from the fresh consent at the approval event,
 never from authority the binding token could itself derive.<a href="#section-4.2-5" class="pilcrow">¶</a></p>
 <p id="section-4.2-6">Because expansion reuses the issuance profile's grant binding, it
@@ -1756,6 +1762,18 @@ transition to <code>superseded</code> (<a href="#superseded-state" class="auto i
 never widens authority without a new consent: if the Approver declines,
 no successor is created and the predecessor is untouched
 (<a href="#denial-reasons" class="auto internal xref">Section 10</a>).<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-4">Supersession is a terminal exit from <code>active</code>, so it is a terminal
+cascade trigger for the predecessor's entire delegation tree under the
+child-delegation profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). When the
+predecessor has non-terminal Child Missions, the expansion consent
+disclosure <span class="bcp14">SHOULD</span> surface that fact as a material notice: at minimum
+the count of live Child Missions and that supersession terminates
+them. A child still needed after the expansion is re-created under the
+successor through ordinary child creation, in generation order. A
+deployment <span class="bcp14">MAY</span> additionally support an expansion-request parameter by
+which the client asks the Mission Issuer to refuse the expansion while
+live Child Missions exist.<a href="#section-5-4" class="pilcrow">¶</a></p>
 <div id="successor-expiry">
 <section id="section-5.1">
         <h3 id="name-successor-expiry">
@@ -2095,10 +2113,12 @@ alongside the <code>invalid_grant</code> error:<a href="#section-9-8" class="pil
         <dd style="margin-left: 1.5em" id="section-9-9.2">
           <p id="section-9-9.2.1">A string carrying one code from this document's closed sets: a
 reconciliation status (<a href="#reconciliation" class="auto internal xref">Section 9</a>) or an expansion denial
-reason (<a href="#denial-reasons" class="auto internal xref">Section 10</a>). It is returned in the error response of
-the step that failed: the PAR error response for a binding or
-reconciliation failure, and the approval or token error response for a
-denial.<a href="#section-9-9.2.1" class="pilcrow">¶</a></p>
+reason (<a href="#denial-reasons" class="auto internal xref">Section 10</a>). It is returned by the step that failed.
+At the PAR and token endpoints it is a member of the JSON error
+response body, alongside the OAuth <code>error</code> member. On the
+front-channel authorization error response, which carries error
+parameters rather than a JSON body, it is carried as an error
+response parameter of the same name.<a href="#section-9-9.2.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2148,9 +2168,10 @@ further semantics.<a href="#section-10-3" class="pilcrow">¶</a></p>
 <p id="section-10-4">A Mission Issuer <span class="bcp14">MUST NOT</span> use a reason code to disclose policy
 boundaries beyond the adjudicated request (<a href="#policy-probing" class="auto internal xref">Section 13.5</a>); omitting
 the reason code is always permitted. When present, a reason code is
-carried in the <code>mission_expansion_status</code> member of the OAuth error
-response body (<a href="#reconciliation" class="auto internal xref">Section 9</a>), the same member that carries a
-reconciliation status.<a href="#section-10-4" class="pilcrow">¶</a></p>
+carried in <code>mission_expansion_status</code> (<a href="#reconciliation" class="auto internal xref">Section 9</a>), the same
+carrier as a reconciliation status: an error-body member at the PAR
+and token endpoints, an error response parameter on the front-channel
+authorization error response.<a href="#section-10-4" class="pilcrow">¶</a></p>
 <p id="section-10-5">Two failure classes are not denial reasons and use the issuance
 profile's error vocabulary directly: an expansion request whose
 <code>predecessor</code> does not match the grant-resolved Mission, or
@@ -2382,7 +2403,8 @@ to map the Mission Issuer's policy boundary from the denial reasons.<a href="#se
 <ul class="normal">
 <li class="normal" id="section-13.5-3.1">
             <p id="section-13.5-3.1.1">The Mission Issuer <span class="bcp14">SHOULD</span> rate-limit expansion requests per
-predecessor per client.<a href="#section-13.5-3.1.1" class="pilcrow">¶</a></p>
+predecessor per client, and <span class="bcp14">MUST</span> when the presented
+<code>predecessor_token</code> is not sender-constrained (<a href="#request-binding" class="auto internal xref">Section 4.2</a>).<a href="#section-13.5-3.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.5-3.2">
             <p id="section-13.5-3.2.1">A denial reason <span class="bcp14">MUST NOT</span> disclose policy boundaries beyond the
@@ -2463,12 +2485,13 @@ already-registered <code>mission</code> claim. No new claim, parameter, or
 token-introspection registration is required for the lineage link.<a href="#section-15-1" class="pilcrow">¶</a></p>
 <p id="section-15-2">This document defines two closed sets of symbolic codes, the expansion
 reconciliation status codes (<a href="#reconciliation" class="auto internal xref">Section 9</a>) and the expansion
-denial reasons (<a href="#denial-reasons" class="auto internal xref">Section 10</a>), both conveyed in the
-<code>mission_expansion_status</code> member of the OAuth error response body
-(<a href="#reconciliation" class="auto internal xref">Section 9</a>). <code>mission_expansion_status</code> is a member of the OAuth
-error response JSON body, not an OAuth protocol parameter, and is
-namespaced to this document's error responses, so it requires no
-registration. Like the issuance profile's restraint with <code>mission</code>
+denial reasons (<a href="#denial-reasons" class="auto internal xref">Section 10</a>), both conveyed in
+<code>mission_expansion_status</code> (<a href="#reconciliation" class="auto internal xref">Section 9</a>). As a member of the
+OAuth error response JSON body at the PAR and token endpoints,
+<code>mission_expansion_status</code> is namespaced to this document's error
+responses and requires no registration; its authorization error
+response parameter form is registered below. Like the issuance
+profile's restraint with <code>mission</code>
 members, the codes are documented in this specification rather than
 placed in new IANA registries: the closed sets are small and fully
 specified here. Should interoperable extension of either set prove
@@ -2476,8 +2499,8 @@ necessary, a future revision can create a "Mission Expansion
 Reconciliation Status" registry and a "Mission Expansion Denial Reason"
 registry with a Specification Required <span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span> policy; this document
 does not create them.<a href="#section-15-2" class="pilcrow">¶</a></p>
-<p id="section-15-3">This document registers two parameters in the "OAuth Parameters"
-registry:<a href="#section-15-3" class="pilcrow">¶</a></p>
+<p id="section-15-3">This document registers the following parameters in the "OAuth
+Parameters" registry:<a href="#section-15-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-15-4.1">
           <p id="section-15-4.1.1">Name: <code>predecessor</code><a href="#section-15-4.1.1" class="pilcrow">¶</a></p>
@@ -2502,6 +2525,18 @@ registry:<a href="#section-15-3" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-4.8">
           <p id="section-15-4.8.1">Reference: this document, <a href="#submission" class="auto internal xref">Section 4.1</a><a href="#section-15-4.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.9">
+          <p id="section-15-4.9.1">Name: <code>mission_expansion_status</code><a href="#section-15-4.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.10">
+          <p id="section-15-4.10.1">Parameter Usage Location: authorization response<a href="#section-15-4.10.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.11">
+          <p id="section-15-4.11.1">Change Controller: IETF<a href="#section-15-4.11.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.12">
+          <p id="section-15-4.12.1">Reference: this document, <a href="#reconciliation" class="auto internal xref">Section 9</a><a href="#section-15-4.12.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-15-5">As with <code>mission_intent</code> in the issuance profile, PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>

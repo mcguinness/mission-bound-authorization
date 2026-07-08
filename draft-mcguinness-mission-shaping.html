@@ -1067,7 +1067,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 January 2027</td>
+<td class="center">Expires 9 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1080,12 +1080,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-shaping-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-07" class="published">7 July 2026</time>
+<time datetime="2026-07-08" class="published">8 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-09">9 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1145,7 +1145,7 @@ by the shaper.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1212,7 +1212,7 @@ by the shaper.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-mission-intent-construction" class="internal xref">Mission Intent Construction</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
-                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-authority-ceiling-and-defau" class="internal xref">Authority Ceiling and Default Deny</a></p>
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-shaping-ceiling-and-default" class="internal xref">Shaping Ceiling and Default Deny</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
                 <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-delegation-and-child-work" class="internal xref">Delegation and Child Work</a></p>
@@ -1650,8 +1650,8 @@ trusted context, and facts inferred by the shaper.<a href="#section-6-2.2.1" cla
 (<a href="#capability-resolution" class="auto internal xref">Section 9</a>).<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-6-2.4">
-          <p id="section-6-2.4.1">Apply deployment shaping policy, including authority ceilings and
-risk classification.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-6-2.4.1">Apply deployment shaping policy, including shaping ceilings
+(<a href="#authority-ceiling" class="auto internal xref">Section 7.1</a>) and risk classification.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-6-2.5">
           <p id="section-6-2.5.1">Detect material ambiguity (<a href="#ambiguity" class="auto internal xref">Section 8</a>).<a href="#section-6-2.5.1" class="pilcrow">¶</a></p>
@@ -1684,12 +1684,13 @@ absolute URI), optional free-text <code>constraints</code>, optional
 <code>success_criteria</code>, an optional <code>purpose</code>, an optional
 <code>proposed_authority</code> array of candidate Authority Set entries, an
 <code>expires_at</code>, and an
-optional <code>controls</code> object. The shaper proposes the resources and
+optional <code>controls</code> object. The shaper proposes the resources,
 describes the desired bounds in free-text <code>constraints</code> and
-<code>success_criteria</code>; it does not author actions, structured constraints,
-or delegation. The Mission Issuer derives the actions, structured
-(object) constraints, and delegation as members of the Authority Set it
-computes (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The proposal <span class="bcp14">MUST</span> be
+<code>success_criteria</code>, and carries any concrete candidate authority
+(actions, structured constraints, delegation facts) in
+<code>proposed_authority</code>, the untrusted carrier the Mission Issuer only
+narrows when it derives the Authority Set
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The proposal <span class="bcp14">MUST</span> be
 bounded enough for the Mission Issuer to derive an Authority Set without
 interpreting natural language as authority.<a href="#section-7-1" class="pilcrow">¶</a></p>
 <p id="section-7-2">The proposal <span class="bcp14">MUST NOT</span> present issuer outputs as approved authority:
@@ -1701,18 +1702,17 @@ treats it as untrusted proposal input and bounds the derivation to a
 subset of it (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A shaper that
 has resolved such facts (for
 example, the actions a resource supports, or that the task implies
-delegated execution) proposes them there and records them in Shaping
-Evidence
-(<a href="#shaping-evidence" class="auto internal xref">Section 10</a>), where the Mission Issuer <span class="bcp14">MAY</span> consult them, rather
-than placing them in the proposal.<a href="#section-7-2" class="pilcrow">¶</a></p>
+delegated execution) proposes them there and records the same facts in
+Shaping Evidence (<a href="#shaping-evidence" class="auto internal xref">Section 10</a>) for audit only; Shaping
+Evidence is never an input the derivation consumes.<a href="#section-7-2" class="pilcrow">¶</a></p>
 <p id="section-7-3">A sound shaper does not include a resource in the proposal merely because
 the task text implies it might be useful. The shaper should have a
 resolution basis under <a href="#capability-resolution" class="auto internal xref">Section 9</a>, or it should produce a
 clarification request or a refusal.<a href="#section-7-3" class="pilcrow">¶</a></p>
 <div id="authority-ceiling">
 <section id="section-7.1">
-        <h3 id="name-authority-ceiling-and-defau">
-<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-authority-ceiling-and-defau" class="section-name selfRef">Authority Ceiling and Default Deny</a>
+        <h3 id="name-shaping-ceiling-and-default">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-shaping-ceiling-and-default" class="section-name selfRef">Shaping Ceiling and Default Deny</a>
         </h3>
 <p id="section-7.1-1">A sound shaper applies a default-deny posture. The Mission Intent
 proposal should contain only resources that have a positive basis in the
@@ -1750,7 +1750,10 @@ auditable across domains even though the Mission Issuer's policy
 decision of what to narrow to stays local. The shaper still proposes
 only; the Mission Issuer validates, narrows, and binds authority at
 approval (<a href="#proposes-only" class="auto internal xref">Section 5.2</a>).<a href="#section-7.1-4" class="pilcrow">¶</a></p>
-<p id="section-7.1-5">When a deployment or caller supplies an authority ceiling, the proposal
+<p id="section-7.1-5">When a deployment or caller supplies a <strong>shaping ceiling</strong>, a
+caller-supplied bound distinct from the progressive profile's
+consented <code>authority_ceiling</code> Mission member
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>), the proposal
 <span class="bcp14">MUST</span> be a subset of it. If the task cannot be completed within that
 ceiling, the shaper <span class="bcp14">MUST</span> request clarification or refuse; it <span class="bcp14">MUST NOT</span>
 silently drop necessary authority while emitting a proposal that appears
@@ -1765,14 +1768,15 @@ when no caller ceiling is present.<a href="#section-7.1-5" class="pilcrow">¶</a
         <h3 id="name-delegation-and-child-work">
 <a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-delegation-and-child-work" class="section-name selfRef">Delegation and Child Work</a>
         </h3>
-<p id="section-7.2-1">The shaper does not author a delegation entry: <code>delegation</code> is a member
-of the Authority Set the Mission Issuer derives
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), not of the Mission Intent
-proposal. If the task implies use of sub-agents, background workers, or
-delegated execution, the shaper <span class="bcp14">SHOULD</span> record that fact in Shaping
-Evidence (<a href="#shaping-evidence" class="auto internal xref">Section 10</a>) so the Mission Issuer can derive
-<code>delegation</code> on the relevant Authority Set entry or refuse. The shaper
-<span class="bcp14">MAY</span> also describe the desired delegation bound in free-text
+<p id="section-7.2-1">The shaper does not author the derived <code>delegation</code> member: it
+proposes delegation facts as untrusted candidate authority in the
+Intent's <code>proposed_authority</code> member, which the Mission Issuer only
+narrows when it derives <code>delegation</code> on the relevant Authority Set
+entry, or refuses (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). If the
+task implies use of sub-agents, background workers, or delegated
+execution, the shaper <span class="bcp14">SHOULD</span> propose that fact there, recording the
+same fact in Shaping Evidence (<a href="#shaping-evidence" class="auto internal xref">Section 10</a>) for audit only.
+The shaper <span class="bcp14">MAY</span> also describe the desired delegation bound in free-text
 <code>constraints</code> or <code>success_criteria</code>. A sound shaper does not infer
 delegated execution from the mere existence of a task graph or an agent
 harness: a child actor needs explicit authority derived by the Mission
@@ -1781,7 +1785,7 @@ Issuer, not session ancestry.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), turning a
 sub-task into the proposed Child Mission Intent is a shaping act, and
 this profile applies to it unchanged. The Parent Mission's Authority
-Set is the ceiling (<a href="#authority-ceiling" class="auto internal xref">Section 7.1</a>): the child-delegation
+Set is the shaping ceiling (<a href="#authority-ceiling" class="auto internal xref">Section 7.1</a>): the child-delegation
 profile refuses a child that is not a strict subset of its parent, so
 a proposal that exceeds the parent cannot be approved, and a sound
 shaper narrows, clarifies, or refuses rather than emit one. Shaping
@@ -1797,8 +1801,10 @@ identifier and the parent-derived ceiling it shaped under.<a href="#section-7.2-
 <p id="section-7.3-1">The following maps a prompt or trigger onto the Mission Intent fields.
 It is guidance, not a normative algorithm; the <span class="bcp14">SHOULD</span>/<span class="bcp14">MUST</span> points are
 called out. Resolved actions, structured constraints, and delegation
-facts do not appear here: they belong in Shaping Evidence, where the
-Mission Issuer derives the Authority Set from them.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+facts do not appear here: they belong in the Intent's
+<code>proposed_authority</code> member, the untrusted carrier the Mission Issuer
+only narrows; Shaping Evidence records the same facts for audit only
+and is never an input authority derives from.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
           <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
 <thead>
@@ -2343,11 +2349,12 @@ reads Shaping Evidence for an authorization decision is misusing it.<a href="#se
 function (<a href="#client-side" class="auto internal xref">Section 5.1</a>). A deployment that nevertheless factors
 shaping into a network service for engineering reasons <span class="bcp14">MAY</span> expose it over
 HTTPS. The request and response shapes such a service uses are a local
-implementation detail, not an interoperability contract, and this
-section is non-normative.<a href="#section-15-1" class="pilcrow">¶</a></p>
+implementation detail, not an interoperability contract, and their
+description in this section is non-normative; the authentication
+requirement below is normative.<a href="#section-15-1" class="pilcrow">¶</a></p>
 <p id="section-15-2">A request typically conveys the task (free text and/or structured
 fields), the subject and agent on whose behalf the Mission would run,
-deployment context, an optional authority ceiling, and the capability
+deployment context, an optional shaping ceiling, and the capability
 sources the shaper may consult. A response typically conveys an
 outcome (a Mission Intent proposal, a set of clarifications, or a
 refusal) together with Shaping Evidence and, for a proposal, an
@@ -2410,7 +2417,7 @@ issuance and per action at runtime; shaper output reaches neither
 decision (<a href="#runtime-composition" class="auto internal xref">Section 14.2</a>).<a href="#section-16-5.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-5.4">
-          <p id="section-16-5.4.1"><strong>Assurance.</strong> Shaping appears on no rung of the Mission Assurance
+          <p id="section-16-5.4.1"><strong>Assurance.</strong> Shaping appears at no level of the Mission Assurance
 Levels, and no level requires it: the levels are built from
 issuer-side and runtime-side guarantees, and the shaper is
 client-side by construction
@@ -2693,6 +2700,10 @@ and would carry its own registrations there.<a href="#section-19-1" class="pilcr
 <dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-progressive">[I-D.draft-mcguinness-oauth-mission-progressive]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Progressive Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC6749">[RFC6749]</dt>
         <dd>

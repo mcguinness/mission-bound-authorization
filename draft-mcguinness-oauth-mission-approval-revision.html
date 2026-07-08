@@ -1061,7 +1061,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 January 2027</td>
+<td class="center">Expires 9 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1074,12 +1074,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-approval-revision-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-07" class="published">7 July 2026</time>
+<time datetime="2026-07-08" class="published">8 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-09">9 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1132,7 +1132,7 @@ narrow the proposed Mission.<a href="#section-abstract-1" class="pilcrow">¶</a>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1530,15 +1530,18 @@ Cache-Control: no-store
 }
 </pre><a href="#section-6.3-4" class="pilcrow">¶</a>
 </div>
-<p id="section-6.3-5">A malformed revision leaves the <code>revision_handle</code> reissuable: because the
-submission never advanced the approval, the client obtains a new handle
-from a subsequent <code>authorization_pending</code> response and retries. A
-consumed handle, and a handle whose deferral has resolved, are not
-reissuable.<a href="#section-6.3-5" class="pilcrow">¶</a></p>
+<p id="section-6.3-5">A malformed submission consumes the <code>revision_handle</code>: every handle is
+invalidated after one submission, success or failure
+(<a href="#security-considerations" class="auto internal xref">Section 10</a>). Because a malformed submission never
+advanced the approval, a new handle is issued on the next pending
+response and the client retries with it; no new handle is issued once
+the deferral has resolved.<a href="#section-6.3-5" class="pilcrow">¶</a></p>
 <p id="section-6.3-6">A Mission Issuer <span class="bcp14">MUST</span> bound the number of revision cycles per deferred
 approval and <span class="bcp14">MUST</span> resolve to <code>access_denied</code> once the bound is reached or
 no acceptable narrowing remains, so a client cannot drive an unbounded
-revision loop.<a href="#section-6.3-6" class="pilcrow">¶</a></p>
+revision loop. The same bound caps the <code>narrowed</code> Consent Evidence
+records one deferral can produce (<a href="#integration" class="auto internal xref">Section 7</a>), so evidence volume
+is bounded by the same limit.<a href="#section-6.3-6" class="pilcrow">¶</a></p>
 <p id="section-6.3-7">A revised proposal remains subject to the deferred approval profile's
 pending lifetime and staleness rules
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>): a decision after a

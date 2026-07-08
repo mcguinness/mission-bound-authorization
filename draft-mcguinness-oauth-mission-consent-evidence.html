@@ -1069,7 +1069,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 January 2027</td>
+<td class="center">Expires 9 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1082,12 +1082,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-consent-evidence-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-07" class="published">7 July 2026</time>
+<time datetime="2026-07-08" class="published">8 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-09">9 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1149,7 +1149,7 @@ authority grant.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1383,7 +1383,9 @@ standard, or any new OAuth grant. It does not change the Authority Set
 or Mission lifecycle. Under the standalone Mission Authority Server
 binding (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), the
 Mission Authority Server is the committing Mission Issuer and this
-profile composes with it unchanged.<a href="#section-2-3" class="pilcrow">¶</a></p>
+profile composes with it unchanged; under its own binding, the AAuth
+Person Server is likewise the committing Mission Issuer
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-2-3" class="pilcrow">¶</a></p>
 <div id="evidence-model">
 <section id="section-2.1">
         <h3 id="name-evidence-model">
@@ -1509,7 +1511,8 @@ Subject, and a display of the Approver. Presentation wording is free.<a href="#s
 <code>authority_summary</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-4-2.16">
           <p id="section-4-2.16.1"><span class="bcp14">REQUIRED</span>. An array with exactly one element per
-<code>mission_resource_access</code> entry of the approved Authority Set. Each
+<code>mission_resource_access</code> entry of the derived Authority Set the
+disclosure presents for decision. Each
 element carries the entry's <code>resource</code>, its <code>actions</code>, the rendered
 form of each <code>constraints</code> key together with its value, the delegation
 summary when the entry permits delegation, and the consumption bounds
@@ -2356,7 +2359,11 @@ the term the issuance profile defines
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Declined and narrowed events
 create no Mission (<a href="#declined-events" class="auto internal xref">Section 8.1</a>, <a href="#revision-events" class="auto internal xref">Section 8.2</a>) and so have
 no Mission audit horizon; a deployment <span class="bcp14">MUST</span> retain their evidence for a
-deployment-declared window.<a href="#section-9-3" class="pilcrow">¶</a></p>
+deployment-declared window. Entries discharged under the completion
+profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-completion" class="cite xref">I-D.draft-mcguinness-oauth-mission-completion</a>]</span>) disappear
+from status surfaces while <code>authority_hash</code> still commits them, so an
+auditor reconciling the recorded approval surface against
+later-enforced authority consults discharge state.<a href="#section-9-3" class="pilcrow">¶</a></p>
 <div id="minimization">
 <section id="section-9.1">
         <h3 id="name-minimization-and-redaction">
@@ -2649,6 +2656,10 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-aauth">[I-D.draft-mcguinness-mission-aauth]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for AAuth"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html</a>&gt;</span>. </dd>
@@ -2668,6 +2679,10 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <dt id="I-D.draft-mcguinness-oauth-mission-approval-revision">[I-D.draft-mcguinness-oauth-mission-approval-revision]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approval Revision for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval-revision.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval-revision.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-completion">[I-D.draft-mcguinness-oauth-mission-completion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Completion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-completion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-completion.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
       <dd>

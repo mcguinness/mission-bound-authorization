@@ -1063,7 +1063,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 January 2027</td>
+<td class="center">Expires 9 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1076,12 +1076,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-mandate-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-07" class="published">7 July 2026</time>
+<time datetime="2026-07-08" class="published">8 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-09">9 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1137,7 +1137,7 @@ limits what a given verifier sees.<a href="#section-abstract-1" class="pilcrow">
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1251,6 +1251,9 @@ limits what a given verifier sees.<a href="#section-abstract-1" class="pilcrow">
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
                 <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-task-data-propagation" class="internal xref">Task-Data Propagation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.2">
+                <p id="section-toc.1-1.12.2.2.1"><a href="#section-12.2" class="auto internal xref">12.2</a>.  <a href="#name-subject-disclosure" class="internal xref">Subject Disclosure</a></p>
 </li>
             </ul>
 </li>
@@ -1531,8 +1534,9 @@ Mission record's <code>expires_at</code>.<a href="#section-5.2-1.16.1" class="pi
             <p id="section-5.2-1.22.1"><span class="bcp14">OPTIONAL</span>. An array. The full consented Authority Set, exactly as
 recorded on the Mission record, preserving array order (the order is
 part of the canonical form under the issuance profile's
-canonicalization rules). When present, a verifier <span class="bcp14">MAY</span> recompute
-<code>authority_hash</code> over it (<a href="#verification" class="auto internal xref">Section 7</a>).<a href="#section-5.2-1.22.1" class="pilcrow">¶</a></p>
+canonicalization rules). When present, a verifier that relies on
+its contents recomputes <code>authority_hash</code> over it
+(<a href="#verification" class="auto internal xref">Section 7</a>).<a href="#section-5.2-1.22.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.2-1.23">
@@ -1542,8 +1546,12 @@ canonicalization rules). When present, a verifier <span class="bcp14">MAY</span>
 distinct from <code>mission_expiry</code>: after it, the Mandate <span class="bcp14">MUST NOT</span> be
 relied on as evidence. When absent, the Mandate is valid as evidence
 for the Mission's audit horizon, the retention term the issuance
-profile defines. It is deliberately not the standard <code>exp</code> claim,
-whose validity window would read as a credential lifetime.<a href="#section-5.2-1.24.1" class="pilcrow">¶</a></p>
+profile defines. Setting <code>mandate_exp</code> explicitly is <span class="bcp14">RECOMMENDED</span>:
+the audit horizon is the issuer's retention term, which a
+third-party verifier cannot discover, so an absent <code>mandate_exp</code>
+leaves the evidence bound unverifiable from the artifact alone. It
+is deliberately not the standard <code>exp</code> claim, whose validity window
+would read as a credential lifetime.<a href="#section-5.2-1.24.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -1641,6 +1649,10 @@ from the displayed JSON.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      },
       "delegation": {
         "max_depth": 2,
         "allowed_delegates": [{ "sub_profile": "ai_agent" }]
@@ -1681,12 +1693,15 @@ aXJ5IjoiMjAyNi0xMi0zMVQyMzo1OTo1OVoiLCJwb2xpY3lfdmVyc2lvbiI6ImRlcG
 xveS1wb2xpY3k6djE3Iiwic3RhdGVfYXRfaXNzdWFuY2UiOiJhY3RpdmUiLCJtYW5k
 YXRlX2V4cCI6MTgwNTYxNzAwMCwiYXV0aG9yaXR5X3NldCI6W3sidHlwZSI6Im1pc3
 Npb25fcmVzb3VyY2VfYWNjZXNzIiwicmVzb3VyY2UiOiJodHRwczovL2VycC5leGFt
-cGxlLmNvbSIsImFjdGlvbnMiOlsiaW52b2ljZXMucmVhZCJdLCJkZWxlZ2F0aW9uIj
-p7Im1heF9kZXB0aCI6MiwiYWxsb3dlZF9kZWxlZ2F0ZXMiOlt7InN1Yl9wcm9maWxl
-IjoiYWlfYWdlbnQifV19fSx7InR5cGUiOiJtaXNzaW9uX3Jlc291cmNlX2FjY2Vzcy
-IsInJlc291cmNlIjoiaHR0cHM6Ly9lcnAuZXhhbXBsZS5jb20iLCJhY3Rpb25zIjpb
-ImpvdXJuYWwtZW50cmllcy53cml0ZSJdLCJjb25zdHJhaW50cyI6eyJtYXhfYW1vdW
-50Ijp7ImFtb3VudCI6IjUwMC4wMCIsImN1cnJlbmN5IjoiVVNEIn19fV19
+cGxlLmNvbSIsImFjdGlvbnMiOlsiaW52b2ljZXMucmVhZCJdLCJjb25zdHJhaW50cy
+I6eyJyZXNvdXJjZV9pc3N1ZWRfYWZ0ZXIiOiIyMDI2LTA3LTAxVDAwOjAwOjAwWiIs
+InJlc291cmNlX2lzc3VlZF9iZWZvcmUiOiIyMDI2LTA5LTMwVDIzOjU5OjU5WiJ9LC
+JkZWxlZ2F0aW9uIjp7Im1heF9kZXB0aCI6MiwiYWxsb3dlZF9kZWxlZ2F0ZXMiOlt7
+InN1Yl9wcm9maWxlIjoiYWlfYWdlbnQifV19fSx7InR5cGUiOiJtaXNzaW9uX3Jlc2
+91cmNlX2FjY2VzcyIsInJlc291cmNlIjoiaHR0cHM6Ly9lcnAuZXhhbXBsZS5jb20i
+LCJhY3Rpb25zIjpbImpvdXJuYWwtZW50cmllcy53cml0ZSJdLCJjb25zdHJhaW50cy
+I6eyJtYXhfYW1vdW50Ijp7ImFtb3VudCI6IjUwMC4wMCIsImN1cnJlbmN5IjoiVVNE
+In19fV19
 </pre><a href="#section-5.5-10" class="pilcrow">¶</a>
 </div>
 <p id="section-5.5-11">JWS signing input, the two segments joined by <code>.</code>:<a href="#section-5.5-11" class="pilcrow">¶</a></p>
@@ -1708,12 +1723,14 @@ pY3lfdmVyc2lvbiI6ImRlcGxveS1wb2xpY3k6djE3Iiwic3RhdGVfYXRfaXNzdWFuY
 2UiOiJhY3RpdmUiLCJtYW5kYXRlX2V4cCI6MTgwNTYxNzAwMCwiYXV0aG9yaXR5X3N
 ldCI6W3sidHlwZSI6Im1pc3Npb25fcmVzb3VyY2VfYWNjZXNzIiwicmVzb3VyY2UiO
 iJodHRwczovL2VycC5leGFtcGxlLmNvbSIsImFjdGlvbnMiOlsiaW52b2ljZXMucmV
-hZCJdLCJkZWxlZ2F0aW9uIjp7Im1heF9kZXB0aCI6MiwiYWxsb3dlZF9kZWxlZ2F0Z
-XMiOlt7InN1Yl9wcm9maWxlIjoiYWlfYWdlbnQifV19fSx7InR5cGUiOiJtaXNzaW9
-uX3Jlc291cmNlX2FjY2VzcyIsInJlc291cmNlIjoiaHR0cHM6Ly9lcnAuZXhhbXBsZ
-S5jb20iLCJhY3Rpb25zIjpbImpvdXJuYWwtZW50cmllcy53cml0ZSJdLCJjb25zdHJ
-haW50cyI6eyJtYXhfYW1vdW50Ijp7ImFtb3VudCI6IjUwMC4wMCIsImN1cnJlbmN5I
-joiVVNEIn19fV19
+hZCJdLCJjb25zdHJhaW50cyI6eyJyZXNvdXJjZV9pc3N1ZWRfYWZ0ZXIiOiIyMDI2L
+TA3LTAxVDAwOjAwOjAwWiIsInJlc291cmNlX2lzc3VlZF9iZWZvcmUiOiIyMDI2LTA
+5LTMwVDIzOjU5OjU5WiJ9LCJkZWxlZ2F0aW9uIjp7Im1heF9kZXB0aCI6MiwiYWxsb
+3dlZF9kZWxlZ2F0ZXMiOlt7InN1Yl9wcm9maWxlIjoiYWlfYWdlbnQifV19fSx7InR
+5cGUiOiJtaXNzaW9uX3Jlc291cmNlX2FjY2VzcyIsInJlc291cmNlIjoiaHR0cHM6L
+y9lcnAuZXhhbXBsZS5jb20iLCJhY3Rpb25zIjpbImpvdXJuYWwtZW50cmllcy53cml
+0ZSJdLCJjb25zdHJhaW50cyI6eyJtYXhfYW1vdW50Ijp7ImFtb3VudCI6IjUwMC4wM
+CIsImN1cnJlbmN5IjoiVVNEIn19fV19
 </pre><a href="#section-5.5-12" class="pilcrow">¶</a>
 </div>
 <p id="section-5.5-13">The Mandate's JWS Compact Serialization appends <code>.</code> and the signature
@@ -1781,11 +1798,13 @@ Mandate from an untrusted issuer proves nothing.<a href="#section-7-2.3.1" class
 </li>
         <li id="section-7-2.4">
           <p id="section-7-2.4.1"><strong>Anchor recomputation.</strong> When <code>authority_set</code> is present in full,
-the verifier <span class="bcp14">MAY</span> recompute <code>authority_hash</code> over it per the
-issuance profile's integrity-anchor rules (the
-<code>mission-authority-set</code> envelope with <code>iss</code> set to <code>mission.issuer</code>) and
-<span class="bcp14">MUST</span> reject the Mandate on mismatch. It <span class="bcp14">MAY</span> likewise verify
-<code>intent_hash</code> against a Mission Intent it holds.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
+a verifier that relies on its contents <span class="bcp14">MUST</span> recompute
+<code>authority_hash</code> over it per the issuance profile's
+integrity-anchor rules (the <code>mission-authority-set</code> envelope with
+<code>iss</code> set to <code>mission.issuer</code>); a verifier that does not so rely
+<span class="bcp14">MAY</span> recompute. Either way, the verifier <span class="bcp14">MUST</span> reject the Mandate on
+mismatch. It <span class="bcp14">MAY</span> likewise verify <code>intent_hash</code> against a Mission
+Intent it holds.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-7-2.5">
           <p id="section-7-2.5.1"><strong>Freshness.</strong> When reliance requires an active Mission, obtain
@@ -1879,6 +1898,13 @@ Mission that motivated it. The derivation itself, what the rail's
 artifact authorizes and how it is consented and revoked, is governed
 by that rail, not by this document; the Mission Mandate contributes
 committed facts and audit continuity, never authority.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<p id="section-8.2-2">A rail deriving a durable artifact from a Mandate <span class="bcp14">SHOULD</span> record the
+time of its current-state check (<a href="#state-at-issuance" class="auto internal xref">Section 5.3</a>) in its own
+artifact, and <span class="bcp14">SHOULD</span> consume Mission Status
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) or Lifecycle Signals
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>) for the Mission's
+lifetime, so a later revocation of the Mission does not go silently
+unnoticed on the rail.<a href="#section-8.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="audit-evidence">
@@ -2078,6 +2104,19 @@ profile's privacy considerations describe: it carries <code>mission.id</code> an
 holders can correlate on them. That is the artifact's purpose, an
 auditable shared anchor; a deployment <span class="bcp14">SHOULD</span> weigh it before minting
 Mandates for recipients that do not need durable correlation.<a href="#section-12.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="subject-disclosure">
+<section id="section-12.2">
+        <h3 id="name-subject-disclosure">
+<a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-subject-disclosure" class="section-name selfRef">Subject Disclosure</a>
+        </h3>
+<p id="section-12.2-1">Selective disclosure never hides <code>subject</code>
+(<a href="#selective-disclosure" class="auto internal xref">Section 6</a>): every presentation identifies the
+Mission's Subject. Deployments <span class="bcp14">SHOULD</span> use opaque or pairwise Subject
+identifiers where the identity provider supports them, and <span class="bcp14">SHOULD</span>
+weigh Subject disclosure per recipient as this section weighs
+<code>authority_set</code>.<a href="#section-12.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

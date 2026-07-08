@@ -1067,7 +1067,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 January 2027</td>
+<td class="center">Expires 9 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1080,12 +1080,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-metering-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-07" class="published">7 July 2026</time>
+<time datetime="2026-07-08" class="published">8 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-09">9 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1144,7 +1144,7 @@ refuse rather than silently ignore it.<a href="#section-abstract-1" class="pilcr
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1310,7 +1310,8 @@ carried on the Mission and committed by <code>intent_hash</code> exactly as any
 other Intent member. Metering is performed by the runtime profile's
 PDP within a documented enforcement scope; this document adds metering
 semantics to the runtime profile's decision contract and changes no
-issuance behavior.<a href="#section-3-1" class="pilcrow">¶</a></p>
+issuance protocol, though it does add consent-surface obligations on
+the Mission Issuer (<a href="#consent" class="auto internal xref">Section 6.1</a>).<a href="#section-3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conventions">
@@ -1599,20 +1600,31 @@ other selector of the same group. The latch is per group and per
 Mission, is PDP-side operational state like a consumption counter
 (<a href="#metering" class="auto internal xref">Section 7</a>), and never unlatches: narrowing by exercise is
 monotonic, like every other narrowing in the family.<a href="#section-8-1" class="pilcrow">¶</a></p>
-<p id="section-8-2">Exclusivity turns the quarantine deployment pattern
+<p id="section-8-2">The latch is exempt from the relaxations of <a href="#topology" class="auto internal xref">Section 7.1</a>. A counter
+degrades gracefully under a per-PDP sub-budget or a reconciliation
+window; a separation-of-duty rule violated once is violated
+permanently, and two PDPs can latch the same group to opposite
+selectors within the window. An exclusivity group <span class="bcp14">MUST</span> therefore be
+enforced in a single strongly consistent per-Mission latch domain
+(the runtime profile's Mission-sharding guidance makes the Mission
+the consistency unit, <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), the
+sub-budget and reconciliation-window relaxations <span class="bcp14">MUST NOT</span> be applied
+to <code>exclusive</code>, and the deployment <span class="bcp14">MUST</span> name the latch domain in its
+enforcement scope statement.<a href="#section-8-2" class="pilcrow">¶</a></p>
+<p id="section-8-3">Exclusivity turns the quarantine deployment pattern
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>) into consented,
 enforceable structure: an Approver can approve a Mission that may
 read a sensitive store or communicate externally, but never both.
 The groups are consented at the approval event, committed by
 <code>intent_hash</code> with the other <code>controls</code> members, and rendered in the
-consent disclosure (<a href="#consent" class="auto internal xref">Section 6.1</a> applies unchanged).<a href="#section-8-2" class="pilcrow">¶</a></p>
-<p id="section-8-3">In the AuthZEN binding, a refusal under a latched group is denied
+consent disclosure (<a href="#consent" class="auto internal xref">Section 6.1</a> applies unchanged).<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">In the AuthZEN binding, a refusal under a latched group is denied
 with <code>exclusivity_latched</code>, an extension of the runtime denial set
 under the AuthZEN profile's coordinated-extension conventions
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), and recorded as the
 <code>denial_reason</code> in Decision Evidence. A PDP that cannot establish a
 group's latch state fails closed for the actions the group covers,
-per the runtime profile's availability posture.<a href="#section-8-3" class="pilcrow">¶</a></p>
+per the runtime profile's availability posture.<a href="#section-8-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="aggregate-bounds">
@@ -1647,7 +1659,10 @@ provisioned as its own consistency domain
 <p id="section-10-1">Where the runtime deployment uses the AuthZEN binding
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), this section defines the
 wire representation of metering. It defines no new metering semantics
-and no new constraint.<a href="#section-10-1" class="pilcrow">¶</a></p>
+and no new constraint. The requirements of this section and
+<a href="#settlement-exchange" class="auto internal xref">Section 10.1</a> apply only to a deployment that adopts the
+AuthZEN binding under that profile's conformance; for every other
+deployment the AuthZEN profile remains an informative reference.<a href="#section-10-1" class="pilcrow">¶</a></p>
 <p id="section-10-2">When metering a bound would exceed it, the PDP <span class="bcp14">MUST</span> deny with
 <code>quota_exceeded</code> (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) instead of
 returning a permit, and <span class="bcp14">MUST</span> record <code>quota_exceeded</code> as the
@@ -1670,37 +1685,45 @@ binding, delivery of the Execution Evidence Object
 commit-or-release signal: on receipt the PDP commits the consumption
 the linked action used and releases any reserved excess, keyed to the
 Execution Evidence's <code>decision_id</code>.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
-<p id="section-10.1-2">For a duration-metered action the PEP reports the measured duration in
+<p id="section-10.1-2">Settlement can also fail to arrive. An unsettled reservation remains
+charged against the bound until it is reconciled through the runtime
+profile's orphaned-evidence process
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and is released only on
+affirmative evidence of non-execution; timeout alone never releases a
+reservation for a non-idempotent action class.<a href="#section-10.1-2" class="pilcrow">¶</a></p>
+<p id="section-10.1-3">For a duration-metered action the PEP reports the measured duration in
 the Execution Evidence <code>measured_duration</code> member, and the PDP commits
 that duration against <code>max_duration</code>. A duration-lease renewal is a new
 re-evaluation request that carries the prior permit's <code>decision_id</code> in
 <code>context.prior_decision_id</code>, so the PDP continues the same metered
-activity rather than opening a new reservation. This exchange requires
-one request member and one evidence member:<a href="#section-10.1-2" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-10.1-3">
-          <dt id="section-10.1-3.1">
+activity rather than opening a new reservation. The PDP <span class="bcp14">MUST</span> verify
+that the renewal's Mission, subject, action, and audience match the
+decision named by <code>prior_decision_id</code>. This exchange requires
+one request member and one evidence member:<a href="#section-10.1-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10.1-4">
+          <dt id="section-10.1-4.1">
 <code>context.prior_decision_id</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-3.2">
-            <p id="section-10.1-3.2.1"><span class="bcp14">OPTIONAL</span>. A string. Present on a duration-lease renewal request,
+          <dd style="margin-left: 1.5em" id="section-10.1-4.2">
+            <p id="section-10.1-4.2.1"><span class="bcp14">OPTIONAL</span>. A string. Present on a duration-lease renewal request,
 carrying the <code>decision_id</code> of the permit being renewed. Absent on an
-initial request.<a href="#section-10.1-3.2.1" class="pilcrow">¶</a></p>
+initial request.<a href="#section-10.1-4.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-10.1-3.3">
+<dt id="section-10.1-4.3">
 <code>measured_duration</code> (Execution Evidence):</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-3.4">
-            <p id="section-10.1-3.4.1"><span class="bcp14">REQUIRED</span> for a duration-metered action, otherwise absent. A string
+          <dd style="margin-left: 1.5em" id="section-10.1-4.4">
+            <p id="section-10.1-4.4.1"><span class="bcp14">REQUIRED</span> for a duration-metered action, otherwise absent. A string
 containing an ISO 8601 duration (the <code>duration</code> rule in Appendix A of
-<span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>): the PEP's measured duration for the executed action.<a href="#section-10.1-3.4.1" class="pilcrow">¶</a></p>
+<span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>): the PEP's measured duration for the executed action.<a href="#section-10.1-4.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-10.1-4">A renewal repeats the evaluation-request envelope for the same
+<p id="section-10.1-5">A renewal repeats the evaluation-request envelope for the same
 activity and adds <code>context.prior_decision_id</code>. Here a long-running,
 duration-metered ledger reconciliation renews its lease before the
 prior permit expires; the action is not parameter-bound, so no
-<code>parameter_digest</code> is carried:<a href="#section-10.1-4" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-10.1-5">
+<code>parameter_digest</code> is carried:<a href="#section-10.1-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-10.1-6">
 <pre>
 {
   "subject": {
@@ -1736,7 +1759,7 @@ prior permit expires; the action is not parameter-bound, so no
     "prior_decision_id": "dec_0Rt5nB8xW2qK7mJ4vS1pL9eYc"
   }
 }
-</pre><a href="#section-10.1-5" class="pilcrow">¶</a>
+</pre><a href="#section-10.1-6" class="pilcrow">¶</a>
 </div>
 </section>
 </div>

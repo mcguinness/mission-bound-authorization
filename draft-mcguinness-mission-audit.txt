@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             7 July 2026
-Expires: 8 January 2027
+Intended status: Standards Track                             8 July 2026
+Expires: 9 January 2027
 
 
                        Mission Audit Transparency
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 January 2027.
+   This Internet-Draft will expire on 9 January 2027.
 
 Copyright Notice
 
@@ -296,6 +296,12 @@ Table of Contents
      | Mandate    | Serialization,  | mission-           |          |
      |            | as issued       | mandate+jwt        |          |
      +------------+-----------------+--------------------+----------+
+     | Child      | Child Evidence  | application/       | issuer   |
+     | Evidence   | object (JCS),   | mission-child-     |          |
+     |            | as the child-   | evidence+json      |          |
+     |            | delegation      |                    |          |
+     |            | profile fixes   |                    |          |
+     +------------+-----------------+--------------------+----------+
 
                                  Table 1
 
@@ -327,8 +333,16 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-consent-evidence],
    [I-D.draft-mcguinness-mission-authzen]), the Signals SET media type
    by the Signals profile it is carried in
-   ([I-D.draft-mcguinness-oauth-mission-signals]), and the Mandate media
-   type by the Mandate profile ([I-D.draft-mcguinness-mission-mandate]).
+   ([I-D.draft-mcguinness-oauth-mission-signals]), the Mandate media
+   type by the Mandate profile ([I-D.draft-mcguinness-mission-mandate]),
+   and the Child Evidence canonical bytes and type identifier by the
+   child-delegation profile
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]).
+
+   A Child Evidence record registers on the Parent Mission's feed: the
+   sub is the parent's (Section 7), its producer is the issuer, and the
+   child Mission's id inside the evidence makes the delegation navigable
+   from parent to child.
 
 6.2.1.  The Lifecycle Transition Object
 
@@ -348,17 +362,25 @@ Table of Contents
    *  transitioned_at (string, required): an RFC 3339 [RFC3339] date-
       time at which the transition was committed.
 
+   *  salt (string, required): a random salt of at least 128 bits,
+      base64url-encoded, retained with the evidence.  The object's other
+      members are drawn from an enumerable space, so an unsalted
+      commitment is confirmable by dictionary (Section 13).
+
    Its media type is application/mission-lifecycle-transition+json
    (Section 14).
 
 6.2.1.1.  Computed Example
 
    A minimal transition object recording the revocation of Mission
-   msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-:
+   msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-; the salt is a fixed
+   illustrative 16-byte value, where a producer generates a fresh random
+   one per record:
 
    {
      "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
      "issuer": "https://as.example.com",
+     "salt": "q7hJ2mXv9pTzR4kW5nB8dQ",
      "state": "revoked",
      "transitioned_at": "2026-11-02T08:30:00Z"
    }
@@ -366,11 +388,11 @@ Table of Contents
    Its JCS canonical bytes (one line; breaks are for display only):
 
    {"issuer":"https://as.example.com","mission_id":"msn_8RfX2Lqv9TqMv
-   4z7sA2bN1k0YpEdHc9-","state":"revoked","transitioned_at":"2026-11-
-   02T08:30:00Z"}
+   4z7sA2bN1k0YpEdHc9-","salt":"q7hJ2mXv9pTzR4kW5nB8dQ","state":"revo
+   ked","transitioned_at":"2026-11-02T08:30:00Z"}
 
    The committed digest is the SHA-256 of those bytes; its base64url
-   form is 9xMd0Ge2W5oh7f_a964mvK66QOOHYOe-kDz3HUYXkd8.  The Signed
+   form is SD3SCb7vm3b_Ivsm19ENQAGAv7pjLS-mNWGcaXqslmc.  The Signed
    Statement carries the digest bytes inline as its payload, with this
    protected header (Section 6.1, Section 7):
 
@@ -548,10 +570,12 @@ Table of Contents
    identifier of that Mission, derived from the mission claim's issuer
    and id.  All evidence about one Mission shares one sub and forms one
    Transparency Service feed.  Where the deployment provides feed
-   retrieval (Section 6.5), an auditor collects a Mission's complete,
-   ordered, append-only evidence by that sub, and the substrate's non-
-   equivocation guarantee means the auditor and the deployment see the
-   same records.
+   retrieval (Section 6.5), an auditor collects a Mission's registered
+   evidence, ordered and append-only, by that sub, and the substrate's
+   non-equivocation guarantee means the auditor and the deployment see
+   the same records.  The feed is complete only relative to what the
+   deployment is expected to register (Section 6.6); an omitted record
+   is visible only against that expectation (Section 12).
 
    For that to hold, every producer MUST compute the identical sub.
    This profile fixes a single construction; a producer MUST use it and
@@ -577,9 +601,11 @@ Table of Contents
    Mission with its own id and issuer, so its evidence forms its own
    feed; its lifecycle events, including a cascaded transition, appear
    in that feed.  The event that triggered the cascade is in the
-   parent's feed, and the child's lineage to the parent is the parent
-   member of its mission claim, which an auditor follows to the parent's
-   sub to see that trigger.
+   parent's feed.  Lineage is navigable in both directions: the child's
+   lineage to the parent is the parent member of its mission claim,
+   which an auditor follows to the parent's sub to see that trigger, and
+   the parent's children are enumerated by the Child Evidence records on
+   the parent's feed (Section 6.2), each carrying the child's id.
 
    Across trust domains a Mission's issuer and id are unchanged
    ([I-D.draft-mcguinness-oauth-mission]), so every producer in every
@@ -831,7 +857,10 @@ Table of Contents
    can confirm the commitment by dictionary; the salt makes the
    committed digest unguessable while still reproducible at
    verification, where the salt is retrieved with the evidence
-   (Section 8).
+   (Section 8).  The lifecycle-transition object carries the salt as a
+   required member of its canonical bytes for exactly this reason
+   (Section 6.2.1), and any other profile-fixed low-entropy shape MUST
+   do the same.
 
    Deleting retained evidence has a consequence the log makes permanent.
    The Receipt, the sub, and the registration cadence stay in the log,
@@ -896,12 +925,15 @@ Table of Contents
    by the consent evidence profile
    ([I-D.draft-mcguinness-oauth-mission-consent-evidence]), the Mission
    Mandate media type by the Mandate profile
-   ([I-D.draft-mcguinness-mission-mandate]), and the Signals SET media
-   type application/secevent+jwt by RFC 8417, which the Signals profile
-   carries the event in ([I-D.draft-mcguinness-oauth-mission-signals]).
-   The Signed Statement and Receipt media types are the transparency
-   substrate's ([RFC9943]).  This profile derives the sub by profile
-   rather than registering a new identifier.
+   ([I-D.draft-mcguinness-mission-mandate]), the Child Evidence type
+   identifier by the child-delegation profile
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]), and the
+   Signals SET media type application/secevent+jwt by RFC 8417, which
+   the Signals profile carries the event in
+   ([I-D.draft-mcguinness-oauth-mission-signals]).  The Signed Statement
+   and Receipt media types are the transparency substrate's ([RFC9943]).
+   This profile derives the sub by profile rather than registering a new
+   identifier.
 
 15.  References
 

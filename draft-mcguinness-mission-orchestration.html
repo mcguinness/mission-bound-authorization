@@ -1062,7 +1062,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 January 2027</td>
+<td class="center">Expires 9 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1075,12 +1075,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-orchestration-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-07" class="published">7 July 2026</time>
+<time datetime="2026-07-08" class="published">8 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-09">9 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1135,7 +1135,7 @@ active Mission, never the terminated Mission.<a href="#section-abstract-1" class
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1320,12 +1320,9 @@ answers. The harness answers "may this unit of work continue." This
 document answers "how is in-flight state unwound once continuation is
 stopped." The runtime profile still gates each action. The checks
 compose; none replaces the others (<a href="#relationship" class="auto internal xref">Section 12</a>).<a href="#section-1-3" class="pilcrow">¶</a></p>
-<p id="section-1-4">This is a newer profile than the rest of the Mission-Bound
-Authorization family and is not part of the recommended v1 deployment
-bundles. The unwind, compensation, and reversibility model it defines is
-less exercised than the issuance core and the runtime layer, and
-compensation is inherently domain-specific. Its details may change;
-treat it as a direction, not yet as a stable interface.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-4">This is a newer, experimental profile and is not required by any
+Mission Assurance Level
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="scope">
@@ -1699,13 +1696,21 @@ Mission.<a href="#section-6-3" class="pilcrow">¶</a></p>
         <h3 id="name-unwind-plan-integrity">
 <a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-unwind-plan-integrity" class="section-name selfRef">Unwind Plan Integrity</a>
         </h3>
-<p id="section-6.1-1">The step's first Orchestration Evidence record (<a href="#orchestration-evidence" class="auto internal xref">Section 11</a>)
-<span class="bcp14">MUST</span> carry an <code>unwind_plan_hash</code> over the step's unwind plan. It is
-computed with the integrity-anchor envelope of the issuance profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) under a new <code>typ</code> value
-<code>mission-unwind-plan</code>, where <code>value</code> is the unwind plan object. This
-lets an auditor detect any later alteration of the plan a step ran
-under.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<p id="section-6.1-1">The <code>unwind_plan_hash</code> over the step's unwind plan <span class="bcp14">MUST</span> be committed
+at or before the step's dispatch: a hash first recorded after a
+trigger proves later alteration, not that the plan existed when the
+step was dispatched. The orchestrator <span class="bcp14">MUST</span> commit it in an
+Orchestration Evidence record emitted at dispatch
+(<a href="#orchestration-evidence" class="auto internal xref">Section 11</a>). As an alternative, a deployment <span class="bcp14">MAY</span>
+commit it instead as a coordinated member of the step's Decision
+Evidence, through the AuthZEN profile's coordinated-extension seam
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); the step's first
+Orchestration Evidence record then repeats the committed value. The
+hash is computed with the integrity-anchor envelope of the issuance
+profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) under a new <code>typ</code>
+value <code>mission-unwind-plan</code>, where <code>value</code> is the unwind plan object.
+This lets an auditor verify that the plan a step ran under existed at
+dispatch and detect any later alteration.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
 <p id="section-6.1-2">Every unwind-plan member <span class="bcp14">MUST</span> derive from a trusted source. The
 compensation action, review queue, and safe point, like the
 reversibility class (<a href="#action-class-source" class="auto internal xref">Section 5.1</a>), <span class="bcp14">MUST</span> derive from a
@@ -2133,8 +2138,10 @@ or prior Orchestration Evidence identifiers. <span class="bcp14">REQUIRED</span>
 <dt id="section-11-2.23">
 <code>unwind_plan_hash</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-2.24">
-          <p id="section-11-2.24.1"><span class="bcp14">REQUIRED</span> on the step's first Orchestration Evidence record. The
-integrity anchor over the step's unwind plan
+          <p id="section-11-2.24.1"><span class="bcp14">REQUIRED</span> on the step's dispatch-time record or, where the hash was
+committed through Decision Evidence instead, on the step's first
+Orchestration Evidence record. The integrity anchor over the step's
+unwind plan, committed at or before dispatch
 (<a href="#unwind-plan-integrity" class="auto internal xref">Section 6.1</a>).<a href="#section-11-2.24.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -2168,10 +2175,13 @@ object. When present with <code>format</code> <code>jws-compact</code>, it is a 
 <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> Compact Serialization whose payload is the JCS
 <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical bytes of the object with <code>evidence_envelope</code>
 removed. When present, it <span class="bcp14">MUST</span> identify the signer: the JWS protected
-header <span class="bcp14">MUST</span> carry <code>alg</code>, <code>iss</code>, <code>kid</code> resolvable under deployment
-policy, and a <code>typ</code> naming the record's own media type, matching
-the suite's evidence-envelope convention
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-11-2.32.1" class="pilcrow">¶</a></p>
+header <span class="bcp14">MUST</span> carry <code>kid</code>, whose resolution under deployment policy
+identifies the issuer, <code>alg</code>, and <code>typ</code>, matching the suite's
+evidence-envelope convention
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). This document registers
+no media type; its two local-use type identifiers are
+<code>mission-orchestration-evidence</code>, which <code>typ</code> carries here, and
+<code>mission-unwind-plan</code> (<a href="#unwind-plan-integrity" class="auto internal xref">Section 6.1</a>).<a href="#section-11-2.32.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2290,7 +2300,8 @@ execution profile stops or unwinds the work.<a href="#section-12-1" class="pilcr
           <p id="section-13-2.1.1">assign a reversibility class to each consequential step;<a href="#section-13-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.2">
-          <p id="section-13-2.2.1">record an unwind plan before dispatch;<a href="#section-13-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-13-2.2.1">record an unwind plan, and commit its hash, at or before dispatch
+(<a href="#unwind-plan-integrity" class="auto internal xref">Section 6.1</a>);<a href="#section-13-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.3">
           <p id="section-13-2.3.1">stop new governed work when Mission state is non-active or stale;<a href="#section-13-2.3.1" class="pilcrow">¶</a></p>
@@ -2404,6 +2415,10 @@ and avoid recording raw user content when identifiers are sufficient.<a href="#s
 <a href="#section-17.1" class="section-number selfRef">17.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
@@ -2449,13 +2464,13 @@ and avoid recording raw user content when identifiers are sufficient.<a href="#s
 <a href="#section-17.2" class="section-number selfRef">17.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"An Architecture for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
         <dd>

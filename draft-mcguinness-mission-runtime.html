@@ -1074,7 +1074,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 January 2027</td>
+<td class="center">Expires 9 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1087,12 +1087,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-runtime-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-07" class="published">7 July 2026</time>
+<time datetime="2026-07-08" class="published">8 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-09">9 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1158,7 +1158,7 @@ agent-compromise-resistant enforcement and trifecta containment.<a href="#sectio
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1698,10 +1698,8 @@ profile.<a href="#section-2-3.20.1" class="pilcrow">¶</a></p>
         <dd class="break"></dd>
 <dt id="section-2-3.21">Operation profile:</dt>
         <dd style="margin-left: 1.5em" id="section-2-3.22">
-          <p id="section-2-3.22.1">Deployment documentation that defines operation-specific runtime
-semantics needed for interoperable enforcement within that
-deployment, including parameter normalization rules and duration
-measurement.<a href="#section-2-3.22.1" class="pilcrow">¶</a></p>
+          <p id="section-2-3.22.1">The per-operation statement of normalization and binding rules a
+deployment publishes; defined in full in <a href="#parameter-binding" class="auto internal xref">Section 8</a>.<a href="#section-2-3.22.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-2-3.23">Resource Server runtime profile:</dt>
@@ -1844,10 +1842,15 @@ action class (<a href="#state-freshness" class="auto internal xref">Section 7.2<
 (<a href="#evidence" class="auto internal xref">Section 11</a>);<a href="#section-4.2-3.8.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.2-3.9">
-            <p id="section-4.2-3.9.1">the reconciliation window for matching execution-outcome evidence to
+            <p id="section-4.2-3.9.1">the locations of the deployment-published evidence signing key sets
+(the AuthZEN profile's PDP and PEP key sets,
+<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>, resolve here);<a href="#section-4.2-3.9.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.2-3.10">
+            <p id="section-4.2-3.10.1">the reconciliation window for matching execution-outcome evidence to
 decisions, the component responsible for orphaned-evidence and
 sequence-gap detection, and that component's alerting obligation
-(<a href="#evidence" class="auto internal xref">Section 11</a>).<a href="#section-4.2-3.9.1" class="pilcrow">¶</a></p>
+(<a href="#evidence" class="auto internal xref">Section 11</a>).<a href="#section-4.2-3.10.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-4.2-4">A deployment <span class="bcp14">MUST NOT</span> claim runtime enforcement for a resource, action
@@ -2218,8 +2221,13 @@ broad as that set.<a href="#section-4.6-8" class="pilcrow">¶</a></p>
 credentials with distinct <code>cnf</code> keys over sharing one key across
 mediating PEPs, so that compromise of one mediating PEP does not expose
 the authority of another. On compromise of a mediating PEP's key, the
-deployment revokes the affected tokens and re-derives. Mediating-PEP
-key rotation follows the deployment's published key set.<a href="#section-4.6-9" class="pilcrow">¶</a></p>
+deployment revokes the affected tokens and re-derives. A
+sender-constraint private key is never published; rotation is
+re-derivation with a new <code>cnf</code> binding plus revocation or expiry of
+the tokens bound to the old key. The Enforcement Scope Statement
+<span class="bcp14">SHOULD</span> state the custody replica topology (a shared HSM-held key
+versus per-replica keys): replicating one <code>cnf</code> key across a PEP
+fleet widens the exposure custody exists to shrink.<a href="#section-4.6-9" class="pilcrow">¶</a></p>
 <p id="section-4.6-10">Mediated execution also places a controllable chokepoint on the
 egress path itself: content-level controls this profile does not
 define (data-loss prevention, redaction, payload policy) compose
@@ -2561,9 +2569,12 @@ out-of-band trusted status feed.<a href="#section-7.2-2.4.1" class="pilcrow">¶<
           <li class="normal" id="section-7.2-2.5">
             <p id="section-7.2-2.5.1">Each enforcement scope <span class="bcp14">MUST</span> publish its maximum staleness bound per
 action class and state source, together with the revocation latency
-that bound implies: a Mission's revocation takes effect, in the
-worst case, after the staleness bound plus the derived token's
-lifetime. This document imposes no universal value because the
+that bound implies: for a PDP-gated class, a Mission's revocation
+takes effect, in the worst case, after the staleness bound plus the
+permit validity window plus the class's execution bound
+(<a href="#parameter-binding" class="auto internal xref">Section 8</a>); the derived token's lifetime is the bound
+only for paths outside PDP gating. This document imposes no
+universal value because the
 acceptable latency is deployment- and consequence-specific, but the
 bound is the number that determines the profile's headline
 revocation property, so publishing it without its latency
@@ -2774,23 +2785,40 @@ the restart; a multi-instance PEP <span class="bcp14">MUST</span> share or parti
 so a single-use identifier cannot be consumed once per replica.<a href="#section-8-5.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-5.5">
-          <p id="section-8-5.5.1">The executing PEP <span class="bcp14">MUST</span> verify those bindings and <span class="bcp14">MUST</span> recompute the
+          <p id="section-8-5.5.1">A single-use identifier bounds executions of one permit, not permits
+for one action. For every non-idempotent operation in the
+irreversible-action, external-commitment, and
+privileged-administration classes, the Operation Profile <span class="bcp14">MUST</span>
+therefore also define an idempotency key. The PDP <span class="bcp14">MUST</span> refuse, or
+route to the action-bound approval requirement (<a href="#action-approval" class="auto internal xref">Section 4.4</a>),
+a permit request whose normalized parameters and idempotency key
+match a prior decision whose execution outcome is unresolved or
+completed within the reconciliation window (<a href="#evidence" class="auto internal xref">Section 11</a>).
+Legitimate re-execution of the same normalized action mints a new
+idempotency key.<a href="#section-8-5.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-5.6">
+          <p id="section-8-5.6.1">The executing PEP <span class="bcp14">MUST</span> verify those bindings and <span class="bcp14">MUST</span> recompute the
 <code>parameter_digest</code> against the parameters it is about to use. A
 mismatch <span class="bcp14">MUST</span> cause refusal: the permit does not authorize the
-changed parameters.<a href="#section-8-5.5.1" class="pilcrow">¶</a></p>
+changed parameters.<a href="#section-8-5.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-8-6">A permit authorizes initiation. An action still executing when the
 permit expires <span class="bcp14">MAY</span> run to completion, unless the action class requires
 an execution lease, which the operation profile defines; when a lease
 is required the executing PEP <span class="bcp14">MUST</span> stop or renew before the lease
-expires.<a href="#section-8-6" class="pilcrow">¶</a></p>
+expires. For the irreversible-action, external-commitment, and
+privileged-administration classes the Operation Profile <span class="bcp14">MUST</span> define
+an execution lease or a published maximum execution duration, and
+run-to-completion applies only within that bound.<a href="#section-8-6" class="pilcrow">¶</a></p>
 <p id="section-8-7">This closes the time-of-check to time-of-use gap and prevents a permit
 from being replayed for a different request (the <code>parameter_digest</code>
 mismatches). For non-idempotent consequential writes, irreversible
 actions, external commitments, and privileged administration, the
-single-use decision identifier or idempotency key also prevents repeat
-execution of the same normalized action.
+single-use decision identifier prevents repeat execution under one
+permit, and the required idempotency key prevents repeat execution of
+the same normalized action across separately obtained permits.
 Consequential reads do not require a parameter digest by default; the
 evaluation request still appears in the evidence record, by digest
 where the parameters are sensitive (<a href="#evidence" class="auto internal xref">Section 11</a>).<a href="#section-8-7" class="pilcrow">¶</a></p>
@@ -2862,7 +2890,7 @@ refusal.<a href="#section-10-1" class="pilcrow">¶</a></p>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">PDP unreachable</td>
-            <td class="text-left" rowspan="1" colspan="1">Fail closed for consequential actions; do not proceed on cached permits past the window</td>
+            <td class="text-left" rowspan="1" colspan="1">Fail closed for consequential actions; do not proceed on cached permits past the window. An unexpired, unconsumed permit <span class="bcp14">MAY</span> execute during a PDP outage: executing-PEP reverification needs no PDP</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Mission not <code>active</code>
@@ -3079,7 +3107,10 @@ than a record-specific signing scheme.<a href="#section-11.4-2.2.1" class="pilcr
             <p id="section-11.4-2.3.1">Raw parameters <span class="bcp14">MUST NOT</span> appear in the record; when retained for
 forensics they <span class="bcp14">MUST</span> be in separately access-controlled storage
 referenced by an opaque identifier, with only the
-<code>parameter_digest</code> in the record.<a href="#section-11.4-2.3.1" class="pilcrow">¶</a></p>
+<code>parameter_digest</code> in the record. A deployment <span class="bcp14">SHOULD</span> retain the
+normalized parameters of denied high-consequence attempts in that
+forensic store, so an auditor can reconstruct what was refused, not
+only that a refusal happened.<a href="#section-11.4-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.4-2.4">
             <p id="section-11.4-2.4.1">Records for one Mission <span class="bcp14">MUST</span> carry a deployment-defined sequence
@@ -3138,7 +3169,8 @@ already <span class="bcp14">MUST</span> in the base profile (<a href="#state-fre
 condition makes <span class="bcp14">MUST</span> the base profile's requirement that mediated
 classes have no unmediated path (<a href="#pep-placement" class="auto internal xref">Section 4.5</a>); mediated custody
 and action-bound approval are <span class="bcp14">SHOULD</span> in the base profile
-(<a href="#custody" class="auto internal xref">Section 4.6</a>, <a href="#action-approval" class="auto internal xref">Section 4.4</a>) and <span class="bcp14">MUST</span> here.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
+(<a href="#custody" class="auto internal xref">Section 4.6</a>, <a href="#action-approval" class="auto internal xref">Section 4.4</a>) and <span class="bcp14">MUST</span> here; the
+approval-rendering condition is stated only by this claim.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-12.1-2.1">
             <p id="section-12.1-2.1.1">the sender-constraint private key is held by the mediating PEP, not by
@@ -3152,25 +3184,38 @@ there is no unmediated path to those actions;<a href="#section-12.1-2.2.1" class
 </li>
           <li class="normal" id="section-12.1-2.3">
             <p id="section-12.1-2.3.1">each such action requires an action-bound approval
-(<a href="#action-approval" class="auto internal xref">Section 4.4</a>); and<a href="#section-12.1-2.3.1" class="pilcrow">¶</a></p>
+(<a href="#action-approval" class="auto internal xref">Section 4.4</a>);<a href="#section-12.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.1-2.4">
-            <p id="section-12.1-2.4.1">the Mission state source for those classes is an active freshness
-mechanism, not token-lifetime expiry (<a href="#state-freshness" class="auto internal xref">Section 7.2</a>).<a href="#section-12.1-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-12.1-2.4.1">the disclosure rendered to the Approver for an action-bound approval
+is derived from the bound normalized parameters by a component
+isolated from the agent (the approval service or the mediating PEP),
+never composed by the agent, and the rendering <span class="bcp14">SHOULD</span> be committed
+as Consent Evidence, raising the base profile's <span class="bcp14">MAY</span>
+(<a href="#action-approval" class="auto internal xref">Section 4.4</a>); and<a href="#section-12.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-12.1-2.5">
+            <p id="section-12.1-2.5.1">the Mission state source for those classes is an active freshness
+mechanism, not token-lifetime expiry (<a href="#state-freshness" class="auto internal xref">Section 7.2</a>).<a href="#section-12.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-12.1-3">A deployment that leaves any of these unmet <span class="bcp14">MUST NOT</span> claim
+<p id="section-12.1-3">A deployment <span class="bcp14">MAY</span> satisfy the action-bound approval condition for a
+batch through one approval that binds an enumerated list of parameter
+digests, each consumed single-use, so the human pause stays meaningful
+at volume rather than degrading into per-action rubber-stamping
+(<a href="#action-approval" class="auto internal xref">Section 4.4</a>).<a href="#section-12.1-3" class="pilcrow">¶</a></p>
+<p id="section-12.1-4">A deployment that leaves any of these unmet <span class="bcp14">MUST NOT</span> claim
 agent-compromise-resistant enforcement; it may still claim base runtime
-conformance. The claim names exactly the set of classes it covers.<a href="#section-12.1-3" class="pilcrow">¶</a></p>
-<p id="section-12.1-4">The guarantee is the conjunction of these conditions, not any one of
+conformance. The claim names exactly the set of classes it covers.<a href="#section-12.1-4" class="pilcrow">¶</a></p>
+<p id="section-12.1-5">The guarantee is the conjunction of these conditions, not any one of
 them. Mediated custody alone prevents only off-path presentation of
 the credential: the agent still initiates every action and supplies
 every parameter, and the mediating PEP executes any in-scope action
 the agent requests. What bounds a compromised agent is custody
 <strong>and</strong> complete PEP placement <strong>and</strong> correct classification acting
 together, so the claim is no stronger than the weakest of the three,
-and "mediated custody" on its own is not the property.<a href="#section-12.1-4" class="pilcrow">¶</a></p>
-<p id="section-12.1-5">Each unmet condition loses a specific property:<a href="#section-12.1-5" class="pilcrow">¶</a></p>
+and "mediated custody" on its own is not the property.<a href="#section-12.1-5" class="pilcrow">¶</a></p>
+<p id="section-12.1-6">Each unmet condition loses a specific property:<a href="#section-12.1-6" class="pilcrow">¶</a></p>
 <table class="center" id="table-4">
           <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
 <thead>
@@ -3191,6 +3236,10 @@ and "mediated custody" on its own is not the property.<a href="#section-12.1-4" 
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Action-bound approval</td>
               <td class="text-left" rowspan="1" colspan="1">Unattended high-consequence action</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Agent-independent approval rendering</td>
+              <td class="text-left" rowspan="1" colspan="1">Approval decided on agent-composed disclosure</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Active-state freshness</td>
@@ -3270,8 +3319,8 @@ one as a technical one.<a href="#section-12.2-4" class="pilcrow">¶</a></p>
 on PEP-placement completeness, which is a deployment property no
 protocol element proves. A deployment <span class="bcp14">SHOULD</span> demonstrate it with
 negative tests: each of the following bypass attempts <span class="bcp14">MUST</span> be refused
-or contained by a conforming deployment that claims the relevant
-tier, and a deployment <span class="bcp14">SHOULD</span> retain evidence that it ran them.<a href="#section-13-1" class="pilcrow">¶</a></p>
+or contained by a conforming deployment that makes the relevant
+claim, and a deployment <span class="bcp14">SHOULD</span> retain evidence that it ran them.<a href="#section-13-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-5">
         <caption><a href="#table-5" class="selfRef">Table 5</a></caption>
 <thead>

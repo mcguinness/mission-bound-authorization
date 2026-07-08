@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                                7 July 2026
-Expires: 8 January 2027
+Intended status: Experimental                                8 July 2026
+Expires: 9 January 2027
 
 
                 Mission Lifecycle Signals for OAuth 2.0
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 January 2027.
+   This Internet-Draft will expire on 9 January 2027.
 
 Copyright Notice
 
@@ -156,9 +156,11 @@ Table of Contents
    Mission Issuer (the Mission issuer: in this document's OAuth binding
    the Authorization Server; a standalone Mission Issuer, the Mission
    Authority Server [I-D.draft-mcguinness-mission-authority-server],
-   transmits these events with the same semantics), mission_id, and the
-   Mission lifecycle states.  It additionally uses *Security Event Token
-   (SET)* [RFC8417] and the *Shared Signals Framework (SSF)* [OIDC-SSF]
+   transmits these events with the same semantics, as does the AAuth
+   Person Server for its native missions
+   [I-D.draft-mcguinness-mission-aauth]), mission_id, and the Mission
+   lifecycle states.  It additionally uses *Security Event Token (SET)*
+   [RFC8417] and the *Shared Signals Framework (SSF)* [OIDC-SSF]
    transmitter, receiver, and stream terminology.
 
    A *consumer* here is an SSF receiver that relies on Mission state,
@@ -205,6 +207,11 @@ Table of Contents
    configuration declares, in its delivery object, the method it uses;
    the Mission Issuer MUST respect it and MUST NOT silently fall back to
    a less-timely method.
+
+   A bulk lifecycle sweep at the management endpoint
+   ([I-D.draft-mcguinness-oauth-mission-management]) emits one SET per
+   member Mission; a transmitter should expect, and pace, the resulting
+   burst.
 
 3.1.  Stream Scoping
 
@@ -418,6 +425,12 @@ Table of Contents
       event carrying a version not greater than the last applied for
       that mission.id MUST NOT regress the consumer's view of the state.
 
+   *  Re-establish current state through the Mission Status operation
+      ([I-D.draft-mcguinness-oauth-mission-status]) on a detected
+      version gap (a received version more than one greater than the
+      last applied for that mission.id), rather than rely on the cached
+      state that spans the gap.
+
    *  Acknowledge the event per the SSF delivery method in use.
 
    A consumer MUST NOT treat the event as authority to change Mission
@@ -427,13 +440,14 @@ Table of Contents
    rather than inventing a state.
 
    A consumer anchors stream liveness to the Shared Signals Framework
-   [OIDC-SSF] stream verification event.  A consumer that cannot verify
-   its stream, or that was down and may have missed events, SHOULD treat
-   its cached Mission state as stale once it exceeds the Mission
-   Issuer's advertised mission_max_stale_seconds
-   ([I-D.draft-mcguinness-oauth-mission-status]) and SHOULD fall back to
-   the Mission Status operation rather than continue on possibly stale
-   state.
+   [OIDC-SSF] stream verification event.  A consumer MUST treat cached
+   Mission state as stale once its age exceeds the Mission Issuer's
+   advertised mission_max_stale_seconds
+   ([I-D.draft-mcguinness-oauth-mission-status]) and MUST re-establish
+   current state before further reliance; the Mission Status operation
+   is the RECOMMENDED fallback surface.  A consumer that cannot verify
+   its stream, or that was down and may have missed events, applies the
+   same rule rather than continuing on possibly stale state.
 
 7.  Relationship to Revocation Propagation
 
@@ -678,6 +692,11 @@ Table of Contents
 
 14.2.  Informative References
 
+   [I-D.draft-mcguinness-mission-aauth]
+              McGuinness, K., "Mission-Bound Authorization for AAuth",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-mission-aauth.html>.
+
    [I-D.draft-mcguinness-mission-authority-server]
               McGuinness, K., "Mission Authority Server", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -693,6 +712,11 @@ Table of Contents
               McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-expansion.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-management]
+              McGuinness, K., "Mission Management for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-management.html>.
 
    [OIDC-CAEP]
               OpenID Foundation, "OpenID Continuous Access Evaluation

@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                                7 July 2026
-Expires: 8 January 2027
+Intended status: Experimental                                8 July 2026
+Expires: 9 January 2027
 
 
                   Mission Orchestration and Unwinding
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 January 2027.
+   This Internet-Draft will expire on 9 January 2027.
 
 Copyright Notice
 
@@ -135,12 +135,9 @@ Table of Contents
    stopped."  The runtime profile still gates each action.  The checks
    compose; none replaces the others (Section 12).
 
-   This is a newer profile than the rest of the Mission-Bound
-   Authorization family and is not part of the recommended v1 deployment
-   bundles.  The unwind, compensation, and reversibility model it
-   defines is less exercised than the issuance core and the runtime
-   layer, and compensation is inherently domain-specific.  Its details
-   may change; treat it as a direction, not yet as a stable interface.
+   This is a newer, experimental profile and is not required by any
+   Mission Assurance Level
+   ([I-D.draft-mcguinness-mission-architecture]).
 
 2.  Scope
 
@@ -371,12 +368,20 @@ Table of Contents
 
 6.1.  Unwind Plan Integrity
 
-   The step's first Orchestration Evidence record (Section 11) MUST
-   carry an unwind_plan_hash over the step's unwind plan.  It is
-   computed with the integrity-anchor envelope of the issuance profile
-   ([I-D.draft-mcguinness-oauth-mission]) under a new typ value mission-
-   unwind-plan, where value is the unwind plan object.  This lets an
-   auditor detect any later alteration of the plan a step ran under.
+   The unwind_plan_hash over the step's unwind plan MUST be committed at
+   or before the step's dispatch: a hash first recorded after a trigger
+   proves later alteration, not that the plan existed when the step was
+   dispatched.  The orchestrator MUST commit it in an Orchestration
+   Evidence record emitted at dispatch (Section 11).  As an alternative,
+   a deployment MAY commit it instead as a coordinated member of the
+   step's Decision Evidence, through the AuthZEN profile's coordinated-
+   extension seam ([I-D.draft-mcguinness-mission-authzen]); the step's
+   first Orchestration Evidence record then repeats the committed value.
+   The hash is computed with the integrity-anchor envelope of the
+   issuance profile ([I-D.draft-mcguinness-oauth-mission]) under a new
+   typ value mission-unwind-plan, where value is the unwind plan object.
+   This lets an auditor verify that the plan a step ran under existed at
+   dispatch and detect any later alteration.
 
    Every unwind-plan member MUST derive from a trusted source.  The
    compensation action, review queue, and safe point, like the
@@ -648,9 +653,11 @@ Table of Contents
    outcome_state:  OPTIONAL.  One of not_dispatched,
       dispatched_not_committed, committed, or unknown.
 
-   unwind_plan_hash:  REQUIRED on the step's first Orchestration
-      Evidence record.  The integrity anchor over the step's unwind plan
-      (Section 6.1).
+   unwind_plan_hash:  REQUIRED on the step's dispatch-time record or,
+      where the hash was committed through Decision Evidence instead, on
+      the step's first Orchestration Evidence record.  The integrity
+      anchor over the step's unwind plan, committed at or before
+      dispatch (Section 6.1).
 
    authority_basis:  REQUIRED when orchestration_decision is compensate;
       otherwise absent.  One of resource_policy or separate_mission
@@ -667,10 +674,13 @@ Table of Contents
       compact, it is a JWS [RFC7515] Compact Serialization whose payload
       is the JCS [RFC8785] canonical bytes of the object with
       evidence_envelope removed.  When present, it MUST identify the
-      signer: the JWS protected header MUST carry alg, iss, kid
-      resolvable under deployment policy, and a typ naming the record's
-      own media type, matching the suite's evidence-envelope convention
-      ([I-D.draft-mcguinness-mission-runtime]).
+      signer: the JWS protected header MUST carry kid, whose resolution
+      under deployment policy identifies the issuer, alg, and typ,
+      matching the suite's evidence-envelope convention
+      ([I-D.draft-mcguinness-mission-runtime]).  This document registers
+      no media type; its two local-use type identifiers are mission-
+      orchestration-evidence, which typ carries here, and mission-
+      unwind-plan (Section 6.1).
 
    Example:
 
@@ -763,7 +773,8 @@ Table of Contents
 
    *  assign a reversibility class to each consequential step;
 
-   *  record an unwind plan before dispatch;
+   *  record an unwind plan, and commit its hash, at or before dispatch
+      (Section 6.1);
 
    *  stop new governed work when Mission state is non-active or stale;
 
@@ -833,6 +844,11 @@ Table of Contents
 
 17.1.  Normative References
 
+   [I-D.draft-mcguinness-mission-harness]
+              McGuinness, K., "Mission-Aware Agent Harnesses", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-harness.html>.
+
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -877,16 +893,17 @@ Table of Contents
 
 17.2.  Informative References
 
+   [I-D.draft-mcguinness-mission-architecture]
+              McGuinness, K., "An Architecture for Mission-Bound
+              Authorization", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-mission-
+              architecture.html>.
+
    [I-D.draft-mcguinness-mission-authzen]
               McGuinness, K., "Mission-Bound Runtime Enforcement:
               AuthZEN Profile", 2026, <https://mcguinness.github.io/
               mission-bound-authorization/draft-mcguinness-mission-
               authzen.html>.
-
-   [I-D.draft-mcguinness-mission-harness]
-              McGuinness, K., "Mission-Aware Agent Harnesses", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-mission-harness.html>.
 
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,

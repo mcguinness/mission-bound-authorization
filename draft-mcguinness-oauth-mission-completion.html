@@ -1066,7 +1066,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 January 2027</td>
+<td class="center">Expires 9 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1079,12 +1079,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-completion-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-07" class="published">7 July 2026</time>
+<time datetime="2026-07-08" class="published">8 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-09">9 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1142,7 +1142,7 @@ enforceable counterpart of the inert <code>success_criteria</code>.<a href="#sec
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1306,7 +1306,7 @@ rules for handling it.<a href="#section-2-1" class="pilcrow">¶</a></p>
 <p id="section-2-2">A deployment claims this profile only when it issues or consumes entries
 carrying <code>terminal_when</code>.<a href="#section-2-2" class="pilcrow">¶</a></p>
 <p id="section-2-3">This profile is newer and less exercised than the issuance core and the
-runtime layer, and is not part of the recommended v1 deployment bundles.
+runtime layer, and is not required by any Mission Assurance Level.
 Its entry-discharge details may change.<a href="#section-2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1429,7 +1429,10 @@ entry's task finishes. The three Mission states are unchanged; a
 deployment that also tracks Mission-level completion <span class="bcp14">MAY</span> transition a
 Mission whose entries are all discharged to a <code>completed</code> state where a
 lifecycle profile defines one (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>),
-but this document does not require it.<a href="#section-6-2" class="pilcrow">¶</a></p>
+but this document does not require it. Such a transition is performed
+through the Status profile's <code>complete</code> operation semantics, as an
+issuer-initiated lifecycle operation, so that profile's state-machine
+event sources remain authoritative.<a href="#section-6-2" class="pilcrow">¶</a></p>
 <p id="section-6-3">Discharge gates new derivations only. A token already issued for an entry
 remains valid until it expires, as with revocation
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A deployment that needs prompt
@@ -1702,10 +1705,17 @@ authenticate and integrity-verify an event source outside its own trust
 domain (<a href="#determining" class="auto internal xref">Section 6.1</a>), and <span class="bcp14">SHOULD</span> prefer sources within it.<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.5">
-          <p id="section-13-2.5.1">Already-issued tokens. Discharge gates new derivations only; a token
+          <p id="section-13-2.5.1">Event-source availability. Fail-closed discharge gives issuance an
+availability dependency on <code>event_source</code> within <code>max_staleness</code>: an
+unreachable source withholds the entry (<a href="#determining" class="auto internal xref">Section 6.1</a>). Event
+sources inside the issuer's trust domain are <span class="bcp14">RECOMMENDED</span>, for latency
+as well as trust.<a href="#section-13-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.6">
+          <p id="section-13-2.6.1">Already-issued tokens. Discharge gates new derivations only; a token
 already issued runs to expiry. Prompt cutoff relies on short token
 lifetimes or runtime point-of-use denial (<a href="#runtime" class="auto internal xref">Section 10</a>), the same caveat
-revocation carries.<a href="#section-13-2.5.1" class="pilcrow">¶</a></p>
+revocation carries.<a href="#section-13-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

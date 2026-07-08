@@ -1067,7 +1067,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 January 2027</td>
+<td class="center">Expires 9 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1080,12 +1080,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-audit-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-07" class="published">7 July 2026</time>
+<time datetime="2026-07-08" class="published">8 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-09">9 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1144,7 +1144,7 @@ commit to the evidence by hash rather than carrying it.<a href="#section-abstrac
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1538,6 +1538,16 @@ record as part of the Mission's feed.<a href="#section-6.2-1" class="pilcrow">¶
                 <code>issuer</code>
 </td>
             </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Child Evidence</td>
+              <td class="text-left" rowspan="1" colspan="1">Child Evidence object (JCS), as the child-delegation profile fixes</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>application/mission-child-evidence+json</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>issuer</code>
+</td>
+            </tr>
           </tbody>
         </table>
 <p id="section-6.2-3">The table is extensible by specification: a profile <span class="bcp14">MAY</span> define an
@@ -1568,9 +1578,15 @@ the profiles that define those objects
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), the Signals SET
 media type by the Signals profile it is carried in
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), and the Mandate
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), the Mandate
 media type by the Mandate profile
-(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>).<a href="#section-6.2-5" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>), and the Child Evidence
+canonical bytes and type identifier by the child-delegation profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).<a href="#section-6.2-5" class="pilcrow">¶</a></p>
+<p id="section-6.2-6">A Child Evidence record registers on the Parent Mission's feed: the
+<code>sub</code> is the parent's (<a href="#feed" class="auto internal xref">Section 7</a>), its producer is the <code>issuer</code>, and
+the child Mission's <code>id</code> inside the evidence makes the delegation
+navigable from parent to child.<a href="#section-6.2-6" class="pilcrow">¶</a></p>
 <div id="transition-object">
 <section id="section-6.2.1">
           <h4 id="name-the-lifecycle-transition-ob">
@@ -1597,6 +1613,13 @@ transition.<a href="#section-6.2.1-2.4.1" class="pilcrow">¶</a></p>
               <p id="section-6.2.1-2.5.1"><code>transitioned_at</code> (string, required): an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>
 date-time at which the transition was committed.<a href="#section-6.2.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
+            <li class="normal" id="section-6.2.1-2.6">
+              <p id="section-6.2.1-2.6.1"><code>salt</code> (string, required): a random salt of at least 128 bits,
+base64url-encoded, retained with the evidence. The object's other
+members are drawn from an enumerable space, so an unsalted
+commitment is confirmable by dictionary
+(<a href="#privacy-considerations" class="auto internal xref">Section 13</a>).<a href="#section-6.2.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
           </ul>
 <p id="section-6.2.1-3">Its media type is <code>application/mission-lifecycle-transition+json</code>
 (<a href="#iana" class="auto internal xref">Section 14</a>).<a href="#section-6.2.1-3" class="pilcrow">¶</a></p>
@@ -1606,12 +1629,15 @@ date-time at which the transition was committed.<a href="#section-6.2.1-2.5.1" c
 <a href="#section-6.2.1.1" class="section-number selfRef">6.2.1.1. </a><a href="#name-computed-example" class="section-name selfRef">Computed Example</a>
             </h5>
 <p id="section-6.2.1.1-1">A minimal transition object recording the revocation of Mission
-<code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code>:<a href="#section-6.2.1.1-1" class="pilcrow">¶</a></p>
+<code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code>; the <code>salt</code> is a fixed
+illustrative 16-byte value, where a producer generates a fresh random
+one per record:<a href="#section-6.2.1.1-1" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-6.2.1.1-2">
 <pre>
 {
   "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "issuer": "https://as.example.com",
+  "salt": "q7hJ2mXv9pTzR4kW5nB8dQ",
   "state": "revoked",
   "transitioned_at": "2026-11-02T08:30:00Z"
 }
@@ -1621,12 +1647,12 @@ date-time at which the transition was committed.<a href="#section-6.2.1-2.5.1" c
 <div class="lang-text sourcecode" id="section-6.2.1.1-4">
 <pre>
 {"issuer":"https://as.example.com","mission_id":"msn_8RfX2Lqv9TqMv
-4z7sA2bN1k0YpEdHc9-","state":"revoked","transitioned_at":"2026-11-
-02T08:30:00Z"}
+4z7sA2bN1k0YpEdHc9-","salt":"q7hJ2mXv9pTzR4kW5nB8dQ","state":"revo
+ked","transitioned_at":"2026-11-02T08:30:00Z"}
 </pre><a href="#section-6.2.1.1-4" class="pilcrow">¶</a>
 </div>
 <p id="section-6.2.1.1-5">The committed digest is the SHA-256 of those bytes; its base64url
-form is <code>9xMd0Ge2W5oh7f_a964mvK66QOOHYOe-kDz3HUYXkd8</code>. The Signed
+form is <code>SD3SCb7vm3b_Ivsm19ENQAGAv7pjLS-mNWGcaXqslmc</code>. The Signed
 Statement carries the digest bytes inline as its payload, with this
 protected header (<a href="#hash-commitment" class="auto internal xref">Section 6.1</a>, <a href="#feed" class="auto internal xref">Section 7</a>):<a href="#section-6.2.1.1-5" class="pilcrow">¶</a></p>
 <div class="lang-cbor-diag sourcecode" id="section-6.2.1.1-6">
@@ -1850,9 +1876,12 @@ mandates; registering it closes the approval-to-action gap.<a href="#section-6.6
 identifier of that Mission, derived from the <code>mission</code> claim's <code>issuer</code>
 and <code>id</code>. All evidence about one Mission shares one <code>sub</code> and forms one
 Transparency Service feed. Where the deployment provides feed retrieval
-(<a href="#retrieval" class="auto internal xref">Section 6.5</a>), an auditor collects a Mission's complete, ordered,
-append-only evidence by that <code>sub</code>, and the substrate's non-equivocation
-guarantee means the auditor and the deployment see the same records.<a href="#section-7-1" class="pilcrow">¶</a></p>
+(<a href="#retrieval" class="auto internal xref">Section 6.5</a>), an auditor collects a Mission's registered evidence,
+ordered and append-only, by that <code>sub</code>, and the substrate's
+non-equivocation guarantee means the auditor and the deployment see the
+same records. The feed is complete only relative to what the deployment
+is expected to register (<a href="#what-to-register" class="auto internal xref">Section 6.6</a>); an omitted record is
+visible only against that expectation (<a href="#security-considerations" class="auto internal xref">Section 12</a>).<a href="#section-7-1" class="pilcrow">¶</a></p>
 <p id="section-7-2">For that to hold, every producer <span class="bcp14">MUST</span> compute the identical <code>sub</code>. This
 profile fixes a single construction; a producer <span class="bcp14">MUST</span> use it and <span class="bcp14">MUST NOT</span>
 use any other. The <code>sub</code> is the URI formed by appending the literal path
@@ -1876,9 +1905,12 @@ nothing (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">
 is its own Mission with its own <code>id</code> and <code>issuer</code>, so its evidence forms
 its own feed; its lifecycle events, including a <code>cascaded</code> transition,
 appear in that feed. The event that triggered the cascade is in the
-parent's feed, and the child's lineage to the parent is the <code>parent</code>
-member of its <code>mission</code> claim, which an auditor follows to the parent's
-<code>sub</code> to see that trigger.<a href="#section-7-6" class="pilcrow">¶</a></p>
+parent's feed. Lineage is navigable in both directions: the child's
+lineage to the parent is the <code>parent</code> member of its <code>mission</code> claim,
+which an auditor follows to the parent's <code>sub</code> to see that trigger,
+and the parent's children are enumerated by the Child Evidence
+records on the parent's feed (<a href="#evidence-types" class="auto internal xref">Section 6.2</a>), each carrying the
+child's <code>id</code>.<a href="#section-7-6" class="pilcrow">¶</a></p>
 <p id="section-7-7">Across trust domains a Mission's <code>issuer</code> and <code>id</code> are unchanged
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), so every producer in every
 domain computes the same <code>sub</code>. They share one feed only when they
@@ -2181,7 +2213,10 @@ alongside the evidence and hashed together with the evidence's canonical
 bytes. Without a salt, a party that can guess the evidence can confirm
 the commitment by dictionary; the salt makes the committed digest
 unguessable while still reproducible at verification, where the salt is
-retrieved with the evidence (<a href="#receipts" class="auto internal xref">Section 8</a>).<a href="#section-13-2" class="pilcrow">¶</a></p>
+retrieved with the evidence (<a href="#receipts" class="auto internal xref">Section 8</a>). The lifecycle-transition
+object carries the salt as a required member of its canonical bytes
+for exactly this reason (<a href="#transition-object" class="auto internal xref">Section 6.2.1</a>), and any other
+profile-fixed low-entropy shape <span class="bcp14">MUST</span> do the same.<a href="#section-13-2" class="pilcrow">¶</a></p>
 <p id="section-13-3">Deleting retained evidence has a consequence the log makes permanent. The
 Receipt, the <code>sub</code>, and the registration cadence stay in the log, but the
 evidence they commit to is gone, so every record over the erased evidence
@@ -2261,7 +2296,9 @@ evidence types by the AuthZEN profile
 type by the consent evidence profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>), the
 Mission Mandate media type by the Mandate profile
-(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>), and the
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>), the Child Evidence type
+identifier by the child-delegation profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), and the
 Signals SET media type <code>application/secevent+jwt</code> by RFC 8417, which the
 Signals profile carries the event in
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>). The Signed Statement

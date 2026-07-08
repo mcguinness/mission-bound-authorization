@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             7 July 2026
-Expires: 8 January 2027
+Intended status: Standards Track                             8 July 2026
+Expires: 9 January 2027
 
 
                  Mission Child Delegation for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 January 2027.
+   This Internet-Draft will expire on 9 January 2027.
 
 Copyright Notice
 
@@ -96,6 +96,7 @@ Table of Contents
      10.1.  Child Mission State
    11. Child Evidence
      11.1.  Child Evidence Object
+     11.2.  Canonical Bytes
    12. Relationship to Expansion
    13. Composition with Offline Attenuation
    14. Relationship to Harnesses
@@ -386,7 +387,8 @@ Table of Contents
 
    3.   Verify the resolved Mission matches parent.
 
-   4.   Verify the Parent Mission is active.
+   4.   Verify the Parent Mission is active and no ancestor Mission in
+        its lineage chain is non-active.
 
    5.   Verify the parent grant permits the requester to create a child.
 
@@ -415,7 +417,9 @@ Table of Contents
    msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-, the approved agent s6BhdRkqt3,
    acting for alice, spawns a read-only invoice extraction sub-agent and
    submits a child Mission Intent through PAR bound to the parent's
-   grant:
+   grant (illustrative; this Mission's Authority Set extends the single-
+   domain walkthrough's, its read entry's delegation carrying a children
+   object (Section 9), so its anchors differ from that example's):
 
    POST /par HTTP/1.1
    Host: as.example.com
@@ -461,7 +465,7 @@ Table of Contents
          "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
          "issuer": "https://as.example.com",
          "authority_hash":
-           "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+           "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6",
          "depth": 1,
          "delegation_id": "dlg_7pQ4m",
          "cascade_mode": "immediate"
@@ -565,7 +569,7 @@ Table of Contents
          "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
          "issuer": "https://as.example.com",
          "authority_hash":
-           "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+           "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6",
          "depth": 1,
          "delegation_id": "dlg_7pQ4m",
          "cascade_mode": "immediate",
@@ -711,8 +715,10 @@ Table of Contents
 
 10.  Cascade Revocation
 
-   A Child Mission depends on the Parent Mission.  The cascade trigger
-   is any Parent Mission transition to a non-active state.  This profile
+   A Child Mission depends on the Parent Mission.  A Mission's dependent
+   Child Missions are every transitive descendant: its Child Missions,
+   their children, and every further generation.  The cascade trigger is
+   any Parent Mission transition to a non-active state.  This profile
    distinguishes terminal triggers from the one reversible trigger:
 
    *  Terminal triggers: parent revoked or expired
@@ -765,6 +771,13 @@ Table of Contents
    continue deriving new credentials after the parent is known to be
    non-active.
 
+   Cascade modes may differ across one lineage.  The Mission Issuer MUST
+   commit the terminal cascade transition for every dependent Child
+   Mission regardless of its cascade mode; the mode governs only what
+   consumers must verify in the interim.  An immediate-mode descendant
+   under a consumer-verified parent is therefore never orphaned: its own
+   transition is committed even where the parent's is consumer-observed.
+
    The cascade behavior by trigger:
 
       +=======================+============+=======================+
@@ -777,7 +790,7 @@ Table of Contents
       | superseded, cascaded) |            | from Mission Status   |
       |                       |            | or a lifecycle event  |
       +-----------------------+------------+-----------------------+
-      | Reversible            | reported   | Origin reports it;    |
+      | Reversible            | reported   | Issuer reports it;    |
       | (suspended)           | suspended; | consumers read it     |
       |                       | restored   | (Section 10.1)        |
       |                       | on resume  |                       |
@@ -804,14 +817,26 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission-signals]) carries it on the
       cascade transition.
 
-   A Child Mission also depends on parent state.  For derivation under a
-   Child Mission, both conditions MUST hold:
+   A Child Mission also depends on ancestor state.  For derivation under
+   a Child Mission, both conditions MUST hold:
 
    *  the Child Mission state is active; and
 
-   *  the Parent Mission is active.
+   *  every ancestor Mission in its lineage chain, not only the
+      immediate parent, is active.
 
    If either condition fails, the Mission Issuer MUST refuse derivation.
+   A cascade in progress (Section 10) opens no window: a descendant
+   whose root ancestor is non-active is refused derivation even before
+   its own cascade transition commits.
+
+   Where a deployment also runs the completion profile
+   ([I-D.draft-mcguinness-oauth-mission-completion]), discharge
+   propagates entry-wise: when a parent Authority Set entry is
+   discharged, the Mission Issuer MUST discharge every child entry
+   justified by it, so spent authority does not survive in the subtree.
+   The issuer holds both records, so the propagation needs no consumer
+   coordination.
 
    While a parent is suspended, the issuer MUST report each dependent
    child's state as suspended on every state-reporting surface (the
@@ -891,7 +916,7 @@ Table of Contents
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "issuer": "https://as.example.com",
        "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+         "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6"
      },
      "child": {
        "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
@@ -914,6 +939,14 @@ Table of Contents
      "decision": "created",
      "created_at": "2026-11-02T08:14:00Z"
    }
+
+11.2.  Canonical Bytes
+
+   A Child Evidence object's canonical bytes are its JCS [RFC8785]
+   canonicalization, and its type identifier is application/mission-
+   child-evidence+json, used by local agreement pending registration.
+   An audit or transparency profile registers the object by these
+   values.
 
 12.  Relationship to Expansion
 
@@ -1008,6 +1041,13 @@ Table of Contents
    If parent revocation does not reach children, child authority can
    outlive its source.  Cascade modes define how termination propagates
    and how consumers bound stale parent state.
+
+   Cascade reaches derivation at the commit of each transition: once a
+   terminal trigger commits, no dependent Child Mission derives again.
+   Outstanding child access tokens run to the earlier of the token's exp
+   and the runtime staleness bound, where the runtime enforcement layer
+   is deployed.  A deployment that needs prompt cascade uses short
+   child-token lifetimes.
 
 17.4.  Parent Confusion
 
@@ -1116,6 +1156,11 @@ Table of Contents
               DOI 10.17487/RFC8414, June 2018,
               <https://www.rfc-editor.org/rfc/rfc8414>.
 
+   [RFC8785]  Rundgren, A., Jordan, B., and S. Erdtman, "JSON
+              Canonicalization Scheme (JCS)", RFC 8785,
+              DOI 10.17487/RFC8785, June 2020,
+              <https://www.rfc-editor.org/rfc/rfc8785>.
+
    [RFC9126]  Lodderstedt, T., Campbell, B., Sakimura, N., Tonge, D.,
               and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",
               RFC 9126, DOI 10.17487/RFC9126, September 2021,
@@ -1147,6 +1192,11 @@ Table of Contents
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-
               attenuation.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-completion]
+              McGuinness, K., "Mission Completion for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-completion.html>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",

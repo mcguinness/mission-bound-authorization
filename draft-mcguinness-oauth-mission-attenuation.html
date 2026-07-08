@@ -1068,7 +1068,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 January 2027</td>
+<td class="center">Expires 9 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1081,12 +1081,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-attenuation-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-07" class="published">7 July 2026</time>
+<time datetime="2026-07-08" class="published">8 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-09">9 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1146,7 +1146,7 @@ alongside, not instead of, Authorization-Server-mediated delegation.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1409,11 +1409,32 @@ constraint <span class="bcp14">MUST</span> be no broader than the mapped entry <
 intended holder (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.1-3">The root's authority <span class="bcp14">MUST</span> be within the Mission's approved authority
+<p id="section-5.1-3">Root issuance is the only moment the Mission Issuer is present in the
+chain, so per-entry delegation policy is enforced by shaping the root:<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.1-4.1">
+            <p id="section-5.1-4.1.1">an entry whose <code>delegation</code> policy does not permit re-delegation,
+including the non-delegable default of an entry carrying no
+<code>delegation</code> member, <span class="bcp14">MUST NOT</span> be carried on a root whose
+<code>del_max_depth</code> exceeds 0; the issuer carries such entries only on
+roots with <code>del_max_depth</code> 0;<a href="#section-5.1-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.1-4.2">
+            <p id="section-5.1-4.2.1">a root's <code>del_max_depth</code> <span class="bcp14">MUST NOT</span> exceed the minimum <code>max_depth</code>
+across the <code>delegation</code> members of the entries it maps; and<a href="#section-5.1-4.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.1-4.3">
+            <p id="section-5.1-4.3.1">the issuer <span class="bcp14">SHOULD</span> mint separate roots per delegation class rather
+than mix entries of differing delegation policy on one root, which
+also serves the per-subtree disclosure minimization of
+<a href="#privacy-considerations" class="auto internal xref">Section 14</a>.<a href="#section-5.1-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.1-5">The root's authority <span class="bcp14">MUST</span> be within the Mission's approved authority
 under this mapping and the issuance profile's subset rule. An auditor
 verifies that a root is within the Authority Set by applying this same
 mapping in reverse: each root tool and argument constraint traces to a
-permitted entry action and constraint.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+permitted entry action and constraint.<a href="#section-5.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1530,6 +1551,12 @@ its parent's <code>aud</code> (<a href="#attenuation" class="auto internal xref"
 <p id="section-8-3">These checks fail safe: a chain that does not present a single, unchanged
 Mission binding, an audience within its parent's, and an expiry within
 its parent's is refused, not evaluated against a guessed Mission.<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">Verification cost scales with the chain: a consumer performs one
+signature verification per link, the proof-of-possession check, and
+the Mission-state check (<a href="#kill-switch" class="auto internal xref">Section 9</a>) on every presentation. A
+consumer <span class="bcp14">SHOULD</span> bound the chain length it accepts, independently of
+the <code>del_max_depth</code> the chain carries, so an adversarially deep chain
+is refused rather than verified.<a href="#section-8-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="kill-switch">
@@ -1595,7 +1622,12 @@ own durable, separately revocable Mission.<a href="#section-10-1" class="pilcrow
 <code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code> to reconcile Q3 invoices, holds a
 Mission-bound attenuation root. Its authority covers reading Q3 invoices
 and posting journal entries under $500; <code>del_max_depth</code> allows two
-levels of offline narrowing. Decoded root token:<a href="#section-11-1" class="pilcrow">¶</a></p>
+levels of offline narrowing (illustrative; this Mission's Authority Set
+extends the single-domain walkthrough's, its write entry also carrying
+a <code>delegation</code> member with <code>max_depth</code> 2, so both mapped entries are
+delegable to depth 2 under the root-shaping rules of <a href="#root-mapping" class="auto internal xref">Section 5.1</a>
+and its <code>authority_hash</code> differs from that example's). Decoded root
+token:<a href="#section-11-1" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-11-2">
 <pre>
 {
@@ -1613,7 +1645,7 @@ levels of offline narrowing. Decoded root token:<a href="#section-11-1" class="p
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:X1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2nD9bM7s"
   },
   "authorization_details": [
     { "type": "attenuating_agent_token",
@@ -1639,7 +1671,7 @@ and keeps only the Q3 invoice read. It signs the child with the key the
 root's <code>cnf</code> binds, sets <code>iss</code> to that key's thumbprint, increments
 <code>del_depth</code>, and commits the parent by <code>par_hash</code> (the <code>iss</code> value
 is one line, wrapped here for display):<a href="#section-11-4" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-11-5">
+<div class="alignLeft art-text artwork" id="section-11-5">
 <pre>
 {
   "iss":
@@ -1658,7 +1690,7 @@ is one line, wrapped here for display):<a href="#section-11-4" class="pilcrow">�
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:X1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2nD9bM7s"
   },
   "authorization_details": [
     { "type": "attenuating_agent_token",
@@ -1771,7 +1803,10 @@ leaves.<a href="#section-13-2.5.1" class="pilcrow">¶</a></p>
 consuming enforcement points are the only place a derivation is seen;
 runtime enforcement evidence
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) is the audit record
-for offline-attenuated actions.<a href="#section-13-2.6.1" class="pilcrow">¶</a></p>
+for offline-attenuated actions. PEP evidence for an action under an
+attenuated token <span class="bcp14">SHOULD</span> carry the chain linkage, the leaf's <code>jti</code>,
+its <code>del_depth</code>, and its <code>par_hash</code>, so offline derivations are
+reconstructable in audit.<a href="#section-13-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

@@ -1065,7 +1065,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 January 2027</td>
+<td class="center">Expires 9 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1078,12 +1078,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-harness-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-07" class="published">7 July 2026</time>
+<time datetime="2026-07-08" class="published">8 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-09">9 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1141,7 +1141,7 @@ treats session continuity as proof that Mission authority continues.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1646,7 +1646,9 @@ item.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
       </h2>
 <p id="section-7-1">Before resuming governed work, a Mission-aware harness <span class="bcp14">MUST</span> establish
 that the Mission is <code>active</code> within the deployment's staleness bound.
-Resume includes:<a href="#section-7-1" class="pilcrow">¶</a></p>
+The invariant behind every check in this section: freshness <span class="bcp14">MUST</span> be
+valid at the moment each consequential action is submitted to the
+runtime gate, not only at the resume boundary. Resume includes:<a href="#section-7-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-2.1">
           <p id="section-7-2.1.1">process restart;<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
@@ -2305,8 +2307,20 @@ consequential external-communication or external-commitment action
 derives from tainted content. Session-level taint remains the
 fallback where provenance is unavailable: the harness applies the rule
 to every such action in a governed session that tainted content has
-entered.<a href="#section-14-3" class="pilcrow">¶</a></p>
-<p id="section-14-4">The rule: the harness <span class="bcp14">SHOULD</span> either require a fresh action-bound
+entered. Session-level taint persists for the governed session's
+lifetime and clears only with a fresh session or an explicit
+Subject-directed reset recorded in Harness Evidence
+(<a href="#harness-evidence" class="auto internal xref">Section 15</a>).<a href="#section-14-3" class="pilcrow">¶</a></p>
+<p id="section-14-4">The provenance polarity is fixed. In a tainted session, a bound
+parameter the harness cannot affirmatively trace to sources on the
+content trust list <span class="bcp14">MUST</span> be treated as tainted. Parameter-granularity
+provenance therefore only exempts an egress whose bound parameters
+are all affirmatively of trusted provenance; it never launders
+inferred or paraphrased content, which is untraceable and so remains
+tainted. This default-taint polarity is a condition of the runtime
+profile's trifecta-containment claim
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-14-4" class="pilcrow">¶</a></p>
+<p id="section-14-5">The rule: the harness <span class="bcp14">SHOULD</span> either require a fresh action-bound
 approval (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) or downgrade that
 authority (suppress the action), rather than let the agent egress on
 the strength of injected content. This is the plan-then-execute
@@ -2315,27 +2329,28 @@ pattern: untrusted content may inform the agent's planning, but it
 deployment <span class="bcp14">MAY</span> instead route the taint determination through the
 decision request where the binding carries it
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); the PDP then enforces
-this rule and records the taint context in Decision Evidence.<a href="#section-14-4" class="pilcrow">¶</a></p>
-<p id="section-14-5">The taint policy <span class="bcp14">MUST</span> be declared in the execution-environment scope
+this rule and records the taint context in Decision Evidence.<a href="#section-14-5" class="pilcrow">¶</a></p>
+<p id="section-14-6">The taint policy <span class="bcp14">MUST</span> be declared in the execution-environment scope
 statement (<a href="#mediated-egress" class="auto internal xref">Section 5</a>): the content trust list, the trigger
 granularity (parameter provenance, session-level, or both), and the
 fallback where provenance is unavailable. The claim is then
 inspectable: an auditor reads what taints, what triggers, and what
-happens when tracking runs out.<a href="#section-14-5" class="pilcrow">¶</a></p>
-<p id="section-14-6">This remains a coarse control, not information-flow control, though
+happens when tracking runs out.<a href="#section-14-6" class="pilcrow">¶</a></p>
+<p id="section-14-7">This remains a coarse control, not information-flow control, though
 source classing and parameter provenance give it discriminating power:
 it gates the egress whose inputs derive from untrusted content and
 leaves trusted-provenance egress ungated, instead of gating every
 egress in any session any content entered. Data-plane provenance does
-not survive model inference, so a value the agent paraphrases rather
-than copies can shed its taint, and the control cannot close
-within-scope data laundering
+not survive model inference; the default-taint polarity above is what
+keeps a value the agent paraphrases rather than copies from shedding
+its taint, at the cost of gating untraceable parameters in a tainted
+session. The control still cannot close within-scope data laundering
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); it raises the bar by
 forcing a human or a fresh approval between untrusted input and
 egress. A harness that applies it records the taint source class, the
 provenance where established, and the resulting downgrade or approval
-in Harness Evidence (<a href="#harness-evidence" class="auto internal xref">Section 15</a>).<a href="#section-14-6" class="pilcrow">¶</a></p>
+in Harness Evidence (<a href="#harness-evidence" class="auto internal xref">Section 15</a>).<a href="#section-14-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="harness-evidence">
@@ -2780,7 +2795,7 @@ Harness Evidence unless required for audit.<a href="#section-19-1" class="pilcro
 <dl class="references">
 <dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Runtime Enforcement with AuthZEN"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-orchestration">[I-D.draft-mcguinness-mission-orchestration]</dt>
         <dd>

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             7 July 2026
-Expires: 8 January 2027
+Intended status: Standards Track                             8 July 2026
+Expires: 9 January 2027
 
 
                     Mission Expansion for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 January 2027.
+   This Internet-Draft will expire on 9 January 2027.
 
 Copyright Notice
 
@@ -408,10 +408,15 @@ Table of Contents
    of the PAR request satisfies the constraint.  Presenting the token
    for expansion MUST NOT rotate it and MUST NOT register as a replay in
    the deployment's refresh-token replay detection: the token is used
-   here only to bind and resolve the predecessor, not to refresh.  The
-   successor's authority still comes only from the fresh consent at the
-   approval event, never from authority the binding token could itself
-   derive.
+   here only to bind and resolve the predecessor, not to refresh.  In a
+   rotation-based deployment that carve-out would let a stolen bearer
+   refresh token be presented repeatedly without detection, so each
+   expansion presentation MUST be recorded and counted toward the
+   deployment's anomaly detection, and the per-predecessor rate limit
+   (Section 13.5) is a MUST when the presented token is not sender-
+   constrained.  The successor's authority still comes only from the
+   fresh consent at the approval event, never from authority the binding
+   token could itself derive.
 
    Because expansion reuses the issuance profile's grant binding, it
    needs no opaque expansion ticket or other new bearer: the predecessor
@@ -477,6 +482,19 @@ Table of Contents
    Expansion never widens authority without a new consent: if the
    Approver declines, no successor is created and the predecessor is
    untouched (Section 10).
+
+   Supersession is a terminal exit from active, so it is a terminal
+   cascade trigger for the predecessor's entire delegation tree under
+   the child-delegation profile
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]).  When the
+   predecessor has non-terminal Child Missions, the expansion consent
+   disclosure SHOULD surface that fact as a material notice: at minimum
+   the count of live Child Missions and that supersession terminates
+   them.  A child still needed after the expansion is re-created under
+   the successor through ordinary child creation, in generation order.
+   A deployment MAY additionally support an expansion-request parameter
+   by which the client asks the Mission Issuer to refuse the expansion
+   while live Child Missions exist.
 
 5.1.  Successor expiry
 
@@ -744,10 +762,12 @@ Table of Contents
 
    mission_expansion_status:  A string carrying one code from this
       document's closed sets: a reconciliation status (Section 9) or an
-      expansion denial reason (Section 10).  It is returned in the error
-      response of the step that failed: the PAR error response for a
-      binding or reconciliation failure, and the approval or token error
-      response for a denial.
+      expansion denial reason (Section 10).  It is returned by the step
+      that failed.  At the PAR and token endpoints it is a member of the
+      JSON error response body, alongside the OAuth error member.  On
+      the front-channel authorization error response, which carries
+      error parameters rather than a JSON body, it is carried as an
+      error response parameter of the same name.
 
 10.  Expansion Denial Reasons
 
@@ -780,9 +800,10 @@ Table of Contents
    A Mission Issuer MUST NOT use a reason code to disclose policy
    boundaries beyond the adjudicated request (Section 13.5); omitting
    the reason code is always permitted.  When present, a reason code is
-   carried in the mission_expansion_status member of the OAuth error
-   response body (Section 9), the same member that carries a
-   reconciliation status.
+   carried in mission_expansion_status (Section 9), the same carrier as
+   a reconciliation status: an error-body member at the PAR and token
+   endpoints, an error response parameter on the front-channel
+   authorization error response.
 
    Two failure classes are not denial reasons and use the issuance
    profile's error vocabulary directly: an expansion request whose
@@ -968,7 +989,8 @@ Table of Contents
    Mitigations:
 
    *  The Mission Issuer SHOULD rate-limit expansion requests per
-      predecessor per client.
+      predecessor per client, and MUST when the presented
+      predecessor_token is not sender-constrained (Section 4.2).
 
    *  A denial reason MUST NOT disclose policy boundaries beyond the
       adjudicated request (Section 10); a denial reports whether the
@@ -1026,22 +1048,22 @@ Table of Contents
 
    This document defines two closed sets of symbolic codes, the
    expansion reconciliation status codes (Section 9) and the expansion
-   denial reasons (Section 10), both conveyed in the
-   mission_expansion_status member of the OAuth error response body
-   (Section 9). mission_expansion_status is a member of the OAuth error
-   response JSON body, not an OAuth protocol parameter, and is
-   namespaced to this document's error responses, so it requires no
-   registration.  Like the issuance profile's restraint with mission
-   members, the codes are documented in this specification rather than
-   placed in new IANA registries: the closed sets are small and fully
-   specified here.  Should interoperable extension of either set prove
-   necessary, a future revision can create a "Mission Expansion
-   Reconciliation Status" registry and a "Mission Expansion Denial
-   Reason" registry with a Specification Required [RFC8126] policy; this
-   document does not create them.
+   denial reasons (Section 10), both conveyed in
+   mission_expansion_status (Section 9).  As a member of the OAuth error
+   response JSON body at the PAR and token endpoints,
+   mission_expansion_status is namespaced to this document's error
+   responses and requires no registration; its authorization error
+   response parameter form is registered below.  Like the issuance
+   profile's restraint with mission members, the codes are documented in
+   this specification rather than placed in new IANA registries: the
+   closed sets are small and fully specified here.  Should interoperable
+   extension of either set prove necessary, a future revision can create
+   a "Mission Expansion Reconciliation Status" registry and a "Mission
+   Expansion Denial Reason" registry with a Specification Required
+   [RFC8126] policy; this document does not create them.
 
-   This document registers two parameters in the "OAuth Parameters"
-   registry:
+   This document registers the following parameters in the "OAuth
+   Parameters" registry:
 
    *  Name: predecessor
 
@@ -1058,6 +1080,14 @@ Table of Contents
    *  Change Controller: IETF
 
    *  Reference: this document, Section 4.1
+
+   *  Name: mission_expansion_status
+
+   *  Parameter Usage Location: authorization response
+
+   *  Change Controller: IETF
+
+   *  Reference: this document, Section 9
 
    As with mission_intent in the issuance profile, PAR [RFC9126] carries
    authorization-request parameters without a distinct usage location,

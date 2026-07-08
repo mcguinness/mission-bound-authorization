@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             7 July 2026
-Expires: 8 January 2027
+Intended status: Standards Track                             8 July 2026
+Expires: 9 January 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 January 2027.
+   This Internet-Draft will expire on 9 January 2027.
 
 Copyright Notice
 
@@ -402,9 +402,13 @@ Table of Contents
       anchor, in the integrity-anchor encoded form
       ([I-D.draft-mcguinness-oauth-mission]).
 
-   state:  REQUIRED.  A string. the current Mission lifecycle state the
-      PEP established from its Mission state source
-      ([I-D.draft-mcguinness-mission-runtime]).
+   state:  CONDITIONAL.  A string. the current Mission lifecycle state
+      the PEP established from its Mission state source
+      ([I-D.draft-mcguinness-mission-runtime]).  REQUIRED where the
+      deployment's declared state-source placement has the PEP supply
+      state; where state establishment is placed with the PDP, the
+      member is absent and the PDP MUST establish state from its own
+      source or deny with stale_state.
 
    policy_version:  REQUIRED when known.  A string. the policy_version
       recorded at the approval event.  It is a Mission-record field
@@ -505,9 +509,10 @@ Table of Contents
    audience:  REQUIRED.  A string. the PEP's audience or protected-
       resource identifier.
 
-   freshness:  REQUIRED.  An object. the freshness of the Mission state
-      the PEP relied on, conveying the runtime profile's freshness
-      inputs on the wire.  Members:
+   freshness:  CONDITIONAL.  An object, REQUIRED whenever state is
+      present: the freshness of the Mission state the PEP relied on,
+      conveying the runtime profile's freshness inputs on the wire.
+      Members:
 
       mode:  REQUIRED.  A string. one of fresh, cached, or event_driven
          (Section 10).
@@ -557,13 +562,18 @@ Table of Contents
 
    Absence of taint means the harness did not route the determination
    through the decision request, not that the action is untainted; the
-   harness's own egress rule then applies.  When taint is present with
-   tainted true on a consequential external-communication or external-
-   commitment action, the PDP MUST deny or return
-   action_approval_required (Section 6.4) unless a fresh action-bound
-   approval bound to the action's parameters is present in the decision
-   context.  The PDP MUST record the presented taint context in Decision
-   Evidence.
+   harness's own egress rule then applies.  That reading is confined to
+   harness-enforced deployments: when the deployment's Enforcement Scope
+   Statement declares PDP-enforced taint for an action class
+   ([I-D.draft-mcguinness-mission-runtime]), the PDP MUST require
+   context.taint on every external-communication and external-commitment
+   decision in that class and MUST deny with taint_context_missing when
+   it is absent.  When taint is present with tainted true on a
+   consequential external-communication or external-commitment action,
+   the PDP MUST deny or return action_approval_required (Section 6.4)
+   unless a fresh action-bound approval bound to the action's parameters
+   is present in the decision context.  The PDP MUST record the
+   presented taint context in Decision Evidence.
 
 5.8.  Capability Source Context
 
@@ -657,9 +667,9 @@ Table of Contents
    requires, the PDP MUST verify that the AuthZEN-carried envelope is
    self-consistent:
 
-   1.  The Mission state conveyed in context.mission.state is exactly
-       active; every other value, recognized or not, is non-active per
-       the issuance profile's forward-compatibility rule
+   1.  When present, the Mission state conveyed in context.mission.state
+       is exactly active; every other value, recognized or not, is non-
+       active per the issuance profile's forward-compatibility rule
        ([I-D.draft-mcguinness-oauth-mission]) and the PDP returns
        mission_inactive (Section 6.4).  A PDP with direct access to a
        Mission state source MUST prefer its own fresher view over
@@ -1005,6 +1015,10 @@ Table of Contents
       carries any such approval in the decision context; this profile
       does not define the approval artifact, which the runtime profile
       owns.
+
+   *  taint_context_missing: the deployment declares PDP-enforced taint
+      for the action's class and the decision request carries no
+      context.taint (Section 5.7).
 
    *  stale_state: the PEP-supplied freshness is stale or inconsistent
       with the materialized policy view.
@@ -1438,10 +1452,11 @@ Table of Contents
 
    denial_reason:  REQUIRED.  A string. one of token_invalid,
       mission_claim_missing, channel_failure, pdp_unreachable, or
-      state_unavailable (the PEP cannot establish Mission state to send
-      to the PDP).  These name PEP-side conditions and are disjoint from
-      the PDP denial reasons of Section 6.4; a record that can populate
-      the PDP-derived members is a Decision Evidence Object instead.
+      state_unavailable (where the deployment's state-source placement
+      has the PEP supply state, and it cannot establish it).  These name
+      PEP-side conditions and are disjoint from the PDP denial reasons
+      of Section 6.4; a record that can populate the PDP-derived members
+      is a Decision Evidence Object instead.
 
    evaluated_at:  REQUIRED.  An RFC 3339 [RFC3339] timestamp.
 
@@ -1493,7 +1508,8 @@ Table of Contents
      },
      "audience": "https://erp.example.com",
      "action": { "name": "journal-entries.write" },
-     "resource": { "type": "journal-entry", "id": "je_2026Q3_inv_8421" },
+     "resource":
+       { "type": "journal-entry", "id": "je_2026Q3_inv_8421" },
      "parameter_digest":
        "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
      "decision": "deny",
@@ -1826,8 +1842,9 @@ Table of Contents
       an MCP server instance), asserted by the PEP that authenticates
       it.  It is a request-time fact, not part of the derived authority
       recorded at derivation, and is recorded in Decision Evidence when
-      present.  Where the executing component authenticates under an
-      attested-instance profile
+      present; it is never an input to the source_digest or
+      catalog_digest comparison.  Where the executing component
+      authenticates under an attested-instance profile
       ([I-D.draft-mcguinness-oauth-client-instance-assertion],
       [I-D.draft-mcguinness-oauth-ai-agent-instance]), the deployment
       SHOULD carry the attested instance identifier here rather than a
@@ -2409,7 +2426,7 @@ Table of Contents
               1_0.html>.
 
    [I-D.draft-mcguinness-mission-harness]
-              McGuinness, K., "Mission-Aware Agent Harness", 2026,
+              McGuinness, K., "Mission-Aware Agent Harnesses", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-harness.html>.
 

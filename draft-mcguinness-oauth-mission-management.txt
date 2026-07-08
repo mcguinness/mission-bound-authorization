@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                             7 July 2026
-Expires: 8 January 2027
+Intended status: Standards Track                             8 July 2026
+Expires: 9 January 2027
 
 
                     Mission Management for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 January 2027.
+   This Internet-Draft will expire on 9 January 2027.
 
 Copyright Notice
 
@@ -102,7 +102,8 @@ Table of Contents
    13. Conformance
    14. IANA Considerations
      14.1.  Metadata Registrations
-     14.2.  Media Type
+     14.2.  Media Type Registration
+       14.2.1.  application/mission-management-response+jwt
    Acknowledgments
    References
      Normative References
@@ -130,6 +131,9 @@ Table of Contents
    indistinguishability but by explicit authorization and mandatory
    audit of every call (Section 3.2).  The surface is never agent-
    facing: the Agent executing a Mission has no role here (Section 3.1).
+   Fleet enumeration and bulk lifecycle are the operator surface of the
+   family's delegated-authority layer
+   ([I-D.draft-mcguinness-mission-architecture]).
 
    Both capabilities share one endpoint, one request shape, one
    authentication and authorization model, one signing discipline, and
@@ -204,11 +208,12 @@ Table of Contents
    a typ of mission-management-response+jwt, the algorithm is one
    advertised in mission_status_signing_alg_values_supported
    (Section 10), and the status profile's signing-key retention rules
-   apply.  The HTTP Content-Type is application/jwt [RFC7519] with
-   Cache-Control: no-store; the typ value is a local-use identifier
-   defined by this document (Section 14).  The signed payload carries
-   the envelope iss, aud (the authenticated caller), sub (the acting
-   party), nonce, iat, and exp, plus the members of Section 5.1,
+   apply.  Per [RFC7515] Section 4.1.9 the typ header omits the
+   application/ prefix; the full media type application/mission-
+   management-response+jwt (registered in Section 14) is used as the
+   HTTP Content-Type, with Cache-Control: no-store.  The signed payload
+   carries the envelope iss, aud (the authenticated caller), sub (the
+   acting party), nonce, iat, and exp, plus the members of Section 5.1,
    Section 6.1, or Section 6.3.  Before honoring a response a Management
    Client MUST apply the status profile's response verification checks
    (signature, iss, aud, sub, nonce, iat/exp with up to 30 seconds skew)
@@ -487,14 +492,15 @@ Table of Contents
    |                    | terminal state (the status profile's         |
    |                    | idempotent case).                            |
    +--------------------+----------------------------------------------+
-   | already_terminal   | The Mission was already in a terminal        |
-   |                    | state, including the operation's own         |
-   |                    | resulting state; nothing remained to         |
-   |                    | stop.                                        |
+   | already_terminal   | The Mission already stood in a terminal      |
+   |                    | state; when that state is the operation's    |
+   |                    | own resulting state, this is the status      |
+   |                    | profile's idempotent case, reported          |
+   |                    | distinctly for operator clarity.             |
    +--------------------+----------------------------------------------+
    | illegal_transition | The operation is not legal from the          |
-   |                    | Mission's current non-terminal state;        |
-   |                    | the Mission is unchanged.                    |
+   |                    | Mission's current non-terminal state; the    |
+   |                    | Mission is unchanged.                        |
    +--------------------+----------------------------------------------+
    | error              | The AS failed to process this Mission;       |
    |                    | its state is unverified.                     |
@@ -707,14 +713,17 @@ Table of Contents
    disclosure and work stoppage, not authority escalation: the surface
    cannot create or widen a Mission, and the model's availability trade
    applies, since a management credential converts into stopped governed
-   work rather than loosened enforcement.  Deployments SHOULD scope
-   Management Clients narrowly, protect their credentials as operator
-   credentials, and alert on anomalous management activity; where audit
-   transparency runs, management audit records are candidates for it
-   ([I-D.draft-mcguinness-mission-audit]).  The purpose and reason
-   strings that flow into those records, and into per-Mission evidence
-   and signals, are caller-written free text; audit systems MUST treat
-   them as untrusted input.
+   work rather than loosened enforcement.  One qualification: bulk
+   resume re-activates Missions suspended for cause, undoing an in-
+   flight containment.  A deployment MUST require a distinct or elevated
+   grant for resume at this endpoint and SHOULD alert on bulk resume.
+   Deployments SHOULD scope Management Clients narrowly, protect their
+   credentials as operator credentials, and alert on anomalous
+   management activity; where audit transparency runs, management audit
+   records are candidates for it ([I-D.draft-mcguinness-mission-audit]).
+   The purpose and reason strings that flow into those records, and into
+   per-Mission evidence and signals, are caller-written free text; audit
+   systems MUST treat them as untrusted input.
 
 11.2.  Enumeration-Oracle Inversion
 
@@ -807,14 +816,50 @@ Table of Contents
    For both: Change Controller IETF; Reference this document,
    Section 10.
 
-14.2.  Media Type
+14.2.  Media Type Registration
 
-   This document registers no media type.  A management response is
-   served as application/jwt [RFC7519] and identified by its JWS header
-   typ of mission-management-response+jwt (Section 3), a local-use type
-   identifier following this suite's convention for issuer-signed
-   artifacts that need a distinguishing typ without a dedicated media
-   type.
+   IANA is requested to register one media type per [RFC6838], mirroring
+   the status profile's registration.
+
+14.2.1.  application/mission-management-response+jwt
+
+   *  Type name: application
+
+   *  Subtype name: mission-management-response+jwt
+
+   *  Required parameters: none
+
+   *  Optional parameters: none
+
+   *  Encoding considerations: binary; JWS Compact Serialization
+
+   *  Security considerations: see Section 11
+
+   *  Interoperability considerations: see this document
+
+   *  Published specification: this document
+
+   *  Applications that use this media type: OAuth Mission-Bound
+      Management Clients
+
+   *  Fragment identifier considerations: not applicable
+
+   *  Restrictions on usage: none
+
+   *  Provisional registration: no
+
+   *  Magic number(s): none
+
+   *  File extension(s): none
+
+   *  Macintosh file type code(s): none
+
+   *  Person & email address to contact: Karl McGuinness
+      public@karlmcguinness.com (mailto:public@karlmcguinness.com)
+
+   *  Intended usage: COMMON
+
+   *  Author/Change controller: IETF
 
 Acknowledgments
 
@@ -845,13 +890,14 @@ Normative References
               Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
               <https://www.rfc-editor.org/rfc/rfc3339>.
 
+   [RFC6838]  Freed, N., Klensin, J., and T. Hansen, "Media Type
+              Specifications and Registration Procedures", BCP 13,
+              RFC 6838, DOI 10.17487/RFC6838, January 2013,
+              <https://www.rfc-editor.org/rfc/rfc6838>.
+
    [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
               Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
               2015, <https://www.rfc-editor.org/rfc/rfc7515>.
-
-   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
-              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
-              <https://www.rfc-editor.org/rfc/rfc7519>.
 
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,

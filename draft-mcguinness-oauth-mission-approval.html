@@ -1062,7 +1062,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 January 2027</td>
+<td class="center">Expires 9 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1075,12 +1075,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-approval-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-07" class="published">7 July 2026</time>
+<time datetime="2026-07-08" class="published">8 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-09">9 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1134,7 +1134,7 @@ atomically with that decision rather than with the authorization code.<a href="#
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1186,6 +1186,9 @@ atomically with that decision rather than with the authorization code.<a href="#
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
                 <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-pending-lifetime-and-stalen" class="internal xref">Pending Lifetime and Staleness</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
+                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-queue-pressure" class="internal xref">Queue Pressure</a></p>
 </li>
             </ul>
 </li>
@@ -1278,7 +1281,9 @@ Internet-Draft that is not ratified and whose details may change, so
 this profile is not yet a stable interface and will track the substrate
 as it evolves. Synchronous Mission approval, which needs only the
 issuance profile, is the stable path; deploy deferred approval for
-evaluation rather than as a stable interface.<a href="#section-2-4" class="pilcrow">¶</a></p>
+evaluation rather than as a stable interface. This document is
+Standards Track despite that posture because it tracks its substrate
+and stabilizes with it.<a href="#section-2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="issuance-relationship">
@@ -1374,7 +1379,10 @@ resolves to a Mission-bound token response.<a href="#section-5.1-2.5.1" class="p
         </ol>
 <p id="section-5.1-3">Deferral changes only the timing of the approval event. The Authority
 Set the token is issued against, its <code>authority_hash</code>, and the recorded
-consent are exactly as in a synchronous approval.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+consent are exactly as in a synchronous approval. A Mission revoked
+between the approval decision and the resolving poll yields no token:
+issuance gating derives only from an <code>active</code> Mission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="state-machine">
@@ -1419,6 +1427,22 @@ the applicable capability catalog, <span class="bcp14">MUST</span> be made over 
 been re-derived and re-rendered under the current policy and catalog; the
 Mission Issuer <span class="bcp14">MUST NOT</span> commit an approval over a proposal derived under
 superseded policy.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="queue-pressure">
+<section id="section-5.4">
+        <h3 id="name-queue-pressure">
+<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-queue-pressure" class="section-name selfRef">Queue Pressure</a>
+        </h3>
+<p id="section-5.4-1">Deferral turns the review surface into a queue a client can flood. The
+Mission Issuer <span class="bcp14">MUST</span> bound the number of concurrent pending proposals
+per (client, Approver) pair, refusing further submissions until the
+queue drains. It <span class="bcp14">SHOULD</span> collapse pending proposals carrying an
+identical <code>intent_hash</code> into a single review item, <span class="bcp14">SHOULD</span> rate-limit
+reviewer notifications, and <span class="bcp14">SHOULD</span> log a queue flood as a security
+event, alongside the decline-suppression detection the consent
+evidence profile describes
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-5.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1543,7 +1567,7 @@ decision; and<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.4">
           <p id="section-8-2.4.1">enforce the pending lifetime and staleness rules of
-<a href="#pending-staleness" class="auto internal xref">Section 5.3</a>.<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
+<a href="#pending-staleness" class="auto internal xref">Section 5.3</a> and the queue bounds of <a href="#queue-pressure" class="auto internal xref">Section 5.4</a>.<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-8-3">A client conforming to this profile <span class="bcp14">MUST</span> treat every pending response

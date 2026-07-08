@@ -1066,7 +1066,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 January 2027</td>
+<td class="center">Expires 9 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1079,12 +1079,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-cross-domain-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-07" class="published">7 July 2026</time>
+<time datetime="2026-07-08" class="published">8 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-08">8 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-09">9 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1142,7 +1142,7 @@ of the base profile are unaffected by this document.<a href="#section-abstract-1
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1301,9 +1301,10 @@ AS is never the Mission Issuer.<a href="#section-1-3" class="pilcrow">¶</a></p>
 the record, the Mission Intent, the full Authority Set, and lifecycle
 authority stay with the Mission Issuer, and the Resource AS receives
 only claim-shape facts and the entries scoped to it
-(<a href="#what-crosses" class="auto internal xref">Section 5</a>). Authority only narrows: a projection carries an
-audience-scoped subset, and nothing the Resource AS mints may widen
-it (<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>). Honoring is session-less: the
+(<a href="#what-crosses" class="auto internal xref">Section 5</a>). Authority never widens: the projection carries
+the agent's authority preserved and scoped to the audience, and
+nothing the Resource AS mints may widen it
+(<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>). Honoring is session-less: the
 Resource AS verifies pre-established issuer trust and a signature, so
 the Mission Issuer is never on the partner's request path; the cost
 of that independence is a bounded revocation lease
@@ -1515,8 +1516,13 @@ any other derivation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class
 derivation budget, however many local tokens the partner domain later
 mints: the issuer cannot observe those tokens and does not count
 them, and the Resource AS bounds its own minting by the grant and by
-local policy (<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>). A Mission-bound
-cross-domain grant:<a href="#section-7-1" class="pilcrow">¶</a></p>
+local policy (<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>). Because each grant
+lives at most 300 seconds, steady-state partner work re-issues grants
+on a lease cadence and consumes at least 12 derivations per hour per
+audience; a deployment sizes the Mission's <code>max_derivations</code> control
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) as a function of that
+cadence times the projected audiences times the Mission's duration.
+A Mission-bound cross-domain grant:<a href="#section-7-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-2.1">
           <p id="section-7-2.1.1"><span class="bcp14">MUST</span> be a JWT authorization grant issued and signed by the Mission
@@ -1753,7 +1759,15 @@ tying a local token to the grant it was minted from and showing
 its authority did not widen.<a href="#section-8-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-8-3">A <code>{ "sub": ... }</code> matcher in a conveyed entry's
+<p id="section-8-3">A grant that carries no <code>mission</code> claim is outside this profile: the
+Resource AS processes it, or refuses it, under plain identity
+chaining, and <span class="bcp14">MUST NOT</span> grant Mission-scoped resources on it. Where
+the deployment's pre-established trust (<a href="#pre-established-trust" class="auto internal xref">Section 6</a>)
+requires Mission binding for the requested resources, the Resource AS
+refuses such a grant with <code>invalid_grant</code>; a <code>mission</code> claim that is
+present but malformed is always <code>invalid_grant</code>
+(<a href="#error-responses" class="auto internal xref">Section 9</a>).<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">A <code>{ "sub": ... }</code> matcher in a conveyed entry's
 <code>delegation.allowed_delegates</code> is a client identifier in the
 originating AS's namespace and is not portable across the trust
 domain. When a Resource AS evaluates a conveyed entry, it <span class="bcp14">MUST</span> fail
@@ -1762,8 +1776,8 @@ resolve against the delegate it authenticated in its own namespace.
 Portable cross-domain matching <span class="bcp14">SHOULD</span> therefore use a <code>sub_profile</code>
 matcher, an actor-type class rather than a domain-relative identifier
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Delegation
-Constraints").<a href="#section-8-3" class="pilcrow">¶</a></p>
-<p id="section-8-4">This document does not define cross-domain subject mapping. A Resource
+Constraints").<a href="#section-8-4" class="pilcrow">¶</a></p>
+<p id="section-8-5">This document does not define cross-domain subject mapping. A Resource
 AS consuming a Mission-bound cross-domain grant resolves the subject
 of any local token according to the cross-domain grant profile in use
 (the Identity Assertion Authorization Grant profile in the recommended
@@ -1771,8 +1785,8 @@ case), the OAuth identity chaining architecture, and its local trust
 and account-linking policy. This document only requires that the
 Mission binding (<code>mission.id</code>, <code>mission.issuer</code>, and <code>authority_hash</code>)
 and the audience-scoped <code>authorization_details</code> remain bounded as
-described here.<a href="#section-8-4" class="pilcrow">¶</a></p>
-<p id="section-8-5">Downstream, <code>authority_hash</code> is an immutable audit and correlation
+described here.<a href="#section-8-5" class="pilcrow">¶</a></p>
+<p id="section-8-6">Downstream, <code>authority_hash</code> is an immutable audit and correlation
 anchor to the originating AS's consent commitment. A Resource AS and
 its Resource Servers hold only the audience-scoped subset, never the
 full Authority Set, so they cannot recompute <code>authority_hash</code>
@@ -1780,7 +1794,11 @@ full Authority Set, so they cannot recompute <code>authority_hash</code>
 its integrity rests on the signature chain (the originating AS signs
 the ID-JAG; the Resource AS validates issuer trust and signs its local
 token). It is verifiable only against the originating AS, which this
-document does not require to be exposed.<a href="#section-8-5" class="pilcrow">¶</a></p>
+document does not require to be exposed. A Resource AS or auditor
+that needs to verify the conveyed entries against the approved
+commitment <span class="bcp14">MAY</span> obtain a Mission Mandate
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>) and recompute
+<code>authority_hash</code> per that profile.<a href="#section-8-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="error-responses">
@@ -1842,7 +1860,7 @@ conditions so both surfaces fail uniformly.<a href="#section-9-1" class="pilcrow
 </td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">Untrusted issuer; wrong or missing <code>typ</code>; signature, audience, or expiry failure; a sender-constraint absent, unverifiable, or bound to a different client; a replayed <code>jti</code>; a missing or malformed <code>mission</code> claim</td>
+            <td class="text-left" rowspan="1" colspan="1">Untrusted issuer; wrong or missing <code>typ</code>; signature, audience, or expiry failure; a sender-constraint absent, unverifiable, or bound to a different client; a replayed <code>jti</code>; a malformed <code>mission</code> claim, or a grant carrying none where the deployment's pre-established trust requires Mission binding for the requested resources (<a href="#validation-at-resource-as" class="auto internal xref">Section 8</a>)</td>
             <td class="text-left" rowspan="1" colspan="1">
               <code>invalid_grant</code>
 </td>
