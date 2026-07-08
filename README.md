@@ -101,6 +101,8 @@ it.
  govern       Status (pull)    Signals (push)
               Expansion (widen via a successor)
               Completion (retire authority per entry)
+              Discovery (bind encountered resources
+              within a consented ceiling; experimental)
                          |
  enforce      Runtime contract -> AuthZEN binding: a PEP obtains a
  each action  PDP permit before every consequential action
@@ -149,8 +151,10 @@ companion assumes. From there, follow the path that matches your role:
   push complement), Consent
   Evidence (approval-surface evidence), Expansion and Completion
   (growing and retiring authority), Deferred Approval if approvals
-  are asynchronous, and Cross-Domain Projection when Missions span
-  trust domains.
+  are asynchronous, Cross-Domain Projection when Missions span
+  trust domains, and Discovery (experimental, with Progressive) when
+  agents meet resources mid-task: the encounter is adjudicated at
+  the issuer.
 - **Deploy without changing your AS, or govern an estate**: Mission
   Authority Server, then Runtime Enforcement and its AuthZEN binding
   (mandatory in this mode), then the Harness; add Consent Evidence for
@@ -162,7 +166,9 @@ companion assumes. From there, follow the path that matches your role:
   mediation section for where keys live.
 - **Build an agent harness or orchestrator**: Harness, then
   Orchestration, with Runtime Enforcement for the gate they feed; Child
-  Delegation when sub-agents get their own Missions.
+  Delegation when sub-agents get their own Missions; Discovery when
+  agents work the open world (the harness reports taint and admits
+  discovered channels into its egress enumeration).
 - **Audit or review security**: Security Model first, then Consent
   Evidence, Audit Transparency, and Mandate; each profile's own
   Security Considerations remain normative.
@@ -215,7 +221,7 @@ below the table.
 |---|---|---|
 | **Baseline Issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Runtime-Enforced level). The kill switch is binding-dependent: under the standalone MAS there is no issuance gate, and the cutoff arrives with the runtime layer. Audit, not action-time defense. |
 | **Runtime-Enforced** (the Protocol MVP) | mission + runtime + authzen + a freshness source (status or issuer token introspection; signals, experimental, adds push) | Per-action enforcement at the point of use, and prompt revocation. The smallest deployment that makes a Mission-bound token more than governance metadata, and every dependency it needs is ratified. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
-| **Governed Agent** (recommended for AI agents) | Runtime-Enforced + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. Add child-delegation for sub-agents and expansion for mid-task growth, and orchestration (experimental) for safe unwinding of in-flight work. |
+| **Governed Agent** (recommended for AI agents) | Runtime-Enforced + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. Add child-delegation for sub-agents and expansion for mid-task growth, orchestration (experimental) for safe unwinding of in-flight work, and discovery (experimental, with progressive) for agents that meet resources their approval could not name. |
 | **High-Assurance Agent** | Governed Agent + mediated custody, no unmediated path, action-bound approval, active freshness | Resistance to a compromised agent: the runtime profile's named agent-compromise-resistant enforcement and trifecta containment claims (see the note below the table), optionally bound to execution-environment attestation. |
 
 The model deploys through three bindings. The OAuth binding is the
@@ -340,7 +346,8 @@ components outside the Authorization Server (runtime enforcement and
 its AuthZEN binding, the agent harness, orchestration, intent shaping,
 audit transparency, the security model, the architecture, the
 standalone authority server, the AAuth binding, the substrate
-requirements, and the mandate) are named without it:
+requirements, consumption metering, open-world discovery, and the
+mandate) are named without it:
 they are defined against
 the Mission model's substrate primitives, each names those primitives
 in a Mission Substrate section, and the core is that model's OAuth 2.0
