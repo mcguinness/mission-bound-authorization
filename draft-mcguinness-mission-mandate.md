@@ -41,6 +41,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-issuance-grant:
+    title: "Mission Issuance Grant for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-cross-domain:
     title: "Mission Cross-Domain Projection for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
@@ -122,7 +130,7 @@ Mission-Bound Authorization for OAuth 2.0
 commits a Mission's facts at the approval event:
 the approved Mission Intent and consented Authority Set under their
 integrity anchors, the Subject and Approver, the agent `client_id`,
-the derivation `policy_version`, and the `mission_expiry`. Those facts
+the derivation `policy_version`, and the expiry. Those facts
 live on the Mission record, held by the Mission Issuer; a derived
 token or cross-domain grant projects only the `mission` claim and an
 audience-scoped subset of the authority. A verifier that needs the
@@ -256,8 +264,11 @@ The protected header MUST carry:
 : REQUIRED. An object in the `mission` claim shape of the issuance
   profile, extended per its extensibility rules: `id`, `issuer`, and
   `authority_hash`, plus `intent_hash` committing the approved Mission
-  Intent. All four members are REQUIRED here. `mission.issuer` MUST
-  equal `iss`.
+  Intent, and `expires_at`, an RFC 3339 {{RFC3339}} date-time
+  mirroring the Mission record's `expires_at` (the `mission` claim
+  member the issuance-grant profile defines,
+  {{I-D.draft-mcguinness-oauth-mission-issuance-grant}}). All five
+  members are REQUIRED here. `mission.issuer` MUST equal `iss`.
 
 `subject`:
 : REQUIRED. An object with `iss` and `sub`, the Mission record's
@@ -269,10 +280,6 @@ The protected header MUST carry:
 
 `client_id`:
 : REQUIRED. A string. The Mission record's `client_id`.
-
-`mission_expiry`:
-: REQUIRED. A string. An RFC 3339 {{RFC3339}} date-time, mirroring the
-  Mission record's `expires_at`.
 
 `policy_version`:
 : REQUIRED. A string. The Mission record's `policy_version`.
@@ -291,7 +298,7 @@ The protected header MUST carry:
 
 `mandate_exp`:
 : OPTIONAL. A NumericDate. An expiry of the Mandate artifact itself,
-  distinct from `mission_expiry`: after it, the Mandate MUST NOT be
+  distinct from the Mission's `expires_at`: after it, the Mandate MUST NOT be
   relied on as evidence. When absent, the Mandate is valid as evidence
   for the Mission's audit horizon, the retention term the issuance
   profile defines. Setting `mandate_exp` explicitly is RECOMMENDED:
@@ -300,6 +307,13 @@ The protected header MUST carry:
   leaves the evidence bound unverifiable from the artifact alone. It
   is deliberately not the standard `exp` claim, whose validity window
   would read as a credential lifetime.
+
+`minted_for`:
+: OPTIONAL. A string. An identifier for the party this Mandate was
+  minted for. It is attribution, not audience: it binds nothing, a
+  verifier MUST NOT treat it as access control or reject a Mandate
+  over its value, and its use is that a Mandate found where it should
+  not be names its leak path ({{privacy-considerations}}).
 
 The claim set is open in the manner of the `mission` claim: a
 companion profile of the issuance profile MAY add members with
@@ -311,7 +325,10 @@ understand and MUST NOT derive authority from any member.
 
 `state_at_issuance` records history, not currency. A Mandate proves
 the Mission's committed facts as of `iat`; it MUST NOT be treated as
-proof of the Mission's current state. The Mission may have transitioned
+proof of the Mission's current state. A verifier reads the value
+under the issuance profile's fail-safe rule: any value other than the
+exact string `active`, including one it does not recognize, means the
+Mission was not active at minting. The Mission may have transitioned
 since minting, and nothing in the artifact would show it.
 
 Current state comes from a state surface, not from the Mandate: the
@@ -338,9 +355,24 @@ the record.
 
 To whom Mandates are issued, and through what request surface, is
 deployment policy; this document defines the artifact, not a delivery
-protocol. An issuer SHOULD mint narrowly for the recipient's need, in
-particular omitting `authority_set` when the recipient does not
-recompute the anchor ({{privacy-considerations}}).
+protocol. Whatever its shape, the minting surface MUST authenticate
+its requesters and MUST authorize each request under the deployment's
+visibility policy: a Mandate reveals a Mission's existence,
+principals, expiry, and optionally its full consented authority, and
+an unauthorized requester learns none of that, receiving the same
+response as for a Mission that does not exist, per the anti-oracle
+discipline of the family's status surfaces
+({{I-D.draft-mcguinness-oauth-mission-status}}). An issuer SHOULD
+mint narrowly for the recipient's need, in particular omitting
+`authority_set` when the recipient does not recompute the anchor
+({{privacy-considerations}}), and SHOULD record `minted_for`.
+
+A Mandate outlives signing-key rotation schedules. The issuer MUST
+keep the key that verifies each minted Mandate resolvable by its
+`kid` in the published key material for that Mandate's evidence
+lifetime: until `mandate_exp`, or for the Mission's audit horizon
+when `mandate_exp` is absent. Rotation retires a key from signing,
+never from resolvability within that bound.
 
 ## Example {#example}
 
@@ -371,17 +403,18 @@ Payload:
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "intent_hash":
-      "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY"
+      "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+    "expires_at": "2026-12-31T23:59:59Z"
   },
   "subject": { "iss": "https://idp.example.com",
     "sub": "user_3p2q8mN1a0kV7tR" },
   "approver": { "iss": "https://idp.example.com",
     "sub": "user_3p2q8mN1a0kV7tR" },
   "client_id": "s6BhdRkqt3",
-  "mission_expiry": "2026-12-31T23:59:59Z",
   "policy_version": "deploy-policy:v17",
   "state_at_issuance": "active",
   "mandate_exp": 1805617000,
+  "minted_for": "https://rail.example.com",
   "authority_set": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
@@ -423,23 +456,23 @@ bXNuXzhSZlgyTHF2OVRxTXY0ejdzQTJiTjFrMFlwRWRIYzktIiwiaXNzdWVyIjoiaH
 R0cHM6Ly9hcy5leGFtcGxlLmNvbSIsImF1dGhvcml0eV9oYXNoIjoic2hhLTI1Njps
 M0t2WjRtUDV4MHdRclI2dFkybkQ5Yk03c1gxY0Y4Z0gydko0a0U1cE5RIiwiaW50ZW
 50X2hhc2giOiJzaGEtMjU2OndRN3A0TEhuWDlNZDBMcUo2c1pKOGI4bVozck4yeFQ1
-cFY0bEU2c1FxWVkifSwic3ViamVjdCI6eyJpc3MiOiJodHRwczovL2lkcC5leGFtcG
-xlLmNvbSIsInN1YiI6InVzZXJfM3AycThtTjFhMGtWN3RSIn0sImFwcHJvdmVyIjp7
-ImlzcyI6Imh0dHBzOi8vaWRwLmV4YW1wbGUuY29tIiwic3ViIjoidXNlcl8zcDJxOG
-1OMWEwa1Y3dFIifSwiY2xpZW50X2lkIjoiczZCaGRSa3F0MyIsIm1pc3Npb25fZXhw
-aXJ5IjoiMjAyNi0xMi0zMVQyMzo1OTo1OVoiLCJwb2xpY3lfdmVyc2lvbiI6ImRlcG
-xveS1wb2xpY3k6djE3Iiwic3RhdGVfYXRfaXNzdWFuY2UiOiJhY3RpdmUiLCJtYW5k
-YXRlX2V4cCI6MTgwNTYxNzAwMCwiYXV0aG9yaXR5X3NldCI6W3sidHlwZSI6Im1pc3
-Npb25fcmVzb3VyY2VfYWNjZXNzIiwicmVzb3VyY2UiOiJodHRwczovL2VycC5leGFt
-cGxlLmNvbSIsImFjdGlvbnMiOlsiaW52b2ljZXMucmVhZCJdLCJjb25zdHJhaW50cy
-I6eyJyZXNvdXJjZV9pc3N1ZWRfYWZ0ZXIiOiIyMDI2LTA3LTAxVDAwOjAwOjAwWiIs
-InJlc291cmNlX2lzc3VlZF9iZWZvcmUiOiIyMDI2LTA5LTMwVDIzOjU5OjU5WiJ9LC
-JkZWxlZ2F0aW9uIjp7Im1heF9kZXB0aCI6MiwiYWxsb3dlZF9kZWxlZ2F0ZXMiOlt7
-InN1Yl9wcm9maWxlIjoiYWlfYWdlbnQifV19fSx7InR5cGUiOiJtaXNzaW9uX3Jlc2
-91cmNlX2FjY2VzcyIsInJlc291cmNlIjoiaHR0cHM6Ly9lcnAuZXhhbXBsZS5jb20i
-LCJhY3Rpb25zIjpbImpvdXJuYWwtZW50cmllcy53cml0ZSJdLCJjb25zdHJhaW50cy
-I6eyJtYXhfYW1vdW50Ijp7ImFtb3VudCI6IjUwMC4wMCIsImN1cnJlbmN5IjoiVVNE
-In19fV19
+cFY0bEU2c1FxWVkiLCJleHBpcmVzX2F0IjoiMjAyNi0xMi0zMVQyMzo1OTo1OVoifS
+wic3ViamVjdCI6eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6
+InVzZXJfM3AycThtTjFhMGtWN3RSIn0sImFwcHJvdmVyIjp7ImlzcyI6Imh0dHBzOi
+8vaWRwLmV4YW1wbGUuY29tIiwic3ViIjoidXNlcl8zcDJxOG1OMWEwa1Y3dFIifSwi
+Y2xpZW50X2lkIjoiczZCaGRSa3F0MyIsInBvbGljeV92ZXJzaW9uIjoiZGVwbG95LX
+BvbGljeTp2MTciLCJzdGF0ZV9hdF9pc3N1YW5jZSI6ImFjdGl2ZSIsIm1hbmRhdGVf
+ZXhwIjoxODA1NjE3MDAwLCJtaW50ZWRfZm9yIjoiaHR0cHM6Ly9yYWlsLmV4YW1wbG
+UuY29tIiwiYXV0aG9yaXR5X3NldCI6W3sidHlwZSI6Im1pc3Npb25fcmVzb3VyY2Vf
+YWNjZXNzIiwicmVzb3VyY2UiOiJodHRwczovL2VycC5leGFtcGxlLmNvbSIsImFjdG
+lvbnMiOlsiaW52b2ljZXMucmVhZCJdLCJjb25zdHJhaW50cyI6eyJyZXNvdXJjZV9p
+c3N1ZWRfYWZ0ZXIiOiIyMDI2LTA3LTAxVDAwOjAwOjAwWiIsInJlc291cmNlX2lzc3
+VlZF9iZWZvcmUiOiIyMDI2LTA5LTMwVDIzOjU5OjU5WiJ9LCJkZWxlZ2F0aW9uIjp7
+Im1heF9kZXB0aCI6MiwiYWxsb3dlZF9kZWxlZ2F0ZXMiOlt7InN1Yl9wcm9maWxlIj
+oiYWlfYWdlbnQifV19fSx7InR5cGUiOiJtaXNzaW9uX3Jlc291cmNlX2FjY2VzcyIs
+InJlc291cmNlIjoiaHR0cHM6Ly9lcnAuZXhhbXBsZS5jb20iLCJhY3Rpb25zIjpbIm
+pvdXJuYWwtZW50cmllcy53cml0ZSJdLCJjb25zdHJhaW50cyI6eyJtYXhfYW1vdW50
+Ijp7ImFtb3VudCI6IjUwMC4wMCIsImN1cnJlbmN5IjoiVVNEIn19fV19
 ~~~
 
 JWS signing input, the two segments joined by `.`:
@@ -452,23 +485,24 @@ CJtaXNzaW9uIjp7ImlkIjoibXNuXzhSZlgyTHF2OVRxTXY0ejdzQTJiTjFrMFlwRWR
 IYzktIiwiaXNzdWVyIjoiaHR0cHM6Ly9hcy5leGFtcGxlLmNvbSIsImF1dGhvcml0e
 V9oYXNoIjoic2hhLTI1NjpsM0t2WjRtUDV4MHdRclI2dFkybkQ5Yk03c1gxY0Y4Z0g
 ydko0a0U1cE5RIiwiaW50ZW50X2hhc2giOiJzaGEtMjU2OndRN3A0TEhuWDlNZDBMc
-Uo2c1pKOGI4bVozck4yeFQ1cFY0bEU2c1FxWVkifSwic3ViamVjdCI6eyJpc3MiOiJ
-odHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6InVzZXJfM3AycThtTjFhMGtWN
-3RSIn0sImFwcHJvdmVyIjp7ImlzcyI6Imh0dHBzOi8vaWRwLmV4YW1wbGUuY29tIiw
-ic3ViIjoidXNlcl8zcDJxOG1OMWEwa1Y3dFIifSwiY2xpZW50X2lkIjoiczZCaGRSa
-3F0MyIsIm1pc3Npb25fZXhwaXJ5IjoiMjAyNi0xMi0zMVQyMzo1OTo1OVoiLCJwb2x
-pY3lfdmVyc2lvbiI6ImRlcGxveS1wb2xpY3k6djE3Iiwic3RhdGVfYXRfaXNzdWFuY
-2UiOiJhY3RpdmUiLCJtYW5kYXRlX2V4cCI6MTgwNTYxNzAwMCwiYXV0aG9yaXR5X3N
-ldCI6W3sidHlwZSI6Im1pc3Npb25fcmVzb3VyY2VfYWNjZXNzIiwicmVzb3VyY2UiO
-iJodHRwczovL2VycC5leGFtcGxlLmNvbSIsImFjdGlvbnMiOlsiaW52b2ljZXMucmV
-hZCJdLCJjb25zdHJhaW50cyI6eyJyZXNvdXJjZV9pc3N1ZWRfYWZ0ZXIiOiIyMDI2L
-TA3LTAxVDAwOjAwOjAwWiIsInJlc291cmNlX2lzc3VlZF9iZWZvcmUiOiIyMDI2LTA
-5LTMwVDIzOjU5OjU5WiJ9LCJkZWxlZ2F0aW9uIjp7Im1heF9kZXB0aCI6MiwiYWxsb
-3dlZF9kZWxlZ2F0ZXMiOlt7InN1Yl9wcm9maWxlIjoiYWlfYWdlbnQifV19fSx7InR
-5cGUiOiJtaXNzaW9uX3Jlc291cmNlX2FjY2VzcyIsInJlc291cmNlIjoiaHR0cHM6L
-y9lcnAuZXhhbXBsZS5jb20iLCJhY3Rpb25zIjpbImpvdXJuYWwtZW50cmllcy53cml
-0ZSJdLCJjb25zdHJhaW50cyI6eyJtYXhfYW1vdW50Ijp7ImFtb3VudCI6IjUwMC4wM
-CIsImN1cnJlbmN5IjoiVVNEIn19fV19
+Uo2c1pKOGI4bVozck4yeFQ1cFY0bEU2c1FxWVkiLCJleHBpcmVzX2F0IjoiMjAyNi0
+xMi0zMVQyMzo1OTo1OVoifSwic3ViamVjdCI6eyJpc3MiOiJodHRwczovL2lkcC5le
+GFtcGxlLmNvbSIsInN1YiI6InVzZXJfM3AycThtTjFhMGtWN3RSIn0sImFwcHJvdmV
+yIjp7ImlzcyI6Imh0dHBzOi8vaWRwLmV4YW1wbGUuY29tIiwic3ViIjoidXNlcl8zc
+DJxOG1OMWEwa1Y3dFIifSwiY2xpZW50X2lkIjoiczZCaGRSa3F0MyIsInBvbGljeV9
+2ZXJzaW9uIjoiZGVwbG95LXBvbGljeTp2MTciLCJzdGF0ZV9hdF9pc3N1YW5jZSI6I
+mFjdGl2ZSIsIm1hbmRhdGVfZXhwIjoxODA1NjE3MDAwLCJtaW50ZWRfZm9yIjoiaHR
+0cHM6Ly9yYWlsLmV4YW1wbGUuY29tIiwiYXV0aG9yaXR5X3NldCI6W3sidHlwZSI6I
+m1pc3Npb25fcmVzb3VyY2VfYWNjZXNzIiwicmVzb3VyY2UiOiJodHRwczovL2VycC5
+leGFtcGxlLmNvbSIsImFjdGlvbnMiOlsiaW52b2ljZXMucmVhZCJdLCJjb25zdHJha
+W50cyI6eyJyZXNvdXJjZV9pc3N1ZWRfYWZ0ZXIiOiIyMDI2LTA3LTAxVDAwOjAwOjA
+wWiIsInJlc291cmNlX2lzc3VlZF9iZWZvcmUiOiIyMDI2LTA5LTMwVDIzOjU5OjU5W
+iJ9LCJkZWxlZ2F0aW9uIjp7Im1heF9kZXB0aCI6MiwiYWxsb3dlZF9kZWxlZ2F0ZXM
+iOlt7InN1Yl9wcm9maWxlIjoiYWlfYWdlbnQifV19fSx7InR5cGUiOiJtaXNzaW9uX
+3Jlc291cmNlX2FjY2VzcyIsInJlc291cmNlIjoiaHR0cHM6Ly9lcnAuZXhhbXBsZS5
+jb20iLCJhY3Rpb25zIjpbImpvdXJuYWwtZW50cmllcy53cml0ZSJdLCJjb25zdHJha
+W50cyI6eyJtYXhfYW1vdW50Ijp7ImFtb3VudCI6IjUwMC4wMCIsImN1cnJlbmN5Ijo
+iVVNEIn19fV19
 ~~~
 
 The Mandate's JWS Compact Serialization appends `.` and the signature
@@ -492,6 +526,9 @@ claims, in particular `iss`, `mission`, `subject`, and
 still identifies the Mission, its issuer, its Subject, and its state
 as of minting.
 
+An issuer MAY include decoy digests per {{RFC9901}}, so a partial
+presentation does not reveal the count of `authority_set` entries.
+
 A verifier MUST NOT recompute `authority_hash` from a partial
 presentation: the anchor is defined only over the full Authority Set
 ({{I-D.draft-mcguinness-oauth-mission}}), and an undisclosed
@@ -512,16 +549,20 @@ Mandate:
    `mission-mandate+jwt` (or `mission-mandate+sd-jwt` for the SD-JWT
    form, then applying {{RFC9901}} processing). Reject any other
    value.
-2. **Signature.** Resolve the REQUIRED `kid` in the Mission Issuer's
+2. **Structure.** Confirm every REQUIRED claim of {{claims}} is
+   present and well-formed.
+3. **Signature.** Resolve the REQUIRED `kid` in the Mission Issuer's
    published key material ({{mission-substrate}}) and verify the JWS
    signature. Confirm `mission.issuer` equals `iss`.
-3. **Issuer trust.** Decide by local policy or configured trust
+4. **Issuer trust.** Decide by local policy or configured trust
    anchors whether the `iss` value names a trusted issuer. A verifier MUST NOT
    trust an issuer merely because it appears inside a signed artifact,
    mirroring the issuer-trust rule of the cross-domain projection
    profile ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). A
    Mandate from an untrusted issuer proves nothing.
-4. **Anchor recomputation.** When `authority_set` is present in full,
+5. **Evidence lifetime.** Reject reliance on a Mandate whose
+   `mandate_exp` has passed (the expired class of {{failures}}).
+6. **Anchor recomputation.** When `authority_set` is present in full,
    a verifier that relies on its contents MUST recompute
    `authority_hash` over it per the issuance profile's
    integrity-anchor rules (the `mission-authority-set` envelope with
@@ -529,27 +570,23 @@ Mandate:
    MAY recompute. Either way, the verifier MUST reject the Mandate on
    mismatch. It MAY likewise verify `intent_hash` against a Mission
    Intent it holds.
-5. **Freshness.** When reliance requires an active Mission, obtain
+7. **Freshness.** When reliance requires an active Mission, obtain
    current state within the freshness bound of
    {{state-at-issuance}}. `state_at_issuance` never substitutes.
-6. **Hash agility.** Reject any integrity anchor whose algorithm
+8. **Hash agility.** Reject any integrity anchor whose algorithm
    prefix the verifier does not recognize, and never treat an
    unrecognized prefix as `sha-256`, per the issuance profile.
 
-A verifier MUST additionally reject a Mandate whose required claims
-are absent or malformed, and MUST NOT rely on a Mandate whose
-`mandate_exp` has passed.
-
 ## Failure Taxonomy {#failures}
 
-Verification failures fall into three classes, and a verifier MUST
+Verification failures fall into four classes, and a verifier MUST
 distinguish them:
 
 Invalid:
-: The artifact fails as an artifact: signature, `typ`, required-claim
-  structure, `iss`/`issuer` mismatch, anchor mismatch under step 4, or
-  an unrecognized hash prefix under step 6. The Mandate MUST be
-  rejected and MUST NOT be relied on for anything.
+: The artifact fails as an artifact: signature, `typ`, the claim
+  structure of step 2, `iss`/`issuer` mismatch, anchor mismatch under
+  step 6, or an unrecognized hash prefix under step 8. The Mandate
+  MUST be rejected and MUST NOT be relied on for anything.
 
 Unverifiable:
 : Verification cannot complete: the issuer's key material is
@@ -557,13 +594,24 @@ Unverifiable:
   the Mission's issuer. This is not evidence of tampering, mirroring the audit
   profile's classification ({{I-D.draft-mcguinness-mission-audit}});
   the verifier MUST NOT treat the Mandate as verified and MUST NOT
-  treat the failure as proof the artifact is false.
+  treat the failure as proof the artifact is false. Within a
+  Mandate's evidence lifetime a conforming issuer keeps its
+  verification key resolvable ({{minting}}), so a `kid` that no
+  longer resolves inside that bound is itself worth recording,
+  though still not proof of forgery.
 
 Stale:
 : The artifact verifies, but reliance requires an active Mission and
-  no current state was obtained within the freshness bound (step 5).
+  no current state was obtained within the freshness bound (step 7).
   The verifier MUST NOT proceed with that reliance until it obtains
   current state.
+
+Expired:
+: The artifact verifies, but its evidence lifetime has passed:
+  `mandate_exp` is behind the verification time (step 5). Unlike
+  stale, expiry is not cured by a state check: the Mandate MUST NOT
+  be relied on as evidence, though expiry is not evidence against
+  the facts it states.
 
 # Mandate Use {#use}
 
@@ -602,7 +650,13 @@ artifact, and SHOULD consume Mission Status
 ({{I-D.draft-mcguinness-oauth-mission-status}}) or Lifecycle Signals
 ({{I-D.draft-mcguinness-oauth-mission-signals}}) for the Mission's
 lifetime, so a later revocation of the Mission does not go silently
-unnoticed on the rail.
+unnoticed on the rail. Where the deployment runs the audit
+transparency profile, the rail SHOULD register its derivation event,
+its own artifact's digest with the Mission reference, on the
+Mission's feed under that profile's extension pattern
+({{I-D.draft-mcguinness-mission-audit}}), so the Mission's evidence
+shows what external artifacts it spawned, as it shows what children
+it delegated.
 
 ## Mission Evidence {#audit-evidence}
 
@@ -626,6 +680,10 @@ bounds a later issuer key compromise ({{security-considerations}}).
 - A Mandate is not a credential and is never authority-bearing;
   anything authority-bearing belongs to the substrate's issuance
   surfaces.
+- No audience. A Mandate is deliberately unaudienced: evidence is
+  freely copyable, and its scoping is the issuer's minting restraint
+  and selective disclosure, not an artifact gate. `minted_for` is
+  attribution for leak tracing, never an audience.
 - No key binding. A Mandate binds no holder key, and its presentation
   proves nothing about the presenter. A holder-bound Mandate, a
   `cnf`-style confirmation with key-bound presentation, is named
@@ -646,12 +704,14 @@ A **Mandate Issuer** MUST:
 - when including `authority_set`, include the consented Authority Set
   exactly as recorded, in recorded order;
 - sign with a key resolvable by `kid` in its published key material,
-  with the protected `typ` of {{header}}; and
+  with the protected `typ` of {{header}};
+- keep the verification key for every minted Mandate resolvable for
+  that Mandate's evidence lifetime ({{minting}}); and
 - issue `jti` values it never reuses.
 
 A **Mandate Verifier** MUST:
 
-- perform steps 1 through 6 of {{verification}} before reliance;
+- perform the steps of {{verification}} before reliance;
 - classify failures per {{failures}} and treat only the invalid class
   as evidence against the artifact;
 - obtain current state within its freshness bound whenever reliance
@@ -716,7 +776,8 @@ domain boundary: omit `authority_set` unless the recipient needs
 anchor recomputation, prefer the selective-disclosure form
 ({{selective-disclosure}}) where a holder re-presents the Mandate
 onward, and avoid Intent-derived free-text extension members by
-default.
+default. Recording `minted_for` costs nothing and makes an artifact
+that travels beyond its recipient attributable to a leak path.
 
 The Mandate also extends the correlation surface the issuance
 profile's privacy considerations describe: it carries `mission.id` and
