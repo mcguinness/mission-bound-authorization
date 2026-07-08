@@ -1211,6 +1211,44 @@ the view yields a new `policy_view_id`, so equality on
 document defines no second canonicalization and no policy-language
 wire form for the view.
 
+## Semantic Evaluators {#semantic-evaluators}
+
+A structurally valid action can still be semantically out of bounds:
+every schema check passes while the content betrays the task. A
+deployment MAY add a semantic evaluator (a data-loss-prevention
+engine, an LLM-based content policy, an embedding-similarity check)
+to the decision path. This profile does not standardize the
+evaluator; it fixes how one composes:
+
+- **Rubric.** The evaluator judges content against the approved
+  task, not a free-floating policy: its rubric is the recorded
+  Mission Intent, whose integrity is verifiable against
+  `intent_hash`, optionally with the consented Authority Set under
+  `authority_hash`. A rubric that cannot be tied to the committed
+  record is ordinary deployment policy, not a Mission check.
+- **Composition.** The verdict enters the decision as Resource
+  policy, carried as deployment-defined context. It can deny, or
+  route the action to the existing step-up affordances: an
+  action-bound human approval ({{action-approval}}, the decision
+  API binding's `action_approval_required`) or an authentication
+  step-up (`step_up_required`). It MUST NOT widen authority and
+  MUST NOT substitute for a structural check this profile requires.
+- **Evidence.** When a verdict contributes to a decision, the
+  decision evidence SHOULD record the evaluator's identity or
+  version and its verdict, so a semantic denial is as
+  reconstructable as a structural one.
+- **Latency.** The evaluator runs inside the invoking action
+  class's latency budget ({{runtime-deployment}}); a deployment
+  that cannot afford a synchronous evaluation on a class routes the
+  class to action-bound approval or narrows its authority instead.
+
+An LLM-based evaluator is itself part of the attack surface: it
+reads the same adversarial content it judges, and can be injected
+by it. It therefore augments the structural signals (provenance,
+composition, enumeration, volume, re-consent) and never replaces
+them, and a deployment that relies on one for an action class
+states that reliance in its Enforcement Scope Statement.
+
 # Parameter Binding and Time-of-Check to Time-of-Use {#parameter-binding}
 
 Parameter binding is only as consistent as the normalization behind
@@ -1802,7 +1840,8 @@ action-bound re-consent for the highest classes
 evaluator (data-loss prevention, an LLM-based content policy)
 composes it as Resource policy at the PDP: the verdict enters the
 decision as deployment-defined context, only ever narrows, and its
-latency belongs to the action class that invokes it.
+latency belongs to the action class that invokes it
+({{semantic-evaluators}}).
 
 It does not make a compromised enforcement component safe. A
 compromised PEP can decline to consult the PDP or ignore its decision;
