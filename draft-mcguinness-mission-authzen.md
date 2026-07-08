@@ -1475,7 +1475,8 @@ that failed closed:
   },
   "audience": "https://erp.example.com",
   "action": { "name": "journal-entries.write" },
-  "resource": { "type": "journal-entry", "id": "je_2026Q3_inv_8421" },
+  "resource":
+    { "type": "journal-entry", "id": "je_2026Q3_inv_8421" },
   "parameter_digest":
     "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
   "decision": "deny",
