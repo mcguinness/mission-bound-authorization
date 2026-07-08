@@ -89,7 +89,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-authzen:
-    title: "Mission Runtime Enforcement with AuthZEN"
+    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
     author:
       -
@@ -342,7 +342,9 @@ item.
 
 Before resuming governed work, a Mission-aware harness MUST establish
 that the Mission is `active` within the deployment's staleness bound.
-Resume includes:
+The invariant behind every check in this section: freshness MUST be
+valid at the moment each consequential action is submitted to the
+runtime gate, not only at the resume boundary. Resume includes:
 
 - process restart;
 - device or worker handoff;
@@ -763,7 +765,20 @@ consequential external-communication or external-commitment action
 derives from tainted content. Session-level taint remains the
 fallback where provenance is unavailable: the harness applies the rule
 to every such action in a governed session that tainted content has
-entered.
+entered. Session-level taint persists for the governed session's
+lifetime and clears only with a fresh session or an explicit
+Subject-directed reset recorded in Harness Evidence
+({{harness-evidence}}).
+
+The provenance polarity is fixed. In a tainted session, a bound
+parameter the harness cannot affirmatively trace to sources on the
+content trust list MUST be treated as tainted. Parameter-granularity
+provenance therefore only exempts an egress whose bound parameters
+are all affirmatively of trusted provenance; it never launders
+inferred or paraphrased content, which is untraceable and so remains
+tainted. This default-taint polarity is a condition of the runtime
+profile's trifecta-containment claim
+({{I-D.draft-mcguinness-mission-runtime}}).
 
 The rule: the harness SHOULD either require a fresh action-bound
 approval ({{I-D.draft-mcguinness-mission-runtime}}) or downgrade that
@@ -788,9 +803,10 @@ source classing and parameter provenance give it discriminating power:
 it gates the egress whose inputs derive from untrusted content and
 leaves trusted-provenance egress ungated, instead of gating every
 egress in any session any content entered. Data-plane provenance does
-not survive model inference, so a value the agent paraphrases rather
-than copies can shed its taint, and the control cannot close
-within-scope data laundering
+not survive model inference; the default-taint polarity above is what
+keeps a value the agent paraphrases rather than copies from shedding
+its taint, at the cost of gating untraceable parameters in a tainted
+session. The control still cannot close within-scope data laundering
 ({{I-D.draft-mcguinness-oauth-mission}},
 {{I-D.draft-mcguinness-mission-runtime}}); it raises the bar by
 forcing a human or a fresh approval between untrusted input and

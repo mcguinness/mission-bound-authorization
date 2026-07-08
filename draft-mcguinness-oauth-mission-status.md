@@ -101,6 +101,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-aauth:
+    title: "Mission-Bound Authorization for AAuth"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -176,7 +184,9 @@ This document uses the terms defined in the issuance profile
 Mission Issuer (the Mission `issuer`: in this document's OAuth binding
 the Authorization Server; a standalone Mission Issuer, the Mission
 Authority Server {{I-D.draft-mcguinness-mission-authority-server}},
-serves these surfaces with the same semantics), Authority Set, the
+serves these surfaces with the same semantics, as does the AAuth
+Person Server for its native missions
+{{I-D.draft-mcguinness-mission-aauth}}), Authority Set, the
 `mission` claim, `mission_id`, and the `mission_resource_access`
 authorization details type. Resource AS is used as defined in the
 cross-domain companion
@@ -386,6 +396,11 @@ The members are:
     report-freshness metadata, carried in `mission` so it travels with
     `state` even on the introspection projection, which has no signed
     envelope to carry it ({{introspection-projection}}).
+  - `suspend_until`, `on_expiry`: CONDITIONAL. Present only while the
+    Mission is `suspended` under a deadline
+    ({{mission-lifecycle-endpoint}}): the RFC 3339 {{RFC3339}}
+    deadline, and the transition (`resume` or `revoke`) the AS applies
+    when it passes.
   - `successor`: OPTIONAL. A string, the successor `mission_id`. Present
     only when `state` is `superseded`, giving the successor that
     replaced this Mission, set atomically at supersession on the
@@ -459,12 +474,13 @@ Success outcomes (HTTP 200, signed Mission Status Response, described by
 |---|---|
 | `active` | Mission is active and permits reliance. |
 | `suspended` | Mission is suspended (non-terminal). |
-| terminated | Mission is in a terminal, non-active state. |
+| `revoked`, `expired`, `completed`, `superseded`, `cascaded` | Mission is in a terminal, non-active state. |
 
-`terminated` is not a `mission.state` value; it names any terminal
-non-`active` state, including companion-defined terminal states, and is
-not a closed list. The terminal states currently defined across this
-suite are `revoked` and `expired`
+This document uses "terminated" in prose for any terminal
+non-`active` state; it is not itself a `mission.state` value, and the
+terminal set is not closed: a deployment reports the companion-defined
+terminal states it runs. The terminal states currently defined across
+this suite are `revoked` and `expired`
 ({{I-D.draft-mcguinness-oauth-mission}}), `completed` (this document),
 `superseded` ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and
 `cascaded` ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). A
@@ -669,9 +685,11 @@ so a consumer sees the pending outcome.
 
 ## Legal Transitions {#legal-transitions}
 
-An operation is legal only from the source states below. The terminal
-states (`revoked`, `expired`, `completed`, and the companion-defined
-terminal states `superseded` and `cascaded`) accept no operation.
+An operation is legal only from the source states below. A terminal
+state (`revoked`, `expired`, `completed`, or the companion-defined
+`superseded` and `cascaded`) admits no transition; an operation whose
+resulting state equals the current state, terminal or not, is
+idempotent success ({{idempotency}}).
 
 | Operation | Legal from | Resulting state |
 |---|---|---|
@@ -685,13 +703,12 @@ a monotonic narrowing to a terminal state and needs no derivation
 window, so a suspended Mission need not first be resumed to be
 completed.
 
-A request for an operation against a state it is not legal from MUST be
-refused as a conflict ({{idempotency}}); the AS MUST NOT treat it as a
-no-op. Re-requesting an operation that has already reached its resulting
-state (for example, `revoke` on an already-`revoked` Mission) is
-idempotent and succeeds without a state change. A Mission that reaches
-its `expires_at` transitions to `expired` independently of this
-endpoint, from `active` or `suspended`.
+Requests are adjudicated by the single rule of {{idempotency}}: an
+operation whose resulting state equals the Mission's current state is
+idempotent success, and any other operation not legal from the current
+state is refused as a conflict. A Mission that reaches its
+`expires_at` transitions to `expired` independently of this endpoint,
+from `active` or `suspended`.
 
 ## Consolidated State Machine {#state-machine}
 
@@ -876,26 +893,30 @@ request.
 
 The request `nonce` ({{mission-lifecycle-endpoint}}, Operations) is
 the idempotency key. The AS MUST deduplicate lifecycle requests by the
-pair (`mission`, `nonce`) for a bounded window and, on a retransmit
-carrying a `nonce` already seen for that `mission`, MUST replay the
-original response rather than re-execute the operation. This makes a
-retransmit safe against reordering: a delayed `suspend` retry that
-arrives after a `resume` is recognized as a duplicate and replays the
-original `suspend` response, so it cannot re-suspend an already-resumed
-Mission.
+triple (client, `mission_id`, `nonce`) for a bounded window and, on a
+retransmit carrying a `nonce` already seen for that client and
+`mission_id`, MUST replay the original response rather than re-execute
+the operation. This makes a retransmit safe against reordering: a
+delayed `suspend` retry that arrives after a `resume` is recognized as
+a duplicate and replays the original `suspend` response, so it cannot
+re-suspend an already-resumed Mission.
 
-Lifecycle operations MUST be idempotent on the pair (`mission`,
-`operation`). A repeated request that does not change state returns
-success without side effect, returning the current Mission Status
-Response. This applies only when the operation is legal from the current
-state and has already reached its resulting state
-({{legal-transitions}}).
+Lifecycle operations follow one rule. An operation whose resulting
+state ({{legal-transitions}}) equals the Mission's current state is
+idempotent success, terminal or not: the AS returns the current
+Mission Status Response, with no state change and no event emitted.
+Any other operation not legal from the current state is a conflict
+(for example, `resume` on a Mission that was never suspended, or
+`suspend` against a terminal state): the AS MUST refuse it with HTTP
+409 and a JSON body whose error symbol is `conflict`, leaving the
+Mission state unchanged.
 
-An operation that is not legal from the current state (for example,
-`resume` on a Mission that was never suspended, or any operation on a
-terminal state) is a conflict, not an idempotent no-op. The AS MUST
-refuse it with HTTP 409 and a JSON body whose error symbol is
-`conflict`, leaving the Mission state unchanged.
+One idempotent case carries metadata. A `suspend` against a
+`suspended` Mission whose `suspend_until` or `on_expiry` differ from
+the recorded values MUST update the recorded values, emitting the
+corresponding transition-metadata change and reporting the updated
+values in the response; silent acceptance without effect is not
+conforming.
 
 ## Relationship to RFC 7009
 

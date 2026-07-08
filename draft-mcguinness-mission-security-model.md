@@ -342,7 +342,7 @@ can achieve, and is stated relative to a trusted base that excludes the
 agent. Two structural choices carry this:
 
 - **Authority is fixed by an approval the agent cannot move.** Authority
-  is derived by the Authorization Server and committed at the approval
+  is derived by the Mission Issuer and committed at the approval
   event, which may be asynchronous
   ({{I-D.draft-mcguinness-oauth-mission}},
   {{I-D.draft-mcguinness-oauth-mission-approval}}); the agent proposes
@@ -413,7 +413,10 @@ Mission Authority Server (standalone binding):
   only binding between a presented credential and a Mission, so a
   compromised Mission Authority Server combined with the PDP's trust in
   it yields arbitrary attribution of authority to any credential the
-  join accepts
+  join accepts. Where Mission Join Assertions are used, the PDP's join
+  trust concentrates in one MAS signature, and the MAS may hold
+  introspection credentials at the Authorization Server, a
+  cross-component channel whose compromise forges joins
   ({{I-D.draft-mcguinness-mission-authority-server}}).
 
 AAuth Person Server (AAuth binding):
@@ -446,12 +449,16 @@ Policy Decision Point (PDP):
 
 Mission state source:
 : Reports current Mission state for the freshness the runtime layer
-  requires, whether by introspection, the Status surface, or pushed
-  Signals. It must report accurately within the staleness bound and be
+  requires, whether by introspection, the Status surface, pushed
+  Signals, or a materialized policy view. It must report accurately
+  within the staleness bound and be
   authenticated and integrity-protected. A compromised or spoofed state
   source can report `active` for a Mission that is revoked, defeating the
   kill switch; the runtime layer fails closed when state cannot be
-  established within the bound
+  established within the bound. The materialized policy view carries
+  authority as well as state, so a stale or tampered view feeds the
+  PDP wrong authority; its integrity and staleness bounds are part of
+  the trusted base
   ({{I-D.draft-mcguinness-oauth-mission-status}},
   {{I-D.draft-mcguinness-oauth-mission-signals}},
   {{I-D.draft-mcguinness-mission-runtime}}).
@@ -485,7 +492,10 @@ Metering state:
   enforced. Its compromise voids the volume bound but not the
   authority bound: a drained, reset, or bypassed meter lets a Mission
   consume without limit inside its approved scope, and a falsely
-  exhausted meter is a denial of service. Under a multi-PDP topology
+  exhausted meter is a denial of service. The metering state also
+  holds the exclusivity latch: latch state whose loss or reset
+  silently voids a consented separation-of-duty, an exposure distinct
+  from counter drift. Under a multi-PDP topology
   the published consistency bound is the honest statement of the
   undercounting exposure
   ({{I-D.draft-mcguinness-mission-metering}}).
@@ -608,7 +618,9 @@ Bounded authority (Baseline Issuance):
   Set and cannot move authority by influencing inert intent; authority
   grows only by a fresh approval that supersedes the prior Mission
   ({{I-D.draft-mcguinness-oauth-mission-expansion}}), not by agent
-  action. Rests on the Mission Issuer.
+  action. Rests on the Mission Issuer. Under the standalone binding no
+  token carries the Mission, so this guarantee and the Kill switch
+  rest additionally on PEP and PDP coverage.
 
 Kill switch (Baseline Issuance for issuance; Runtime-Enforced for action):
 : Revoking or expiring a Mission stops further issuance at once and
@@ -646,7 +658,9 @@ Trifecta containment (High-Assurance Agent):
 Attributable action (any level, per the evidence deployed):
 : What was proposed, approved, decided, and executed is recorded and,
   where audit transparency is used, tamper-evident
-  ({{I-D.draft-mcguinness-mission-audit}}). This is accountability,
+  ({{I-D.draft-mcguinness-mission-audit}}); the Mission Receipt is the
+  portable per-action artifact
+  ({{I-D.draft-mcguinness-mission-runtime}}). This is accountability,
   not prevention. Rests on the evidence producers and, for
   non-equivocation, the Transparency Service.
 
@@ -699,28 +713,117 @@ trusted-base component; those last two are the residuals of
 exclusion.
 
 The following maps each adversary move to the mechanism that addresses
-it and to what is explicitly not stopped. The residual column is the
-honest part: it is what a deploying party still owns.
+it and to what is explicitly not stopped. The residual is the honest
+part: it is what a deploying party still owns.
 
-| Adversary move | Addressed by | Residual: not stopped |
-|---|---|---|
-| Compromised or injected agent acts beyond its task | Authority fixed at the approval event (issuance); per-action PDP check (runtime) | Misuse within the approved scope; low-consequence authority the agent legitimately holds |
-| Prompt injection tries to widen authority | Authority fixed at approval: `purpose` and `success_criteria` are inert, and `goal` shapes authority only through the pre-approval derivation the Approver consents to | Injected text can still drive actions already in scope |
-| Agent escalates through the request path (expansion, requestable denial, deferred approval) | Every widening is a fresh approval event: expansion supersedes rather than amends, access-request adjudication routes high-consequence escalation to an independent approver, and an approval revision can only narrow ({{I-D.draft-mcguinness-oauth-mission-approval-revision}}) | Rubber-stamping: an over-asked Approver approves an escalation like a considered one (the consent-fatigue residual) |
-| In-scope volume abuse (budget drain, call flooding, egress volume) | Consumption metering where deployed: atomic check-and-decrement, reserve and commit, duration leases; a bound that cannot be metered is refused, not rendered as enforced | Without metering, volume inside the approved scope is bounded only by Mission expiry; with it, the published multi-PDP consistency bound |
-| Stolen or exfiltrated token | Sender-constraint (proof-of-possession); the high-consequence key is held by the PEP, not the agent (mediated execution) | A token stolen together with its key; soundness of the PoP mechanism |
-| Token replayed at another resource (confused deputy) | Permit bound to audience, resource, `sub`, `client_id`, and action; cross-domain grant single-use and audienced | Correct binding configuration is the deployment's |
-| Parameters change between decision and use (TOCTOU) | Parameter binding; the digest is reverified at the executing PEP immediately before acting | The PEP must sit at the last controllable boundary |
-| Active Mission used as ambient standing authority | Per-action runtime enforcement, state re-check, fail-closed on stale state | An issuance-only deployment gets audit, not action-time defense |
-| Revoked or expired Mission still acts (kill switch) | Issuance gating; runtime state re-check within the staleness bound; short token lifetimes | A window up to the staleness bound or token TTL; a spoofed state source (a trusted component) |
-| Approver approves more than was shown | The rendered disclosure is committed; rendering-assurance ladder up to an authenticator-signed commitment | Comprehension: no server-side commitment proves what a human perceived or understood |
-| Exfiltration of private data (the third leg of the lethal trifecta) | External communication is a gated consequential action; harness leaves no unmediated path; session taint downgrades egress after untrusted input (optional; recommended, not required); least-exposure context minimization narrows what an injected agent sees (runtime, harness); the composite is claimable as trifecta containment (runtime) | PEP-placement completeness; no information-flow control, so a sequence of in-scope steps can launder data; the quarantine pattern (separate ingestion and egress Missions) turns that limit into a deployment architecture ({{I-D.draft-mcguinness-mission-architecture}}) |
-| Sub-agent fan-out abuse (Child Missions) | Child creation is issuer-adjudicated: strict-subset authority, expiry no later than the parent, fan-out controls, separate child actor identity, cascade termination when the parent ends, and child credentials never transit the parent | Breadth within the fan-out policy is the deployment's; a permissive delegation policy is consented but wide |
-| Offline sub-agent fan-out abuse | Capability monotonicity (narrow-only) and the runtime kill-switch re-check on the carried chain | Fan-out breadth is unobserved by the issuer; bounded by depth and policy, not by the issuer |
-| Operator surface abused (fleet management) | Management Client authorization; dry-run-then-execute with a bulk token pinning the evaluated membership; every call audited; never agent-facing | A compromised Management Client stops or resumes Missions fleet-wide and learns Mission existence; it cannot mint or widen authority |
-| Audit tampered, dropped, or reordered | Transparency: append-only log, inclusion receipts, non-equivocation | Single-service equivocation (per-service only; register with several); a producer can still log a false record (accountability, not prevention) |
-| Agent fabricates results or acts on false data | Not addressed | Full: semantic and grounding verification are a non-goal; pair with a grounding layer if needed |
-| A trusted-base component is compromised | Not addressed; evidence detects it after the fact | Not prevented; degrades the specific guarantee per {{trusted-base}} |
+Compromised or injected agent acts beyond its task:
+: Addressed by authority fixed at the approval event (issuance);
+  per-action PDP check (runtime). Residual: misuse within the approved
+  scope; low-consequence authority the agent legitimately holds.
+
+Prompt injection tries to widen authority:
+: Addressed by authority fixed at approval: `purpose` and
+  `success_criteria` are inert, and `goal` shapes authority only through
+  the pre-approval derivation the Approver consents to. Residual:
+  injected text can still drive actions already in scope.
+
+Agent escalates through the request path (expansion, requestable denial,
+  deferred approval):
+: Addressed by every widening is a fresh approval event: expansion
+  supersedes rather than amends, access-request adjudication routes
+  high-consequence escalation to an independent approver, and an
+  approval revision can only narrow
+  ({{I-D.draft-mcguinness-oauth-mission-approval-revision}}). Residual:
+  rubber-stamping: an over-asked Approver approves an escalation like a
+  considered one (the consent-fatigue residual).
+
+In-scope volume abuse (budget drain, call flooding, egress volume):
+: Addressed by consumption metering where deployed: atomic
+  check-and-decrement, reserve and commit, duration leases; a bound that
+  cannot be metered is refused, not rendered as enforced. Residual:
+  without metering, volume inside the approved scope is bounded only by
+  Mission expiry; with it, the published multi-PDP consistency bound.
+
+Stolen or exfiltrated token:
+: Addressed by sender-constraint (proof-of-possession); the
+  high-consequence key is held by the PEP, not the agent (mediated
+  execution). Residual: a token stolen together with its key; soundness
+  of the PoP mechanism.
+
+Token replayed at another resource (confused deputy):
+: Addressed by permit bound to audience, resource, `sub`, `client_id`,
+  and action; cross-domain grant single-use and audienced. Residual:
+  correct binding configuration is the deployment's.
+
+Parameters change between decision and use (TOCTOU):
+: Addressed by parameter binding; the digest is reverified at the
+  executing PEP immediately before acting. Residual: the PEP must sit at
+  the last controllable boundary.
+
+Active Mission used as ambient standing authority:
+: Addressed by per-action runtime enforcement, state re-check,
+  fail-closed on stale state. Residual: an issuance-only deployment gets
+  audit, not action-time defense.
+
+Revoked or expired Mission still acts (kill switch):
+: Addressed by issuance gating; runtime state re-check within the
+  staleness bound; short token lifetimes. Residual: a window up to the
+  staleness bound or token TTL; a spoofed state source (a trusted
+  component).
+
+Approver approves more than was shown:
+: Addressed by the rendered disclosure is committed; rendering-assurance
+  ladder up to an authenticator-signed commitment. Residual:
+  comprehension: no server-side commitment proves what a human perceived
+  or understood.
+
+Exfiltration of private data (the third leg of the lethal trifecta):
+: Addressed by external communication is a gated consequential action;
+  harness leaves no unmediated path; session taint downgrades egress
+  after untrusted input (optional; recommended, not required);
+  least-exposure context minimization narrows what an injected agent
+  sees (runtime, harness); the composite is claimable as trifecta
+  containment (runtime). Residual: pEP-placement completeness; no
+  information-flow control, so a sequence of in-scope steps can launder
+  data; the quarantine pattern (separate ingestion and egress Missions)
+  turns that limit into a deployment architecture
+  ({{I-D.draft-mcguinness-mission-architecture}}).
+
+Sub-agent fan-out abuse (Child Missions):
+: Addressed by child creation is issuer-adjudicated: strict-subset
+  authority, expiry no later than the parent, fan-out controls, separate
+  child actor identity, cascade termination when the parent ends, and
+  child credentials never transit the parent. Residual: breadth within
+  the fan-out policy is the deployment's; a permissive delegation policy
+  is consented but wide.
+
+Offline sub-agent fan-out abuse:
+: Addressed by capability monotonicity (narrow-only) and the runtime
+  kill-switch re-check on the carried chain. Residual: fan-out breadth
+  is unobserved by the issuer; bounded by depth and policy, not by the
+  issuer.
+
+Operator surface abused (fleet management):
+: Addressed by management Client authorization; dry-run-then-execute
+  with a bulk token pinning the evaluated membership; every call
+  audited; never agent-facing. Residual: a compromised Management Client
+  stops or resumes Missions fleet-wide and learns Mission existence; it
+  cannot mint or widen authority.
+
+Audit tampered, dropped, or reordered:
+: Addressed by transparency: append-only log, inclusion receipts,
+  non-equivocation. Residual: single-service equivocation (per-service
+  only; register with several); a producer can still log a false record
+  (accountability, not prevention).
+
+Agent fabricates results or acts on false data:
+: Addressed by not addressed. Residual: full: semantic and grounding
+  verification are a non-goal; pair with a grounding layer if needed.
+
+A trusted-base component is compromised:
+: Addressed by not addressed; evidence detects it after the fact.
+  Residual: not prevented; degrades the specific guarantee per
+  {{trusted-base}}.
 
 Eight residuals are worth stating on their own, because they are the
 limits most likely to matter and most often overstated away elsewhere:
@@ -798,7 +901,12 @@ revoked and the last possible consequential action under it there is a
 window, and its size is a composition of the mechanisms a deployment
 runs. The following non-normative table names the governing parameter at
 each layer; the end-to-end worst case for an action class is the tightest
-layer the deployment enforces for that class.
+layer the deployment enforces for that class. The tables in this
+section read on the credential-issuing bindings (the OAuth
+Authorization Server and the AAuth Person Server); under the
+standalone MAS binding the unchanged Authorization Server keeps
+issuing valid tokens after revocation, and the cutoff for every
+column is the runtime layer's state re-check.
 
 | Configuration | Worst-case window | Governing parameter |
 |---|---|---|

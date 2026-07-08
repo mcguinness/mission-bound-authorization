@@ -120,6 +120,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-mandate:
     title: "Mission Mandate"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
@@ -232,8 +240,8 @@ forgoes.
 This is the third binding of the Mission model and the first to a
 non-OAuth substrate: the issuance profile binds the model to the OAuth
 Authorization Server, the Mission Authority Server binds it to a
-standalone service beside an unchanged AS, and this document binds it
-to the AAuth Person Server.
+standalone service beside an unchanged Authorization Server, and this
+document binds it to the AAuth Person Server.
 
 ## Applicability
 
@@ -258,7 +266,7 @@ Set, Approver, Subject, `mission_id`, the integrity anchors
 (`intent_hash` and `authority_hash`), the subset rule, the
 only-`active` rule, and the audit horizon as defined by
 {{I-D.draft-mcguinness-oauth-mission}}. It uses Person Server (PS),
-Agent Provider, Access Server (AS), agent token, resource token, auth
+Agent Provider, Access Server, agent token, resource token, auth
 token, mission blob, mission log, the `AAuth-Mission` header, and the
 resource access modes as defined by
 {{I-D.draft-hardt-oauth-aauth-protocol}}. It additionally uses:
@@ -348,9 +356,9 @@ parameters are defined, and this document gives its existing
 parameters family semantics (`approver` names the `issuer`, `s256`
 locates the record). A Mission-Bound Person Server MUST resolve `s256`
 to the Mission record at every PS endpoint that takes a mission
-reference. Per AAuth, a Resource or AS never dereferences the
-reference; it consumes mission semantics through token claims and PS
-evaluation. `mission_id` remains the family-surface identifier: the
+reference. Per AAuth, a Resource or Access Server never dereferences
+the reference; it consumes mission semantics through token claims and
+PS evaluation. `mission_id` remains the family-surface identifier: the
 Mission Status operation, lifecycle signals, consent evidence, runtime
 evidence, and audit key on it
 ({{I-D.draft-mcguinness-oauth-mission-status}},
@@ -587,6 +595,12 @@ federated mode it refuses to federate, so no credential is derived
 under a non-active Mission in any mode. The `active` check MUST be
 atomic with issuance.
 
+Each auth-token issuance and each federation event counts as one
+derivation under the Mission. The PS maintains the derivation count
+and, where the Intent's `controls.max_derivations` is present, MUST
+refuse the issuance or federation that would exceed it, per the
+issuance profile's count-and-gate rule.
+
 An auth token issued under a Mission MUST NOT have an `exp` later
 than the Mission's `expires_at`, so no credential outlives the
 Mission. AAuth
@@ -636,11 +650,12 @@ authority, per the issuance profile.
 
 In the federated mode the Access Server mints the auth token and
 copies the AAuth-native reference per AAuth. The family members
-appear only when the AS supports this profile; when it does not, the
-credential still names the Mission by (`approver`, `s256`), the PS's
-gate still holds ({{gating}}), and a consumer that needs the family
-members resolves them through the Mission Status operation or a
-Mission Mandate ({{I-D.draft-mcguinness-mission-mandate}}).
+appear only when the Access Server supports this profile; when it
+does not, the credential still names the Mission by (`approver`,
+`s256`), the PS's gate still holds ({{gating}}), and a consumer that
+needs the family members resolves them through the Mission Status
+operation or a Mission Mandate
+({{I-D.draft-mcguinness-mission-mandate}}).
 
 ## Authority Subset {#subset}
 
@@ -651,7 +666,12 @@ authority present in the Authority Set, and no scope value may convey
 authority, or relaxation of a constraint, that the set does not
 grant. In the federated mode the PS MUST NOT federate a request whose
 requested authority exceeds this subset, and it MUST NOT deliver to
-the agent an AS-issued token whose granted scope does.
+the agent an Access Server-issued token whose granted scope does. The
+delivery check also bounds lifetime: the PS MUST NOT deliver an
+Access Server-issued token whose `exp` is later than the Mission's
+`expires_at`, so no federated credential outlives the Mission
+({{gating}}), and it MUST NOT initiate federation when the Mission's
+remaining lifetime is too short to yield a deliverable token.
 
 An auth token MAY additionally carry Mission-derived authorization
 details entries as the issuance profile defines them; each carried
@@ -742,10 +762,14 @@ undirected for readability. The AAuth claims (`iss`, `dwk`, `aud`,
 
 The companion profiles of the Mission suite are defined against the
 Mission model's substrate primitives rather than against OAuth
-mechanics. This binding provides all of them, including the
-Mission-bound credential and issuance gating, the two the standalone
-binding forgoes. Against the architecture's binding checklist
-({{I-D.draft-mcguinness-mission-architecture}}):
+mechanics. In the PS-asserted mode this binding is full provision in
+the substrate's terms ({{I-D.draft-mcguinness-mission-substrate}}):
+it provides every primitive, including the Mission-bound credential
+and issuance gating, the two the standalone binding forgoes. In the
+federated mode full provision holds only when the Access Server
+carries the family `mission` members ({{mission-claim}}); a federated
+deployment whose Access Servers do not is Reference-only
+({{verification-modes}}). Against the substrate's requirements:
 
 1. **Identifier and issuer**: `id` on the record, `issuer`
    the `approver` URL; the (`approver`, `s256`) pair is the
@@ -768,6 +792,9 @@ binding forgoes. Against the architecture's binding checklist
    AAuth's discovery ({{state-surfaces}}).
 7. **Audit horizon**: PS-declared; the record and the mission log are
    retained for it.
+8. **Approval fidelity**: the propose, clarify, approve interaction
+   produces the record, the anchors, and the consent disclosure with
+   the required fidelity ({{approval}}).
 
 The composition consequences:
 
@@ -791,8 +818,9 @@ The composition consequences:
   proof-of-possession bound
   ({{I-D.draft-mcguinness-oauth-mission-attenuation}}).
 - Cross-domain projection does not apply: AAuth's federated mode is
-  its own cross-party mechanism, federating per request at the PS-AS
-  trust layer rather than projecting a Mission into a foreign issuer
+  its own cross-party mechanism, federating per request at the trust
+  layer between the PS and the Access Server rather than projecting a
+  Mission into a foreign issuer
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
 # Limitations {#limitations}
@@ -803,8 +831,8 @@ draft-hardt-oauth-aauth-protocol-08. A change to AAuth's mission
 surfaces revises this document; a deployment tracks both.
 
 **Blob visibility.** Only the agent and the PS hold the mission blob,
-and AAuth forbids a Resource or AS to dereference the reference. A
-Resource therefore verifies from token claims and the
+and AAuth forbids a Resource or Access Server to dereference the
+reference. A Resource therefore verifies from token claims and the
 signature-covered reference, not by recomputing the anchors: it holds
 no Authority Set unless a token carries authorization details. A
 deployment that needs Resource-side `authority_hash` verification
@@ -880,9 +908,11 @@ A **Mission-Bound Person Server**:
   `expires_at` enforcement, completion, and the only-`active`
   gate at every PS surface, atomic with issuance ({{gating}});
 - issues auth tokens as Mission-bound credentials ({{mission-claim}},
-  {{subset}}), with `exp` bounded by the Mission's `expires_at`; and
+  {{subset}}), with `exp` bounded by the Mission's `expires_at`;
 - serves Mission state per {{state-surfaces}} and retains the record
-  and mission log for the audit horizon.
+  and mission log for the audit horizon; and
+- declares which verification mode of {{verification-modes}} the
+  deployment serves.
 
 A **Mission-Bound Agent**:
 

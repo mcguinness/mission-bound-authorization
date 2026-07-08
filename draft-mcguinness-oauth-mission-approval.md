@@ -144,7 +144,9 @@ Internet-Draft that is not ratified and whose details may change, so
 this profile is not yet a stable interface and will track the substrate
 as it evolves. Synchronous Mission approval, which needs only the
 issuance profile, is the stable path; deploy deferred approval for
-evaluation rather than as a stable interface.
+evaluation rather than as a stable interface. This document is
+Standards Track despite that posture because it tracks its substrate
+and stabilizes with it.
 
 # Relationship to the Issuance Profile {#issuance-relationship}
 
@@ -209,7 +211,10 @@ approval event without weakening it:
 
 Deferral changes only the timing of the approval event. The Authority
 Set the token is issued against, its `authority_hash`, and the recorded
-consent are exactly as in a synchronous approval.
+consent are exactly as in a synchronous approval. A Mission revoked
+between the approval decision and the resolving poll yields no token:
+issuance gating derives only from an `active` Mission
+({{I-D.draft-mcguinness-oauth-mission}}).
 
 ## Deferred Approval State Machine {#state-machine}
 
@@ -246,6 +251,18 @@ the applicable capability catalog, MUST be made over a proposal that has
 been re-derived and re-rendered under the current policy and catalog; the
 Mission Issuer MUST NOT commit an approval over a proposal derived under
 superseded policy.
+
+## Queue Pressure {#queue-pressure}
+
+Deferral turns the review surface into a queue a client can flood. The
+Mission Issuer MUST bound the number of concurrent pending proposals
+per (client, Approver) pair, refusing further submissions until the
+queue drains. It SHOULD collapse pending proposals carrying an
+identical `intent_hash` into a single review item, SHOULD rate-limit
+reviewer notifications, and SHOULD log a queue flood as a security
+event, alongside the decline-suppression detection the consent
+evidence profile describes
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 
 # Integration with the Mission Suite {#integration}
 
@@ -340,7 +357,7 @@ A Mission Issuer conforming to this profile MUST:
 - create the Mission record `active` atomically with the approval
   decision; and
 - enforce the pending lifetime and staleness rules of
-  {{pending-staleness}}.
+  {{pending-staleness}} and the queue bounds of {{queue-pressure}}.
 
 A client conforming to this profile MUST treat every pending response
 as unapproved and poll the `deferral_code` per the deferred substrate.

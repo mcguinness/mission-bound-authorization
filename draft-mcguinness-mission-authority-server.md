@@ -403,6 +403,13 @@ codes ({{submission-errors}}):
   (the MAS equivalent of `invalid_authorization_details`), so a client
   can distinguish a syntax error from an authority-derivation failure.
 
+A MAS has no derivation event: no token is issued under the Mission,
+so `controls.max_derivations` binds nothing here. A MAS SHOULD refuse
+an Intent that carries it, or record it and ensure the approval
+rendering marks it non-binding, per the issuance profile's rule that
+consent is not given to a limit that binds nowhere. The same
+treatment applies to any future control scoped to an issuance event.
+
 On acceptance the MAS derives the Authority Set from the Intent under
 the issuance profile's derivation rules
 ({{I-D.draft-mcguinness-oauth-mission}}) and returns HTTP 202 with a
@@ -1005,16 +1012,36 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    default. Where the AS and MAS client namespaces differ, the
    deployment MUST document the client mapping, exactly as for
    subjects.
-5. **Join failure is a deny.** A failure of the subject or client join
-   MUST be denied with the `mission_mismatch` denial reason. The PDP
-   MUST NOT fall back to evaluating the action against the referenced
+5. **Delegate narrowing.** When the joined party is a delegate rather
+   than the Mission's `client_id`, the PDP MUST narrow the effective
+   Authority Set to the delegable subset under the issuance profile's
+   per-entry `delegation` rules
+   ({{I-D.draft-mcguinness-oauth-mission}}): entries without a
+   `delegation` member are excluded, `allowed_delegates` is applied,
+   and `max_depth` is evaluated from the deployment's actor records
+   rather than from a Mission-bound token's `act` chain.
+6. **Join failure is a deny.** A failure of the subject or client join
+   MUST be denied with the `mission_mismatch` denial reason: the
+   presented credential does not join to the referenced Mission
+   because its authenticated subject or client identifier does not
+   match the Mission's `subject.sub` or `client_id` under the
+   deployment's documented mapping and delegate policy. The PDP MUST
+   NOT fall back to evaluating the action against the referenced
    Mission's authority when the join fails.
-6. **Authority comes from the Mission.** On a successful join, the PDP
+7. **Authority comes from the Mission.** On a successful join, the PDP
    evaluates the action under the runtime profile's decision contract,
    drawing the Authority Set from the Mission (the audience-scoped
    Mission Status response or a materialized policy view), since the
    credential carries none. All other decision inputs and invariants
    of {{I-D.draft-mcguinness-mission-runtime}} apply unchanged.
+
+The join binds identity, not possession, so the acting credential's
+own sender binding is what keeps a joined permit from being a bearer
+property. Acting credentials for governed work SHOULD be
+sender-constrained, with DPoP or mutual TLS at the unchanged AS; for
+the high-consequence action classes they MUST be. With a pure bearer
+token, any holder inside the (subject, client) equivalence class
+joins ({{join-spoofing}}).
 
 A successful join, in the AuthZEN binding: the PEP supplies
 `context.mission` populated from its Mission binding, with
@@ -1060,12 +1087,6 @@ the action under the Mission's Authority Set and permits:
   }
 }
 ~~~
-
-`mission_mismatch`:
-: The presented credential does not join to the referenced Mission:
-  its authenticated subject or client identifier does not match the
-  Mission's `subject.sub` or `client_id` under the deployment's
-  documented mapping and delegate policy.
 
 The AuthZEN profile's denial-reason extensibility rule permits a
 companion profile to extend the denial-reason set by specification,
@@ -1168,6 +1189,12 @@ A token that does not join is refused with the `join_failed` error
 `conflict`, it extends that section's error code set. An unknown
 or not-visible `mission_id` returns `not_found`, preserving the
 anti-oracle property.
+
+Visibility on this endpoint is bounded: a Mission is visible to its
+`client_id`, its recorded delegates, and the PEPs and PDPs enrolled
+for the Mission's enforcement scope. Any other caller MUST receive
+`not_found`, so the `join_failed` (403) and `not_found` (404) split
+never acts as a mapping oracle for callers outside that set.
 
 ## The Assertion {#join-assertion-artifact}
 
@@ -1308,9 +1335,10 @@ consequential action path within the scope it claims Mission
 governance for, and the no-unmediated-path condition consolidated by
 the security model ({{I-D.draft-mcguinness-mission-security-model}})
 is load-bearing for all of this profile's guarantees, not only for the
-runtime profile's agent-compromise-resistant tier. A token exercised
-outside PEP coverage is ungoverned: its use is bounded by ordinary
-OAuth alone, and no Mission property applies to it.
+runtime profile's agent-compromise-resistant enforcement claim. A
+token exercised outside PEP coverage is ungoverned: its use is
+bounded by ordinary OAuth alone, and no Mission property applies to
+it.
 
 **Weaker expansion and child-creation binding.** Mission Expansion
 and Child Delegation are carried natively in this mode
@@ -1443,7 +1471,9 @@ performs:
   subject maps to the Mission's `subject`);
 - the client namespace mapping (how a credential's client maps to the
   Mission's `client_id`);
-- the delegate policy applied to `act`-chain actors;
+- the delegate policy applied to `act`-chain actors, which MUST state
+  how the issuance profile's per-entry `delegation` rules are
+  evaluated at the join;
 - whether client-instance identity is supported and required;
 - a mapping version identifier, so a mapping change is detectable;
 - an audit record for each mapping decision; and
@@ -1518,7 +1548,9 @@ independently useful:
 
 1. The MAS records Missions and approvals: governance and audit of
    what tasks were approved, with no enforcement change yet
-   (Baseline Issuance under the MAS binding).
+   (Baseline Issuance under the MAS binding: governance and audit,
+   without the level's issuance-gate kill switch; phase 2 supplies
+   the state-based cutoff).
 2. Mission Status and lifecycle become the estate-wide kill switch:
    consumers fail safe on non-`active` state (the state-aware
    half-step).
@@ -1560,7 +1592,11 @@ without instance identity. A second residual: two Missions held by
 the same subject and client are distinguished only by the PEP-supplied
 reference, so a faulty or compromised PEP can attribute work to the
 wrong same-party Mission, bounded by that Mission's authority and
-visible in evidence.
+visible in evidence. A third residual is bearer possession: with a
+pure bearer token, possession alone presents the credential, so any
+holder inside the (subject, client) equivalence class joins, which is
+why {{mission-join}} requires sender-constraint for the
+high-consequence classes.
 
 The Mission Join Assertion ({{join-assertion}}) is the mitigation for
 the coarse-mapping and shared-client residuals: the MAS evaluates the

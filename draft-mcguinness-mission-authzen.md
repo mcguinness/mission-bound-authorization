@@ -104,7 +104,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-harness:
-    title: "Mission-Aware Agent Harness"
+    title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
     author:
       -
@@ -378,9 +378,13 @@ materialized view:
   ({{I-D.draft-mcguinness-oauth-mission}}).
 
 `state`:
-: REQUIRED. A string. the current Mission lifecycle state the
+: CONDITIONAL. A string. the current Mission lifecycle state the
   PEP established from its Mission state source
-  ({{I-D.draft-mcguinness-mission-runtime}}).
+  ({{I-D.draft-mcguinness-mission-runtime}}). REQUIRED when the
+  deployment's Enforcement Scope Statement places Mission state
+  supply with the PEP; where it does not, the PEP omits it and the
+  PDP MUST establish the state from its own Mission state source or
+  deny with `stale_state`.
 
 `policy_version`:
 : REQUIRED when known. A string. the `policy_version` recorded at the
@@ -489,9 +493,13 @@ under {{I-D.draft-mcguinness-mission-runtime}}, the PEP supplies:
   protected-resource identifier.
 
 `freshness`:
-: REQUIRED. An object. the freshness of the Mission state
+: CONDITIONAL. An object. the freshness of the Mission state
   the PEP relied on, conveying the runtime profile's freshness inputs
-  on the wire. Members:
+  on the wire. REQUIRED whenever the PEP supplies
+  `context.mission.state` ({{context-mission}}); where the deployment
+  places state establishment with the PDP and `state` is absent,
+  `freshness` is omitted with it and the PDP's own state-source
+  freshness governs. Members:
 
     `mode`:
     : REQUIRED. A string. one of `fresh`, `cached`, or `event_driven`
@@ -547,8 +555,15 @@ through the PDP, as the value of `context.taint`:
   `third_party_document`), for policy and evidence.
 
 Absence of `taint` means the harness did not route the determination
-through the decision request, not that the action is untainted; the
-harness's own egress rule then applies. When `taint` is present with
+through the decision request, not that the action is untainted; in a
+harness-enforced deployment the harness's own egress rule then
+applies. When the deployment's Enforcement Scope Statement
+({{I-D.draft-mcguinness-mission-runtime}}) declares PDP-enforced
+taint for an action class, absence MUST NOT fail open: the PDP MUST
+require `context.taint` on every external-communication and
+external-commitment decision in that class and MUST deny with
+`taint_context_missing` ({{runtime-denial-classification}}) when it
+is absent. When `taint` is present with
 `tainted` true on a consequential external-communication or
 external-commitment action, the PDP MUST deny or return
 `action_approval_required` ({{runtime-denial-classification}}) unless
@@ -560,8 +575,9 @@ taint context in Decision Evidence.
 
 For catalog-sourced actions, the PEP supplies the capability-source
 binding in `context.capability_source` using the object defined in
-{{capability-source-binding}}. For non-catalog actions, this member is
-absent.
+{{capability-source-binding}}, and identifies the executing component,
+when it can, in the separate `context.executor` member defined there.
+For non-catalog actions, both members are absent.
 
 ## Worked PDP request
 
@@ -642,7 +658,8 @@ In addition to evaluating the decision inputs the runtime profile
 requires, the PDP MUST verify that the AuthZEN-carried envelope is
 self-consistent:
 
-1. The Mission state conveyed in `context.mission.state` is exactly
+1. The Mission state conveyed in `context.mission.state`, when
+   present, is exactly
    `active`; every other value, recognized or not, is non-active per the
    issuance profile's forward-compatibility rule
    ({{I-D.draft-mcguinness-oauth-mission}}) and the PDP returns
@@ -651,7 +668,10 @@ self-consistent:
    view over `context.mission.state`, and MUST return `mission_inactive`
    when its view disagrees with the PEP-supplied state. PEP-supplied
    state is a floor, never a substitute for a state source the PDP can
-   itself consult.
+   itself consult. When `context.mission.state` is absent
+   ({{context-mission}}), the PDP MUST establish the state from its
+   own Mission state source, and returns `stale_state` when it
+   cannot.
 2. The `id` and `authority_hash` in `context.mission` equal the
    `mission_id` and `authority_hash` committed in the materialized
    policy view the PDP has loaded for this Mission
@@ -664,9 +684,12 @@ self-consistent:
    authoritative.
 3. When `context.credential.expires_at` is present, it has not passed;
    otherwise the PDP returns `credential_invalid`.
-4. The `context.freshness` the PEP supplied is within the deployment's
+4. The `context.freshness` the PEP supplied, when present, is within
+   the deployment's
    staleness bound; otherwise the PDP returns `stale_state`, with the
-   freshness-window violation in the denial reason.
+   freshness-window violation in the denial reason. When `freshness`
+   is absent with `state` ({{context-audience-freshness}}), the
+   staleness bound applies to the PDP's own state view.
 5. For an action whose class requires parameter binding
    ({{I-D.draft-mcguinness-mission-runtime}}),
    `context.parameter_digest` MUST be present; if it is absent the PDP
@@ -918,6 +941,12 @@ canonicalization, and integrity envelope an AuthZEN deployment emits.
 : OPTIONAL. An object. the catalog-source binding the PDP evaluated
   for catalog-sourced actions.
 
+`executor`:
+: OPTIONAL. A string. the presented executing-component identifier
+  (`context.executor`, {{capability-source-binding}}), recorded as
+  supplied. It is a request-time fact and is never part of the
+  derivation-time digest comparison.
+
 `compensates_decision_id`:
 : OPTIONAL. A string. the `decision_id` of the action this decision
   compensates, carrying the runtime profile's compensation link
@@ -944,10 +973,8 @@ canonicalization, and integrity envelope an AuthZEN deployment emits.
 
 `denial_reason`:
 : CONDITIONAL. A string. Present when `decision` is `deny`. A value from
-  the set of {{runtime-denial-classification}}, including any
-  specification-defined extension under that section's extensibility
-  rule; a consumer MUST treat an unrecognized value as a deny and MUST
-  NOT attach any other semantics to it. When the denial
+  the set of {{runtime-denial-classification}}, subject to that
+  section's extensibility and unrecognized-value rule. When the denial
   is a constraint violation, the value is `parameter_violation` and the
   specific failing `constraints` keys are carried in
   `contributing_constraints`, not in `denial_reason`, so the reason
@@ -1003,7 +1030,8 @@ privacy-preserving digest of the refused request otherwise, per the
 runtime record minimum),
 `decision` of `deny`, and a `denial_reason` from this pre-decision set:
 `token_invalid`, `mission_claim_missing`, `channel_failure`,
-`pdp_unreachable`, or `state_unavailable` (the PEP cannot establish
+`pdp_unreachable`, or `state_unavailable` (under declared PEP-side
+state supply, {{context-mission}}, the PEP cannot establish
 Mission state to send to the PDP). These name PEP-side conditions and
 are disjoint from the PDP denial reasons of
 {{runtime-denial-classification}}; a record that can populate the
@@ -1013,6 +1041,26 @@ runtime profile's binding-establishment step
 ({{I-D.draft-mcguinness-mission-runtime}}), absence of the `mission`
 claim is not a pre-decision refusal and `mission_claim_missing` does
 not apply; the external join's verification governs instead.
+
+A worked refusal record, for a parameter-bound write the PEP refuses
+because the PDP is unreachable, signed under the PEP's own key with
+the evidence envelope of {{decision-evidence-integrity}}:
+
+~~~ json
+{
+  "audience": "https://erp.example.com",
+  "action": { "name": "journal-entries.write" },
+  "parameter_digest":
+    "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+  "decision": "deny",
+  "denial_reason": "pdp_unreachable",
+  "evaluated_at": "2026-11-02T08:14:03Z",
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBlcC1rZXkt..."
+  }
+}
+~~~
 
 ## Integrity {#decision-evidence-integrity}
 
@@ -1314,8 +1362,14 @@ carried in Decision Evidence:
   approval bound to the action's parameters is not present. The PEP
   carries any such approval in the decision context; this profile does
   not define the approval artifact, which the runtime profile owns.
+- `taint_context_missing`: the deployment declares PDP-enforced taint
+  for the action's class and the decision request for an
+  external-communication or external-commitment action carries no
+  `context.taint` ({{context-taint}}).
 - `stale_state`: the PEP-supplied freshness is stale or inconsistent
-  with the materialized policy view.
+  with the materialized policy view, or the PDP cannot itself
+  establish Mission state within the staleness bound where state
+  establishment is PDP-side ({{context-mission}}).
 - `mission_inactive`: the Mission state is not `active`.
 - `actor_invalid`: the required `act` chain is missing or malformed, so
   the PDP cannot establish the runtime actor context
@@ -1412,10 +1466,8 @@ AuthZEN decisions use a boolean `decision` member and an optional
 
 `denial_reason`:
 : REQUIRED when `decision` is `false`. A string from the set of
-  {{runtime-denial-classification}}, including any
-  specification-defined extension under that section's extensibility
-  rule; a consumer MUST treat an unrecognized value as a deny and MUST
-  NOT attach any other semantics to it. A constraint violation uses
+  {{runtime-denial-classification}}, subject to that section's
+  extensibility and unrecognized-value rule. A constraint violation uses
   `parameter_violation`; the specific failing `constraints` keys are
   carried in the Decision Evidence `contributing_constraints`, not here.
 
@@ -1661,18 +1713,20 @@ and presented by the executing component at request time in
   the capability. A deployment records it where the whole catalog is
   the trust unit.
 
-`executor`:
-: OPTIONAL. A string. An identifier for the executing component that
-  serves the capability at request time (for example, an MCP server
-  instance), asserted by the PEP that authenticates it. It is a
-  request-time fact, not part of the derived authority recorded at
-  derivation, and is recorded in Decision Evidence when present.
-  Where the executing component authenticates under an
-  attested-instance profile
-  ({{I-D.draft-mcguinness-oauth-client-instance-assertion}},
-  {{I-D.draft-mcguinness-oauth-ai-agent-instance}}), the deployment
-  SHOULD carry the attested instance identifier here rather than a
-  self-chosen label.
+The executing component is identified outside the binding object.
+`context.executor`, carried beside `context.capability_source`, is an
+OPTIONAL string: an identifier for the executing component that
+serves the capability at request time (for example, an MCP server
+instance), asserted by the PEP that authenticates it. It is a
+request-time fact, not part of the derived authority recorded at
+derivation: it is never an input to the `source_digest` or
+`catalog_digest` comparison, and it is recorded in Decision Evidence
+when present. Where the executing component authenticates under an
+attested-instance profile
+({{I-D.draft-mcguinness-oauth-client-instance-assertion}},
+{{I-D.draft-mcguinness-oauth-ai-agent-instance}}), the deployment
+SHOULD carry the attested instance identifier here rather than a
+self-chosen label.
 
 Rules:
 
@@ -1698,7 +1752,8 @@ Rules:
   ({{runtime-denial-classification}}). It defines no drift rule of its
   own.
 - Resource policy MAY refuse a catalog-sourced action whose
-  `source_uri` or `executor` is outside the deployment's trusted set.
+  `source_uri` or `context.executor` is outside the deployment's
+  trusted set.
   Such a refusal is a Resource-policy condition, carried as
   `resource_policy` ({{runtime-denial-classification}}), not a drift
   refusal.
@@ -1775,7 +1830,9 @@ The PDP relies on Mission state to decide. The runtime profile defines
 the Mission state source, the maximum staleness bound, and the
 fail-closed rule ({{I-D.draft-mcguinness-mission-runtime}}). This
 binding conveys that state and its freshness on the wire through
-`context.mission.state` and `context.freshness` ({{pdp-request}}),
+`context.mission.state` and `context.freshness` ({{pdp-request}})
+where the deployment declares PEP-side state supply
+({{context-mission}}),
 using a `mode` member with one of three values that describe how the
 PEP obtained the state:
 
@@ -2020,7 +2077,8 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 
 The `context.mission`, `context.actor`, `context.credential`,
 `context.parameters`, `context.parameter_digest`, `context.audience`,
-`context.freshness`, `context.taint`, and `context.capability_source`
+`context.freshness`, `context.taint`, `context.capability_source`,
+and `context.executor`
 members carried
 inside the AuthZEN request
 `context` object ({{pdp-request}}) are

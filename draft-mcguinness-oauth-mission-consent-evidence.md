@@ -59,6 +59,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-aauth:
+    title: "Mission-Bound Authorization for AAuth"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-completion:
+    title: "Mission Completion for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-completion.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
@@ -175,7 +191,9 @@ standard, or any new OAuth grant. It does not change the Authority Set
 or Mission lifecycle. Under the standalone Mission Authority Server
 binding ({{I-D.draft-mcguinness-mission-authority-server}}), the
 Mission Authority Server is the committing Mission Issuer and this
-profile composes with it unchanged.
+profile composes with it unchanged; under its own binding, the AAuth
+Person Server is likewise the committing Mission Issuer
+({{I-D.draft-mcguinness-mission-aauth}}).
 
 ## Evidence Model {#evidence-model}
 
@@ -253,7 +271,8 @@ A Consent Disclosure object has these members:
 
 `authority_summary`:
 : REQUIRED. An array with exactly one element per
-  `mission_resource_access` entry of the approved Authority Set. Each
+  `mission_resource_access` entry of the derived Authority Set the
+  disclosure presents for decision. Each
   element carries the entry's `resource`, its `actions`, the rendered
   form of each `constraints` key together with its value, the delegation
   summary when the entry permits delegation, and the consumption bounds
@@ -862,7 +881,11 @@ the term the issuance profile defines
 ({{I-D.draft-mcguinness-oauth-mission}}). Declined and narrowed events
 create no Mission ({{declined-events}}, {{revision-events}}) and so have
 no Mission audit horizon; a deployment MUST retain their evidence for a
-deployment-declared window.
+deployment-declared window. Entries discharged under the completion
+profile ({{I-D.draft-mcguinness-oauth-mission-completion}}) disappear
+from status surfaces while `authority_hash` still commits them, so an
+auditor reconciling the recorded approval surface against
+later-enforced authority consults discharge state.
 
 ## Minimization and Redaction {#minimization}
 

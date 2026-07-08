@@ -228,6 +228,21 @@ authority from `mission_resource_access` entries
 - the root MUST derive only from entries whose `delegation` permits the
   intended holder ({{I-D.draft-mcguinness-oauth-mission}}).
 
+Root issuance is the only moment the Mission Issuer is present in the
+chain, so per-entry delegation policy is enforced by shaping the root:
+
+- an entry whose `delegation` policy does not permit re-delegation,
+  including the non-delegable default of an entry carrying no
+  `delegation` member, MUST NOT be carried on a root whose
+  `del_max_depth` exceeds 0; the issuer carries such entries only on
+  roots with `del_max_depth` 0;
+- a root's `del_max_depth` MUST NOT exceed the minimum `max_depth`
+  across the `delegation` members of the entries it maps; and
+- the issuer SHOULD mint separate roots per delegation class rather
+  than mix entries of differing delegation policy on one root, which
+  also serves the per-subtree disclosure minimization of
+  {{privacy-considerations}}.
+
 The root's authority MUST be within the Mission's approved authority
 under this mapping and the issuance profile's subset rule. An auditor
 verifies that a root is within the Authority Set by applying this same
@@ -323,6 +338,13 @@ These checks fail safe: a chain that does not present a single, unchanged
 Mission binding, an audience within its parent's, and an expiry within
 its parent's is refused, not evaluated against a guessed Mission.
 
+Verification cost scales with the chain: a consumer performs one
+signature verification per link, the proof-of-possession check, and
+the Mission-state check ({{kill-switch}}) on every presentation. A
+consumer SHOULD bound the chain length it accepts, independently of
+the `del_max_depth` the chain carries, so an adversarially deep chain
+is refused rather than verified.
+
 # The Kill Switch Requires Runtime Enforcement {#kill-switch}
 
 The attenuation substrate defines no revocation: a child, once minted,
@@ -376,7 +398,12 @@ An orchestrator agent (`s6BhdRkqt3`), acting for `alice` under Mission
 `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` to reconcile Q3 invoices, holds a
 Mission-bound attenuation root. Its authority covers reading Q3 invoices
 and posting journal entries under $500; `del_max_depth` allows two
-levels of offline narrowing. Decoded root token:
+levels of offline narrowing (illustrative; this Mission's Authority Set
+extends the single-domain walkthrough's, its write entry also carrying
+a `delegation` member with `max_depth` 2, so both mapped entries are
+delegable to depth 2 under the root-shaping rules of {{root-mapping}}
+and its `authority_hash` differs from that example's). Decoded root
+token:
 
 ~~~ json
 {
@@ -394,7 +421,7 @@ levels of offline narrowing. Decoded root token:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:X1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2nD9bM7s"
   },
   "authorization_details": [
     { "type": "attenuating_agent_token",
@@ -422,7 +449,7 @@ root's `cnf` binds, sets `iss` to that key's thumbprint, increments
 `del_depth`, and commits the parent by `par_hash` (the `iss` value
 is one line, wrapped here for display):
 
-~~~ json
+~~~
 {
   "iss":
     "urn:ietf:params:oauth:jwk-thumbprint:sha-256:0ZcOCORZNYy-
@@ -440,7 +467,7 @@ is one line, wrapped here for display):
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:X1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2nD9bM7s"
   },
   "authorization_details": [
     { "type": "attenuating_agent_token",
@@ -538,7 +565,10 @@ profile, and the attenuation substrate apply. This profile adds:
   consuming enforcement points are the only place a derivation is seen;
   runtime enforcement evidence
   ({{I-D.draft-mcguinness-mission-runtime}}) is the audit record
-  for offline-attenuated actions.
+  for offline-attenuated actions. PEP evidence for an action under an
+  attenuated token SHOULD carry the chain linkage, the leaf's `jti`,
+  its `del_depth`, and its `par_hash`, so offline derivations are
+  reconstructable in audit.
 
 # Privacy Considerations {#privacy-considerations}
 

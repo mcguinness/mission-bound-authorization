@@ -136,7 +136,7 @@ A deployment claims this profile only when it issues or consumes entries
 carrying `terminal_when`.
 
 This profile is newer and less exercised than the issuance core and the
-runtime layer, and is not part of the recommended v1 deployment bundles.
+runtime layer, and is not required by any Mission Assurance Level.
 Its entry-discharge details may change.
 
 # Relationship to the Issuance Profile {#issuance-relationship}
@@ -224,7 +224,10 @@ entry's task finishes. The three Mission states are unchanged; a
 deployment that also tracks Mission-level completion MAY transition a
 Mission whose entries are all discharged to a `completed` state where a
 lifecycle profile defines one ({{I-D.draft-mcguinness-oauth-mission-status}}),
-but this document does not require it.
+but this document does not require it. Such a transition is performed
+through the Status profile's `complete` operation semantics, as an
+issuer-initiated lifecycle operation, so that profile's state-machine
+event sources remain authoritative.
 
 Discharge gates new derivations only. A token already issued for an entry
 remains valid until it expires, as with revocation
@@ -433,6 +436,11 @@ adds:
   entry derivable past its true completion. The Mission Issuer MUST
   authenticate and integrity-verify an event source outside its own trust
   domain ({{determining}}), and SHOULD prefer sources within it.
+- Event-source availability. Fail-closed discharge gives issuance an
+  availability dependency on `event_source` within `max_staleness`: an
+  unreachable source withholds the entry ({{determining}}). Event
+  sources inside the issuer's trust domain are RECOMMENDED, for latency
+  as well as trust.
 - Already-issued tokens. Discharge gates new derivations only; a token
   already issued runs to expiry. Prompt cutoff relies on short token
   lifetimes or runtime point-of-use denial ({{runtime}}), the same caveat

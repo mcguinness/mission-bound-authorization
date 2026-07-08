@@ -213,7 +213,7 @@ below the table.
 
 | Level | Drafts | What you get |
 |---|---|---|
-| **Baseline Issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Runtime-Enforced level). Audit, not action-time defense. |
+| **Baseline Issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Runtime-Enforced level). The kill switch is binding-dependent: under the standalone MAS there is no issuance gate, and the cutoff arrives with the runtime layer. Audit, not action-time defense. |
 | **Runtime-Enforced** (the Protocol MVP) | mission + runtime + authzen + a freshness source (status or issuer token introspection; signals, experimental, adds push) | Per-action enforcement at the point of use, and prompt revocation. The smallest deployment that makes a Mission-bound token more than governance metadata, and every dependency it needs is ratified. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
 | **Governed Agent** (recommended for AI agents) | Runtime-Enforced + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. Add child-delegation for sub-agents and expansion for mid-task growth, and orchestration (experimental) for safe unwinding of in-flight work. |
 | **High-Assurance Agent** | Governed Agent + mediated custody, no unmediated path, action-bound approval, active freshness | Resistance to a compromised agent: the runtime profile's named agent-compromise-resistant enforcement and trifecta containment claims (see the note below the table), optionally bound to execution-environment attestation. |
@@ -243,8 +243,8 @@ layers onto any level; it produces the Mission Intent and is not itself
 deployed at the Authorization Server. Mission Deferred Approval is an
 approval-time option for deployments whose approvals are asynchronous or
 whose reviewers narrow a proposed Mission; it layers onto the
-OAuth-binding levels (the Mission Authority Server is natively
-asynchronous and does not use it).
+OAuth-binding levels (the Mission Authority Server and the AAuth
+Person Server are natively asynchronous and do not use it).
 
 Each draft also states its own scoped conformance; the levels are
 guidance, not a new conformance class.
@@ -614,8 +614,9 @@ is stopped.
 
 Lets a parent Mission authorize a Child Mission for a sub-agent, with
 explicit parent lineage, strict-subset authority, expiry no later than
-the parent, fan-out controls, and cascade revocation when the parent is
-no longer active. A child is never created by session ancestry alone.
+the parent, fan-out controls, and cascade revocation when the parent
+reaches a terminal state (suspension pauses, not terminates). A child
+is never created by session ancestry alone.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-child-delegation.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-child-delegation) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-child-delegation) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-child-delegation.diff)
 

@@ -390,7 +390,13 @@ request MUST carry a DPoP proof bound to the PAR endpoint (its `htu` and
 the PAR request satisfies the constraint. Presenting the token for
 expansion MUST NOT rotate it and MUST NOT register as a replay in the
 deployment's refresh-token replay detection: the token is used here only
-to bind and resolve the predecessor, not to refresh. The successor's
+to bind and resolve the predecessor, not to refresh. In a
+rotation-based deployment that carve-out would let a stolen bearer
+refresh token be presented repeatedly without detection, so each
+expansion presentation MUST be recorded and counted toward the
+deployment's anomaly detection, and the per-predecessor rate limit
+({{policy-probing}}) is a MUST when the presented token is not
+sender-constrained. The successor's
 authority still comes only from the fresh consent at the approval event,
 never from authority the binding token could itself derive.
 
@@ -454,6 +460,19 @@ The expansion is governed by the consent obtained at step 3. Expansion
 never widens authority without a new consent: if the Approver declines,
 no successor is created and the predecessor is untouched
 ({{denial-reasons}}).
+
+Supersession is a terminal exit from `active`, so it is a terminal
+cascade trigger for the predecessor's entire delegation tree under the
+child-delegation profile
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). When the
+predecessor has non-terminal Child Missions, the expansion consent
+disclosure SHOULD surface that fact as a material notice: at minimum
+the count of live Child Missions and that supersession terminates
+them. A child still needed after the expansion is re-created under the
+successor through ordinary child creation, in generation order. A
+deployment MAY additionally support an expansion-request parameter by
+which the client asks the Mission Issuer to refuse the expansion while
+live Child Missions exist.
 
 ## Successor expiry {#successor-expiry}
 
@@ -714,10 +733,12 @@ alongside the `invalid_grant` error:
 `mission_expansion_status`:
 : A string carrying one code from this document's closed sets: a
   reconciliation status ({{reconciliation}}) or an expansion denial
-  reason ({{denial-reasons}}). It is returned in the error response of
-  the step that failed: the PAR error response for a binding or
-  reconciliation failure, and the approval or token error response for a
-  denial.
+  reason ({{denial-reasons}}). It is returned by the step that failed.
+  At the PAR and token endpoints it is a member of the JSON error
+  response body, alongside the OAuth `error` member. On the
+  front-channel authorization error response, which carries error
+  parameters rather than a JSON body, it is carried as an error
+  response parameter of the same name.
 
 # Expansion Denial Reasons {#denial-reasons}
 
@@ -751,9 +772,10 @@ further semantics.
 A Mission Issuer MUST NOT use a reason code to disclose policy
 boundaries beyond the adjudicated request ({{policy-probing}}); omitting
 the reason code is always permitted. When present, a reason code is
-carried in the `mission_expansion_status` member of the OAuth error
-response body ({{reconciliation}}), the same member that carries a
-reconciliation status.
+carried in `mission_expansion_status` ({{reconciliation}}), the same
+carrier as a reconciliation status: an error-body member at the PAR
+and token endpoints, an error response parameter on the front-channel
+authorization error response.
 
 Two failure classes are not denial reasons and use the issuance
 profile's error vocabulary directly: an expansion request whose
@@ -934,7 +956,8 @@ to map the Mission Issuer's policy boundary from the denial reasons.
 Mitigations:
 
 - The Mission Issuer SHOULD rate-limit expansion requests per
-  predecessor per client.
+  predecessor per client, and MUST when the presented
+  `predecessor_token` is not sender-constrained ({{request-binding}}).
 - A denial reason MUST NOT disclose policy boundaries beyond the
   adjudicated request ({{denial-reasons}}); a denial reports whether
   the requested authority was approved, not the full surface of what
@@ -991,12 +1014,13 @@ token-introspection registration is required for the lineage link.
 
 This document defines two closed sets of symbolic codes, the expansion
 reconciliation status codes ({{reconciliation}}) and the expansion
-denial reasons ({{denial-reasons}}), both conveyed in the
-`mission_expansion_status` member of the OAuth error response body
-({{reconciliation}}). `mission_expansion_status` is a member of the OAuth
-error response JSON body, not an OAuth protocol parameter, and is
-namespaced to this document's error responses, so it requires no
-registration. Like the issuance profile's restraint with `mission`
+denial reasons ({{denial-reasons}}), both conveyed in
+`mission_expansion_status` ({{reconciliation}}). As a member of the
+OAuth error response JSON body at the PAR and token endpoints,
+`mission_expansion_status` is namespaced to this document's error
+responses and requires no registration; its authorization error
+response parameter form is registered below. Like the issuance
+profile's restraint with `mission`
 members, the codes are documented in this specification rather than
 placed in new IANA registries: the closed sets are small and fully
 specified here. Should interoperable extension of either set prove
@@ -1005,8 +1029,8 @@ Reconciliation Status" registry and a "Mission Expansion Denial Reason"
 registry with a Specification Required {{RFC8126}} policy; this document
 does not create them.
 
-This document registers two parameters in the "OAuth Parameters"
-registry:
+This document registers the following parameters in the "OAuth
+Parameters" registry:
 
 - Name: `predecessor`
 - Parameter Usage Location: authorization request
@@ -1017,6 +1041,11 @@ registry:
 - Parameter Usage Location: authorization request
 - Change Controller: IETF
 - Reference: this document, {{submission}}
+
+- Name: `mission_expansion_status`
+- Parameter Usage Location: authorization response
+- Change Controller: IETF
+- Reference: this document, {{reconciliation}}
 
 As with `mission_intent` in the issuance profile, PAR {{RFC9126}}
 carries authorization-request parameters without a distinct usage
