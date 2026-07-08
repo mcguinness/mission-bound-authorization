@@ -406,6 +406,15 @@ gap; a deployment composes the ones its risk warrants
 ({{assurance-levels}}), and the verbs of {{layers}} organize the
 levers by the question each answers.
 
+The levers share one strategy: they convert semantic risk into
+structural signals. A policy decision point is never asked to judge
+whether content is harmful; provenance (the harness taint context),
+composition (the quarantine pattern), egress enumeration and volume
+bounds, separation of duty, and re-consent turn that question into
+facts a decision can gate on. A content evaluator a deployment adds
+composes as Resource policy at the decision point and only ever
+narrows.
+
 # A Mission's Life {#mission-life}
 
 The structure is easiest to see by following one Mission end to end
@@ -1094,6 +1103,12 @@ The AAuth binding composes the same two chokepoints: the Person
 Server issues or gates every auth token, so issuance gating holds at
 the PS, and per-action enforcement runs under the runtime composition
 the AAuth profile defines ({{I-D.draft-mcguinness-mission-aauth}}).
+Per-action enforcement is budgeted, not blanket: only consequential
+actions are gated, the common-case decision is a local evaluation
+against a materialized policy view whose network cost is paid per
+freshness window, and only the high-consequence classes must hold a
+synchronous gate (the runtime profile's deployment considerations,
+{{I-D.draft-mcguinness-mission-runtime}}).
 
 The standalone mode trades the token-layer kill switch for zero
 Authorization Server changes. A MAS creates, approves, and serves

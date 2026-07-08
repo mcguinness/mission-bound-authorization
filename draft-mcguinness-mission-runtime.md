@@ -155,6 +155,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-attenuation:
+    title: "Mission Offline Attenuation for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-attenuation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -1652,7 +1660,7 @@ excludes.
 
 # Deployment Considerations {#runtime-deployment}
 
-Two properties govern how this profile scales.
+Three properties govern how this profile scales.
 
 **Token lifetime trades against the enforcement layer.** The
 issuance profile recommends short-lived tokens because, in an
@@ -1678,6 +1686,28 @@ deployment-configured aggregate bound crosses that partition and is
 provisioned as its own consistency domain. Fail-closed applies per
 action class ({{failure-modes}}): a PDP outage stops consequential
 work and nothing else.
+
+**Decision latency is budgeted by class.** The synchronous cost of
+this profile is confined to the actions whose consequences warrant
+it. Classification ({{classification}}) is the first lever: only
+consequential actions need a permit, and only the high-consequence
+classes must hold a synchronous gate. For the rest of the governed
+surface the common-case decision is local: a PDP embedded in or
+colocated with its PEP evaluates against a materialized policy view
+({{policy-view}}) whose network cost is paid once per freshness
+window, not per action; a permit's validity window covers the
+follow-through of one normalized action ({{parameter-binding}}); the
+decision API's batch evaluation amortizes fan-out ({{authzen}}); and
+metering leases amortize the metered classes
+({{I-D.draft-mcguinness-mission-metering}}). Offline attenuation
+({{I-D.draft-mcguinness-oauth-mission-attenuation}}) removes the
+issuer from sub-agent fan-out entirely; its Experimental status
+tracks the maturity of its substrate, not a judgment that localized
+offline validation is optional at machine speed. A deployment for
+which a synchronous gate on a low-consequence class is too expensive
+reclassifies deliberately and records the choice in its Enforcement
+Scope Statement, rather than weakening the gate on the classes that
+matter.
 
 # Decision API Binding {#authzen}
 
@@ -1756,6 +1786,23 @@ is checked at the point of use, parameters are bound to the permit,
 and each decision or refusal path is recorded.
 This closes the approval-to-execution gap the issuance profile leaves
 open.
+
+It governs actions, not meaning. A request can satisfy every
+structural check while its content does harm no schema names: the
+approved `send_email` whose body carries what an injection extracted.
+The profile's answer is to convert semantic risk into structural
+signals rather than ask the PDP to judge content: provenance (the
+harness taint context and its default-taint polarity,
+{{I-D.draft-mcguinness-mission-harness}}), composition (the
+quarantine pattern, {{I-D.draft-mcguinness-mission-architecture}}),
+egress-channel enumeration ({{trifecta-containment}}), volume bounds
+and exclusivity ({{I-D.draft-mcguinness-mission-metering}}), and
+action-bound re-consent for the highest classes
+({{action-approval}}). A deployment that additionally runs a content
+evaluator (data-loss prevention, an LLM-based content policy)
+composes it as Resource policy at the PDP: the verdict enters the
+decision as deployment-defined context, only ever narrows, and its
+latency belongs to the action class that invokes it.
 
 It does not make a compromised enforcement component safe. A
 compromised PEP can decline to consult the PDP or ignore its decision;

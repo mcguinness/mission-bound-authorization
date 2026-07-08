@@ -136,6 +136,20 @@ of the harness's two duties; the other is establishing the mediated
 execution environment, in which work in a mediated action class has no
 path that bypasses the enforcement point ({{mediated-egress}}).
 
+Two ledgers coexist by design, and neither mirrors the other. The
+harness or its workflow engine keeps the execution ledger: task
+graphs, retry queues, event histories, progress. The Mission Issuer
+keeps the authorization ledger: the approved task, its lifecycle, and
+what each decision permitted. They are separated because they sit in
+different trust domains: the execution ledger lives with the
+component this profile assumes compromisable, and a kill switch
+cannot live inside the thing it kills. The only shared key is the
+Mission Binding's reference ({{mission-binding}}); every obligation
+this profile places on a harness is a consume-and-gate check at a
+boundary the engine already has, never a copy of Mission state into
+engine state or of engine state into the Mission record
+({{engine-mapping}}).
+
 # Scope
 
 This document defines:
@@ -1082,6 +1096,49 @@ Harness Evidence unless required for audit.
 This document makes no IANA request.
 
 --- back
+
+# Mapping to Durable-Execution Engines {#engine-mapping}
+
+This appendix is informative. Stateful agent stacks commonly run on
+a durable-execution engine or graph runtime that already keeps
+transaction logs, retry queues, and execution state; this profile
+adds no second copy of that state. Each obligation is discharged at
+a boundary such an engine already exposes:
+
+Workflow or run handle, and the context it carries:
+: the Mission Binding ({{mission-binding}}); the reference travels
+  with the work it governs.
+
+Activity or tool-call boundary:
+: the runtime profile's PEP consult, with freshness valid at the
+  moment of submission ({{resume-algorithm}}).
+
+Retry and backoff queue:
+: the queue rule: re-establish Mission state before release
+  ({{queues}}).
+
+Resume or replay of a suspended run:
+: the resume checks ({{resume-algorithm}}).
+
+Sub-workflow or child-run spawn:
+: sub-agent handle binding ({{subagents}}); child authority arrives
+  only by explicit delegation, never by session ancestry.
+
+Human-in-the-loop signal or wait point:
+: carriage of an action-bound approval to the decision
+  ({{I-D.draft-mcguinness-mission-runtime}}).
+
+Compensation or saga rollback:
+: the orchestration profile's unwind plan
+  ({{I-D.draft-mcguinness-mission-orchestration}}).
+
+Engine event history:
+: an input to execution evidence; never the authorization record.
+
+An integration is complete when each obligation is discharged at the
+named boundary. Nothing here requires the engine to persist Mission
+state beyond the binding, or the Mission Issuer to know the engine
+exists.
 
 # Acknowledgments
 {:numbered="false"}

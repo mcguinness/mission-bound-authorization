@@ -107,7 +107,15 @@ Exchange ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). For an
 agent that fans out to many
 sub-agents, each needing a slice of the Mission's authority, that makes
 the Authorization Server a per-delegation latency and availability
-dependency on the execution hot path.
+dependency on the execution hot path. At machine speed that
+dependency is the bottleneck: a swarm forking sub-agents per subtask
+cannot afford an issuer round trip per fork, and localized, offline,
+cryptographically verifiable narrowing is the shape that load
+requires from day one. This profile is the family's answer to it;
+its Experimental status reflects the maturity of the attenuation
+substrate it profiles, not a judgment that the capability is
+optional. The stable path meanwhile is issuer-mediated child
+delegation ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
 
 This document removes the issuer from that path for narrowing. It
 profiles Attenuating Agent Tokens
