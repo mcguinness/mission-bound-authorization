@@ -1,0 +1,1994 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission Issuance Grant for OAuth 2.0</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       The standalone Mission Authority Server binding governs Missions with
+no change to an estate's Authorization Servers: tokens remain
+ordinary, and enforcement joins them to Missions at the point of use.
+That mode provides no Mission-bound credential and no issuance
+gating. This document defines the Mission Issuance Grant: a
+short-lived, audience-bound, one-time assertion, minted by a
+standalone Mission Issuer for an approved, active Mission, that an
+OAuth Authorization Server redeems at its token endpoint to issue
+Mission-bound tokens gated on Mission state. Approval, record, and
+lifecycle stay at the Mission Authority Server; the Authorization
+Server keeps the token plane and adds only grant validation,
+subset-bounded minting, and state-gated refresh. This issuance join
+restores Mission-bound credentials and the issuance-gate kill switch
+without the Authorization Server implementing the issuance profile's
+intake, approval, or derivation surfaces. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="oauth" name="keyword">
+<meta content="mission" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="issuance" name="keyword">
+<meta content="grant" name="keyword">
+<meta content="draft-mcguinness-oauth-mission-issuance-grant-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.10.0
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.2
+-->
+<link href="draft-mcguinness-oauth-mission-issuance-grant.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Mission Issuance Grant</td>
+<td class="right">July 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 9 January 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Web Authorization Protocol</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-oauth-mission-issuance-grant-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-07-08" class="published">8 July 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-01-09">9 January 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission Issuance Grant for OAuth 2.0</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">The standalone Mission Authority Server binding governs Missions with
+no change to an estate's Authorization Servers: tokens remain
+ordinary, and enforcement joins them to Missions at the point of use.
+That mode provides no Mission-bound credential and no issuance
+gating. This document defines the Mission Issuance Grant: a
+short-lived, audience-bound, one-time assertion, minted by a
+standalone Mission Issuer for an approved, active Mission, that an
+OAuth Authorization Server redeems at its token endpoint to issue
+Mission-bound tokens gated on Mission state. Approval, record, and
+lifecycle stay at the Mission Authority Server; the Authorization
+Server keeps the token plane and adds only grant validation,
+subset-bounded minting, and state-gated refresh. This issuance join
+restores Mission-bound credentials and the issuance-gate kill switch
+without the Authorization Server implementing the issuance profile's
+intake, approval, or derivation surfaces.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-issuance-grant/">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-issuance-grant/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 9 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
+                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-requirements-language" class="internal xref">Requirements Language</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-the-issuance-join" class="internal xref">The Issuance Join</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-the-mission-issuance-grant" class="internal xref">The Mission Issuance Grant</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-obtaining-a-grant" class="internal xref">Obtaining a Grant</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-redemption" class="internal xref">Redemption</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-authorization-code-flow-car" class="internal xref">Authorization Code Flow Carriage</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-relationship-to-other-artif" class="internal xref">Relationship to Other Artifacts</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-composite-provision" class="internal xref">Composite Provision</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
+                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-media-type-registration" class="internal xref">Media Type Registration</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1.2.1">
+                    <p id="section-toc.1-1.12.2.1.2.1.1"><a href="#section-12.1.1" class="auto internal xref">12.1.1</a>.  <a href="#name-application-mission-issuanc" class="internal xref">application/mission-issuance-grant+jwt</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.2">
+                <p id="section-toc.1-1.12.2.2.1"><a href="#section-12.2" class="auto internal xref">12.2</a>.  <a href="#name-mission-authority-server-me" class="internal xref">Mission Authority Server Metadata Registration</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
+                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">Mission-Bound Authorization for OAuth 2.0
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile", here
+"the core") binds issued authority to a durable, human-approved
+Mission, with the Authorization Server (AS) as the Mission Issuer.
+The Mission Authority Server (MAS,
+<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>) hosts the same
+object without touching the AS: it validates Mission Intents, runs
+approval, records Missions, and operates the lifecycle, while tokens
+remain ordinary and a Policy Decision Point joins them to Missions at
+the point of use. Between those two integrations there was none: an
+estate either changed its AS completely or not at all.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">This document defines the middle integration, the <strong>issuance join</strong>.
+The MAS remains the Mission Issuer; the estate's AS consumes the
+approved Mission at its token endpoint. The carrier is the <strong>Mission
+Issuance Grant</strong>, a short-lived assertion the MAS mints for an
+active Mission and the AS redeems under the JWT authorization grant
+<span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> to issue tokens that carry the <code>mission</code> claim and are
+bounded by the Mission's derived authority. Because every grant is
+minted against current Mission state and refresh is gated on that
+state, the possession-independent kill switch returns to the
+issuance gate, the property the MAS-only mode structurally lacks.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">The Authorization Server's obligations are deliberately small:
+validate the grant, mint within its bounds, gate refresh on Mission
+state. It implements none of the core's intake, approval ceremony,
+derivation, record, or lifecycle surfaces; those stay at the MAS.
+The integration ladder is then: record-only governance, the runtime
+join, the issuance join, and native Mission-awareness, each adopted
+where its cost is warranted
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-1-3" class="pilcrow">¶</a></p>
+<div id="requirements-language">
+<section id="section-1.1">
+        <h3 id="name-requirements-language">
+<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-requirements-language" class="section-name selfRef">Requirements Language</a>
+        </h3>
+<p id="section-1.1-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="conventions">
+<section id="section-2">
+      <h2 id="name-conventions-and-terminology">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+      </h2>
+<p id="section-2-1">This document uses Mission, Mission Intent, Authority Set, Mission
+Issuer, the <code>mission</code> claim, the subset rule, and the integrity
+anchors (<code>intent_hash</code>, <code>authority_hash</code>) as the core defines them,
+and Mission Authority Server (MAS), Mission Join, and the Enterprise
+Mapping Contract as <span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>
+defines them. It additionally uses:<a href="#section-2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-2">
+        <dt id="section-2-2.1">Issuance join:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-2.2">
+          <p id="section-2-2.2.1">The integration this document defines: a MAS-approved Mission
+consumed at an Authorization Server's token endpoint.<a href="#section-2-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-2.3">Mission Issuance Grant (grant):</dt>
+        <dd style="margin-left: 1.5em" id="section-2-2.4">
+          <p id="section-2-2.4.1">The signed assertion of <a href="#grant" class="auto internal xref">Section 4</a>, minted by the Mission Issuer
+and redeemed for Mission-bound tokens.<a href="#section-2-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-2.5">Grant Minter:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-2.6">
+          <p id="section-2-2.6.1">The standalone Mission Issuer minting grants; conformance role of
+<a href="#conformance" class="auto internal xref">Section 9</a>.<a href="#section-2-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-2.7">Consuming Authorization Server (consuming AS):</dt>
+        <dd style="margin-left: 1.5em" id="section-2-2.8">
+          <p id="section-2-2.8.1">An OAuth Authorization Server <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> that redeems Mission
+Issuance Grants at its token endpoint; conformance role of
+<a href="#conformance" class="auto internal xref">Section 9</a>.<a href="#section-2-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="issuance-join">
+<section id="section-3">
+      <h2 id="name-the-issuance-join">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-the-issuance-join" class="section-name selfRef">The Issuance Join</a>
+      </h2>
+<p id="section-3-1">Trust is pre-established and bilateral. A consuming AS accepts
+grants only from Mission Issuers its local policy names, resolving
+their signing keys through the MAS's published key material (its
+discovery <code>jwks_uri</code>,
+<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>); a MAS mints
+grants only for Authorization Servers named as audiences by
+deployment configuration. Subject and client correspondence between
+the Mission record and the consuming AS's accounts is governed by
+the deployment's mapping policy; where the Enterprise Mission
+Authority Profile is claimed, its mapping contract governs
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">The division of duties is fixed. The MAS holds the approval event,
+the record and its anchors, the lifecycle, and grant minting. The
+consuming AS holds client authentication, token minting bounded by
+the grant, refresh, and its ordinary token-plane obligations. An
+auditor attributes what was approved to the MAS record and what was
+issued to the consuming AS's log, joined by the Mission reference
+the grant carries.<a href="#section-3-2" class="pilcrow">¶</a></p>
+<p id="section-3-3">Tokens issued under this profile are Mission-bound in the core's
+sense: they carry the <code>mission</code> claim, their authority is a subset
+of the consented Authority Set, and issuance and refresh are gated
+on Mission state. Runtime enforcement
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) composes
+credential-carried for these tokens; the MAS-only mode's join caveat
+(the credential's membership is mapped, not issued) does not apply
+to them. Tokens the estate issues outside this profile are
+unchanged and continue to compose through the Mission Join.<a href="#section-3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="grant">
+<section id="section-4">
+      <h2 id="name-the-mission-issuance-grant">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-the-mission-issuance-grant" class="section-name selfRef">The Mission Issuance Grant</a>
+      </h2>
+<p id="section-4-1">A Mission Issuance Grant is a JWT <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> signed as a JWS
+<span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> by the Mission Issuer. Its JOSE header <span class="bcp14">MUST</span> carry <code>typ</code>
+        <code>mission-issuance-grant+jwt</code> (<a href="#iana" class="auto internal xref">Section 12</a>), <code>alg</code>, and a <code>kid</code> that
+resolves in the Mission Issuer's published key material. A consumer
+<span class="bcp14">MUST</span> reject as a Mission Issuance Grant any JWT whose <code>typ</code> differs;
+in particular a Mission Mandate
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>) is evidence, authorizes
+nothing, and <span class="bcp14">MUST NOT</span> redeem.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2">Claims:<a href="#section-4-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4-3">
+        <dt id="section-4-3.1">
+<code>iss</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.2">
+          <p id="section-4-3.2.1"><span class="bcp14">REQUIRED</span>. The Mission's <code>issuer</code>: the MAS issuer URL.<a href="#section-4-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.3">
+<code>sub</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.4">
+          <p id="section-4-3.4.1"><span class="bcp14">REQUIRED</span>. The Mission's recorded Subject identifier
+(<code>subject.sub</code>), interpreted at the consuming AS under the
+deployment's mapping policy (<a href="#issuance-join" class="auto internal xref">Section 3</a>).<a href="#section-4-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.5">
+<code>aud</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.6">
+          <p id="section-4-3.6.1"><span class="bcp14">REQUIRED</span>. The consuming AS's issuer identifier. A consuming AS
+<span class="bcp14">MUST</span> reject a grant whose <code>aud</code> does not name it.<a href="#section-4-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.7">
+<code>iat</code>, <code>exp</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.8">
+          <p id="section-4-3.8.1"><span class="bcp14">REQUIRED</span>. The grant <span class="bcp14">MUST NOT</span> be valid longer than 300 seconds.<a href="#section-4-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.9">
+<code>jti</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.10">
+          <p id="section-4-3.10.1"><span class="bcp14">REQUIRED</span>. Unique per grant; single use (<a href="#redemption" class="auto internal xref">Section 6</a>).<a href="#section-4-3.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.11">
+<code>client_id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.12">
+          <p id="section-4-3.12.1"><span class="bcp14">REQUIRED</span>. The Mission's recorded agent client identifier at the
+consuming AS. Only this authenticated client redeems the grant.<a href="#section-4-3.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.13">
+<code>mission</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.14">
+          <p id="section-4-3.14.1"><span class="bcp14">REQUIRED</span>. The core's <code>mission</code> claim object: <code>id</code>, <code>issuer</code>, and
+<code>authority_hash</code>, exactly as recorded.<a href="#section-4-3.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.15">
+<code>mission_expiry</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.16">
+          <p id="section-4-3.16.1"><span class="bcp14">REQUIRED</span>. NumericDate form of the Mission's <code>expires_at</code>. No token
+issued under this grant may outlive it (<a href="#redemption" class="auto internal xref">Section 6</a>).<a href="#section-4-3.16.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.17">
+<code>authorization_details</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.18">
+          <p id="section-4-3.18.1"><span class="bcp14">REQUIRED</span>. The <code>mission_resource_access</code> entries <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> the
+consuming AS may mint against: a subset of the Mission's consented
+Authority Set, scoped to the resources this AS serves.<a href="#section-4-3.18.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.19">
+<code>cnf</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.20">
+          <p id="section-4-3.20.1"><span class="bcp14">OPTIONAL</span>. A proof-of-possession key binding <span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span> for
+redemption; when present, the consuming AS <span class="bcp14">MUST</span> require proof of
+possession of the bound key at redemption.<a href="#section-4-3.20.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-4-4">An illustrative decoded grant (this Mission and its anchors are not
+the core walkthrough's):<a href="#section-4-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4-5">
+<pre>
+{
+  "iss": "https://mas.example.com",
+  "sub": "user_3p2q8mN1a0kV7tR",
+  "aud": "https://as.example.com",
+  "iat": 1793606400,
+  "exp": 1793606580,
+  "jti": "mig_7Kq2Rv9Lp4xW1nT8",
+  "client_id": "s6BhdRkqt3",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "issuer": "https://mas.example.com",
+    "authority_hash":
+      "sha-256:R6tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQr"
+  },
+  "mission_expiry": 1795385700,
+  "authorization_details": [
+    {
+      "type": "mission_resource_access",
+      "resource": "https://api.example.com/invoices",
+      "actions": ["read"],
+      "constraints": { "resource_issued_after": "2026-07-01" }
+    }
+  ]
+}
+</pre><a href="#section-4-5" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="minting">
+<section id="section-5">
+      <h2 id="name-obtaining-a-grant">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-obtaining-a-grant" class="section-name selfRef">Obtaining a Grant</a>
+      </h2>
+<p id="section-5-1">A MAS implementing this profile serves a Mission Issuance Grant
+endpoint, published as <code>mission_issuance_grant_endpoint</code> in its
+discovery metadata (<a href="#iana" class="auto internal xref">Section 12</a>). The Grant Minter <span class="bcp14">MUST</span> observe:<a href="#section-5-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5-2">
+<li id="section-5-2.1">
+          <p id="section-5-2.1.1"><strong>Requester.</strong> The endpoint requires authentication. The
+requester <span class="bcp14">MUST</span> be the Mission's recorded client; any other caller
+receives the MAS's <code>not_found</code> anti-oracle response, under the
+same visibility rules as the Mission Join Assertion
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-5-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-2.2">
+          <p id="section-5-2.2.1"><strong>State gate.</strong> A grant is minted only while the Mission is
+<code>active</code>, established from the MAS's own record at minting. Any
+other state refuses.<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-2.3">
+          <p id="section-5-2.3.1"><strong>Subset and audience.</strong> The grant's <code>authorization_details</code> <span class="bcp14">MUST</span>
+be a subset of the Mission's consented Authority Set under the
+core's subset rule, and <span class="bcp14">SHOULD</span> carry only the entries the named
+consuming AS serves. The requester <span class="bcp14">MAY</span> request a narrower subset;
+it <span class="bcp14">MUST NOT</span> obtain a wider one.<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-2.4">
+          <p id="section-5-2.4.1"><strong>Derivation event.</strong> Each grant minted is a derivation event.
+Where the Mission carries a consented <code>controls.max_derivations</code>,
+the MAS <span class="bcp14">MUST</span> count grants against it atomically and refuse beyond
+it, which gives that control a binding locus under the standalone
+binding.<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-2.5">
+          <p id="section-5-2.5.1"><strong>Evidence.</strong> Each minting is recorded with the Mission record:
+the <code>jti</code>, audience, requested and granted entries, and time.<a href="#section-5-2.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+</section>
+</div>
+<div id="redemption">
+<section id="section-6">
+      <h2 id="name-redemption">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-redemption" class="section-name selfRef">Redemption</a>
+      </h2>
+<p id="section-6-1">The client presents the grant to the consuming AS's token endpoint
+as a JWT authorization grant <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>:<a href="#section-6-1" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-6-2">
+<pre>
+POST /token HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer
+&amp;assertion=eyJ0eXAiOiJtaXNzaW9uLWlzc3VhbmNlLWdyYW50K2p3dCIs...
+</pre><a href="#section-6-2" class="pilcrow">¶</a>
+</div>
+<p id="section-6-3">The client authenticates as it ordinarily does at this AS; the grant
+is an authorization, not a client credential. The consuming AS <span class="bcp14">MUST</span>
+validate, in an order that fails closed:<a href="#section-6-3" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6-4">
+<li id="section-6-4.1">
+          <p id="section-6-4.1.1">the JOSE <code>typ</code> is <code>mission-issuance-grant+jwt</code>; any other type is
+not this profile (<a href="#relationships" class="auto internal xref">Section 7</a>);<a href="#section-6-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-4.2">
+          <p id="section-6-4.2.1">the signature, under a <code>kid</code> resolving in the published key
+material of an <code>iss</code> its local policy trusts for issuance joins;<a href="#section-6-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-4.3">
+          <p id="section-6-4.3.1"><code>aud</code> names this AS; <code>exp</code> and <code>iat</code> are within the 300-second
+bound; the <code>jti</code> has not been seen, and is recorded until <code>exp</code>
+passes (single use);<a href="#section-6-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-4.4">
+          <p id="section-6-4.4.1">the authenticated client is the grant's <code>client_id</code>;<a href="#section-6-4.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-4.5">
+          <p id="section-6-4.5.1">when <code>cnf</code> is present, proof of possession of the bound key.<a href="#section-6-4.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-6-5">On success the consuming AS mints tokens under these rules:<a href="#section-6-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6-6.1">
+          <p id="section-6-6.1.1"><strong>The claim rides unchanged.</strong> Issued tokens carry the grant's
+<code>mission</code> object verbatim as the core's <code>mission</code> claim.<a href="#section-6-6.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-6.2">
+          <p id="section-6-6.2.1"><strong>Subset.</strong> Issued <code>authorization_details</code> <span class="bcp14">MUST</span> be a subset of the
+grant's; the token response <span class="bcp14">SHOULD</span> echo them as the core specifies
+for Mission-bound issuance. The consuming AS <span class="bcp14">MUST NOT</span> widen, remap,
+or supplement them from its own policy except to narrow.<a href="#section-6-6.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-6.3">
+          <p id="section-6-6.3.1"><strong>Lifetime.</strong> No access or refresh token issued under the grant
+may have an expiry later than <code>mission_expiry</code>.<a href="#section-6-6.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-6.4">
+          <p id="section-6-6.4.1"><strong>Refresh is state-gated.</strong> A consuming AS <span class="bcp14">MAY</span> issue refresh
+tokens only if it gates each refresh on current Mission state,
+resolved through the Mission Status operation
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) or the MAS's state
+surface within a published staleness bound, refusing when the
+Mission is not established as <code>active</code>. A consuming AS without a
+state integration <span class="bcp14">MUST NOT</span> issue refresh tokens under a grant.<a href="#section-6-6.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-6.5">
+          <p id="section-6-6.5.1"><strong>No re-approval.</strong> The approval event already occurred at the
+Mission Issuer. The consuming AS <span class="bcp14">MUST NOT</span> prompt the Subject or
+any user for consent at redemption.<a href="#section-6-6.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-6-7">A grant redeems exactly once. Subsequent token needs are met by the
+issued refresh token (state-gated) or a fresh grant (state-gated at
+minting); either way, every path to new authority re-enters a
+Mission-state gate, which is the issuance-gate kill switch this
+profile restores.<a href="#section-6-7" class="pilcrow">¶</a></p>
+<div id="par-carriage">
+<section id="section-6.1">
+        <h3 id="name-authorization-code-flow-car">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-authorization-code-flow-car" class="section-name selfRef">Authorization Code Flow Carriage</a>
+        </h3>
+<p id="section-6.1-1">Deployments whose clients must traverse the authorization code flow
+<span class="bcp14">MAY</span> carry the grant in a Pushed Authorization Request <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> as
+the request parameter <code>mission_issuance_grant</code>. The AS applies the
+validation of <a href="#redemption" class="auto internal xref">Section 6</a> at the PAR endpoint, treats the grant
+as the authorization already obtained, and <span class="bcp14">MUST NOT</span> re-prompt for
+consent; at most it renders the Mission reference. All redemption
+rules apply unchanged, with the authorization code standing between
+validation and minting.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="relationships">
+<section id="section-7">
+      <h2 id="name-relationship-to-other-artif">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-relationship-to-other-artif" class="section-name selfRef">Relationship to Other Artifacts</a>
+      </h2>
+<p id="section-7-1"><strong>The Mandate is evidence; this grant authorizes.</strong> Both are
+issuer-signed statements about a Mission; the <code>typ</code> values keep them
+apart mechanically, and a verifier of either <span class="bcp14">MUST</span> reject the other
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>).<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2"><strong>The cross-domain grant is this shape across a trust boundary.</strong>
+Cross-domain projection
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) carries a
+Mission to a Resource AS in another domain, with trust established
+by federation agreement and identity chaining. The issuance join is
+the same-estate case: bilateral, pre-configured trust between a MAS
+and its own Authorization Servers, no identity-chaining substrate
+required. A deployment does not use this profile across domains;
+projection exists for that.<a href="#section-7-2" class="pilcrow">¶</a></p>
+<p id="section-7-3"><strong>The core is the destination, not a competitor.</strong> An AS that
+becomes natively Mission-aware implements the core and mints without
+grants for its own resources; the record, anchors, and lifecycle it
+consumes are the same ones the MAS already operates, so nothing is
+re-approved in migration. Until then, the issuance join gives the
+estate Mission-bound tokens at a fraction of the core's
+implementation surface.<a href="#section-7-3" class="pilcrow">¶</a></p>
+<p id="section-7-4"><strong>The runtime join remains for everything else.</strong> Tokens minted
+under this profile compose credential-carried at the PDP; ordinary
+tokens continue to compose through the Mission Join. The two joins
+coexist per resource and per AS.<a href="#section-7-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="composite">
+<section id="section-8">
+      <h2 id="name-composite-provision">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-composite-provision" class="section-name selfRef">Composite Provision</a>
+      </h2>
+<p id="section-8-1">In the substrate's terms (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>)
+the MAS alone is a partial-provision binding: everything but the
+Mission-bound credential and issuance gating. A MAS composed with
+its consuming Authorization Servers under this profile provides
+both, jointly: a composite full provision for the resources those
+ASs serve. In the Mission Assurance Levels
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>), Baseline Issuance
+and its issuance-gate kill switch become reachable under the
+standalone binding through this profile, and the state-aware
+half-step arrives with the consuming AS's refresh gating.<a href="#section-8-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conformance">
+<section id="section-9">
+      <h2 id="name-conformance">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+      </h2>
+<p id="section-9-1"><strong>Grant Minter</strong> (the MAS): implements <a href="#minting" class="auto internal xref">Section 5</a> in full: the
+authenticated, visibility-guarded endpoint; the <code>active</code>-only gate;
+subset and audience scoping; derivation counting where consented;
+minting evidence; and grants shaped exactly as <a href="#grant" class="auto internal xref">Section 4</a> requires.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2"><strong>Consuming Authorization Server</strong>: implements <a href="#redemption" class="auto internal xref">Section 6</a> in
+full: <code>typ</code>, signature, audience, lifetime, single-use, and client
+binding validation; verbatim <code>mission</code> claim carriage;
+subset-bounded minting; <code>mission_expiry</code> capping; state-gated
+refresh or no refresh; no re-approval. The PAR carriage of
+<a href="#par-carriage" class="auto internal xref">Section 6.1</a> is <span class="bcp14">OPTIONAL</span>.<a href="#section-9-2" class="pilcrow">¶</a></p>
+<p id="section-9-3">A deployment claiming this profile states, alongside its
+enforcement-scope statement, which Authorization Servers consume
+grants and the staleness bound of each one's refresh gating.<a href="#section-9-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-10">
+      <h2 id="name-security-considerations">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-10-1"><strong>Grant theft.</strong> The grant authorizes issuance, so it is defended in
+depth: 300-second lifetime, single-use <code>jti</code>, audience binding to
+one AS, redemption bound to the Mission's authenticated <code>client_id</code>,
+and optional <code>cnf</code> key binding. A stolen grant is useless to any
+party that cannot also authenticate as the recorded client at the
+named AS within the window; deployments whose client credentials are
+weak <span class="bcp14">SHOULD</span> require <code>cnf</code> (DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> or mTLS <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>
+bindings serve).<a href="#section-10-1" class="pilcrow">¶</a></p>
+<p id="section-10-2"><strong>Mission Issuer compromise reaches issuance.</strong> In MAS-only
+deployment, MAS compromise corrupts records and state. Under this
+profile it additionally mints grants every consuming AS honors:
+compromise reaches token issuance across the estate. The consuming
+ASs' audit logs of redeemed grants (each with <code>jti</code> and Mission
+reference) are the independent record that bounds and exposes such
+minting; deployments <span class="bcp14">SHOULD</span> reconcile MAS minting evidence against
+consuming-AS redemption logs.<a href="#section-10-2" class="pilcrow">¶</a></p>
+<p id="section-10-3"><strong>Trust inversion.</strong> The consuming AS accepts externally derived
+authority. Its exposure is bounded by the profile's own rules: it
+mints only within the grant's <code>authorization_details</code>, only for the
+grant's client, never longer than <code>mission_expiry</code>, and its local
+policy <span class="bcp14">MAY</span> narrow further. The AS remains free to refuse any grant
+its policy distrusts; nothing obliges issuance.<a href="#section-10-3" class="pilcrow">¶</a></p>
+<p id="section-10-4"><strong>Type confusion.</strong> Three issuer-signed JWT artifacts about Missions
+now exist: the Mandate (evidence), the cross-domain grant (foreign
+domain), and this grant (same estate). The <code>typ</code> discipline is the
+defense; every consumer checks it first, and none accepts another's
+type.<a href="#section-10-4" class="pilcrow">¶</a></p>
+<p id="section-10-5"><strong>Revocation latency.</strong> New grants stop at the MAS <code>active</code> gate at
+the moment of state commit. Outstanding tokens end at the earlier of
+their own expiry and the consuming AS's next state-gated refresh;
+where the runtime layer is deployed, the PDP's re-check bounds
+outstanding-token use independently. A deployment states the refresh
+staleness bound it publishes (<a href="#conformance" class="auto internal xref">Section 9</a>).<a href="#section-10-5" class="pilcrow">¶</a></p>
+<p id="section-10-6"><strong>Consent integrity.</strong> The approval the grant rests on was rendered
+and committed at the Mission Issuer under the core's rules and,
+where deployed, Consent Evidence. The consuming AS relies on that
+event; it <span class="bcp14">MUST NOT</span> substitute a weaker consent of its own, and its
+non-prompting duty (<a href="#redemption" class="auto internal xref">Section 6</a>) prevents consent-surface
+confusion where the Subject holds accounts at both.<a href="#section-10-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-11">
+      <h2 id="name-privacy-considerations">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-11-1">The grant carries the Mission reference and an authority subset to
+the consuming AS, which may be operated by a different organizational
+unit than the MAS. Minimization is structural: the MAS scopes
+<code>authorization_details</code> to what the audience serves (<a href="#minting" class="auto internal xref">Section 5</a>),
+and nothing else of the record (no <code>purpose</code> text, no Intent, no full
+Authority Set) travels. The Mission identifier is a correlator across
+MAS and AS logs by design; that correlation is the audit trail, and
+deployments that need to limit broader correlation apply the
+issuance profile's identifier guidance.<a href="#section-11-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana">
+<section id="section-12">
+      <h2 id="name-iana-considerations">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<div id="media-type-registration">
+<section id="section-12.1">
+        <h3 id="name-media-type-registration">
+<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-media-type-registration" class="section-name selfRef">Media Type Registration</a>
+        </h3>
+<p id="section-12.1-1">IANA is requested to register one media type per <span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
+<div id="applicationmission-issuance-grantjwt">
+<section id="section-12.1.1">
+          <h4 id="name-application-mission-issuanc">
+<a href="#section-12.1.1" class="section-number selfRef">12.1.1. </a><a href="#name-application-mission-issuanc" class="section-name selfRef">application/mission-issuance-grant+jwt</a>
+          </h4>
+<ul class="normal">
+<li class="normal" id="section-12.1.1-1.1">
+              <p id="section-12.1.1-1.1.1">Type name: application<a href="#section-12.1.1-1.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.1-1.2">
+              <p id="section-12.1.1-1.2.1">Subtype name: mission-issuance-grant+jwt<a href="#section-12.1.1-1.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.1-1.3">
+              <p id="section-12.1.1-1.3.1">Required parameters: none<a href="#section-12.1.1-1.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.1-1.4">
+              <p id="section-12.1.1-1.4.1">Optional parameters: none<a href="#section-12.1.1-1.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.1-1.5">
+              <p id="section-12.1.1-1.5.1">Encoding considerations: binary; JWS Compact Serialization<a href="#section-12.1.1-1.5.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.1-1.6">
+              <p id="section-12.1.1-1.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 10</a><a href="#section-12.1.1-1.6.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.1-1.7">
+              <p id="section-12.1.1-1.7.1">Interoperability considerations: see this document<a href="#section-12.1.1-1.7.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.1-1.8">
+              <p id="section-12.1.1-1.8.1">Published specification: this document<a href="#section-12.1.1-1.8.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.1-1.9">
+              <p id="section-12.1.1-1.9.1">Applications that use this media type: Mission Authority Servers
+and OAuth Authorization Servers implementing this profile<a href="#section-12.1.1-1.9.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.1-1.10">
+              <p id="section-12.1.1-1.10.1">Fragment identifier considerations: n/a<a href="#section-12.1.1-1.10.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.1-1.11">
+              <p id="section-12.1.1-1.11.1">Additional information: n/a<a href="#section-12.1.1-1.11.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.1-1.12">
+              <p id="section-12.1.1-1.12.1">Person and email address to contact for further information: see
+the Authors' Addresses section<a href="#section-12.1.1-1.12.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.1-1.13">
+              <p id="section-12.1.1-1.13.1">Intended usage: COMMON<a href="#section-12.1.1-1.13.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.1-1.14">
+              <p id="section-12.1.1-1.14.1">Restrictions on usage: none<a href="#section-12.1.1-1.14.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.1-1.15">
+              <p id="section-12.1.1-1.15.1">Author: see the Authors' Addresses section<a href="#section-12.1.1-1.15.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-12.1.1-1.16">
+              <p id="section-12.1.1-1.16.1">Change controller: IETF<a href="#section-12.1.1-1.16.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</section>
+</div>
+</section>
+</div>
+<div id="mission-authority-server-metadata-registration">
+<section id="section-12.2">
+        <h3 id="name-mission-authority-server-me">
+<a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-mission-authority-server-me" class="section-name selfRef">Mission Authority Server Metadata Registration</a>
+        </h3>
+<p id="section-12.2-1">IANA is requested to register the following in the "Mission
+Authority Server Metadata" registry established by
+<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>. Change Controller
+IETF; Reference this document, <a href="#minting" class="auto internal xref">Section 5</a>.<a href="#section-12.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-12.2-2.1">
+            <p id="section-12.2-2.1.1"><code>mission_issuance_grant_endpoint</code><a href="#section-12.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-13">
+      <h2 id="name-references">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-13.1">
+        <h3 id="name-normative-references">
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6749">[RFC6749]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6749">https://www.rfc-editor.org/rfc/rfc6749</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6838">[RFC6838]</dt>
+        <dd>
+<span class="refAuthor">Freed, N.</span>, <span class="refAuthor">Klensin, J.</span>, and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"Media Type Specifications and Registration Procedures"</span>, <span class="seriesInfo">BCP 13</span>, <span class="seriesInfo">RFC 6838</span>, <span class="seriesInfo">DOI 10.17487/RFC6838</span>, <time datetime="2013-01" class="refDate">January 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6838">https://www.rfc-editor.org/rfc/rfc6838</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7515">[RFC7515]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Signature (JWS)"</span>, <span class="seriesInfo">RFC 7515</span>, <span class="seriesInfo">DOI 10.17487/RFC7515</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7515">https://www.rfc-editor.org/rfc/rfc7515</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7519">[RFC7519]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Token (JWT)"</span>, <span class="seriesInfo">RFC 7519</span>, <span class="seriesInfo">DOI 10.17487/RFC7519</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7519">https://www.rfc-editor.org/rfc/rfc7519</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7523">[RFC7523]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Campbell, B.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"JSON Web Token (JWT) Profile for OAuth 2.0 Client Authentication and Authorization Grants"</span>, <span class="seriesInfo">RFC 7523</span>, <span class="seriesInfo">DOI 10.17487/RFC7523</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7523">https://www.rfc-editor.org/rfc/rfc7523</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7800">[RFC7800]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">H. Tschofenig</span>, <span class="refTitle">"Proof-of-Possession Key Semantics for JSON Web Tokens (JWTs)"</span>, <span class="seriesInfo">RFC 7800</span>, <span class="seriesInfo">DOI 10.17487/RFC7800</span>, <time datetime="2016-04" class="refDate">April 2016</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7800">https://www.rfc-editor.org/rfc/rfc7800</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9126">[RFC9126]</dt>
+        <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Sakimura, N.</span>, <span class="refAuthor">Tonge, D.</span>, and <span class="refAuthor">F. Skokan</span>, <span class="refTitle">"OAuth 2.0 Pushed Authorization Requests"</span>, <span class="seriesInfo">RFC 9126</span>, <span class="seriesInfo">DOI 10.17487/RFC9126</span>, <time datetime="2021-09" class="refDate">September 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9126">https://www.rfc-editor.org/rfc/rfc9126</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9396">[RFC9396]</dt>
+      <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-13.2">
+        <h3 id="name-informative-references">
+<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"An Architecture for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-mandate">[I-D.draft-mcguinness-mission-mandate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Mandate"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8693">[RFC8693]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8693">https://www.rfc-editor.org/rfc/rfc8693</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8705">[RFC8705]</dt>
+        <dd>
+<span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">T. Lodderstedt</span>, <span class="refTitle">"OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens"</span>, <span class="seriesInfo">RFC 8705</span>, <span class="seriesInfo">DOI 10.17487/RFC8705</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8705">https://www.rfc-editor.org/rfc/rfc8705</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9449">[RFC9449]</dt>
+      <dd>
+<span class="refAuthor">Fett, D.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Jones, M.</span>, and <span class="refAuthor">D. Waite</span>, <span class="refTitle">"OAuth 2.0 Demonstrating Proof of Possession (DPoP)"</span>, <span class="seriesInfo">RFC 9449</span>, <span class="seriesInfo">DOI 10.17487/RFC9449</span>, <time datetime="2023-09" class="refDate">September 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9449">https://www.rfc-editor.org/rfc/rfc9449</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-A">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-A-1">This document profiles the JWT authorization grant of RFC 7523 and
+composes the Mission Authority Server with the issuance profile it
+already mirrors; it defines no cryptography of its own.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
