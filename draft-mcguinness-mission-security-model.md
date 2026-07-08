@@ -185,6 +185,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-discovery:
+    title: "Mission Open-World Discovery"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -808,6 +816,15 @@ Sub-agent fan-out abuse (Child Missions):
   child credentials never transit the parent. Residual: breadth within
   the fan-out policy is the deployment's; a permissive delegation policy
   is consented but wide.
+
+Injection steers discovery (the agent binds the attacker's resource):
+: Addressed by default-closed discovery (no consented ceiling, no
+  binding), the tainted-session human floor for egress-capable
+  bindings, resource identity pinning, the rule that
+  self-declarations never classify consequences, and Discovery
+  Evidence ({{I-D.draft-mcguinness-mission-discovery}}). Residual: an
+  untainted session binding within an over-broad consented family;
+  ceiling breadth is a consent-time decision.
 
 Offline sub-agent fan-out abuse:
 : Addressed by capability monotonicity (narrow-only) and the runtime

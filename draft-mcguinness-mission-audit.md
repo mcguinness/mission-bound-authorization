@@ -101,6 +101,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-discovery:
+    title: "Mission Open-World Discovery"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -287,6 +295,7 @@ record as part of the Mission's feed.
 | Execution evidence | Execution Evidence object, as issued | `application/mission-execution-evidence+json` | PEP key |
 | Mission Mandate | JWS Compact Serialization, as issued | `application/mission-mandate+jwt` | `issuer` |
 | Child Evidence | Child Evidence object (JCS), as the child-delegation profile fixes | `application/mission-child-evidence+json` | `issuer` |
+| Discovery Evidence | Discovery Evidence object (JCS), as the discovery profile fixes | `application/mission-discovery-evidence+json` | the adjudicator (`issuer` or PDP key) |
 
 The table is extensible by specification: a profile MAY define an
 additional evidence type by fixing its canonical bytes, its
@@ -320,9 +329,11 @@ the profiles that define those objects
 media type by the Signals profile it is carried in
 ({{I-D.draft-mcguinness-oauth-mission-signals}}), the Mandate
 media type by the Mandate profile
-({{I-D.draft-mcguinness-mission-mandate}}), and the Child Evidence
+({{I-D.draft-mcguinness-mission-mandate}}), the Child Evidence
 canonical bytes and type identifier by the child-delegation profile
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), and the
+Discovery Evidence canonical bytes and type identifier by the
+discovery profile ({{I-D.draft-mcguinness-mission-discovery}}).
 
 A Child Evidence record registers on the Parent Mission's feed: the
 `sub` is the parent's ({{feed}}), its producer is the `issuer`, and

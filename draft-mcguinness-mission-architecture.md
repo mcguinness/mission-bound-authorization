@@ -63,6 +63,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-discovery:
+    title: "Mission Open-World Discovery"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -445,7 +453,11 @@ requires a fresh approval
 resource self-declares, the declaration's digest is committed with
 the binding evidence, a third commitment beside `intent_hash` (what
 the client asked) and `authority_hash` (what was consented): what
-the resource claimed to be at the moment authority bound to it.
+the resource claimed to be at the moment authority bound to it. The
+discovery companion ({{I-D.draft-mcguinness-mission-discovery}})
+gives the encounter its contract: identity pinning, ceiling
+adjudication, the lying-resource and tainted-session floors, and
+Discovery Evidence.
 
 # A Mission's Life {#mission-life}
 
@@ -1570,6 +1582,11 @@ reclassification, not by a stable document absorbing a dependency.
 `oauth-mission-progressive`:
 : Experimental: policy-adjudicated expansion within a pre-consented
   ceiling.
+
+`mission-discovery`:
+: Experimental: the open-world encounter as a governed operation:
+  identity pinning, ceiling adjudication with the lying-resource and
+  tainted-session floors, Discovery Evidence.
 
 `oauth-mission-management`:
 : Fleet enumeration and bulk lifecycle operations for operators and

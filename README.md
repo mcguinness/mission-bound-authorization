@@ -22,7 +22,7 @@ management surfaces.
 
 At a glance:
 
-- **27 drafts, deliberately decomposed.** One mandatory core (the
+- **28 drafts, deliberately decomposed.** One mandatory core (the
   OAuth 2.0 issuance profile, [on the
   datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/)),
   two further bindings and normative substrate requirements, optional
@@ -290,8 +290,10 @@ facts are the next subsection.
 6. **Experimental, adopt for evaluation only**: **signals** (push
    latency optimization over correctly sized status polling),
    **approval-revision**, **progressive**, **metering**,
-   **attenuation**, **orchestration**. Each names a stable path to
-   prefer where one exists.
+   **attenuation**, **orchestration**, **discovery** (open-world
+   encounters adjudicated against a pre-consented ceiling, with the
+   lying-resource and tainted-session floors). Each names a stable
+   path to prefer where one exists.
 
 The architecture and security model are Informational companions and
 sit outside the ordering.
@@ -459,6 +461,20 @@ High-consequence and cross-domain authority always require the human.
 Under Expansion alone, every widening is human-approved.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-progressive.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-progressive) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-progressive) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-progressive.diff)
+
+#### Mission Open-World Discovery
+
+Experimental. Makes discovery a governed operation for agents that
+meet resources their approval could not name. Defines the Encounter,
+resource identity pinning (origin, the RFC 9728 resource-to-AS
+metadata chain, self-declaration digests), Discovery Adjudication
+against a pre-consented ceiling (bind, route to a human, or refuse;
+default-closed), and Discovery Evidence for the transparency log.
+Two floors hold regardless of policy: a resource's self-declaration
+never classifies its own consequences, and a tainted session never
+binds egress-capable authority without a human.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-discovery.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-mission-discovery) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-discovery) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-discovery.diff)
 
 #### Mission Completion for OAuth 2.0
 
