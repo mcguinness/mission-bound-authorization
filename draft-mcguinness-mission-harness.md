@@ -1102,7 +1102,19 @@ This document makes no IANA request.
 This appendix is informative. Stateful agent stacks commonly run on
 a durable-execution engine or graph runtime that already keeps
 transaction logs, retry queues, and execution state; this profile
-adds no second copy of that state. Each obligation is discharged at
+adds no second copy of that state. Ownership splits by ledger: the
+execution ledger stays with the harness or engine, the authorization
+ledger with the Mission Issuer and its enforcement plane.
+
+| Execution ledger | Authorization ledger |
+|---|---|
+| Step execution, retries, failure loops | Mission lifecycle state and expiry |
+| Memory, context windows, prompt state | The committed record: `intent_hash` and `authority_hash` |
+| Sub-agent spawning mechanics | Child-Mission adjudication: lineage, subset, depth, cascade |
+| Tool connections and caches | Credential issuance and custody; counters and latches |
+| Scheduling and queue management | Per-action permits and their evidence |
+
+Each obligation is discharged at
 a boundary such an engine already exposes:
 
 Workflow or run handle, and the context it carries:

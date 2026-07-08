@@ -353,6 +353,30 @@ consumer SHOULD bound the chain length it accepts, independently of
 the `del_max_depth` the chain carries, so an adversarially deep chain
 is refused rather than verified.
 
+## Edge Validation {#edge-validation}
+
+The deployment pattern this profile exists for. At Mission start the
+issuer mints the attenuation root alongside issuance and hands it to
+the orchestrating agent; from there, narrowing never touches the
+issuer. The agent mints children for its sub-agents offline
+({{attenuation}}), and the PEP fronting each tool or resource (an
+agent harness, an edge API gateway, a service-mesh sidecar)
+validates offline too: the signature chain to the root, capability
+monotonicity, audience and expiry nesting, and the holder's proof
+of possession are all facts of the presented chain
+({{mission-binding-check}}), checkable locally at memory speed.
+
+The kill switch is the one non-local fact. For ordinary
+consequential classes the validating PEP relies on cached Mission
+state within the published staleness bound, so the state cost is
+paid once per freshness window rather than per call; the
+high-consequence classes and Mission state transitions still reach
+the state source synchronously, under the runtime profile's
+active-freshness requirement ({{kill-switch}}). The result is the
+split a machine-speed swarm needs: local validation on the hot
+path, synchronous authority only for the actions whose consequences
+warrant it.
+
 # The Kill Switch Requires Runtime Enforcement {#kill-switch}
 
 The attenuation substrate defines no revocation: a child, once minted,
