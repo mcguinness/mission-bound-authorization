@@ -147,7 +147,8 @@ carried on the Mission and committed by `intent_hash` exactly as any
 other Intent member. Metering is performed by the runtime profile's
 PDP within a documented enforcement scope; this document adds metering
 semantics to the runtime profile's decision contract and changes no
-issuance behavior.
+issuance protocol, though it does add consent-surface obligations on
+the Mission Issuer ({{consent}}).
 
 # Conventions and Terminology {#conventions}
 
@@ -355,6 +356,18 @@ Mission, is PDP-side operational state like a consumption counter
 ({{metering}}), and never unlatches: narrowing by exercise is
 monotonic, like every other narrowing in the family.
 
+The latch is exempt from the relaxations of {{topology}}. A counter
+degrades gracefully under a per-PDP sub-budget or a reconciliation
+window; a separation-of-duty rule violated once is violated
+permanently, and two PDPs can latch the same group to opposite
+selectors within the window. An exclusivity group MUST therefore be
+enforced in a single strongly consistent per-Mission latch domain
+(the runtime profile's Mission-sharding guidance makes the Mission
+the consistency unit, {{I-D.draft-mcguinness-mission-runtime}}), the
+sub-budget and reconciliation-window relaxations MUST NOT be applied
+to `exclusive`, and the deployment MUST name the latch domain in its
+enforcement scope statement.
+
 Exclusivity turns the quarantine deployment pattern
 ({{I-D.draft-mcguinness-mission-architecture}}) into consented,
 enforceable structure: an Approver can approve a Mission that may
@@ -398,7 +411,10 @@ provisioned as its own consistency domain
 Where the runtime deployment uses the AuthZEN binding
 ({{I-D.draft-mcguinness-mission-authzen}}), this section defines the
 wire representation of metering. It defines no new metering semantics
-and no new constraint.
+and no new constraint. The requirements of this section and
+{{settlement-exchange}} apply only to a deployment that adopts the
+AuthZEN binding under that profile's conformance; for every other
+deployment the AuthZEN profile remains an informative reference.
 
 When metering a bound would exceed it, the PDP MUST deny with
 `quota_exceeded` ({{I-D.draft-mcguinness-mission-authzen}}) instead of
@@ -421,12 +437,21 @@ commit-or-release signal: on receipt the PDP commits the consumption
 the linked action used and releases any reserved excess, keyed to the
 Execution Evidence's `decision_id`.
 
+Settlement can also fail to arrive. An unsettled reservation remains
+charged against the bound until it is reconciled through the runtime
+profile's orphaned-evidence process
+({{I-D.draft-mcguinness-mission-runtime}}), and is released only on
+affirmative evidence of non-execution; timeout alone never releases a
+reservation for a non-idempotent action class.
+
 For a duration-metered action the PEP reports the measured duration in
 the Execution Evidence `measured_duration` member, and the PDP commits
 that duration against `max_duration`. A duration-lease renewal is a new
 re-evaluation request that carries the prior permit's `decision_id` in
 `context.prior_decision_id`, so the PDP continues the same metered
-activity rather than opening a new reservation. This exchange requires
+activity rather than opening a new reservation. The PDP MUST verify
+that the renewal's Mission, subject, action, and audience match the
+decision named by `prior_decision_id`. This exchange requires
 one request member and one evidence member:
 
 `context.prior_decision_id`:

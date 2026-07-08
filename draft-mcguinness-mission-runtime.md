@@ -422,10 +422,8 @@ Enforcement scope:
   profile.
 
 Operation profile:
-: Deployment documentation that defines operation-specific runtime
-  semantics needed for interoperable enforcement within that
-  deployment, including parameter normalization rules and duration
-  measurement.
+: The per-operation statement of normalization and binding rules a
+  deployment publishes; defined in full in {{parameter-binding}}.
 
 Resource Server runtime profile:
 : A deployment's Resource Server-facing conformance statement for this
@@ -527,6 +525,9 @@ architecture defines ({{I-D.draft-mcguinness-mission-architecture}}). It MUST in
   action class ({{state-freshness}});
 - the runtime enforcement evidence mechanism and retention window
   ({{evidence}});
+- the locations of the deployment-published evidence signing key sets
+  (the AuthZEN profile's PDP and PEP key sets,
+  {{I-D.draft-mcguinness-mission-authzen}}, resolve here);
 - the reconciliation window for matching execution-outcome evidence to
   decisions, the component responsible for orphaned-evidence and
   sequence-gap detection, and that component's alerting obligation
@@ -819,8 +820,13 @@ Custody has a lifecycle. A deployment SHOULD prefer per-class
 credentials with distinct `cnf` keys over sharing one key across
 mediating PEPs, so that compromise of one mediating PEP does not expose
 the authority of another. On compromise of a mediating PEP's key, the
-deployment revokes the affected tokens and re-derives. Mediating-PEP
-key rotation follows the deployment's published key set.
+deployment revokes the affected tokens and re-derives. A
+sender-constraint private key is never published; rotation is
+re-derivation with a new `cnf` binding plus revocation or expiry of
+the tokens bound to the old key. The Enforcement Scope Statement
+SHOULD state the custody replica topology (a shared HSM-held key
+versus per-replica keys): replicating one `cnf` key across a PEP
+fleet widens the exposure custody exists to shrink.
 
 Mediated execution also places a controllable chokepoint on the
 egress path itself: content-level controls this profile does not
@@ -1111,9 +1117,12 @@ is the deployment's accepted state lease.
   out-of-band trusted status feed.
 - Each enforcement scope MUST publish its maximum staleness bound per
   action class and state source, together with the revocation latency
-  that bound implies: a Mission's revocation takes effect, in the
-  worst case, after the staleness bound plus the derived token's
-  lifetime. This document imposes no universal value because the
+  that bound implies: for a PDP-gated class, a Mission's revocation
+  takes effect, in the worst case, after the staleness bound plus the
+  permit validity window plus the class's execution bound
+  ({{parameter-binding}}); the derived token's lifetime is the bound
+  only for paths outside PDP gating. This document imposes no
+  universal value because the
   acceptable latency is deployment- and consequence-specific, but the
   bound is the number that determines the profile's headline
   revocation property, so publishing it without its latency
@@ -1257,6 +1266,17 @@ that digest immediately before acting.
   restart, or the component MUST fail closed for permits issued before
   the restart; a multi-instance PEP MUST share or partition the store
   so a single-use identifier cannot be consumed once per replica.
+- A single-use identifier bounds executions of one permit, not permits
+  for one action. For every non-idempotent operation in the
+  irreversible-action, external-commitment, and
+  privileged-administration classes, the Operation Profile MUST
+  therefore also define an idempotency key. The PDP MUST refuse, or
+  route to the action-bound approval requirement ({{action-approval}}),
+  a permit request whose normalized parameters and idempotency key
+  match a prior decision whose execution outcome is unresolved or
+  completed within the reconciliation window ({{evidence}}).
+  Legitimate re-execution of the same normalized action mints a new
+  idempotency key.
 - The executing PEP MUST verify those bindings and MUST recompute the
   `parameter_digest` against the parameters it is about to use. A
   mismatch MUST cause refusal: the permit does not authorize the
@@ -1266,14 +1286,18 @@ A permit authorizes initiation. An action still executing when the
 permit expires MAY run to completion, unless the action class requires
 an execution lease, which the operation profile defines; when a lease
 is required the executing PEP MUST stop or renew before the lease
-expires.
+expires. For the irreversible-action, external-commitment, and
+privileged-administration classes the Operation Profile MUST define
+an execution lease or a published maximum execution duration, and
+run-to-completion applies only within that bound.
 
 This closes the time-of-check to time-of-use gap and prevents a permit
 from being replayed for a different request (the `parameter_digest`
 mismatches). For non-idempotent consequential writes, irreversible
 actions, external commitments, and privileged administration, the
-single-use decision identifier or idempotency key also prevents repeat
-execution of the same normalized action.
+single-use decision identifier prevents repeat execution under one
+permit, and the required idempotency key prevents repeat execution of
+the same normalized action across separately obtained permits.
 Consequential reads do not require a parameter digest by default; the
 evaluation request still appears in the evidence record, by digest
 where the parameters are sensitive ({{evidence}}).
@@ -1319,7 +1343,7 @@ refusal.
 | Mission governance is required but the token lacks a `mission` claim | Refuse before runtime Mission evaluation, unless the Mission binding is externally established ({{mission-binding}}) |
 | PEP-PDP channel authentication or integrity protection fails | Fail closed |
 | Mission state cannot be established within the staleness bound | Fail closed for consequential actions |
-| PDP unreachable | Fail closed for consequential actions; do not proceed on cached permits past the window |
+| PDP unreachable | Fail closed for consequential actions; do not proceed on cached permits past the window. An unexpired, unconsumed permit MAY execute during a PDP outage: executing-PEP reverification needs no PDP |
 | Mission not `active` | Refuse |
 | The Mission's `expires_at` passed, when known from the Mission state source | Refuse |
 | Unsupported `authorization_details` type for the action | Refuse |
@@ -1455,7 +1479,10 @@ The following requirements apply to every record:
 - Raw parameters MUST NOT appear in the record; when retained for
   forensics they MUST be in separately access-controlled storage
   referenced by an opaque identifier, with only the
-  `parameter_digest` in the record.
+  `parameter_digest` in the record. A deployment SHOULD retain the
+  normalized parameters of denied high-consequence attempts in that
+  forensic store, so an auditor can reconstruct what was refused, not
+  only that a refusal happened.
 - Records for one Mission MUST carry a deployment-defined sequence
   indicator so decision order can be reconstructed without relying on
   wall-clock time alone.
@@ -1501,7 +1528,8 @@ already MUST in the base profile ({{state-freshness}}); the harness
 condition makes MUST the base profile's requirement that mediated
 classes have no unmediated path ({{pep-placement}}); mediated custody
 and action-bound approval are SHOULD in the base profile
-({{custody}}, {{action-approval}}) and MUST here.
+({{custody}}, {{action-approval}}) and MUST here; the
+approval-rendering condition is stated only by this claim.
 
 - the sender-constraint private key is held by the mediating PEP, not by
   the agent component ({{custody}});
@@ -1510,9 +1538,21 @@ and action-bound approval are SHOULD in the base profile
   execution-environment scope statement covers the mediated classes, so
   there is no unmediated path to those actions;
 - each such action requires an action-bound approval
+  ({{action-approval}});
+- the disclosure rendered to the Approver for an action-bound approval
+  is derived from the bound normalized parameters by a component
+  isolated from the agent (the approval service or the mediating PEP),
+  never composed by the agent, and the rendering SHOULD be committed
+  as Consent Evidence, raising the base profile's MAY
   ({{action-approval}}); and
 - the Mission state source for those classes is an active freshness
   mechanism, not token-lifetime expiry ({{state-freshness}}).
+
+A deployment MAY satisfy the action-bound approval condition for a
+batch through one approval that binds an enumerated list of parameter
+digests, each consumed single-use, so the human pause stays meaningful
+at volume rather than degrading into per-action rubber-stamping
+({{action-approval}}).
 
 A deployment that leaves any of these unmet MUST NOT claim
 agent-compromise-resistant enforcement; it may still claim base runtime
@@ -1534,6 +1574,7 @@ Each unmet condition loses a specific property:
 | Custody in the mediating PEP | Key exfiltration |
 | Harness-established no-unmediated-path | Off-path execution |
 | Action-bound approval | Unattended high-consequence action |
+| Agent-independent approval rendering | Approval decided on agent-composed disclosure |
 | Active-state freshness | Revocation lag bounded only by token lifetime |
 
 ## Trifecta Containment {#trifecta-containment}
@@ -1592,8 +1633,8 @@ The agent-compromise-resistant claim ({{compromise-resistant}}) rests
 on PEP-placement completeness, which is a deployment property no
 protocol element proves. A deployment SHOULD demonstrate it with
 negative tests: each of the following bypass attempts MUST be refused
-or contained by a conforming deployment that claims the relevant
-tier, and a deployment SHOULD retain evidence that it ran them.
+or contained by a conforming deployment that makes the relevant
+claim, and a deployment SHOULD retain evidence that it ran them.
 
 | Bypass attempt | Required outcome |
 |---|---|

@@ -105,6 +105,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-progressive:
+    title: "Mission Progressive Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -376,8 +384,8 @@ A sound shaper processes a request in this order:
    trusted context, and facts inferred by the shaper.
 3. Resolve candidate resources and actions against capability sources
    ({{capability-resolution}}).
-4. Apply deployment shaping policy, including authority ceilings and
-   risk classification.
+4. Apply deployment shaping policy, including shaping ceilings
+   ({{authority-ceiling}}) and risk classification.
 5. Detect material ambiguity ({{ambiguity}}).
 6. Produce an outcome: a proposal, a request for clarification, or a
    refusal.
@@ -399,12 +407,13 @@ absolute URI), optional free-text `constraints`, optional
 `success_criteria`, an optional `purpose`, an optional
 `proposed_authority` array of candidate Authority Set entries, an
 `expires_at`, and an
-optional `controls` object. The shaper proposes the resources and
+optional `controls` object. The shaper proposes the resources,
 describes the desired bounds in free-text `constraints` and
-`success_criteria`; it does not author actions, structured constraints,
-or delegation. The Mission Issuer derives the actions, structured
-(object) constraints, and delegation as members of the Authority Set it
-computes ({{I-D.draft-mcguinness-oauth-mission}}). The proposal MUST be
+`success_criteria`, and carries any concrete candidate authority
+(actions, structured constraints, delegation facts) in
+`proposed_authority`, the untrusted carrier the Mission Issuer only
+narrows when it derives the Authority Set
+({{I-D.draft-mcguinness-oauth-mission}}). The proposal MUST be
 bounded enough for the Mission Issuer to derive an Authority Set without
 interpreting natural language as authority.
 
@@ -417,17 +426,16 @@ treats it as untrusted proposal input and bounds the derivation to a
 subset of it ({{I-D.draft-mcguinness-oauth-mission}}). A shaper that
 has resolved such facts (for
 example, the actions a resource supports, or that the task implies
-delegated execution) proposes them there and records them in Shaping
-Evidence
-({{shaping-evidence}}), where the Mission Issuer MAY consult them, rather
-than placing them in the proposal.
+delegated execution) proposes them there and records the same facts in
+Shaping Evidence ({{shaping-evidence}}) for audit only; Shaping
+Evidence is never an input the derivation consumes.
 
 A sound shaper does not include a resource in the proposal merely because
 the task text implies it might be useful. The shaper should have a
 resolution basis under {{capability-resolution}}, or it should produce a
 clarification request or a refusal.
 
-## Authority Ceiling and Default Deny {#authority-ceiling}
+## Shaping Ceiling and Default Deny {#authority-ceiling}
 
 A sound shaper applies a default-deny posture. The Mission Intent
 proposal should contain only resources that have a positive basis in the
@@ -469,7 +477,10 @@ decision of what to narrow to stays local. The shaper still proposes
 only; the Mission Issuer validates, narrows, and binds authority at
 approval ({{proposes-only}}).
 
-When a deployment or caller supplies an authority ceiling, the proposal
+When a deployment or caller supplies a **shaping ceiling**, a
+caller-supplied bound distinct from the progressive profile's
+consented `authority_ceiling` Mission member
+({{I-D.draft-mcguinness-oauth-mission-progressive}}), the proposal
 MUST be a subset of it. If the task cannot be completed within that
 ceiling, the shaper MUST request clarification or refuse; it MUST NOT
 silently drop necessary authority while emitting a proposal that appears
@@ -480,14 +491,15 @@ when no caller ceiling is present.
 
 ## Delegation and Child Work {#delegation}
 
-The shaper does not author a delegation entry: `delegation` is a member
-of the Authority Set the Mission Issuer derives
-({{I-D.draft-mcguinness-oauth-mission}}), not of the Mission Intent
-proposal. If the task implies use of sub-agents, background workers, or
-delegated execution, the shaper SHOULD record that fact in Shaping
-Evidence ({{shaping-evidence}}) so the Mission Issuer can derive
-`delegation` on the relevant Authority Set entry or refuse. The shaper
-MAY also describe the desired delegation bound in free-text
+The shaper does not author the derived `delegation` member: it
+proposes delegation facts as untrusted candidate authority in the
+Intent's `proposed_authority` member, which the Mission Issuer only
+narrows when it derives `delegation` on the relevant Authority Set
+entry, or refuses ({{I-D.draft-mcguinness-oauth-mission}}). If the
+task implies use of sub-agents, background workers, or delegated
+execution, the shaper SHOULD propose that fact there, recording the
+same fact in Shaping Evidence ({{shaping-evidence}}) for audit only.
+The shaper MAY also describe the desired delegation bound in free-text
 `constraints` or `success_criteria`. A sound shaper does not infer
 delegated execution from the mere existence of a task graph or an agent
 harness: a child actor needs explicit authority derived by the Mission
@@ -497,7 +509,7 @@ Where a deployment creates Child Missions
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), turning a
 sub-task into the proposed Child Mission Intent is a shaping act, and
 this profile applies to it unchanged. The Parent Mission's Authority
-Set is the ceiling ({{authority-ceiling}}): the child-delegation
+Set is the shaping ceiling ({{authority-ceiling}}): the child-delegation
 profile refuses a child that is not a strict subset of its parent, so
 a proposal that exceeds the parent cannot be approved, and a sound
 shaper narrows, clarifies, or refuses rather than emit one. Shaping
@@ -509,8 +521,10 @@ identifier and the parent-derived ceiling it shaped under.
 The following maps a prompt or trigger onto the Mission Intent fields.
 It is guidance, not a normative algorithm; the SHOULD/MUST points are
 called out. Resolved actions, structured constraints, and delegation
-facts do not appear here: they belong in Shaping Evidence, where the
-Mission Issuer derives the Authority Set from them.
+facts do not appear here: they belong in the Intent's
+`proposed_authority` member, the untrusted carrier the Mission Issuer
+only narrows; Shaping Evidence records the same facts for audit only
+and is never an input authority derives from.
 
 | Field | Guidance | Avoid |
 |---|---|---|
@@ -872,12 +886,13 @@ This profile requires no shaping endpoint, and a shaper is a client-side
 function ({{client-side}}). A deployment that nevertheless factors
 shaping into a network service for engineering reasons MAY expose it over
 HTTPS. The request and response shapes such a service uses are a local
-implementation detail, not an interoperability contract, and this
-section is non-normative.
+implementation detail, not an interoperability contract, and their
+description in this section is non-normative; the authentication
+requirement below is normative.
 
 A request typically conveys the task (free text and/or structured
 fields), the subject and agent on whose behalf the Mission would run,
-deployment context, an optional authority ceiling, and the capability
+deployment context, an optional shaping ceiling, and the capability
 sources the shaper may consult. A response typically conveys an
 outcome (a Mission Intent proposal, a set of clarifications, or a
 refusal) together with Shaping Evidence and, for a proposal, an
@@ -923,7 +938,7 @@ What it does not add:
 - **Enforcement.** Whether an action is permitted is decided at
   issuance and per action at runtime; shaper output reaches neither
   decision ({{runtime-composition}}).
-- **Assurance.** Shaping appears on no rung of the Mission Assurance
+- **Assurance.** Shaping appears at no level of the Mission Assurance
   Levels, and no level requires it: the levels are built from
   issuer-side and runtime-side guarantees, and the shaper is
   client-side by construction

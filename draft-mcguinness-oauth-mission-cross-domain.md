@@ -142,9 +142,10 @@ Three properties define the projection. The Mission does not cross:
 the record, the Mission Intent, the full Authority Set, and lifecycle
 authority stay with the Mission Issuer, and the Resource AS receives
 only claim-shape facts and the entries scoped to it
-({{what-crosses}}). Authority only narrows: a projection carries an
-audience-scoped subset, and nothing the Resource AS mints may widen
-it ({{validation-at-resource-as}}). Honoring is session-less: the
+({{what-crosses}}). Authority never widens: the projection carries
+the agent's authority preserved and scoped to the audience, and
+nothing the Resource AS mints may widen it
+({{validation-at-resource-as}}). Honoring is session-less: the
 Resource AS verifies pre-established issuer trust and a signature, so
 the Mission Issuer is never on the partner's request path; the cost
 of that independence is a bounded revocation lease
@@ -317,8 +318,13 @@ any other derivation ({{I-D.draft-mcguinness-oauth-mission}}, Section
 derivation budget, however many local tokens the partner domain later
 mints: the issuer cannot observe those tokens and does not count
 them, and the Resource AS bounds its own minting by the grant and by
-local policy ({{validation-at-resource-as}}). A Mission-bound
-cross-domain grant:
+local policy ({{validation-at-resource-as}}). Because each grant
+lives at most 300 seconds, steady-state partner work re-issues grants
+on a lease cadence and consumes at least 12 derivations per hour per
+audience; a deployment sizes the Mission's `max_derivations` control
+({{I-D.draft-mcguinness-oauth-mission}}) as a function of that
+cadence times the projected audiences times the Mission's duration.
+A Mission-bound cross-domain grant:
 
 - MUST be a JWT authorization grant issued and signed by the Mission
   `issuer`, redeemable at the target Resource AS through the
@@ -516,6 +522,15 @@ A Resource AS consuming a Mission-bound cross-domain grant:
   tying a local token to the grant it was minted from and showing
   its authority did not widen.
 
+A grant that carries no `mission` claim is outside this profile: the
+Resource AS processes it, or refuses it, under plain identity
+chaining, and MUST NOT grant Mission-scoped resources on it. Where
+the deployment's pre-established trust ({{pre-established-trust}})
+requires Mission binding for the requested resources, the Resource AS
+refuses such a grant with `invalid_grant`; a `mission` claim that is
+present but malformed is always `invalid_grant`
+({{error-responses}}).
+
 A `{ "sub": ... }` matcher in a conveyed entry's
 `delegation.allowed_delegates` is a client identifier in the
 originating AS's namespace and is not portable across the trust
@@ -545,7 +560,11 @@ full Authority Set, so they cannot recompute `authority_hash`
 its integrity rests on the signature chain (the originating AS signs
 the ID-JAG; the Resource AS validates issuer trust and signs its local
 token). It is verifiable only against the originating AS, which this
-document does not require to be exposed.
+document does not require to be exposed. A Resource AS or auditor
+that needs to verify the conveyed entries against the approved
+commitment MAY obtain a Mission Mandate
+({{I-D.draft-mcguinness-mission-mandate}}) and recompute
+`authority_hash` per that profile.
 
 # Error Responses {#error-responses}
 
@@ -568,7 +587,7 @@ At redemption (the JWT-bearer grant at the Resource AS,
 | Condition | Error |
 |---|---|
 | Client authentication fails | `invalid_client` |
-| Untrusted issuer; wrong or missing `typ`; signature, audience, or expiry failure; a sender-constraint absent, unverifiable, or bound to a different client; a replayed `jti`; a missing or malformed `mission` claim | `invalid_grant` |
+| Untrusted issuer; wrong or missing `typ`; signature, audience, or expiry failure; a sender-constraint absent, unverifiable, or bound to a different client; a replayed `jti`; a malformed `mission` claim, or a grant carrying none where the deployment's pre-established trust requires Mission binding for the requested resources ({{validation-at-resource-as}}) | `invalid_grant` |
 | The request names a resource outside the conveyed entries | `invalid_target` |
 
 A Resource AS rejecting a grant reveals no Mission state it does not

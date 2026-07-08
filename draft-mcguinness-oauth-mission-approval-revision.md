@@ -333,16 +333,19 @@ Cache-Control: no-store
 }
 ~~~
 
-A malformed revision leaves the `revision_handle` reissuable: because the
-submission never advanced the approval, the client obtains a new handle
-from a subsequent `authorization_pending` response and retries. A
-consumed handle, and a handle whose deferral has resolved, are not
-reissuable.
+A malformed submission consumes the `revision_handle`: every handle is
+invalidated after one submission, success or failure
+({{security-considerations}}). Because a malformed submission never
+advanced the approval, a new handle is issued on the next pending
+response and the client retries with it; no new handle is issued once
+the deferral has resolved.
 
 A Mission Issuer MUST bound the number of revision cycles per deferred
 approval and MUST resolve to `access_denied` once the bound is reached or
 no acceptable narrowing remains, so a client cannot drive an unbounded
-revision loop.
+revision loop. The same bound caps the `narrowed` Consent Evidence
+records one deferral can produce ({{integration}}), so evidence volume
+is bounded by the same limit.
 
 A revised proposal remains subject to the deferred approval profile's
 pending lifetime and staleness rules

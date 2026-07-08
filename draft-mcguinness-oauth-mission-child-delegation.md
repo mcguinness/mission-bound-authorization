@@ -30,6 +30,7 @@ normative:
   RFC3339:
   RFC8259:
   RFC8414:
+  RFC8785:
   RFC9126:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
@@ -63,6 +64,14 @@ informative:
   I-D.draft-mcguinness-oauth-mission-attenuation:
     title: "Mission Offline Attenuation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-attenuation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-completion:
+    title: "Mission Completion for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-completion.html
     author:
       -
         ins: K. McGuinness
@@ -369,7 +378,8 @@ The Mission Issuer processes child creation in this order:
 1. Authenticate the client submitting the PAR request.
 2. Resolve the Parent Mission from `parent_token`.
 3. Verify the resolved Mission matches `parent`.
-4. Verify the Parent Mission is `active`.
+4. Verify the Parent Mission is `active` and no ancestor Mission in
+   its lineage chain is non-active.
 5. Verify the parent grant permits the requester to create a child.
 6. Verify `child_actor` satisfies the parent entry's `children`
    constraints ({{fanout}}).
@@ -391,7 +401,10 @@ Under the Q3 reconciliation Mission
 `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`, the approved agent
 `s6BhdRkqt3`, acting for `alice`, spawns a read-only invoice
 extraction sub-agent and submits a child Mission Intent through PAR
-bound to the parent's grant:
+bound to the parent's grant (illustrative; this Mission's Authority
+Set extends the single-domain walkthrough's, its read entry's
+`delegation` carrying a `children` object ({{fanout}}), so its
+anchors differ from that example's):
 
 ~~~ http
 POST /par HTTP/1.1
@@ -440,7 +453,7 @@ parent. The decoded child access token:
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
       "authority_hash":
-        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+        "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6",
       "depth": 1,
       "delegation_id": "dlg_7pQ4m",
       "cascade_mode": "immediate"
@@ -564,7 +577,7 @@ Example:
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
       "authority_hash":
-        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+        "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6",
       "depth": 1,
       "delegation_id": "dlg_7pQ4m",
       "cascade_mode": "immediate",
@@ -708,7 +721,9 @@ the limit.
 
 # Cascade Revocation {#cascade}
 
-A Child Mission depends on the Parent Mission. The cascade trigger is
+A Child Mission depends on the Parent Mission. A Mission's dependent
+Child Missions are every transitive descendant: its Child Missions,
+their children, and every further generation. The cascade trigger is
 any Parent Mission transition to a non-active state. This profile
 distinguishes terminal triggers from the one reversible trigger:
 
@@ -760,12 +775,19 @@ consumer-side parent-state checks, are experimental and defined in
 to continue deriving
 new credentials after the parent is known to be non-active.
 
+Cascade modes may differ across one lineage. The Mission Issuer MUST
+commit the terminal cascade transition for every dependent Child
+Mission regardless of its cascade mode; the mode governs only what
+consumers must verify in the interim. An `immediate`-mode descendant
+under a consumer-verified parent is therefore never orphaned: its own
+transition is committed even where the parent's is consumer-observed.
+
 The cascade behavior by trigger:
 
 | Trigger | Resulting child state | Who observes |
 |---------|-----------------------|--------------|
 | Terminal (`revoked`, `expired`, `completed`, `superseded`, `cascaded`) | `cascaded` (terminal) | Mission Issuer sets it; consumers read it from Mission Status or a lifecycle event |
-| Reversible (`suspended`) | reported `suspended`; restored on resume | Origin reports it; consumers read it ({{child-state}}) |
+| Reversible (`suspended`) | reported `suspended`; restored on resume | Issuer reports it; consumers read it ({{child-state}}) |
 
 ## Child Mission State {#child-state}
 
@@ -787,13 +809,25 @@ profile defines one child-specific terminal state:
   ({{I-D.draft-mcguinness-oauth-mission-signals}}) carries it on the
   cascade transition.
 
-A Child Mission also depends on parent state. For derivation under a
+A Child Mission also depends on ancestor state. For derivation under a
 Child Mission, both conditions MUST hold:
 
 - the Child Mission state is `active`; and
-- the Parent Mission is `active`.
+- every ancestor Mission in its lineage chain, not only the immediate
+  parent, is `active`.
 
 If either condition fails, the Mission Issuer MUST refuse derivation.
+A cascade in progress ({{cascade}}) opens no window: a descendant
+whose root ancestor is non-active is refused derivation even before
+its own cascade transition commits.
+
+Where a deployment also runs the completion profile
+({{I-D.draft-mcguinness-oauth-mission-completion}}), discharge
+propagates entry-wise: when a parent Authority Set entry is
+discharged, the Mission Issuer MUST discharge every child entry
+justified by it, so spent authority does not survive in the subtree.
+The issuer holds both records, so the propagation needs no consumer
+coordination.
 
 While a parent is `suspended`, the issuer MUST report each dependent
 child's state as `suspended` on every state-reporting surface (the
@@ -876,7 +910,7 @@ Example:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6"
   },
   "child": {
     "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
@@ -900,6 +934,14 @@ Example:
   "created_at": "2026-11-02T08:14:00Z"
 }
 ~~~
+
+## Canonical Bytes {#child-evidence-canonical}
+
+A Child Evidence object's canonical bytes are its JCS {{RFC8785}}
+canonicalization, and its type identifier is
+`application/mission-child-evidence+json`, used by local agreement
+pending registration. An audit or transparency profile registers the
+object by these values.
 
 # Relationship to Expansion
 
@@ -988,6 +1030,13 @@ can bound breadth as well as depth.
 If parent revocation does not reach children, child authority can
 outlive its source. Cascade modes define how termination propagates and
 how consumers bound stale parent state.
+
+Cascade reaches derivation at the commit of each transition: once a
+terminal trigger commits, no dependent Child Mission derives again.
+Outstanding child access tokens run to the earlier of the token's
+`exp` and the runtime staleness bound, where the runtime enforcement
+layer is deployed. A deployment that needs prompt cascade uses short
+child-token lifetimes.
 
 ## Parent Confusion
 

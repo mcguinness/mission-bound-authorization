@@ -492,7 +492,9 @@ profile.
 : No Mission-bound authority exists except by derivation for a
   Mission, and a Mission is created only by an explicit approval
   event that commits `intent_hash` and `authority_hash` (the core).
-  Fields an agent can influence never derive, widen, or gate
+  Fields an agent can influence shape authority only through the
+  pre-approval derivation the Approver consents to; once the Mission
+  is approved they are inert and never derive, widen, or gate
   authority.
 
 **Only `active` permits**:
@@ -502,9 +504,11 @@ profile.
 
 **Authority only narrows**:
 : Derived tokens, delegated child Missions, attenuated tokens, and
-  cross-domain projections carry subsets; widening exists only as a
-  fresh approval creating a successor
-  ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
+  cross-domain projections carry subsets; widening exists only as an
+  approved successor: a fresh approval
+  ({{I-D.draft-mcguinness-oauth-mission-expansion}}), or policy
+  drawdown within a ceiling a human pre-consented
+  ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
 **Revocation is possession-independent**:
 : A Mission ends by a state change at its issuer, not by finding and
@@ -567,6 +571,10 @@ Mission Issuer:
   Server: the mission blob carries the record under AAuth's `s256`
   commitment, and the Person Server issues or gates every auth token,
   so issuance gating holds ({{I-D.draft-mcguinness-mission-aauth}}).
+  Under every binding the Issuer also serves audience-scoped policy
+  views, the authority-distribution artifact the runtime and MAS
+  profiles define ({{I-D.draft-mcguinness-mission-runtime}},
+  {{I-D.draft-mcguinness-mission-authority-server}}).
 
 Resource Server:
 : The protected resource. In the OAuth binding it enforces
@@ -1183,10 +1191,11 @@ agent safety (Governed and High-Assurance Agent), advancing to the
 level its risk warrants and stopping there.
 
 The levels are one axis; the **binding** is an orthogonal one. Every
-level is reached under any of the three Mission Issuer bindings, the
+level is reachable under any of the three Mission Issuer bindings, the
 OAuth Authorization Server, the standalone Mission Authority Server,
 or the AAuth Person Server, and a deployment names its binding
-separately from its level. The standalone MAS binding is the case that
+separately from its level; what a level grants varies with what the
+binding provides. The standalone MAS binding is the case that
 matters most: it provides the Mission record, lifecycle, and authority
 but no Mission-bound credential and no issuance gating, so under it the
 kill switch is the runtime layer alone, not the token gate, and a
@@ -1195,13 +1204,19 @@ deployment states that. Binding is not a level.
 The levels, cumulative:
 
 **Baseline Issuance**:
-: authority derived and committed at the approval event with the
-  integrity anchors, issuance bounded by the subset rule, and
-  derivation gated on Mission state (the core). Grants task-bound,
-  auditable authority and a possession-independent kill switch at the
-  issuance gate; it grants no per-action control, and outstanding
-  tokens run to their own expiry. Proof obligations: the anchored
-  approval and the subset rule. A deployment that adds only a freshness
+: the approved, anchored Mission record and its lifecycle: authority
+  derived and committed at the approval event with the integrity
+  anchors (the core). Where the binding issues credentials, issuance
+  is bounded by the subset rule and gated on Mission state, which
+  grants task-bound, auditable authority and a possession-independent
+  kill switch at the issuance gate; it grants no per-action control,
+  and outstanding tokens run to their own expiry. Under a
+  partial-provision binding (the standalone MAS), Baseline grants
+  governance and audit; no kill switch of any kind exists until a
+  freshness surface (the half-step) and runtime enforcement (the next
+  level) arrive, and a deployment states that. Proof obligations: the
+  anchored approval and, where credentials are issued, the subset
+  rule. A deployment that adds only a freshness
   surface, Mission Status or introspection with a published staleness
   bound ({{I-D.draft-mcguinness-oauth-mission-status}}), gains
   state-aware reliance, a revocation cutoff within that bound, without
@@ -1213,7 +1228,9 @@ The levels, cumulative:
   state source with a published staleness bound, parameter binding, and
   runtime evidence ({{I-D.draft-mcguinness-mission-runtime}} and its
   AuthZEN binding). Grants per-action enforcement and revocation
-  bounded by the staleness bound plus token lifetime. This is the
+  bounded, for gated classes, by the staleness bound plus the permit
+  window plus the class's execution bound, and by token lifetime for
+  ungated paths. This is the
   family's adoption wedge, the **Protocol MVP**: the smallest
   deployment that makes a Mission-bound token more than governance
   metadata, and every normative dependency it needs is ratified. Proof

@@ -86,6 +86,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-aauth:
+    title: "Mission-Bound Authorization for AAuth"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-management:
+    title: "Mission Management for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-management.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   OIDC-CAEP:
     title: "OpenID Continuous Access Evaluation Profile 1.0"
     author:
@@ -165,7 +181,9 @@ This document uses the terms defined in the issuance profile
 Mission Issuer (the Mission `issuer`: in this document's OAuth binding
 the Authorization Server; a standalone Mission Issuer, the Mission
 Authority Server {{I-D.draft-mcguinness-mission-authority-server}},
-transmits these events with the same semantics), `mission_id`,
+transmits these events with the same semantics, as does the AAuth
+Person Server for its native missions
+{{I-D.draft-mcguinness-mission-aauth}}), `mission_id`,
 and the Mission lifecycle states. It additionally uses **Security Event
 Token (SET)** {{RFC8417}} and the **Shared Signals Framework (SSF)**
 {{OIDC-SSF}} transmitter, receiver, and stream terminology.
@@ -212,6 +230,11 @@ Authorization Server metadata
 member. The consumer's stream configuration declares, in its
 `delivery` object, the method it uses; the Mission Issuer MUST respect it and MUST NOT silently fall
 back to a less-timely method.
+
+A bulk lifecycle sweep at the management endpoint
+({{I-D.draft-mcguinness-oauth-mission-management}}) emits one SET per
+member Mission; a transmitter should expect, and pace, the resulting
+burst.
 
 ## Stream Scoping {#stream-scoping}
 
@@ -420,6 +443,11 @@ On receiving and verifying ({{set-protection}}) a
 - Apply the transition idempotently: a repeated or out-of-order event
   carrying a `version` not greater than the last applied for that
   `mission.id` MUST NOT regress the consumer's view of the state.
+- Re-establish current state through the Mission Status operation
+  ({{I-D.draft-mcguinness-oauth-mission-status}}) on a detected
+  `version` gap (a received `version` more than one greater than the
+  last applied for that `mission.id`), rather than rely on the cached
+  state that spans the gap.
 - Acknowledge the event per the SSF delivery method in use.
 
 A consumer MUST NOT treat the event as authority to change Mission
@@ -429,13 +457,14 @@ believes the reported state is wrong re-checks through Mission Status
 rather than inventing a state.
 
 A consumer anchors stream liveness to the Shared Signals Framework
-{{OIDC-SSF}} stream verification event. A consumer that cannot verify
-its stream, or that was down and may have missed events, SHOULD treat
-its cached Mission state as stale once it exceeds the Mission Issuer's
+{{OIDC-SSF}} stream verification event. A consumer MUST treat cached
+Mission state as stale once its age exceeds the Mission Issuer's
 advertised `mission_max_stale_seconds`
-({{I-D.draft-mcguinness-oauth-mission-status}}) and SHOULD fall back to
-the Mission Status operation rather than continue on possibly stale
-state.
+({{I-D.draft-mcguinness-oauth-mission-status}}) and MUST re-establish
+current state before further reliance; the Mission Status operation is
+the RECOMMENDED fallback surface. A consumer that cannot verify its
+stream, or that was down and may have missed events, applies the same
+rule rather than continuing on possibly stale state.
 
 # Relationship to Revocation Propagation {#event-driven}
 

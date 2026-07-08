@@ -286,6 +286,7 @@ record as part of the Mission's feed.
 | Decision evidence | Decision Evidence object, as issued | `application/mission-decision-evidence+json` | PDP key |
 | Execution evidence | Execution Evidence object, as issued | `application/mission-execution-evidence+json` | PEP key |
 | Mission Mandate | JWS Compact Serialization, as issued | `application/mission-mandate+jwt` | `issuer` |
+| Child Evidence | Child Evidence object (JCS), as the child-delegation profile fixes | `application/mission-child-evidence+json` | `issuer` |
 
 The table is extensible by specification: a profile MAY define an
 additional evidence type by fixing its canonical bytes, its
@@ -317,9 +318,16 @@ the profiles that define those objects
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}},
 {{I-D.draft-mcguinness-mission-authzen}}), the Signals SET
 media type by the Signals profile it is carried in
-({{I-D.draft-mcguinness-oauth-mission-signals}}), and the Mandate
+({{I-D.draft-mcguinness-oauth-mission-signals}}), the Mandate
 media type by the Mandate profile
-({{I-D.draft-mcguinness-mission-mandate}}).
+({{I-D.draft-mcguinness-mission-mandate}}), and the Child Evidence
+canonical bytes and type identifier by the child-delegation profile
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
+
+A Child Evidence record registers on the Parent Mission's feed: the
+`sub` is the parent's ({{feed}}), its producer is the `issuer`, and
+the child Mission's `id` inside the evidence makes the delegation
+navigable from parent to child.
 
 ### The Lifecycle Transition Object {#transition-object}
 
@@ -334,6 +342,11 @@ transition as a minimal JSON object with these members, JCS-canonicalized
   transition.
 - `transitioned_at` (string, required): an RFC 3339 {{RFC3339}}
   date-time at which the transition was committed.
+- `salt` (string, required): a random salt of at least 128 bits,
+  base64url-encoded, retained with the evidence. The object's other
+  members are drawn from an enumerable space, so an unsalted
+  commitment is confirmable by dictionary
+  ({{privacy-considerations}}).
 
 Its media type is `application/mission-lifecycle-transition+json`
 ({{iana}}).
@@ -341,12 +354,15 @@ Its media type is `application/mission-lifecycle-transition+json`
 #### Computed Example {#transition-vector}
 
 A minimal transition object recording the revocation of Mission
-`msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`:
+`msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`; the `salt` is a fixed
+illustrative 16-byte value, where a producer generates a fresh random
+one per record:
 
 ~~~ json
 {
   "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "issuer": "https://as.example.com",
+  "salt": "q7hJ2mXv9pTzR4kW5nB8dQ",
   "state": "revoked",
   "transitioned_at": "2026-11-02T08:30:00Z"
 }
@@ -356,12 +372,12 @@ Its JCS canonical bytes (one line; breaks are for display only):
 
 ~~~ text
 {"issuer":"https://as.example.com","mission_id":"msn_8RfX2Lqv9TqMv
-4z7sA2bN1k0YpEdHc9-","state":"revoked","transitioned_at":"2026-11-
-02T08:30:00Z"}
+4z7sA2bN1k0YpEdHc9-","salt":"q7hJ2mXv9pTzR4kW5nB8dQ","state":"revo
+ked","transitioned_at":"2026-11-02T08:30:00Z"}
 ~~~
 
 The committed digest is the SHA-256 of those bytes; its base64url
-form is `9xMd0Ge2W5oh7f_a964mvK66QOOHYOe-kDz3HUYXkd8`. The Signed
+form is `SD3SCb7vm3b_Ivsm19ENQAGAv7pjLS-mNWGcaXqslmc`. The Signed
 Statement carries the digest bytes inline as its payload, with this
 protected header ({{hash-commitment}}, {{feed}}):
 
@@ -542,9 +558,12 @@ The `sub` of every Signed Statement about a Mission is a stable
 identifier of that Mission, derived from the `mission` claim's `issuer`
 and `id`. All evidence about one Mission shares one `sub` and forms one
 Transparency Service feed. Where the deployment provides feed retrieval
-({{retrieval}}), an auditor collects a Mission's complete, ordered,
-append-only evidence by that `sub`, and the substrate's non-equivocation
-guarantee means the auditor and the deployment see the same records.
+({{retrieval}}), an auditor collects a Mission's registered evidence,
+ordered and append-only, by that `sub`, and the substrate's
+non-equivocation guarantee means the auditor and the deployment see the
+same records. The feed is complete only relative to what the deployment
+is expected to register ({{what-to-register}}); an omitted record is
+visible only against that expectation ({{security-considerations}}).
 
 For that to hold, every producer MUST compute the identical `sub`. This
 profile fixes a single construction; a producer MUST use it and MUST NOT
@@ -571,9 +590,12 @@ A Child Mission ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
 is its own Mission with its own `id` and `issuer`, so its evidence forms
 its own feed; its lifecycle events, including a `cascaded` transition,
 appear in that feed. The event that triggered the cascade is in the
-parent's feed, and the child's lineage to the parent is the `parent`
-member of its `mission` claim, which an auditor follows to the parent's
-`sub` to see that trigger.
+parent's feed. Lineage is navigable in both directions: the child's
+lineage to the parent is the `parent` member of its `mission` claim,
+which an auditor follows to the parent's `sub` to see that trigger,
+and the parent's children are enumerated by the Child Evidence
+records on the parent's feed ({{evidence-types}}), each carrying the
+child's `id`.
 
 Across trust domains a Mission's `issuer` and `id` are unchanged
 ({{I-D.draft-mcguinness-oauth-mission}}), so every producer in every
@@ -810,7 +832,10 @@ alongside the evidence and hashed together with the evidence's canonical
 bytes. Without a salt, a party that can guess the evidence can confirm
 the commitment by dictionary; the salt makes the committed digest
 unguessable while still reproducible at verification, where the salt is
-retrieved with the evidence ({{receipts}}).
+retrieved with the evidence ({{receipts}}). The lifecycle-transition
+object carries the salt as a required member of its canonical bytes
+for exactly this reason ({{transition-object}}), and any other
+profile-fixed low-entropy shape MUST do the same.
 
 Deleting retained evidence has a consequence the log makes permanent. The
 Receipt, the `sub`, and the registration cadence stay in the log, but the
@@ -871,7 +896,9 @@ evidence types by the AuthZEN profile
 type by the consent evidence profile
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), the
 Mission Mandate media type by the Mandate profile
-({{I-D.draft-mcguinness-mission-mandate}}), and the
+({{I-D.draft-mcguinness-mission-mandate}}), the Child Evidence type
+identifier by the child-delegation profile
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), and the
 Signals SET media type `application/secevent+jwt` by RFC 8417, which the
 Signals profile carries the event in
 ({{I-D.draft-mcguinness-oauth-mission-signals}}). The Signed Statement

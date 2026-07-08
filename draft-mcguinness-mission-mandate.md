@@ -285,16 +285,21 @@ The protected header MUST carry:
 : OPTIONAL. An array. The full consented Authority Set, exactly as
   recorded on the Mission record, preserving array order (the order is
   part of the canonical form under the issuance profile's
-  canonicalization rules). When present, a verifier MAY recompute
-  `authority_hash` over it ({{verification}}).
+  canonicalization rules). When present, a verifier that relies on
+  its contents recomputes `authority_hash` over it
+  ({{verification}}).
 
 `mandate_exp`:
 : OPTIONAL. A NumericDate. An expiry of the Mandate artifact itself,
   distinct from `mission_expiry`: after it, the Mandate MUST NOT be
   relied on as evidence. When absent, the Mandate is valid as evidence
   for the Mission's audit horizon, the retention term the issuance
-  profile defines. It is deliberately not the standard `exp` claim,
-  whose validity window would read as a credential lifetime.
+  profile defines. Setting `mandate_exp` explicitly is RECOMMENDED:
+  the audit horizon is the issuer's retention term, which a
+  third-party verifier cannot discover, so an absent `mandate_exp`
+  leaves the evidence bound unverifiable from the artifact alone. It
+  is deliberately not the standard `exp` claim, whose validity window
+  would read as a credential lifetime.
 
 The claim set is open in the manner of the `mission` claim: a
 companion profile of the issuance profile MAY add members with
@@ -381,6 +386,10 @@ Payload:
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      },
       "delegation": {
         "max_depth": 2,
         "allowed_delegates": [{ "sub_profile": "ai_agent" }]
@@ -422,12 +431,15 @@ aXJ5IjoiMjAyNi0xMi0zMVQyMzo1OTo1OVoiLCJwb2xpY3lfdmVyc2lvbiI6ImRlcG
 xveS1wb2xpY3k6djE3Iiwic3RhdGVfYXRfaXNzdWFuY2UiOiJhY3RpdmUiLCJtYW5k
 YXRlX2V4cCI6MTgwNTYxNzAwMCwiYXV0aG9yaXR5X3NldCI6W3sidHlwZSI6Im1pc3
 Npb25fcmVzb3VyY2VfYWNjZXNzIiwicmVzb3VyY2UiOiJodHRwczovL2VycC5leGFt
-cGxlLmNvbSIsImFjdGlvbnMiOlsiaW52b2ljZXMucmVhZCJdLCJkZWxlZ2F0aW9uIj
-p7Im1heF9kZXB0aCI6MiwiYWxsb3dlZF9kZWxlZ2F0ZXMiOlt7InN1Yl9wcm9maWxl
-IjoiYWlfYWdlbnQifV19fSx7InR5cGUiOiJtaXNzaW9uX3Jlc291cmNlX2FjY2Vzcy
-IsInJlc291cmNlIjoiaHR0cHM6Ly9lcnAuZXhhbXBsZS5jb20iLCJhY3Rpb25zIjpb
-ImpvdXJuYWwtZW50cmllcy53cml0ZSJdLCJjb25zdHJhaW50cyI6eyJtYXhfYW1vdW
-50Ijp7ImFtb3VudCI6IjUwMC4wMCIsImN1cnJlbmN5IjoiVVNEIn19fV19
+cGxlLmNvbSIsImFjdGlvbnMiOlsiaW52b2ljZXMucmVhZCJdLCJjb25zdHJhaW50cy
+I6eyJyZXNvdXJjZV9pc3N1ZWRfYWZ0ZXIiOiIyMDI2LTA3LTAxVDAwOjAwOjAwWiIs
+InJlc291cmNlX2lzc3VlZF9iZWZvcmUiOiIyMDI2LTA5LTMwVDIzOjU5OjU5WiJ9LC
+JkZWxlZ2F0aW9uIjp7Im1heF9kZXB0aCI6MiwiYWxsb3dlZF9kZWxlZ2F0ZXMiOlt7
+InN1Yl9wcm9maWxlIjoiYWlfYWdlbnQifV19fSx7InR5cGUiOiJtaXNzaW9uX3Jlc2
+91cmNlX2FjY2VzcyIsInJlc291cmNlIjoiaHR0cHM6Ly9lcnAuZXhhbXBsZS5jb20i
+LCJhY3Rpb25zIjpbImpvdXJuYWwtZW50cmllcy53cml0ZSJdLCJjb25zdHJhaW50cy
+I6eyJtYXhfYW1vdW50Ijp7ImFtb3VudCI6IjUwMC4wMCIsImN1cnJlbmN5IjoiVVNE
+In19fV19
 ~~~
 
 JWS signing input, the two segments joined by `.`:
@@ -449,12 +461,14 @@ pY3lfdmVyc2lvbiI6ImRlcGxveS1wb2xpY3k6djE3Iiwic3RhdGVfYXRfaXNzdWFuY
 2UiOiJhY3RpdmUiLCJtYW5kYXRlX2V4cCI6MTgwNTYxNzAwMCwiYXV0aG9yaXR5X3N
 ldCI6W3sidHlwZSI6Im1pc3Npb25fcmVzb3VyY2VfYWNjZXNzIiwicmVzb3VyY2UiO
 iJodHRwczovL2VycC5leGFtcGxlLmNvbSIsImFjdGlvbnMiOlsiaW52b2ljZXMucmV
-hZCJdLCJkZWxlZ2F0aW9uIjp7Im1heF9kZXB0aCI6MiwiYWxsb3dlZF9kZWxlZ2F0Z
-XMiOlt7InN1Yl9wcm9maWxlIjoiYWlfYWdlbnQifV19fSx7InR5cGUiOiJtaXNzaW9
-uX3Jlc291cmNlX2FjY2VzcyIsInJlc291cmNlIjoiaHR0cHM6Ly9lcnAuZXhhbXBsZ
-S5jb20iLCJhY3Rpb25zIjpbImpvdXJuYWwtZW50cmllcy53cml0ZSJdLCJjb25zdHJ
-haW50cyI6eyJtYXhfYW1vdW50Ijp7ImFtb3VudCI6IjUwMC4wMCIsImN1cnJlbmN5I
-joiVVNEIn19fV19
+hZCJdLCJjb25zdHJhaW50cyI6eyJyZXNvdXJjZV9pc3N1ZWRfYWZ0ZXIiOiIyMDI2L
+TA3LTAxVDAwOjAwOjAwWiIsInJlc291cmNlX2lzc3VlZF9iZWZvcmUiOiIyMDI2LTA
+5LTMwVDIzOjU5OjU5WiJ9LCJkZWxlZ2F0aW9uIjp7Im1heF9kZXB0aCI6MiwiYWxsb
+3dlZF9kZWxlZ2F0ZXMiOlt7InN1Yl9wcm9maWxlIjoiYWlfYWdlbnQifV19fSx7InR
+5cGUiOiJtaXNzaW9uX3Jlc291cmNlX2FjY2VzcyIsInJlc291cmNlIjoiaHR0cHM6L
+y9lcnAuZXhhbXBsZS5jb20iLCJhY3Rpb25zIjpbImpvdXJuYWwtZW50cmllcy53cml
+0ZSJdLCJjb25zdHJhaW50cyI6eyJtYXhfYW1vdW50Ijp7ImFtb3VudCI6IjUwMC4wM
+CIsImN1cnJlbmN5IjoiVVNEIn19fV19
 ~~~
 
 The Mandate's JWS Compact Serialization appends `.` and the signature
@@ -508,11 +522,13 @@ Mandate:
    profile ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). A
    Mandate from an untrusted issuer proves nothing.
 4. **Anchor recomputation.** When `authority_set` is present in full,
-   the verifier MAY recompute `authority_hash` over it per the
-   issuance profile's integrity-anchor rules (the
-   `mission-authority-set` envelope with `iss` set to `mission.issuer`) and
-   MUST reject the Mandate on mismatch. It MAY likewise verify
-   `intent_hash` against a Mission Intent it holds.
+   a verifier that relies on its contents MUST recompute
+   `authority_hash` over it per the issuance profile's
+   integrity-anchor rules (the `mission-authority-set` envelope with
+   `iss` set to `mission.issuer`); a verifier that does not so rely
+   MAY recompute. Either way, the verifier MUST reject the Mandate on
+   mismatch. It MAY likewise verify `intent_hash` against a Mission
+   Intent it holds.
 5. **Freshness.** When reliance requires an active Mission, obtain
    current state within the freshness bound of
    {{state-at-issuance}}. `state_at_issuance` never substitutes.
@@ -579,6 +595,14 @@ Mission that motivated it. The derivation itself, what the rail's
 artifact authorizes and how it is consented and revoked, is governed
 by that rail, not by this document; the Mission Mandate contributes
 committed facts and audit continuity, never authority.
+
+A rail deriving a durable artifact from a Mandate SHOULD record the
+time of its current-state check ({{state-at-issuance}}) in its own
+artifact, and SHOULD consume Mission Status
+({{I-D.draft-mcguinness-oauth-mission-status}}) or Lifecycle Signals
+({{I-D.draft-mcguinness-oauth-mission-signals}}) for the Mission's
+lifetime, so a later revocation of the Mission does not go silently
+unnoticed on the rail.
 
 ## Mission Evidence {#audit-evidence}
 
@@ -700,6 +724,15 @@ profile's privacy considerations describe: it carries `mission.id` and
 holders can correlate on them. That is the artifact's purpose, an
 auditable shared anchor; a deployment SHOULD weigh it before minting
 Mandates for recipients that do not need durable correlation.
+
+## Subject Disclosure
+
+Selective disclosure never hides `subject`
+({{selective-disclosure}}): every presentation identifies the
+Mission's Subject. Deployments SHOULD use opaque or pairwise Subject
+identifiers where the identity provider supports them, and SHOULD
+weigh Subject disclosure per recipient as this section weighs
+`authority_set`.
 
 # IANA Considerations {#iana}
 

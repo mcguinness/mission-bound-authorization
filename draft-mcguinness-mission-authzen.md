@@ -104,7 +104,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-harness:
-    title: "Mission-Aware Agent Harness"
+    title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
     author:
       -
@@ -384,9 +384,13 @@ materialized view:
   ({{I-D.draft-mcguinness-oauth-mission}}).
 
 `state`:
-: REQUIRED. A string. the current Mission lifecycle state the
+: CONDITIONAL. A string. the current Mission lifecycle state the
   PEP established from its Mission state source
-  ({{I-D.draft-mcguinness-mission-runtime}}).
+  ({{I-D.draft-mcguinness-mission-runtime}}). REQUIRED where the
+  deployment's declared state-source placement has the PEP supply
+  state; where state establishment is placed with the PDP, the member
+  is absent and the PDP MUST establish state from its own source or
+  deny with `stale_state`.
 
 `policy_version`:
 : REQUIRED when known. A string. the `policy_version` recorded at the
@@ -495,9 +499,9 @@ under {{I-D.draft-mcguinness-mission-runtime}}, the PEP supplies:
   protected-resource identifier.
 
 `freshness`:
-: REQUIRED. An object. the freshness of the Mission state
-  the PEP relied on, conveying the runtime profile's freshness inputs
-  on the wire. Members:
+: CONDITIONAL. An object, REQUIRED whenever `state` is present: the
+  freshness of the Mission state the PEP relied on, conveying the
+  runtime profile's freshness inputs on the wire. Members:
 
     `mode`:
     : REQUIRED. A string. one of `fresh`, `cached`, or `event_driven`
@@ -554,7 +558,13 @@ through the PDP, as the value of `context.taint`:
 
 Absence of `taint` means the harness did not route the determination
 through the decision request, not that the action is untainted; the
-harness's own egress rule then applies. When `taint` is present with
+harness's own egress rule then applies. That reading is confined to
+harness-enforced deployments: when the deployment's Enforcement Scope
+Statement declares PDP-enforced taint for an action class
+({{I-D.draft-mcguinness-mission-runtime}}), the PDP MUST require
+`context.taint` on every external-communication and
+external-commitment decision in that class and MUST deny with
+`taint_context_missing` when it is absent. When `taint` is present with
 `tainted` true on a consequential external-communication or
 external-commitment action, the PDP MUST deny or return
 `action_approval_required` ({{runtime-denial-classification}}) unless
@@ -657,7 +667,8 @@ In addition to evaluating the decision inputs the runtime profile
 requires, the PDP MUST verify that the AuthZEN-carried envelope is
 self-consistent:
 
-1. The Mission state conveyed in `context.mission.state` is exactly
+1. When present, the Mission state conveyed in `context.mission.state`
+   is exactly
    `active`; every other value, recognized or not, is non-active per the
    issuance profile's forward-compatibility rule
    ({{I-D.draft-mcguinness-oauth-mission}}) and the PDP returns
@@ -1011,6 +1022,9 @@ carried in Decision Evidence:
   approval bound to the action's parameters is not present. The PEP
   carries any such approval in the decision context; this profile does
   not define the approval artifact, which the runtime profile owns.
+- `taint_context_missing`: the deployment declares PDP-enforced taint
+  for the action's class and the decision request carries no
+  `context.taint` ({{context-taint}}).
 - `stale_state`: the PEP-supplied freshness is stale or inconsistent
   with the materialized policy view.
 - `mission_inactive`: the Mission state is not `active`.
@@ -1397,8 +1411,8 @@ only facts the PEP verified:
 `denial_reason`:
 : REQUIRED. A string. one of `token_invalid`,
   `mission_claim_missing`, `channel_failure`, `pdp_unreachable`, or
-  `state_unavailable` (the PEP cannot establish Mission state to send
-  to the PDP). These name PEP-side conditions and are disjoint from
+  `state_unavailable` (where the deployment's state-source placement
+  has the PEP supply state, and it cannot establish it). These name PEP-side conditions and are disjoint from
   the PDP denial reasons of {{runtime-denial-classification}}; a
   record that can populate the PDP-derived members is a Decision
   Evidence Object instead.
@@ -1461,7 +1475,8 @@ that failed closed:
   },
   "audience": "https://erp.example.com",
   "action": { "name": "journal-entries.write" },
-  "resource": { "type": "journal-entry", "id": "je_2026Q3_inv_8421" },
+  "resource":
+    { "type": "journal-entry", "id": "je_2026Q3_inv_8421" },
   "parameter_digest":
     "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
   "decision": "deny",
@@ -1825,7 +1840,9 @@ and presented by the executing component at request time in
   serves the capability at request time (for example, an MCP server
   instance), asserted by the PEP that authenticates it. It is a
   request-time fact, not part of the derived authority recorded at
-  derivation, and is recorded in Decision Evidence when present.
+  derivation, and is recorded in Decision Evidence when present; it
+  is never an input to the `source_digest` or `catalog_digest`
+  comparison.
   Where the executing component authenticates under an
   attested-instance profile
   ({{I-D.draft-mcguinness-oauth-client-instance-assertion}},

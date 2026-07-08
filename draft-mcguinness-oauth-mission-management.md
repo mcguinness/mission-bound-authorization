@@ -31,8 +31,8 @@ author:
 
 normative:
   RFC3339:
+  RFC6838:
   RFC7515:
-  RFC7519:
   RFC8259:
   RFC8414:
   RFC9325:
@@ -153,7 +153,9 @@ knowledge over a declared filter scope, compensated not by
 indistinguishability but by explicit authorization and mandatory audit
 of every call ({{filter-scope}}). The surface is never agent-facing:
 the Agent executing a Mission has no role here
-({{management-authentication}}).
+({{management-authentication}}). Fleet enumeration and bulk lifecycle
+are the operator surface of the family's delegated-authority layer
+({{I-D.draft-mcguinness-mission-architecture}}).
 
 Both capabilities share one endpoint, one request shape, one
 authentication and authorization model, one signing discipline, and
@@ -227,9 +229,10 @@ status profile's signing discipline: the JWS header carries a `kid`
 and a `typ` of `mission-management-response+jwt`, the algorithm is one
 advertised in `mission_status_signing_alg_values_supported`
 ({{as-metadata}}), and the status profile's signing-key retention
-rules apply. The HTTP `Content-Type` is `application/jwt` {{RFC7519}}
-with `Cache-Control: no-store`; the `typ` value is a local-use
-identifier defined by this document ({{iana}}). The signed payload
+rules apply. Per {{RFC7515}} Section 4.1.9 the `typ` header omits the
+`application/` prefix; the full media type
+`application/mission-management-response+jwt` (registered in {{iana}})
+is used as the HTTP `Content-Type`, with `Cache-Control: no-store`. The signed payload
 carries the envelope `iss`, `aud` (the authenticated caller), `sub`
 (the acting party), `nonce`, `iat`, and `exp`, plus the members of
 {{enumeration-response}}, {{dry-run}}, or {{manifest}}. Before
@@ -527,7 +530,7 @@ The outcomes:
 | Outcome | Meaning |
 |---|---|
 | `applied` | The operation succeeded: the transition was committed, or the Mission already stood in the operation's resulting non-terminal state (the status profile's idempotent case). |
-| `already_terminal` | The Mission was already in a terminal state, including the operation's own resulting state; nothing remained to stop. |
+| `already_terminal` | The Mission already stood in a terminal state; when that state is the operation's own resulting state, this is the status profile's idempotent case, reported distinctly for operator clarity. |
 | `illegal_transition` | The operation is not legal from the Mission's current non-terminal state; the Mission is unchanged. |
 | `error` | The AS failed to process this Mission; its state is unverified. |
 
@@ -719,7 +722,11 @@ the mandatory audit trail. Its abuse ceiling is disclosure and work
 stoppage, not authority escalation: the surface cannot create or widen
 a Mission, and the model's availability trade applies, since a
 management credential converts into stopped governed work rather than
-loosened enforcement. Deployments SHOULD scope Management Clients
+loosened enforcement. One qualification: bulk `resume` re-activates
+Missions suspended for cause, undoing an in-flight containment. A
+deployment MUST require a distinct or elevated grant for `resume` at
+this endpoint and SHOULD alert on bulk resume. Deployments SHOULD
+scope Management Clients
 narrowly, protect their credentials as operator credentials, and alert
 on anomalous management activity; where audit transparency runs,
 management audit records are candidates for it
@@ -822,14 +829,33 @@ policy is Specification Required; this document is the specification.
 For both: Change Controller IETF; Reference this document,
 {{as-metadata}}.
 
-## Media Type
+## Media Type Registration
 
-This document registers no media type. A management response is served
-as `application/jwt` {{RFC7519}} and identified by its JWS header
-`typ` of `mission-management-response+jwt` ({{management-endpoint}}),
-a local-use type identifier following this suite's convention for
-issuer-signed artifacts that need a distinguishing `typ` without a
-dedicated media type.
+IANA is requested to register one media type per {{RFC6838}},
+mirroring the status profile's registration.
+
+### application/mission-management-response+jwt
+
+- Type name: application
+- Subtype name: mission-management-response+jwt
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: binary; JWS Compact Serialization
+- Security considerations: see {{security-considerations}}
+- Interoperability considerations: see this document
+- Published specification: this document
+- Applications that use this media type: OAuth Mission-Bound
+  Management Clients
+- Fragment identifier considerations: not applicable
+- Restrictions on usage: none
+- Provisional registration: no
+- Magic number(s): none
+- File extension(s): none
+- Macintosh file type code(s): none
+- Person & email address to contact: Karl McGuinness
+  <public@karlmcguinness.com>
+- Intended usage: COMMON
+- Author/Change controller: IETF
 
 # Acknowledgments
 {:numbered="false"}

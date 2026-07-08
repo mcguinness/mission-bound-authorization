@@ -54,19 +54,27 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
-  I-D.draft-mcguinness-mission-authzen:
-    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
+  I-D.draft-mcguinness-mission-harness:
+    title: "Mission-Aware Agent Harnesses"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-mission-harness:
-    title: "Mission-Aware Agent Harnesses"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
+
+informative:
+  I-D.draft-mcguinness-mission-architecture:
+    title: "An Architecture for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-authzen:
+    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
     author:
       -
         ins: K. McGuinness
@@ -131,12 +139,9 @@ document answers "how is in-flight state unwound once continuation is
 stopped." The runtime profile still gates each action. The checks
 compose; none replaces the others ({{relationship}}).
 
-This is a newer profile than the rest of the Mission-Bound
-Authorization family and is not part of the recommended v1 deployment
-bundles. The unwind, compensation, and reversibility model it defines is
-less exercised than the issuance core and the runtime layer, and
-compensation is inherently domain-specific. Its details may change;
-treat it as a direction, not yet as a stable interface.
+This is a newer, experimental profile and is not required by any
+Mission Assurance Level
+({{I-D.draft-mcguinness-mission-architecture}}).
 
 # Scope
 
@@ -350,13 +355,21 @@ Mission.
 
 ## Unwind Plan Integrity {#unwind-plan-integrity}
 
-The step's first Orchestration Evidence record ({{orchestration-evidence}})
-MUST carry an `unwind_plan_hash` over the step's unwind plan. It is
-computed with the integrity-anchor envelope of the issuance profile
-({{I-D.draft-mcguinness-oauth-mission}}) under a new `typ` value
-`mission-unwind-plan`, where `value` is the unwind plan object. This
-lets an auditor detect any later alteration of the plan a step ran
-under.
+The `unwind_plan_hash` over the step's unwind plan MUST be committed
+at or before the step's dispatch: a hash first recorded after a
+trigger proves later alteration, not that the plan existed when the
+step was dispatched. The orchestrator MUST commit it in an
+Orchestration Evidence record emitted at dispatch
+({{orchestration-evidence}}). As an alternative, a deployment MAY
+commit it instead as a coordinated member of the step's Decision
+Evidence, through the AuthZEN profile's coordinated-extension seam
+({{I-D.draft-mcguinness-mission-authzen}}); the step's first
+Orchestration Evidence record then repeats the committed value. The
+hash is computed with the integrity-anchor envelope of the issuance
+profile ({{I-D.draft-mcguinness-oauth-mission}}) under a new `typ`
+value `mission-unwind-plan`, where `value` is the unwind plan object.
+This lets an auditor verify that the plan a step ran under existed at
+dispatch and detect any later alteration.
 
 Every unwind-plan member MUST derive from a trusted source. The
 compensation action, review queue, and safe point, like the
@@ -637,8 +650,10 @@ members:
   `committed`, or `unknown`.
 
 `unwind_plan_hash`:
-: REQUIRED on the step's first Orchestration Evidence record. The
-  integrity anchor over the step's unwind plan
+: REQUIRED on the step's dispatch-time record or, where the hash was
+  committed through Decision Evidence instead, on the step's first
+  Orchestration Evidence record. The integrity anchor over the step's
+  unwind plan, committed at or before dispatch
   ({{unwind-plan-integrity}}).
 
 `authority_basis`:
@@ -660,10 +675,13 @@ members:
   {{RFC7515}} Compact Serialization whose payload is the JCS
   {{RFC8785}} canonical bytes of the object with `evidence_envelope`
   removed. When present, it MUST identify the signer: the JWS protected
-  header MUST carry `alg`, `iss`, `kid` resolvable under deployment
-  policy, and a `typ` naming the record's own media type, matching
-  the suite's evidence-envelope convention
-  ({{I-D.draft-mcguinness-mission-runtime}}).
+  header MUST carry `kid`, whose resolution under deployment policy
+  identifies the issuer, `alg`, and `typ`, matching the suite's
+  evidence-envelope convention
+  ({{I-D.draft-mcguinness-mission-runtime}}). This document registers
+  no media type; its two local-use type identifiers are
+  `mission-orchestration-evidence`, which `typ` carries here, and
+  `mission-unwind-plan` ({{unwind-plan-integrity}}).
 
 Example:
 
@@ -760,7 +778,8 @@ execution profile stops or unwinds the work.
 A conforming Mission-aware orchestrator MUST:
 
 - assign a reversibility class to each consequential step;
-- record an unwind plan before dispatch;
+- record an unwind plan, and commit its hash, at or before dispatch
+  ({{unwind-plan-integrity}});
 - stop new governed work when Mission state is non-active or stale;
 - classify in-flight steps under {{in-flight}};
 - apply post-completion behavior for committed or unknown outcomes;

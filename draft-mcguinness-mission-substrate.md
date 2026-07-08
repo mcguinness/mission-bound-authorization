@@ -162,10 +162,10 @@ The core remains self-contained and authoritative for every definition
 this document names; the existing bindings' Mission Substrate
 statements remain authoritative for those bindings, which predate this
 document and claim no conformance to it. No existing family document
-depends on this one, and none needs revision on its account. A
-requirement stated here binds only a new binding that claims
-conformance to this document ({{conformance}}). Where this document
-and the core appear to differ, the core governs.
+claims conformance to this one, and none needs revision on its
+account. A requirement stated here binds only a new binding that
+claims conformance to this document ({{conformance}}). Where this
+document and the core appear to differ, the core governs.
 
 ## Conventions and Terminology
 
@@ -235,9 +235,19 @@ issuance, derivation, or continued reliance. Every other state value,
 including one a consumer does not recognize, is non-active and
 non-deriving; a binding MUST NOT define a surface that fails open on
 an unrecognized state. A binding that adopts an extension state MUST
-surface its value verbatim and MUST NOT translate it into a core state
-or a substrate-native vocabulary, because the fail-safe rule keys on
-the exact value.
+surface its value verbatim on the binding's Mission state surfaces
+(the Mission Status operation and kin) and MUST NOT translate it
+there into a core state or a substrate-native vocabulary, because the
+fail-safe rule keys on the exact value. On a substrate-native
+protocol surface a binding MAY project states onto its native
+vocabulary, provided every non-`active` state projects to a
+non-active native signal: the projection is fail-safe.
+
+A binding MUST provide an authenticated means, independent of any
+credential's possession, for the Subject, the Approver, or an
+administrator to transition a Mission to `revoked` by its Mission
+Identifier: the state space is not provided without a way to cause
+its kill-switch state.
 
 A binding MUST specify at least one state source from which consumers
 learn a Mission's current state, with a stated staleness bound, so
@@ -263,7 +273,11 @@ attenuation under a Mission yields authority broader than the
 Mission's Authority Set. The binding MUST interpret Common Constraint
 names per their definitions and compare their values in value space
 under each definition's subset and intersection rules, so independent
-implementations compute the same result for the same values.
+implementations compute the same result for the same values. Where a
+binding or its enforcement surface admits a delegate, per-entry
+`delegation` policy is evaluated by whichever surface admits the
+delegate: the issuance gate where tokens are derived, the join where
+they are not.
 
 Home: the Mission Authority section of
 {{I-D.draft-mcguinness-oauth-mission}}, with its Subset Rule and
@@ -304,10 +318,14 @@ form), and audit transparency (the committed evidence types).
 
 This primitive is OPTIONAL, and it is where provision levels split.
 
-Under full provision, the binding issues a credential carrying the
-`mission` claim (`id`, `issuer`, `authority_hash`) under its own
-proof-of-possession discipline, and only while the referenced Mission
-is `active`: credential issuance is gated on Mission state.
+Under full provision, the binding issues a Mission-bound credential:
+a credential under the binding's own proof-of-possession discipline
+that names exactly one Mission, through the `mission` claim (`id`,
+`issuer`, `authority_hash`) or a substrate-native reference the
+Mission record binds ({{identifier}}), issued only while the
+referenced Mission is `active`: credential issuance is gated on
+Mission state. The `mission` claim shape is the interoperable
+default.
 
 Under partial provision, the binding issues no such credential. It
 MUST define a join per the externally established mode of the runtime
@@ -344,9 +362,11 @@ Home: the Signing and Key Rotation section of
 binding's own metadata.
 
 Consumers: verifiers of Mission-bound credentials under full
-provision, the Mandate ({{I-D.draft-mcguinness-mission-mandate}}),
-signed state surfaces ({{I-D.draft-mcguinness-oauth-mission-status}}),
-and audit statements ({{I-D.draft-mcguinness-mission-audit}}).
+provision, consent evidence (its JWS verifies under the Issuer's
+published keys), the Mandate
+({{I-D.draft-mcguinness-mission-mandate}}), signed state surfaces
+({{I-D.draft-mcguinness-oauth-mission-status}}), and audit statements
+({{I-D.draft-mcguinness-mission-audit}}).
 
 ## Mission Audit Horizon {#audit-horizon}
 
@@ -379,6 +399,13 @@ steps, whatever its native ceremony:
 5. create the Mission record in the `active` state atomically with the
    approval decision.
 
+Derivation in step 3 MUST be bounded by the approved Mission Intent
+per the core's Mission Authority rules: each derived entry's resource
+is among the Intent's `resources`, the Intent's `controls` are
+respected, and `proposed_authority` is only narrowed, so
+`intent_hash` and `authority_hash` commit a task and its authority
+with a defined relationship.
+
 If the derived Authority Set changes between rendering and consent,
 the binding MUST recompute the anchors and MUST NOT create the
 Mission without the Approver's consent to the changed set.
@@ -408,7 +435,7 @@ provision); `.` not consumed. Notes follow the table.
 | Harness | X | X | . | . | B | . | . | . |
 | Orchestration | X | X | . | X | . | . | . | . |
 | Intent Shaping | . | . | . | X | . | . | . | . |
-| Consent Evidence | X | . | X | X | . | . | X | X |
+| Consent Evidence | X | . | X | X | . | X | X | X |
 | Mandate | X | X | X | X | . | X | . | . |
 | Audit Transparency | X | . | . | X | . | X | X | . |
 | Consumption Metering | X | . | X | X | . | . | . | . |
@@ -448,8 +475,9 @@ A **Mission Substrate Binding**:
    provides the Mission Identifier and `issuer` ({{identifier}});
 2. provides the lifecycle state space with the only-`active` rule,
    fail-safe treatment of unrecognized states, verbatim extension
-   states, and a state source with a stated staleness bound
-   ({{lifecycle}});
+   states, an authenticated, possession-independent means to
+   transition a Mission to `revoked` by its Mission Identifier, and a
+   state source with a stated staleness bound ({{lifecycle}});
 3. represents the Authority Set in the core's shape and applies the
    subset rule and Common Constraint value-space semantics at every
    narrowing ({{authority}});
@@ -480,12 +508,15 @@ pattern, that states how the binding provides each primitive of
 2. the identifier mapping and any substrate-native Mission reference
    ({{identifier}});
 3. each state source and its staleness bound ({{lifecycle}});
-4. the value its anchors bind as the envelope `iss`, and the
+4. how the binding carries the Authority Set (token payload,
+   status-served view, or native artifact) and where each narrowing
+   occurs ({{authority}});
+5. the value its anchors bind as the envelope `iss`, and the
    relationship of any native commitment to the anchors
    ({{anchors}});
-5. the discovery surface for issuer key material ({{keys}});
-6. the audit horizon ({{audit-horizon}}); and
-7. the surface that realizes each approval-event step
+6. the discovery surface for issuer key material ({{keys}});
+7. the audit horizon ({{audit-horizon}}); and
+8. the surface that realizes each approval-event step
    ({{approval-fidelity}}).
 
 Each item is checkable against the binding's own text; a claim its
