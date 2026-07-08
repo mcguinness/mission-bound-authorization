@@ -36,6 +36,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-issuance-grant:
+    title: "Mission Issuance Grant for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -325,7 +333,10 @@ that names exactly one Mission, through the `mission` claim (`id`,
 Mission record binds ({{identifier}}), issued only while the
 referenced Mission is `active`: credential issuance is gated on
 Mission state. The `mission` claim shape is the interoperable
-default.
+default. Provision may be composite: the standalone MAS binding
+together with Authorization Servers consuming its issuance grants
+({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) provides
+this credential jointly.
 
 Under partial provision, the binding issues no such credential. It
 MUST define a join per the externally established mode of the runtime
