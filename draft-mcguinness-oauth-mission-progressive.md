@@ -46,6 +46,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-discovery:
+    title: "Mission Open-World Discovery"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-aauth:
     title: "Mission-Bound Authorization for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
@@ -373,7 +381,10 @@ composes one such substrate,
 evaluate the declaration against the ceiling and the record MUST
 carry the declaration's digest as `resource_declaration_digest`, so
 the encounter is reproducible in audit: what the resource claimed to
-be when authority bound to it.
+be when authority bound to it. The discovery companion
+({{I-D.draft-mcguinness-mission-discovery}}) defines the encounter
+adjudication contract, the identity pinning, and the floors this
+drawdown path carries.
 
 # Conformance {#conformance}
 

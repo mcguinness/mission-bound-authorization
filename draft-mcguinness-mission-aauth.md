@@ -72,6 +72,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-discovery:
+    title: "Mission Open-World Discovery"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -956,7 +964,10 @@ governance half without new mechanism:
 
 R3 is an exploratory draft; this section describes composition, not
 a normative dependency, and nothing in this binding's conformance
-requires it.
+requires it. The discovery companion
+({{I-D.draft-mcguinness-mission-discovery}}) defines the encounter
+contract, the identity pinning, and the floors the Person Server
+applies at that gate.
 
 # Conformance {#conformance}
 

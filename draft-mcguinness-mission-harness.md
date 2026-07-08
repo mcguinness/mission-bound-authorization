@@ -80,6 +80,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-discovery:
+    title: "Mission Open-World Discovery"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-orchestration:
     title: "Mission Orchestration and Unwinding"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html
@@ -276,7 +284,12 @@ claim. For each mediated class the statement MUST also enumerate the
 secondary egress channel classes the environment offers, at minimum
 DNS resolution, log and error output, and shared stores another
 process reads, stating for each whether it is mediated, excluded by
-the isolation mechanism, or outside the claim. The statement also declares the deployment's taint policy
+the isolation mechanism, or outside the claim. The enumeration is
+not static where open-world discovery is deployed: a channel created
+by a discovery binding enters it at binding, recorded in Harness
+Evidence, and an egress channel that entered neither way is a
+mediated-environment violation, not a discovery
+({{I-D.draft-mcguinness-mission-discovery}}). The statement also declares the deployment's taint policy
 ({{session-taint}}). Verifying that no unmediated path exists is a
 deployment audit obligation, not a protocol property: this profile
 fixes what the statement declares, not how a deployment proves it.

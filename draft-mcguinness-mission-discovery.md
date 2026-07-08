@@ -1,0 +1,490 @@
+---
+title: "Mission Open-World Discovery"
+abbrev: "Mission Discovery"
+category: exp
+
+docname: draft-mcguinness-mission-discovery-latest
+submissiontype: IETF
+number:
+date:
+consensus: true
+v: 3
+keyword:
+ - oauth
+ - mission
+ - agent
+ - authorization
+ - discovery
+ - open world
+venue:
+  github: "mcguinness/mission-bound-authorization"
+  latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html"
+
+author:
+ -
+    fullname: Karl McGuinness
+    organization: Independent
+    email: public@karlmcguinness.com
+
+normative:
+  RFC8785:
+  RFC9728:
+  I-D.draft-mcguinness-oauth-mission:
+    title: "Mission-Bound Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-progressive:
+    title: "Mission Progressive Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-harness:
+    title: "Mission-Aware Agent Harnesses"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+
+informative:
+  I-D.draft-mcguinness-oauth-domain-authorized-issuer:
+  I-D.draft-hardt-aauth-r3:
+    title: "AAuth Rich Resource Requests (R3)"
+    target: https://dickhardt.github.io/AAuth/draft-hardt-aauth-r3.html
+    author:
+      -
+        ins: D. Hardt
+        name: Dick Hardt
+    date: 2026
+  I-D.draft-mcguinness-mission-aauth:
+    title: "Mission-Bound Authorization for AAuth"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-expansion:
+    title: "Mission Expansion for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-cross-domain:
+    title: "Mission Cross-Domain Projection for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-authzen:
+    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-metering:
+    title: "Mission Consumption Metering"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-audit:
+    title: "Mission Audit Transparency"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-architecture:
+    title: "An Architecture for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+
+--- abstract
+
+A Mission commits its authority at approval, but an open-world agent
+meets resources the approval could not name. This document defines
+discovery as a governed operation: the Encounter, the Discovery
+Adjudication that evaluates a newly met resource against a
+pre-consented ceiling, the identity a discovered resource must pin
+before any binding, and the Discovery Evidence that makes each
+binding reproducible in audit. Two floors hold regardless of policy:
+a resource's self-declaration is accountability material and never
+classification authority, and in a session that has ingested
+untrusted content no external-communication- or commitment-capable
+resource binds without a human. A Mission without a ceiling binds
+nothing discovered: the open world is reachable only through consent
+given in advance, narrowed at every step, and evidenced at every
+binding.
+
+--- middle
+
+# Introduction
+
+Mission-Bound Authorization for OAuth 2.0
+{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile", here
+"the core") commits a Mission's authority at the approval event, over
+resources the Authority Set names. An open-world agent breaks that
+premise: given a task, it meets resources, tools, and services the
+approval could not enumerate, and some substrates invert the
+ontology outright, with the resource declaring its own operations,
+meaning, and consequences at encounter time
+({{I-D.draft-hardt-aauth-r3}}).
+
+The family already routes the encounter through existing levers: a
+resource within a pre-consented ceiling binds by policy drawdown
+({{I-D.draft-mcguinness-oauth-mission-progressive}}), a catalog
+capability binds through the capability-source binding
+({{I-D.draft-mcguinness-mission-authzen}}), a partner domain binds
+through projection
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), and anything
+else requires a fresh approval
+({{I-D.draft-mcguinness-oauth-mission-expansion}}). What no document
+defines is the encounter itself: what is submitted when an agent
+meets an unknown resource, who adjudicates it, what identity the
+resource must pin first, what its self-description may and may not
+influence, and what record survives. This document defines that
+contract, and the two floors that hold regardless of deployment
+policy: self-declarations never classify consequences, and tainted
+sessions never bind egress by policy alone.
+
+# Status: An EXPERIMENTAL Extension {#optional-status}
+
+This document is Experimental. It extends stable interfaces only
+through their declared seams: the progressive profile's drawdown
+path, the runtime profile's decision context, and the evidence
+objects' coordinated-extension rules. A deployment that does not
+adopt it is unaffected; a Mission whose Authority Set and ceiling
+name every resource it touches never encounters this document. The
+stable path for a resource outside every envelope is a fresh
+human-approved expansion
+({{I-D.draft-mcguinness-oauth-mission-expansion}}).
+
+## Requirements Language
+
+{::boilerplate bcp14-tagged}
+
+# Conventions and Terminology {#conventions}
+
+This document uses Mission, Authority Set, Mission Issuer, the
+subset rule, and the integrity anchors as the core defines them; the
+authority ceiling, drawdown policy, and in-ceiling expansion as the
+progressive profile defines them
+({{I-D.draft-mcguinness-oauth-mission-progressive}}); action
+classes, PEP, and PDP as the runtime profile defines them
+({{I-D.draft-mcguinness-mission-runtime}}); and session taint as the
+harness profile defines it
+({{I-D.draft-mcguinness-mission-harness}}). It additionally uses:
+
+Encounter:
+: The event of an agent meeting, during execution, a resource,
+  capability catalog, or service that no entry of its Mission's
+  Authority Set names.
+
+Discovery Adjudicator:
+: The component that decides an encounter: the Mission Issuer where
+  binding rides the drawdown path, the PDP where the encounter is a
+  catalog capability, the AAuth Person Server at its token gate
+  ({{I-D.draft-mcguinness-mission-aauth}}).
+
+Resource Self-Declaration:
+: A content-addressed statement a resource publishes about its own
+  operations, meaning, and consequences. AAuth's Rich Resource
+  Requests R3 document is one such form
+  ({{I-D.draft-hardt-aauth-r3}}).
+
+Discovery Binding:
+: The successful outcome of an adjudication: concrete authority for
+  the encountered resource, within a consented ceiling entry, bound
+  to the Mission.
+
+# Mission Substrate {#mission-substrate}
+
+This profile is defined against the Mission model rather than OAuth
+mechanics. It consumes: the Mission record's committed members and
+the only-`active` rule; the Authority Set representation with the
+subset rule's resource-narrowing semantics; the integrity-anchor
+envelope for the digests its evidence carries; and the progressive
+profile's consented ceiling, which is the only object a discovery
+binding may draw against. Where these exist under another binding,
+this profile composes unchanged; the AAuth binding hosts the
+adjudication at its Person Server token gate.
+
+# The Encounter {#encounter}
+
+An encounter is classified before it is adjudicated:
+
+- **A resource**: an API origin or service the agent must call. It
+  is adjudicated under this profile ({{adjudication}}).
+- **A capability catalog or tool**: a tool server or catalog whose
+  capabilities the agent would invoke. Its admission is adjudicated
+  under this profile; each capability then binds and drifts under
+  the capability-source rules
+  ({{I-D.draft-mcguinness-mission-authzen}}).
+- **A foreign trust domain**: a resource whose Authorization Server
+  the deployment's trust does not cover. This profile does not bind
+  it; cross-domain projection exists for domains with established
+  trust ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), and
+  everything else is a fresh approval.
+
+The encounter request is agent-influenced input by construction: the
+agent chose what to meet, and content it ingested may have chosen
+for it. Every rule in this document is written against that fact,
+and no member of an encounter request derives, widens, or gates
+authority by itself, per the core's inert-input rule.
+
+# Resource Identity {#resource-identity}
+
+No binding occurs against an unpinned resource. Before adjudication,
+the identity of the encountered resource MUST be established and
+recorded:
+
+1. **Origin.** The resource's origin, TLS-authenticated at
+   encounter.
+2. **Authorization chain.** Where the resource names an
+   Authorization Server, the resource-to-AS association is
+   established through OAuth 2.0 Protected Resource Metadata
+   {{RFC9728}}, and the metadata document's bytes are digested into
+   the evidence. A deployment SHOULD additionally verify that the
+   named issuer is authorized for the resource's domain, for which
+   the domain-authorized-issuer mechanism is one profile
+   ({{I-D.draft-mcguinness-oauth-domain-authorized-issuer}}); an
+   unverifiable issuer association routes the encounter to a human.
+3. **Self-declaration.** Where the resource publishes a
+   self-declaration, its content-addressed digest is computed at
+   encounter and carried through adjudication and evidence
+   ({{lying-resource}}).
+
+Under the AAuth binding, the Person Server performs the equivalent
+pinning with the substrate's own material: the Access Server
+association and the R3 document's `r3_s256`
+({{I-D.draft-mcguinness-mission-aauth}}).
+
+# Discovery Adjudication {#adjudication}
+
+An adjudication takes, at minimum: the Mission reference; the pinned
+resource identity ({{resource-identity}}); the self-declaration
+digest where one exists; the requesting actor; and the session's
+taint state as the harness reports it. It returns exactly one of:
+
+**Bind.**
+: The encountered resource falls within a consented ceiling entry
+  under the subset rule's resource-narrowing semantics, no floor of
+  this document objects, and concrete authority is created for it:
+  under the OAuth binding, as a progressive in-ceiling drawdown
+  whose successor entry names the resource
+  ({{I-D.draft-mcguinness-oauth-mission-progressive}}); under the
+  AAuth binding, as the Person Server's token-gate decision. The
+  binding is narrowing-only: nothing an encounter creates may exceed
+  the ceiling entry it draws against.
+
+**Route to a human.**
+: The encounter is real but no policy may decide it: it falls
+  outside every ceiling entry, a floor of this document requires a
+  human ({{lying-resource}}, {{injection-discovery}}), or identity
+  could not be fully pinned. The encounter becomes an expansion
+  proposal carrying the pinned identity and declaration digest, so
+  the Approver decides with the same facts the policy saw.
+
+**Refuse.**
+: The encounter violates a hard rule (unpinnable identity the
+  deployment does not escalate, a prohibited class, an exhausted
+  bound) and is recorded as refused.
+
+A Mission with no consented ceiling has no bind outcome: every
+encounter routes to a human or refuses. Discovery is default-closed.
+
+On the OAuth binding's drawdown path, the encounter rides the
+expansion request as two additional parameters, `encountered_resource`
+(the pinned identity, as a JSON object) and
+`resource_declaration_digest`; the progressive profile's rate bound,
+prohibited-class mapping, and audit linkage apply to
+encounter-triggered drawdowns unchanged.
+
+# The Lying Resource {#lying-resource}
+
+A self-declaration is self-asserted: a malicious resource declares
+itself read-only, reversible, and inconsequential, and authors
+consent text to match. Therefore:
+
+- A self-declaration is accountability material, never
+  classification authority. The action classes of an encountered
+  resource's operations are assigned by the deployment's own
+  classification under the runtime profile
+  ({{I-D.draft-mcguinness-mission-runtime}}), never taken from the
+  declaration. A declaration may only make classification stricter,
+  never laxer.
+- Authority in the irreversible, external-commitment, or
+  privileged-administration classes MUST NOT bind on any encounter
+  by policy alone, regardless of ceiling: those bindings route to a
+  human, with the declaration rendered as the resource's claim, not
+  as fact.
+- The declaration digest is committed in evidence precisely so a
+  lie is attributable: what the resource claimed at binding is
+  reproducible against what it later did.
+
+# Injection-Driven Discovery {#injection-discovery}
+
+The sharpest open-world attack needs no authority excess: injected
+content steers the agent to encounter the attacker's resource and
+bind it in-ceiling, and the exfiltration channel is created rather
+than found. Two rules close the policy path:
+
+- In a session the harness reports tainted
+  ({{I-D.draft-mcguinness-mission-harness}}), an encounter whose
+  binding would create external-communication- or
+  external-commitment-capable authority MUST NOT bind by policy: it
+  routes to a human, and the disclosure states that the session had
+  ingested untrusted content.
+- A channel created by a discovery binding enters the harness's
+  egress-channel enumeration at binding, recorded in Harness
+  Evidence; an egress channel that did not enter through a binding
+  or the original enumeration is a violation of the mediated
+  environment, not a discovery.
+
+Where the metering companion is deployed, a deployment MAY place
+discovered egress-capable bindings in an exclusivity group with its
+sensitive-read authority, so a session that has read cannot acquire
+new egress by encounter at all
+({{I-D.draft-mcguinness-mission-metering}}).
+
+# Discovery Evidence {#discovery-evidence}
+
+Every adjudication, in all three outcomes, produces a Discovery
+Evidence object:
+
+`mission`:
+: REQUIRED. The Mission's `id` and `issuer`.
+
+`outcome`:
+: REQUIRED. `bound`, `routed_to_approval`, or `refused`.
+
+`resource`:
+: REQUIRED. The pinned identity of {{resource-identity}}: the
+  origin, and where established, the authorization-chain metadata
+  digest and issuer.
+
+`resource_declaration_digest`:
+: CONDITIONAL. REQUIRED when a self-declaration existed at
+  encounter; its content-addressed digest.
+
+`ceiling_entry_digest`:
+: CONDITIONAL. REQUIRED on `bound`: the integrity-anchor encoded
+  digest of the ceiling entry drawn against.
+
+`actor`, `taint`, `adjudicator`, `adjudicated_at`:
+: REQUIRED. The requesting actor; the session taint state presented;
+  the adjudicating component; the time.
+
+The object's canonical bytes are its JCS canonicalization
+{{RFC8785}}; its type identifier is
+`application/mission-discovery-evidence+json` (a local-use
+identifier pending registration). It is registrable in a
+transparency log on the Mission's feed
+({{I-D.draft-mcguinness-mission-audit}}), and its digest members are
+what make an encounter reproducible: what was met, what it claimed,
+what was drawn against, and who decided.
+
+# Conformance {#conformance}
+
+A deployment claiming this profile:
+
+- adjudicates every encounter of the classes it enables through
+  {{adjudication}}, default-closed, with the identity pinning of
+  {{resource-identity}};
+- enforces both floors: no consequence classification from
+  self-declarations, with the high-consequence human floor
+  ({{lying-resource}}); and no policy binding of egress-capable
+  authority in tainted sessions ({{injection-discovery}});
+- produces Discovery Evidence for every adjudication
+  ({{discovery-evidence}}); and
+- states in its enforcement-scope statement which encounter classes
+  it adjudicates, the ceiling families consented for them, and the
+  floors as published limits.
+
+# Security Considerations {#security-considerations}
+
+**The lying resource** is {{lying-resource}}'s subject; its residual
+is honest: a resource whose operations are correctly classified
+low-consequence can still misdescribe its meaning to an Approver,
+and the declaration digest makes that attributable, not impossible.
+
+**Injection-driven discovery** is {{injection-discovery}}'s subject;
+its residual is an untainted session binding within an over-broad
+consented family. The mitigation is at consent time: ceiling
+families SHOULD be as narrow as the task allows, and the progressive
+profile's rate bound applies per chain, so mass encounter-binding is
+bounded and visible.
+
+**Declaration swap.** A resource that changes its declaration
+between encounter and use is caught by the digest: the runtime
+capability-drift rule refuses catalog capabilities whose source
+changed, and a re-encountered resource whose declaration digest
+differs is a new encounter, not a bound one.
+
+**Probing.** Encounter refusals reveal ceiling shape to whoever
+controls what the agent meets. Refusals are uniform (`refused`
+carries no ceiling detail), and the anti-oracle discipline of the
+family's status surfaces applies to any encounter-facing endpoint.
+
+**Adjudicator availability.** The adjudicator sits on the discovery
+path only: a bound resource is thereafter enforced by the runtime
+layer without re-adjudication, and adjudicator outage stops new
+bindings, never existing authority. Fail-closed here costs
+opportunity, not work in flight.
+
+# Privacy Considerations {#privacy-considerations}
+
+Encounters reveal where an agent goes: the adjudicator, and the
+transparency log where evidence registers, learn every resource an
+agent met, including refused ones. That trail is the point for
+audit, and a hazard for the Subject. A deployment minimizes by
+registering digests rather than declarations, restricting Discovery
+Evidence access as it does other Mission evidence, and applying the
+issuance profile's identifier guidance where correlation across
+feeds matters. A self-declaration may itself contain third-party
+information; committing its digest rather than its bytes keeps that
+content out of the log.
+
+# IANA Considerations {#iana}
+
+This document makes no IANA request. The evidence type identifier of
+{{discovery-evidence}} is local-use pending registration.
+
+--- back
+
+# Acknowledgments
+{:numbered="false"}
+
+This document gives the family's open-world encounter one contract
+and two floors; the mechanisms it composes are the progressive,
+runtime, harness, and audit profiles' own.
