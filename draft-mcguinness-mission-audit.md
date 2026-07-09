@@ -29,6 +29,7 @@ author:
 normative:
   RFC3339:
   RFC6234:
+  RFC6838:
   RFC8785:
   RFC9052:
   RFC9943:
