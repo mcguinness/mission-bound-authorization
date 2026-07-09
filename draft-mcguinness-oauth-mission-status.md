@@ -109,6 +109,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-mandate:
+    title: "Mission Mandate"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-authzen:
+    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -1121,14 +1137,19 @@ signed form it requires.
 ## Signing-Key Retention for Audit
 
 The AS signs Mission Status and Lifecycle responses with a key from
-its `jwks_uri`. The AS MUST retain the public JWK for every `kid` it
-has signed such a response under, indexed by `kid`, for at least the
-Mission record retention period (even after the key is rotated out
-of the live `jwks_uri`), so an archived
-`application/mission-status-response+jwt` remains verifiable for audit
-and dispute. The AS MAY expose retired verification keys through a
-deployment-defined audit interface but MUST NOT serve them as active
-keys at `jwks_uri`.
+its `jwks_uri`. The AS MUST keep the public JWK for every `kid` it
+has signed such a response under resolvable in its `jwks_uri` for at
+least the Mission record retention period, so an archived
+`application/mission-status-response+jwt` remains verifiable for
+audit and dispute. Rotation retires a key from signing, never from
+the published set within that bound: the same rule the Mandate
+states for its evidence lifetime
+({{I-D.draft-mcguinness-mission-mandate}}) and the AuthZEN profile
+states for its deployment-published evidence key sets
+({{I-D.draft-mcguinness-mission-authzen}}). A key known or suspected
+compromised is the exception: the AS removes it, and the Mandate
+profile's compromise-time rule governs how artifacts signed under it
+are then classified.
 
 ## General OAuth Security
 

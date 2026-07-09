@@ -1240,6 +1240,13 @@ claims:
 `aud`:
 : OPTIONAL. The PDP or PDPs the assertion is minted for.
 
+`mapping_version`:
+: OPTIONAL. A string. The mapping contract version
+  ({{mapping-contract}}) under which the subject and client joins
+  were evaluated. RECOMMENDED where the MAS publishes a mapping
+  contract, so each join is attributable to the mapping that
+  produced it.
+
 When the introspected token carries instance identity
 ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}), the MAS
 SHOULD include the instance identifier in the `token` object: the
@@ -1253,8 +1260,9 @@ instance, not any holder of a client-shared key.
 The endpoint returns HTTP 200 with a JSON object whose `assertion`
 member carries the JWT. Each minting is a join evidence event: the MAS
 records the Mission reference, the token digest and thumbprint, the
-authenticated caller, and the validity window, retained for the audit
-horizon.
+authenticated caller, the mapping version where one is published
+({{mapping-contract}}), and the validity window, retained for the
+audit horizon.
 
 Example claims:
 
@@ -1458,7 +1466,11 @@ binding, with the obligations below ({{I-D.draft-mcguinness-mission-architecture
   MAS-served state MUST be an active freshness source with a published
   staleness bound, meeting the runtime profile's requirement for those
   classes ({{I-D.draft-mcguinness-mission-runtime}}); token-lifetime
-  expiry alone does not qualify.
+  expiry alone does not qualify. Where per-class bounds differ, the
+  metadata's single `mission_max_stale_seconds` ({{discovery}})
+  advertises the tightest bound in force, the value a consumer may
+  assume without knowing an action's class; the per-class bounds are
+  published in the Enforcement Scope Statement.
 - **Join Assertion.** The MAS MUST offer the Mission Join Assertion
   ({{join-assertion}}), and for the high-consequence classes the PDP
   MUST require one: the mapping join ({{mission-join}}) is the baseline
@@ -1485,6 +1497,34 @@ A deployment claiming this profile SHOULD publish its claims,
 coverage, and residual risks as a Mission Deployment Profile
 ({{I-D.draft-mcguinness-mission-architecture}}).
 
+## Estate Prerequisites {#enterprise-prerequisites}
+
+The profile's mandatory path runs through the deployment's unchanged
+Authorization Server, and it assumes capabilities there:
+configuration rather than code, but gating nonetheless. Before
+claiming the profile a deployment confirms its estate AS provides:
+
+- **Token introspection.** {{RFC7662}} introspection reachable by the
+  MAS, under credentials the deployment protects
+  ({{sec-join-assertion}}); the MAS cannot mint a Join Assertion
+  without it ({{join-assertion-request}}).
+- **Sender-constrained issuance.** DPoP-bound or mutual-TLS-bound
+  access tokens for the agent clients acting in the high-consequence
+  classes: the join requires sender-constraint for those classes
+  ({{mission-join}}), and the MAS MUST NOT mint an assertion for a
+  token without a `cnf` key ({{join-assertion-request}}).
+- **`cnf` in introspection.** Introspection responses that report the
+  token's `cnf` confirmation, since the assertion binds the key
+  thumbprint that response reports.
+
+An estate whose Authorization Server cannot provide these still
+joins under the mapping join at the conformance floor
+({{mission-join}}, {{conformance}}); it does not claim this profile.
+The digest pair of {{join-assertion-request}} further assumes an
+introspection surface that resolves a token by digest, which
+mainstream Authorization Servers do not provide; a deployment plans
+for the `access_token` form.
+
 ## The Enterprise Mapping Contract {#mapping-contract}
 
 The dominant MAS risk is a coarse or drifting join: shared
@@ -1505,6 +1545,11 @@ performs:
 - an audit record for each mapping decision; and
 - the failure semantics, which MUST fail closed with `mission_mismatch`
   on any unresolved or ambiguous mapping.
+
+A MAS that mints Join Assertions SHOULD carry the version in each
+assertion's `mapping_version` claim ({{join-assertion-artifact}}), so
+a mapping change is attributable in join evidence, not only
+detectable in documents.
 
 ## Policy View Distribution {#policy-distribution}
 
