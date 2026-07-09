@@ -991,6 +991,12 @@ that a deployment claiming the Mission suite extend that documentation to
 its full trusted base: which of the components in {{trusted-base}} it
 relies on, which it does not deploy, and, for each consequential action
 class, which components must be intact for the class's guarantee to hold.
+The statement covers key custody: for each key class the deployment
+operates (issuer signing, evidence signing, agent sender-constraint,
+mediating-PEP custody, attenuation roots), where the key is held, at
+what custody grade, and the compromise-recovery procedure, since the
+model's strongest assumption reduces to those keys
+({{trusted-base}}).
 This documentation is what lets a relying party or auditor reason about
 the deployment's actual security posture rather than the model's
 idealized one.
