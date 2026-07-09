@@ -108,6 +108,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-discovery:
+    title: "Mission Open-World Discovery"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-progressive:
+    title: "Mission Progressive Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -141,14 +157,16 @@ every primitive except the Mission-bound credential and issuance
 gating, and profiles the join that fills that gap as its Mission Join
 ({{I-D.draft-mcguinness-mission-authority-server}}). The AAuth
 binding gives that protocol's native mission concept the model's
-structure and provides every primitive
+structure; in its PS-asserted mode it provides every primitive, and in
+its federated mode it provides them all only where the Access Server
+carries the family `mission` members, and is Reference-only otherwise
 ({{I-D.draft-mcguinness-mission-aauth}}).
 
 The family's substrate-neutral profiles (runtime enforcement and its
 decision API bindings, the harness, orchestration, intent shaping,
-consent evidence, the Mandate, audit transparency, and the security
-model) are written against Mission primitives rather than against
-OAuth mechanics; each names what it consumes in a Mission Substrate
+consent evidence, consumption metering, open-world discovery, the
+Mandate, audit transparency, and the security model) are written
+against Mission primitives rather than against OAuth mechanics; each names what it consumes in a Mission Substrate
 section of its own, except consent evidence, whose consumption is
 stated by its approval binding. A binding that provides the
 primitives therefore hosts these profiles as written.
@@ -213,10 +231,10 @@ profiles; a summary here never overrides its home.
 
 ## Mission Record, Identifier, and Issuer {#identifier}
 
-A binding MUST maintain the Mission record as the core defines it:
-the durable object created at the approval event, immutable after
-creation except its lifecycle state, and retained per the audit
-horizon ({{audit-horizon}}). A binding MUST provide a Mission
+A binding MUST require its implementations to maintain the Mission
+record as the core defines it: the durable object created at the
+approval event, immutable after creation except its lifecycle state,
+and retained per the audit horizon ({{audit-horizon}}). A binding MUST provide a Mission
 Identifier that is opaque, carries no semantic content, has at least
 128 bits of entropy, and is never reused, together with an `issuer`:
 an issuer identifier naming the approving Mission Issuer, from which
@@ -259,7 +277,12 @@ its kill-switch state.
 
 A binding MUST specify at least one state source from which consumers
 learn a Mission's current state, with a stated staleness bound, so
-deployments can meet the runtime profile's freshness rules.
+deployments can meet the runtime profile's freshness rules. Each state
+source MUST be authenticated and integrity-protected, so a consumer
+verifies a state report's origin and detects tampering before relying
+on it: state whose origin or integrity a consumer cannot verify is
+treated as unavailable and fails closed. Verifying a signed state
+report consumes the issuer key material of {{keys}}.
 
 Home: the Mission Lifecycle and Gating section of
 {{I-D.draft-mcguinness-oauth-mission}}; the freshness rules are the
@@ -275,12 +298,13 @@ staleness), the harness (pause, suppress, terminate), orchestration
 
 A binding MUST represent the Authority Set as an array of entries in
 the core's authorization-details shape: each entry names a resource,
-its actions, and its constraints. The binding MUST apply the subset
-rule at every narrowing it performs: no derivation, delegation, or
-attenuation under a Mission yields authority broader than the
-Mission's Authority Set. The binding MUST interpret Common Constraint
-names per their definitions and compare their values in value space
-under each definition's subset and intersection rules, so independent
+its actions, and its constraints. The binding MUST require its
+implementations to apply the subset rule at every narrowing they
+perform: no derivation, delegation, or attenuation under a Mission
+yields authority broader than the Mission's Authority Set. The binding
+MUST require its implementations to interpret Common Constraint names
+per their definitions and compare their values in value space under
+each definition's subset and intersection rules, so independent
 implementations compute the same result for the same values. Where a
 binding or its enforcement surface admits a delegate, per-entry
 `delegation` policy is evaluated by whichever surface admits the
@@ -297,15 +321,15 @@ carriage).
 
 ## Mission Integrity Anchors {#anchors}
 
-A binding MUST compute `intent_hash` and `authority_hash` over the
-core's domain-separated, issuer-bound envelope (`typ` names the
-committed object, `iss` carries the binding's issuer identifier,
-`value` is the committed object), under the core's canonicalization
-rules. The computation is the core's byte for byte: the core's test
-vectors verify a binding's implementation, and only the envelope
-`iss` is the binding's own. A verifier MUST reject an anchor whose
-algorithm prefix it does not recognize and MUST NOT treat an
-unrecognized prefix as `sha-256`. A new committed object uses the same
+A binding MUST require its implementations to compute `intent_hash`
+and `authority_hash` over the core's domain-separated, issuer-bound
+envelope (`typ` names the committed object, `iss` carries the binding's
+issuer identifier, `value` is the committed object), under the core's
+canonicalization rules. The computation is the core's byte for byte:
+the core's test vectors verify a binding's implementation, and only the
+envelope `iss` is the binding's own. A binding MUST require verifiers
+of its anchors to reject an anchor whose algorithm prefix they do not
+recognize and never to treat an unrecognized prefix as `sha-256`. A new committed object uses the same
 envelope with a new `typ` under the core's extension rule.
 
 A binding MAY additionally commit to its native artifact with a
@@ -384,7 +408,8 @@ published keys), the Mandate
 A binding MUST declare an audit horizon: the retention window for the
 Mission record and its evidence, at least the Mission's lifetime plus
 a declared post-expiry period. After a Mission reaches a terminal
-state, its record MUST be retained for the audit horizon.
+state, the binding MUST require its record to be retained for the
+audit horizon.
 
 Home: the Mission Record section of
 {{I-D.draft-mcguinness-oauth-mission}}.
@@ -410,6 +435,13 @@ steps, whatever its native ceremony:
 5. create the Mission record in the `active` state atomically with the
    approval decision.
 
+The binding MUST provide a Mission Intent submission channel through
+which a client proposes the Intent that step 1 authenticates against
+and step 3 derives from, preserving the core's Intent semantics (its
+`resources`, `controls`, and inert fields carried intact); a binding
+without such a channel cannot run the approval event, and the
+intent-shaping profile consumes this channel ({{composition}}).
+
 Derivation in step 3 MUST be bounded by the approved Mission Intent
 per the core's Mission Authority rules: each derived entry's resource
 is among the Intent's `resources`, the Intent's `controls` are
@@ -418,8 +450,9 @@ respected, and `proposed_authority` is only narrowed, so
 with a defined relationship.
 
 If the derived Authority Set changes between rendering and consent,
-the binding MUST recompute the anchors and MUST NOT create the
-Mission without the Approver's consent to the changed set.
+the binding MUST require its implementations to recompute the anchors,
+and not to create the Mission without the Approver's consent to the
+changed set.
 
 Home: the Mission Approval section of
 {{I-D.draft-mcguinness-oauth-mission}}. The MAS shows the steps
@@ -442,18 +475,37 @@ provision); `.` not consumed. Notes follow the table.
 
 | Profile | Id | State | Auth | Anchor | Cred | Keys | Horizon | Appr |
 |---|---|---|---|---|---|---|---|---|
-| Runtime and its decision API bindings | X | X | X | X | B | . | X | . |
+| Runtime and its decision API bindings | X | X | X | X | B | X | X | . |
 | Harness | X | X | . | . | B | . | . | . |
 | Orchestration | X | X | . | X | . | . | . | . |
 | Intent Shaping | . | . | . | X | . | . | . | . |
 | Consent Evidence | X | . | X | X | . | X | X | X |
-| Mandate | X | X | X | X | . | X | . | . |
+| Mandate | X | X | X | X | . | X | X | . |
 | Audit Transparency | X | . | . | X | . | X | X | . |
 | Consumption Metering | X | . | X | X | . | . | . | . |
+| Open-World Discovery | X | X | X | X | . | . | . | . |
 {: title="Primitives consumed per substrate-neutral profile"}
 
 - The credential column is the split. Under partial provision, every
   `B` composes through the join and no other cell changes.
+- State verification consumes Keys: the runtime row reads a signed
+  state surface and verifies it under the Issuer's published keys
+  ({{lifecycle}}, {{keys}}), so its Keys cell is `X`; a binding whose
+  harness or orchestration verifies state itself consumes Keys
+  likewise.
+- The Mandate consumes the audit horizon: an absent `mandate_exp`
+  binds the Mandate's evidence validity to the Mission's audit horizon
+  ({{I-D.draft-mcguinness-mission-mandate}}), so its Horizon cell is
+  `X`; its Authority Set carriage is optional.
+- Open-World Discovery is experimental: it keys on the identifier and
+  the only-`active` rule, adjudicates encountered resources against the
+  Authority Set under the subset rule, and commits Discovery Evidence
+  through the anchor envelope
+  ({{I-D.draft-mcguinness-mission-discovery}}); where the Progressive
+  companion supplies a pre-consented ceiling
+  ({{I-D.draft-mcguinness-oauth-mission-progressive}}), that ceiling is
+  a further adjudication input, as intent shaping takes the Intent
+  structure as a further input.
 - Consumption Metering defines no binding of its own: its counters key
   on the identifier, its `call_class` draws on the Authority Set
   representation, and its bounds are committed through the anchor

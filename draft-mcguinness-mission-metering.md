@@ -78,6 +78,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-orchestration:
+    title: "Mission Orchestration and Unwinding"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -271,8 +279,15 @@ enforced unless the bound is within a runtime enforcement scope that
 meters it under this document. A deployment that accepts the bounds
 into the Intent but does not meter them presents an unenforced promise
 at the consent surface; a Mission Issuer whose deployment does not
-meter a bound SHOULD refuse an Intent that carries it, and MUST NOT
-render it as an enforced limit.
+meter a bound MUST refuse an Intent that carries it at intake, and MUST
+NOT render it as an enforced limit.
+
+Under a multi-PDP topology ({{topology}}), a consented hard cap the
+deployment renders as enforced MUST either be realized as structurally
+exact relaxations, per-PDP sub-budgets that sum to the cap, or be
+rendered with the consistency qualifier the topology operates under, so
+the Approver consents to the guarantee the deployment can meet rather
+than to a hard number it cannot.
 
 # Consumption Metering {#metering}
 
@@ -290,15 +305,31 @@ Consumption bounds are enforced by the runtime profile's PDP
   refuse an action that would exceed either cap. Payload size is
   measured over the parameter bytes committed by `parameter_digest`
   ({{I-D.draft-mcguinness-mission-runtime}}); the operation profile
-  defines the measurement so PDPs accumulate consistently.
+  defines the measurement so PDPs accumulate consistently. For a
+  reference-typed parameter, one that carries an attachment identifier
+  or URL whose referent egresses while the pointer is what
+  `parameter_digest` commits, the operation profile MUST measure the
+  dereferenced payload size, or the deployment MUST exclude such
+  actions from a claimed `bytes` bound; counting the pointer bytes
+  alone understates the egress.
 - `max_duration`: the PDP
   accumulates the duration of consequential activity it reserves,
   commits, or permits and MUST refuse once that total would exceed the
-  bound. For an action whose duration is not known before execution,
+  bound. The PDP MUST accumulate `max_duration` as the sum of
+  per-action measured durations, not the union of activity intervals,
+  so concurrent actions each count against the bound. For an action
+  whose duration is not known before execution,
   the PDP MUST either reserve a bounded maximum duration or issue a
   duration lease that expires unless renewed; the PEP MUST stop the
   action or obtain a new permit before the reservation or lease is
-  exhausted. After execution, the PEP MUST report the measured
+  exhausted. Lease boundaries MUST carry a clock-skew margin: the PEP
+  renews or stops ahead of expiry by at least the deployment's skew
+  bound, so a renewal in flight does not race the expiry it extends.
+  For an action that cannot be safely stopped mid-execution, lease
+  exhaustion is handled as an in-flight outcome under the orchestration
+  profile's `dispatched_not_committed` or `unknown` classes
+  ({{I-D.draft-mcguinness-mission-orchestration}}), not by severing
+  the action. After execution, the PEP MUST report the measured
   duration so the PDP can commit actual use and release any unused
   reservation. The operation profile defines how a single action's
   duration is measured so that PDPs accumulate consistently.
@@ -352,9 +383,14 @@ consequential action matching a selector latches the group to that
 selector, atomically with the permit; for the Mission's remaining
 lifetime the PDP MUST refuse a consequential action matching any
 other selector of the same group. The latch is per group and per
-Mission, is PDP-side operational state like a consumption counter
-({{metering}}), and never unlatches: narrowing by exercise is
-monotonic, like every other narrowing in the family.
+Mission and is PDP-side operational state like a consumption counter
+({{metering}}). The latch tracks execution, not permit issuance: a
+permit whose action is affirmatively not executed never combined the
+group's authority, so when Execution Evidence reports that outcome
+within the strongly consistent latch domain the PDP releases the latch,
+restoring monotonic narrowing rather than breaking it. Absent that
+affirmative non-execution the latch does not unlatch: narrowing by
+exercise is monotonic, like every other narrowing in the family.
 
 The latch is exempt from the relaxations of {{topology}}. A counter
 degrades gracefully under a per-PDP sub-budget or a reconciliation
@@ -435,13 +471,23 @@ binding, delivery of the Execution Evidence Object
 ({{I-D.draft-mcguinness-mission-authzen}}) to the PDP is that
 commit-or-release signal: on receipt the PDP commits the consumption
 the linked action used and releases any reserved excess, keyed to the
-Execution Evidence's `decision_id`.
+Execution Evidence's `decision_id`. The deployment MUST provide a
+settlement transport for this signal: a PDP evidence-submission path,
+or an equivalent channel, with at-least-once delivery and a commit that
+is idempotent on the Execution Evidence's `decision_id`, so a
+redelivered settlement neither double-commits the consumption nor
+double-releases the reservation.
 
-Settlement can also fail to arrive. An unsettled reservation remains
-charged against the bound until it is reconciled through the runtime
-profile's orphaned-evidence process
-({{I-D.draft-mcguinness-mission-runtime}}), and is released only on
-affirmative evidence of non-execution; timeout alone never releases a
+Settlement can also fail to arrive. A reservation MUST carry a bounded
+lease so a crashed or abandoned reservation does not consume the budget
+permanently: on lease expiry without settlement the PDP reconciles the
+reservation through the runtime profile's orphaned-evidence process
+({{I-D.draft-mcguinness-mission-runtime}}). For an idempotent or
+reversible action class, expiry releases the reservation and returns the
+budget; for a non-idempotent action class, expiry forces reconciliation
+or human review rather than release. An unsettled reservation remains
+charged against the bound until it is reconciled, and is released only
+on affirmative evidence of non-execution; timeout alone never releases a
 reservation for a non-idempotent action class. The operational
 consequence: a lossy evidence channel accumulates reservations
 against `max_budget` and `max_calls` until the Mission starves on
@@ -565,6 +611,18 @@ Their enforcement, however, is only as good as the metering:
 - **Lease abandonment.** An agent that stops renewing a duration lease
   and keeps acting is stopped by the PEP, which MUST stop the action or
   obtain a new permit before the lease is exhausted ({{metering}}).
+- **Reservation starvation.** An attacker who opens reservations and
+  never settles them can consume a budget with no executed action,
+  denying the Mission its remaining authority. The bounded reservation
+  lease ({{settlement-exchange}}) caps this: an unsettled reservation is
+  reconciled on lease expiry rather than held indefinitely, and the
+  idempotent-release path returns the budget.
+- **Latch burning.** Because the first matching action latches an
+  exclusivity group, an injected agent can try to burn a group by
+  driving the side it wants foreclosed, denying the Mission the other
+  side. Releasing the latch on affirmative non-execution
+  ({{exclusivity}}) keeps an unexecuted attempt from foreclosing the
+  group permanently.
 
 # Privacy Considerations {#privacy-considerations}
 
@@ -573,7 +631,14 @@ fine-grained record of Mission activity over time. It SHOULD be
 retained under the same access controls and retention windows as
 runtime enforcement evidence
 ({{I-D.draft-mcguinness-mission-runtime}}), and disclosed in decision
-responses only as refusals, not as remaining-balance oracles.
+responses only as refusals, not as remaining-balance oracles. The
+refusal boundary is itself a coarse balance oracle: the point at which a
+bound flips from permit to refusal reveals the remaining margin. A
+deployment SHOULD bound this probing with the AuthZEN profile's
+denial-oracle controls ({{I-D.draft-mcguinness-mission-authzen}}),
+per-Mission rate-limiting of access requests and evidence-logging of
+request provenance, so a compromised agent mapping a balance by
+repeated probes is visible to the humans adjudicating it.
 
 # IANA Considerations {#iana}
 

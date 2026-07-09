@@ -73,7 +73,9 @@ the Mission model's structure, lifecycle, and anchors, and because the
 Person Server issues or gates every AAuth auth token, issuance gating
 holds there too. In all three, authority only narrows as it flows down
 to derived and delegated credentials; widening requires a fresh
-approval.
+approval. (One carve-out: AAuth call chaining does not impose
+cross-hop subset attenuation; a chained downstream hop is its own
+decision point, governed under its own Mission or per-call permission.)
 
 The **core** defines the model and its OAuth 2.0 binding. Everything
 else is an OPTIONAL companion profile that layers on without changing
@@ -319,7 +321,11 @@ identity chaining (approved, in the RFC Editor queue) and ID-JAG (a
 working-group document); **audit**'s COSE hash envelope is approved
 and in the RFC Editor queue; **approval**, **attenuation**, and
 **aauth** track unratified individual drafts (OAuth Deferred Token
-Response, Attenuating Agent Tokens, and the AAuth protocol). For
+Response, Attenuating Agent Tokens, and the AAuth protocol);
+**authority-server** confines its Internet-Draft references (client
+instance assertion and the AI agent instance profile) to the
+Enterprise Mission Authority Profile's instance-bound joins, an
+optional hardening above the base conformance floor. For
 **authzen**, the stable surface is its core AuthZEN decision binding;
 its Access Request and Approval Profile (ARAP) and Model Context
 Protocol tool-authorization (COAZ) integrations are informative and
@@ -600,8 +606,11 @@ approval event, and the family lifecycle rides AAuth's two wire states
 (`active`, `terminated`) with revocation and expiry made normative and
 the only-`active` rule governing. Because the Person Server issues or
 gates every AAuth auth token, this binding provides true issuance
-gating, and the auth token is a Mission-bound credential, so runtime
-enforcement composes credential-carried.
+gating in both modes. In its PS-asserted mode it is full provision:
+the auth token is a Mission-bound credential, so runtime enforcement
+composes credential-carried. Its federated mode is full provision only
+where the Access Server carries the family `mission` members, and
+Reference-only otherwise.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-mission-aauth) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-aauth) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.diff)
 

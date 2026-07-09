@@ -213,12 +213,15 @@ rely on token lifetime and the polling surfaces of
 {{I-D.draft-mcguinness-oauth-mission-status}}.
 
 A Mission Issuer that emits lifecycle events publishes a Shared Signals
-Framework {{OIDC-SSF}} stream and advertises it in Authorization Server
-metadata ({{as-metadata}}) as `mission_event_stream_endpoint`. The
-endpoint and its configuration follow {{OIDC-SSF}}; this document
-profiles only the event carried, its protection, and the consumer's
-duty on receipt. The stream MUST be served over TLS 1.2 or later (TLS
-1.3 RECOMMENDED), following the recommendations of {{RFC9325}}.
+Framework {{OIDC-SSF}} Transmitter Configuration Metadata document and
+advertises its URL in Authorization Server metadata ({{as-metadata}})
+as `mission_event_stream_endpoint`. From that document a consumer
+discovers the SSF stream configuration, stream status, add-subject, and
+poll endpoints, and the supported delivery methods, per {{OIDC-SSF}};
+this document profiles only the event carried, its protection, and the
+consumer's duty on receipt. The stream MUST be served over TLS 1.2 or
+later (TLS 1.3 RECOMMENDED), following the recommendations of
+{{RFC9325}}.
 
 Delivery uses the Shared Signals Framework delivery methods,
 advertised in the SSF Transmitter Configuration Metadata's
@@ -310,13 +313,29 @@ claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
   and `state` of `superseded`.
 - `version` (integer, required): a strictly monotonic per-Mission
   counter the Mission Issuer maintains and increments on each committed
-  lifecycle transition (the approval-event emission is version 1),
-  letting a consumer order events and detect gaps. This profile defines
-  the counter here; the issuance profile does not surface it, and the
-  Status profile returns it only where the deployment also runs this
-  profile ({{I-D.draft-mcguinness-oauth-mission-status}}).
+  lifecycle transition (the approval-event emission is version 1) and on
+  each committed metadata-only change (for example a suspend-metadata
+  update, below), letting a consumer order events and detect gaps. This
+  profile defines the counter here; the issuance profile does not
+  surface it, and the Status profile returns it only where the
+  deployment also runs this profile
+  ({{I-D.draft-mcguinness-oauth-mission-status}}).
 - `committed_at` (string, required): an RFC 3339 {{RFC3339}} date-time
   at which the Mission Issuer committed the transition.
+- `expires_at` (string, required): an RFC 3339 {{RFC3339}} date-time,
+  the Mission's own expiry, the same `expires_at` the Status profile
+  reports ({{I-D.draft-mcguinness-oauth-mission-status}}), so an
+  event-only consumer can fail safe on expiry without a Status fetch.
+- `suspend_until`, `on_expiry` (conditional): present only on a
+  transition to `suspended` under a deadline, with the values and
+  meaning of the Status profile
+  ({{I-D.draft-mcguinness-oauth-mission-status}}): the RFC 3339
+  {{RFC3339}} deadline and the transition (`resume` or `revoke`) the
+  Mission Issuer applies when it passes. A suspend-metadata update, a
+  change to `suspend_until` or `on_expiry` on an already-`suspended`
+  Mission, is emitted as a `mission.lifecycle-change` with `state` and
+  `prior_state` both `suspended` and the updated values, incrementing
+  `version` like any other committed change.
 - `tenant` (string, optional): the Mission's deployment tenant. This
   profile defines no tenant model and does not use it; it is present so
   the event type is shared, unchanged, with multi-tenant and
@@ -356,6 +375,7 @@ Example SET (decoded), for a revocation:
       "state": "revoked",
       "version": 2,
       "committed_at": "2026-11-02T09:06:40Z",
+      "expires_at": "2026-12-31T23:59:59Z",
       "reason": "Quarterly reconcile completed early"
     }
   }
@@ -383,7 +403,8 @@ Mission (`version` 1, no `prior_state`):
       },
       "state": "active",
       "version": 1,
-      "committed_at": "2026-11-02T07:00:00Z"
+      "committed_at": "2026-11-02T07:00:00Z",
+      "expires_at": "2026-12-31T23:59:59Z"
     }
   }
 }
@@ -411,6 +432,7 @@ Example SET (decoded), for a supersession, carrying `successor`:
       "state": "superseded",
       "version": 2,
       "committed_at": "2026-11-02T09:40:00Z",
+      "expires_at": "2026-12-31T23:59:59Z",
       "successor": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX"
     }
   }
@@ -431,12 +453,18 @@ is carried in the event for cross-substrate deployments where the two
 can differ.)
 
 The SET `aud` MUST be the receiving consumer's registered audience
-identifier; a consumer MUST refuse a SET whose `aud` is not its own. A
-consumer MUST treat `jti` as a one-time identifier and reject a replayed
-`jti`, tracking each `jti` for a deployment-defined replay window
-measured from the SET's `iat`. Following {{RFC8417}}, this profile does
-not require an `exp` on the SET; a consumer MAY reject a SET whose `iat`
-is implausibly old.
+identifier; a consumer MUST refuse a SET whose `aud` is not its own.
+SSF delivery is at-least-once, so the same SET (same `jti`) may be
+redelivered; a consumer MUST NOT treat redelivery as an error. At the
+delivery layer a consumer acknowledges a duplicate `jti` normally, per
+the SSF delivery method in use, without reprocessing it; at the
+application layer it applies each event idempotently by `version`
+({{consumer-behavior}}), so a redelivered SET regresses nothing.
+Tracking recently seen `jti` values for a deployment-defined window
+measured from the SET's `iat` lets a consumer recognize a duplicate;
+this is duplicate suppression, not a hard reject. Following
+{{RFC8417}}, this profile does not require an `exp` on the SET; a
+consumer MAY reject a SET whose `iat` is implausibly old.
 
 # Consumer Behavior on Receipt {#consumer-behavior}
 
@@ -456,6 +484,14 @@ On receiving and verifying ({{set-protection}}) a
 - Apply the transition idempotently: a repeated or out-of-order event
   carrying a `version` not greater than the last applied for that
   `mission.id` MUST NOT regress the consumer's view of the state.
+- Establish initial state through the Mission Status operation
+  ({{I-D.draft-mcguinness-oauth-mission-status}}) before relying on the
+  stream for a Mission: on first subscription, and whenever the earliest
+  event it holds for a `mission.id` carries a `version` greater than 1
+  (so it never received the activating event that anchors the sequence).
+  The stream carries transitions, not a snapshot; once bootstrapped, a
+  consumer MAY rely on events alone, each carrying the state members
+  ({{lifecycle-event}}) it needs to act without a further fetch.
 - Re-establish current state through the Mission Status operation
   ({{I-D.draft-mcguinness-oauth-mission-status}}) on a detected
   `version` gap (a received `version` more than one greater than the
@@ -471,11 +507,23 @@ state at the Mission Issuer; the Mission Issuer is authoritative
 believes the reported state is wrong re-checks through Mission Status
 rather than inventing a state.
 
-A consumer anchors stream liveness to the Shared Signals Framework
-{{OIDC-SSF}} stream verification event. A consumer MUST treat cached
-Mission state as stale once its age exceeds the Mission Issuer's
-advertised `mission_max_stale_seconds`
-({{I-D.draft-mcguinness-oauth-mission-status}}) and MUST re-establish
+A consumer anchors freshness to stream liveness, not to per-Mission
+age. The Shared Signals Framework {{OIDC-SSF}} provides a stream
+verification event, and a Mission Issuer MAY additionally emit a
+periodic stream-status heartbeat. A verified verification or heartbeat
+event received within the stream's heartbeat interval attests that the
+stream is live and that any committed transition for the stream's
+subjects would have been delivered; it therefore extends freshness for
+those subjects up to the next heartbeat interval. On a stream verified
+live, silence is freshness-preserving: the consumer MAY continue to
+rely on cached Mission state and does not poll Mission Status per
+Mission.
+
+The staleness fallback applies to a stream that is not verified live. A
+consumer MUST treat cached Mission state as stale once the stream has
+gone without a verified verification or heartbeat event for longer than
+the Mission Issuer's advertised `mission_max_stale_seconds`
+({{I-D.draft-mcguinness-oauth-mission-status}}), and MUST re-establish
 current state before further reliance; the Mission Status operation is
 the RECOMMENDED fallback surface. A consumer that cannot verify its
 stream, or that was down and may have missed events, applies the same
@@ -525,6 +573,7 @@ consumer's receiver ({{RFC8935}}). Decoded SET:
       "prior_state": "active",
       "version": 7,
       "committed_at": "2026-11-02T09:00:00Z",
+      "expires_at": "2026-12-31T23:59:59Z",
       "reason": "user_cancelled"
     }
   }
@@ -548,13 +597,13 @@ its Authorization Server metadata {{RFC8414}}, in addition to the
 issuance-profile and Status-profile members it already publishes:
 
 `mission_event_stream_endpoint`:
-: OPTIONAL. A string containing a URL. The Shared Signals Framework
-  {{OIDC-SSF}} stream endpoint for Mission lifecycle events
-  ({{event-stream}}). Present when the Mission Issuer emits events. The
-  supported delivery methods are discovered from the SSF stream
-  Transmitter Configuration Metadata's `delivery_methods_supported`,
-not from a separate
-  metadata member.
+: OPTIONAL. A string containing a URL. The URL of the Mission Issuer's
+  Shared Signals Framework {{OIDC-SSF}} Transmitter Configuration
+  Metadata document. From it a consumer discovers the SSF stream
+  configuration, stream status, add-subject, and poll endpoints, and
+  the supported delivery methods (`delivery_methods_supported`), rather
+  than from a separate metadata member ({{event-stream}}). Present when
+  the Mission Issuer emits events.
 
 # Security Considerations {#security-considerations}
 
@@ -568,10 +617,12 @@ covers threats specific to event propagation.
 A forged event could suppress a Mission (a spurious `revoked`) or, more
 dangerously, mask a revocation (a spurious `active`). SET signing
 ({{set-protection}}) binds each event to the Mission Issuer; a consumer
-MUST verify the signature, the `iss`, and its own `aud`, and MUST
-reject a replayed `jti`. The `version` ordering rule
+MUST verify the signature, the `iss`, and its own `aud`, and suppresses
+a redelivered `jti` as a duplicate rather than reprocessing it
+({{set-protection}}). The `version` ordering rule
 ({{consumer-behavior}}) prevents an old `active` event from overriding
-a newer `revoked` one.
+a newer `revoked` one, whether the old event is a forgery, a replay, or
+an at-least-once duplicate.
 
 ## Missed Events Are Not Fail-Open
 
@@ -638,11 +689,13 @@ the author-controlled `schemas.karlmcguinness.com` namespace:
   Identifier {{RFC9493}} of format `opaque` whose `id` is the
   `mission_id`, per {{OIDC-SSF}} conventions. Required event-body
   claims: `mission` (carrying `id` and `issuer`), `state`, `version`,
-  `committed_at`. Conditional event-body claim: `prior_state` (required
-  on transition emissions, absent on the approval-event emission).
-  Optional event-body claims: `tenant`, `reason`, `successor`
-  (`successor` present only on a `superseded` transition). See
-  {{lifecycle-event}} for the schema.
+  `committed_at`, `expires_at`. Conditional event-body claims:
+  `prior_state` (required on transition emissions, absent on the
+  approval-event emission) and `suspend_until` with `on_expiry` (present
+  only on a transition to `suspended` under a deadline). Optional
+  event-body claims: `tenant`, `reason`, `successor` (`successor`
+  present only on a `superseded` transition). See {{lifecycle-event}}
+  for the schema.
 
 This event type uses the OpenID Shared Signals Framework {{OIDC-SSF}}
 SET shape. The standalone Mission Issuer binding
@@ -651,6 +704,16 @@ type unchanged and imposes no tenant requirement; `tenant` remains
 OPTIONAL. A consumer MUST ignore members it does not understand and
 MUST NOT reject an event solely for a missing OPTIONAL member (notably
 `tenant`).
+
+The event-type URI is under the author-controlled
+`schemas.karlmcguinness.com` namespace so this experimental profile can
+be deployed and evaluated without a registry dependency. On adoption,
+the URI SHOULD migrate to an IETF- or foundation-controlled namespace
+(for example a `urn:ietf:params` URN or an OpenID Foundation schema
+URI); a provisional `urn:ietf:params` URN MAY be used in the interim.
+A consumer matches the event type by the exact URI the Mission Issuer's
+Transmitter Configuration Metadata advertises, so the namespace can
+change without a change to this profile's semantics.
 
 ## OAuth Authorization Server Metadata Registration
 

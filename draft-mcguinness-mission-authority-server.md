@@ -33,6 +33,7 @@ normative:
   RFC7662:
   RFC8259:
   RFC8615:
+  RFC9068:
   RFC9325:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
@@ -888,7 +889,13 @@ poll returns `approved` with the successor's `mission_id`
 
 A MAS publishes a metadata document at the well-known URI {{RFC8615}}
 path `/.well-known/mission-authority-server`, registered in {{iana}}:
-a JSON object served over TLS as `application/json`. Its members
+a JSON object served over TLS as `application/json`. For an `issuer`
+with no path component the document is served at that well-known path
+under the issuer's host; for an `issuer` that bears a path component
+the `mission-authority-server` well-known segment is inserted between
+the host and the issuer's path, following the metadata-location rule of
+{{RFC8414}} (for `issuer` `https://host/tenant`, the document is at
+`https://host/.well-known/mission-authority-server/tenant`). Its members
 mirror the Mission suite's Authorization Server metadata members where
 applicable, so a consumer reads the same member names it would read
 from AS metadata {{RFC8414}}, resolved from this document instead:
@@ -897,8 +904,11 @@ from AS metadata {{RFC8414}}, resolved from this document instead:
 : REQUIRED. A string. The MAS's issuer URL. It equals the `issuer` of
   every Mission the MAS records and the `iss` of its integrity-anchor
   envelopes and signed status responses. A consumer MUST verify it
-  equals the URL the metadata was resolved from, with the well-known
-  path removed.
+  equals the URL the metadata was resolved from with the
+  `mission-authority-server` well-known segment removed: for a
+  host-only issuer that segment is the entire path, and for a
+  path-bearing issuer it is removed from between the host and the
+  issuer's path, reversing the insertion above.
 
 `mission_submission_endpoint`:
 : REQUIRED. A string containing a URL. The mission submission endpoint
@@ -1050,6 +1060,18 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    credential carries none. All other decision inputs and invariants
    of {{I-D.draft-mcguinness-mission-runtime}} apply unchanged.
 
+In the baseline mapping join the PDP compares the authenticated subject
+and client the PEP attests in the decision request, not the acting
+credential itself: the PEP authenticates the credential at the
+enforcement boundary and populates the decision request from it, and
+the PDP neither receives nor inspects the credential. Baseline join
+integrity therefore rests wholly within the PEP trust base, and a PEP
+that misattests the subject or client widens the join. The
+credential-bound join, where the acting token itself is inspected, is
+the Mission Join Assertion ({{join-assertion}}), where the MAS resolves
+the token centrally and binds its assertion to that token's digest and
+key.
+
 The join binds identity, not possession, so the acting credential's
 own sender binding is what keeps a joined permit from being a bearer
 property. Acting credentials for governed work SHOULD be
@@ -1191,13 +1213,22 @@ MAS MUST NOT mint one for it.
 
 The MAS verifies the join centrally:
 
-1. It introspects the token at the deployment's Authorization Server
-   {{RFC7662}}, under introspection credentials the MAS holds there.
-   Calling the AS is permitted in MAS mode; changing it is not. A
-   token the AS reports inactive fails the request.
+1. It establishes the acting token's validity, subject, and client.
+   Where the AS offers token introspection {{RFC7662}}, the MAS
+   introspects the token under introspection credentials it holds
+   there, and a token the AS reports inactive fails the request. Where
+   the AS offers no third-party introspection but issues JWT access
+   tokens, the MAS MAY instead validate the token locally under RFC
+   9068 {{RFC9068}} semantics, resolving the AS's signing keys from its
+   published metadata and taking the subject and client from the
+   validated claims; a token that fails signature, `exp`, or `aud`
+   validation fails the request. An opaque token that no introspection
+   surface will resolve cannot be verified, and the request fails.
+   Calling the AS is permitted in MAS mode; changing it is not.
 2. It verifies the subject and client joins of {{mission-join}}
-   against the introspection response, under its own documented
-   account and client mappings and delegate policy.
+   against the introspection response or the validated token claims,
+   under its own documented account and client mappings and delegate
+   policy.
 
 A token that does not join is refused with the `join_failed` error
 (HTTP 403), in the error format of {{submission-errors}}; like
@@ -1494,7 +1525,13 @@ binding, with the obligations below ({{I-D.draft-mcguinness-mission-architecture
   ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}), a
   high-consequence join MUST bind (`subject`, `client`, `instance`),
   not (`subject`, `client`), so a single workload joins rather than
-  every workload sharing a gateway `client_id`.
+  every workload sharing a gateway `client_id`. Client-instance
+  identity rests on an unratified individual draft
+  ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}); where a
+  deployment has no instance-identity substrate, the high-consequence
+  join binds only (`subject`, `client`), the shared-`client_id`
+  residual of {{join-spoofing}} remains, and the deployment MUST state
+  that residual.
 - **Runtime enforcement.** Consequential actions MUST be enforced
   under the runtime profile and its AuthZEN binding
   ({{I-D.draft-mcguinness-mission-authzen}}), with documented PEP
@@ -1677,10 +1714,10 @@ and that shrinking residue is the adoption metric.
 ## Join Spoofing {#join-spoofing}
 
 A client cannot gain authority by asserting another party's
-`mission_id`: the join requires the credential's authenticated subject
-and client to match values the MAS recorded at approval, which the
-client cannot alter, so a reference to someone else's Mission fails
-with `mission_mismatch`. The residual is mapping coarseness. Where the
+`mission_id`: the join requires the subject and client the PEP
+authenticates from the credential to match values the MAS recorded at
+approval, which the client cannot alter, so a reference to someone
+else's Mission fails with `mission_mismatch`. The residual is mapping coarseness. Where the
 deployment's account mapping is many-to-one (several AS accounts map
 to one directory subject), any credential in the equivalence class
 joins; a deployment SHOULD keep the mapping one-to-one for subjects
@@ -1715,8 +1752,9 @@ sender-constraint key proves nothing, and `exp`, capped at the token's
 remaining lifetime, bounds the window in which the proof is live. The
 introspection call names a trust relationship specific to this
 upgrade: the MAS relies on the deployment's AS, through RFC 7662
-introspection, for the token's validity, subject, and client, and the
-deployment documents that reliance and protects the MAS's
+introspection or, for JWT access tokens, local RFC 9068 validation of
+the AS-issued token, for the token's validity, subject, and client, and
+the deployment documents that reliance and protects the MAS's
 introspection credentials accordingly. The structural gain is
 concentration: the subject and client mappings are evaluated at one
 audited point under one documented policy, instead of configured

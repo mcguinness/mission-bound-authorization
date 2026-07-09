@@ -362,7 +362,7 @@ Decoded JWS payload:
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "state": "active",
     "expires_at":  "2026-12-31T23:59:59Z",
-    "fresh_until": "2026-11-02T08:15:00Z"
+    "fresh_until": "2026-11-02T08:00:45Z"
   },
   "authorization_details": [
     { "type": "mission_resource_access",
@@ -441,13 +441,18 @@ The members are:
 
 A consumer MUST verify, before honoring a response:
 
-1. the JWS signature against a current `jwks_uri` entry for the
+1. the JWS header `typ` is `mission-status-response+jwt`;
+2. the JWS header `alg` is one the AS advertises in
+   `mission_status_signing_alg_values_supported` ({{as-metadata}}),
+   rejecting `none` and any algorithm not listed;
+3. the JWS signature against a current `jwks_uri` entry for the
    `issuer` AS;
-2. `iss` equals the expected AS issuer URL;
-3. `aud` equals the consumer's own audience identifier;
-4. `sub` equals the requesting client's identifier;
-5. `nonce` equals the request's nonce; and
-6. `iat` is not in the future and `exp` is not in the past, with up to
+4. `iss` equals the expected AS issuer URL;
+5. `aud` equals the consumer's own audience identifier;
+6. `sub` equals the requesting client's identifier;
+7. `nonce` equals the request's nonce;
+8. `mission.id` equals the requested `mission_id`; and
+9. `iat` is not in the future and `exp` is not in the past, with up to
    30 seconds clock-skew tolerance.
 
 ## Caching {#mission-status-caching}
@@ -455,7 +460,11 @@ A consumer MUST verify, before honoring a response:
 Consumers SHOULD cache a response keyed on (`mission_id`, audience),
 or on (`mission_id`, requester identifier) for a state-only response,
 until `mission.fresh_until`. Consumers MUST NOT use a cached response
-after `mission.fresh_until`. When comparing the current time to
+after `mission.fresh_until`. When the AS advertises
+`mission_max_stale_seconds` ({{as-metadata}}), it MUST NOT set
+`mission.fresh_until` later than the response `iat` plus that value, so
+report freshness never exceeds the deployment's advertised
+revocation-propagation tolerance. When comparing the current time to
 `mission.fresh_until`, a consumer MAY allow up to 30 seconds of
 tolerance for the `active` state only, and no tolerance for any other
 state. This tolerance is a clock-skew allowance on the reliance path,
@@ -610,7 +619,7 @@ for a token whose Mission is `active`:
       "authority_hash":
         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
       "state":   "active",
-      "fresh_until": "2026-11-02T08:15:00Z"
+      "fresh_until": "2026-11-02T08:00:45Z"
     }
   }
 }
@@ -712,7 +721,11 @@ An operation is legal only from the source states below. A terminal
 state (`revoked`, `expired`, `completed`, or the companion-defined
 `superseded` and `cascaded`) admits no transition; an operation whose
 resulting state equals the current state, terminal or not, is
-idempotent success ({{idempotency}}).
+idempotent success ({{idempotency}}). `resume` is the sole exception:
+it is legal only from `suspended` (its resulting state, `active`, is
+also the baseline a Mission holds before any suspension), so `resume`
+on an `active` or terminal Mission is a conflict, not idempotent
+success.
 
 | Operation | Legal from | Resulting state |
 |---|---|---|
@@ -728,10 +741,11 @@ completed.
 
 Requests are adjudicated by the single rule of {{idempotency}}: an
 operation whose resulting state equals the Mission's current state is
-idempotent success, and any other operation not legal from the current
-state is refused as a conflict. A Mission that reaches its
-`expires_at` transitions to `expired` independently of this endpoint,
-from `active` or `suspended`.
+idempotent success, with the `resume` exception above, and any other
+operation not legal from the current state, including `resume` on a
+Mission that is not `suspended`, is refused as a conflict. A Mission
+that reaches its `expires_at` transitions to `expired` independently of
+this endpoint, from `active` or `suspended`.
 
 ## Consolidated State Machine {#state-machine}
 
@@ -785,21 +799,33 @@ existing OAuth client-authentication metadata {{RFC8414}}.
 ## Authorization
 
 The AS authorizes lifecycle operations against deployment policy. This
-document sets the minimum authorization semantics per authenticating
-mechanism ({{mission-status-authentication}}) and leaves finer policy
-deployment-defined. When a sender-constrained access token (DPoP-bound
+document sets the minimum authorization semantics and leaves finer
+policy deployment-defined. Every authenticated caller, whatever its
+authentication mechanism ({{mission-status-authentication}}), MUST be
+governed by an explicit lifecycle authorization: a `mission_lifecycle`
+scope or a deployment-defined equivalent grant that names who may
+perform the transition. The AS MUST refuse a caller that carries no
+such authorization. When a sender-constrained access token (DPoP-bound
 {{RFC9449}} or mTLS-bound {{RFC8705}}) authenticates the call, the
-token's `sub` is the acting party, and the token MUST carry a lifecycle
-authorization: a `mission_lifecycle` scope or an equivalent
-deployment-defined grant. The AS MUST record the acting party and
-SHOULD reflect it in the signed response's audit surface (for example
-in `sub` or a deployment-defined audit member of the Mission Status
-Response).
+token's `sub` is the acting party and the token MUST carry that
+authorization. When the caller authenticates directly as a client (mTLS
+client authentication {{RFC8705}} or private-key JWT {{RFC7523}}), the
+authenticated client is the acting party and the AS MUST check the
+deployment-defined lifecycle grant bound to that client. The AS MUST
+record the acting party and SHOULD reflect it in the signed response's
+audit surface (for example in `sub` or a deployment-defined audit
+member of the Mission Status Response).
 
 Which parties may perform which operation is deployment-defined. Typical
 deployments authorize `revoke` to the Mission's Subject or Approver and
 to administrators; `suspend` and `resume` to administrators; and
 `complete` to the requesting client or an administrator.
+
+Because `resume` returns a suspended Mission to `active` and so undoes
+the containment a `suspend` established, a deployment SHOULD require a
+distinct or elevated authorization for `resume`, mirroring the
+treatment of bulk `resume` in Mission Management
+({{I-D.draft-mcguinness-oauth-mission-management}}).
 
 The AS MUST refuse an unauthorized lifecycle request with the
 not-found response shape of {{mission-status-errors}}, so the endpoint
@@ -856,7 +882,7 @@ Decoded JWS payload:
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "state": "revoked",
     "expires_at":  "2026-12-31T23:59:59Z",
-    "fresh_until": "2026-11-02T09:11:40Z"
+    "fresh_until": "2026-11-02T08:54:05Z"
   }
 }
 ~~~
@@ -903,7 +929,7 @@ and `on_expiry` in `mission` alongside `state`. Decoded JWS payload:
     "suspend_until": "2026-11-09T08:15:00Z",
     "on_expiry": "revoke",
     "expires_at":  "2026-12-31T23:59:59Z",
-    "fresh_until": "2026-11-02T08:35:00Z"
+    "fresh_until": "2026-11-02T08:20:45Z"
   }
 }
 ~~~
@@ -919,7 +945,11 @@ the idempotency key. The AS MUST deduplicate lifecycle requests by the
 triple (client, `mission_id`, `nonce`) for a bounded window and, on a
 retransmit carrying a `nonce` already seen for that client and
 `mission_id`, MUST replay the original response rather than re-execute
-the operation. This makes a retransmit safe against reordering: a
+the operation. This window MUST be at least the validity span of the
+signed response the AS would replay (its `iat` to `exp`,
+{{mission-status-response}}), so any retransmit that could still
+present a live response is deduplicated; a deployment MAY use a longer
+window. This makes a retransmit safe against reordering: a
 delayed `suspend` retry that arrives after a `resume` is recognized as
 a duplicate and replays the original `suspend` response, so it cannot
 re-suspend an already-resumed Mission.
@@ -928,11 +958,17 @@ Lifecycle operations follow one rule. An operation whose resulting
 state ({{legal-transitions}}) equals the Mission's current state is
 idempotent success, terminal or not: the AS returns the current
 Mission Status Response, with no state change and no event emitted.
-Any other operation not legal from the current state is a conflict
-(for example, `resume` on a Mission that was never suspended, or
-`suspend` against a terminal state): the AS MUST refuse it with HTTP
-409 and a JSON body whose error symbol is `conflict`, leaving the
-Mission state unchanged.
+This covers a repeat of the same transition, such as `revoke` on a
+`revoked` Mission, `suspend` on a `suspended` Mission, or `complete` on
+a `completed` Mission. `resume` is the sole exception: it is legal only
+from `suspended`, and its resulting state `active` is also the baseline
+a Mission holds before any suspension, so `resume` on an `active`
+Mission (one never suspended, or already resumed) or on a terminal
+Mission is not idempotent success but a conflict. Any other operation
+not legal from the current state is likewise a conflict (for example
+that `resume` on an `active` or terminal Mission, or `suspend` against
+a terminal state): the AS MUST refuse it with HTTP 409 and a JSON body
+whose error symbol is `conflict`, leaving the Mission state unchanged.
 
 One idempotent case carries metadata. A `suspend` against a
 `suspended` Mission whose `suspend_until` or `on_expiry` differ from
@@ -1117,7 +1153,7 @@ A Mission Status Response is bound to (caller `sub`, audience,
 `nonce`, issuance time). Replay against a different caller or audience,
 or beyond `mission.fresh_until`, is detectable by signature
 verification and by verifying the bindings; a consumer MUST verify all
-six checks of {{mission-status-response}} before honoring a response. A
+the checks of {{mission-status-response}} before honoring a response. A
 response cached and replayed by the same caller within
 `mission.fresh_until` is equivalent to a fresh response; a consumer MUST
 NOT use a cached response after `mission.fresh_until`, with the skew

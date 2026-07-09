@@ -165,6 +165,15 @@ or a replacement for runtime PEP enforcement. Its object shapes (the
 unwind plan and the evidence record) bind what a deployment records and
 proves, not how an orchestrator is internally structured.
 
+This profile applies to workflows whose steps derive from a reviewed
+workflow definition or operation profile ({{action-class-source}},
+{{unwind-plan-integrity}}). A dynamically planned graph, whose steps a
+model composes at runtime, is out of scope for unwind plans: such work
+falls back to harness stop behavior
+({{I-D.draft-mcguinness-mission-harness}}) and runtime gating
+({{I-D.draft-mcguinness-mission-runtime}}), neither of which depends on
+a pre-committed plan.
+
 ## Orchestration Profile {#orchestration-profile}
 
 A deployment claiming this profile MUST publish or otherwise make
@@ -355,16 +364,22 @@ Mission.
 
 ## Unwind Plan Integrity {#unwind-plan-integrity}
 
-The `unwind_plan_hash` over the step's unwind plan MUST be committed
-at or before the step's dispatch: a hash first recorded after a
-trigger proves later alteration, not that the plan existed when the
-step was dispatched. The orchestrator MUST commit it in an
-Orchestration Evidence record emitted at dispatch
-({{orchestration-evidence}}). As an alternative, a deployment MAY
-commit it instead as a coordinated member of the step's Decision
-Evidence, through the AuthZEN profile's coordinated-extension seam
+The `unwind_plan_hash` over the step's unwind plan MUST be durably
+recorded strictly before the step's dispatch: a hash first recorded
+after a trigger proves later alteration, not that the plan existed when
+the step was dispatched, and a record written only after dispatch
+leaves a crash indistinguishable from evasion. The orchestrator MUST
+commit it in an Orchestration Evidence record durably written before
+dispatch ({{orchestration-evidence}}), and MUST NOT dispatch the step
+if that evidence write fails: evidence is fail-closed. As an
+alternative, a deployment MAY commit it instead as a coordinated member
+of the step's Decision Evidence, through the AuthZEN profile's
+coordinated-extension seam
 ({{I-D.draft-mcguinness-mission-authzen}}); the step's first
 Orchestration Evidence record then repeats the committed value. The
+durability and fail-closed rule applies to whichever path commits the
+hash: the committing write MUST complete durably before dispatch, and a
+failed write MUST prevent dispatch. The
 hash is computed with the integrity-anchor envelope of the issuance
 profile ({{I-D.draft-mcguinness-oauth-mission}}) under a new `typ`
 value `mission-unwind-plan`, where `value` is the unwind plan object.
@@ -570,12 +585,21 @@ compensation is one of:
 `separate_mission`:
 : A narrow, pre-provisioned remedial Mission that is `active`
   authorizes the compensation. It is a distinct Mission, not the
-  terminated one, and it carries its own Authority Set.
+  terminated one, and it carries its own Authority Set. That Authority
+  Set MUST be scoped to compensation actions for the terminated
+  Mission's committed steps, so the remedial Mission cannot authorize
+  new forward work under cover of compensation.
 
 An operator may gate either basis, but operator approval is not itself
 an authority basis: it does not create authority a PEP would enforce
 over a terminated Mission. If neither basis applies, the orchestrator
 MUST NOT compensate and MUST record a `human_review` decision.
+
+Under either basis, the compensating action's decision MUST carry the
+`decision_id` of the decision it reverses in the runtime profile's
+`compensates_decision_id` ({{I-D.draft-mcguinness-mission-runtime}}),
+binding each compensation to the specific committed step it offsets
+rather than standing as an open-ended remedial power.
 
 ## Unwind Ordering and Partial Failure {#unwind-ordering}
 
@@ -670,7 +694,7 @@ members:
 : REQUIRED on the step's dispatch-time record or, where the hash was
   committed through Decision Evidence instead, on the step's first
   Orchestration Evidence record. The integrity anchor over the step's
-  unwind plan, committed at or before dispatch
+  unwind plan, committed durably before dispatch
   ({{unwind-plan-integrity}}).
 
 `authority_basis`:
@@ -800,15 +824,22 @@ A deployment running both this profile and the harness profile MUST
 provide a means for the harness to determine whether a work item is
 under an active unwind decision; the mechanism is deployment-defined.
 Where harness stop policy and an active unwind decision would produce
-different outcomes for the same work item, the stricter outcome
-governs.
+different outcomes for the same work item, the stage split chooses how
+to stop, not whether: where both would stop the item, the
+orchestrator's in-flight handling governs a dispatched or in-flight
+step, since only the orchestrator can unwind committed or partially
+committed work, and the harness stop policy governs an undispatched
+one; where one would stop and the other continue, the item stops, and
+the harness still honors an orchestrator cancel or hold per the harness
+resume algorithm ({{I-D.draft-mcguinness-mission-harness}}).
 
 # Conformance {#conformance}
 
 A conforming Mission-aware orchestrator MUST:
 
 - assign a reversibility class to each consequential step;
-- record an unwind plan, and commit its hash, at or before dispatch
+- record an unwind plan, and durably commit its hash strictly before
+  dispatch, failing closed if the commit fails
   ({{unwind-plan-integrity}});
 - stop new governed work when Mission state is non-active or stale;
 - classify in-flight steps under {{in-flight}};

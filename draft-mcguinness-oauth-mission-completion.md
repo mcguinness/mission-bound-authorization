@@ -76,8 +76,8 @@ OPTIONAL Mission Completion profile. It adds `terminal_when`, a
 completion condition carried in a `mission_resource_access` entry's
 `constraints` that, once met, **discharges** the Authority Set entry:
 the Authorization Server stops deriving tokens carrying that entry. Discharge is monotonic, it can only remove an
-entry's authority and never widen it, so it is safe against a
-prompt-injected agent by construction; it composes with the subset rule
+entry's authority and never widen it, so a prompt-injected agent cannot
+use it to escalate; it composes with the subset rule
 as a condition a derived entry can add but never drop; and it lets a
 multi-resource Mission complete one entry at a time. It is the
 enforceable counterpart of the inert `success_criteria`.
@@ -109,8 +109,10 @@ document requires all three:
 
 - **Discharge is monotonic.** It only removes an entry's authority; it
   can never widen the entry or the Mission. A prompt-injected agent
-  therefore cannot use it to gain anything: the worst it can do is spend
-  its own authority sooner, which is not an attack.
+  therefore cannot use it to escalate: the worst it can do is spend
+  its own authority sooner, which is not an escalation, though a forced
+  premature discharge is an availability and guardrail-retirement
+  concern ({{security-considerations}}).
 - **Discharge composes with the subset rule.** A derived entry carries
   its parent's completion conditions unchanged and MAY add more, the same
   way constraints may be added or tightened but never dropped.
@@ -238,7 +240,11 @@ discharged entry at the point of use ({{runtime}}).
 ## Determining Discharge {#determining}
 
 The Authorization Server determines whether a condition has been met from
-the `event_source`, within `max_staleness` when present. The mechanism is
+the `event_source`, within `max_staleness` when present. When
+`max_staleness` is absent, the Authorization Server MUST re-evaluate the
+condition at each derivation, so `terminal_when` never goes inert:
+absence of `max_staleness` removes the tolerance for a cached view, it
+does not relieve the freshness duty. The mechanism is
 deployment-defined (a status query, a received signal, a recorded
 administrative action). This document defines one interoperable
 event-source profile a deployment MAY use: the `event_source` URI is
@@ -252,9 +258,24 @@ document, a JWS {{RFC7515}}, with these members:
   reports.
 - `source`: REQUIRED. A URI identifying the reporting source.
 
+The Authorization Server verifies the JWS against key material it
+resolves for the `source` identity, not for the `event_source` origin:
+the protected header's `kid` MUST resolve to a key the `source`
+publishes through an authenticated channel (for example its JWKS), and
+the resolved signer identity MUST be the `source` the Authorization
+Server trusts for this `event_type`. A signature that does not chain to
+a trusted `source` for the `event_type` leaves the condition
+indeterminate, and the Authorization Server fails closed as below.
+
 Other source mechanisms remain deployment-defined. The Mission Issuer
 MUST authenticate and integrity-verify any event source outside its own
-trust domain before acting on its report.
+trust domain before acting on its report. The `event_source` SHOULD lie
+outside the Mission's own writable authority: an agent that can write to
+the source can drive its own discharge or suppress it. Where the
+`event_source` is on an origin the Mission holds write authority to, the
+Authorization Server MUST determine discharge through an integrity
+mechanism, such as the signed status document above, whose signing key
+the Mission cannot influence.
 
 Once the Authorization Server observes that a condition has been met, the
 discharge is recorded as Authorization-Server-side state and MUST NOT
@@ -372,10 +393,14 @@ bounded to under 500 USD and discharged when the Q3 close is finalized:
       "max_amount": { "amount": "500.00", "currency": "USD" },
       "terminal_when": [
         { "event_type": "accounting-period-closed",
-          "event_source": "https://erp.example.com/periods/2026-Q3",
+          "event_source": "https://close.example.com/periods/2026-Q3",
           "max_staleness": "PT15M" } ] } }
 ]
 ~~~
+
+The `event_source` is on a separate close-management origin the Mission
+has no write authority to, so the agent cannot drive its own discharge
+({{determining}}).
 
 While the period is open, the Authorization Server derives both entries.
 When the finance team finalizes the Q3 close, the `event_source` reports
@@ -421,7 +446,12 @@ adds:
 - Monotonic by construction. Discharge only removes an entry's authority,
   so it is not a path to escalation; a compromised or injected agent
   cannot use `terminal_when` to widen authority, and the worst it can do
-  is retire its own authority sooner.
+  is retire its own authority sooner. That is not an escalation, but a
+  forced premature discharge is a denial-of-service on the task
+  (authority the task still needs is withdrawn) and, where discharge is
+  relied on as a guardrail, retires that guardrail early. The
+  event-source integrity and independence requirements below bound who
+  can force it.
 - Fail closed on unknown constraint. A consumer that does not understand
   the `terminal_when` constraint MUST refuse the entry
   ({{forward-compat}}); ignoring the constraint would let a discharged
@@ -433,9 +463,14 @@ adds:
   control.
 - Trusted event source. `event_source` is a trusted input to issuance: a
   party that can make the source report "not yet complete" can keep an
-  entry derivable past its true completion. The Mission Issuer MUST
-  authenticate and integrity-verify an event source outside its own trust
-  domain ({{determining}}), and SHOULD prefer sources within it.
+  entry derivable past its true completion, and one that can make it
+  report "complete" can force a premature discharge. The Mission Issuer
+  MUST authenticate and integrity-verify an event source outside its own
+  trust domain ({{determining}}), and SHOULD prefer sources within it.
+  The `event_source` SHOULD lie outside the Mission's own writable
+  authority, so an agent cannot drive or suppress its own discharge; the
+  signed status document verified against the `source` identity is the
+  interoperable integrity mechanism where it cannot ({{determining}}).
 - Event-source availability. Fail-closed discharge gives issuance an
   availability dependency on `event_source` within `max_staleness`: an
   unreachable source withholds the entry ({{determining}}). Event

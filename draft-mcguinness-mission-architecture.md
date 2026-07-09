@@ -582,7 +582,11 @@ profile.
 **Attribution is carried, never inferred**:
 : Each role in the actor chain travels in its own construct, and the
   evidence layer records them together; no role is derived from
-  another ({{actor-chain}}).
+  another ({{actor-chain}}). This invariant scopes the actor chain.
+  The credential-to-Mission association is itself a carried fact only
+  where a binding carries the `mission` claim; under the standalone
+  binding the PDP's join establishes it by inference, bounded by that
+  binding's join assurance ({{deployment}}).
 
 **Enforcement fails closed; inert surfaces fail safe**:
 : A PDP that cannot establish state or authority within the published
@@ -809,7 +813,7 @@ the audit feed.
 The companion profiles named without "oauth" are defined against the
 Mission model's substrate primitives rather than against OAuth
 mechanics; each names what it consumes in a Mission Substrate section
-of its own. This section consolidates that interface: six primitives,
+of its own. This section consolidates that interface: eight primitives,
 each with its normative home and its consumers. Every sentence
 mirrors a rule the named profile states normatively.
 
@@ -871,15 +875,17 @@ committed evidence types it registers).
 
 ## Token Classes {#token-classes}
 
-"Mission-bound" is a specific claim, and three token shapes are worth
-distinguishing so a weak one is not read as the strong one:
+"Mission-bound" is a specific claim. This document names three token
+shapes descriptively, so a weak one is not read as the strong one; the
+names below are this document's own, and the properties the strong
+class requires are the core's:
 
 - a **Mission-referenced token** carries a Mission identifier only;
 - a **Mission-derived token** carries authority derived from an
   active Mission; and
 - a **Mission-bound token** is Mission-derived and additionally
-  active-state gated, subset-constrained, and refresh-gated (the
-  core's conformance rule).
+  active-state gated, subset-constrained, and refresh-gated, the
+  properties the core's conformance rule requires.
 
 Only the third earns the term: a `mission` claim alone is a reference,
 not Mission-bound authorization. The family reserves "Mission-bound"
@@ -917,6 +923,16 @@ two: the standalone Mission Issuer mints a Mission Issuance Grant
 that a consuming Authorization Server redeems for Mission-bound
 tokens, providing this primitive compositely.
 
+## Issuer Key Material
+
+The Mission Issuer's signing keys, resolvable from the `issuer` by the
+verifiers of its signed artifacts; across a rotation each key
+identifier's verification key stays resolvable while artifacts signed
+under it remain within the audit horizon. Home: the core's Signing and
+Key Rotation section. Consumed by the verifiers of Mission-bound
+credentials under full provision, Consent Evidence, the Mandate, the
+signed state surfaces, and Audit Transparency.
+
 ## The Audit Horizon
 
 The deployment-declared retention window for the Mission record and
@@ -925,6 +941,17 @@ post-terminal period. Home: the core's Mission Record section.
 Consumed by Consent Evidence, runtime evidence, and Audit
 Transparency for retention; by the MAS for record retention; and by
 the security model's retention analysis.
+
+## Approval Fidelity
+
+The approval event's fidelity: whatever a binding's native ceremony,
+it authenticates the Approver, establishes the Subject, derives and
+renders the Authority Set for consent, computes the anchors over the
+consented set and the approved Intent, and creates the record in
+`active` atomically with the decision. Home: the core's Mission
+Approval section. Consumed by Consent Evidence, which binds to this
+event, and by every downstream guarantee that assumes the anchors, the
+gating, and the record.
 
 ## The Validity Model {#validity-model}
 
@@ -1000,13 +1027,13 @@ heart of the model and the one step the family deliberately does not
 standardize. The consequence is a trust boundary worth stating
 plainly: interoperability begins at the committed result, not at the
 Intent. A Mission Intent has no portable semantics; two conforming
-Authorization Servers MAY derive different Authority Sets from the
+Authorization Servers can derive different Authority Sets from the
 same Intent, and audit can establish what was derived (against
 `intent_hash` and `policy_version`), never whether it was the right
 reading of the task. A deployment whose partners must reason about
-its derivations SHOULD publish a derivation policy identifier and
-test fixtures that pin Intent-to-Authority-Set outcomes, so the local
-policy becomes reviewable even though it does not travel. Narrowing
+its derivations can publish a derivation policy identifier and
+test fixtures that pin Intent-to-Authority-Set outcomes, making the local
+policy reviewable even though it does not travel. Narrowing
 mode ({{I-D.draft-mcguinness-oauth-mission}}) is the checkable path:
 where the client supplies candidate authority, derivation is a subset
 of it and reproducible, which is the closest the family comes to
@@ -1368,9 +1395,10 @@ The levels, cumulative:
 
 **Governed Agent** (recommended for AI agents):
 : adds Consent Evidence and the harness, growing with Child Delegation,
-  Expansion, and Orchestration as needed. Grants consent-rendering
-  evidence and session-continuity discipline. Documents: Runtime-
-  Enforced plus consent-evidence and the harness.
+  Expansion, Orchestration, and Discovery (experimental, with
+  Progressive) as needed. Grants consent-rendering evidence and
+  session-continuity discipline. Documents: Runtime-Enforced plus
+  consent-evidence and the harness.
 
 **High-Assurance Agent**:
 : adds the guarantees that resist a compromised agent. Two named claims
@@ -1444,7 +1472,7 @@ it does not cover. An illustrative shape:
 {
   "profile": "mission-governed-agent-runtime",
   "assurance_level": "high-assurance-agent",
-  "mission_issuer": "https://mas.example.com",
+  "mission_issuer": "https://as.example.com",
   "state_sources": [
     { "type": "status_endpoint", "max_staleness_seconds": 30 }
   ],
@@ -1457,7 +1485,11 @@ it does not cover. An illustrative shape:
     "pdp": "authzen",
     "pep_locations": ["tool-gateway", "browser-action-proxy"],
     "mediated_action_classes": [
-      "irreversible_action", "external_commitment"
+      "irreversible_action", "external_commitment",
+      "external_communication", "privileged_administration"
+    ],
+    "action_bound_approval_classes": [
+      "irreversible_action", "privileged_administration"
     ],
     "unmediated_exclusions": [
       "internal_reasoning", "local_cache_read"
@@ -1466,7 +1498,11 @@ it does not cover. An illustrative shape:
   "credential_custody": {
     "held_by": "pep",
     "sender_constrained": true,
+    "key_generated_in_pep": true,
     "agent_receives_bearer_token": false
+  },
+  "approval_rendering": {
+    "rendered_by": "agent-isolated-component"
   },
   "harness": {
     "subagent_inheritance": "explicit_delegation_only",

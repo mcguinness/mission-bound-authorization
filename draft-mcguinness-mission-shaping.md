@@ -235,7 +235,10 @@ behavior that an auditor can observe in the shaper's output. Mission
 Issuer behavior is cited from the issuance profile
 ({{I-D.draft-mcguinness-oauth-mission}}), not legislated here. The
 keywords do not establish a conformance class: this profile is
-Informational ({{why-informational}}).
+Informational ({{why-informational}}). They bind only the observable
+shaping artifacts, the Mission Intent proposal and Shaping Evidence, as
+recommended behavior an auditor can check against those artifacts, not a
+conformance obligation on any party.
 
 All JSON shown in this document is non-normative and illustrative; the
 member descriptions in the surrounding text are authoritative. This
@@ -708,7 +711,13 @@ can cite how the proposal was produced. When it does:
   prefixed digest of the JCS {{RFC8785}} canonical bytes of that
   envelope. Hashing the bare object would omit the `typ` domain
   separation and `iss` binding the integrity-anchor construction exists
-  to provide. It is an audit commitment only.
+  to provide. It is an audit commitment only. Because the shaper is
+  client-side and MAY build a proposal before the target Mission Issuer
+  is selected, the `iss` binding requires that issuer to be known: the
+  `shaping_evidence_hash` is computed only once the Mission Issuer's
+  `issuer` is fixed, and a proposal re-submitted to a different Mission
+  Issuer needs a `shaping_evidence_hash` recomputed under that issuer's
+  `issuer`.
 - A deployment MAY instead, or in addition, carry an integrity envelope
   over the Shaping Evidence, for example a JWS {{RFC7515}} Compact
   Serialization over the JCS canonical bytes of the evidence with the
@@ -866,10 +875,14 @@ The shaper does not invoke the PAR endpoint or the Authorization
 Endpoint and does not handle the authorization response. Those are
 requesting-client responsibilities ({{proposes-only}}). The shaper hands
 its output to the requesting client, which performs the OAuth flow and
-MAY also convey a `shaping_evidence_hash` as deployment extension data
-so the Mission record can cite the evidence ({{evidence-hash}}).
-Conveying it does not
-require the Mission Issuer to trust the shaper.
+MAY also convey a `shaping_evidence_hash` so the Mission record can cite
+the evidence ({{evidence-hash}}). Because the issuance profile rejects
+an unrecognized top-level Mission Intent member
+({{I-D.draft-mcguinness-oauth-mission}}), the hash is not carried inside
+`mission_intent`; a deployment conveys it as a separate PAR {{RFC9126}}
+request parameter it registers (for example, a `shaping_evidence_hash`
+parameter) alongside the Mission Intent. Conveying it does not require
+the Mission Issuer to trust the shaper.
 
 ## Runtime Enforcement {#runtime-composition}
 
