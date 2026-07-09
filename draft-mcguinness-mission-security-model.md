@@ -560,7 +560,11 @@ Transparency Service:
   compromised service can present different histories to different
   auditors; registering with more than one service makes equivocation
   detectable, but the non-equivocation guarantee is per-service
-  ({{I-D.draft-mcguinness-mission-audit}}).
+  ({{I-D.draft-mcguinness-mission-audit}}). The structural case needs
+  no compromise: a service operated by the producer whose records it
+  holds returns the auditor to trusting that producer's
+  infrastructure, so the audit profile's cross-domain claim rests on
+  operator independence or a second, independent service.
 
 Event source:
 : When completion or trigger-based discharge is used, it reports whether
