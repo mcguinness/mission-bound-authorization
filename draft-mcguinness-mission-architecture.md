@@ -1320,6 +1320,35 @@ two, the metering profile's exclusivity control
 apart under a single approval. This turns the no-information-flow-control
 limit into a deployment architecture rather than an unmitigated gap.
 
+The **standing-agent pattern** governs the agent whose work never
+ends: the support-triage agent on a ticket queue, the SOC agent on an
+alert stream. The agent stands; the authority cycles. The standing
+thing is a charter: a Mission whose Approver additionally consented
+to an authority ceiling and a drawdown policy
+({{I-D.draft-mcguinness-oauth-mission-progressive}}, experimental).
+The working thing is the bounded Mission each unit of work draws
+under it: an in-ceiling successor where one agent works the stream,
+or a policy-approved Child Mission where units fan out to workers
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), each
+carrying its own expiry, each discharging its entries as the unit
+completes ({{I-D.draft-mcguinness-oauth-mission-completion}}).
+Nothing high-consequence rides the policy path: the drawdown guard
+routes the irreversible, external-commitment,
+privileged-administration, external-communication, and cross-domain
+classes to a fresh human approval even inside the ceiling. What keeps
+the charter from decaying into a standing grant with ceremony is the
+ceiling review: the chain is bounded by a published review cadence,
+and continuing past it requires a fresh human approval whose
+disclosure renders the prior cycle's record (the progressive
+profile's Ceiling Review). A deployment states the cadence and the
+evidence it consumes in its Deployment Profile
+({{deployment-profile}}). Without the progressive profile the same
+pattern runs at lower automation: each unit of work is an ordinary,
+freshly approved Mission, with deferred approval
+({{I-D.draft-mcguinness-oauth-mission-approval}}) absorbing the
+asynchronous approvals; the experimental profile changes the unit
+economics, not the governance shape.
+
 # Mission Assurance Levels {#assurance-levels}
 
 Two questions get asked of a Mission deployment: what to deploy for a
@@ -1458,10 +1487,12 @@ artifact: a single publishable manifest that composes the per-layer
 scope statements (the runtime profile's Enforcement Scope Statement,
 the harness execution-environment scope statement, the MAS mapping
 contract where used, the Resource Server coverage split between
-`authorization_details` enforcement and the scope projection, and the
+`authorization_details` enforcement and the scope projection, the
 transparency-service topology and registration schedule where audit
-transparency is run) into one object an auditor, a procurement, or a
-security review can read. It is non-normative in shape here; a profile
+transparency is run, and the standing-charter posture, per-drawdown
+and rate bounds, the action-class mapping, and the ceiling review
+cadence and its evidence, where standing charters are run) into one
+object an auditor, a procurement, or a security review can read. It is non-normative in shape here; a profile
 or deployment fixes the exact serialization.
 
 Its distinguishing field is `residual_risks`: the profile is not
@@ -1509,6 +1540,14 @@ it does not cover. An illustrative shape:
     "resume_requires_active_state": true,
     "cached_credentials_revalidated": true,
     "secondary_egress_enumerated": true
+  },
+  "standing_charters": {
+    "ceiling_review_cadence_days": 90,
+    "review_evidence": ["drawdowns", "guard_exceptions",
+      "out_of_ceiling_refusals", "discharged_entries",
+      "metering_consumption"],
+    "per_drawdown_bound": "single_entry_delta",
+    "drawdown_rate_bound_per_chain_per_hour": 60
   },
   "resource_servers": {
     "authorization_details_enforcing": ["https://erp.example.com"],
