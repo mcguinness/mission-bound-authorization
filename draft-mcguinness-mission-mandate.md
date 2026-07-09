@@ -372,7 +372,9 @@ keep the key that verifies each minted Mandate resolvable by its
 `kid` in the published key material for that Mandate's evidence
 lifetime: until `mandate_exp`, or for the Mission's audit horizon
 when `mandate_exp` is absent. Rotation retires a key from signing,
-never from resolvability within that bound.
+never from resolvability within that bound; the status profile
+states the matching retention rule for the issuer's `jwks_uri`
+({{I-D.draft-mcguinness-oauth-mission-status}}).
 
 ## Example {#example}
 
@@ -590,8 +592,11 @@ Invalid:
 
 Unverifiable:
 : Verification cannot complete: the issuer's key material is
-  unreachable, the `kid` does not resolve, or no trust anchor covers
-  the Mission's issuer. This is not evidence of tampering, mirroring the audit
+  unreachable, the `kid` does not resolve, no trust anchor covers
+  the Mission's issuer, or the signing key is issuer-flagged as
+  compromised and the Mandate's `iat` is not anchored before the
+  compromise time ({{security-considerations}}). This is not
+  evidence of tampering, mirroring the audit
   profile's classification ({{I-D.draft-mcguinness-mission-audit}});
   the verifier MUST NOT treat the Mandate as verified and MUST NOT
   treat the failure as proof the artifact is false. Within a
@@ -743,13 +748,19 @@ makes the omission a named failure rather than a silent acceptance.
 ## Issuer Key Compromise
 
 A party holding the Mission Issuer's signing key can mint Mandates for
-Missions that never existed, until the key is rotated out of the
-published set. Verifiers bound this by resolving `kid` against live
-key material; audit registration ({{audit-evidence}}) narrows it
-further, since a genuine Mandate has an independent, timestamped
-existence proof and a forged one either goes unregistered or leaves a
-permanent, attributable trace. A deployment whose Mandates feed
-high-consequence decisions SHOULD register them.
+Missions that never existed. Rotation does not bound the exposure:
+within each Mandate's evidence lifetime the verification key stays
+resolvable ({{minting}}), so a forged Mandate with a backdated `iat`
+verifies exactly as a genuine one does. Audit registration
+({{audit-evidence}}) is the bound: a genuine Mandate has an
+independent, timestamped existence proof, and a forged one either
+goes unregistered or leaves a permanent, attributable trace. A
+deployment whose Mandates feed high-consequence decisions SHOULD
+register them. An issuer that learns a signing key was compromised
+SHOULD record and publish the compromise time; a verifier then
+treats an unregistered Mandate under that `kid` whose `iat` cannot
+be anchored before that time as unverifiable ({{failures}}), never
+as verified evidence.
 
 ## Confusion with the Cross-Domain Grant
 
