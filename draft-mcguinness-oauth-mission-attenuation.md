@@ -628,7 +628,15 @@ profile, and the attenuation substrate apply. This profile adds:
   child within its authority, offline and unobserved. The bound is that
   it can only narrow, never broaden (capability monotonicity), and that
   the runtime layer still gates every action against the Mission; the
-  compromise does not widen authority or evade revocation.
+  compromise does not widen authority or evade revocation. The `cnf`
+  key of an attenuation root is nonetheless two things at once: the
+  presentation key for one token and the offline minting key for its
+  whole subtree, and a key whose theft mints credentials warrants a
+  higher custody class than one whose theft replays a credential. A
+  deployment SHOULD hold attenuation-root keys under the mediating
+  component's custody (the runtime profile's mediated custody,
+  {{I-D.draft-mcguinness-mission-runtime}}), hardware-backed where
+  available, rather than loose in the agent process.
 - Depth and fan-out. `del_max_depth` bounds chain depth; a deployment
   SHOULD set it. Because offline minting is unobserved by the issuer,
   breadth is bounded at consumption, not at issuance: PEPs SHOULD meter

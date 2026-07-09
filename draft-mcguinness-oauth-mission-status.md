@@ -109,6 +109,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-mandate:
+    title: "Mission Mandate"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-authzen:
+    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -406,6 +422,13 @@ The members are:
     replaced this Mission, set atomically at supersession on the
     predecessor's record
     ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
+  - `version`: OPTIONAL; REQUIRED where the deployment offers the
+    Lifecycle Signals stream
+    ({{I-D.draft-mcguinness-oauth-mission-signals}}): the Mission's
+    lifecycle transition counter as the Signals profile defines it,
+    current as of the reported `state`. An event consumer that
+    re-established state through this operation re-seats its gap
+    detection on it: the last-applied version becomes this value.
 - `authorization_details`: the audience-scoped Authority Set entries
   relevant to the requesting audience, as the `mission_resource_access`
   shape of {{I-D.draft-mcguinness-oauth-mission}} (Section "Mission
@@ -1006,7 +1029,19 @@ separate posture list:
 A deployment advertises `mission_max_stale_seconds` ({{as-metadata}}),
 the maximum interval it tolerates for a Mission state change to take
 effect, so a consumer can size token lifetimes and choose propagation
-mechanisms to match.
+mechanisms to match. When the member is absent, no propagation bound
+is declared: a consumer MUST size reliance to token lifetime alone
+and MUST NOT assume a tighter bound.
+
+Where the member is present, a status response's `mission.fresh_until`
+MUST NOT exceed the response's issuance time plus the advertised
+bound: the advertisement is the ceiling on every reliance window
+built from these surfaces, including a runtime permit's validity
+window, which is capped by the state view's freshness. As sizing
+guidance, the runtime enforcement profile's recommended defaults
+target an effective bound under 300 seconds for the high-consequence
+classes; the 60-second value in this document's examples is a tight
+deployment's choice, not a floor.
 
 ## Recommended Access-Token TTL
 
@@ -1052,7 +1087,8 @@ through standard {{RFC8414}} discovery.
 `mission_max_stale_seconds`:
 : OPTIONAL. An integer. The maximum
   tolerated interval, in seconds, for revocation propagation
-  ({{revocation-enforcement-classes}}).
+  ({{revocation-enforcement-classes}}). When absent, no bound is
+  declared, and a consumer sizes reliance to token lifetime alone.
 
 DPoP and mTLS support for issued credentials are read from the
 standard `dpop_signing_alg_values_supported` {{RFC9449}} and
@@ -1147,14 +1183,19 @@ signed form it requires.
 ## Signing-Key Retention for Audit
 
 The AS signs Mission Status and Lifecycle responses with a key from
-its `jwks_uri`. The AS MUST retain the public JWK for every `kid` it
-has signed such a response under, indexed by `kid`, for at least the
-Mission record retention period (even after the key is rotated out
-of the live `jwks_uri`), so an archived
-`application/mission-status-response+jwt` remains verifiable for audit
-and dispute. The AS MAY expose retired verification keys through a
-deployment-defined audit interface but MUST NOT serve them as active
-keys at `jwks_uri`.
+its `jwks_uri`. The AS MUST keep the public JWK for every `kid` it
+has signed such a response under resolvable in its `jwks_uri` for at
+least the Mission record retention period, so an archived
+`application/mission-status-response+jwt` remains verifiable for
+audit and dispute. Rotation retires a key from signing, never from
+the published set within that bound: the same rule the Mandate
+states for its evidence lifetime
+({{I-D.draft-mcguinness-mission-mandate}}) and the AuthZEN profile
+states for its deployment-published evidence key sets
+({{I-D.draft-mcguinness-mission-authzen}}). A key known or suspected
+compromised is the exception: the AS removes it, and the Mandate
+profile's compromise-time rule governs how artifacts signed under it
+are then classified.
 
 ## General OAuth Security
 

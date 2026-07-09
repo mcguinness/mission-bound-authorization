@@ -392,6 +392,15 @@ reversibility class ({{action-class-source}}), MUST derive from a
 reviewed workflow definition or operation profile. Model output MUST
 NOT define them.
 
+A model-proposed plan is not excluded; it is unadopted. A deployment
+MAY admit one through its review surface, a human review or a
+deterministic validation against a reviewed operation profile, which
+adopts the proposal into the deployment's committed documentation
+before dispatch; the adopted plan is then a reviewed definition, and
+the Orchestration Evidence that commits its hash records the
+admission. What the rule excludes is model output defining an
+unwind-plan member with nothing between proposal and dispatch.
+
 ## Worked Unwind Plan {#worked-unwind-plan}
 
 ~~~ json
@@ -449,6 +458,14 @@ it MUST:
 4. execute or schedule post-completion behavior for completed steps
    whose unwind plan requires it; and
 5. emit Orchestration Evidence under {{orchestration-evidence}}.
+
+The two triggers differ in what they permit. An established
+non-active state runs the full sequence. Staleness alone, an active
+state that cannot be established within the bound, performs items 1,
+2, 3, and 5 and MUST NOT execute post-completion behavior (item 4):
+compensation is itself consequential work, and unwinding work nobody
+stopped is not fail-closed. Post-completion behavior runs only on an
+established non-active state.
 
 The states `revoked` and `expired` ({{I-D.draft-mcguinness-oauth-mission}}),
 `suspended` and `completed` ({{I-D.draft-mcguinness-oauth-mission-status}}),
@@ -694,7 +711,13 @@ members:
   of the compensation action.
 
 `evidence_envelope`:
-: OPTIONAL. Integrity protection over the Orchestration Evidence
+: OPTIONAL, except REQUIRED when `orchestration_decision` is
+  `compensate` and the compensated step's reversibility class is
+  `irreversible_action`, `external_commitment`, or
+  `privileged_administration`. Compensation in those classes is
+  consequential work in its own right; its record does not rest on
+  an unsigned self-report by the orchestrator that performed it.
+  Integrity protection over the Orchestration Evidence
   object. When present with `format` `jws-compact`, it is a JWS
   {{RFC7515}} Compact Serialization whose payload is the JCS
   {{RFC8785}} canonical bytes of the object with `evidence_envelope`

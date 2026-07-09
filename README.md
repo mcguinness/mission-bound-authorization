@@ -221,7 +221,7 @@ below the table.
 
 | Level | Drafts | What you get |
 |---|---|---|
-| **Baseline Issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Runtime-Enforced level). The kill switch is binding-dependent: under the standalone MAS there is no issuance gate, and the cutoff arrives with the runtime layer. Audit, not action-time defense. |
+| **Baseline Issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Runtime-Enforced level). The kill switch is binding-dependent: under the standalone MAS there is no issuance gate, and the cutoff arrives with the runtime layer. Audit, not action-time defense. Day-one AS prerequisites: PAR, RAR, and JWT access tokens; the standalone MAS needs none of them. |
 | **Runtime-Enforced** (the Protocol MVP) | mission + runtime + authzen + a freshness source (status or issuer token introspection; signals, experimental, adds push) | Per-action enforcement at the point of use, and prompt revocation. The smallest deployment that makes a Mission-bound token more than governance metadata, and every dependency it needs is ratified. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
 | **Governed Agent** (recommended for AI agents) | Runtime-Enforced + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. Add child-delegation for sub-agents and expansion for mid-task growth, orchestration (experimental) for safe unwinding of in-flight work, and discovery (experimental, with progressive) for agents that meet resources their approval could not name. |
 | **High-Assurance Agent** | Governed Agent + mediated custody, no unmediated path, action-bound approval, active freshness, agent-isolated approval rendering | Resistance to a compromised agent: the runtime profile's named agent-compromise-resistant enforcement and trifecta containment claims (see the note below the table), optionally bound to execution-environment attestation. |
@@ -279,8 +279,12 @@ action, must not represent itself as resistant to agent compromise.
 What to implement, in order. This is deployment advice; dependency
 facts are the next subsection.
 
-1. **Adopt first**: read the **architecture**, implement the **core**
-   (the minimal implementation above).
+1. **Adopt first**: read the **architecture**; then implement the
+   **core** (the minimal implementation above) where the AS can
+   change, or start at **authority-server** phase 1 (records and
+   approvals, no enforcement change) where it cannot. The
+   architecture's entry-ramp table maps estate starting conditions
+   to the right ramp.
 2. **Implementation minimum** for agents that act: **status**,
    **runtime**, **authzen** (the Runtime-Enforced level).
 3. **Recommended for AI agents**: **consent-evidence** and **harness**

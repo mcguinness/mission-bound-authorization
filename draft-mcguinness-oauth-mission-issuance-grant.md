@@ -629,8 +629,10 @@ mapping of {{redemption-errors}}. The PAR carriage of
 
 A deployment claiming this profile states, alongside its
 enforcement-scope statement, which Authorization Servers consume
-grants and the staleness bound of each one's refresh gating. A
-consuming AS advertises its support with the
+grants, the staleness bound of each one's refresh gating, and its
+reconciliation posture ({{security-considerations}}): the window
+within which minting and redemption logs are reconciled, or that
+they are not. A consuming AS advertises its support with the
 `mission_issuance_grant_supported` metadata member, and its PAR
 carriage with `mission_issuance_grant_par_supported` ({{iana}}).
 
@@ -651,8 +653,14 @@ profile it additionally mints grants every consuming AS honors:
 compromise reaches token issuance across the estate. The consuming
 ASs' audit logs of redeemed grants (each with `jti` and Mission
 reference) are the independent record that bounds and exposes such
-minting; deployments SHOULD reconcile MAS minting evidence against
-consuming-AS redemption logs.
+minting; a deployment SHOULD reconcile MAS minting evidence against
+consuming-AS redemption logs and treat a redemption with no matching
+minting record as a security event, and states its reconciliation
+posture in its conformance statement ({{conformance}}). A deployment
+operating under the Enterprise Mission Authority Profile
+({{I-D.draft-mcguinness-mission-authority-server}}) MUST reconcile,
+within the window its statement declares: at estate scale,
+reconciliation is the only check on this compromise class.
 
 **Trust inversion.** The consuming AS accepts externally derived
 authority. Its exposure is bounded by the profile's own rules: it

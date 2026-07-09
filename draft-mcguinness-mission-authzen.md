@@ -960,6 +960,29 @@ Evidence `contributing_constraints`:
 }
 ~~~
 
+## Timeouts, Retries, and Overload {#transport-behavior}
+
+An evaluation exchange carries metered and single-use consequences,
+so its transport behavior is specified, not assumed:
+
+- A PEP MUST bound each evaluation call with a timeout inside the
+  action class's staleness budget and treat expiry as
+  `pdp_unreachable` ({{pre-decision-refusal}}): fail closed, never a
+  permit.
+- A PEP MAY retry an evaluation whose response was lost, carrying
+  the same normalized parameters and idempotency key. The runtime
+  profile's retransmission rule then returns the prior decision
+  where its permit is unexpired and unconsumed
+  ({{I-D.draft-mcguinness-mission-runtime}}), and metering MUST NOT
+  charge the bound twice for the retried request
+  ({{I-D.draft-mcguinness-mission-metering}}).
+- A PDP under overload sheds load explicitly: HTTP 429 with
+  `Retry-After`. The PEP treats it as `pdp_unreachable` for the
+  action at hand and MUST NOT retry before `Retry-After` elapses.
+- A PDP MAY publish a maximum batch size and refuse an oversized
+  boxcar with HTTP 413; the PEP splits the batch rather than
+  dropping items.
+
 # PDP Response {#pdp-response}
 
 The PDP returns its permit or denial in the AuthZEN response
@@ -1018,7 +1041,12 @@ This profile defines the following AuthZEN response `context` members:
   freshness time or lease of the Mission state view the decision
   relied on ({{I-D.draft-mcguinness-mission-runtime}}); in
   particular, it MUST NOT be later than a supplied
-  `context.freshness.mission_status_expires_at`.
+  `context.freshness.mission_status_expires_at`. In `fresh` mode
+  with no supplied `mission_status_expires_at`, the PDP derives the
+  bound from its own state view: the view's freshness time or lease
+  where the source reports one, otherwise the deployment's published
+  staleness bound for the action's class. No mode leaves the permit
+  window unbounded on the wire.
 
 `single_use`:
 : CONDITIONAL. A boolean. When `true`, the PEP MUST treat `decision_id`
@@ -1339,6 +1367,14 @@ otherwise make the cache never hit. A cached permit cannot be reused for
 a request that differs in any bound field, and its reuse is bounded in
 time by `permit_expires_at`, not by the freshness telemetry.
 
+The envelope rule fixes what a permit cache is for. A parameter-bound
+class keys on `parameter_digest`, and a high-consequence permit is
+single-use, so caching amortizes only repeat-identical,
+non-single-use actions: reads and idempotent re-checks. The steady
+state for consequential writes is one evaluation per action, and a
+deployment sizes PDP capacity and placement to that rate, not to a
+cache hit ratio ({{I-D.draft-mcguinness-mission-runtime}}).
+
 ## Decision identifier propagation {#decision-id-propagation}
 
 In a split topology the resource request the permit authorizes is
@@ -1587,6 +1623,15 @@ only facts the PEP verified:
 `evaluated_at`:
 : REQUIRED. An RFC 3339 {{RFC3339}} timestamp.
 
+`first_evaluated_at`:
+: OPTIONAL. An RFC 3339 timestamp. Present on an aggregated record:
+  the earliest refusal the record covers, with `evaluated_at` the
+  latest.
+
+`attempt_count`:
+: OPTIONAL. An integer. Present on an aggregated record: the number
+  of refusals the record covers.
+
 `parameter_digest`:
 : CONDITIONAL. A string. REQUIRED for a parameter-bound action class.
 
@@ -1629,6 +1674,14 @@ only facts the PEP verified:
 
 A Refusal Record is closed to uncoordinated extension under the same
 rule as Decision Evidence.
+
+A sustained failure condition with a retrying agent otherwise yields
+one signed record per attempt. A PEP MAY aggregate consecutive
+refusals sharing `denial_reason`, `audience`, `action`, and the
+parameter or request digest into one Refusal Record, carrying
+`first_evaluated_at`, `evaluated_at`, and `attempt_count`.
+Aggregation applies only to the PEP-side conditions of this section;
+PDP denials remain one Decision Evidence Object per evaluation.
 
 When the deployment establishes the Mission binding externally under
 the runtime profile's binding-establishment step

@@ -343,6 +343,9 @@ exists before the first grant is issued.
 - Subject resolution: the account-linking policy by which the
   Resource AS resolves the conveyed Subject in its own namespace
   ({{validation-at-resource-as}}).
+- Derivation records: whether the Resource AS keeps the per-token
+  derivation record of {{validation-at-resource-as}}. An originating
+  AS MAY condition projection on it.
 
 A deployment that publishes a Mission Deployment Profile
 ({{I-D.draft-mcguinness-mission-architecture}}) records its
@@ -570,7 +573,10 @@ A Resource AS consuming a Mission-bound cross-domain grant:
   `authorization_details`. The issuer cannot observe local tokens
   ({{cross-domain-revocation}}), so this record is the only evidence
   tying a local token to the grant it was minted from and showing
-  its authority did not widen.
+  its authority did not widen; without it, cross-domain minting is
+  unaccountable to both domains. Whether the Resource AS keeps this
+  record is a pre-established trust input
+  ({{pre-established-trust}}).
 
 A grant that carries no `mission` claim is outside this profile: the
 Resource AS processes it, or refuses it, under plain identity

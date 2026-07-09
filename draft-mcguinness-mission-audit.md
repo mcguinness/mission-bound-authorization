@@ -29,7 +29,6 @@ author:
 normative:
   RFC3339:
   RFC6234:
-  RFC6838:
   RFC8785:
   RFC9052:
   RFC9943:
@@ -86,6 +85,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-harness:
+    title: "Mission-Aware Agent Harnesses"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-mandate:
     title: "Mission Mandate"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
@@ -113,6 +120,14 @@ informative:
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-architecture:
+    title: "An Architecture for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
     author:
       -
         ins: K. McGuinness
@@ -303,6 +318,8 @@ record as part of the Mission's feed.
 | Mission Mandate | JWS Compact Serialization, as issued | `application/mission-mandate+jwt` | `issuer` |
 | Child Evidence | Child Evidence object (JCS), as the child-delegation profile fixes | `application/mission-child-evidence+json` | `issuer` |
 | Discovery Evidence | Discovery Evidence object (JCS), as the discovery profile fixes | `application/mission-discovery-evidence+json` | `issuer` |
+| Harness Evidence | Harness Evidence object (JCS), as the harness profile fixes | `application/mission-harness-evidence+json` | harness key |
+| Erasure record | {{erasure-record}} (JCS) | `application/mission-erasure-record+json` | producer of the erased record's type |
 
 The table is extensible by specification: a profile MAY define an
 additional evidence type by fixing its canonical bytes, its
@@ -528,6 +545,33 @@ Statement carries the digest bytes inline as its payload, with
 `payload-preimage-content-type` `application/mission-derivation-record+json`
 and the same `iss` and `sub` as {{transition-vector}}.
 
+### The Erasure Record {#erasure-record}
+
+When retained evidence is destroyed inside its retention window, under
+a data-subject request or a retention limit, the erasure itself is
+registered, so the resulting audit failure is explained on the feed
+rather than indistinguishable from convenient loss
+({{privacy-considerations}}). The canonical bytes are the JCS
+serialization of a JSON object with:
+
+- `erased` (string, required): the committed digest, from the Signed
+  Statement's payload, of the record whose evidence was erased.
+- `basis` (string, required): the erasure basis:
+  `data_subject_request`, `retention_limit`, or a deployment-defined
+  value.
+- `erased_at` (string, required): an RFC 3339 {{RFC3339}} date-time.
+- `salt` (string, required): a random salt of at least 128 bits,
+  base64url encoded, per the enumerable-shape rule of
+  {{privacy-considerations}}.
+
+The record's producer is the authoritative producer of the erased
+record's type, and it registers on the same Mission feed. A relying
+party that finds an erasure record covering an unretrievable
+commitment treats the audit failure as explained (recorded-basis
+erasure, still not content-verified); an unexplained gap, in a
+deployment that registers erasures, remains worth recording
+({{verification-failures}}).
+
 ## Registration Policy and Authoritative Producers {#registration-policy}
 
 Each evidence type has one authoritative producer ({{evidence-types}}).
@@ -548,11 +592,13 @@ Authorization Server's metadata `jwks_uri` in the OAuth binding
 Server's discovery `jwks_uri` in the standalone binding
 ({{I-D.draft-mcguinness-mission-authority-server}}), or the AAuth
 Person Server's existing `jwks_uri` in the AAuth binding
-({{I-D.draft-mcguinness-mission-aauth}}). A PDP or PEP key
+({{I-D.draft-mcguinness-mission-aauth}}). A PDP, PEP, or harness key
 is resolved
 through the deployment-published key sets the runtime and AuthZEN
 profiles require ({{I-D.draft-mcguinness-mission-runtime}},
-{{I-D.draft-mcguinness-mission-authzen}}).
+{{I-D.draft-mcguinness-mission-authzen}}); the harness profile
+requires the same publication of a harness that registers its
+evidence ({{I-D.draft-mcguinness-mission-harness}}).
 
 ## Registration Availability {#availability}
 
@@ -562,7 +608,12 @@ Service being reachable or on a Receipt being returned; the governed
 operation proceeds and the record is registered out of band. A conforming
 deployment registers each record within a documented time bound and
 records its registration backlog, so a gap between an event and its
-registration is visible rather than silent.
+registration is visible rather than silent. The bound, the backlog
+metric, and the component that alerts when the bound is exceeded are
+published with the deployment's registration schedule in its Mission
+Deployment Profile ({{I-D.draft-mcguinness-mission-architecture}}),
+mirroring the runtime profile's orphaned-evidence obligations
+({{I-D.draft-mcguinness-mission-runtime}}).
 
 A record registered late is transparent only from its registration time:
 the Receipt proves inclusion from when the log received the Signed
@@ -582,6 +633,16 @@ wants an auditor to retrieve all of a Mission's records by `sub` provides
 that enumeration itself, out of band, over the records it registered;
 this profile fixes the `sub` so those records share one correlator
 ({{feed}}), not a standardized feed query.
+
+Out of band is not undocumented. A deployment claiming this profile
+MUST document its feed-enumeration mechanism: how an authorized
+auditor retrieves every record registered for a `sub`, in what order,
+with what completeness relative to {{what-to-register}}, and under
+what auditor authentication. The mechanism is deployment-chosen (a
+SCRAPI extension, a log export, a query surface over retained
+Transparent Statements); an undocumented one leaves the feed
+assembled only by the deployment itself, which is the trust this
+profile exists to remove.
 
 ## What to Register {#what-to-register}
 
@@ -666,7 +727,10 @@ On registration the Transparency Service returns a Receipt, a signed
 inclusion proof ({{RFC9943}}). The producer
 SHOULD retain the Receipt with the evidence, or on the Mission record,
 as a Transparent Statement (the Signed Statement augmented with its
-Receipt).
+Receipt). A producer that claims offline verifiability for a record
+MUST retain its Receipt, or an entry identifier the service
+guarantees resolvable for the audit horizon; a registered record
+with neither is verifiable only against the live service.
 
 A relying party verifies a Transparent Statement offline, without
 contacting the producer or the service:
@@ -704,7 +768,10 @@ checked but is not refuted, as the consent evidence profile does
   committed time, in a non-equivocating log; only the content check is
   incomplete. The relying party MUST NOT treat the record as
   content-verified, and MUST NOT treat unretrievable evidence as
-  evidence of tampering.
+  evidence of tampering. An erasure record on the feed
+  ({{erasure-record}}) explains the gap as recorded-basis erasure;
+  a gap without one, in a deployment that registers erasures, is
+  itself worth recording, though still not proof of tampering.
 - A producer or Transparency Service key that the relying party cannot
   verify against a trust anchor (step 1 or step 2 unresolved) is an audit
   failure, not an integrity failure. The relying party cannot attribute
@@ -721,6 +788,14 @@ which must not differ in ways the append-only property forbids. A service
 that presents inconsistent Receipts for one statement, or a subject
 listing that diverges from another service's, is equivocating, and the
 relying party can rely on the others.
+
+Detection is a duty, not a side effect. A deployment claiming this
+profile MUST designate the party that periodically re-verifies feed
+consistency (retained Receipts and the `sub` listing, against each
+service it registers with) and that party's alerting obligation on
+failure. A deployment with a single service and no designated monitor
+obtains tamper evidence only against alteration after registration,
+not against a split view, and MUST NOT claim non-equivocation.
 
 # Worked Example {#example}
 
@@ -857,6 +932,19 @@ profile adds:
 - Transparency Service trust. A single service is trusted not to
   equivocate; a deployment that needs that property checked SHOULD
   register with multiple independent services ({{receipts}}).
+- Operator independence. The cross-domain value of transparency is
+  verification without trust in the producer's own infrastructure
+  ({{limits}}); a service operated by the producer whose records it
+  holds returns the auditor to exactly that trust. The Transparency
+  Service SHOULD be operated independently of the authoritative
+  producers for the feeds it holds. Where producer and service share
+  an operator, registration with a second, independent service is
+  the compensating control, and a deployment without one MUST NOT
+  claim cross-domain verifiability for the affected records. A
+  deployment states its service topology (self-run, vendor-shared,
+  or third-party) and each operator's relationship to the producers
+  in its Mission Deployment Profile
+  ({{I-D.draft-mcguinness-mission-architecture}}).
 - Completeness. Transparency proves what was registered, not that
   everything was registered. A producer that omits a record cannot
   forge inclusion, but the gap is visible only if an auditor expects the
@@ -868,14 +956,19 @@ profile adds:
 - Log lifecycle. Transparency Service key rotation, log retirement, and
   migration of a Mission's feed between services are deferred to future
   work, and a deployment whose Missions outlive a single log instance
-  handles them by local arrangement until then. Because a Receipt is
-  the longest-lived artifact this profile produces and is the
+  handles them by local arrangement until then. One interim rule
+  holds now, matching the family's retired-key posture: a service key
+  that signed any retained Receipt stays resolvable in the service's
+  published key material for the audit horizon of the feeds it
+  covers, so rotation retires a key from signing, never from Receipt
+  verifiability within that bound. Because a Receipt is the
+  longest-lived artifact this profile produces and is the
   compensating control for issuer key compromise
-  ({{I-D.draft-mcguinness-mission-mandate}}), a deployment MUST pin and
-  retain the Transparency Service verification keys that validate its
-  retained Receipts for the audit horizon of the Missions registered
-  under them; a Receipt whose signing key is no longer resolvable
-  cannot be verified offline, and the compensating control is lost.
+  ({{I-D.draft-mcguinness-mission-mandate}}), a deployment MUST also
+  pin and retain the Transparency Service verification keys that
+  validate its retained Receipts for that horizon; a Receipt whose
+  signing key is no longer resolvable cannot be verified offline, and
+  the compensating control is lost.
 
 # Privacy Considerations {#privacy-considerations}
 
@@ -914,7 +1007,11 @@ content can never again be checked against the commitment. A deployment
 that may need to erase evidence, for a data-subject request or a
 retention limit, weighs this before registering. Registration does not
 prevent erasure; it converts an erased record into a permanent, visible
-gap rather than a silent one.
+gap rather than a silent one. A deployment that erases committed
+evidence MUST register an erasure record ({{erasure-record}}) on the
+same feed, so the gap carries its basis: lawful erasure and
+convenient loss are otherwise indistinguishable, and the
+verification taxonomy forbids reading the gap as tampering.
 
 ## Evidence Minimization {#evidence-minimization}
 
@@ -947,43 +1044,18 @@ profile and the runtime and consent-evidence records it aggregates:
 
 # IANA Considerations {#iana}
 
-This document requests registration of three media types per
-{{RFC6838}}, for the evidence types of {{evidence-types}} that no other
-profile defines: `application/mission-approval-record+json` for the
-approval-event record, `application/mission-lifecycle-transition+json`
-for the minimal lifecycle-transition object ({{transition-object}}),
-and `application/mission-derivation-record+json` for the derivation
-record ({{derivation-record}}). Each is carried in the
-`payload-preimage-content-type` header a relying party MUST verify
-({{hash-commitment}}, {{evidence-types}}), so they are registered
-rather than left to local agreement. The three share the following
-template, differing only in subtype name:
-
-- Type name: application
-- Subtype name: mission-approval-record+json,
-  mission-lifecycle-transition+json, or
-  mission-derivation-record+json
-- Required parameters: none
-- Optional parameters: none
-- Encoding considerations: binary; JSON canonicalized per this document
-- Security considerations: see {{security-considerations}}
-- Interoperability considerations: see this document
-- Published specification: this document
-- Applications that use this media type: Mission-Bound Authorization
-  audit deployments registering Mission evidence with a Transparency
-  Service
-- Fragment identifier considerations: not applicable
-- Additional information:
-  - Deprecated alias names for this type: none
-  - Magic number(s): none
-  - File extension(s): none
-  - Macintosh file type code(s): none
-- Person & email address to contact for further information:
-  Karl McGuinness <public@karlmcguinness.com>
-- Intended usage: COMMON
-- Restrictions on usage: none
-- Author: IETF
-- Change controller: IETF
+This document defines four media types for the evidence types of
+{{evidence-types}} that no other profile defines:
+`application/mission-approval-record+json` for the approval-event record,
+`application/mission-lifecycle-transition+json` for the minimal
+lifecycle-transition object ({{transition-object}}),
+`application/mission-derivation-record+json` for the derivation record
+({{derivation-record}}), and
+`application/mission-erasure-record+json` for the erasure record
+({{erasure-record}}). This document makes
+no registration request for them yet; registration is deferred pending a
+demonstrated cross-domain interoperability need, and deployments using
+these media types do so by local agreement until then.
 
 The other evidence media types this profile registers into a Transparency
 Service are defined elsewhere: the runtime decision, execution, and
@@ -994,7 +1066,9 @@ type by the consent evidence profile
 Mission Mandate media type by the Mandate profile
 ({{I-D.draft-mcguinness-mission-mandate}}), the Child Evidence type
 identifier by the child-delegation profile
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), and the
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), the
+Harness Evidence type identifier by the harness profile
+({{I-D.draft-mcguinness-mission-harness}}), and the
 Signals SET media type `application/secevent+jwt` by RFC 8417, which the
 Signals profile carries the event in
 ({{I-D.draft-mcguinness-oauth-mission-signals}}). The Signed Statement

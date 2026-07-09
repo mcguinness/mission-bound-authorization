@@ -1242,6 +1242,17 @@ for the Mission's enforcement scope. Any other caller MUST receive
 `not_found`, so the `join_failed` (403) and `not_found` (404) split
 never acts as a mapping oracle for callers outside that set.
 
+Assertion lifetime is capped by the token's, so short token lifetimes
+put minting on the rotation path: each rotation needs a fresh
+assertion and its introspection call, per Mission and per workload. A
+deployment amortizes deliberately: it sizes agent token lifetimes to
+the runtime layer's revocation cutoff rather than treating expiry as
+the kill switch (the token-lifetime trade of
+{{I-D.draft-mcguinness-mission-runtime}}), and the MAS MAY reuse an
+introspection result across mintings of the same token within the
+deployment's staleness bound, so re-minting for an unchanged token
+does not repeat the AS round trip.
+
 ## The Assertion {#join-assertion-artifact}
 
 On success the MAS mints a Mission Join Assertion: a signed JWT
@@ -1271,6 +1282,13 @@ claims:
 `aud`:
 : OPTIONAL. The PDP or PDPs the assertion is minted for.
 
+`mapping_version`:
+: OPTIONAL. A string. The mapping contract version
+  ({{mapping-contract}}) under which the subject and client joins
+  were evaluated. RECOMMENDED where the MAS publishes a mapping
+  contract, so each join is attributable to the mapping that
+  produced it.
+
 When the introspected token carries instance identity
 ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}), the MAS
 SHOULD include the instance identifier in the `token` object: the
@@ -1284,8 +1302,9 @@ instance, not any holder of a client-shared key.
 The endpoint returns HTTP 200 with a JSON object whose `assertion`
 member carries the JWT. Each minting is a join evidence event: the MAS
 records the Mission reference, the token digest and thumbprint, the
-authenticated caller, and the validity window, retained for the audit
-horizon.
+authenticated caller, the mapping version where one is published
+({{mapping-contract}}), and the validity window, retained for the
+audit horizon.
 
 Example claims:
 
@@ -1489,7 +1508,11 @@ binding, with the obligations below ({{I-D.draft-mcguinness-mission-architecture
   MAS-served state MUST be an active freshness source with a published
   staleness bound, meeting the runtime profile's requirement for those
   classes ({{I-D.draft-mcguinness-mission-runtime}}); token-lifetime
-  expiry alone does not qualify.
+  expiry alone does not qualify. Where per-class bounds differ, the
+  metadata's single `mission_max_stale_seconds` ({{discovery}})
+  advertises the tightest bound in force, the value a consumer may
+  assume without knowing an action's class; the per-class bounds are
+  published in the Enforcement Scope Statement.
 - **Join Assertion.** The MAS MUST offer the Mission Join Assertion
   ({{join-assertion}}), and for the high-consequence classes the PDP
   MUST require one: the mapping join ({{mission-join}}) is the baseline
@@ -1522,6 +1545,34 @@ A deployment claiming this profile SHOULD publish its claims,
 coverage, and residual risks as a Mission Deployment Profile
 ({{I-D.draft-mcguinness-mission-architecture}}).
 
+## Estate Prerequisites {#enterprise-prerequisites}
+
+The profile's mandatory path runs through the deployment's unchanged
+Authorization Server, and it assumes capabilities there:
+configuration rather than code, but gating nonetheless. Before
+claiming the profile a deployment confirms its estate AS provides:
+
+- **Token introspection.** {{RFC7662}} introspection reachable by the
+  MAS, under credentials the deployment protects
+  ({{sec-join-assertion}}); the MAS cannot mint a Join Assertion
+  without it ({{join-assertion-request}}).
+- **Sender-constrained issuance.** DPoP-bound or mutual-TLS-bound
+  access tokens for the agent clients acting in the high-consequence
+  classes: the join requires sender-constraint for those classes
+  ({{mission-join}}), and the MAS MUST NOT mint an assertion for a
+  token without a `cnf` key ({{join-assertion-request}}).
+- **`cnf` in introspection.** Introspection responses that report the
+  token's `cnf` confirmation, since the assertion binds the key
+  thumbprint that response reports.
+
+An estate whose Authorization Server cannot provide these still
+joins under the mapping join at the conformance floor
+({{mission-join}}, {{conformance}}); it does not claim this profile.
+The digest pair of {{join-assertion-request}} further assumes an
+introspection surface that resolves a token by digest, which
+mainstream Authorization Servers do not provide; a deployment plans
+for the `access_token` form.
+
 ## The Enterprise Mapping Contract {#mapping-contract}
 
 The dominant MAS risk is a coarse or drifting join: shared
@@ -1542,6 +1593,11 @@ performs:
 - an audit record for each mapping decision; and
 - the failure semantics, which MUST fail closed with `mission_mismatch`
   on any unresolved or ambiguous mapping.
+
+A MAS that mints Join Assertions SHOULD carry the version in each
+assertion's `mapping_version` claim ({{join-assertion-artifact}}), so
+a mapping change is attributable in join evidence, not only
+detectable in documents.
 
 ## Policy View Distribution {#policy-distribution}
 
@@ -1580,6 +1636,13 @@ provider and Authorization Server, changing neither:
   table; and
 - runtime decision and execution evidence flows to the deployment's
   audit sink.
+
+Which Mission Issuer governs a given resource is deployment
+configuration the estate makes explicit: where more than one Mission
+Issuer operates, the deployment documents the resource-to-issuer
+mapping alongside its mapping contract, and a PEP treats a resource
+with no mapped issuer as outside this profile's governance rather
+than inventing one.
 
 ## Connector Patterns {#deployment-connectors}
 
@@ -1637,6 +1700,14 @@ floor is required to begin. The MAS is not a throwaway bridge but the
 enduring control plane of the family's delegated-authority layer
 ({{I-D.draft-mcguinness-mission-architecture}}), which a deployment
 keeps even as individual Authorization Servers become Mission-aware.
+
+The common starting estate runs bots on standing service accounts
+with broad, durable entitlements. The migration is per task, not per
+account: each recurring job becomes a durable Mission whose Authority
+Set is derived from the entitlements the job actually exercises, with
+the deployment's entitlement catalog as the derivation policy's
+input; the service account retains only what no Mission yet governs,
+and that shrinking residue is the adoption metric.
 
 # Security Considerations
 
@@ -1730,6 +1801,20 @@ work stoppage for governed actions, not into loosened enforcement
 {{I-D.draft-mcguinness-mission-security-model}}). A deployment
 provisions MAS availability accordingly and sizes
 `mission_max_stale_seconds` to the caching it can tolerate.
+
+## Signing-Key Custody
+
+The MAS's signing key is the estate's Mission root of trust: it signs
+status and lifecycle responses, Join Assertions, and the issuer-signed
+artifacts of the companions. A MAS SHOULD hold it in a non-exportable
+keystore (an HSM or equivalent KMS-grade custody) with dual-controlled
+generation, and SHOULD sign high-volume surfaces (status, Join
+Assertions) and long-lived artifacts (Mandates, Issuance Grants) under
+distinct `kid`s in one `jwks_uri`, so custody can differ by blast
+radius. The introspection credential the MAS holds at the estate AS
+({{join-assertion-request}}) is secret material of the same tier: its
+compromise forges joins
+({{I-D.draft-mcguinness-mission-security-model}}).
 
 ## MAS Compromise
 

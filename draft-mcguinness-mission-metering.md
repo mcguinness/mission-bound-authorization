@@ -488,7 +488,13 @@ budget; for a non-idempotent action class, expiry forces reconciliation
 or human review rather than release. An unsettled reservation remains
 charged against the bound until it is reconciled, and is released only
 on affirmative evidence of non-execution; timeout alone never releases a
-reservation for a non-idempotent action class.
+reservation for a non-idempotent action class. The operational
+consequence: a lossy evidence channel accumulates reservations
+against `max_budget` and `max_calls` until the Mission starves on
+`quota_exceeded`, a self-inflicted denial of service. A deployment
+SHOULD run orphaned-evidence reconciliation on a published cadence
+sized to its evidence-channel loss rate; the reconciliation window
+it publishes is how long leaked budget stays leaked.
 
 For a duration-metered action the PEP reports the measured duration in
 the Execution Evidence `measured_duration` member, and the PDP commits
@@ -497,7 +503,10 @@ re-evaluation request that carries the prior permit's `decision_id` in
 `context.prior_decision_id`, so the PDP continues the same metered
 activity rather than opening a new reservation. The PDP MUST verify
 that the renewal's Mission, subject, action, and audience match the
-decision named by `prior_decision_id`. This exchange requires
+decision named by `prior_decision_id`. A deployment sizes lease
+intervals to amortize renewals: an interval materially shorter than
+the action class's staleness bound adds decision load without
+tightening the revocation cutoff. This exchange requires
 one request member and one evidence member:
 
 `context.prior_decision_id`:

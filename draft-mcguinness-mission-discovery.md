@@ -374,12 +374,14 @@ drive every floor of this document; the requesting actor; and the
 session's taint state. The taint state MUST be obtained from the
 harness through a channel the agent does not mediate (a harness
 attestation, {{I-D.draft-mcguinness-mission-harness}}), never from
-the encounter request; where the Mission Issuer cannot obtain a
-trustworthy taint state, it MUST treat the session as tainted. An
-operation the deployment's classification cannot assign an action
-class MUST NOT bind by policy: with no class the floors cannot be
-applied, so the encounter routes to a human or is refused. The
-adjudication returns exactly one of:
+the encounter request, and the adjudicator MUST treat a missing,
+stale, or unverifiable taint state as tainted: the floor of
+{{injection-discovery}} keys on the harness's report, and an absent
+report is not an untainted one. An operation the deployment's
+classification cannot assign an action class MUST NOT bind by
+policy: with no class the floors cannot be applied, so the encounter
+routes to a human or is refused. The adjudication returns exactly
+one of:
 
 **Bind.**
 : The encountered resource falls within a consented ceiling entry
@@ -668,16 +670,17 @@ opportunity, not work in flight.
 
 # Privacy Considerations {#privacy-considerations}
 
-Encounters reveal where an agent goes: the adjudicator, and the
-transparency log where evidence registers, learn every resource an
-agent met, including refused ones. That trail is the point for
-audit, and a hazard for the Subject. A deployment minimizes by
-registering digests rather than declarations, restricting Discovery
-Evidence access as it does other Mission evidence, and applying the
-issuance profile's identifier guidance where correlation across
-feeds matters. A self-declaration may itself contain third-party
-information; committing its digest rather than its bytes keeps that
-content out of the log.
+Encounters reveal where an agent goes: the adjudicator learns every
+resource an agent met, including refused ones, and the transparency
+log, which receives only hash commitments
+({{I-D.draft-mcguinness-mission-audit}}), still learns the Mission's
+feed, its registration cadence, and that encounters occurred. That
+trail is the point for audit, and a hazard for the Subject. A
+deployment minimizes by restricting Discovery Evidence access as it
+does other Mission evidence and applying the issuance profile's
+identifier guidance where correlation across feeds matters. A
+self-declaration may itself contain third-party information; the
+digest commitment keeps that content out of the log.
 
 # IANA Considerations {#iana}
 
