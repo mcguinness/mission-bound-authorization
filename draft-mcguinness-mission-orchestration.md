@@ -670,7 +670,13 @@ members:
   of the compensation action.
 
 `evidence_envelope`:
-: OPTIONAL. Integrity protection over the Orchestration Evidence
+: OPTIONAL, except REQUIRED when `orchestration_decision` is
+  `compensate` and the compensated step's reversibility class is
+  `irreversible_action`, `external_commitment`, or
+  `privileged_administration`. Compensation in those classes is
+  consequential work in its own right; its record does not rest on
+  an unsigned self-report by the orchestrator that performed it.
+  Integrity protection over the Orchestration Evidence
   object. When present with `format` `jws-compact`, it is a JWS
   {{RFC7515}} Compact Serialization whose payload is the JCS
   {{RFC8785}} canonical bytes of the object with `evidence_envelope`
