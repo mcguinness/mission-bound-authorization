@@ -17,8 +17,10 @@ a client initiates expansion: it submits a new Mission Intent through
 Pushed Authorization Requests, bound to the predecessor Mission's
 grant, and a fresh approval event records a successor Mission. The
 successor carries a  predecessor  member on its  mission  claim
-linking it to the Mission it replaces; on the successor's activation
-the predecessor enters a terminal  superseded  state. Expansion never
+linking it to the Mission it replaces; on the successor's first
+redemption it activates and the predecessor enters a terminal
+ superseded  state, so an unredeemed code leaves the predecessor
+active. Expansion never
 widens authority without a new consent: the successor's authority
 comes only from its own approval. A deployment that never expands a
 Mission is unaffected by this document. 
@@ -1107,8 +1109,10 @@ a client initiates expansion: it submits a new Mission Intent through
 Pushed Authorization Requests, bound to the predecessor Mission's
 grant, and a fresh approval event records a successor Mission. The
 successor carries a <code>predecessor</code> member on its <code>mission</code> claim
-linking it to the Mission it replaces; on the successor's activation
-the predecessor enters a terminal <code>superseded</code> state. Expansion never
+linking it to the Mission it replaces; on the successor's first
+redemption it activates and the predecessor enters a terminal
+<code>superseded</code> state, so an unredeemed code leaves the predecessor
+active. Expansion never
 widens authority without a new consent: the successor's authority
 comes only from its own approval. A deployment that never expands a
 Mission is unaffected by this document.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
@@ -1519,12 +1523,13 @@ grant, that asks the Mission Issuer to adjudicate a successor
      |    &lt;----- request_uri ----- | gate predecessor active
      |                            |
      | 2. authorization request -&gt;| fresh consent for the
-     |                            | broader authority
-     |    &lt;-------- code --------- | -&gt; successor active
+     |                            | broader authority;
+     |    &lt;-------- code --------- | predecessor stays active
+     |                            |
+     | 3. token request --------&gt; | first redemption:
+     |    (redeem code)           | -&gt; successor active
      |                            |    -&gt; predecessor
      |                            |       superseded (atomic)
-     |                            |
-     | 3. token request --------&gt; | derive under successor
      |    &lt;----- access token ---- | (mission.predecessor set)
      v
 </pre><a href="#section-3.1-1" class="pilcrow">¶</a>
@@ -1535,7 +1540,11 @@ the request is bound to the predecessor Mission's grant, so the
 Mission Issuer adjudicates a successor of a specific predecessor rather
 than an unrelated new Mission. The fresh consent at step 2 is what
 supplies the broader authority; the successor's authority comes only
-from this approval.<a href="#section-3.1-2" class="pilcrow">¶</a></p>
+from this approval. Supersession is deferred to step 3: the successor
+activates and the predecessor becomes <code>superseded</code> atomically at the
+first redemption of the successor's authorization code, so an
+unredeemed or expired code leaves the predecessor <code>active</code>
+(<a href="#superseded-state" class="auto internal xref">Section 7</a>).<a href="#section-3.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="eligibility">
@@ -1618,7 +1627,7 @@ authoritatively. It is carried through PAR with <code>mission_intent</code>; an
 AS <span class="bcp14">MUST</span> reject a <code>predecessor_token</code> presented directly on a
 front-channel authorization request rather than through a PAR-issued
 <code>request_uri</code> with <code>invalid_request</code>. Because it carries a refresh
-token, it <span class="bcp14">MUST</span> be sent only on the client-authenticated PAR back
+token, it <span class="bcp14">MUST</span> be sent only on the PAR back
 channel and <span class="bcp14">MUST NOT</span> appear on any front channel.<a href="#section-4.1-3.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -1641,8 +1650,17 @@ client presents, never from a client-supplied <code>mission_id</code>
 request <span class="bcp14">MUST</span> be bound to the predecessor's grant the same way.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
 <p id="section-4.2-2">Because expansion runs as an interactive approval event, a PAR
 submission followed by an authorization-code flow (<a href="#adjudication" class="auto internal xref">Section 5</a>),
-the binding is established at the PAR submission, which is a
-client-authenticated back-channel request. In the same PAR request that
+the binding is established at the PAR submission, a back-channel
+request. PAR permits a public client to submit without client
+authentication (<span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>), so the expansion <span class="bcp14">MUST</span> rest on an
+authenticated proof of control over the predecessor's grant. A
+confidential client supplies this by authenticating to the PAR
+endpoint. A public client's PAR request is not client-authenticated,
+so its expansion rests solely on the presented <code>predecessor_token</code>,
+which <span class="bcp14">MUST</span> then be sender-constrained (<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> or <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) so
+it is not a bearer proof; the Mission Issuer <span class="bcp14">MUST</span> reject a
+public-client expansion whose <code>predecessor_token</code> is not
+sender-constrained with <code>invalid_request</code>. In the same PAR request that
 carries <code>mission_intent</code> and <code>predecessor</code>, the client <span class="bcp14">MUST</span>
 present the predecessor Mission's refresh token in the
 <code>predecessor_token</code> parameter (<a href="#submission" class="auto internal xref">Section 4.1</a>). The Mission
@@ -1676,14 +1694,23 @@ rotation-based deployment that carve-out would let a stolen bearer
 refresh token be presented repeatedly without detection, so each
 expansion presentation <span class="bcp14">MUST</span> be recorded and counted toward the
 deployment's anomaly detection, and the per-predecessor rate limit
-(<a href="#policy-probing" class="auto internal xref">Section 13.5</a>) is a <span class="bcp14">MUST</span> when the presented token is not
-sender-constrained. The successor's
+(<a href="#policy-probing" class="auto internal xref">Section 13.5</a>) applies unconditionally, with a tighter bound
+<span class="bcp14">SHOULD</span> when the presented token is not sender-constrained. The
+successor's
 authority still comes only from the fresh consent at the approval event,
 never from authority the binding token could itself derive.<a href="#section-4.2-5" class="pilcrow">¶</a></p>
-<p id="section-4.2-6">Because expansion reuses the issuance profile's grant binding, it
+<p id="section-4.2-6">This binding requires the predecessor to have a refresh token to
+present. A Mission issued without one (for example an
+access-token-only grant) has no <code>predecessor_token</code> to carry and so
+cannot be expanded through this binding; a deployment that must expand
+such a Mission defines an alternative grant proof by extension, or the
+task obtains its broadened authority as an ordinary new Mission under
+the issuance profile, linked by the successor's <code>related_to</code> member
+(<a href="#predecessor-member" class="auto internal xref">Section 6</a>) for lineage.<a href="#section-4.2-6" class="pilcrow">¶</a></p>
+<p id="section-4.2-7">Because expansion reuses the issuance profile's grant binding, it
 needs no opaque expansion ticket or other new bearer: the predecessor
 is identified and authorized by the grant the client already holds for
-it, and a client cannot name an arbitrary predecessor.<a href="#section-4.2-6" class="pilcrow">¶</a></p>
+it, and a client cannot name an arbitrary predecessor.<a href="#section-4.2-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="predecessor-active">
@@ -1752,10 +1779,16 @@ this step for expansions within a pre-consented ceiling,
 </li>
         <li id="section-5-2.4">
           <p id="section-5-2.4.1">Compute the successor's integrity anchors (<code>intent_hash</code>,
-<code>authority_hash</code>) and create the successor Mission record in the
-<code>active</code> state, with its <code>predecessor</code> member set
-(<a href="#predecessor-member" class="auto internal xref">Section 6</a>), atomically with the predecessor's
-transition to <code>superseded</code> (<a href="#superseded-state" class="auto internal xref">Section 7</a>).<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
+<code>authority_hash</code>) and commit them in the authorization code the
+approval event issues; defer materializing the successor. On the
+first redemption of that authorization code (the successor's
+grant), create the successor Mission record in the <code>active</code> state,
+with its <code>predecessor</code> member set (<a href="#predecessor-member" class="auto internal xref">Section 6</a>),
+atomically with the predecessor's transition to <code>superseded</code>
+(<a href="#superseded-state" class="auto internal xref">Section 7</a>). Until that redemption the predecessor
+remains <code>active</code>; an authorization code that is never redeemed or
+that expires creates no successor and leaves the predecessor
+<code>active</code>.<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
 <p id="section-5-3">The expansion is governed by the consent obtained at step 3. Expansion
@@ -1931,7 +1964,7 @@ unchanged for it. The transition is:<a href="#section-7-3" class="pilcrow">¶</a
             <td class="text-left" rowspan="1" colspan="1">
               <code>active</code>
 </td>
-            <td class="text-left" rowspan="1" colspan="1">successor activates by expansion</td>
+            <td class="text-left" rowspan="1" colspan="1">successor activates on first redemption of its grant</td>
             <td class="text-left" rowspan="1" colspan="1">
               <code>superseded</code>
 </td>
@@ -1941,14 +1974,20 @@ unchanged for it. The transition is:<a href="#section-7-3" class="pilcrow">¶</a
 <p id="section-7-5">The transition has these requirements:<a href="#section-7-5" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-6.1">
-          <p id="section-7-6.1.1"><strong>Atomic with successor activation.</strong> The predecessor enters
-<code>superseded</code> in the same atomic operation that activates the
-successor (<a href="#adjudication" class="auto internal xref">Section 5</a>), and in that same operation the Mission
-Issuer sets the predecessor's <code>successor</code> member to the successor's
-<code>mission_id</code> (<a href="#predecessor-member" class="auto internal xref">Section 6</a>). If that operation fails, the
-predecessor remains <code>active</code> and no successor record exists; the
-Mission Issuer <span class="bcp14">MUST NOT</span> produce a partial successor or a predecessor
-left in an indeterminate state.<a href="#section-7-6.1.1" class="pilcrow">¶</a></p>
+          <p id="section-7-6.1.1"><strong>Atomic with successor activation at first redemption.</strong> The
+successor activates, and the predecessor enters <code>superseded</code>, in one
+atomic operation at the first redemption of the successor's
+authorization code (its grant), not at the approval event
+(<a href="#adjudication" class="auto internal xref">Section 5</a>); in that same operation the Mission Issuer sets
+the predecessor's <code>successor</code> member to the successor's <code>mission_id</code>
+(<a href="#predecessor-member" class="auto internal xref">Section 6</a>). Until that redemption the predecessor
+remains <code>active</code>. An authorization code that is never redeemed or
+that expires activates no successor and leaves the predecessor
+<code>active</code>, so an unredeemed or expired code never strands the task's
+authority nor cascade-terminates the predecessor's Child Missions.
+If the atomic operation fails, the predecessor remains <code>active</code> and
+no successor record exists; the Mission Issuer <span class="bcp14">MUST NOT</span> produce a
+partial successor or a predecessor left in an indeterminate state.<a href="#section-7-6.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-6.2">
           <p id="section-7-6.2.1"><strong>Non-active: no further derivation.</strong> A <code>superseded</code> Mission is not
@@ -2041,29 +2080,31 @@ event is deferred to a future revision of this document.<a href="#section-8-3" c
 <a href="#section-9" class="section-number selfRef">9. </a><a href="#name-concurrent-expansion-reconc" class="section-name selfRef">Concurrent Expansion Reconciliation</a>
       </h2>
 <p id="section-9-1">More than one expansion request <span class="bcp14">MAY</span> be in flight against the same
-predecessor at once. Because replacement produces exactly one successor
-per predecessor (<a href="#replacement" class="auto internal xref">Section 8</a>), the Mission Issuer <span class="bcp14">MUST</span> serialize
-adjudications against the same predecessor so that concurrent
-expansions cannot each produce a successor.<a href="#section-9-1" class="pilcrow">¶</a></p>
-<p id="section-9-2">The Mission Issuer <span class="bcp14">MUST</span> serialize expansion adjudications against the
-same predecessor with compare-and-set semantics. At the moment of
-adjudication, in the same atomic step that would activate the successor
-and supersede the predecessor, the Mission Issuer <span class="bcp14">MUST</span> verify:<a href="#section-9-2" class="pilcrow">¶</a></p>
+predecessor at once, and more than one <span class="bcp14">MAY</span> be adjudicated and hold an
+unredeemed authorization code. Because replacement produces exactly one
+successor per predecessor (<a href="#replacement" class="auto internal xref">Section 8</a>) and supersession is
+deferred to first redemption (<a href="#superseded-state" class="auto internal xref">Section 7</a>), the Mission Issuer
+<span class="bcp14">MUST</span> serialize the redemptions that would activate a successor of the
+same predecessor, so that concurrent expansions cannot each activate
+one.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">The Mission Issuer <span class="bcp14">MUST</span> apply compare-and-set semantics at the first
+redemption of a successor's authorization code. In the same atomic step
+that would activate the successor and supersede the predecessor, the
+Mission Issuer <span class="bcp14">MUST</span> verify:<a href="#section-9-2" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-9-3">
 <li id="section-9-3.1">
-          <p id="section-9-3.1.1">the predecessor resolved from the presented grant is still in the
-<code>active</code> state; and<a href="#section-9-3.1.1" class="pilcrow">¶</a></p>
+          <p id="section-9-3.1.1">the predecessor is still in the <code>active</code> state; and<a href="#section-9-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-9-3.2">
-          <p id="section-9-3.2.1">no other replacement expansion has already produced a successor for
+          <p id="section-9-3.2.1">no other replacement expansion has already activated a successor for
 this predecessor (equivalently, the predecessor has not already
 transitioned to <code>superseded</code>).<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-9-4">If either check fails, the Mission Issuer <span class="bcp14">MUST</span> refuse the request with
-<code>invalid_grant</code> and the applicable reconciliation status from the
-closed set below. The losing or otherwise stale expansion request is
-rejected; it does not produce a second successor.<a href="#section-9-4" class="pilcrow">¶</a></p>
+<p id="section-9-4">If either check fails, the Mission Issuer <span class="bcp14">MUST</span> refuse the redemption
+with <code>invalid_grant</code> and the applicable reconciliation status from the
+closed set below. The losing or otherwise stale expansion is rejected
+at redemption; it activates no successor.<a href="#section-9-4" class="pilcrow">¶</a></p>
 <p id="section-9-5">The reconciliation status codes are:<a href="#section-9-5" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-9-6">
         <dt id="section-9-6.1">
@@ -2080,9 +2121,10 @@ a new expansion against the successor as predecessor).<a href="#section-9-6.2.1"
 <code>predecessor_state_changed</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-9-6.4">
           <p id="section-9-6.4.1">The predecessor made a terminal exit from <code>active</code> (to <code>revoked</code>,
-<code>expired</code>, or <code>superseded</code>) before this request could be adjudicated,
-including the cases caught at request binding (<a href="#predecessor-active" class="auto internal xref">Section 4.3</a>).
-The client <span class="bcp14">MUST NOT</span> retry the same expansion against this predecessor.<a href="#section-9-6.4.1" class="pilcrow">¶</a></p>
+<code>expired</code>, or <code>superseded</code>) before this expansion could complete,
+whether caught at request binding (<a href="#predecessor-active" class="auto internal xref">Section 4.3</a>) or at the
+compare-and-set on first redemption (<a href="#reconciliation" class="auto internal xref">Section 9</a>). The client
+<span class="bcp14">MUST NOT</span> retry the same expansion against this predecessor.<a href="#section-9-6.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-9-6.5">
@@ -2217,10 +2259,11 @@ client_id=s6BhdRkqt3
 </div>
 <p id="section-11-3">The Mission Issuer resolves the predecessor from the grant, confirms it
 matches <code>predecessor</code> and is <code>active</code>, derives the successor's Authority
-Set, and obtains fresh consent from <code>alice</code> for the widened cap. On
-approval it creates the successor <code>active</code> and supersedes the
-predecessor atomically. The successor's token carries a <code>predecessor</code>
-member:<a href="#section-11-3" class="pilcrow">¶</a></p>
+Set, and obtains fresh consent from <code>alice</code> for the widened cap,
+issuing an authorization code. When the client redeems that code, the
+Mission Issuer activates the successor and supersedes the predecessor
+atomically; until then the predecessor stays <code>active</code>. The successor's
+token carries a <code>predecessor</code> member:<a href="#section-11-3" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-11-4">
 <pre>
 {
@@ -2272,9 +2315,10 @@ the successor-expiry rule (<a href="#successor-expiry" class="auto internal xref
 and Mission record (<a href="#predecessor-member" class="auto internal xref">Section 6</a>);<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-2.5">
-          <p id="section-12-2.5.1">transition the predecessor to <code>superseded</code> atomically with successor
-activation, and refuse further derivation under a <code>superseded</code>
-Mission (<a href="#superseded-state" class="auto internal xref">Section 7</a>); and<a href="#section-12-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-12-2.5.1">activate the successor and transition the predecessor to <code>superseded</code>
+atomically at the first redemption of the successor's grant, leaving
+the predecessor <code>active</code> until then, and refuse further derivation
+under a <code>superseded</code> Mission (<a href="#superseded-state" class="auto internal xref">Section 7</a>); and<a href="#section-12-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-2.6">
           <p id="section-12-2.6.1">serialize concurrent expansions against the same predecessor with the
@@ -2362,17 +2406,19 @@ longer lifetime past the originally approved horizon.<a href="#section-13.2-3.2.
 <a href="#section-13.3" class="section-number selfRef">13.3. </a><a href="#name-race-against-predecessor-li" class="section-name selfRef">Race against predecessor lifecycle</a>
         </h3>
 <p id="section-13.3-1">Between the moment a client decides to expand and the moment the
-Mission Issuer adjudicates, the predecessor may be revoked, expire, or
-be superseded by a concurrent expansion. Without serialization an
-expansion could appear to succeed against a predecessor that is no
-longer authoritative, or two successors could be created.<a href="#section-13.3-1" class="pilcrow">¶</a></p>
+successor activates at first redemption, the predecessor may be
+revoked, expire, or be superseded by a concurrent expansion. Without
+serialization an expansion could appear to succeed against a
+predecessor that is no longer authoritative, or two successors could be
+created.<a href="#section-13.3-1" class="pilcrow">¶</a></p>
 <p id="section-13.3-2">Mitigations:<a href="#section-13.3-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-13.3-3.1">
             <p id="section-13.3-3.1.1">The Mission Issuer <span class="bcp14">MUST</span> verify predecessor state and the
 no-existing-successor condition in the same atomic step that would
-activate the successor (<a href="#reconciliation" class="auto internal xref">Section 9</a>), and serializes
-adjudications against the same predecessor.<a href="#section-13.3-3.1.1" class="pilcrow">¶</a></p>
+activate the successor at first redemption (<a href="#reconciliation" class="auto internal xref">Section 9</a>), and
+serializes the redemptions that activate a successor of the same
+predecessor.<a href="#section-13.3-3.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.3-3.2">
             <p id="section-13.3-3.2.1">A failed check refuses with <code>invalid_grant</code> and a reconciliation
@@ -2411,9 +2457,12 @@ to map the Mission Issuer's policy boundary from the denial reasons.<a href="#se
 <p id="section-13.5-2">Mitigations:<a href="#section-13.5-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-13.5-3.1">
-            <p id="section-13.5-3.1.1">The Mission Issuer <span class="bcp14">SHOULD</span> rate-limit expansion requests per
-predecessor per client, and <span class="bcp14">MUST</span> when the presented
-<code>predecessor_token</code> is not sender-constrained (<a href="#request-binding" class="auto internal xref">Section 4.2</a>).<a href="#section-13.5-3.1.1" class="pilcrow">¶</a></p>
+            <p id="section-13.5-3.1.1">The Mission Issuer <span class="bcp14">MUST</span> rate-limit expansion requests per predecessor
+per client. The bound is unconditional: it caps both policy probing
+and the approval prompts a client can drive against an Approver
+(prompt fatigue). A deployment <span class="bcp14">SHOULD</span> apply a tighter bound when the
+presented <code>predecessor_token</code> is not sender-constrained
+(<a href="#request-binding" class="auto internal xref">Section 4.2</a>).<a href="#section-13.5-3.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.5-3.2">
             <p id="section-13.5-3.2.1">A denial reason <span class="bcp14">MUST NOT</span> disclose policy boundaries beyond the

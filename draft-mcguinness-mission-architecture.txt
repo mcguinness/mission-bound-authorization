@@ -92,9 +92,11 @@ Table of Contents
      9.4.  The Integrity-Anchor Envelope
      9.5.  Token Classes
      9.6.  The Mission-Bound Credential
-     9.7.  The Audit Horizon
-     9.8.  The Validity Model
-     9.9.  The Binding Checklist
+     9.7.  Issuer Key Material
+     9.8.  The Audit Horizon
+     9.9.  Approval Fidelity
+     9.10. The Validity Model
+     9.11. The Binding Checklist
    10. The Authority Derivation Boundary
    11. The Mission Verbs
      11.1.  Propose
@@ -441,11 +443,16 @@ Table of Contents
    *Revocation is possession-independent*:  A Mission ends by a state
       change at its issuer, not by finding and destroying credentials;
       outstanding credentials meet the issuance gate, the runtime re-
-      check, or their own expiry, whichever comes first (Section 9.8).
+      check, or their own expiry, whichever comes first (Section 9.10).
 
    *Attribution is carried, never inferred*:  Each role in the actor
       chain travels in its own construct, and the evidence layer records
       them together; no role is derived from another (Section 8.1).
+      This invariant scopes the actor chain.  The credential-to-Mission
+      association is itself a carried fact only where a binding carries
+      the mission claim; under the standalone binding the PDP's join
+      establishes it by inference, bounded by that binding's join
+      assurance (Section 12).
 
    *Enforcement fails closed; inert surfaces fail safe*:  A PDP that
       cannot establish state or authority within the published staleness
@@ -670,7 +677,7 @@ Table of Contents
    The companion profiles named without "oauth" are defined against the
    Mission model's substrate primitives rather than against OAuth
    mechanics; each names what it consumes in a Mission Substrate section
-   of its own.  This section consolidates that interface: six
+   of its own.  This section consolidates that interface: eight
    primitives, each with its normative home and its consumers.  Every
    sentence mirrors a rule the named profile states normatively.
 
@@ -732,8 +739,10 @@ Table of Contents
 
 9.5.  Token Classes
 
-   "Mission-bound" is a specific claim, and three token shapes are worth
-   distinguishing so a weak one is not read as the strong one:
+   "Mission-bound" is a specific claim.  This document names three token
+   shapes descriptively, so a weak one is not read as the strong one;
+   the names below are this document's own, and the properties the
+   strong class requires are the core's:
 
    *  a *Mission-referenced token* carries a Mission identifier only;
 
@@ -741,8 +750,8 @@ Table of Contents
       Mission; and
 
    *  a *Mission-bound token* is Mission-derived and additionally
-      active-state gated, subset-constrained, and refresh-gated (the
-      core's conformance rule).
+      active-state gated, subset-constrained, and refresh-gated, the
+      properties the core's conformance rule requires.
 
    Only the third earns the term: a mission claim alone is a reference,
    not Mission-bound authorization.  The family reserves "Mission-bound"
@@ -778,7 +787,17 @@ Table of Contents
    Issuance Grant that a consuming Authorization Server redeems for
    Mission-bound tokens, providing this primitive compositely.
 
-9.7.  The Audit Horizon
+9.7.  Issuer Key Material
+
+   The Mission Issuer's signing keys, resolvable from the issuer by the
+   verifiers of its signed artifacts; across a rotation each key
+   identifier's verification key stays resolvable while artifacts signed
+   under it remain within the audit horizon.  Home: the core's Signing
+   and Key Rotation section.  Consumed by the verifiers of Mission-bound
+   credentials under full provision, Consent Evidence, the Mandate, the
+   signed state surfaces, and Audit Transparency.
+
+9.8.  The Audit Horizon
 
    The deployment-declared retention window for the Mission record and
    its evidence: at least the Mission's lifetime plus a declared post-
@@ -787,7 +806,18 @@ Table of Contents
    retention; by the MAS for record retention; and by the security
    model's retention analysis.
 
-9.8.  The Validity Model
+9.9.  Approval Fidelity
+
+   The approval event's fidelity: whatever a binding's native ceremony,
+   it authenticates the Approver, establishes the Subject, derives and
+   renders the Authority Set for consent, computes the anchors over the
+   consented set and the approved Intent, and creates the record in
+   active atomically with the decision.  Home: the core's Mission
+   Approval section.  Consumed by Consent Evidence, which binds to this
+   event, and by every downstream guarantee that assumes the anchors,
+   the gating, and the record.
+
+9.10.  The Validity Model
 
    Five validity horizons govern reliance, each with its own setter,
    checker, and consequence; implementations most often err by
@@ -816,7 +846,7 @@ Table of Contents
    every applicable horizon to be open, and no horizon substitutes for
    another.
 
-9.9.  The Binding Checklist
+9.11.  The Binding Checklist
 
    For a new binding this checklist is now normatively stated by Mission
    Substrate Requirements ([I-D.draft-mcguinness-mission-substrate]);
@@ -865,17 +895,17 @@ Table of Contents
    standardize.  The consequence is a trust boundary worth stating
    plainly: interoperability begins at the committed result, not at the
    Intent.  A Mission Intent has no portable semantics; two conforming
-   Authorization Servers MAY derive different Authority Sets from the
+   Authorization Servers can derive different Authority Sets from the
    same Intent, and audit can establish what was derived (against
    intent_hash and policy_version), never whether it was the right
    reading of the task.  A deployment whose partners must reason about
-   its derivations SHOULD publish a derivation policy identifier and
-   test fixtures that pin Intent-to-Authority-Set outcomes, so the local
-   policy becomes reviewable even though it does not travel.  Narrowing
-   mode ([I-D.draft-mcguinness-oauth-mission]) is the checkable path:
-   where the client supplies candidate authority, derivation is a subset
-   of it and reproducible, which is the closest the family comes to
-   portable derivation.
+   its derivations can publish a derivation policy identifier and test
+   fixtures that pin Intent-to-Authority-Set outcomes, making the local
+   policy reviewable even though it does not travel.  Narrowing mode
+   ([I-D.draft-mcguinness-oauth-mission]) is the checkable path: where
+   the client supplies candidate authority, derivation is a subset of it
+   and reproducible, which is the closest the family comes to portable
+   derivation.
 
    The derivation modes rank by how portable their result is:
 
@@ -1272,10 +1302,11 @@ Table of Contents
       runtime, its AuthZEN binding, and a freshness source.
 
    *Governed Agent* (recommended for AI agents):  adds Consent Evidence
-      and the harness, growing with Child Delegation, Expansion, and
-      Orchestration as needed.  Grants consent-rendering evidence and
-      session-continuity discipline.  Documents: Runtime- Enforced plus
-      consent-evidence and the harness.
+      and the harness, growing with Child Delegation, Expansion,
+      Orchestration, and Discovery (experimental, with Progressive) as
+      needed.  Grants consent-rendering evidence and session-continuity
+      discipline.  Documents: Runtime-Enforced plus consent-evidence and
+      the harness.
 
    *High-Assurance Agent*:  adds the guarantees that resist a
       compromised agent.  Two named claims live at this level, each with
@@ -1360,7 +1391,7 @@ Table of Contents
    {
      "profile": "mission-governed-agent-runtime",
      "assurance_level": "high-assurance-agent",
-     "mission_issuer": "https://mas.example.com",
+     "mission_issuer": "https://as.example.com",
      "state_sources": [
        { "type": "status_endpoint", "max_staleness_seconds": 30 }
      ],
@@ -1373,7 +1404,11 @@ Table of Contents
        "pdp": "authzen",
        "pep_locations": ["tool-gateway", "browser-action-proxy"],
        "mediated_action_classes": [
-         "irreversible_action", "external_commitment"
+         "irreversible_action", "external_commitment",
+         "external_communication", "privileged_administration"
+       ],
+       "action_bound_approval_classes": [
+         "irreversible_action", "privileged_administration"
        ],
        "unmediated_exclusions": [
          "internal_reasoning", "local_cache_read"
@@ -1382,7 +1417,11 @@ Table of Contents
      "credential_custody": {
        "held_by": "pep",
        "sender_constrained": true,
+       "key_generated_in_pep": true,
        "agent_receives_bearer_token": false
+     },
+     "approval_rendering": {
+       "rendered_by": "agent-isolated-component"
      },
      "harness": {
        "subagent_inheritance": "explicit_delegation_only",

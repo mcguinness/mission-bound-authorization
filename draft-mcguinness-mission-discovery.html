@@ -16,8 +16,8 @@ before any binding, and the Discovery Evidence that makes each
 binding reproducible in audit. Two floors hold regardless of policy:
 a resource's self-declaration is accountability material and never
 classification authority, and in a session that has ingested
-untrusted content no external-communication- or commitment-capable
-resource binds without a human. A Mission without a ceiling binds
+untrusted content nothing newly discovered binds by policy, because a
+request to a new origin is itself egress. A Mission without a ceiling binds
 nothing discovered: the open world is reachable only through consent
 given in advance, narrowed at every step, and evidenced at every
 binding. 
@@ -1106,8 +1106,8 @@ before any binding, and the Discovery Evidence that makes each
 binding reproducible in audit. Two floors hold regardless of policy:
 a resource's self-declaration is accountability material and never
 classification authority, and in a session that has ingested
-untrusted content no external-communication- or commitment-capable
-resource binds without a human. A Mission without a ceiling binds
+untrusted content nothing newly discovered binds by policy, because a
+request to a new origin is itself egress. A Mission without a ceiling binds
 nothing discovered: the open world is reachable only through consent
 given in advance, narrowed at every step, and evidenced at every
 binding.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
@@ -1273,7 +1273,7 @@ resource must pin first, what its self-description may and may not
 influence, and what record survives. This document defines that
 contract, and the two floors that hold regardless of deployment
 policy: self-declarations never classify consequences, and tainted
-sessions never bind egress by policy alone.<a href="#section-1-2" class="pilcrow">¶</a></p>
+sessions never bind a newly discovered resource by policy alone.<a href="#section-1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="optional-status">
@@ -1428,67 +1428,87 @@ authority by itself, per the core's inert-input rule.<a href="#section-5-4" clas
       <h2 id="name-resource-identity">
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-resource-identity" class="section-name selfRef">Resource Identity</a>
       </h2>
-<p id="section-6-1">No binding occurs against an unpinned resource. Before adjudication,
-the identity of the encountered resource <span class="bcp14">MUST</span> be established and
-recorded:<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-1">No binding occurs against an unpinned resource. The Mission Issuer
+<span class="bcp14">MUST</span> establish the identity of the encountered resource itself, from
+its own server-side retrieval, and <span class="bcp14">MUST NOT</span> accept an agent-supplied
+origin, metadata digest, issuer, or declaration digest as that
+identity. An Encountered Resource object that rides the agent's
+request is a hint the issuer verifies, never the pinned identity
+(<a href="#adjudication" class="auto internal xref">Section 7</a>). Before adjudication, the identity <span class="bcp14">MUST</span> be
+established and recorded:<a href="#section-6-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-6-2">
 <li id="section-6-2.1">
-          <p id="section-6-2.1.1"><strong>Origin.</strong> The resource's origin, TLS-authenticated at
-encounter.<a href="#section-6-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-6-2.1.1"><strong>Origin.</strong> The resource's origin, TLS-authenticated by the
+Mission Issuer's own connection at encounter, not as the agent
+reports it.<a href="#section-6-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-6-2.2">
           <p id="section-6-2.2.1"><strong>Authorization chain.</strong> Where the resource names an
-Authorization Server, the resource-to-AS association is
-established through OAuth 2.0 Protected Resource Metadata
-<span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>, and the metadata document's bytes are digested into
-the evidence. A deployment <span class="bcp14">SHOULD</span> additionally verify that the
+Authorization Server, the Mission Issuer <span class="bcp14">MUST</span> retrieve the OAuth
+2.0 Protected Resource Metadata <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> server-side and digest
+the exact bytes it retrieved into the evidence; it <span class="bcp14">MUST NOT</span> reuse
+an agent-supplied digest. The Mission Issuer <span class="bcp14">MUST</span> verify that the
 named issuer is authorized for the resource's domain, for which
 the domain-authorized-issuer mechanism is one profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-domain-authorized-issuer" class="cite xref">I-D.draft-mcguinness-oauth-domain-authorized-issuer</a>]</span>); an
-unverifiable issuer association routes the encounter to a human.<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-domain-authorized-issuer" class="cite xref">I-D.draft-mcguinness-oauth-domain-authorized-issuer</a>]</span>); where
+it cannot, the encounter routes to a human and never binds by
+policy. Origin pinning (<span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>) authenticates domain control,
+not the operator's trustworthiness or the resource-to-AS
+authorization: a party that controls a domain can publish metadata
+naming any issuer, so domain control alone is not authorization.<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-6-2.3">
           <p id="section-6-2.3.1"><strong>Self-declaration.</strong> Where the resource publishes a
-self-declaration, its content-addressed digest is computed at
-encounter and carried through adjudication and evidence
-(<a href="#lying-resource" class="auto internal xref">Section 8</a>).<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
+self-declaration, the Mission Issuer computes its content-addressed
+digest at encounter from the bytes it retrieved and carries that
+digest through adjudication and evidence (<a href="#lying-resource" class="auto internal xref">Section 8</a>).<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-6-3">Where discovery infrastructure verified the publisher before the
+<p id="section-6-3">The two floors of this document (<a href="#lying-resource" class="auto internal xref">Section 8</a>,
+<a href="#injection-discovery" class="auto internal xref">Section 9</a>) are only as strong as these issuer-verified
+inputs. An origin, digest, issuer, or taint state taken from the
+agent would let a prompt-injected agent fabricate identity or clear
+taint, so each <span class="bcp14">MUST</span> be established through a channel the agent does
+not mediate; where the Mission Issuer cannot obtain a trustworthy
+identity, it <span class="bcp14">MUST</span> route the encounter to a human or refuse.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-4">Where discovery infrastructure verified the publisher before the
 encounter, a namespace-verified registry entry or a catalog served
 from the publisher's own domain, that verification is an additional
 pinned fact: it strengthens the origin association, is recorded with
-the identity, and is rendered in any disclosure.<a href="#section-6-3" class="pilcrow">¶</a></p>
-<p id="section-6-4">The pinned identity travels as one shape, the <strong>Encountered Resource
-object</strong>, on the wire and in evidence:<a href="#section-6-4" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-6-5">
-        <dt id="section-6-5.1">
+the identity, and is rendered in any disclosure.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-5">The pinned identity travels as one shape, the <strong>Encountered Resource
+object</strong>, on the wire and in evidence. When it rides the agent's
+request it is an unverified hint; the values recorded in evidence and
+used for adjudication are the Mission Issuer's own verified values
+(<a href="#resource-identity" class="auto internal xref">Section 6</a>), never the agent's:<a href="#section-6-5" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6-6">
+        <dt id="section-6-6.1">
 <code>origin</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-5.2">
-          <p id="section-6-5.2.1"><span class="bcp14">REQUIRED</span>. A string containing a URI. The TLS-authenticated origin
-of the encountered resource.<a href="#section-6-5.2.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-6-6.2">
+          <p id="section-6-6.2.1"><span class="bcp14">REQUIRED</span>. A string containing a URI. The TLS-authenticated origin
+of the encountered resource.<a href="#section-6-6.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-5.3">
+<dt id="section-6-6.3">
 <code>resource_metadata_digest</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-5.4">
-          <p id="section-6-5.4.1">CONDITIONAL. <span class="bcp14">REQUIRED</span> when a protected-resource metadata document
+        <dd style="margin-left: 1.5em" id="section-6-6.4">
+          <p id="section-6-6.4.1">CONDITIONAL. <span class="bcp14">REQUIRED</span> when a protected-resource metadata document
 was retrieved: the integrity-anchor encoded digest of its exact
-retrieved bytes.<a href="#section-6-5.4.1" class="pilcrow">¶</a></p>
+retrieved bytes.<a href="#section-6-6.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-5.5">
+<dt id="section-6-6.5">
 <code>issuer</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-5.6">
-          <p id="section-6-5.6.1">CONDITIONAL. <span class="bcp14">REQUIRED</span> when the metadata names an Authorization
-Server: the issuer identifier it names.<a href="#section-6-5.6.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-6-6.6">
+          <p id="section-6-6.6.1">CONDITIONAL. <span class="bcp14">REQUIRED</span> when the metadata names an Authorization
+Server: the issuer identifier it names.<a href="#section-6-6.6.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-6-6">Under the AAuth binding, the Person Server performs the equivalent
+<p id="section-6-7">Under the AAuth binding, the Person Server performs the equivalent
 pinning with the substrate's own material: the Access Server
 association and the R3 document's <code>r3_s256</code>
-(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-6-6" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-6-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="adjudication">
@@ -1497,16 +1517,22 @@ association and the R3 document's <code>r3_s256</code>
 <a href="#section-7" class="section-number selfRef">7. </a><a href="#name-discovery-adjudication" class="section-name selfRef">Discovery Adjudication</a>
       </h2>
 <p id="section-7-1">An adjudication takes, at minimum: the Mission reference; the
-Encountered Resource object (<a href="#resource-identity" class="auto internal xref">Section 6</a>); the
-self-declaration digest where one exists; the authority sought, the
-entry or entries the binding would create, whose action classes
-under the deployment's classification drive every floor of this
-document; the requesting actor; and the session's taint state as the
-harness reports it. The adjudicator <span class="bcp14">MUST</span> treat a missing, stale, or
-unverifiable taint state as tainted: the floor of
+Encountered Resource object as the Mission Issuer verified it
+(<a href="#resource-identity" class="auto internal xref">Section 6</a>); the self-declaration digest where one
+exists; the authority sought, the entry or entries the binding would
+create, whose action classes under the deployment's classification
+drive every floor of this document; the requesting actor; and the
+session's taint state. The taint state <span class="bcp14">MUST</span> be obtained from the
+harness through a channel the agent does not mediate (a harness
+attestation, <span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), never from
+the encounter request, and the adjudicator <span class="bcp14">MUST</span> treat a missing,
+stale, or unverifiable taint state as tainted: the floor of
 <a href="#injection-discovery" class="auto internal xref">Section 9</a> keys on the harness's report, and an absent
-report is not an untainted one. The adjudication returns exactly one
-of:<a href="#section-7-1" class="pilcrow">¶</a></p>
+report is not an untainted one. An operation the deployment's
+classification cannot assign an action class <span class="bcp14">MUST NOT</span> bind by
+policy: with no class the floors cannot be applied, so the encounter
+routes to a human or is refused. The adjudication returns exactly
+one of:<a href="#section-7-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-7-2">
         <dt id="section-7-2.1"><strong>Bind.</strong></dt>
         <dd style="margin-left: 1.5em" id="section-7-2.2">
@@ -1559,7 +1585,8 @@ expansion request as two additional parameters, <code>encountered_resource</code
 prohibited-class mapping, and audit linkage apply to
 encounter-triggered drawdowns unchanged. A deployment <span class="bcp14">MUST</span>
 additionally bound the rate of encounter adjudications per Mission
-across all three outcomes: routed and refused encounters consume
+across all three outcomes, and <span class="bcp14">MUST</span> publish the concrete bound in the
+Mission Deployment Profile: routed and refused encounters consume
 adjudicator and Approver attention, and are the probing surface of
 <a href="#security-considerations" class="auto internal xref">Section 12</a>.<a href="#section-7-4" class="pilcrow">¶</a></p>
 <div id="re-encounter">
@@ -1579,6 +1606,14 @@ re-adjudicate a bound resource whose declaration changed before
 further use in a consequential class, and the capability-source
 rules already refuse drifted catalog capabilities at the PDP
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.1-2">The taint floor (<a href="#injection-discovery" class="auto internal xref">Section 9</a>) is applied only at binding.
+A binding created while the session was untainted remains usable after
+the session becomes tainted: the floor gates new egress-capable
+bindings, not the use of authority already bound. A web-reading agent
+is tainted for much of its life, so how taint scopes to sub-sessions
+or decays over time is an open issue this document does not settle; it
+is left to the harness profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-7.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1633,9 +1668,10 @@ every publisher check passes. Two rules close the policy path:<a href="#section-
 <ul class="normal">
 <li class="normal" id="section-9-2.1">
           <p id="section-9-2.1.1">In a session the harness reports tainted
-(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), an encounter whose
-binding would create external-communication- or
-external-commitment-capable authority <span class="bcp14">MUST NOT</span> bind by policy: it
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), a request to a
+previously unknown origin is itself an egress channel, so every
+binding an encounter would create is egress-capable regardless of
+its operation class. Under taint, no encounter binds by policy: it
 routes to a human, and the disclosure states that the session had
 ingested untrusted content.<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
 </li>
@@ -1652,12 +1688,17 @@ discovered egress-capable bindings in an exclusivity group with its
 sensitive-read authority, so a session that has read cannot acquire
 new egress by encounter at all
 (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-9-3" class="pilcrow">¶</a></p>
-<p id="section-9-4">The two floors compose to a simple matrix: in an untainted session,
-policy may bind up to the high-consequence floor, external
-communication included; taint removes external communication from
-policy's reach; and the irreversible, external-commitment, and
-privileged-administration classes are never policy's to bind on any
-encounter.<a href="#section-9-4" class="pilcrow">¶</a></p>
+<p id="section-9-4">The two floors compose to a simple matrix. External communication is
+the exfiltration leg, so an encounter binding that satisfies the
+external-communication predicate always routes to a human, as the
+progressive profile's prohibited set requires and this profile
+inherits unchanged (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>);
+the irreversible, external-commitment, and privileged-administration
+classes are likewise never policy's to bind on any encounter. In an
+untainted session, policy may bind up to that floor. Taint removes
+every remaining class from policy's reach: because a request to a
+newly discovered origin is itself egress, under taint no encounter
+binds by policy and every binding routes to a human.<a href="#section-9-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="discovery-evidence">
@@ -1784,31 +1825,43 @@ walkthrough's):<a href="#section-10-4" class="pilcrow">¶</a></p>
       <h2 id="name-conformance">
 <a href="#section-11" class="section-number selfRef">11. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
       </h2>
-<p id="section-11-1">A deployment claiming this profile:<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-11-1">A deployment claiming this profile <span class="bcp14">MUST</span>:<a href="#section-11-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-11-2.1">
-          <p id="section-11-2.1.1">adjudicates every encounter of the classes it enables through
-<a href="#adjudication" class="auto internal xref">Section 7</a>, default-closed, with the identity pinning of
+          <p id="section-11-2.1.1">adjudicate every encounter of the classes it enables through
+<a href="#adjudication" class="auto internal xref">Section 7</a>, default-closed, establishing resource identity
+itself and independently of the agent, with the pinning of
 <a href="#resource-identity" class="auto internal xref">Section 6</a>;<a href="#section-11-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-2.2">
-          <p id="section-11-2.2.1">enforces both floors: no consequence classification from
-self-declarations, with the high-consequence human floor
-(<a href="#lying-resource" class="auto internal xref">Section 8</a>); and no policy binding of egress-capable
-authority in tainted sessions (<a href="#injection-discovery" class="auto internal xref">Section 9</a>);<a href="#section-11-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.2.1">obtain the session taint state through a channel the agent does not
+mediate, and treat an untrustworthy taint state as tainted
+(<a href="#adjudication" class="auto internal xref">Section 7</a>);<a href="#section-11-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-2.3">
-          <p id="section-11-2.3.1">bounds the rate of encounter adjudications per Mission across all
-outcomes (<a href="#adjudication" class="auto internal xref">Section 7</a>);<a href="#section-11-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.3.1">route to a human or refuse any encounter it cannot pin, cannot
+classify, or cannot obtain a trustworthy taint state for
+(<a href="#resource-identity" class="auto internal xref">Section 6</a>, <a href="#adjudication" class="auto internal xref">Section 7</a>);<a href="#section-11-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-2.4">
-          <p id="section-11-2.4.1">produces and signs Discovery Evidence for every adjudication,
-foreign-domain encounters included (<a href="#discovery-evidence" class="auto internal xref">Section 10</a>); and<a href="#section-11-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.4.1">enforce both floors: no consequence classification from
+self-declarations, with the high-consequence human floor
+(<a href="#lying-resource" class="auto internal xref">Section 8</a>); and no policy binding of egress-capable
+authority in tainted sessions (<a href="#injection-discovery" class="auto internal xref">Section 9</a>);<a href="#section-11-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-2.5">
-          <p id="section-11-2.5.1">states in its enforcement-scope statement which encounter classes
+          <p id="section-11-2.5.1">bound the rate of encounter adjudications per Mission across all
+outcomes and publish the concrete bound in the Mission Deployment
+Profile (<a href="#adjudication" class="auto internal xref">Section 7</a>);<a href="#section-11-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.6">
+          <p id="section-11-2.6.1">produce and sign Discovery Evidence for every adjudication,
+foreign-domain encounters included (<a href="#discovery-evidence" class="auto internal xref">Section 10</a>); and<a href="#section-11-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.7">
+          <p id="section-11-2.7.1">state in its enforcement-scope statement which encounter classes
 it adjudicates, the ceiling families consented for them, and the
-floors as published limits.<a href="#section-11-2.5.1" class="pilcrow">¶</a></p>
+floors as published limits.<a href="#section-11-2.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

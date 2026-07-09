@@ -17,12 +17,16 @@ Person Server policy. This document supplies those pieces from the
 Mission model of Mission-Bound Authorization for OAuth 2.0: the
 mission blob carries the structured Mission record with its integrity
 anchors, the approval interaction is the approval event, the full
-Mission lifecycle governs with revocation and expiry, and the Person
-Server gates auth-token issuance on Mission state. The auth token
-becomes a Mission-bound credential, so the family's governance,
-enforcement, and evidence profiles compose credential-carried. This is
-the third binding of the Mission model and the first to a non-OAuth
-substrate. 
+Mission lifecycle governs with revocation and expiry, and, because no
+auth token is issued under a Mission without passing the Person Server,
+the Person Server gates auth-token issuance on Mission state. In the
+PS-asserted mode, and in the federated mode where the Access Server
+carries the family mission members, the auth token is a Mission-bound
+credential and the family's governance, enforcement, and evidence
+profiles compose credential-carried; otherwise the binding is
+Reference-only and consumers resolve Mission facts through the Person
+Server. This is the third binding of the Mission model and the first to
+a non-OAuth substrate. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="mission" name="keyword">
@@ -1109,12 +1113,16 @@ Person Server policy. This document supplies those pieces from the
 Mission model of Mission-Bound Authorization for OAuth 2.0: the
 mission blob carries the structured Mission record with its integrity
 anchors, the approval interaction is the approval event, the full
-Mission lifecycle governs with revocation and expiry, and the Person
-Server gates auth-token issuance on Mission state. The auth token
-becomes a Mission-bound credential, so the family's governance,
-enforcement, and evidence profiles compose credential-carried. This is
-the third binding of the Mission model and the first to a non-OAuth
-substrate.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+Mission lifecycle governs with revocation and expiry, and, because no
+auth token is issued under a Mission without passing the Person Server,
+the Person Server gates auth-token issuance on Mission state. In the
+PS-asserted mode, and in the federated mode where the Access Server
+carries the family mission members, the auth token is a Mission-bound
+credential and the family's governance, enforcement, and evidence
+profiles compose credential-carried; otherwise the binding is
+Reference-only and consumers resolve Mission facts through the Person
+Server. This is the third binding of the Mission model and the first to
+a non-OAuth substrate.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1826,9 +1834,11 @@ work, per that rationale.<a href="#section-6-4.4.1" class="pilcrow">¶</a></p>
         <h3 id="name-issuance-gating">
 <a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-issuance-gating" class="section-name selfRef">Issuance Gating</a>
         </h3>
-<p id="section-6.1-1">The PS <span class="bcp14">MUST NOT</span> process a token request, federate with an Access
-Server, grant a permission, or otherwise extend authority under a
-Mission that is not <code>active</code>. This extends AAuth's rule that any PS
+<p id="section-6.1-1">This gate rests on an AAuth structural precondition: no auth token
+exists under a Mission without passing the Person Server, in either
+mode. On that precondition the PS <span class="bcp14">MUST NOT</span> process a token request,
+federate with an Access Server, grant a permission, or otherwise extend
+authority under a Mission that is not <code>active</code>. This extends AAuth's rule that any PS
 endpoint referencing a non-active mission returns the mission status
 error, and it is the issuance profile's derivation gate: in the
 PS-asserted mode the PS refuses to issue the auth token, and in the
@@ -1939,7 +1949,14 @@ Authority Set. It does not impose cross-hop attenuation in AAuth call
 chaining, where AAuth deliberately does not require a downstream grant
 to be a subset of the upstream scope: a downstream hop is governed at
 that hop's own decision point, under its own Mission or per-call
-permission, not by algebra over this Mission's set.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+permission, not by algebra over this Mission's set. This is a boundary
+on the family's only-narrows invariant, not an exception to it. The
+invariant governs derivation: a credential derived from a Mission only
+narrows that Mission's authority. A chained hop derives no credential
+from this Mission; it is a fresh decision at a new decision point,
+evaluated against its own authority source, so it falls outside the
+invariant rather than violating it. Attenuation within any one
+Mission's own derivations stays strict (<a href="#gating" class="auto internal xref">Section 6.1</a>, <a href="#credential" class="auto internal xref">Section 7</a>).<a href="#section-7.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="subject-directedness">

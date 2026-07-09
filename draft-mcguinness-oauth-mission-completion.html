@@ -16,8 +16,8 @@ record when a task is done but are inert. This document defines an
 completion condition carried in a  mission_resource_access  entry's
  constraints  that, once met,  discharges  the Authority Set entry:
 the Authorization Server stops deriving tokens carrying that entry. Discharge is monotonic, it can only remove an
-entry's authority and never widen it, so it is safe against a
-prompt-injected agent by construction; it composes with the subset rule
+entry's authority and never widen it, so a prompt-injected agent cannot
+use it to escalate; it composes with the subset rule
 as a condition a derived entry can add but never drop; and it lets a
 multi-resource Mission complete one entry at a time. It is the
 enforceable counterpart of the inert  success_criteria . 
@@ -1106,8 +1106,8 @@ record when a task is done but are inert. This document defines an
 completion condition carried in a <code>mission_resource_access</code> entry's
 <code>constraints</code> that, once met, <strong>discharges</strong> the Authority Set entry:
 the Authorization Server stops deriving tokens carrying that entry. Discharge is monotonic, it can only remove an
-entry's authority and never widen it, so it is safe against a
-prompt-injected agent by construction; it composes with the subset rule
+entry's authority and never widen it, so a prompt-injected agent cannot
+use it to escalate; it composes with the subset rule
 as a condition a derived entry can add but never drop; and it lets a
 multi-resource Mission complete one entry at a time. It is the
 enforceable counterpart of the inert <code>success_criteria</code>.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
@@ -1272,8 +1272,10 @@ document requires all three:<a href="#section-1-3" class="pilcrow">¶</a></p>
 <li class="normal" id="section-1-4.1">
           <p id="section-1-4.1.1"><strong>Discharge is monotonic.</strong> It only removes an entry's authority; it
 can never widen the entry or the Mission. A prompt-injected agent
-therefore cannot use it to gain anything: the worst it can do is spend
-its own authority sooner, which is not an attack.<a href="#section-1-4.1.1" class="pilcrow">¶</a></p>
+therefore cannot use it to escalate: the worst it can do is spend
+its own authority sooner, which is not an escalation, though a forced
+premature discharge is an availability and guardrail-retirement
+concern (<a href="#security-considerations" class="auto internal xref">Section 13</a>).<a href="#section-1-4.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-4.2">
           <p id="section-1-4.2.1"><strong>Discharge composes with the subset rule.</strong> A derived entry carries
@@ -1444,7 +1446,11 @@ discharged entry at the point of use (<a href="#runtime" class="auto internal xr
 <a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-determining-discharge" class="section-name selfRef">Determining Discharge</a>
         </h3>
 <p id="section-6.1-1">The Authorization Server determines whether a condition has been met from
-the <code>event_source</code>, within <code>max_staleness</code> when present. The mechanism is
+the <code>event_source</code>, within <code>max_staleness</code> when present. When
+<code>max_staleness</code> is absent, the Authorization Server <span class="bcp14">MUST</span> re-evaluate the
+condition at each derivation, so <code>terminal_when</code> never goes inert:
+absence of <code>max_staleness</code> removes the tolerance for a cached view, it
+does not relieve the freshness duty. The mechanism is
 deployment-defined (a status query, a received signal, a recorded
 administrative action). This document defines one interoperable
 event-source profile a deployment <span class="bcp14">MAY</span> use: the <code>event_source</code> URI is
@@ -1466,20 +1472,34 @@ reports.<a href="#section-6.1-2.3.1" class="pilcrow">¶</a></p>
             <p id="section-6.1-2.4.1"><code>source</code>: <span class="bcp14">REQUIRED</span>. A URI identifying the reporting source.<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-6.1-3">Other source mechanisms remain deployment-defined. The Mission Issuer
+<p id="section-6.1-3">The Authorization Server verifies the JWS against key material it
+resolves for the <code>source</code> identity, not for the <code>event_source</code> origin:
+the protected header's <code>kid</code> <span class="bcp14">MUST</span> resolve to a key the <code>source</code>
+publishes through an authenticated channel (for example its JWKS), and
+the resolved signer identity <span class="bcp14">MUST</span> be the <code>source</code> the Authorization
+Server trusts for this <code>event_type</code>. A signature that does not chain to
+a trusted <code>source</code> for the <code>event_type</code> leaves the condition
+indeterminate, and the Authorization Server fails closed as below.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+<p id="section-6.1-4">Other source mechanisms remain deployment-defined. The Mission Issuer
 <span class="bcp14">MUST</span> authenticate and integrity-verify any event source outside its own
-trust domain before acting on its report.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
-<p id="section-6.1-4">Once the Authorization Server observes that a condition has been met, the
+trust domain before acting on its report. The <code>event_source</code> <span class="bcp14">SHOULD</span> lie
+outside the Mission's own writable authority: an agent that can write to
+the source can drive its own discharge or suppress it. Where the
+<code>event_source</code> is on an origin the Mission holds write authority to, the
+Authorization Server <span class="bcp14">MUST</span> determine discharge through an integrity
+mechanism, such as the signed status document above, whose signing key
+the Mission cannot influence.<a href="#section-6.1-4" class="pilcrow">¶</a></p>
+<p id="section-6.1-5">Once the Authorization Server observes that a condition has been met, the
 discharge is recorded as Authorization-Server-side state and <span class="bcp14">MUST NOT</span>
 revert, regardless of any later report from the event source: a source
 that afterward reports the event as not occurred does not restore the
-entry's authority.<a href="#section-6.1-4" class="pilcrow">¶</a></p>
-<p id="section-6.1-5">If the Authorization Server cannot determine whether a condition has been
+entry's authority.<a href="#section-6.1-5" class="pilcrow">¶</a></p>
+<p id="section-6.1-6">If the Authorization Server cannot determine whether a condition has been
 met, for example because <code>event_source</code> is unreachable within
 <code>max_staleness</code>, it <span class="bcp14">MUST</span> treat the entry as possibly discharged and
 refuse to derive it, as it fails closed for stale Mission state. Discharge
 removes authority, so the conservative action when status is unknown is
-to withhold issuance, never to issue.<a href="#section-6.1-5" class="pilcrow">¶</a></p>
+to withhold issuance, never to issue.<a href="#section-6.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="visibility">
@@ -1613,23 +1633,26 @@ bounded to under 500 USD and discharged when the Q3 close is finalized:<a href="
       "max_amount": { "amount": "500.00", "currency": "USD" },
       "terminal_when": [
         { "event_type": "accounting-period-closed",
-          "event_source": "https://erp.example.com/periods/2026-Q3",
+          "event_source": "https://close.example.com/periods/2026-Q3",
           "max_staleness": "PT15M" } ] } }
 ]
 </pre><a href="#section-11-2" class="pilcrow">¶</a>
 </div>
-<p id="section-11-3">While the period is open, the Authorization Server derives both entries.
+<p id="section-11-3">The <code>event_source</code> is on a separate close-management origin the Mission
+has no write authority to, so the agent cannot drive its own discharge
+(<a href="#determining" class="auto internal xref">Section 6.1</a>).<a href="#section-11-3" class="pilcrow">¶</a></p>
+<p id="section-11-4">While the period is open, the Authorization Server derives both entries.
 When the finance team finalizes the Q3 close, the <code>event_source</code> reports
 the period closed. From then on the Authorization Server refuses to
 derive the write entry: a refresh returns a token carrying only the read
 entry. The Mission stays <code>active</code>, so the agent can still read the
 ledger to finish its reconciliation report, but it can no longer post
 journal entries. No revoke and no clock was needed; the write authority
-retired itself when the task it was granted for completed.<a href="#section-11-3" class="pilcrow">¶</a></p>
-<p id="section-11-4">If the <code>event_source</code> were unreachable when the agent refreshed, the
+retired itself when the task it was granted for completed.<a href="#section-11-4" class="pilcrow">¶</a></p>
+<p id="section-11-5">If the <code>event_source</code> were unreachable when the agent refreshed, the
 Authorization Server would treat the write entry as possibly discharged
 and omit it, rather than risk issuing authority for a task that may have
-ended (<a href="#determining" class="auto internal xref">Section 6.1</a>).<a href="#section-11-4" class="pilcrow">¶</a></p>
+ended (<a href="#determining" class="auto internal xref">Section 6.1</a>).<a href="#section-11-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conformance">
@@ -1682,7 +1705,12 @@ adds:<a href="#section-13-1" class="pilcrow">¶</a></p>
           <p id="section-13-2.1.1">Monotonic by construction. Discharge only removes an entry's authority,
 so it is not a path to escalation; a compromised or injected agent
 cannot use <code>terminal_when</code> to widen authority, and the worst it can do
-is retire its own authority sooner.<a href="#section-13-2.1.1" class="pilcrow">¶</a></p>
+is retire its own authority sooner. That is not an escalation, but a
+forced premature discharge is a denial-of-service on the task
+(authority the task still needs is withdrawn) and, where discharge is
+relied on as a guardrail, retires that guardrail early. The
+event-source integrity and independence requirements below bound who
+can force it.<a href="#section-13-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.2">
           <p id="section-13-2.2.1">Fail closed on unknown constraint. A consumer that does not understand
@@ -1700,9 +1728,14 @@ control.<a href="#section-13-2.3.1" class="pilcrow">¶</a></p>
         <li class="normal" id="section-13-2.4">
           <p id="section-13-2.4.1">Trusted event source. <code>event_source</code> is a trusted input to issuance: a
 party that can make the source report "not yet complete" can keep an
-entry derivable past its true completion. The Mission Issuer <span class="bcp14">MUST</span>
-authenticate and integrity-verify an event source outside its own trust
-domain (<a href="#determining" class="auto internal xref">Section 6.1</a>), and <span class="bcp14">SHOULD</span> prefer sources within it.<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
+entry derivable past its true completion, and one that can make it
+report "complete" can force a premature discharge. The Mission Issuer
+<span class="bcp14">MUST</span> authenticate and integrity-verify an event source outside its own
+trust domain (<a href="#determining" class="auto internal xref">Section 6.1</a>), and <span class="bcp14">SHOULD</span> prefer sources within it.
+The <code>event_source</code> <span class="bcp14">SHOULD</span> lie outside the Mission's own writable
+authority, so an agent cannot drive or suppress its own discharge; the
+signed status document verified against the <code>source</code> identity is the
+interoperable integrity mechanism where it cannot (<a href="#determining" class="auto internal xref">Section 6.1</a>).<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.5">
           <p id="section-13-2.5.1">Event-source availability. Fail-closed discharge gives issuance an

@@ -1466,7 +1466,13 @@ holds the sender-constraint key. It must be at the last boundary and
 must not act without a permit; it assumes the harness leaves no
 unmediated path. A compromised PEP can decline to consult the PDP or
 ignore its decision; the suite does not prevent this, and evidence
-makes it detectable after the fact, not in the moment
+makes it detectable after the fact, not in the moment. Under mediated
+custody the PEP also holds the sender-constraint keys for the mediated
+classes, so its compromise is high-consequence credential theft: the
+attacker gains usable keys and can take the very off-path actions
+mediation was meant to prevent. Per-class credentials with distinct
+<code>cnf</code> keys and a minimal custody replica topology bound how far one
+compromised PEP reaches
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -1625,11 +1631,14 @@ that issuer.<a href="#section-6-3" class="pilcrow">¶</a></p>
 <p id="section-7-1">Four assumptions hold across the whole model:<a href="#section-7-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-2.1">
-          <p id="section-7-2.1.1"><strong>Sender-constrained credentials.</strong> Mission-bound tokens are
-sender-constrained (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); a token
-exfiltrated without its proof-of-possession key is unusable. The model
-assumes the proof-of-possession mechanism is sound and keys are
-protected by their holder.<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.1.1"><strong>Sender-constrained credentials.</strong> Where Mission-bound tokens are
+sender-constrained (a SHOULD in the core,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), a token exfiltrated without
+its proof-of-possession key is unusable, and the model assumes the
+proof-of-possession mechanism is sound and keys are protected by
+their holder. Where a deployment issues bearer tokens instead, an
+exfiltrated token is usable until it expires, and the stolen-token
+residual (<a href="#adversary-model" class="auto internal xref">Section 9</a>) applies in full.<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.2">
           <p id="section-7-2.2.1"><strong>Fail-closed on authority, fail-safe on inert evidence.</strong> Wherever
@@ -1692,9 +1701,14 @@ and names the components that must be intact for it to hold;
 Set and cannot move authority by influencing inert intent; authority
 grows only by a fresh approval that supersedes the prior Mission
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), not by agent
-action. Rests on the Mission Issuer. Under the standalone binding no
-token carries the Mission, so this guarantee and the Kill switch
-rest additionally on PEP and PDP coverage.<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
+action. Rests on the Mission Issuer and, where the binding issues
+credentials, the issuance gate that bounds each token to the subset.
+Under the standalone binding no token carries the Mission and no
+issuance gate bounds it, so at Baseline nothing enforces the
+Authority Set: this guarantee is not available under that binding
+until runtime enforcement (the Runtime-Enforced level) supplies the
+PEP and PDP coverage it then rests on, and the Kill switch depends on
+the same coverage.<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-2.3">Kill switch (Baseline Issuance for issuance; Runtime-Enforced for action):</dt>
@@ -1723,11 +1737,18 @@ the PDP, its metering state, and the PEP's settlement honesty.<a href="#section-
 <dt id="section-8-2.9">Agent-compromise-resistant enforcement (High-Assurance Agent):</dt>
         <dd style="margin-left: 1.5em" id="section-8-2.10">
           <p id="section-8-2.10.1">A compromised agent cannot unilaterally take a high-consequence
-action it does not hold a mediated credential for
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Rests on PEP key
-custody, the agent and harness isolation boundary (the approval
-disclosure included, never agent-composed), and an
-active-freshness state source.<a href="#section-8-2.10.1" class="pilcrow">¶</a></p>
+action it does not hold a mediated credential for, nor acquire a
+fresh usable credential for one
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Rests on all five
+conditions: mediated credential custody, with the sender-constraint
+key generated in the PEP and never transferred from the agent; no
+unmediated path to the mediated actions or to fresh usable
+credentials for them, issuance for the mediated classes restricted to
+attested mediating-PEP keys; action-bound approval for the
+high-consequence classes; an active-freshness state source; and an
+approval disclosure rendered by a component isolated from the agent,
+never agent-composed. The agent and harness isolation boundary
+underlies custody and rendering alike.<a href="#section-8-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-2.11">Trifecta containment (High-Assurance Agent):</dt>
@@ -1759,9 +1780,10 @@ credential custody and action-bound approval) are recommendations,
 not requirements, and a third, the agent-isolated rendering of the
 approval disclosure, is required only by the claim itself, while
 active-state freshness for the high-consequence classes and the
-no-unmediated-path rule for mediated classes are already base-profile
-requirements; a deployment that leaves any of the five conditions
-unmet does not obtain the guarantee. This
+no-unmediated-path rule for mediated classes (which covers both a path
+to those actions and a path to fresh usable credentials for them) are
+already base-profile requirements; a deployment that leaves any of the
+five conditions unmet does not obtain the guarantee. This
 matches the suite's front-door framing: adopting the profiles does not by
 itself make a deployment resistant to a compromised agent. The model
 makes misuse bounded and, where evidence is produced, attributable.<a href="#section-8-3" class="pilcrow">¶</a></p>
@@ -1851,8 +1873,9 @@ Mission expiry; with it, the published multi-PDP consistency bound.<a href="#sec
         <dd style="margin-left: 1.5em" id="section-9-3.12">
           <p id="section-9-3.12.1">Addressed by sender-constraint (proof-of-possession); the
 high-consequence key is held by the PEP, not the agent (mediated
-execution). Residual: a token stolen together with its key; soundness
-of the PoP mechanism.<a href="#section-9-3.12.1" class="pilcrow">¶</a></p>
+execution). Residual: a token stolen together with its key; a bearer
+token, where the deployment does not sender-constrain, usable until
+it expires; soundness of the PoP mechanism.<a href="#section-9-3.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-9-3.13">Token replayed at another resource (confused deputy):</dt>
@@ -1892,9 +1915,20 @@ comprehension: no server-side commitment proves what a human perceived
 or understood.<a href="#section-9-3.22.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.23">Exfiltration of private data (the third leg of the lethal trifecta):</dt>
+<dt id="section-9-3.23">Approver account, session, or authenticator compromised:</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.24">
-          <p id="section-9-3.24.1">Addressed by external communication is a gated consequential action;
+          <p id="section-9-3.24.1">Addressed by the approval-event authentication floor and the Intent's
+<code>controls.acr</code> step-up hook, which a deployment raises for
+high-consequence Missions (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).
+Residual: a phished, hijacked, or coerced Approver approves a hostile
+Mission, and the evidence machinery then faithfully attests the
+attacker's Mission; account security and step-up strength are the
+deployment's.<a href="#section-9-3.24.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.25">Exfiltration of private data (the third leg of the lethal trifecta):</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.26">
+          <p id="section-9-3.26.1">Addressed by external communication is a gated consequential action;
 harness leaves no unmediated path; session taint downgrades egress
 after untrusted input (optional; recommended, not required);
 least-exposure context minimization narrows what an injected agent
@@ -1903,70 +1937,70 @@ containment (runtime). Residual: PEP-placement completeness; no
 information-flow control, so a sequence of in-scope steps can launder
 data; the quarantine pattern (separate ingestion and egress Missions)
 turns that limit into a deployment architecture
-(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-9-3.24.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-9-3.26.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.25">Sub-agent fan-out abuse (Child Missions):</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.26">
-          <p id="section-9-3.26.1">Addressed by child creation is issuer-adjudicated: strict-subset
+<dt id="section-9-3.27">Sub-agent fan-out abuse (Child Missions):</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.28">
+          <p id="section-9-3.28.1">Addressed by child creation is issuer-adjudicated: strict-subset
 authority, expiry no later than the parent, fan-out controls, separate
 child actor identity, cascade termination when the parent ends, and
 child credentials never transit the parent. Residual: breadth within
 the fan-out policy is the deployment's; a permissive delegation policy
-is consented but wide.<a href="#section-9-3.26.1" class="pilcrow">¶</a></p>
+is consented but wide.<a href="#section-9-3.28.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.27">Injection steers discovery (the agent binds the attacker's resource):</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.28">
-          <p id="section-9-3.28.1">Addressed by default-closed discovery (no consented ceiling, no
+<dt id="section-9-3.29">Injection steers discovery (the agent binds the attacker's resource):</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.30">
+          <p id="section-9-3.30.1">Addressed by default-closed discovery (no consented ceiling, no
 binding), the tainted-session human floor for egress-capable
 bindings, resource identity pinning, the rule that
 self-declarations never classify consequences, and Discovery
 Evidence (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>). Residual: an
 untainted session binding within an over-broad consented family;
-ceiling breadth is a consent-time decision.<a href="#section-9-3.28.1" class="pilcrow">¶</a></p>
+ceiling breadth is a consent-time decision.<a href="#section-9-3.30.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.29">Offline sub-agent fan-out abuse:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.30">
-          <p id="section-9-3.30.1">Addressed by capability monotonicity (narrow-only) and the runtime
+<dt id="section-9-3.31">Offline sub-agent fan-out abuse:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.32">
+          <p id="section-9-3.32.1">Addressed by capability monotonicity (narrow-only) and the runtime
 kill-switch re-check on the carried chain. Residual: fan-out breadth
 is unobserved by the issuer; bounded by depth and policy, not by the
-issuer.<a href="#section-9-3.30.1" class="pilcrow">¶</a></p>
+issuer.<a href="#section-9-3.32.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.31">Operator surface abused (fleet management):</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.32">
-          <p id="section-9-3.32.1">Addressed by management Client authorization; dry-run-then-execute
+<dt id="section-9-3.33">Operator surface abused (fleet management):</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.34">
+          <p id="section-9-3.34.1">Addressed by management Client authorization; dry-run-then-execute
 with a bulk token pinning the evaluated membership; every call
 audited; never agent-facing. Residual: a compromised Management Client
 stops or resumes Missions fleet-wide and learns Mission existence; it
-cannot mint or widen authority.<a href="#section-9-3.32.1" class="pilcrow">¶</a></p>
+cannot mint or widen authority.<a href="#section-9-3.34.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.33">Audit tampered, dropped, or reordered:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.34">
-          <p id="section-9-3.34.1">Addressed by transparency: append-only log, inclusion receipts,
+<dt id="section-9-3.35">Audit tampered, dropped, or reordered:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.36">
+          <p id="section-9-3.36.1">Addressed by transparency: append-only log, inclusion receipts,
 non-equivocation. Residual: single-service equivocation (per-service
 only; register with several); a producer can still log a false record
-(accountability, not prevention).<a href="#section-9-3.34.1" class="pilcrow">¶</a></p>
+(accountability, not prevention).<a href="#section-9-3.36.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.35">Agent fabricates results or acts on false data:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.36">
-          <p id="section-9-3.36.1">Addressed by not addressed. Residual: full: semantic and grounding
-verification are a non-goal; pair with a grounding layer if needed.<a href="#section-9-3.36.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-9-3.37">A trusted-base component is compromised:</dt>
+<dt id="section-9-3.37">Agent fabricates results or acts on false data:</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.38">
-          <p id="section-9-3.38.1">Addressed by not addressed; evidence detects it after the fact.
+          <p id="section-9-3.38.1">Addressed by not addressed. Residual: full: semantic and grounding
+verification are a non-goal; pair with a grounding layer if needed.<a href="#section-9-3.38.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.39">A trusted-base component is compromised:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.40">
+          <p id="section-9-3.40.1">Addressed by not addressed; evidence detects it after the fact.
 Residual: not prevented; degrades the specific guarantee per
-<a href="#trusted-base" class="auto internal xref">Section 6</a>.<a href="#section-9-3.38.1" class="pilcrow">¶</a></p>
+<a href="#trusted-base" class="auto internal xref">Section 6</a>.<a href="#section-9-3.40.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-9-4">Eight residuals are worth stating on their own, because they are the
+<p id="section-9-4">Nine residuals are worth stating on their own, because they are the
 limits most likely to matter and most often overstated away elsewhere:<a href="#section-9-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9-5.1">
@@ -1990,7 +2024,19 @@ from the anchor accrues only to a full-set holder (an auditor, a
 Mandate verifier, a full-set Resource Server).<a href="#section-9-5.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-5.3">
-          <p id="section-9-5.3.1"><strong>Narrowing is typed.</strong> The subset rule, the "authority only
+          <p id="section-9-5.3.1"><strong>Standalone-join ceiling.</strong> Under the standalone binding, an
+uncompromised join still has an assurance ceiling: the PDP's join
+proves the acting credential belongs to the subject and client the
+Mission names, but no mechanism in that mode proves the credential
+was derived under the Mission, and mapping coarseness and same-party
+misattribution remain
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>). The
+credential-to-Mission association is an inference the join bounds,
+not a carried fact.<a href="#section-9-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-5.4">
+          <p id="section-9-5.4.1"><strong>Narrowing is typed.</strong> The subset rule, the "authority only
 narrows" guarantee, is defined over <code>mission_resource_access</code> and
 its Common Constraints. Authority expressed in another
 <code>authorization_details</code> type, including an opaque policy-language
@@ -1999,18 +2045,18 @@ is neither narrowed nor delegated nor projected across a trust
 boundary. The strong narrowing guarantee therefore weakens exactly
 as a deployment moves authority into expressive policy-language
 entries, which is a design trade a deployment should make
-knowingly.<a href="#section-9-5.3.1" class="pilcrow">¶</a></p>
+knowingly.<a href="#section-9-5.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-5.4">
-          <p id="section-9-5.4.1"><strong>In-scope volume.</strong> The Authority Set bounds what a Mission may
+        <li class="normal" id="section-9-5.5">
+          <p id="section-9-5.5.1"><strong>In-scope volume.</strong> The Authority Set bounds what a Mission may
 touch, not how much. Consumption metering
 (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>) is the extension that
 bounds volume; where it is not deployed, an agent whose every action
 individually passes is limited only by Mission expiry, and the first
-row of the coverage table is unbounded in this dimension.<a href="#section-9-5.4.1" class="pilcrow">¶</a></p>
+row of the coverage table is unbounded in this dimension.<a href="#section-9-5.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-5.5">
-          <p id="section-9-5.5.1"><strong>Consent fatigue.</strong> The model multiplies approval moments: the
+        <li class="normal" id="section-9-5.6">
+          <p id="section-9-5.6.1"><strong>Consent fatigue.</strong> The model multiplies approval moments: the
 approval event, expansion approvals, action-bound approvals, and
 review queues. A deployment that over-asks trains its Approvers to
 rubber-stamp, and a rubber-stamped approval carries the same
@@ -2021,15 +2067,15 @@ highest-consequence actions
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and use a pre-consented
 ceiling with policy-adjudicated drawdown where growth is
 anticipated (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>),
-so the human moments that remain are rare enough to be read.<a href="#section-9-5.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-9-5.6">
-          <p id="section-9-5.6.1"><strong>Single-service equivocation.</strong> Transparency is non-equivocating only
-per service; a deployment that needs that property checked registers
-with more than one independent service.<a href="#section-9-5.6.1" class="pilcrow">¶</a></p>
+so the human moments that remain are rare enough to be read.<a href="#section-9-5.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-5.7">
-          <p id="section-9-5.7.1"><strong>Offline breadth.</strong> Offline attenuation
+          <p id="section-9-5.7.1"><strong>Single-service equivocation.</strong> Transparency is non-equivocating only
+per service; a deployment that needs that property checked registers
+with more than one independent service.<a href="#section-9-5.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-5.8">
+          <p id="section-9-5.8.1"><strong>Offline breadth.</strong> Offline attenuation
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>) bounds each child
 to a narrowing of its parent, but the issuer does not observe how many
 children are minted; breadth is bounded by depth and policy, not by the
@@ -2038,17 +2084,17 @@ issuer. Child Delegation
 observed alternative: creation is issuer-adjudicated, fan-out is
 controlled, and termination cascades. The trade between the two is
 availability against observation, and a deployment that chooses
-offline minting accepts the unobserved breadth.<a href="#section-9-5.7.1" class="pilcrow">¶</a></p>
+offline minting accepts the unobserved breadth.<a href="#section-9-5.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-5.8">
-          <p id="section-9-5.8.1"><strong>Availability.</strong> The model fails closed everywhere a trusted component
+        <li class="normal" id="section-9-5.9">
+          <p id="section-9-5.9.1"><strong>Availability.</strong> The model fails closed everywhere a trusted component
 cannot establish the fact it needs (<a href="#cross-cutting" class="auto internal xref">Section 7</a>), which trades
 availability for safety. An attacker who degrades a state source, an
 event stream, or a PDP does not gain unauthorized action, but converts
 the attack into work stoppage and, for in-flight work, unwind activity.
 A deployment provisions state-source, event-stream, and PDP
 availability accordingly, because under this model their outage stops
-governed work rather than loosening it.<a href="#section-9-5.8.1" class="pilcrow">¶</a></p>
+governed work rather than loosening it.<a href="#section-9-5.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2107,8 +2153,8 @@ within each server's published staleness bound.<a href="#section-10-1" class="pi
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">With runtime enforcement</td>
-            <td class="text-left" rowspan="1" colspan="1">the per-class freshness bound</td>
-            <td class="text-left" rowspan="1" colspan="1">published per-class staleness bound</td>
+            <td class="text-left" rowspan="1" colspan="1">the per-class freshness bound plus the permit window plus the class's execution bound</td>
+            <td class="text-left" rowspan="1" colspan="1">published per-class staleness bound, permit validity window, and execution bound</td>
           </tr>
         </tbody>
       </table>
@@ -2156,21 +2202,21 @@ child's own window then runs under the same table.<a href="#section-10-3" class=
             <td class="text-left" rowspan="1" colspan="1">Runtime-Enforced</td>
             <td class="text-left" rowspan="1" colspan="1">stopped at once</td>
             <td class="text-left" rowspan="1" colspan="1">stopped for mediated actions</td>
-            <td class="text-left" rowspan="1" colspan="1">stopped within freshness bound</td>
+            <td class="text-left" rowspan="1" colspan="1">stopped within freshness, permit, and execution bounds</td>
             <td class="text-left" rowspan="1" colspan="1">only if the harness re-checks</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Governed Agent</td>
             <td class="text-left" rowspan="1" colspan="1">stopped at once</td>
             <td class="text-left" rowspan="1" colspan="1">stopped for mediated actions</td>
-            <td class="text-left" rowspan="1" colspan="1">stopped within freshness bound</td>
+            <td class="text-left" rowspan="1" colspan="1">stopped within freshness, permit, and execution bounds</td>
             <td class="text-left" rowspan="1" colspan="1">stopped on resume re-check</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">High-Assurance Agent</td>
             <td class="text-left" rowspan="1" colspan="1">stopped at once</td>
             <td class="text-left" rowspan="1" colspan="1">stopped (mediated credential custody)</td>
-            <td class="text-left" rowspan="1" colspan="1">stopped within the active-freshness bound</td>
+            <td class="text-left" rowspan="1" colspan="1">stopped within active-freshness, permit, and execution bounds</td>
             <td class="text-left" rowspan="1" colspan="1">stopped on resume re-check</td>
           </tr>
         </tbody>

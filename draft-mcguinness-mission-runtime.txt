@@ -246,7 +246,13 @@ Table of Contents
    deployments do not thereby interoperate at the PEP-PDP boundary; the
    interoperable wire surface is supplied by a separately specified
    decision API binding (Section 15), the AuthZEN binding being
-   [I-D.draft-mcguinness-mission-authzen].  This document is the
+   [I-D.draft-mcguinness-mission-authzen].  That a wire format is a
+   deployment choice does not make it an ad hoc one: the Runtime-
+   Enforced level of the Mission Assurance Levels
+   ([I-D.draft-mcguinness-mission-architecture]) requires a specified
+   decision-API binding, of which the AuthZEN profile is the one this
+   family defines, and a deployment that uses a different decision API
+   MUST specify that binding likewise.  This document is the
    architecture and invariant layer; the binding is the interoperability
    layer.
 
@@ -675,12 +681,17 @@ Table of Contents
 
    A PEP MUST refuse an action for which deployment policy or Resource
    policy requires an action-bound approval and a valid fresh approval
-   bound to the action's parameters is not present.  A deployment SHOULD
-   require an action-bound approval for the high-consequence classes,
-   where a token-lifetime-wide standing authority is least appropriate.
-   Because the approval is bound to the concrete parameters, it MUST be
-   reverified under the time-of-check to time-of-use rules of Section 8;
-   a parameter change after approval invalidates it.
+   bound to the action's parameters is not present.  An action-bound
+   approval MUST carry a maximum age, bounded by a value the deployment
+   set publishes; past that age the approval is not fresh and the PEP
+   MUST refuse.  The permit lease does not substitute for this bound: a
+   permit's validity window (Section 8) bounds the permit, not the age
+   of the approval it relied on.  A deployment SHOULD require an action-
+   bound approval for the high-consequence classes, where a token-
+   lifetime-wide standing authority is least appropriate.  Because the
+   approval is bound to the concrete parameters, it MUST be reverified
+   under the time-of-check to time-of-use rules of Section 8; a
+   parameter change after approval invalidates it.
 
    This profile does not define the wire workflow that obtains the
    approval.  A decision-API binding MAY route the requiring denial
@@ -771,14 +782,14 @@ Table of Contents
    For an action class it mediates, a deployment SHOULD hold the sender-
    constraint private key for the Mission-bound credential in the
    mediating PEP rather than in the agent component, and SHOULD do so
-   for the external-commitment and privileged-administration classes.
-   Two properties follow: a credential exfiltrated from a compromised
-   agent is unusable without the key; and a compromised agent cannot
-   reach a mediated action without passing the per-action check, because
-   it never holds a usable credential for that class.  Mediated
-   execution depends on the agent having no unmediated path to the
-   resource; a Mission-aware harness establishes that execution
-   environment ([I-D.draft-mcguinness-mission-harness]).
+   for the irreversible-action, external-commitment, and privileged-
+   administration classes.  Two properties follow: a credential
+   exfiltrated from a compromised agent is unusable without the key; and
+   a compromised agent cannot reach a mediated action without passing
+   the per-action check, because it never holds a usable credential for
+   that class.  Mediated execution depends on the agent having no
+   unmediated path to the resource; a Mission-aware harness establishes
+   that execution environment ([I-D.draft-mcguinness-mission-harness]).
 
    Where the deployment issues tokens under the client-instance-
    assertion profile
@@ -1337,6 +1348,13 @@ Table of Contents
       byte URI comparison); this document does not define a second
       canonicalization.
 
+   *  Every parameter that influences the action's external effect (for
+      example, the recipient, destination, amount, or target object)
+      MUST enter the parameter_digest.  A field the deployment excludes
+      MUST be shown effect-free in the Operation Profile, which records
+      why that field cannot change the action's external effect; a field
+      whose effect is not so justified MUST be included.
+
    *  The operation profile MUST define default insertion, omitted
       optional fields, and set-like array handling before
       canonicalization.
@@ -1704,19 +1722,28 @@ Table of Contents
    consequence classes is already MUST in the base profile
    (Section 7.2); the harness condition makes MUST the base profile's
    requirement that mediated classes have no unmediated path
-   (Section 4.5); mediated custody and action-bound approval are SHOULD
-   in the base profile (Section 4.6, Section 4.4) and MUST here; the
-   approval-rendering condition is stated only by this claim.
+   (Section 4.5) and adds, stated only by this claim, that no unmediated
+   path yields a fresh usable credential for those classes either;
+   mediated custody and action-bound approval are SHOULD in the base
+   profile (Section 4.6, Section 4.4) and MUST here; the approval-
+   rendering condition is stated only by this claim.
 
    *  the sender-constraint private key is held by the mediating PEP,
-      not by the agent component (Section 4.6);
+      not by the agent component (Section 4.6), and is generated in the
+      mediating PEP or its HSM and never transferred from the agent;
 
    *  governed work runs in a mediated execution environment with no
-      unmediated path to the mediated classes, documented by a published
-      execution-environment scope statement covering those classes; a
-      harness conforming to the harness profile
-      ([I-D.draft-mcguinness-mission-harness]) is the defined way to
-      establish and document this, and the claim binds to the property;
+      unmediated path to the mediated classes and no unmediated path to
+      fresh usable credentials for them: issuance of Mission-bound
+      tokens for the mediated classes is restricted to keys the
+      mediating PEP attests (for example, client-instance attestation),
+      with no token-endpoint, refresh, or exchange path by which the
+      agent obtains such a credential bound to a key it controls.  A
+      published execution-environment scope statement covering those
+      classes documents this; a harness conforming to the harness
+      profile ([I-D.draft-mcguinness-mission-harness]) is the defined
+      way to establish and document it, and the claim binds to the
+      property;
 
    *  each such action requires an action-bound approval (Section 4.4);
 
@@ -1751,23 +1778,23 @@ Table of Contents
 
    Each unmet condition loses a specific property:
 
-       +==============================+===========================+
-       | Condition unmet              | Property lost             |
-       +==============================+===========================+
-       | Custody in the mediating PEP | Key exfiltration          |
-       +------------------------------+---------------------------+
-       | Harness-established no-      | Off-path execution        |
-       | unmediated-path              |                           |
-       +------------------------------+---------------------------+
-       | Action-bound approval        | Unattended high-          |
-       |                              | consequence action        |
-       +------------------------------+---------------------------+
-       | Agent-independent approval   | Approval decided on       |
-       | rendering                    | agent-composed disclosure |
-       +------------------------------+---------------------------+
-       | Active-state freshness       | Revocation lag bounded    |
-       |                              | only by token lifetime    |
-       +------------------------------+---------------------------+
+   +===================================+==============================+
+   | Condition unmet                   | Property lost                |
+   +===================================+==============================+
+   | Custody in the mediating PEP      | Key exfiltration             |
+   +-----------------------------------+------------------------------+
+   | No unmediated path to the actions | Off-path execution or fresh- |
+   | or to fresh credentials for them  | credential acquisition       |
+   +-----------------------------------+------------------------------+
+   | Action-bound approval             | Unattended high-consequence  |
+   |                                   | action                       |
+   +-----------------------------------+------------------------------+
+   | Agent-independent approval        | Approval decided on agent-   |
+   | rendering                         | composed disclosure          |
+   +-----------------------------------+------------------------------+
+   | Active-state freshness            | Revocation lag bounded only  |
+   |                                   | by token lifetime            |
+   +-----------------------------------+------------------------------+
 
                                  Table 4
 

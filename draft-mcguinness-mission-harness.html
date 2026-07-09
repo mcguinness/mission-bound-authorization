@@ -1423,11 +1423,17 @@ not replace a PEP at the last controllable boundary under
             <p id="section-2.1-2.7.1">workspace or artifact handles;<a href="#section-2.1-2.7.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-2.1-2.8">
-            <p id="section-2.1-2.8.1">runtime permits and single-use decision identifiers held by the
-harness (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); and<a href="#section-2.1-2.8.1" class="pilcrow">¶</a></p>
+            <p id="section-2.1-2.8.1">shared vector stores and long-term memory the agent reads or writes;<a href="#section-2.1-2.8.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-2.1-2.9">
-            <p id="section-2.1-2.9.1">credential references managed by the harness.<a href="#section-2.1-2.9.1" class="pilcrow">¶</a></p>
+            <p id="section-2.1-2.9.1">operating-system processes the agent spawns;<a href="#section-2.1-2.9.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.1-2.10">
+            <p id="section-2.1-2.10.1">runtime permits and single-use decision identifiers held by the
+harness (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); and<a href="#section-2.1-2.10.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.1-2.11">
+            <p id="section-2.1-2.11.1">credential references managed by the harness.<a href="#section-2.1-2.11.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-2.1-3">It does not require a harness to inspect application data unrelated to
@@ -1543,10 +1549,12 @@ network egress policy) and names the unmediated paths excluded from the
 claim. For each mediated class the statement <span class="bcp14">MUST</span> also enumerate the
 secondary egress channel classes the environment offers, at minimum
 DNS resolution, log and error output, shared stores another process
-reads, and rendering surfaces that dereference remote references (a
-rendered image fetch is an egress performed for the agent), stating
-for each whether it is mediated, excluded by the isolation
-mechanism, or outside the claim. The enumeration is
+reads, shared vector stores or long-term memory, operating-system
+processes the agent spawns, provider-side model context, the
+inference API itself, and rendering surfaces that dereference remote
+references (a rendered image fetch is an egress performed for the
+agent), stating for each whether it is mediated, excluded by the
+isolation mechanism, or outside the claim. The enumeration is
 not static where open-world discovery is deployed: a channel created
 by a discovery binding enters it at binding, recorded in Harness
 Evidence, and an egress channel that entered neither way is a
@@ -1791,9 +1799,18 @@ the session are still valid.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
 (<span>[<a href="#I-D.draft-mcguinness-mission-orchestration" class="cite xref">I-D.draft-mcguinness-mission-orchestration</a>]</span>) places the joint
 duties on a deployment running both profiles: a means for the harness
 to determine whether a work item is under an active unwind decision
-(the mechanism is deployment-defined), and the stricter outcome where
+(the mechanism is deployment-defined), and a precedence rule where
 harness stop policy and an active unwind decision would produce
-different outcomes for the same work item.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+different outcomes for the same work item. The stage split chooses how
+to stop, not whether: where both would stop the item, the
+orchestrator's in-flight handling governs a dispatched or in-flight
+step, since only the orchestrator can unwind committed or partially
+committed work, and the harness stop policy governs an undispatched
+one; where one would stop and the other continue, the item stops. The
+harness still honors an orchestrator cancel or hold under the resume
+algorithm (<a href="#resume-algorithm" class="auto internal xref">Section 7.1</a>), which forbids resuming, including
+dispatching a queued item, that the orchestrator has cancelled or is
+holding even when the Mission is active.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
 <p id="section-7.2-2">The harness records its decision in Harness Evidence and the
 orchestrator records its decision in Orchestration Evidence, and the
 two records cross-link through their evidence identifiers.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
@@ -2261,7 +2278,7 @@ class to stop behavior. At minimum:<a href="#section-13.1-1" class="pilcrow">¶<
 deployment may run: <code>suspended</code> and <code>completed</code> by Mission Status
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), <code>superseded</code> by Mission
 Expansion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), and
-<code>cascaded</code> by Child Mission Delegation
+<code>cascaded</code> by Mission Child Delegation
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). The harness
 needs none of those profiles to be conformant: per the issuance
 profile's forward-compatibility rule, it treats any state other than
@@ -2329,7 +2346,14 @@ baseline to the sources it vouches for, such as first-party tools, its
 own catalogs, and designated corpora. Content from an unlisted source,
 or from a source the deployment explicitly marks untrusted (web
 fetches, inbound messages, third-party documents), is <strong>tainted</strong>.<a href="#section-14-2" class="pilcrow">¶</a></p>
-<p id="section-14-3">The trigger is parameter provenance where the harness can establish
+<p id="section-14-3">A store a governed session can write <span class="bcp14">MUST NOT</span> be vouched on the content
+trust list as trusted by default: content the harness reads back from a
+Mission-writable store inherits the taint of the session that wrote it,
+or the deployment <span class="bcp14">MUST NOT</span> vouch for that store. Otherwise a tainted
+session launders content across the session boundary by writing it to a
+vouched store that a later session reads as trusted, defeating the
+fresh-session reset below.<a href="#section-14-3" class="pilcrow">¶</a></p>
+<p id="section-14-4">The trigger is parameter provenance where the harness can establish
 it. Because the harness mediates tool input and output, it <span class="bcp14">SHOULD</span>
 track at the data plane which tainted source a value derives from. The
 egress rule below then applies when a bound parameter of a
@@ -2340,8 +2364,8 @@ to every such action in a governed session that tainted content has
 entered. Session-level taint persists for the governed session's
 lifetime and clears only with a fresh session or an explicit
 Subject-directed reset recorded in Harness Evidence
-(<a href="#harness-evidence" class="auto internal xref">Section 15</a>).<a href="#section-14-3" class="pilcrow">¶</a></p>
-<p id="section-14-4">Taint follows derivation across session boundaries with the same
+(<a href="#harness-evidence" class="auto internal xref">Section 15</a>).<a href="#section-14-4" class="pilcrow">¶</a></p>
+<p id="section-14-5">Taint follows derivation across session boundaries with the same
 polarity. A sub-agent session spawned from a tainted session
 inherits taint, because its task and context were composed there,
 unless every input the child receives is affirmatively of trusted
@@ -2349,17 +2373,21 @@ provenance; and a session seeded with content derived from a tainted
 session (a compaction summary, carried-over working notes) is not a
 fresh session and inherits the taint. Where the child runs under its
 own Mission, the inherited state is what the harness reports at that
-Mission's adjudications (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>).<a href="#section-14-4" class="pilcrow">¶</a></p>
-<p id="section-14-5">The provenance polarity is fixed. In a tainted session, a bound
+Mission's adjudications (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>).<a href="#section-14-5" class="pilcrow">¶</a></p>
+<p id="section-14-6">The provenance polarity is fixed. In a tainted session, a bound
 parameter the harness cannot affirmatively trace to sources on the
 content trust list <span class="bcp14">MUST</span> be treated as tainted. Parameter-granularity
 provenance therefore only exempts an egress whose bound parameters
 are all affirmatively of trusted provenance; it never launders
 inferred or paraphrased content, which is untraceable and so remains
+tainted. In practice the exemption reaches only verbatim tool-to-tool
+plumbing, where a value passes from a trusted source into the bound
+parameter unmodified; once the model transforms, summarizes, or
+rephrases a value, data-plane provenance is lost and the parameter is
 tainted. This default-taint polarity is a condition of the runtime
 profile's trifecta-containment claim
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-14-5" class="pilcrow">¶</a></p>
-<p id="section-14-6">The rule: the harness <span class="bcp14">SHOULD</span> either require a fresh action-bound
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-14-6" class="pilcrow">¶</a></p>
+<p id="section-14-7">The rule: the harness <span class="bcp14">SHOULD</span> either require a fresh action-bound
 approval (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) or downgrade that
 authority (suppress the action), rather than let the agent egress on
 the strength of injected content. This is the plan-then-execute
@@ -2368,14 +2396,14 @@ pattern: untrusted content may inform the agent's planning, but it
 deployment <span class="bcp14">MAY</span> instead route the taint determination through the
 decision request where the binding carries it
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); the PDP then enforces
-this rule and records the taint context in Decision Evidence.<a href="#section-14-6" class="pilcrow">¶</a></p>
-<p id="section-14-7">The taint policy <span class="bcp14">MUST</span> be declared in the execution-environment scope
+this rule and records the taint context in Decision Evidence.<a href="#section-14-7" class="pilcrow">¶</a></p>
+<p id="section-14-8">The taint policy <span class="bcp14">MUST</span> be declared in the execution-environment scope
 statement (<a href="#mediated-egress" class="auto internal xref">Section 5</a>): the content trust list, the trigger
 granularity (parameter provenance, session-level, or both), and the
 fallback where provenance is unavailable. The claim is then
 inspectable: an auditor reads what taints, what triggers, and what
-happens when tracking runs out.<a href="#section-14-7" class="pilcrow">¶</a></p>
-<p id="section-14-8">This remains a coarse control, not information-flow control, though
+happens when tracking runs out.<a href="#section-14-8" class="pilcrow">¶</a></p>
+<p id="section-14-9">This remains a coarse control, not information-flow control, though
 source classing and parameter provenance give it discriminating power:
 it gates the egress whose inputs derive from untrusted content and
 leaves trusted-provenance egress ungated, instead of gating every
@@ -2393,7 +2421,7 @@ The control still cannot close within-scope data laundering
 forcing a human or a fresh approval between untrusted input and
 egress. A harness that applies it records the taint source class, the
 provenance where established, and the resulting downgrade or approval
-in Harness Evidence (<a href="#harness-evidence" class="auto internal xref">Section 15</a>).<a href="#section-14-8" class="pilcrow">¶</a></p>
+in Harness Evidence (<a href="#harness-evidence" class="auto internal xref">Section 15</a>).<a href="#section-14-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="harness-evidence">
@@ -2720,17 +2748,27 @@ issuance gating still bounds what authority can exist, and Mission
 revocation still terminates authority at its source. A compromised
 harness cannot manufacture Mission authority the issuer never granted.<a href="#section-18.1-2" class="pilcrow">¶</a></p>
 <p id="section-18.1-3">What falls is everything the harness alone mediates:
-local-tool mediation, session-level suppression, and taint control.
-A compromised harness can resume suppressed work, ignore its own stop
-decisions, and drive egress that the taint rule was meant to hold.<a href="#section-18.1-3" class="pilcrow">¶</a></p>
+local-tool mediation, session-level suppression, taint control, and
+the mediated execution environment itself (<a href="#mediated-egress" class="auto internal xref">Section 5</a>). The
+no-unmediated-path condition is harness-operated, so a compromised
+harness can resume suppressed work, ignore its own stop decisions,
+drive egress that the taint rule was meant to hold, and open an
+unmediated route around the enforcement point, forfeiting the runtime
+profile's external-communication containment leg
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-18.1-3" class="pilcrow">¶</a></p>
 <p id="section-18.1-4">Because of this split, a deployment that claims the runtime profile's
 agent-compromise-resistant enforcement
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) <span class="bcp14">MUST</span> isolate the
 mediating PEP and its sender-constraint key custody from the
 agent-facing harness components, by process, host, or service
-separation. A harness that both faces the agent and holds the
-sender-constraint key defeats mediated custody: its compromise yields
-the key.<a href="#section-18.1-4" class="pilcrow">¶</a></p>
+separation. Because the no-unmediated-path condition is itself
+harness-operated, that separation <span class="bcp14">MUST</span> extend to the isolation
+mechanism's control plane: the container configuration, egress policy,
+and environment definitions that confine governed work <span class="bcp14">MUST</span> be isolated
+from the agent-facing components, so a harness compromise cannot
+rewrite the boundary it runs behind. A harness that both faces the
+agent and holds the sender-constraint key defeats mediated custody: its
+compromise yields the key.<a href="#section-18.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="session-continuity-is-not-authority-continuity">
@@ -2771,7 +2809,9 @@ cascade stop behavior when parent authority ends.<a href="#section-18.4-1" class
         </h3>
 <p id="section-18.5-1">Multiple workers may resume the same session or queue item. A harness
 <span class="bcp14">SHOULD</span> use compare-and-set or equivalent concurrency control so a stop
-decision cannot race with a resume decision. When the state is
+decision cannot race with a resume decision, and <span class="bcp14">MUST</span> serialize
+stop-versus-resume per work item for high-consequence action classes
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). When the state is
 ambiguous, fail closed and suppress governed work.<a href="#section-18.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>

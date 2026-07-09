@@ -1486,8 +1486,13 @@ enforced unless the bound is within a runtime enforcement scope that
 meters it under this document. A deployment that accepts the bounds
 into the Intent but does not meter them presents an unenforced promise
 at the consent surface; a Mission Issuer whose deployment does not
-meter a bound <span class="bcp14">SHOULD</span> refuse an Intent that carries it, and <span class="bcp14">MUST NOT</span>
-render it as an enforced limit.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+meter a bound <span class="bcp14">MUST</span> refuse an Intent that carries it at intake, and <span class="bcp14">MUST NOT</span> render it as an enforced limit.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+<p id="section-6.1-3">Under a multi-PDP topology (<a href="#topology" class="auto internal xref">Section 7.1</a>), a consented hard cap the
+deployment renders as enforced <span class="bcp14">MUST</span> either be realized as structurally
+exact relaxations, per-PDP sub-budgets that sum to the cap, or be
+rendered with the consistency qualifier the topology operates under, so
+the Approver consents to the guarantee the deployment can meet rather
+than to a hard number it cannot.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1516,17 +1521,33 @@ and increments the action count atomically with the permit and <span class="bcp1
 refuse an action that would exceed either cap. Payload size is
 measured over the parameter bytes committed by <code>parameter_digest</code>
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); the operation profile
-defines the measurement so PDPs accumulate consistently.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+defines the measurement so PDPs accumulate consistently. For a
+reference-typed parameter, one that carries an attachment identifier
+or URL whose referent egresses while the pointer is what
+<code>parameter_digest</code> commits, the operation profile <span class="bcp14">MUST</span> measure the
+dereferenced payload size, or the deployment <span class="bcp14">MUST</span> exclude such
+actions from a claimed <code>bytes</code> bound; counting the pointer bytes
+alone understates the egress.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.4">
           <p id="section-7-2.4.1"><code>max_duration</code>: the PDP
 accumulates the duration of consequential activity it reserves,
 commits, or permits and <span class="bcp14">MUST</span> refuse once that total would exceed the
-bound. For an action whose duration is not known before execution,
+bound. The PDP <span class="bcp14">MUST</span> accumulate <code>max_duration</code> as the sum of
+per-action measured durations, not the union of activity intervals,
+so concurrent actions each count against the bound. For an action
+whose duration is not known before execution,
 the PDP <span class="bcp14">MUST</span> either reserve a bounded maximum duration or issue a
 duration lease that expires unless renewed; the PEP <span class="bcp14">MUST</span> stop the
 action or obtain a new permit before the reservation or lease is
-exhausted. After execution, the PEP <span class="bcp14">MUST</span> report the measured
+exhausted. Lease boundaries <span class="bcp14">MUST</span> carry a clock-skew margin: the PEP
+renews or stops ahead of expiry by at least the deployment's skew
+bound, so a renewal in flight does not race the expiry it extends.
+For an action that cannot be safely stopped mid-execution, lease
+exhaustion is handled as an in-flight outcome under the orchestration
+profile's <code>dispatched_not_committed</code> or <code>unknown</code> classes
+(<span>[<a href="#I-D.draft-mcguinness-mission-orchestration" class="cite xref">I-D.draft-mcguinness-mission-orchestration</a>]</span>), not by severing
+the action. After execution, the PEP <span class="bcp14">MUST</span> report the measured
 duration so the PDP can commit actual use and release any unused
 reservation. The operation profile defines how a single action's
 duration is measured so that PDPs accumulate consistently.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
@@ -1597,9 +1618,14 @@ consequential action matching a selector latches the group to that
 selector, atomically with the permit; for the Mission's remaining
 lifetime the PDP <span class="bcp14">MUST</span> refuse a consequential action matching any
 other selector of the same group. The latch is per group and per
-Mission, is PDP-side operational state like a consumption counter
-(<a href="#metering" class="auto internal xref">Section 7</a>), and never unlatches: narrowing by exercise is
-monotonic, like every other narrowing in the family.<a href="#section-8-1" class="pilcrow">¶</a></p>
+Mission and is PDP-side operational state like a consumption counter
+(<a href="#metering" class="auto internal xref">Section 7</a>). The latch tracks execution, not permit issuance: a
+permit whose action is affirmatively not executed never combined the
+group's authority, so when Execution Evidence reports that outcome
+within the strongly consistent latch domain the PDP releases the latch,
+restoring monotonic narrowing rather than breaking it. Absent that
+affirmative non-execution the latch does not unlatch: narrowing by
+exercise is monotonic, like every other narrowing in the family.<a href="#section-8-1" class="pilcrow">¶</a></p>
 <p id="section-8-2">The latch is exempt from the relaxations of <a href="#topology" class="auto internal xref">Section 7.1</a>. A counter
 degrades gracefully under a per-PDP sub-budget or a reconciliation
 window; a separation-of-duty rule violated once is violated
@@ -1684,12 +1710,22 @@ binding, delivery of the Execution Evidence Object
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) to the PDP is that
 commit-or-release signal: on receipt the PDP commits the consumption
 the linked action used and releases any reserved excess, keyed to the
-Execution Evidence's <code>decision_id</code>.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
-<p id="section-10.1-2">Settlement can also fail to arrive. An unsettled reservation remains
-charged against the bound until it is reconciled through the runtime
-profile's orphaned-evidence process
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and is released only on
-affirmative evidence of non-execution; timeout alone never releases a
+Execution Evidence's <code>decision_id</code>. The deployment <span class="bcp14">MUST</span> provide a
+settlement transport for this signal: a PDP evidence-submission path,
+or an equivalent channel, with at-least-once delivery and a commit that
+is idempotent on the Execution Evidence's <code>decision_id</code>, so a
+redelivered settlement neither double-commits the consumption nor
+double-releases the reservation.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<p id="section-10.1-2">Settlement can also fail to arrive. A reservation <span class="bcp14">MUST</span> carry a bounded
+lease so a crashed or abandoned reservation does not consume the budget
+permanently: on lease expiry without settlement the PDP reconciles the
+reservation through the runtime profile's orphaned-evidence process
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). For an idempotent or
+reversible action class, expiry releases the reservation and returns the
+budget; for a non-idempotent action class, expiry forces reconciliation
+or human review rather than release. An unsettled reservation remains
+charged against the bound until it is reconciled, and is released only
+on affirmative evidence of non-execution; timeout alone never releases a
 reservation for a non-idempotent action class. The operational
 consequence: a lossy evidence channel accumulates reservations
 against <code>max_budget</code> and <code>max_calls</code> until the Mission starves on
@@ -1852,6 +1888,22 @@ trusted-base assumptions for PEPs.<a href="#section-12-2.3.1" class="pilcrow">¶
 and keeps acting is stopped by the PEP, which <span class="bcp14">MUST</span> stop the action or
 obtain a new permit before the lease is exhausted (<a href="#metering" class="auto internal xref">Section 7</a>).<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
 </li>
+        <li class="normal" id="section-12-2.5">
+          <p id="section-12-2.5.1"><strong>Reservation starvation.</strong> An attacker who opens reservations and
+never settles them can consume a budget with no executed action,
+denying the Mission its remaining authority. The bounded reservation
+lease (<a href="#settlement-exchange" class="auto internal xref">Section 10.1</a>) caps this: an unsettled reservation is
+reconciled on lease expiry rather than held indefinitely, and the
+idempotent-release path returns the budget.<a href="#section-12-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.6">
+          <p id="section-12-2.6.1"><strong>Latch burning.</strong> Because the first matching action latches an
+exclusivity group, an injected agent can try to burn a group by
+driving the side it wants foreclosed, denying the Mission the other
+side. Releasing the latch on affirmative non-execution
+(<a href="#exclusivity" class="auto internal xref">Section 8</a>) keeps an unexecuted attempt from foreclosing the
+group permanently.<a href="#section-12-2.6.1" class="pilcrow">¶</a></p>
+</li>
       </ul>
 </section>
 </div>
@@ -1865,7 +1917,14 @@ fine-grained record of Mission activity over time. It <span class="bcp14">SHOULD
 retained under the same access controls and retention windows as
 runtime enforcement evidence
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and disclosed in decision
-responses only as refusals, not as remaining-balance oracles.<a href="#section-13-1" class="pilcrow">¶</a></p>
+responses only as refusals, not as remaining-balance oracles. The
+refusal boundary is itself a coarse balance oracle: the point at which a
+bound flips from permit to refusal reveals the remaining margin. A
+deployment <span class="bcp14">SHOULD</span> bound this probing with the AuthZEN profile's
+denial-oracle controls (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>),
+per-Mission rate-limiting of access requests and evidence-logging of
+request provenance, so a compromised agent mapping a balance by
+repeated probes is visible to the humans adjudicating it.<a href="#section-13-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana">
@@ -1934,6 +1993,10 @@ extension data carried per the AuthZEN profile's conventions
 <dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"An Architecture for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-orchestration">[I-D.draft-mcguinness-mission-orchestration]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Orchestration and Unwinding"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
       <dd>

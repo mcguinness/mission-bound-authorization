@@ -1448,7 +1448,10 @@ behavior that an auditor can observe in the shaper's output. Mission
 Issuer behavior is cited from the issuance profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), not legislated here. The
 keywords do not establish a conformance class: this profile is
-Informational (<a href="#why-informational" class="auto internal xref">Section 1.1</a>).<a href="#section-3-2" class="pilcrow">¶</a></p>
+Informational (<a href="#why-informational" class="auto internal xref">Section 1.1</a>). They bind only the observable
+shaping artifacts, the Mission Intent proposal and Shaping Evidence, as
+recommended behavior an auditor can check against those artifacts, not a
+conformance obligation on any party.<a href="#section-3-2" class="pilcrow">¶</a></p>
 <p id="section-3-3">All JSON shown in this document is non-normative and illustrative; the
 member descriptions in the surrounding text are authoritative. This
 document uses JSON <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> as the data model for the illustrative
@@ -2129,7 +2132,13 @@ that profile's domain-separated <code>{typ, iss, value}</code> envelope, with
 prefixed digest of the JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical bytes of that
 envelope. Hashing the bare object would omit the <code>typ</code> domain
 separation and <code>iss</code> binding the integrity-anchor construction exists
-to provide. It is an audit commitment only.<a href="#section-10.1-2.1.1" class="pilcrow">¶</a></p>
+to provide. It is an audit commitment only. Because the shaper is
+client-side and <span class="bcp14">MAY</span> build a proposal before the target Mission Issuer
+is selected, the <code>iss</code> binding requires that issuer to be known: the
+<code>shaping_evidence_hash</code> is computed only once the Mission Issuer's
+<code>issuer</code> is fixed, and a proposal re-submitted to a different Mission
+Issuer needs a <code>shaping_evidence_hash</code> recomputed under that issuer's
+<code>issuer</code>.<a href="#section-10.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.1-2.2">
             <p id="section-10.1-2.2.1">A deployment <span class="bcp14">MAY</span> instead, or in addition, carry an integrity envelope
@@ -2319,10 +2328,14 @@ the approval event, and derives an Authority Set
 Endpoint and does not handle the authorization response. Those are
 requesting-client responsibilities (<a href="#proposes-only" class="auto internal xref">Section 5.2</a>). The shaper hands
 its output to the requesting client, which performs the OAuth flow and
-<span class="bcp14">MAY</span> also convey a <code>shaping_evidence_hash</code> as deployment extension data
-so the Mission record can cite the evidence (<a href="#evidence-hash" class="auto internal xref">Section 10.1</a>).
-Conveying it does not
-require the Mission Issuer to trust the shaper.<a href="#section-14.1-2" class="pilcrow">¶</a></p>
+<span class="bcp14">MAY</span> also convey a <code>shaping_evidence_hash</code> so the Mission record can cite
+the evidence (<a href="#evidence-hash" class="auto internal xref">Section 10.1</a>). Because the issuance profile rejects
+an unrecognized top-level Mission Intent member
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the hash is not carried inside
+<code>mission_intent</code>; a deployment conveys it as a separate PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>
+request parameter it registers (for example, a <code>shaping_evidence_hash</code>
+parameter) alongside the Mission Intent. Conveying it does not require
+the Mission Issuer to trust the shaper.<a href="#section-14.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="runtime-composition">

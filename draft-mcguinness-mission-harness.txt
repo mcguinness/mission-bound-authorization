@@ -196,6 +196,11 @@ Table of Contents
 
    *  workspace or artifact handles;
 
+   *  shared vector stores and long-term memory the agent reads or
+      writes;
+
+   *  operating-system processes the agent spawns;
+
    *  runtime permits and single-use decision identifiers held by the
       harness ([I-D.draft-mcguinness-mission-runtime]); and
 
@@ -290,7 +295,9 @@ Table of Contents
    the claim.  For each mediated class the statement MUST also enumerate
    the secondary egress channel classes the environment offers, at
    minimum DNS resolution, log and error output, shared stores another
-   process reads, and rendering surfaces that dereference remote
+   process reads, shared vector stores or long-term memory, operating-
+   system processes the agent spawns, provider-side model context, the
+   inference API itself, and rendering surfaces that dereference remote
    references (a rendered image fetch is an egress performed for the
    agent), stating for each whether it is mediated, excluded by the
    isolation mechanism, or outside the claim.  The enumeration is not
@@ -472,9 +479,18 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-orchestration]) places the joint
    duties on a deployment running both profiles: a means for the harness
    to determine whether a work item is under an active unwind decision
-   (the mechanism is deployment-defined), and the stricter outcome where
+   (the mechanism is deployment-defined), and a precedence rule where
    harness stop policy and an active unwind decision would produce
-   different outcomes for the same work item.
+   different outcomes for the same work item.  The stage split chooses
+   how to stop, not whether: where both would stop the item, the
+   orchestrator's in-flight handling governs a dispatched or in-flight
+   step, since only the orchestrator can unwind committed or partially
+   committed work, and the harness stop policy governs an undispatched
+   one; where one would stop and the other continue, the item stops.
+   The harness still honors an orchestrator cancel or hold under the
+   resume algorithm (Section 7.1), which forbids resuming, including
+   dispatching a queued item, that the orchestrator has cancelled or is
+   holding even when the Mission is active.
 
    The harness records its decision in Harness Evidence and the
    orchestrator records its decision in Orchestration Evidence, and the
@@ -796,7 +812,7 @@ Table of Contents
    a deployment may run: suspended and completed by Mission Status
    ([I-D.draft-mcguinness-oauth-mission-status]), superseded by Mission
    Expansion ([I-D.draft-mcguinness-oauth-mission-expansion]), and
-   cascaded by Child Mission Delegation
+   cascaded by Mission Child Delegation
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]).  The harness
    needs none of those profiles to be conformant: per the issuance
    profile's forward-compatibility rule, it treats any state other than
@@ -844,6 +860,14 @@ Table of Contents
    source, or from a source the deployment explicitly marks untrusted
    (web fetches, inbound messages, third-party documents), is *tainted*.
 
+   A store a governed session can write MUST NOT be vouched on the
+   content trust list as trusted by default: content the harness reads
+   back from a Mission-writable store inherits the taint of the session
+   that wrote it, or the deployment MUST NOT vouch for that store.
+   Otherwise a tainted session launders content across the session
+   boundary by writing it to a vouched store that a later session reads
+   as trusted, defeating the fresh-session reset below.
+
    The trigger is parameter provenance where the harness can establish
    it.  Because the harness mediates tool input and output, it SHOULD
    track at the data plane which tainted source a value derives from.
@@ -872,6 +896,10 @@ Table of Contents
    provenance therefore only exempts an egress whose bound parameters
    are all affirmatively of trusted provenance; it never launders
    inferred or paraphrased content, which is untraceable and so remains
+   tainted.  In practice the exemption reaches only verbatim tool-to-
+   tool plumbing, where a value passes from a trusted source into the
+   bound parameter unmodified; once the model transforms, summarizes, or
+   rephrases a value, data-plane provenance is lost and the parameter is
    tainted.  This default-taint polarity is a condition of the runtime
    profile's trifecta-containment claim
    ([I-D.draft-mcguinness-mission-runtime]).
@@ -1143,17 +1171,28 @@ Table of Contents
    granted.
 
    What falls is everything the harness alone mediates: local-tool
-   mediation, session-level suppression, and taint control.  A
-   compromised harness can resume suppressed work, ignore its own stop
-   decisions, and drive egress that the taint rule was meant to hold.
+   mediation, session-level suppression, taint control, and the mediated
+   execution environment itself (Section 5).  The no-unmediated-path
+   condition is harness-operated, so a compromised harness can resume
+   suppressed work, ignore its own stop decisions, drive egress that the
+   taint rule was meant to hold, and open an unmediated route around the
+   enforcement point, forfeiting the runtime profile's external-
+   communication containment leg
+   ([I-D.draft-mcguinness-mission-runtime]).
 
    Because of this split, a deployment that claims the runtime profile's
    agent-compromise-resistant enforcement
    ([I-D.draft-mcguinness-mission-runtime]) MUST isolate the mediating
    PEP and its sender-constraint key custody from the agent-facing
-   harness components, by process, host, or service separation.  A
-   harness that both faces the agent and holds the sender-constraint key
-   defeats mediated custody: its compromise yields the key.
+   harness components, by process, host, or service separation.  Because
+   the no-unmediated-path condition is itself harness-operated, that
+   separation MUST extend to the isolation mechanism's control plane:
+   the container configuration, egress policy, and environment
+   definitions that confine governed work MUST be isolated from the
+   agent-facing components, so a harness compromise cannot rewrite the
+   boundary it runs behind.  A harness that both faces the agent and
+   holds the sender-constraint key defeats mediated custody: its
+   compromise yields the key.
 
 18.2.  Session Continuity Is Not Authority Continuity
 
@@ -1179,7 +1218,9 @@ Table of Contents
 
    Multiple workers may resume the same session or queue item.  A
    harness SHOULD use compare-and-set or equivalent concurrency control
-   so a stop decision cannot race with a resume decision.  When the
+   so a stop decision cannot race with a resume decision, and MUST
+   serialize stop-versus-resume per work item for high-consequence
+   action classes ([I-D.draft-mcguinness-mission-runtime]).  When the
    state is ambiguous, fail closed and suppress governed work.
 
 18.6.  Tool Cache Confusion

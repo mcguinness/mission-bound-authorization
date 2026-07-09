@@ -1529,7 +1529,13 @@ future work are collected in <a href="#deferred" class="auto internal xref">Sect
 do not thereby interoperate at the PEP-PDP boundary; the interoperable
 wire surface is supplied by a separately specified decision API binding
 (<a href="#authzen" class="auto internal xref">Section 15</a>), the AuthZEN binding being
-<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>. This document is the
+<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>. That a wire format is a
+deployment choice does not make it an ad hoc one: the Runtime-Enforced
+level of the Mission Assurance Levels
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>) requires a specified
+decision-API binding, of which the AuthZEN profile is the one this
+family defines, and a deployment that uses a different decision API <span class="bcp14">MUST</span>
+specify that binding likewise. This document is the
 architecture and invariant layer; the binding is the interoperability
 layer.<a href="#section-1.3-2" class="pilcrow">¶</a></p>
 </section>
@@ -2098,7 +2104,12 @@ bound to the action parameters. It composes with, and does not replace,
 authentication context rather than approving a specific action.<a href="#section-4.4-2" class="pilcrow">¶</a></p>
 <p id="section-4.4-3">A PEP <span class="bcp14">MUST</span> refuse an action for which deployment policy or Resource
 policy requires an action-bound approval and a valid fresh approval
-bound to the action's parameters is not present. A deployment <span class="bcp14">SHOULD</span>
+bound to the action's parameters is not present. An action-bound
+approval <span class="bcp14">MUST</span> carry a maximum age, bounded by a value the deployment
+set publishes; past that age the approval is not fresh and the PEP <span class="bcp14">MUST</span>
+refuse. The permit lease does not substitute for this bound: a permit's
+validity window (<a href="#parameter-binding" class="auto internal xref">Section 8</a>) bounds the permit, not the age
+of the approval it relied on. A deployment <span class="bcp14">SHOULD</span>
 require an action-bound approval for the high-consequence classes,
 where a token-lifetime-wide standing authority is least appropriate. Because the approval is bound to the
 concrete parameters, it <span class="bcp14">MUST</span> be reverified under the time-of-check to
@@ -2205,7 +2216,8 @@ of the authority.<a href="#section-4.6-4" class="pilcrow">¶</a></p>
 <p id="section-4.6-5">For an action class it mediates, a deployment <span class="bcp14">SHOULD</span> hold the
 sender-constraint private key for the Mission-bound credential in the
 mediating PEP rather than in the agent component, and <span class="bcp14">SHOULD</span> do so for
-the external-commitment and privileged-administration classes. Two
+the irreversible-action, external-commitment, and
+privileged-administration classes. Two
 properties follow: a credential exfiltrated from a compromised agent is
 unusable without the key; and a compromised agent cannot reach a
 mediated action without passing the per-action check, because it never
@@ -2841,11 +2853,19 @@ member rejection, significant array order, byte-for-byte URI
 comparison); this document does not define a second canonicalization.<a href="#section-8-6.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-6.2">
-          <p id="section-8-6.2.1">The operation profile <span class="bcp14">MUST</span> define default insertion, omitted
-optional fields, and set-like array handling before canonicalization.<a href="#section-8-6.2.1" class="pilcrow">¶</a></p>
+          <p id="section-8-6.2.1">Every parameter that influences the action's external effect (for
+example, the recipient, destination, amount, or target object) <span class="bcp14">MUST</span>
+enter the <code>parameter_digest</code>. A field the deployment excludes <span class="bcp14">MUST</span> be
+shown effect-free in the Operation Profile, which records why that
+field cannot change the action's external effect; a field whose effect
+is not so justified <span class="bcp14">MUST</span> be included.<a href="#section-8-6.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-6.3">
-          <p id="section-8-6.3.1">The permit <span class="bcp14">MUST</span> also bind the Mission reference, token issuer when
+          <p id="section-8-6.3.1">The operation profile <span class="bcp14">MUST</span> define default insertion, omitted
+optional fields, and set-like array handling before canonicalization.<a href="#section-8-6.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-6.4">
+          <p id="section-8-6.4.1">The permit <span class="bcp14">MUST</span> also bind the Mission reference, token issuer when
 available, token audience or protected resource, <code>sub</code>, <code>client_id</code>,
 actor context, sender-constraint confirmation key when present,
 action, resource, the authorizing <code>authorization_details</code> entry or
@@ -2857,10 +2877,10 @@ validity window combined with an idempotency key that prevents repeat
 execution of the same normalized action. For an irreversible action,
 an external commitment, or privileged administration it <span class="bcp14">MUST</span> be a
 single-use decision identifier: a validity window alone does not
-bound how many times such a permit executes.<a href="#section-8-6.3.1" class="pilcrow">¶</a></p>
+bound how many times such a permit executes.<a href="#section-8-6.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-8-6.4">
-          <p id="section-8-6.4.1">Where a single-use decision identifier is used, the enforcing
+        <li class="normal" id="section-8-6.5">
+          <p id="section-8-6.5.1">Where a single-use decision identifier is used, the enforcing
 component <span class="bcp14">MUST</span> record consumed identifiers for at least the permit
 lifetime and <span class="bcp14">MUST</span> refuse, fail closed, any second presentation of a
 consumed identifier. This is independent of consumption metering and
@@ -2868,10 +2888,10 @@ applies even when the action carries no consumption bound. The
 consumed-identifier store <span class="bcp14">MUST</span> survive an enforcing-component
 restart, or the component <span class="bcp14">MUST</span> fail closed for permits issued before
 the restart; a multi-instance PEP <span class="bcp14">MUST</span> share or partition the store
-so a single-use identifier cannot be consumed once per replica.<a href="#section-8-6.4.1" class="pilcrow">¶</a></p>
+so a single-use identifier cannot be consumed once per replica.<a href="#section-8-6.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-8-6.5">
-          <p id="section-8-6.5.1">A single-use identifier bounds executions of one permit, not permits
+        <li class="normal" id="section-8-6.6">
+          <p id="section-8-6.6.1">A single-use identifier bounds executions of one permit, not permits
 for one action. For every non-idempotent operation in the
 irreversible-action, external-commitment, and
 privileged-administration classes, the Operation Profile <span class="bcp14">MUST</span>
@@ -2888,13 +2908,13 @@ decision (same decision identifier, same permit) rather than
 refuse, so a permit response lost in transit does not lock the
 action out for the reconciliation window. Once the identifier is
 consumed or the permit expired, the refusal above stands until the
-outcome is reconciled.<a href="#section-8-6.5.1" class="pilcrow">¶</a></p>
+outcome is reconciled.<a href="#section-8-6.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-8-6.6">
-          <p id="section-8-6.6.1">The executing PEP <span class="bcp14">MUST</span> verify those bindings and <span class="bcp14">MUST</span> recompute the
+        <li class="normal" id="section-8-6.7">
+          <p id="section-8-6.7.1">The executing PEP <span class="bcp14">MUST</span> verify those bindings and <span class="bcp14">MUST</span> recompute the
 <code>parameter_digest</code> against the parameters it is about to use. A
 mismatch <span class="bcp14">MUST</span> cause refusal: the permit does not authorize the
-changed parameters.<a href="#section-8-6.6.1" class="pilcrow">¶</a></p>
+changed parameters.<a href="#section-8-6.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-8-7">A permit authorizes initiation. An action still executing when the
@@ -3260,22 +3280,30 @@ condition below is <span class="bcp14">MUST</span> under this claim regardless o
 level: active-state freshness for the high-consequence classes is
 already <span class="bcp14">MUST</span> in the base profile (<a href="#state-freshness" class="auto internal xref">Section 7.2</a>); the harness
 condition makes <span class="bcp14">MUST</span> the base profile's requirement that mediated
-classes have no unmediated path (<a href="#pep-placement" class="auto internal xref">Section 4.5</a>); mediated custody
+classes have no unmediated path (<a href="#pep-placement" class="auto internal xref">Section 4.5</a>) and adds, stated
+only by this claim, that no unmediated path yields a fresh usable
+credential for those classes either; mediated custody
 and action-bound approval are <span class="bcp14">SHOULD</span> in the base profile
 (<a href="#custody" class="auto internal xref">Section 4.6</a>, <a href="#action-approval" class="auto internal xref">Section 4.4</a>) and <span class="bcp14">MUST</span> here; the
 approval-rendering condition is stated only by this claim.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-12.1-2.1">
             <p id="section-12.1-2.1.1">the sender-constraint private key is held by the mediating PEP, not by
-the agent component (<a href="#custody" class="auto internal xref">Section 4.6</a>);<a href="#section-12.1-2.1.1" class="pilcrow">¶</a></p>
+the agent component (<a href="#custody" class="auto internal xref">Section 4.6</a>), and is generated in the mediating
+PEP or its HSM and never transferred from the agent;<a href="#section-12.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.1-2.2">
             <p id="section-12.1-2.2.1">governed work runs in a mediated execution environment with no
-unmediated path to the mediated classes, documented by a published
-execution-environment scope statement covering those classes; a
-harness conforming to the harness profile
+unmediated path to the mediated classes and no unmediated path to
+fresh usable credentials for them: issuance of Mission-bound tokens
+for the mediated classes is restricted to keys the mediating PEP
+attests (for example, client-instance attestation), with no
+token-endpoint, refresh, or exchange path by which the agent obtains
+such a credential bound to a key it controls. A published
+execution-environment scope statement covering those classes documents
+this; a harness conforming to the harness profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>) is the defined way to
-establish and document this, and the claim binds to the property;<a href="#section-12.1-2.2.1" class="pilcrow">¶</a></p>
+establish and document it, and the claim binds to the property;<a href="#section-12.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.1-2.3">
             <p id="section-12.1-2.3.1">each such action requires an action-bound approval
@@ -3325,8 +3353,8 @@ and "mediated custody" on its own is not the property.<a href="#section-12.1-5" 
               <td class="text-left" rowspan="1" colspan="1">Key exfiltration</td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">Harness-established no-unmediated-path</td>
-              <td class="text-left" rowspan="1" colspan="1">Off-path execution</td>
+              <td class="text-left" rowspan="1" colspan="1">No unmediated path to the actions or to fresh credentials for them</td>
+              <td class="text-left" rowspan="1" colspan="1">Off-path execution or fresh-credential acquisition</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Action-bound approval</td>

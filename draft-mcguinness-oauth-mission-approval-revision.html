@@ -14,8 +14,9 @@ outcome. This document defines an experimental revisable approval mode
 on top of the deferred approval profile: when the Authorization Server
 can grant only a narrowed version of the proposed Mission, it invites
 the client to push a narrowing revision and continue the same deferred
-approval rather than abandon it and start over. Revisions can only
-narrow the proposed Mission. 
+approval rather than abandon it and start over. A revision can only
+narrow, measured against the current baseline, the Authority Set the
+reviewer last saw. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="oauth" name="keyword">
@@ -1099,8 +1100,9 @@ outcome. This document defines an experimental revisable approval mode
 on top of the deferred approval profile: when the Authorization Server
 can grant only a narrowed version of the proposed Mission, it invites
 the client to push a narrowing revision and continue the same deferred
-approval rather than abandon it and start over. Revisions can only
-narrow the proposed Mission.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+approval rather than abandon it and start over. A revision can only
+narrow, measured against the current baseline, the Authority Set the
+reviewer last saw.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1333,13 +1335,25 @@ the client offered <code>revisable</code> (<a href="#revisable" class="auto inte
 </li>
         <li class="normal" id="section-5-2.2">
           <p id="section-5-2.2.1">returns <code>revision_required</code> to <code>pending</code> on an accepted revision
-(<a href="#revision-submission" class="auto internal xref">Section 6.2</a>); and<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
+(<a href="#revision-submission" class="auto internal xref">Section 6.2</a>);<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-2.3">
-          <p id="section-5-2.3.1">accepts a revision only while in <code>revision_required</code>.<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-5-2.3.1">accepts a revision only while in <code>revision_required</code>;<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.4">
+          <p id="section-5-2.4.1"><span class="bcp14">MUST</span> move <code>revision_required</code> to <code>denied</code> when the revision-cycle
+bound is reached or no acceptable narrowing remains
+(<a href="#revision-submission" class="auto internal xref">Section 6.2</a>); and<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.5">
+          <p id="section-5-2.5.1">moves <code>revision_required</code> to <code>expired</code> when the pending lifetime
+elapses (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>).<a href="#section-5-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-5-3"><code>approved</code> and <code>denied</code> remain the terminal states. Resolving a
+<p id="section-5-3">Client cancellation under the deferred substrate moves a <code>pending</code> or
+<code>revision_required</code> approval to <code>cancelled</code>
+(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>). <code>approved</code>,
+<code>denied</code>, <code>expired</code>, and <code>cancelled</code> are the terminal states. Resolving a
 deferred approval and replacing its proposed Mission with a revision
 are atomic with respect to each other: a concurrent approval of a
 proposal that a revision has superseded cannot commit, and a revision
@@ -1349,16 +1363,19 @@ accepted after the approval resolved cannot reopen it.<a href="#section-5-3" cla
        submit (PAR + deferred)
                 |
                 v
-           +---------+   accept revision   +------------------+
-           | pending |&lt;--------------------| revision_required|
-           +---------+                     +------------------+
-             |  |  |                              ^
-   approve   |  |  | needs narrowing              |
-             |  |  +------------------------------+
-             |  |
-             |  +----------------&gt; denied  (terminal)
-             v
-          approved  (terminal; Mission created active)
+           +---------+   accept revision   +-------------------+
+           | pending | &lt;------------------ | revision_required |
+           +---------+ ------------------&gt;  +-------------------+
+                |        needs narrowing
+      approve   |
+                v
+             approved   (terminal; Mission created active)
+
+   terminal exits from pending or revision_required:
+     deny (from revision_required: cycle bound reached or
+       no acceptable narrowing)  --&gt; denied     (terminal)
+     pending lifetime elapsed    --&gt; expired    (terminal)
+     client cancels              --&gt; cancelled  (terminal)
 </pre><a href="#section-5-4" class="pilcrow">¶</a>
 </div>
 </section>
@@ -1457,7 +1474,15 @@ Issuer:<a href="#section-6.2-1" class="pilcrow">¶</a></p>
 <li id="section-6.2-2.1">
             <p id="section-6.2-2.1.1">verifies the <code>revision_handle</code> is bound to a deferred approval
 in the revision-required condition, is unexpired and single-use, and
-matches the client and sender-constraint of the deferred approval;<a href="#section-6.2-2.1.1" class="pilcrow">¶</a></p>
+matches the client and sender-constraint of the deferred approval. It
+verifies the sender constraint on the PAR request itself: the client
+<span class="bcp14">MUST</span> demonstrate possession of the same key that constrains the
+<code>deferral_code</code> under the deferred substrate's sender-constraint rules
+(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>), by presenting a
+DPoP proof on the PAR request keyed to that key or, where the deferred
+approval is bound by client authentication, by authenticating with the
+same client-authentication key. A PAR request whose key is not
+equivalent to the <code>deferral_code</code>'s is rejected;<a href="#section-6.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.2-2.2">
             <p id="section-6.2-2.2.1">re-derives the Authority Set for the revised Intent, under the same
@@ -1473,7 +1498,12 @@ proposed Mission's <code>policy_version</code> keeps the subset comparison
 reproducible; if policy has changed since the proposal, the Mission
 Issuer re-derives the proposed Authority Set under the current policy
 to re-establish the baseline before comparing, or refuses the
-revision;<a href="#section-6.2-2.2.1" class="pilcrow">¶</a></p>
+revision. Because a re-baselined set could be broader than the one the
+reviewer saw, the re-derived Authority Set <span class="bcp14">MUST</span> also be a subset of
+the Authority Set the reviewer saw when the <code>revision_required</code>
+decision was made (the reviewer-seen set), so re-baselining under
+changed policy cannot widen the revision beyond what was actually
+reviewed;<a href="#section-6.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.2-2.3">
             <p id="section-6.2-2.3.1">invalidates the <code>revision_handle</code>;<a href="#section-6.2-2.3.1" class="pilcrow">¶</a></p>
@@ -1486,7 +1516,8 @@ and re-reviews it.<a href="#section-6.2-2.4.1" class="pilcrow">¶</a></p>
 <p id="section-6.2-3">The client continues polling the existing <code>deferral_code</code>; the revision
 does not start a new approval. If the Mission Issuer returns a PAR
 <code>request_uri</code>, it is an artifact of PAR and <span class="bcp14">MUST NOT</span> be used to start a
-separate authorization transaction.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+separate authorization transaction, and the Mission Issuer <span class="bcp14">MUST NOT</span>
+honor that <code>request_uri</code> at the authorization endpoint.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="revision-errors">
@@ -1671,7 +1702,7 @@ worked disclosure and test vector:<a href="#section-8-5" class="pilcrow">¶</a><
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:W-aXkM2quCh07XvdixCTk8qHoMWOs2tA0hZej4kLGr0"
+      "sha-256:dUuA6ioErHALo02bwESKBt4Yq0RrWSTOT0bBGuRBog0"
   },
   "evidence_envelope": {
     "format": "jws-compact",
@@ -1843,16 +1874,22 @@ registry. For each: Change Controller IETF; Reference this document,
           <p id="section-12-4.2.1"><code>revision_handle</code> (token response)<a href="#section-12-4.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-4.3">
-          <p id="section-12-4.3.1"><code>rejected_scope</code> (token response)<a href="#section-12-4.3.1" class="pilcrow">¶</a></p>
+          <p id="section-12-4.3.1"><code>revision_handle</code> (authorization request)<a href="#section-12-4.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-4.4">
-          <p id="section-12-4.4.1"><code>rejected_authorization_details</code> (token response)<a href="#section-12-4.4.1" class="pilcrow">¶</a></p>
+          <p id="section-12-4.4.1"><code>rejected_scope</code> (token response)<a href="#section-12-4.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-4.5">
+          <p id="section-12-4.5.1"><code>rejected_authorization_details</code> (token response)<a href="#section-12-4.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-12-5">PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> carries authorization-request parameters without a
-distinct usage location, so the pushed submission of the narrowed Intent
-and <code>revision_handle</code> needs no separate registration, as the issuance
-profile states (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-12-5" class="pilcrow">¶</a></p>
+<p id="section-12-5">The <code>revision_handle</code> (authorization request) usage location covers the
+handle when the client presents it on the pushed revision submission to
+the PAR endpoint (<a href="#revision-submission" class="auto internal xref">Section 6.2</a>). PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> carries the
+narrowed Mission Intent as an authorization-request parameter without a
+distinct usage location, so that pushed Intent needs no separate
+registration, as the issuance profile states
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-12-5" class="pilcrow">¶</a></p>
 <p id="section-12-6">This document registers the following in the "OAuth Extensions Error"
 registry:<a href="#section-12-6" class="pilcrow">¶</a></p>
 <ul class="normal">

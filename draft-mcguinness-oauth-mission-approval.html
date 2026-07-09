@@ -13,10 +13,11 @@ derived Authority Set, but it treats that event as immediate. A human
 review of an agent's proposed Mission is often asynchronous. This
 document defines an optional Mission Deferred Approval profile. It
 profiles OAuth Deferred Token Response so a Mission approval can be
-deferred and polled. Deferral explicitly overrides the issuance
-profile's approval-event sequencing: the approval event moves to the
-asynchronous review surface, and the Mission record is created
-atomically with that decision rather than with the authorization code. 
+deferred and polled. Deferral relocates the issuance profile's
+approval event to the asynchronous review surface and creates the
+Mission record atomically with that decision rather than with the
+authorization code. It relies on a core extensibility seam for
+approval sequencing. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="oauth" name="keyword">
@@ -1099,10 +1100,11 @@ derived Authority Set, but it treats that event as immediate. A human
 review of an agent's proposed Mission is often asynchronous. This
 document defines an optional Mission Deferred Approval profile. It
 profiles OAuth Deferred Token Response so a Mission approval can be
-deferred and polled. Deferral explicitly overrides the issuance
-profile's approval-event sequencing: the approval event moves to the
-asynchronous review surface, and the Mission record is created
-atomically with that decision rather than with the authorization code.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+deferred and polled. Deferral relocates the issuance profile's
+approval event to the asynchronous review surface and creates the
+Mission record atomically with that decision rather than with the
+authorization code. It relies on a core extensibility seam for
+approval sequencing.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1182,13 +1184,16 @@ atomically with that decision rather than with the authorization code.<a href="#
                 <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-sequencing-the-approval-eve" class="internal xref">Sequencing the Approval Event</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
-                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-deferred-approval-state-mac" class="internal xref">Deferred Approval State Machine</a></p>
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-the-residual-front-channel-" class="internal xref">The Residual Front-Channel Ceremony</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
-                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-pending-lifetime-and-stalen" class="internal xref">Pending Lifetime and Staleness</a></p>
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-deferred-approval-state-mac" class="internal xref">Deferred Approval State Machine</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
-                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-queue-pressure" class="internal xref">Queue Pressure</a></p>
+                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-pending-lifetime-and-stalen" class="internal xref">Pending Lifetime and Staleness</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5">
+                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-queue-pressure" class="internal xref">Queue Pressure</a></p>
 </li>
             </ul>
 </li>
@@ -1346,9 +1351,9 @@ response, <code>access_denied</code>, or <code>expired_token</code>.<a href="#se
 <p id="section-5.1-1">The issuance profile treats the approval event as immediate: the
 Approver consents and the Mission record is created atomically with
 issuance of the authorization code
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). This profile is an explicit
-override of that sequencing for a deferred approval, and it moves the
-approval event without weakening it:<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). For a deferred approval this
+profile relocates that approval event without weakening it, moving it
+to the asynchronous review surface:<a href="#section-5.1-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-5.1-2">
 <li id="section-5.1-2.1">
             <p id="section-5.1-2.1.1">The client submits the proposed Mission via PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> and the
@@ -1377,64 +1382,124 @@ the moved point.<a href="#section-5.1-2.4.1" class="pilcrow">¶</a></p>
 resolves to a Mission-bound token response.<a href="#section-5.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-5.1-3">Deferral changes only the timing of the approval event. The Authority
+<p id="section-5.1-3">This relocation relies on a core extensibility seam for approval
+sequencing, under discussion upstream. The core specifies the approval
+event and authorization-code issuance as one atomic step, so a
+deployment claims conformance to this profile's relocated sequencing
+rather than unqualified conformance to that original step; what the
+approval commits is unchanged.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+<p id="section-5.1-4">Deferral changes only the timing of the approval event. The Authority
 Set the token is issued against, its <code>authority_hash</code>, and the recorded
 consent are exactly as in a synchronous approval. A Mission revoked
 between the approval decision and the resolving poll yields no token:
 issuance gating derives only from an <code>active</code> Mission
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Carrying the issuance
+profile's unredeemed-code rule, when the client never polls and the
+<code>deferral_code</code> is never redeemed, the AS <span class="bcp14">SHOULD</span> revoke the orphaned
+<code>active</code> Mission or allow it to expire
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="front-channel">
+<section id="section-5.2">
+        <h3 id="name-the-residual-front-channel-">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-the-residual-front-channel-" class="section-name selfRef">The Residual Front-Channel Ceremony</a>
+        </h3>
+<p id="section-5.2-1">The issuance profile runs the approval event as the OAuth
+authorization-code flow initiated from the PAR-issued <code>request_uri</code>,
+in ordered steps: authenticate the Approver, establish the Subject,
+render the derived Authority Set for consent, compute the integrity
+anchors, and create the Mission record atomically with issuance of the
+authorization code (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Under
+deferral those steps divide between the front channel and the review
+surface:<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.2-2.1">
+            <p id="section-5.2-2.1.1">Authenticating the Approver, establishing the Subject, rendering for
+consent, and computing the integrity anchors all move to the
+asynchronous review surface and execute at the approval event
+(<a href="#deferred-sequencing" class="auto internal xref">Section 5.1</a>).<a href="#section-5.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-2.2">
+            <p id="section-5.2-2.2.1">The front channel establishes only the pending request. No Approver
+need be present at the authorization endpoint, and the endpoint <span class="bcp14">MAY</span>
+complete the authorization request into the deferred state and issue
+the authorization code without user interaction, because that code
+represents a pending authorization, not authority (step 2 of
+<a href="#deferred-sequencing" class="auto internal xref">Section 5.1</a>). The AS <span class="bcp14">MUST</span> still bind the code to the
+requesting client with PKCE (<code>S256</code>) or issue a DPoP-bound code, as
+the issuance profile requires for a front-channel code
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-2.3">
+            <p id="section-5.2-2.3.1">Subject establishment occurs on the review surface, at the approval
+event, together with Approver authentication, not at the front
+channel; the AS <span class="bcp14">MUST NOT</span> take the Subject from unauthenticated client
+input (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.2-2.4">
+            <p id="section-5.2-2.4.1">Creating the Mission record, the final step, executes atomically with
+the approval decision rather than with the code
+(<a href="#deferred-sequencing" class="auto internal xref">Section 5.1</a>).<a href="#section-5.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
 </section>
 </div>
 <div id="state-machine">
-<section id="section-5.2">
+<section id="section-5.3">
         <h3 id="name-deferred-approval-state-mac">
-<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-deferred-approval-state-mac" class="section-name selfRef">Deferred Approval State Machine</a>
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-deferred-approval-state-mac" class="section-name selfRef">Deferred Approval State Machine</a>
         </h3>
-<p id="section-5.2-1">A deferred approval is in one of three states: <code>pending</code>, <code>approved</code>,
-or <code>denied</code>. The Mission Issuer starts a deferred approval in <code>pending</code>
-and <span class="bcp14">MAY</span> move it to <code>approved</code> or <code>denied</code>; both are terminal.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
-<div class="lang-text sourcecode" id="section-5.2-2">
+<p id="section-5.3-1">A deferred approval is in one of these states: <code>pending</code>, <code>approved</code>,
+<code>denied</code>, <code>expired</code>, or <code>cancelled</code>. The Mission Issuer starts a
+deferred approval in <code>pending</code> and <span class="bcp14">MAY</span> move it to <code>approved</code> or
+<code>denied</code>. The pending lifetime elapsing moves it to <code>expired</code>
+(<a href="#pending-staleness" class="auto internal xref">Section 5.4</a>), and client cancellation under the deferred
+substrate moves it to <code>cancelled</code>
+(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>). <code>approved</code>,
+<code>denied</code>, <code>expired</code>, and <code>cancelled</code> are terminal.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-5.3-2">
 <pre>
        submit (PAR + deferred)
                 |
                 v
-           +---------+
-           | pending |
-           +---------+
-             |     |
-   approve   |     +-------------&gt; denied  (terminal)
+           +---------+  deny             --&gt; denied     (terminal)
+           | pending |  lifetime elapsed --&gt; expired    (terminal)
+           +---------+  client cancels   --&gt; cancelled  (terminal)
+             |
+   approve   |
              v
           approved  (terminal; Mission created active)
-</pre><a href="#section-5.2-2" class="pilcrow">¶</a>
+</pre><a href="#section-5.3-2" class="pilcrow">¶</a>
 </div>
-<p id="section-5.2-3">An experimental companion extends this state machine with a
+<p id="section-5.3-3">An experimental companion extends this state machine with a
 <code>revision_required</code> state and a narrowing-revision handshake
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval-revision" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval-revision</a>]</span>). Without it,
 a proposal the reviewer will grant only in narrowed form resolves to
 <code>access_denied</code>, and the client submits a fresh, narrower Mission
-Intent via PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+Intent via PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="pending-staleness">
-<section id="section-5.3">
+<section id="section-5.4">
         <h3 id="name-pending-lifetime-and-stalen">
-<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-pending-lifetime-and-stalen" class="section-name selfRef">Pending Lifetime and Staleness</a>
+<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-pending-lifetime-and-stalen" class="section-name selfRef">Pending Lifetime and Staleness</a>
         </h3>
-<p id="section-5.3-1">A deferred approval <span class="bcp14">MUST</span> carry a deployment-set maximum pending lifetime,
+<p id="section-5.4-1">A deferred approval <span class="bcp14">MUST</span> carry a deployment-set maximum pending lifetime,
 after which it resolves to <code>expired_token</code> per the deferred substrate. A
 decision made after a change to the derivation <code>policy_version</code>, or to
 the applicable capability catalog, <span class="bcp14">MUST</span> be made over a proposal that has
 been re-derived and re-rendered under the current policy and catalog; the
 Mission Issuer <span class="bcp14">MUST NOT</span> commit an approval over a proposal derived under
-superseded policy.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+superseded policy.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="queue-pressure">
-<section id="section-5.4">
+<section id="section-5.5">
         <h3 id="name-queue-pressure">
-<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-queue-pressure" class="section-name selfRef">Queue Pressure</a>
+<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-queue-pressure" class="section-name selfRef">Queue Pressure</a>
         </h3>
-<p id="section-5.4-1">Deferral turns the review surface into a queue a client can flood. The
+<p id="section-5.5-1">Deferral turns the review surface into a queue a client can flood. The
 Mission Issuer <span class="bcp14">MUST</span> bound the number of concurrent pending proposals
 per (client, Approver) pair, refusing further submissions until the
 queue drains. It <span class="bcp14">SHOULD</span> collapse pending proposals carrying an
@@ -1442,7 +1507,12 @@ identical <code>intent_hash</code> into a single review item, <span class="bcp14
 reviewer notifications, and <span class="bcp14">SHOULD</span> log a queue flood as a security
 event, alongside the decline-suppression detection the consent
 evidence profile describes
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-5.4-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+<p id="section-5.5-2">Collapsing identical proposals is a review-surface convenience and does
+not merge their outcomes: one approval decision <span class="bcp14">MUST</span> resolve exactly
+one pending approval, and the Mission Issuer <span class="bcp14">MUST</span> re-queue or deny the
+others rather than mint a Mission for each. A single consent therefore
+mints at most one Mission.<a href="#section-5.5-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1567,7 +1637,7 @@ decision; and<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.4">
           <p id="section-8-2.4.1">enforce the pending lifetime and staleness rules of
-<a href="#pending-staleness" class="auto internal xref">Section 5.3</a> and the queue bounds of <a href="#queue-pressure" class="auto internal xref">Section 5.4</a>.<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
+<a href="#pending-staleness" class="auto internal xref">Section 5.4</a> and the queue bounds of <a href="#queue-pressure" class="auto internal xref">Section 5.5</a>.<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-8-3">A client conforming to this profile <span class="bcp14">MUST</span> treat every pending response

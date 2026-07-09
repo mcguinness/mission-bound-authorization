@@ -26,7 +26,7 @@ Abstract
    record never crosses the boundary, and honoring it needs no session
    with the Mission Issuer.  The Identity Assertion Authorization Grant
    (ID-JAG) is the recommended grant profile.  Single-domain deployments
-   of the base profile are unaffected by this document.
+   of the issuance profile are unaffected by this document.
 
 About This Document
 
@@ -90,6 +90,7 @@ Table of Contents
    13. Security Considerations
      13.1.  Cross-Domain Revocation Latency
      13.2.  The Grant at the Trust Boundary
+     13.3.  Per-Domain Delegation Depth
    14. Privacy Considerations
    15. Conformance
    16. IANA Considerations
@@ -150,7 +151,7 @@ Table of Contents
    profile's conformance model ([I-D.draft-mcguinness-oauth-mission],
    Section "Conformance").  The capability is OPTIONAL: a deployment
    whose Missions never leave their issuing AS does not implement this
-   document, and the base profile is complete without it.
+   document, and the issuance profile is complete without it.
 
    Two external dependencies set its deployment posture.  The OAuth
    identity chaining architecture
@@ -158,7 +159,7 @@ Table of Contents
    and in the RFC Editor queue; the Identity Assertion Authorization
    Grant [I-D.draft-ietf-oauth-identity-assertion-authz-grant] is a
    working-group document.  This document profiles them and cannot
-   advance ahead of them; confining them here keeps the base profile
+   advance ahead of them; confining them here keeps the issuance profile
    free of in-progress cross-domain dependencies.
 
    The capability is orthogonal to the family's Mission Assurance Levels
@@ -174,7 +175,7 @@ Table of Contents
    BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
    capitals, as shown here.
 
-   This document uses the terms of the base profile
+   This document uses the terms of the issuance profile
    [I-D.draft-mcguinness-oauth-mission]: Mission, Mission Issuer (the
    Mission's issuer), Mission Intent, Authority Set, Subject, mission
    claim, derived token, derivation, the subset rule, and lifecycle
@@ -191,7 +192,7 @@ Table of Contents
    Cross-domain grant:  The short-lived JWT authorization grant the
       Mission Issuer issues toward a Resource AS (Section 8), carrying
       audience-scoped Mission authority and the mission claim.  It is a
-      Mission-bound token in the sense of the base profile.
+      Mission-bound token in the sense of the issuance profile.
 
    Local token:  An access token a Resource AS mints for its own
       resources from a cross-domain grant (Section 9).
@@ -381,7 +382,7 @@ Table of Contents
       domain revocation latency; see Section 13.1);
 
    *  MUST have an exp that does not exceed the Mission's expires_at,
-      per the base profile's expiry rule
+      per the issuance profile's expiry rule
       ([I-D.draft-mcguinness-oauth-mission], Section "Mission-Bound
       Access Tokens");
 
@@ -427,7 +428,7 @@ Table of Contents
    substitutes the Mission's grant so the exchange resolves a Mission
    rather than a bare subject assertion.  This refresh-token mode is
    what binds the request to a Mission: the AS resolves the Mission from
-   the presented grant per the base profile's grant binding
+   the presented grant per the issuance profile's grant binding
    ([I-D.draft-mcguinness-oauth-mission], Section "Binding the Mission
    to the Grant"), exactly as on any other refresh, and the grant
    therefore projects the agent's full Mission authority (audience-
@@ -442,7 +443,7 @@ Table of Contents
    projection by the presenting token, are left to future profiles.  The
    cost is that this OPTIONAL capability is unavailable to a deployment
    that issues no refresh token; such a deployment uses the single-
-   domain base profile, which needs none.
+   domain issuance profile, which needs none.
 
    The AS MUST reject an access token or a delegated token presented as
    subject_token for cross-domain issuance.  The AS MUST NOT resolve the
@@ -479,7 +480,7 @@ Table of Contents
    defines no cross-domain subject mapping, Section 9).
 
    Sender-constraining is REQUIRED for the cross-domain grant, stronger
-   than the RECOMMENDED level the base profile sets for the primary
+   than the RECOMMENDED level the issuance profile sets for the primary
    access token ([I-D.draft-mcguinness-oauth-mission], Section "Mission-
    Bound Access Tokens"): it is the highest-authority credential in the
    chain and the only one that crosses a trust boundary, and the
@@ -493,6 +494,17 @@ Table of Contents
       or issuer metadata before accepting any Mission reference.  It
       MUST NOT trust a mission.issuer merely because it appears inside a
       signed assertion.
+
+   *  MUST reject, with invalid_grant, a cross-domain grant whose
+      signing iss does not equal its mission.issuer.  The party that
+      signs the grant MUST be the Mission's issuer; a trusted issuer
+      that signs a grant carrying another issuer's mission.issuer is
+      refused.  This operationalizes the rule above: the Mission binding
+      is honored only when the grant's own signer is the Mission Issuer
+      named by mission.issuer, and that issuer is trusted.  This applies
+      to the cross-domain grant presented for redemption, not to the
+      local token the Resource AS later mints, whose iss is the Resource
+      AS while mission.issuer remains the originating AS.
 
    *  MUST validate the grant's explicit typ (per the grant profile in
       use; oauth-id-jag+jwt for the RECOMMENDED profile), signature, and
@@ -563,7 +575,7 @@ Table of Contents
       across the trust boundary rather than enforced by guess.
 
    *  MUST, when it issues delegated tokens of its own, enforce each
-      entry's delegation policy as the base profile specifies
+      entry's delegation policy as the issuance profile specifies
       ([I-D.draft-mcguinness-oauth-mission], Section "Delegation
       Constraints"); the policy travels on the conveyed entries.  The
       cross-domain grant carries no act chain (Section 8), so the
@@ -650,23 +662,24 @@ Table of Contents
 
    At redemption (the JWT-bearer grant at the Resource AS, Section 9):
 
-      +============================================+================+
-      | Condition                                  | Error          |
-      +============================================+================+
-      | Client authentication fails                | invalid_client |
-      +--------------------------------------------+----------------+
-      | Untrusted issuer; wrong or missing typ;    | invalid_grant  |
-      | signature, audience, or expiry failure; a  |                |
-      | sender-constraint absent, unverifiable, or |                |
-      | bound to a different client; a replayed    |                |
-      | jti; a malformed mission claim, or a grant |                |
-      | carrying none where the deployment's pre-  |                |
-      | established trust requires Mission binding |                |
-      | for the requested resources (Section 9)    |                |
-      +--------------------------------------------+----------------+
-      | The request names a resource outside the   | invalid_target |
-      | conveyed entries                           |                |
-      +--------------------------------------------+----------------+
+     +==============================================+================+
+     | Condition                                    | Error          |
+     +==============================================+================+
+     | Client authentication fails                  | invalid_client |
+     +----------------------------------------------+----------------+
+     | Untrusted issuer; the grant's iss not equal  | invalid_grant  |
+     | to its mission.issuer; wrong or missing typ; |                |
+     | signature, audience, or expiry failure; a    |                |
+     | sender-constraint absent, unverifiable, or   |                |
+     | bound to a different client; a replayed jti; |                |
+     | a malformed mission claim, or a grant        |                |
+     | carrying none where the deployment's pre-    |                |
+     | established trust requires Mission binding   |                |
+     | for the requested resources (Section 9)      |                |
+     +----------------------------------------------+----------------+
+     | The request names a resource outside the     | invalid_target |
+     | conveyed entries                             |                |
+     +----------------------------------------------+----------------+
 
                                   Table 2
 
@@ -677,20 +690,21 @@ Table of Contents
 
 11.  Introspection at a Resource AS
 
-   The base profile's OPTIONAL token introspection ([RFC7662]) reports a
-   mission response member, and only the Mission issuer reports the
-   Mission's lifecycle state ([I-D.draft-mcguinness-oauth-mission],
-   Section "Mission State via Token Introspection").  This section
-   specifies the non-issuer half of that rule.
+   The issuance profile's OPTIONAL token introspection ([RFC7662])
+   reports a mission response member, and only the Mission issuer
+   reports the Mission's lifecycle state
+   ([I-D.draft-mcguinness-oauth-mission], Section "Mission State via
+   Token Introspection").  This section specifies the non-issuer half of
+   that rule.
 
    A Resource AS that supports introspection for a local token it minted
    from a cross-domain grant returns the claim-shape members only: id,
    issuer, and authority_hash.  It holds the token, not the Mission: it
    knows the Mission state only as of grant validation and has no query
-   to the issuer keyed by mission_id (neither this document nor the base
-   profile defines one).  It MUST omit mission.state rather than report
-   a stale value as current. authority_hash, when included, is the
-   issuer's commitment carried through the grant, not a value the
+   to the issuer keyed by mission_id (neither this document nor the
+   issuance profile defines one).  It MUST omit mission.state rather
+   than report a stale value as current. authority_hash, when included,
+   is the issuer's commitment carried through the grant, not a value the
    Resource AS recomputes from its audience-scoped subset
    ([I-D.draft-mcguinness-oauth-mission], Section "Consent Binding").
 
@@ -699,7 +713,7 @@ Table of Contents
    Discovery uses existing metadata; this document defines no new
    parameters.  A Mission Issuer supporting this capability advertises
    the [RFC8693] token-exchange grant type in grant_types_supported, the
-   base profile's signal for cross-domain grant issuance
+   issuance profile's signal for cross-domain grant issuance
    ([I-D.draft-mcguinness-oauth-mission], Section "Authorization Server
    Metadata").  A Resource AS advertises the [RFC7523] JWT-bearer grant
    type the grant is redeemed through; support for a specific grant
@@ -709,7 +723,7 @@ Table of Contents
 
 13.  Security Considerations
 
-   The security considerations of the base profile
+   The security considerations of the issuance profile
    [I-D.draft-mcguinness-oauth-mission] and of the identity chaining
    architecture [I-D.draft-ietf-oauth-identity-chaining] apply.
 
@@ -729,7 +743,7 @@ Table of Contents
    ASes MUST issue short-lived local tokens for Mission-bound
    interactions; the originating AS bounds grant lifetimes by the
    300-second cap of Section 8, so a revoked Mission cannot continue to
-   seed new downstream tokens for long.  The base profile's token
+   seed new downstream tokens for long.  The issuance profile's token
    introspection closes the revocation gap only single-domain: it
    requires the introspecting AS to hold the Mission, and a Resource AS
    has no query to the issuer keyed by mission_id (Section 11), so short
@@ -763,6 +777,19 @@ Table of Contents
    issuer-signed hop receipts
    ([I-D.draft-mcguinness-oauth-actor-receipts]).
 
+13.3.  Per-Domain Delegation Depth
+
+   Because the cross-domain grant carries no act chain (Section 8), a
+   Resource AS that issues delegated tokens of its own begins its
+   delegation depth at 0 (Section 9).  An entry's max_depth ceiling is
+   therefore enforced per domain, not globally across the projection: a
+   Mission delegable to depth N at the originating AS may be delegated a
+   further N hops inside each Resource AS domain that honors it.  A
+   deployment that needs a global bound on delegation depth across
+   domains constrains it out of band, through the resource-to-AS mapping
+   and each Resource AS's local policy (Section 7); this profile bounds
+   delegation depth only within a single domain.
+
 14.  Privacy Considerations
 
    The cross-domain grant and every local token minted from it carry the
@@ -770,7 +797,7 @@ Table of Contents
    so a Resource AS and its Resource Servers can correlate a Mission's
    activity across domains, and mission.issuer identifies the issuing AS
    to the partner domain.  This is the deliberate correlation property
-   of the base profile ([I-D.draft-mcguinness-oauth-mission],
+   of the issuance profile ([I-D.draft-mcguinness-oauth-mission],
    Section "Mission Identifier Correlation"), extended across the trust
    boundary.  Audience scoping (Section 5.1) is the minimization
    measure: a Resource AS never sees Authority Set entries addressed to
@@ -779,12 +806,12 @@ Table of Contents
 15.  Conformance
 
    An implementation conforms in one of two roles and names the
-   capability as the base profile's conformance model directs (for
+   capability as the issuance profile's conformance model directs (for
    example, "Mission Issuer with Cross-Domain";
    [I-D.draft-mcguinness-oauth-mission], Section "Conformance").
 
    An *Originating Mission Issuer with Cross-Domain* is a conforming
-   Mission Issuer of the base profile that additionally:
+   Mission Issuer of the issuance profile that additionally:
 
    *  issues the Mission-bound cross-domain grant per Section 8, gated
       and counted as a derivation;
@@ -812,15 +839,16 @@ Table of Contents
 
    *  never creates or alters a Mission (Section 4).
 
-   A Resource AS is not required to implement the base profile's Mission
-   Issuer role.
+   A Resource AS is not required to implement the issuance profile's
+   Mission Issuer role.
 
 16.  IANA Considerations
 
    This document has no IANA actions.  The mission JWT claim, the
    mission introspection response member, and the
    mission_resource_access authorization details type it carries are
-   registered by the base profile [I-D.draft-mcguinness-oauth-mission].
+   registered by the issuance profile
+   [I-D.draft-mcguinness-oauth-mission].
 
 17.  References
 
@@ -958,8 +986,8 @@ Table of Contents
 
 Appendix A.  End-to-End Example (Non-Normative)
 
-   This appendix continues the end-to-end example of the base profile's
-   appendix across a trust boundary: from the home domain
+   This appendix continues the end-to-end example of the issuance
+   profile's appendix across a trust boundary: from the home domain
    (as.example.com) into a partner domain, and then into the partner's
    internal microservice call chain.  It is illustrative and adds no
    normative requirements.  The final intra-domain hop shows one
@@ -1024,6 +1052,7 @@ A.1.  Stage 2: Cross-Domain Projection via ID-JAG (Between Domains)
      "client_id": "s6BhdRkqt3",
      "iat": 1793606400,
      "exp": 1793606700,
+     "jti": "idjag_4Kp9sT2vN7xR1mZ8bQ",
      "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
      "authorization_details": [
        { "type": "mission_resource_access",

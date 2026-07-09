@@ -1277,13 +1277,15 @@ every primitive except the Mission-bound credential and issuance
 gating, and profiles the join that fills that gap as its Mission Join
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>). The AAuth
 binding gives that protocol's native mission concept the model's
-structure and provides every primitive
+structure; in its PS-asserted mode it provides every primitive, and in
+its federated mode it provides them all only where the Access Server
+carries the family <code>mission</code> members, and is Reference-only otherwise
 (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">The family's substrate-neutral profiles (runtime enforcement and its
 decision API bindings, the harness, orchestration, intent shaping,
-consent evidence, the Mandate, audit transparency, and the security
-model) are written against Mission primitives rather than against
-OAuth mechanics; each names what it consumes in a Mission Substrate
+consent evidence, consumption metering, open-world discovery, the
+Mandate, audit transparency, and the security model) are written
+against Mission primitives rather than against OAuth mechanics; each names what it consumes in a Mission Substrate
 section of its own, except consent evidence, whose consumption is
 stated by its approval binding. A binding that provides the
 primitives therefore hosts these profiles as written.<a href="#section-1-2" class="pilcrow">¶</a></p>
@@ -1371,10 +1373,10 @@ profiles; a summary here never overrides its home.<a href="#section-2-1" class="
         <h3 id="name-mission-record-identifier-a">
 <a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-mission-record-identifier-a" class="section-name selfRef">Mission Record, Identifier, and Issuer</a>
         </h3>
-<p id="section-2.1-1">A binding <span class="bcp14">MUST</span> maintain the Mission record as the core defines it:
-the durable object created at the approval event, immutable after
-creation except its lifecycle state, and retained per the audit
-horizon (<a href="#audit-horizon" class="auto internal xref">Section 2.7</a>). A binding <span class="bcp14">MUST</span> provide a Mission
+<p id="section-2.1-1">A binding <span class="bcp14">MUST</span> require its implementations to maintain the Mission
+record as the core defines it: the durable object created at the
+approval event, immutable after creation except its lifecycle state,
+and retained per the audit horizon (<a href="#audit-horizon" class="auto internal xref">Section 2.7</a>). A binding <span class="bcp14">MUST</span> provide a Mission
 Identifier that is opaque, carries no semantic content, has at least
 128 bits of entropy, and is never reused, together with an <code>issuer</code>:
 an issuer identifier naming the approving Mission Issuer, from which
@@ -1416,7 +1418,12 @@ Identifier: the state space is not provided without a way to cause
 its kill-switch state.<a href="#section-2.2-2" class="pilcrow">¶</a></p>
 <p id="section-2.2-3">A binding <span class="bcp14">MUST</span> specify at least one state source from which consumers
 learn a Mission's current state, with a stated staleness bound, so
-deployments can meet the runtime profile's freshness rules.<a href="#section-2.2-3" class="pilcrow">¶</a></p>
+deployments can meet the runtime profile's freshness rules. Each state
+source <span class="bcp14">MUST</span> be authenticated and integrity-protected, so a consumer
+verifies a state report's origin and detects tampering before relying
+on it: state whose origin or integrity a consumer cannot verify is
+treated as unavailable and fails closed. Verifying a signed state
+report consumes the issuer key material of <a href="#keys" class="auto internal xref">Section 2.6</a>.<a href="#section-2.2-3" class="pilcrow">¶</a></p>
 <p id="section-2.2-4">Home: the Mission Lifecycle and Gating section of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; the freshness rules are the
 runtime profile's (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and the
@@ -1434,12 +1441,13 @@ staleness), the harness (pause, suppress, terminate), orchestration
         </h3>
 <p id="section-2.3-1">A binding <span class="bcp14">MUST</span> represent the Authority Set as an array of entries in
 the core's authorization-details shape: each entry names a resource,
-its actions, and its constraints. The binding <span class="bcp14">MUST</span> apply the subset
-rule at every narrowing it performs: no derivation, delegation, or
-attenuation under a Mission yields authority broader than the
-Mission's Authority Set. The binding <span class="bcp14">MUST</span> interpret Common Constraint
-names per their definitions and compare their values in value space
-under each definition's subset and intersection rules, so independent
+its actions, and its constraints. The binding <span class="bcp14">MUST</span> require its
+implementations to apply the subset rule at every narrowing they
+perform: no derivation, delegation, or attenuation under a Mission
+yields authority broader than the Mission's Authority Set. The binding
+<span class="bcp14">MUST</span> require its implementations to interpret Common Constraint names
+per their definitions and compare their values in value space under
+each definition's subset and intersection rules, so independent
 implementations compute the same result for the same values. Where a
 binding or its enforcement surface admits a delegate, per-entry
 <code>delegation</code> policy is evaluated by whichever surface admits the
@@ -1458,15 +1466,15 @@ carriage).<a href="#section-2.3-3" class="pilcrow">¶</a></p>
         <h3 id="name-mission-integrity-anchors">
 <a href="#section-2.4" class="section-number selfRef">2.4. </a><a href="#name-mission-integrity-anchors" class="section-name selfRef">Mission Integrity Anchors</a>
         </h3>
-<p id="section-2.4-1">A binding <span class="bcp14">MUST</span> compute <code>intent_hash</code> and <code>authority_hash</code> over the
-core's domain-separated, issuer-bound envelope (<code>typ</code> names the
-committed object, <code>iss</code> carries the binding's issuer identifier,
-<code>value</code> is the committed object), under the core's canonicalization
-rules. The computation is the core's byte for byte: the core's test
-vectors verify a binding's implementation, and only the envelope
-<code>iss</code> is the binding's own. A verifier <span class="bcp14">MUST</span> reject an anchor whose
-algorithm prefix it does not recognize and <span class="bcp14">MUST NOT</span> treat an
-unrecognized prefix as <code>sha-256</code>. A new committed object uses the same
+<p id="section-2.4-1">A binding <span class="bcp14">MUST</span> require its implementations to compute <code>intent_hash</code>
+and <code>authority_hash</code> over the core's domain-separated, issuer-bound
+envelope (<code>typ</code> names the committed object, <code>iss</code> carries the binding's
+issuer identifier, <code>value</code> is the committed object), under the core's
+canonicalization rules. The computation is the core's byte for byte:
+the core's test vectors verify a binding's implementation, and only the
+envelope <code>iss</code> is the binding's own. A binding <span class="bcp14">MUST</span> require verifiers
+of its anchors to reject an anchor whose algorithm prefix they do not
+recognize and never to treat an unrecognized prefix as <code>sha-256</code>. A new committed object uses the same
 envelope with a new <code>typ</code> under the core's extension rule.<a href="#section-2.4-1" class="pilcrow">¶</a></p>
 <p id="section-2.4-2">A binding <span class="bcp14">MAY</span> additionally commit to its native artifact with a
 mechanism of its own, as the AAuth binding's <code>s256</code> commits the
@@ -1548,7 +1556,8 @@ published keys), the Mandate
 <p id="section-2.7-1">A binding <span class="bcp14">MUST</span> declare an audit horizon: the retention window for the
 Mission record and its evidence, at least the Mission's lifetime plus
 a declared post-expiry period. After a Mission reaches a terminal
-state, its record <span class="bcp14">MUST</span> be retained for the audit horizon.<a href="#section-2.7-1" class="pilcrow">¶</a></p>
+state, the binding <span class="bcp14">MUST</span> require its record to be retained for the
+audit horizon.<a href="#section-2.7-1" class="pilcrow">¶</a></p>
 <p id="section-2.7-2">Home: the Mission Record section of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-2.7-2" class="pilcrow">¶</a></p>
 <p id="section-2.7-3">Consumers: consent evidence, runtime enforcement evidence, and audit
@@ -1586,22 +1595,29 @@ the approved Intent (<a href="#anchors" class="auto internal xref">Section 2.4</
 approval decision.<a href="#section-2.8-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-2.8-3">Derivation in step 3 <span class="bcp14">MUST</span> be bounded by the approved Mission Intent
+<p id="section-2.8-3">The binding <span class="bcp14">MUST</span> provide a Mission Intent submission channel through
+which a client proposes the Intent that step 1 authenticates against
+and step 3 derives from, preserving the core's Intent semantics (its
+<code>resources</code>, <code>controls</code>, and inert fields carried intact); a binding
+without such a channel cannot run the approval event, and the
+intent-shaping profile consumes this channel (<a href="#composition" class="auto internal xref">Section 3</a>).<a href="#section-2.8-3" class="pilcrow">¶</a></p>
+<p id="section-2.8-4">Derivation in step 3 <span class="bcp14">MUST</span> be bounded by the approved Mission Intent
 per the core's Mission Authority rules: each derived entry's resource
 is among the Intent's <code>resources</code>, the Intent's <code>controls</code> are
 respected, and <code>proposed_authority</code> is only narrowed, so
 <code>intent_hash</code> and <code>authority_hash</code> commit a task and its authority
-with a defined relationship.<a href="#section-2.8-3" class="pilcrow">¶</a></p>
-<p id="section-2.8-4">If the derived Authority Set changes between rendering and consent,
-the binding <span class="bcp14">MUST</span> recompute the anchors and <span class="bcp14">MUST NOT</span> create the
-Mission without the Approver's consent to the changed set.<a href="#section-2.8-4" class="pilcrow">¶</a></p>
-<p id="section-2.8-5">Home: the Mission Approval section of
+with a defined relationship.<a href="#section-2.8-4" class="pilcrow">¶</a></p>
+<p id="section-2.8-5">If the derived Authority Set changes between rendering and consent,
+the binding <span class="bcp14">MUST</span> require its implementations to recompute the anchors,
+and not to create the Mission without the Approver's consent to the
+changed set.<a href="#section-2.8-5" class="pilcrow">¶</a></p>
+<p id="section-2.8-6">Home: the Mission Approval section of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. The MAS shows the steps
 re-shaped for an asynchronous surface, approval bound to the
 submission rather than an authorization code; the AAuth binding shows them
-profiled onto a propose-clarify-approve interaction.<a href="#section-2.8-5" class="pilcrow">¶</a></p>
-<p id="section-2.8-6">Consumers: consent evidence binds to this event; every downstream
-guarantee (the anchors, the gating, the record) assumes it.<a href="#section-2.8-6" class="pilcrow">¶</a></p>
+profiled onto a propose-clarify-approve interaction.<a href="#section-2.8-6" class="pilcrow">¶</a></p>
+<p id="section-2.8-7">Consumers: consent evidence binds to this event; every downstream
+guarantee (the anchors, the gating, the record) assumes it.<a href="#section-2.8-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1644,7 +1660,7 @@ provision); <code>.</code> not consumed. Notes follow the table.<a href="#sectio
             <td class="text-left" rowspan="1" colspan="1">X</td>
             <td class="text-left" rowspan="1" colspan="1">X</td>
             <td class="text-left" rowspan="1" colspan="1">B</td>
-            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
             <td class="text-left" rowspan="1" colspan="1">X</td>
             <td class="text-left" rowspan="1" colspan="1">.</td>
           </tr>
@@ -1700,7 +1716,7 @@ provision); <code>.</code> not consumed. Notes follow the table.<a href="#sectio
             <td class="text-left" rowspan="1" colspan="1">X</td>
             <td class="text-left" rowspan="1" colspan="1">.</td>
             <td class="text-left" rowspan="1" colspan="1">X</td>
-            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
             <td class="text-left" rowspan="1" colspan="1">.</td>
           </tr>
           <tr>
@@ -1725,6 +1741,17 @@ provision); <code>.</code> not consumed. Notes follow the table.<a href="#sectio
             <td class="text-left" rowspan="1" colspan="1">.</td>
             <td class="text-left" rowspan="1" colspan="1">.</td>
           </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Open-World Discovery</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+          </tr>
         </tbody>
       </table>
 <ul class="normal">
@@ -1733,31 +1760,55 @@ provision); <code>.</code> not consumed. Notes follow the table.<a href="#sectio
 <code>B</code> composes through the join and no other cell changes.<a href="#section-3-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-3-3.2">
-          <p id="section-3-3.2.1">Consumption Metering defines no binding of its own: its counters key
-on the identifier, its <code>call_class</code> draws on the Authority Set
-representation, and its bounds are committed through the anchor
-envelope; enforcement composes through the runtime row's binding.<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
+          <p id="section-3-3.2.1">State verification consumes Keys: the runtime row reads a signed
+state surface and verifies it under the Issuer's published keys
+(<a href="#lifecycle" class="auto internal xref">Section 2.2</a>, <a href="#keys" class="auto internal xref">Section 2.6</a>), so its Keys cell is <code>X</code>; a binding whose
+harness or orchestration verifies state itself consumes Keys
+likewise.<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-3-3.3">
-          <p id="section-3-3.3.1">The security model is not a row: it is informational, analyzes every
-primitive, and applies to any binding
-(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-3-3.3.1" class="pilcrow">¶</a></p>
+          <p id="section-3-3.3.1">The Mandate consumes the audit horizon: an absent <code>mandate_exp</code>
+binds the Mandate's evidence validity to the Mission's audit horizon
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>), so its Horizon cell is
+<code>X</code>; its Authority Set carriage is optional.<a href="#section-3-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-3-3.4">
-          <p id="section-3-3.4.1">Some profiles name further inputs in their own Mission Substrate
+          <p id="section-3-3.4.1">Open-World Discovery is experimental: it keys on the identifier and
+the only-<code>active</code> rule, adjudicates encountered resources against the
+Authority Set under the subset rule, and commits Discovery Evidence
+through the anchor envelope
+(<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>); where the Progressive
+companion supplies a pre-consented ceiling
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>), that ceiling is
+a further adjudication input, as intent shaping takes the Intent
+structure as a further input.<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.5">
+          <p id="section-3-3.5.1">Consumption Metering defines no binding of its own: its counters key
+on the identifier, its <code>call_class</code> draws on the Authority Set
+representation, and its bounds are committed through the anchor
+envelope; enforcement composes through the runtime row's binding.<a href="#section-3-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.6">
+          <p id="section-3-3.6.1">The security model is not a row: it is informational, analyzes every
+primitive, and applies to any binding
+(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-3-3.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.7">
+          <p id="section-3-3.7.1">Some profiles name further inputs in their own Mission Substrate
 sections, which remain the authoritative per-consumer statements:
 intent shaping consumes the Mission Intent structure and a
 submission channel; audit transparency consumes the evidence types
 and their canonical bytes; the harness and orchestration import the
-runtime profile's evidence conventions.<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
+runtime profile's evidence conventions.<a href="#section-3-3.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-3-3.5">
-          <p id="section-3-3.5.1">Profiles bound to OAuth wire mechanics (expansion, child delegation,
+        <li class="normal" id="section-3-3.8">
+          <p id="section-3-3.8.1">Profiles bound to OAuth wire mechanics (expansion, child delegation,
 offline attenuation, cross-domain projection) are not
 substrate-neutral and are not rows; a binding wanting those
 capabilities defines its own surfaces. The documents behind these
 profile names are mapped by the architecture
-(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-3-3.5.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-3-3.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -1987,6 +2038,10 @@ the Mission Issuer; each hosted profile's own apply unchanged.<a href="#section-
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-discovery">[I-D.draft-mcguinness-mission-discovery]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Open-World Discovery"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-mandate">[I-D.draft-mcguinness-mission-mandate]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Mandate"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html</a>&gt;</span>. </dd>
@@ -2002,6 +2057,10 @@ the Mission Issuer; each hosted profile's own apply unchanged.<a href="#section-
 <dt id="I-D.draft-mcguinness-oauth-mission-issuance-grant">[I-D.draft-mcguinness-oauth-mission-issuance-grant]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Issuance Grant for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-progressive">[I-D.draft-mcguinness-oauth-mission-progressive]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Progressive Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
       <dd>

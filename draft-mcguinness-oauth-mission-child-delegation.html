@@ -1283,7 +1283,10 @@ Mission is never created by session ancestry alone.<a href="#section-abstract-1"
                 <p id="section-toc.1-1.17.2.4.1"><a href="#section-17.4" class="auto internal xref">17.4</a>.  <a href="#name-parent-confusion" class="internal xref">Parent Confusion</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.5">
-                <p id="section-toc.1-1.17.2.5.1"><a href="#section-17.5" class="auto internal xref">17.5</a>.  <a href="#name-subset-bugs" class="internal xref">Subset Bugs</a></p>
+                <p id="section-toc.1-1.17.2.5.1"><a href="#section-17.5" class="auto internal xref">17.5</a>.  <a href="#name-parent-grant-at-rest-in-par" class="internal xref">Parent Grant at Rest in PAR</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.6">
+                <p id="section-toc.1-1.17.2.6.1"><a href="#section-17.6" class="auto internal xref">17.6</a>.  <a href="#name-subset-bugs" class="internal xref">Subset Bugs</a></p>
 </li>
             </ul>
 </li>
@@ -1606,13 +1609,27 @@ sender-constrained.<a href="#section-6-5" class="pilcrow">¶</a></p>
 identifier is the <code>client_id</code> of the Child Mission record. The child
 actor authenticates itself at the token endpoint and redeems its own
 grant for the Child Mission's tokens. Child credentials <span class="bcp14">MUST NOT</span> transit
-the parent, and the parent <span class="bcp14">MUST NOT</span> hold child tokens. The concrete
-conveyance of the child's initial grant reference (for example, an
-authorization code or a grant handle) from the creating flow to the
-child actor is deployment-defined, subject to those rules.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
-<p id="section-6.1-2">Where creation is adjudicated by policy with no front channel, the
-Mission Issuer completes the authorization without user interaction and
-the child actor redeems its grant directly at the token endpoint.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+the parent, and the parent <span class="bcp14">MUST NOT</span> hold child tokens.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<p id="section-6.1-2">The child's initial grant <span class="bcp14">MUST</span> be an audience-bound JWT authorization
+grant that the child actor redeems as itself under the <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>
+JWT-bearer grant, of the shape the Mission Issuance Grant profile
+defines (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>): on
+creating the Child Mission the Mission Issuer mints an assertion that
+names the child actor as the authorized redeemer and the Mission
+Issuer's token endpoint as the audience, and the child actor presents it
+there authenticating with its own client credential. An authorization
+code <span class="bcp14">MUST NOT</span> be used to convey the child's grant: a code and its
+<code>request_uri</code> are redeemable only by the client that pushed the request
+(<span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>), which is the parent, not the child. The child-bound
+assertion is redeemable only by the child actor it names, so conveying
+it through the parent gives the parent no ability to redeem it. How the
+assertion reaches the child actor remains deployment-defined, subject to
+the rules above.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+<p id="section-6.1-3">Where creation is adjudicated by policy with no front channel, the
+Mission Issuer completes the authorization without user interaction,
+mints the same child-bound JWT authorization grant, and the child actor
+redeems it as itself under the <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> JWT-bearer grant at the token
+endpoint.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="cross-issuer">
@@ -1985,9 +2002,27 @@ depth the ancestor entries allowed.<a href="#section-7-4" class="pilcrow">¶</a>
 <a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-mission-record-requirements" class="section-name selfRef">Mission Record Requirements</a>
         </h3>
 <p id="section-7.1-1">The Child Mission record <span class="bcp14">MUST</span> contain the <code>parent</code> object, the child
-actor, the child Authority Set, the child <code>authority_hash</code>, the
-delegation event identifier, the cascade mode, and the fan-out policy
-result. The <code>parent</code> value is immutable after creation.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+actor, the child Authority Set, the child <code>authority_hash</code>, the child
+Mission Intent's <code>intent_hash</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
+the delegation event identifier, the cascade mode, and the fan-out
+policy result. The <code>parent</code> value is immutable after creation.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.1-2">The delegation event (<a href="#child-creation" class="auto internal xref">Section 6</a>) is the Child Mission's
+approval event. It <span class="bcp14">MUST</span> commit the issuance profile's integrity anchors
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): <code>authority_hash</code> over the
+child Authority Set and <code>intent_hash</code> over the child Mission Intent, and
+it <span class="bcp14">MUST</span> produce the immutable, accountable record the core approval
+event produces. A Child Mission is created under a parent grant rather
+than a first-party approval (<a href="#issuance-relationship" class="auto internal xref">Section 3</a>), so its human
+accountability is inherited from the Parent Mission's own approval.
+Where the deployment requires a human approval event for child creation
+(<a href="#child-creation" class="auto internal xref">Section 6</a>), that event meets the issuance profile's
+approval-event requirements in full and its human Approver is the
+record's approver. Where creation is adjudicated by policy with no human
+interaction (<a href="#child-client-identity" class="auto internal xref">Section 6.1</a>), the record's approver is the
+adjudicating policy (identified by the <code>child_creation_policy</code> reference
+where the entry carries one, <a href="#fanout" class="auto internal xref">Section 9</a>) together with the Subject and
+Approver of the Parent Mission the parent grant resolves to, and the
+record <span class="bcp14">MUST</span> mark the approval as policy-adjudicated rather than human.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2153,9 +2188,18 @@ it <span class="bcp14">MUST</span> refuse child creation for that entry.<a href=
         </h3>
 <p id="section-9.1-1">The Mission Issuer <span class="bcp14">MUST</span> count non-terminal Child Missions against
 <code>max_children</code> until the child reaches a terminal state.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
-<p id="section-9.1-2">The Mission Issuer <span class="bcp14">MUST</span> serialize child creation against the same
+<p id="section-9.1-2">Where a child entry is a subset of more than one parent entry, the
+Mission Issuer <span class="bcp14">MUST</span> select exactly one parent entry as that child
+entry's justification and count the child against that entry's
+<code>max_children</code> alone. The selection <span class="bcp14">MUST</span> be deterministic: the Mission
+Issuer selects the first parent entry, in Authority Set order, that the
+child entry is a subset of. The recorded justification mapping (the
+parent entry each child entry was derived from, <a href="#child-evidence" class="auto internal xref">Section 11</a>) is
+the accounting basis: <code>max_children</code> is counted per justifying entry,
+and the same mapping is what the child evidence records.<a href="#section-9.1-2" class="pilcrow">¶</a></p>
+<p id="section-9.1-3">The Mission Issuer <span class="bcp14">MUST</span> serialize child creation against the same
 parent entry and fan-out bucket so concurrent requests cannot exceed
-the limit.<a href="#section-9.1-2" class="pilcrow">¶</a></p>
+the limit.<a href="#section-9.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2316,22 +2360,38 @@ Mission Status operation and token introspection,
 child's own state when the parent resumes to <code>active</code>. A child whose own
 <code>expires_at</code> passes during the suspension is <code>expired</code>: expiry takes
 precedence over the projected <code>suspended</code> state.<a href="#section-10.1-7" class="pilcrow">¶</a></p>
-<p id="section-10.1-8">Mission Status for a Child Mission <span class="bcp14">SHOULD</span> also include a parent
-projection for authorized callers, as additional context:<a href="#section-10.1-8" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-10.1-9">
-          <dt id="section-10.1-9.1">
+<p id="section-10.1-8">Likewise, once a terminal cascade trigger (<a href="#cascade" class="auto internal xref">Section 10</a>) commits at any
+ancestor, the issuer <span class="bcp14">MUST</span> report each dependent descendant's state as
+<code>cascaded</code> on every state-reporting surface (the Mission Status
+operation and token introspection,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) from that commit, ahead
+of each descendant's own per-generation transition. The transitive
+transitions still commit in generation order (<a href="#cascade" class="auto internal xref">Section 10</a>); this rule
+bounds only what a consumer reads, so a consumer keying on a
+descendant's own state never reads <code>active</code> mid-cascade.<a href="#section-10.1-8" class="pilcrow">¶</a></p>
+<p id="section-10.1-9">Expiry takes precedence over <code>cascaded</code> as it does over the projected
+<code>suspended</code> state: where a child's own <code>expires_at</code> coincides with a
+terminal cascade of its parent (for example, a child whose <code>expires_at</code>
+equals the parent's on parent expiry), the child's own <code>expired</code> state
+wins and it is reported <code>expired</code>, not <code>cascaded</code>. This matches the
+<code>cascaded</code> state, which a child enters only when its own expiry was not
+reached.<a href="#section-10.1-9" class="pilcrow">¶</a></p>
+<p id="section-10.1-10">Mission Status for a Child Mission <span class="bcp14">SHOULD</span> also include a parent
+projection for authorized callers, as additional context:<a href="#section-10.1-10" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10.1-11">
+          <dt id="section-10.1-11.1">
 <code>parent</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-9.2">
-            <p id="section-10.1-9.2.1">Object containing parent <code>id</code>, <code>issuer</code>, current parent <code>state</code> when
-known, <code>cascade_mode</code>, and freshness information.<a href="#section-10.1-9.2.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-10.1-11.2">
+            <p id="section-10.1-11.2.1">Object containing parent <code>id</code>, <code>issuer</code>, current parent <code>state</code> when
+known, <code>cascade_mode</code>, and freshness information.<a href="#section-10.1-11.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-10.1-10">Under <code>immediate</code> cascade a consumer needs no parent-state check of its
+<p id="section-10.1-12">Under <code>immediate</code> cascade a consumer needs no parent-state check of its
 own: it relies on the Mission Issuer's child state transition, read
 from the child's own state surfaces. The consumer obligations of the
 experimental consumer-verified modes are defined with those modes
-(<a href="#experimental-cascade" class="auto internal xref">Appendix A</a>).<a href="#section-10.1-10" class="pilcrow">¶</a></p>
+(<a href="#experimental-cascade" class="auto internal xref">Appendix A</a>).<a href="#section-10.1-12" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2498,7 +2558,7 @@ object by these values.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
       </h2>
 <p id="section-12-1">Mission Expansion
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span> creates a successor
-Mission that replaces a predecessor for a broader task. Child Mission
+Mission that replaces a predecessor for a broader task. Mission Child
 Delegation creates a dependent Mission for a child actor with narrower
 authority. Expansion widens by fresh approval; Child Missions attenuate
 within parent authority. The two <span class="bcp14">MUST NOT</span> be conflated.<a href="#section-12-1" class="pilcrow">¶</a></p>
@@ -2649,14 +2709,31 @@ the parent from <code>parent_token</code>, not from the identifier, and verifies
 the two match.<a href="#section-17.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="subset-bugs">
+<div id="parent-grant-at-rest-in-par">
 <section id="section-17.5">
-        <h3 id="name-subset-bugs">
-<a href="#section-17.5" class="section-number selfRef">17.5. </a><a href="#name-subset-bugs" class="section-name selfRef">Subset Bugs</a>
+        <h3 id="name-parent-grant-at-rest-in-par">
+<a href="#section-17.5" class="section-number selfRef">17.5. </a><a href="#name-parent-grant-at-rest-in-par" class="section-name selfRef">Parent Grant at Rest in PAR</a>
         </h3>
-<p id="section-17.5-1">Subset evaluation is the security core of this profile. Deployments
+<p id="section-17.5-1">A child creation request carries <code>parent_token</code>, a refresh token or
+other parent grant, through PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>, so that credential sits at
+rest in the PAR store until the pushed request is redeemed or expires. A
+deployment <span class="bcp14">MUST</span> protect the PAR store as credential storage: it <span class="bcp14">SHOULD</span>
+hold <code>parent_token</code> only until its <code>request_uri</code> is redeemed or expires
+and then delete it, <span class="bcp14">MUST NOT</span> write <code>parent_token</code> to request logs,
+traces, or audit records in the clear, and <span class="bcp14">MUST</span> redact or hash it
+wherever the pushed request is otherwise recorded. Child delegation
+evidence (<a href="#child-evidence" class="auto internal xref">Section 11</a>) records the parent Mission by identifier
+and authority hash, never the parent grant itself.<a href="#section-17.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="subset-bugs">
+<section id="section-17.6">
+        <h3 id="name-subset-bugs">
+<a href="#section-17.6" class="section-number selfRef">17.6. </a><a href="#name-subset-bugs" class="section-name selfRef">Subset Bugs</a>
+        </h3>
+<p id="section-17.6-1">Subset evaluation is the security core of this profile. Deployments
 <span class="bcp14">SHOULD</span> keep subset rules deterministic and auditable, and <span class="bcp14">SHOULD</span> record
-the exact parent entries used to justify each child entry.<a href="#section-17.5-1" class="pilcrow">¶</a></p>
+the exact parent entries used to justify each child entry.<a href="#section-17.6-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2759,6 +2836,10 @@ not create it.<a href="#section-19-7" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="RFC7523">[RFC7523]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Campbell, B.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"JSON Web Token (JWT) Profile for OAuth 2.0 Client Authentication and Authorization Grants"</span>, <span class="seriesInfo">RFC 7523</span>, <span class="seriesInfo">DOI 10.17487/RFC7523</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7523">https://www.rfc-editor.org/rfc/rfc7523</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC8174">[RFC8174]</dt>
         <dd>
 <span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
@@ -2807,6 +2888,10 @@ not create it.<a href="#section-19-7" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-oauth-mission-completion">[I-D.draft-mcguinness-oauth-mission-completion]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Completion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-completion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-completion.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-issuance-grant">[I-D.draft-mcguinness-oauth-mission-issuance-grant]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Issuance Grant for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
         <dd>

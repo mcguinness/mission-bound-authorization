@@ -1224,13 +1224,19 @@ and every mechanism it names is defined by the profile it points to.<a href="#se
                 <p id="section-toc.1-1.9.2.6.1"><a href="#section-9.6" class="auto internal xref">9.6</a>.  <a href="#name-the-mission-bound-credentia" class="internal xref">The Mission-Bound Credential</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.7">
-                <p id="section-toc.1-1.9.2.7.1"><a href="#section-9.7" class="auto internal xref">9.7</a>.  <a href="#name-the-audit-horizon" class="internal xref">The Audit Horizon</a></p>
+                <p id="section-toc.1-1.9.2.7.1"><a href="#section-9.7" class="auto internal xref">9.7</a>.  <a href="#name-issuer-key-material" class="internal xref">Issuer Key Material</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.8">
-                <p id="section-toc.1-1.9.2.8.1"><a href="#section-9.8" class="auto internal xref">9.8</a>.  <a href="#name-the-validity-model" class="internal xref">The Validity Model</a></p>
+                <p id="section-toc.1-1.9.2.8.1"><a href="#section-9.8" class="auto internal xref">9.8</a>.  <a href="#name-the-audit-horizon" class="internal xref">The Audit Horizon</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.9">
-                <p id="section-toc.1-1.9.2.9.1"><a href="#section-9.9" class="auto internal xref">9.9</a>.  <a href="#name-the-binding-checklist" class="internal xref">The Binding Checklist</a></p>
+                <p id="section-toc.1-1.9.2.9.1"><a href="#section-9.9" class="auto internal xref">9.9</a>.  <a href="#name-approval-fidelity" class="internal xref">Approval Fidelity</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.10">
+                <p id="section-toc.1-1.9.2.10.1"><a href="#section-9.10" class="auto internal xref">9.10</a>. <a href="#name-the-validity-model" class="internal xref">The Validity Model</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.11">
+                <p id="section-toc.1-1.9.2.11.1"><a href="#section-9.11" class="auto internal xref">9.11</a>. <a href="#name-the-binding-checklist" class="internal xref">The Binding Checklist</a></p>
 </li>
             </ul>
 </li>
@@ -1696,7 +1702,7 @@ drawdown within a ceiling a human pre-consented
           <p id="section-7-2.8.1">A Mission ends by a state change at its issuer, not by finding and
 destroying credentials; outstanding credentials meet the issuance
 gate, the runtime re-check, or their own expiry, whichever comes
-first (<a href="#validity-model" class="auto internal xref">Section 9.8</a>).<a href="#section-7-2.8.1" class="pilcrow">¶</a></p>
+first (<a href="#validity-model" class="auto internal xref">Section 9.10</a>).<a href="#section-7-2.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.9">
@@ -1704,7 +1710,11 @@ first (<a href="#validity-model" class="auto internal xref">Section 9.8</a>).<a 
         <dd style="margin-left: 1.5em" id="section-7-2.10">
           <p id="section-7-2.10.1">Each role in the actor chain travels in its own construct, and the
 evidence layer records them together; no role is derived from
-another (<a href="#actor-chain" class="auto internal xref">Section 8.1</a>).<a href="#section-7-2.10.1" class="pilcrow">¶</a></p>
+another (<a href="#actor-chain" class="auto internal xref">Section 8.1</a>). This invariant scopes the actor chain.
+The credential-to-Mission association is itself a carried fact only
+where a binding carries the <code>mission</code> claim; under the standalone
+binding the PDP's join establishes it by inference, bounded by that
+binding's join assurance (<a href="#deployment" class="auto internal xref">Section 12</a>).<a href="#section-7-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.11">
@@ -2014,7 +2024,7 @@ the audit feed.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
 <p id="section-9-1">The companion profiles named without "oauth" are defined against the
 Mission model's substrate primitives rather than against OAuth
 mechanics; each names what it consumes in a Mission Substrate section
-of its own. This section consolidates that interface: six primitives,
+of its own. This section consolidates that interface: eight primitives,
 each with its normative home and its consumers. Every sentence
 mirrors a rule the named profile states normatively.<a href="#section-9-1" class="pilcrow">¶</a></p>
 <div id="the-mission-identifier-and-issuer">
@@ -2094,8 +2104,10 @@ committed evidence types it registers).<a href="#section-9.4-1" class="pilcrow">
         <h3 id="name-token-classes">
 <a href="#section-9.5" class="section-number selfRef">9.5. </a><a href="#name-token-classes" class="section-name selfRef">Token Classes</a>
         </h3>
-<p id="section-9.5-1">"Mission-bound" is a specific claim, and three token shapes are worth
-distinguishing so a weak one is not read as the strong one:<a href="#section-9.5-1" class="pilcrow">¶</a></p>
+<p id="section-9.5-1">"Mission-bound" is a specific claim. This document names three token
+shapes descriptively, so a weak one is not read as the strong one; the
+names below are this document's own, and the properties the strong
+class requires are the core's:<a href="#section-9.5-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9.5-2.1">
             <p id="section-9.5-2.1.1">a <strong>Mission-referenced token</strong> carries a Mission identifier only;<a href="#section-9.5-2.1.1" class="pilcrow">¶</a></p>
@@ -2106,8 +2118,8 @@ active Mission; and<a href="#section-9.5-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-9.5-2.3">
             <p id="section-9.5-2.3.1">a <strong>Mission-bound token</strong> is Mission-derived and additionally
-active-state gated, subset-constrained, and refresh-gated (the
-core's conformance rule).<a href="#section-9.5-2.3.1" class="pilcrow">¶</a></p>
+active-state gated, subset-constrained, and refresh-gated, the
+properties the core's conformance rule requires.<a href="#section-9.5-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-9.5-3">Only the third earns the term: a <code>mission</code> claim alone is a reference,
@@ -2150,108 +2162,137 @@ that a consuming Authorization Server redeems for Mission-bound
 tokens, providing this primitive compositely.<a href="#section-9.6-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="the-audit-horizon">
+<div id="issuer-key-material">
 <section id="section-9.7">
-        <h3 id="name-the-audit-horizon">
-<a href="#section-9.7" class="section-number selfRef">9.7. </a><a href="#name-the-audit-horizon" class="section-name selfRef">The Audit Horizon</a>
+        <h3 id="name-issuer-key-material">
+<a href="#section-9.7" class="section-number selfRef">9.7. </a><a href="#name-issuer-key-material" class="section-name selfRef">Issuer Key Material</a>
         </h3>
-<p id="section-9.7-1">The deployment-declared retention window for the Mission record and
+<p id="section-9.7-1">The Mission Issuer's signing keys, resolvable from the <code>issuer</code> by the
+verifiers of its signed artifacts; across a rotation each key
+identifier's verification key stays resolvable while artifacts signed
+under it remain within the audit horizon. Home: the core's Signing and
+Key Rotation section. Consumed by the verifiers of Mission-bound
+credentials under full provision, Consent Evidence, the Mandate, the
+signed state surfaces, and Audit Transparency.<a href="#section-9.7-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="the-audit-horizon">
+<section id="section-9.8">
+        <h3 id="name-the-audit-horizon">
+<a href="#section-9.8" class="section-number selfRef">9.8. </a><a href="#name-the-audit-horizon" class="section-name selfRef">The Audit Horizon</a>
+        </h3>
+<p id="section-9.8-1">The deployment-declared retention window for the Mission record and
 its evidence: at least the Mission's lifetime plus a declared
 post-terminal period. Home: the core's Mission Record section.
 Consumed by Consent Evidence, runtime evidence, and Audit
 Transparency for retention; by the MAS for record retention; and by
-the security model's retention analysis.<a href="#section-9.7-1" class="pilcrow">¶</a></p>
+the security model's retention analysis.<a href="#section-9.8-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="approval-fidelity">
+<section id="section-9.9">
+        <h3 id="name-approval-fidelity">
+<a href="#section-9.9" class="section-number selfRef">9.9. </a><a href="#name-approval-fidelity" class="section-name selfRef">Approval Fidelity</a>
+        </h3>
+<p id="section-9.9-1">The approval event's fidelity: whatever a binding's native ceremony,
+it authenticates the Approver, establishes the Subject, derives and
+renders the Authority Set for consent, computes the anchors over the
+consented set and the approved Intent, and creates the record in
+<code>active</code> atomically with the decision. Home: the core's Mission
+Approval section. Consumed by Consent Evidence, which binds to this
+event, and by every downstream guarantee that assumes the anchors, the
+gating, and the record.<a href="#section-9.9-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="validity-model">
-<section id="section-9.8">
+<section id="section-9.10">
         <h3 id="name-the-validity-model">
-<a href="#section-9.8" class="section-number selfRef">9.8. </a><a href="#name-the-validity-model" class="section-name selfRef">The Validity Model</a>
+<a href="#section-9.10" class="section-number selfRef">9.10. </a><a href="#name-the-validity-model" class="section-name selfRef">The Validity Model</a>
         </h3>
-<p id="section-9.8-1">Five validity horizons govern reliance, each with its own setter,
+<p id="section-9.10-1">Five validity horizons govern reliance, each with its own setter,
 checker, and consequence; implementations most often err by
-conflating them:<a href="#section-9.8-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-9.8-2">
-          <dt id="section-9.8-2.1">Token <code>exp</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.8-2.2">
-            <p id="section-9.8-2.2.1">set by the issuer AS, capped by the Mission's <code>expires_at</code>; checked
+conflating them:<a href="#section-9.10-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9.10-2">
+          <dt id="section-9.10-2.1">Token <code>exp</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.10-2.2">
+            <p id="section-9.10-2.2.1">set by the issuer AS, capped by the Mission's <code>expires_at</code>; checked
 by every consumer of the token. Past it the credential is dead and
-refresh re-enters the issuance gate.<a href="#section-9.8-2.2.1" class="pilcrow">¶</a></p>
+refresh re-enters the issuance gate.<a href="#section-9.10-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-9.8-2.3">Mission state and <code>expires_at</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.8-2.4">
-            <p id="section-9.8-2.4.1">set by the Mission Issuer; checked at the issuance gate, by the
+<dt id="section-9.10-2.3">Mission state and <code>expires_at</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.10-2.4">
+            <p id="section-9.10-2.4.1">set by the Mission Issuer; checked at the issuance gate, by the
 PDP, and by state consumers. Off <code>active</code>, derivation stops and
-consequential actions refuse.<a href="#section-9.8-2.4.1" class="pilcrow">¶</a></p>
+consequential actions refuse.<a href="#section-9.10-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-9.8-2.5">
+<dt id="section-9.10-2.5">
 <code>fresh_until</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.8-2.6">
-            <p id="section-9.8-2.6.1">set by the status responder; checked by status consumers. Past it a
-cached state report may not be relied on and is re-fetched.<a href="#section-9.8-2.6.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-9.10-2.6">
+            <p id="section-9.10-2.6.1">set by the status responder; checked by status consumers. Past it a
+cached state report may not be relied on and is re-fetched.<a href="#section-9.10-2.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-9.8-2.7">Permit window:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.8-2.8">
-            <p id="section-9.8-2.8.1">set by the PDP; checked by the executing PEP. Past it the permit is
-void and a new decision is required.<a href="#section-9.8-2.8.1" class="pilcrow">¶</a></p>
+<dt id="section-9.10-2.7">Permit window:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.10-2.8">
+            <p id="section-9.10-2.8.1">set by the PDP; checked by the executing PEP. Past it the permit is
+void and a new decision is required.<a href="#section-9.10-2.8.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-9.8-2.9">Action-approval freshness:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.8-2.10">
-            <p id="section-9.8-2.10.1">set by the approval surface; checked by the PDP. Past it an
-action-bound approval no longer authorizes the action it named.<a href="#section-9.8-2.10.1" class="pilcrow">¶</a></p>
+<dt id="section-9.10-2.9">Action-approval freshness:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.10-2.10">
+            <p id="section-9.10-2.10.1">set by the approval surface; checked by the PDP. Past it an
+action-bound approval no longer authorizes the action it named.<a href="#section-9.10-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-9.8-3">The horizons compose by minimum: reliance at any moment requires
+<p id="section-9.10-3">The horizons compose by minimum: reliance at any moment requires
 every applicable horizon to be open, and no horizon substitutes for
-another.<a href="#section-9.8-3" class="pilcrow">¶</a></p>
+another.<a href="#section-9.10-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="binding-checklist">
-<section id="section-9.9">
+<section id="section-9.11">
         <h3 id="name-the-binding-checklist">
-<a href="#section-9.9" class="section-number selfRef">9.9. </a><a href="#name-the-binding-checklist" class="section-name selfRef">The Binding Checklist</a>
+<a href="#section-9.11" class="section-number selfRef">9.11. </a><a href="#name-the-binding-checklist" class="section-name selfRef">The Binding Checklist</a>
         </h3>
-<p id="section-9.9-1">For a new binding this checklist is now normatively stated by Mission
+<p id="section-9.11-1">For a new binding this checklist is now normatively stated by Mission
 Substrate Requirements (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>);
 this section remains the informative summary, and the three existing
-bindings remain authoritative for themselves.<a href="#section-9.9-1" class="pilcrow">¶</a></p>
-<p id="section-9.9-2">Another mission-based protocol hosts the substrate-neutral profiles
-unchanged when it provides:<a href="#section-9.9-2" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-9.9-3">
-<li id="section-9.9-3.1">
-            <p id="section-9.9-3.1.1">a unique, opaque Mission identifier with an authoritative issuer;<a href="#section-9.9-3.1.1" class="pilcrow">¶</a></p>
+bindings remain authoritative for themselves.<a href="#section-9.11-1" class="pilcrow">¶</a></p>
+<p id="section-9.11-2">Another mission-based protocol hosts the substrate-neutral profiles
+unchanged when it provides:<a href="#section-9.11-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-9.11-3">
+<li id="section-9.11-3.1">
+            <p id="section-9.11-3.1.1">a unique, opaque Mission identifier with an authoritative issuer;<a href="#section-9.11-3.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-9.9-3.2">
-            <p id="section-9.9-3.2.1">the lifecycle state space with the only-<code>active</code> rule, fail-safe
-unrecognized states, and a freshness source with a staleness bound;<a href="#section-9.9-3.2.1" class="pilcrow">¶</a></p>
+          <li id="section-9.11-3.2">
+            <p id="section-9.11-3.2.1">the lifecycle state space with the only-<code>active</code> rule, fail-safe
+unrecognized states, and a freshness source with a staleness bound;<a href="#section-9.11-3.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-9.9-3.3">
-            <p id="section-9.9-3.3.1">an Authority Set representation with a subset rule and a shared
-constraint vocabulary;<a href="#section-9.9-3.3.1" class="pilcrow">¶</a></p>
+          <li id="section-9.11-3.3">
+            <p id="section-9.11-3.3.1">an Authority Set representation with a subset rule and a shared
+constraint vocabulary;<a href="#section-9.11-3.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-9.9-3.4">
-            <p id="section-9.9-3.4.1">the integrity-anchor envelope and canonicalization for every
-object it commits;<a href="#section-9.9-3.4.1" class="pilcrow">¶</a></p>
+          <li id="section-9.11-3.4">
+            <p id="section-9.11-3.4.1">the integrity-anchor envelope and canonicalization for every
+object it commits;<a href="#section-9.11-3.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-9.9-3.5">
-            <p id="section-9.9-3.5.1">an audit horizon over the record and its evidence;<a href="#section-9.9-3.5.1" class="pilcrow">¶</a></p>
+          <li id="section-9.11-3.5">
+            <p id="section-9.11-3.5.1">an audit horizon over the record and its evidence;<a href="#section-9.11-3.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-9.9-3.6">
-            <p id="section-9.9-3.6.1">published key material: the issuer's signing keys, resolvable by
-the verifiers of its signed artifacts; and<a href="#section-9.9-3.6.1" class="pilcrow">¶</a></p>
+          <li id="section-9.11-3.6">
+            <p id="section-9.11-3.6.1">published key material: the issuer's signing keys, resolvable by
+the verifiers of its signed artifacts; and<a href="#section-9.11-3.6.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-9.9-3.7">
-            <p id="section-9.9-3.7.1">optionally, a Mission-bound credential carrying the <code>mission</code>
+          <li id="section-9.11-3.7">
+            <p id="section-9.11-3.7.1">optionally, a Mission-bound credential carrying the <code>mission</code>
 claim; a substrate that omits it composes as the standalone
-binding does, and the credential-carriage profiles do not apply.<a href="#section-9.9-3.7.1" class="pilcrow">¶</a></p>
+binding does, and the credential-carriage profiles do not apply.<a href="#section-9.11-3.7.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-9.9-4">Individual profiles name further inputs in their Mission Substrate
+<p id="section-9.11-4">Individual profiles name further inputs in their Mission Substrate
 sections: the evidence types and their canonical bytes for audit
 transparency, and the intent submission channel for shaping. A
 binding also owes the substrate's approval-fidelity requirement: the
@@ -2260,7 +2301,7 @@ disclosure with the fidelity the substrate requirements fix
 (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>). The
 per-profile Mission Substrate sections remain the authoritative
 per-consumer statements of this interface; this section consolidates
-them and adds nothing further.<a href="#section-9.9-4" class="pilcrow">¶</a></p>
+them and adds nothing further.<a href="#section-9.11-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2275,13 +2316,13 @@ heart of the model and the one step the family deliberately does not
 standardize. The consequence is a trust boundary worth stating
 plainly: interoperability begins at the committed result, not at the
 Intent. A Mission Intent has no portable semantics; two conforming
-Authorization Servers MAY derive different Authority Sets from the
+Authorization Servers can derive different Authority Sets from the
 same Intent, and audit can establish what was derived (against
 <code>intent_hash</code> and <code>policy_version</code>), never whether it was the right
 reading of the task. A deployment whose partners must reason about
-its derivations SHOULD publish a derivation policy identifier and
-test fixtures that pin Intent-to-Authority-Set outcomes, so the local
-policy becomes reviewable even though it does not travel. Narrowing
+its derivations can publish a derivation policy identifier and
+test fixtures that pin Intent-to-Authority-Set outcomes, making the local
+policy reviewable even though it does not travel. Narrowing
 mode (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) is the checkable path:
 where the client supplies candidate authority, derivation is a subset
 of it and reproducible, which is the closest the family comes to
@@ -2745,9 +2786,10 @@ binding, and a freshness source.<a href="#section-13-4.4.1" class="pilcrow">¶</
 <strong>Governed Agent</strong> (recommended for AI agents):</dt>
         <dd style="margin-left: 1.5em" id="section-13-4.6">
           <p id="section-13-4.6.1">adds Consent Evidence and the harness, growing with Child Delegation,
-Expansion, and Orchestration as needed. Grants consent-rendering
-evidence and session-continuity discipline. Documents: Runtime-
-Enforced plus consent-evidence and the harness.<a href="#section-13-4.6.1" class="pilcrow">¶</a></p>
+Expansion, Orchestration, and Discovery (experimental, with
+Progressive) as needed. Grants consent-rendering evidence and
+session-continuity discipline. Documents: Runtime-Enforced plus
+consent-evidence and the harness.<a href="#section-13-4.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-13-4.7">
@@ -2848,7 +2890,7 @@ it does not cover. An illustrative shape:<a href="#section-14-2" class="pilcrow"
 {
   "profile": "mission-governed-agent-runtime",
   "assurance_level": "high-assurance-agent",
-  "mission_issuer": "https://mas.example.com",
+  "mission_issuer": "https://as.example.com",
   "state_sources": [
     { "type": "status_endpoint", "max_staleness_seconds": 30 }
   ],
@@ -2861,7 +2903,11 @@ it does not cover. An illustrative shape:<a href="#section-14-2" class="pilcrow"
     "pdp": "authzen",
     "pep_locations": ["tool-gateway", "browser-action-proxy"],
     "mediated_action_classes": [
-      "irreversible_action", "external_commitment"
+      "irreversible_action", "external_commitment",
+      "external_communication", "privileged_administration"
+    ],
+    "action_bound_approval_classes": [
+      "irreversible_action", "privileged_administration"
     ],
     "unmediated_exclusions": [
       "internal_reasoning", "local_cache_read"
@@ -2870,7 +2916,11 @@ it does not cover. An illustrative shape:<a href="#section-14-2" class="pilcrow"
   "credential_custody": {
     "held_by": "pep",
     "sender_constrained": true,
+    "key_generated_in_pep": true,
     "agent_receives_bearer_token": false
+  },
+  "approval_rendering": {
+    "rendered_by": "agent-isolated-component"
   },
   "harness": {
     "subagent_inheritance": "explicit_delegation_only",

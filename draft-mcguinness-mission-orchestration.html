@@ -1360,6 +1360,14 @@ and<a href="#section-2-3.5.1" class="pilcrow">¶</a></p>
 or a replacement for runtime PEP enforcement. Its object shapes (the
 unwind plan and the evidence record) bind what a deployment records and
 proves, not how an orchestrator is internally structured.<a href="#section-2-4" class="pilcrow">¶</a></p>
+<p id="section-2-5">This profile applies to workflows whose steps derive from a reviewed
+workflow definition or operation profile (<a href="#action-class-source" class="auto internal xref">Section 5.1</a>,
+<a href="#unwind-plan-integrity" class="auto internal xref">Section 6.1</a>). A dynamically planned graph, whose steps a
+model composes at runtime, is out of scope for unwind plans: such work
+falls back to harness stop behavior
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>) and runtime gating
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), neither of which depends on
+a pre-committed plan.<a href="#section-2-5" class="pilcrow">¶</a></p>
 <div id="orchestration-profile">
 <section id="section-2.1">
         <h3 id="name-orchestration-profile">
@@ -1696,16 +1704,22 @@ Mission.<a href="#section-6-3" class="pilcrow">¶</a></p>
         <h3 id="name-unwind-plan-integrity">
 <a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-unwind-plan-integrity" class="section-name selfRef">Unwind Plan Integrity</a>
         </h3>
-<p id="section-6.1-1">The <code>unwind_plan_hash</code> over the step's unwind plan <span class="bcp14">MUST</span> be committed
-at or before the step's dispatch: a hash first recorded after a
-trigger proves later alteration, not that the plan existed when the
-step was dispatched. The orchestrator <span class="bcp14">MUST</span> commit it in an
-Orchestration Evidence record emitted at dispatch
-(<a href="#orchestration-evidence" class="auto internal xref">Section 11</a>). As an alternative, a deployment <span class="bcp14">MAY</span>
-commit it instead as a coordinated member of the step's Decision
-Evidence, through the AuthZEN profile's coordinated-extension seam
+<p id="section-6.1-1">The <code>unwind_plan_hash</code> over the step's unwind plan <span class="bcp14">MUST</span> be durably
+recorded strictly before the step's dispatch: a hash first recorded
+after a trigger proves later alteration, not that the plan existed when
+the step was dispatched, and a record written only after dispatch
+leaves a crash indistinguishable from evasion. The orchestrator <span class="bcp14">MUST</span>
+commit it in an Orchestration Evidence record durably written before
+dispatch (<a href="#orchestration-evidence" class="auto internal xref">Section 11</a>), and <span class="bcp14">MUST NOT</span> dispatch the step
+if that evidence write fails: evidence is fail-closed. As an
+alternative, a deployment <span class="bcp14">MAY</span> commit it instead as a coordinated member
+of the step's Decision Evidence, through the AuthZEN profile's
+coordinated-extension seam
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); the step's first
 Orchestration Evidence record then repeats the committed value. The
+durability and fail-closed rule applies to whichever path commits the
+hash: the committing write <span class="bcp14">MUST</span> complete durably before dispatch, and a
+failed write <span class="bcp14">MUST</span> prevent dispatch. The
 hash is computed with the integrity-anchor envelope of the issuance
 profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) under a new <code>typ</code>
 value <code>mission-unwind-plan</code>, where <code>value</code> is the unwind plan object.
@@ -1996,7 +2010,10 @@ own local policy.<a href="#section-9.1-2.2.1" class="pilcrow">¶</a></p>
           <dd style="margin-left: 1.5em" id="section-9.1-2.4">
             <p id="section-9.1-2.4.1">A narrow, pre-provisioned remedial Mission that is <code>active</code>
 authorizes the compensation. It is a distinct Mission, not the
-terminated one, and it carries its own Authority Set.<a href="#section-9.1-2.4.1" class="pilcrow">¶</a></p>
+terminated one, and it carries its own Authority Set. That Authority
+Set <span class="bcp14">MUST</span> be scoped to compensation actions for the terminated
+Mission's committed steps, so the remedial Mission cannot authorize
+new forward work under cover of compensation.<a href="#section-9.1-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2004,6 +2021,11 @@ terminated one, and it carries its own Authority Set.<a href="#section-9.1-2.4.1
 an authority basis: it does not create authority a PEP would enforce
 over a terminated Mission. If neither basis applies, the orchestrator
 <span class="bcp14">MUST NOT</span> compensate and <span class="bcp14">MUST</span> record a <code>human_review</code> decision.<a href="#section-9.1-3" class="pilcrow">¶</a></p>
+<p id="section-9.1-4">Under either basis, the compensating action's decision <span class="bcp14">MUST</span> carry the
+<code>decision_id</code> of the decision it reverses in the runtime profile's
+<code>compensates_decision_id</code> (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>),
+binding each compensation to the specific committed step it offsets
+rather than standing as an open-ended remedial power.<a href="#section-9.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="unwind-ordering">
@@ -2156,7 +2178,7 @@ or prior Orchestration Evidence identifiers. <span class="bcp14">REQUIRED</span>
           <p id="section-11-2.24.1"><span class="bcp14">REQUIRED</span> on the step's dispatch-time record or, where the hash was
 committed through Decision Evidence instead, on the step's first
 Orchestration Evidence record. The integrity anchor over the step's
-unwind plan, committed at or before dispatch
+unwind plan, committed durably before dispatch
 (<a href="#unwind-plan-integrity" class="auto internal xref">Section 6.1</a>).<a href="#section-11-2.24.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -2312,8 +2334,14 @@ execution profile stops or unwinds the work.<a href="#section-12-1" class="pilcr
 provide a means for the harness to determine whether a work item is
 under an active unwind decision; the mechanism is deployment-defined.
 Where harness stop policy and an active unwind decision would produce
-different outcomes for the same work item, the stricter outcome
-governs.<a href="#section-12-2" class="pilcrow">¶</a></p>
+different outcomes for the same work item, the stage split chooses how
+to stop, not whether: where both would stop the item, the
+orchestrator's in-flight handling governs a dispatched or in-flight
+step, since only the orchestrator can unwind committed or partially
+committed work, and the harness stop policy governs an undispatched
+one; where one would stop and the other continue, the item stops, and
+the harness still honors an orchestrator cancel or hold per the harness
+resume algorithm (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-12-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conformance">
@@ -2327,7 +2355,8 @@ governs.<a href="#section-12-2" class="pilcrow">¶</a></p>
           <p id="section-13-2.1.1">assign a reversibility class to each consequential step;<a href="#section-13-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.2">
-          <p id="section-13-2.2.1">record an unwind plan, and commit its hash, at or before dispatch
+          <p id="section-13-2.2.1">record an unwind plan, and durably commit its hash strictly before
+dispatch, failing closed if the commit fails
 (<a href="#unwind-plan-integrity" class="auto internal xref">Section 6.1</a>);<a href="#section-13-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.3">

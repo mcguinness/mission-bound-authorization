@@ -1272,8 +1272,14 @@ requires from day one. This profile is the family's answer to it;
 its Experimental status reflects the maturity of the attenuation
 substrate it profiles, not a judgment that the capability is
 optional. The stable path meanwhile is issuer-mediated child
-delegation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).<a href="#section-1-1" class="pilcrow">¶</a></p>
-<p id="section-1-2">This document removes the issuer from that path for narrowing. It
+delegation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).
+The saving is amortization, not elimination: because a root's lifetime
+is kept short (<a href="#security-considerations" class="auto internal xref">Section 13</a>), the holder returns to the
+issuer once per subtree per root-lifetime window to mint the root, and
+every narrowing within that window is then offline. The issuer leaves
+the per-fork hot path; it is not removed from the deployment.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">This document removes the issuer from that per-fork path for narrowing
+within a root's lifetime. It
 profiles Attenuating Agent Tokens
 <span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span> (the "attenuation
 substrate"), in which a token holder mints a narrower child token
@@ -1389,8 +1395,10 @@ are distinct.<a href="#section-4-3" class="pilcrow">¶</a></p>
 The Mission Issuer derives that authority from the Mission's Authority
 Set by the mapping of <a href="#root-mapping" class="auto internal xref">Section 5.1</a>. The root carries the <code>mission</code>
 claim (<code>id</code>, <code>issuer</code>, <code>authority_hash</code>) and the holder's confirmation
-key, as both profiles require. It <span class="bcp14">MUST</span> carry <code>aud</code> per the issuance
-profile's token rules (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
+key, as both profiles require. The root's <code>iss</code> <span class="bcp14">MUST</span> equal its
+<code>mission.issuer</code>: only the Mission Issuer mints a Mission-bound root,
+and it signs the root with its own keys. It <span class="bcp14">MUST</span> carry <code>aud</code> per the
+issuance profile's token rules (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
 identifying the Resource Server(s) authorized to consume its authority.<a href="#section-5-1" class="pilcrow">¶</a></p>
 <p id="section-5-2">A Mission-bound attenuation root is one shape of Mission-bound token. A
 deployment <span class="bcp14">MAY</span> also issue ordinary <code>mission_resource_access</code> tokens for
@@ -1469,24 +1477,39 @@ Mission's Authority Set (<a href="#root-mapping" class="auto internal xref">Sect
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-6-3">A client requests a Mission-bound attenuation root at the token endpoint.
-The attenuation substrate defines no OAuth Token Exchange <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>
-requested-token-type identifier for asking for a root; a substrate root
-is requested by carrying an <code>attenuating_agent_token</code> authorization
-detail and the holder's confirmation key
-(<span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>). To ask the
-Mission Issuer to bind such a root to the Mission and derive it from the
-Authority Set, a client includes the token-request parameter:<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-3">A client requests a Mission-bound attenuation root at the token
+endpoint, on any grant the issuance profile uses to issue a
+Mission-bound token (for example, the Mission's <code>refresh_token</code> grant).
+The request combines a selector, a confirmation key, and an optional
+narrowing detail, each with a distinct role:<a href="#section-6-3" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-6-4">
         <dt id="section-6-4.1">
 <code>mission_attenuation_root</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-6-4.2">
-          <p id="section-6-4.2.1"><span class="bcp14">OPTIONAL</span> boolean. When <code>true</code> on a Mission-bound token request, the
-Mission Issuer issues the token as a Mission-bound attenuation root
-(<a href="#root" class="auto internal xref">Section 5</a>) rather than an ordinary <code>mission_resource_access</code> token.<a href="#section-6-4.2.1" class="pilcrow">¶</a></p>
+          <p id="section-6-4.2.1"><span class="bcp14">OPTIONAL</span> boolean. When <code>true</code> on a Mission-bound token request it
+selects root issuance: the Mission Issuer issues the token as a
+Mission-bound attenuation root (<a href="#root" class="auto internal xref">Section 5</a>) rather than an ordinary
+<code>mission_resource_access</code> token. A request that omits it or sets it
+<code>false</code> is an ordinary Mission-bound token request. The attenuation
+substrate defines no OAuth Token Exchange <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>
+requested-token-type for asking for a root, so this boolean, not a
+token-type identifier, is what asks for one.<a href="#section-6-4.2.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
+<p id="section-6-5">The client <span class="bcp14">MUST</span> carry the holder's confirmation key, which binds the
+root to the holder as both profiles require
+(<span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>, <a href="#root" class="auto internal xref">Section 5</a>).<a href="#section-6-5" class="pilcrow">¶</a></p>
+<p id="section-6-6">The client <span class="bcp14">MAY</span> carry an <code>attenuating_agent_token</code> authorization detail
+<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> to request a root narrower than the full mapped Authority
+Set: its tools and argument constraints are the requested subset. When
+the detail is present, the Mission Issuer <span class="bcp14">MUST</span> validate it against the
+root mapping (<a href="#root-mapping" class="auto internal xref">Section 5.1</a>) and <span class="bcp14">MUST</span> reject, with <code>invalid_request</code>,
+any tool or argument constraint not within the mapped Authority Set.
+When the detail is absent, the Mission Issuer derives the full mapped
+root from the Mission's delegable Authority Set entries
+(<a href="#root-mapping" class="auto internal xref">Section 5.1</a>). A client-requested root is therefore always at most
+the mapped Authority Set, never broader.<a href="#section-6-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="attenuation">
@@ -1505,7 +1528,13 @@ substrate's cryptographic linkage rule
 the base64url encoding, without padding, of the SHA-256 digest of the
 parent token's JWS Signing Input.<a href="#section-7-2" class="pilcrow">¶</a></p>
 <p id="section-7-3">The child's <code>aud</code> <span class="bcp14">MUST</span> equal its parent's <code>aud</code> or be a subset of it,
-and the child's <code>exp</code> <span class="bcp14">MUST NOT</span> exceed its parent's <code>exp</code>. Because the
+and the child's <code>exp</code> <span class="bcp14">MUST NOT</span> exceed its parent's <code>exp</code>. For the <code>aud</code>
+comparison the <code>aud</code> is treated as a set of audience values: a string
+<code>aud</code> is the one-element set of that string, and an array <code>aud</code> is the
+set of its members. The child's <code>aud</code> set <span class="bcp14">MUST</span> be a subset of the
+parent's, with values compared as case-sensitive, byte-exact strings
+and no URI normalization; a single-string <code>aud</code> and a one-element array
+carrying the same value are therefore equivalent. Because the
 Mission Issuer caps the root's <code>exp</code> at the Mission's <code>expires_at</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the per-hop <code>exp</code> rule bounds
 the whole chain transitively: no descendant outlives the root, hence
@@ -1547,18 +1576,26 @@ root's, or that omits it, <span class="bcp14">MUST</span> cause the whole chain 
 not treated as a narrower grant; and<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.2">
-          <p id="section-8-2.2.1">treat a chain whose root carries no <code>mission</code> claim as outside this
-profile: it is an ordinary attenuation chain with no Mission binding,
-and a consumer <span class="bcp14">MUST NOT</span> apply the Mission-state kill switch
-(<a href="#kill-switch" class="auto internal xref">Section 9</a>) to it or report it as Mission-bound;<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.2.1">reject the chain unless the root's <code>iss</code> equals its <code>mission.issuer</code>,
+and verify the root's signature under the Mission Issuer's published
+keys (those of that <code>iss</code>). A root whose <code>iss</code> is not its
+<code>mission.issuer</code>, or whose signature does not verify under the Mission
+Issuer's keys, <span class="bcp14">MUST</span> cause the whole chain to be refused: only the
+Mission Issuer mints a Mission-bound root; and<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.3">
-          <p id="section-8-2.3.1">reject the chain if any child's <code>aud</code> is not equal to, or a subset of,
-its parent's <code>aud</code> (<a href="#attenuation" class="auto internal xref">Section 7</a>); and<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.3.1">treat a chain whose root carries no <code>mission</code> claim as outside this
+profile: it is an ordinary attenuation chain with no Mission binding,
+and a consumer <span class="bcp14">MUST NOT</span> apply the Mission-state kill switch
+(<a href="#kill-switch" class="auto internal xref">Section 9</a>) to it or report it as Mission-bound;<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.4">
-          <p id="section-8-2.4.1">reject the chain if any child's <code>exp</code> exceeds its parent's <code>exp</code>
-(<a href="#attenuation" class="auto internal xref">Section 7</a>).<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.4.1">reject the chain if any child's <code>aud</code> is not equal to, or a subset of,
+its parent's <code>aud</code> (<a href="#attenuation" class="auto internal xref">Section 7</a>); and<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.5">
+          <p id="section-8-2.5.1">reject the chain if any child's <code>exp</code> exceeds its parent's <code>exp</code>
+(<a href="#attenuation" class="auto internal xref">Section 7</a>).<a href="#section-8-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-8-3">These checks fail safe: a chain that does not present a single, unchanged
@@ -1645,7 +1682,7 @@ a deployment that relies on token lifetime alone.<a href="#section-9-2" class="p
 <p id="section-10-1">Offline attenuation sits beside two other narrowing mechanisms:
 Authorization-Server-mediated delegation (the issuance profile's <code>act</code>
 chain and Token Exchange), which narrows at the issuer, online, so the
-issuer observes each delegation; and Child Mission Delegation
+issuer observes each delegation; and Mission Child Delegation
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), which creates
 a separate Child Mission with its own <code>mission_id</code>, lifecycle, and
 approval. The Mission Child Delegation profile sets out how the three
@@ -1839,7 +1876,14 @@ available, rather than loose in the agent process.<a href="#section-13-2.3.1" cl
 breadth is bounded at consumption, not at issuance: PEPs <span class="bcp14">SHOULD</span> meter
 the distinct leaf <code>jti</code> and <code>cnf</code> values they see per Mission and
 alert or refuse beyond a deployment-set bound, and issuers <span class="bcp14">SHOULD</span> keep
-root lifetimes short.<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
+root lifetimes short. This metering bound is per-PEP: each enforcement
+point counts only the leaves it sees, so the effective breadth limit
+is per-PEP unless the deployment aggregates leaf counters across its
+PEPs into a shared count. An issuer-side breadth control like Child
+Delegation's <code>max_children</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) is
+structurally unavailable here, because the issuer never observes an
+offline mint and so cannot count children at issuance.<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.5">
           <p id="section-13-2.5.1">Per-branch revocation. The only kill switch is whole-Mission: revoking

@@ -23,12 +23,16 @@ Abstract
    Mission model of Mission-Bound Authorization for OAuth 2.0: the
    mission blob carries the structured Mission record with its integrity
    anchors, the approval interaction is the approval event, the full
-   Mission lifecycle governs with revocation and expiry, and the Person
-   Server gates auth-token issuance on Mission state.  The auth token
-   becomes a Mission-bound credential, so the family's governance,
-   enforcement, and evidence profiles compose credential-carried.  This
-   is the third binding of the Mission model and the first to a non-
-   OAuth substrate.
+   Mission lifecycle governs with revocation and expiry, and, because no
+   auth token is issued under a Mission without passing the Person
+   Server, the Person Server gates auth-token issuance on Mission state.
+   In the PS-asserted mode, and in the federated mode where the Access
+   Server carries the family mission members, the auth token is a
+   Mission-bound credential and the family's governance, enforcement,
+   and evidence profiles compose credential-carried; otherwise the
+   binding is Reference-only and consumers resolve Mission facts through
+   the Person Server.  This is the third binding of the Mission model
+   and the first to a non-OAuth substrate.
 
 About This Document
 
@@ -531,15 +535,17 @@ Table of Contents
 
 6.1.  Issuance Gating
 
-   The PS MUST NOT process a token request, federate with an Access
-   Server, grant a permission, or otherwise extend authority under a
-   Mission that is not active.  This extends AAuth's rule that any PS
-   endpoint referencing a non-active mission returns the mission status
-   error, and it is the issuance profile's derivation gate: in the PS-
-   asserted mode the PS refuses to issue the auth token, and in the
-   federated mode it refuses to federate, so no credential is derived
-   under a non-active Mission in any mode.  The active check MUST be
-   atomic with issuance.
+   This gate rests on an AAuth structural precondition: no auth token
+   exists under a Mission without passing the Person Server, in either
+   mode.  On that precondition the PS MUST NOT process a token request,
+   federate with an Access Server, grant a permission, or otherwise
+   extend authority under a Mission that is not active.  This extends
+   AAuth's rule that any PS endpoint referencing a non-active mission
+   returns the mission status error, and it is the issuance profile's
+   derivation gate: in the PS-asserted mode the PS refuses to issue the
+   auth token, and in the federated mode it refuses to federate, so no
+   credential is derived under a non-active Mission in any mode.  The
+   active check MUST be atomic with issuance.
 
    Each auth-token issuance and each federation event counts as one
    derivation under the Mission.  The PS maintains the derivation count
@@ -632,7 +638,15 @@ Table of Contents
    chaining, where AAuth deliberately does not require a downstream
    grant to be a subset of the upstream scope: a downstream hop is
    governed at that hop's own decision point, under its own Mission or
-   per-call permission, not by algebra over this Mission's set.
+   per-call permission, not by algebra over this Mission's set.  This is
+   a boundary on the family's only-narrows invariant, not an exception
+   to it.  The invariant governs derivation: a credential derived from a
+   Mission only narrows that Mission's authority.  A chained hop derives
+   no credential from this Mission; it is a fresh decision at a new
+   decision point, evaluated against its own authority source, so it
+   falls outside the invariant rather than violating it.  Attenuation
+   within any one Mission's own derivations stays strict (Section 6.1,
+   Section 7).
 
 7.3.  Subject Directedness
 
