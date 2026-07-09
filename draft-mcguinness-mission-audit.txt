@@ -308,6 +308,12 @@ Table of Contents
      |            | discovery       |                    |          |
      |            | profile fixes   |                    |          |
      +------------+-----------------+--------------------+----------+
+     | Harness    | Harness         | application/       | harness  |
+     | Evidence   | Evidence object | mission-harness-   | key      |
+     |            | (JCS), as the   | evidence+json      |          |
+     |            | harness profile |                    |          |
+     |            | fixes           |                    |          |
+     +------------+-----------------+--------------------+----------+
 
                                  Table 1
 
@@ -532,10 +538,12 @@ Table of Contents
    Server's discovery jwks_uri in the standalone binding
    ([I-D.draft-mcguinness-mission-authority-server]), or the AAuth
    Person Server's existing jwks_uri in the AAuth binding
-   ([I-D.draft-mcguinness-mission-aauth]).  A PDP or PEP key is resolved
-   through the deployment-published key sets the runtime and AuthZEN
-   profiles require ([I-D.draft-mcguinness-mission-runtime],
-   [I-D.draft-mcguinness-mission-authzen]).
+   ([I-D.draft-mcguinness-mission-aauth]).  A PDP, PEP, or harness key
+   is resolved through the deployment-published key sets the runtime and
+   AuthZEN profiles require ([I-D.draft-mcguinness-mission-runtime],
+   [I-D.draft-mcguinness-mission-authzen]); the harness profile requires
+   the same publication of a harness that registers its evidence
+   ([I-D.draft-mcguinness-mission-harness]).
 
 6.4.  Registration Availability
 
@@ -944,13 +952,14 @@ Table of Contents
    Mandate media type by the Mandate profile
    ([I-D.draft-mcguinness-mission-mandate]), the Child Evidence type
    identifier by the child-delegation profile
-   ([I-D.draft-mcguinness-oauth-mission-child-delegation]), and the
-   Signals SET media type application/secevent+jwt by RFC 8417, which
-   the Signals profile carries the event in
-   ([I-D.draft-mcguinness-oauth-mission-signals]).  The Signed Statement
-   and Receipt media types are the transparency substrate's ([RFC9943]).
-   This profile derives the sub by profile rather than registering a new
-   identifier.
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]), the Harness
+   Evidence type identifier by the harness profile
+   ([I-D.draft-mcguinness-mission-harness]), and the Signals SET media
+   type application/secevent+jwt by RFC 8417, which the Signals profile
+   carries the event in ([I-D.draft-mcguinness-oauth-mission-signals]).
+   The Signed Statement and Receipt media types are the transparency
+   substrate's ([RFC9943]).  This profile derives the sub by profile
+   rather than registering a new identifier.
 
 15.  References
 
@@ -1044,6 +1053,11 @@ Table of Contents
               McGuinness, K., "Mission Open-World Discovery", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-discovery.html>.
+
+   [I-D.draft-mcguinness-mission-harness]
+              McGuinness, K., "Mission-Aware Agent Harnesses", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-harness.html>.
 
    [I-D.draft-mcguinness-mission-mandate]
               McGuinness, K., "Mission Mandate", 2026,

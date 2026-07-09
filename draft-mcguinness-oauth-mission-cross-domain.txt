@@ -340,6 +340,10 @@ Table of Contents
       Resource AS resolves the conveyed Subject in its own namespace
       (Section 9).
 
+   *  Derivation records: whether the Resource AS keeps the per-token
+      derivation record of Section 9.  An originating AS MAY condition
+      projection on it.
+
    A deployment that publishes a Mission Deployment Profile
    ([I-D.draft-mcguinness-mission-architecture]) records its projection
    posture in these terms, and the accepted cross-domain revocation
@@ -572,7 +576,9 @@ Table of Contents
       authorization_details.  The issuer cannot observe local tokens
       (Section 13.1), so this record is the only evidence tying a local
       token to the grant it was minted from and showing its authority
-      did not widen.
+      did not widen; without it, cross-domain minting is unaccountable
+      to both domains.  Whether the Resource AS keeps this record is a
+      pre-established trust input (Section 7).
 
    A grant that carries no mission claim is outside this profile: the
    Resource AS processes it, or refuses it, under plain identity

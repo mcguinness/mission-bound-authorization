@@ -1715,6 +1715,14 @@ dispatch and detect any later alteration.<a href="#section-6.1-1" class="pilcrow
 compensation action, review queue, and safe point, like the
 reversibility class (<a href="#action-class-source" class="auto internal xref">Section 5.1</a>), <span class="bcp14">MUST</span> derive from a
 reviewed workflow definition or operation profile. Model output <span class="bcp14">MUST NOT</span> define them.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+<p id="section-6.1-3">A model-proposed plan is not excluded; it is unadopted. A deployment
+<span class="bcp14">MAY</span> admit one through its review surface, a human review or a
+deterministic validation against a reviewed operation profile, which
+adopts the proposal into the deployment's committed documentation
+before dispatch; the adopted plan is then a reviewed definition, and
+the Orchestration Evidence that commits its hash records the
+admission. What the rule excludes is model output defining an
+unwind-plan member with nothing between proposal and dispatch.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="worked-unwind-plan">
@@ -1795,7 +1803,14 @@ whose unwind plan requires it; and<a href="#section-7-2.4.1" class="pilcrow">¶<
           <p id="section-7-2.5.1">emit Orchestration Evidence under <a href="#orchestration-evidence" class="auto internal xref">Section 11</a>.<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-7-3">The states <code>revoked</code> and <code>expired</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
+<p id="section-7-3">The two triggers differ in what they permit. An established
+non-active state runs the full sequence. Staleness alone, an active
+state that cannot be established within the bound, performs items 1,
+2, 3, and 5 and <span class="bcp14">MUST NOT</span> execute post-completion behavior (item 4):
+compensation is itself consequential work, and unwinding work nobody
+stopped is not fail-closed. Post-completion behavior runs only on an
+established non-active state.<a href="#section-7-3" class="pilcrow">¶</a></p>
+<p id="section-7-4">The states <code>revoked</code> and <code>expired</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
 <code>suspended</code> and <code>completed</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>),
 and <code>superseded</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>) are
 all non-active. The orchestrator needs none of those companion profiles
@@ -1806,7 +1821,7 @@ governed execution without a fresh authority path. In particular, a
 <code>superseded</code> Mission's continued work <span class="bcp14">SHOULD</span> proceed under the successor
 Mission through a fresh derivation from the successor's grant, not by
 rebinding the predecessor's authority; the successor carries its own
-Authority Set (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-7-3" class="pilcrow">¶</a></p>
+Authority Set (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-7-4" class="pilcrow">¶</a></p>
 <div id="trigger-sources">
 <section id="section-7.1">
         <h3 id="name-trigger-sources">
@@ -2170,7 +2185,13 @@ of the compensation action.<a href="#section-11-2.30.1" class="pilcrow">¶</a></
 <dt id="section-11-2.31">
 <code>evidence_envelope</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-2.32">
-          <p id="section-11-2.32.1"><span class="bcp14">OPTIONAL</span>. Integrity protection over the Orchestration Evidence
+          <p id="section-11-2.32.1"><span class="bcp14">OPTIONAL</span>, except <span class="bcp14">REQUIRED</span> when <code>orchestration_decision</code> is
+<code>compensate</code> and the compensated step's reversibility class is
+<code>irreversible_action</code>, <code>external_commitment</code>, or
+<code>privileged_administration</code>. Compensation in those classes is
+consequential work in its own right; its record does not rest on
+an unsigned self-report by the orchestrator that performed it.
+Integrity protection over the Orchestration Evidence
 object. When present with <code>format</code> <code>jws-compact</code>, it is a JWS
 <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> Compact Serialization whose payload is the JCS
 <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical bytes of the object with <code>evidence_envelope</code>

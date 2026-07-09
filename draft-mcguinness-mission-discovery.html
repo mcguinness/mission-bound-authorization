@@ -1502,7 +1502,11 @@ self-declaration digest where one exists; the authority sought, the
 entry or entries the binding would create, whose action classes
 under the deployment's classification drive every floor of this
 document; the requesting actor; and the session's taint state as the
-harness reports it. It returns exactly one of:<a href="#section-7-1" class="pilcrow">¶</a></p>
+harness reports it. The adjudicator <span class="bcp14">MUST</span> treat a missing, stale, or
+unverifiable taint state as tainted: the floor of
+<a href="#injection-discovery" class="auto internal xref">Section 9</a> keys on the harness's report, and an absent
+report is not an untainted one. The adjudication returns exactly one
+of:<a href="#section-7-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-7-2">
         <dt id="section-7-2.1"><strong>Bind.</strong></dt>
         <dd style="margin-left: 1.5em" id="section-7-2.2">

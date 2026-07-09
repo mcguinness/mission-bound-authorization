@@ -400,6 +400,14 @@ Table of Contents
          the predecessor's record
          ([I-D.draft-mcguinness-oauth-mission-expansion]).
 
+      -  version: OPTIONAL; REQUIRED where the deployment offers the
+         Lifecycle Signals stream
+         ([I-D.draft-mcguinness-oauth-mission-signals]): the Mission's
+         lifecycle transition counter as the Signals profile defines it,
+         current as of the reported state.  An event consumer that re-
+         established state through this operation re-seats its gap
+         detection on it: the last-applied version becomes this value.
+
    *  authorization_details: the audience-scoped Authority Set entries
       relevant to the requesting audience, as the
       mission_resource_access shape of
@@ -1012,7 +1020,9 @@ Table of Contents
    A deployment advertises mission_max_stale_seconds (Section 7), the
    maximum interval it tolerates for a Mission state change to take
    effect, so a consumer can size token lifetimes and choose propagation
-   mechanisms to match.
+   mechanisms to match.  When the member is absent, no propagation bound
+   is declared: a consumer MUST size reliance to token lifetime alone
+   and MUST NOT assume a tighter bound.
 
 6.1.  Recommended Access-Token TTL
 
@@ -1054,7 +1064,8 @@ Table of Contents
 
    mission_max_stale_seconds:  OPTIONAL.  An integer.  The maximum
       tolerated interval, in seconds, for revocation propagation
-      (Section 6).
+      (Section 6).  When absent, no bound is declared, and a consumer
+      sizes reliance to token lifetime alone.
 
    DPoP and mTLS support for issued credentials are read from the
    standard dpop_signing_alg_values_supported [RFC9449] and

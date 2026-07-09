@@ -1679,6 +1679,15 @@ replaced this Mission, set atomically at supersession on the
 predecessor's record
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-3.4-10.2.2.7.1" class="pilcrow">¶</a></p>
 </li>
+              <li class="normal" id="section-3.4-10.2.2.8">
+                <p id="section-3.4-10.2.2.8.1"><code>version</code>: <span class="bcp14">OPTIONAL</span>; <span class="bcp14">REQUIRED</span> where the deployment offers the
+Lifecycle Signals stream
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>): the Mission's
+lifecycle transition counter as the Signals profile defines it,
+current as of the reported <code>state</code>. An event consumer that
+re-established state through this operation re-seats its gap
+detection on it: the last-applied version becomes this value.<a href="#section-3.4-10.2.2.8.1" class="pilcrow">¶</a></p>
+</li>
             </ul>
 </li>
           <li class="normal" id="section-3.4-10.3">
@@ -2598,7 +2607,9 @@ from <code>mission_event_stream_endpoint</code>.<a href="#section-6-3.4.1" class
 <p id="section-6-4">A deployment advertises <code>mission_max_stale_seconds</code> (<a href="#as-metadata" class="auto internal xref">Section 7</a>),
 the maximum interval it tolerates for a Mission state change to take
 effect, so a consumer can size token lifetimes and choose propagation
-mechanisms to match.<a href="#section-6-4" class="pilcrow">¶</a></p>
+mechanisms to match. When the member is absent, no propagation bound
+is declared: a consumer <span class="bcp14">MUST</span> size reliance to token lifetime alone
+and <span class="bcp14">MUST NOT</span> assume a tighter bound.<a href="#section-6-4" class="pilcrow">¶</a></p>
 <div id="recommended-access-token-ttl">
 <section id="section-6.1">
         <h3 id="name-recommended-access-token-tt">
@@ -2663,7 +2674,8 @@ when the AS supports it.<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
         <dd style="margin-left: 1.5em" id="section-7-2.8">
           <p id="section-7-2.8.1"><span class="bcp14">OPTIONAL</span>. An integer. The maximum
 tolerated interval, in seconds, for revocation propagation
-(<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>).<a href="#section-7-2.8.1" class="pilcrow">¶</a></p>
+(<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>). When absent, no bound is
+declared, and a consumer sizes reliance to token lifetime alone.<a href="#section-7-2.8.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
