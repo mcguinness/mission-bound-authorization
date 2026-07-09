@@ -271,6 +271,16 @@ Authorization Requests {{RFC9396}} and kindred mechanisms express
 authority, and the Mission is the approved task that authority
 serves.
 
+The object fills a gap current practice pays for daily. A deployment
+that cannot size authority to a task compensates with three controls,
+each with a cost: agents scoped read-only (a ceiling on value, and
+reads still steer the agent and leak what it sees), a human approving
+or executing every write (approval fatigue, and the human becomes the
+unmediated enforcement point), or pilots permanently fenced into
+sandboxes (shadow paths grow around the fence). These controls exist
+because authority cannot be sized to a task the stack cannot
+represent; the Mission is that representation.
+
 The model is deliberately decomposed: a core profile (the "issuance
 profile", {{I-D.draft-mcguinness-oauth-mission}}, here "the core")
 defines the object and its OAuth 2.0 {{RFC6749}} binding, a
@@ -584,6 +594,29 @@ profile.
 : The integrity anchors prove what was approved and committed, not
   that the derivation was the right reading of the task
   ({{derivation-boundary}}).
+
+Read as properties of the delegated-authority layer rather than
+mechanics of this family, the invariants carry five substrate-neutral
+laws: **Durability** (authority must outlive credentials),
+**Attribution** (every action remains attributable, and the approval
+record commits exactly what the Approver was shown), **Narrowing**
+(authority only narrows as work fans out), **Termination** (revocation
+ends authority, not merely tokens), and **Containment** (execution
+continuously remains inside approved purpose). The correspondence is
+informative and many-to-many:
+
+| Law | Carried by |
+| --- | --- |
+| Durability | Authority serves an approved task: the Mission is the durable object, and credentials are projections of it |
+| Attribution | Attribution is carried, never inferred, with the anchors committing what the Approver was shown |
+| Narrowing | Authority only narrows |
+| Termination | Revocation is possession-independent, with only `active` permits carrying the reliance side |
+| Containment | Only `active` permits and enforcement fails closed, applied at the point of use |
+
+The last two invariants are wire-level mechanics rather than laws of
+their own: fail-closed enforcement is how a substrate carries
+Containment, and the anchor commitment is how it carries
+Attribution's approval-record clause.
 
 # Mission Roles and Components {#components}
 
@@ -1359,6 +1392,22 @@ The levels, cumulative:
   organizational ({{I-D.draft-mcguinness-mission-runtime}},
   {{I-D.draft-mcguinness-mission-harness}}).
 
+Read as an adoption ladder, each level makes a broader class of agent
+work defensible to grant. The mapping is informative: the action
+classes are the runtime profile's
+({{I-D.draft-mcguinness-mission-runtime}}), resource policy remains
+authoritative for its own objects, and what a level grants varies
+with the binding; the Mission Deployment Profile
+({{deployment-profile}}) is where a deployment states its own
+`mediated_action_classes` and exclusions.
+
+| Level | What a deployment can defensibly grant |
+| --- | --- |
+| Baseline Issuance | Consequential reads that are attributable and killable at the issuance gate: the governed pilot |
+| Runtime-Enforced | Consequential writes inside approved bounds, reversible under the deployment's own authority |
+| Governed Agent | Unattended operation and delegation, with approval evidence behind every grant |
+| High-Assurance Agent | The irreversible-action, external-commitment, and privileged-administration classes, under mediated custody and action-bound approval |
+
 Every level above Baseline Issuance also carries the cross-cutting
 obligations its mechanisms imply: operation-profile normalization
 where duration or parameter digests are metered
@@ -1480,15 +1529,26 @@ The requirements the family answers, stated implementation-neutrally;
 each names its answering documents by short form ({{document-map}}).
 They stand on their own: a reader evaluating another design can use
 them as a checklist. As a litmus, a design is Mission-based in this
-family's sense only when all of the following hold: the task is a
-durable, explicitly approved object rather than a session or a token;
-the approved intent and authority are integrity-committed at
-approval; authority is derived from the object and gated on its
-state; derived and delegated authority only narrows; consequential
-actions are checkable against the object at the point of use; and
-what was approved, shown, decided, and done is reconstructible from
-evidence. A design that relaxes one of these provides a different,
-weaker guarantee; the requirements below unpack them.
+family's sense only when all six of the following hold:
+
+1. **An approved task object**: the task is a durable, explicitly
+   approved object rather than a session or a token, and its intent
+   and derived authority are integrity-committed at approval.
+2. **Authority derived from the task**: credentials and decisions
+   derive from that object, never minted independently of it.
+3. **Narrow-only delegation**: derived and delegated authority only
+   narrows, and widening exists only as a fresh approval.
+4. **Per-action runtime enforcement**: consequential actions are
+   checkable against the object at the point of use.
+5. **Observable lifecycle state**: the object's current state is
+   observable and gates issuance and reliance; only `active` permits,
+   and unrecognized states fail safe.
+6. **Evidence that joins**: what was approved, shown, decided, and
+   done is reconstructible from evidence joined on the object's
+   identity.
+
+A design that relaxes one of these provides a different, weaker
+guarantee; the requirements below unpack them.
 
 ## Context and Intent {#req-context}
 
