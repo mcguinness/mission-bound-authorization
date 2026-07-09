@@ -233,6 +233,13 @@ handle of its own: for example, a sub-agent with a queue, background
 job, independent harness session, or separate audit lifecycle. A Child
 Mission is not a way to widen authority; it is a way to create a
 narrower, separately accountable authority record for a child actor.
+The dividing line is survivability: work that can outlive the
+delegating flow, because it is queued, scheduled, or retried after
+the delegator exits, or that needs its own revocation and audit
+lifecycle, requires a Child Mission; work that cannot MAY run on a
+delegated token. A harness applies the test at spawn, not by agent
+design: the same sub-agent takes a delegated token when invoked
+inline and a Child Mission when parked on a queue.
 {:#child-vs-token}
 
 This profile's child delegation is distinct from the in-Mission

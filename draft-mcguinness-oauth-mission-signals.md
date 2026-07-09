@@ -62,6 +62,14 @@ normative:
 
 informative:
   RFC9700:
+  I-D.draft-mcguinness-mission-harness:
+    title: "Mission-Aware Agent Harnesses"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
@@ -243,7 +251,11 @@ its stream with the SSF add-subject operation, using the Mission subject
 identifier ({{lifecycle-event}}). The transmitter MUST accept an
 add-subject only for a Mission the receiver is authorized for under
 deployment policy, for example a receiver whose audience is an audience
-of the Mission's authority. Absent explicit subjects, a deployment MAY
+of the Mission's authority. The executing side is an intended
+receiver class: a deployment SHOULD authorize the harness executing
+a Mission as a receiver for it, since the harness profile's
+event-driven state cache ({{I-D.draft-mcguinness-mission-harness}})
+is a consumer of this stream. Absent explicit subjects, a deployment MAY
 provision an authorization-derived default stream (delivering the events
 for the Missions a receiver is authorized for) and MUST document that
 stream's scope.
@@ -300,8 +312,9 @@ claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
   counter the Mission Issuer maintains and increments on each committed
   lifecycle transition (the approval-event emission is version 1),
   letting a consumer order events and detect gaps. This profile defines
-  the counter here; it is not surfaced by the issuance or status
-  profiles.
+  the counter here; the issuance profile does not surface it, and the
+  Status profile returns it only where the deployment also runs this
+  profile ({{I-D.draft-mcguinness-oauth-mission-status}}).
 - `committed_at` (string, required): an RFC 3339 {{RFC3339}} date-time
   at which the Mission Issuer committed the transition.
 - `tenant` (string, optional): the Mission's deployment tenant. This
@@ -447,7 +460,9 @@ On receiving and verifying ({{set-protection}}) a
   ({{I-D.draft-mcguinness-oauth-mission-status}}) on a detected
   `version` gap (a received `version` more than one greater than the
   last applied for that `mission.id`), rather than rely on the cached
-  state that spans the gap.
+  state that spans the gap. The Status response's `version` member
+  re-seats gap detection: the consumer sets its last-applied version
+  to the returned value and measures the next gap from it.
 - Acknowledge the event per the SSF delivery method in use.
 
 A consumer MUST NOT treat the event as authority to change Mission

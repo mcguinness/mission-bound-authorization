@@ -54,6 +54,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-audit:
+    title: "Mission Audit Transparency"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-client-instance-assertion:
   I-D.draft-mcguinness-oauth-ai-agent-instance:
   I-D.draft-mcguinness-oauth-mission-signals:
@@ -282,9 +290,11 @@ confines governed work (for example a container, virtual machine, or
 network egress policy) and names the unmediated paths excluded from the
 claim. For each mediated class the statement MUST also enumerate the
 secondary egress channel classes the environment offers, at minimum
-DNS resolution, log and error output, and shared stores another
-process reads, stating for each whether it is mediated, excluded by
-the isolation mechanism, or outside the claim. The enumeration is
+DNS resolution, log and error output, shared stores another process
+reads, and rendering surfaces that dereference remote references (a
+rendered image fetch is an egress performed for the agent), stating
+for each whether it is mediated, excluded by the isolation
+mechanism, or outside the claim. The enumeration is
 not static where open-world discovery is deployed: a channel created
 by a discovery binding enters it at binding, recorded in Harness
 Evidence, and an egress channel that entered neither way is a
@@ -798,6 +808,16 @@ lifetime and clears only with a fresh session or an explicit
 Subject-directed reset recorded in Harness Evidence
 ({{harness-evidence}}).
 
+Taint follows derivation across session boundaries with the same
+polarity. A sub-agent session spawned from a tainted session
+inherits taint, because its task and context were composed there,
+unless every input the child receives is affirmatively of trusted
+provenance; and a session seeded with content derived from a tainted
+session (a compaction summary, carried-over working notes) is not a
+fresh session and inherits the taint. Where the child runs under its
+own Mission, the inherited state is what the harness reports at that
+Mission's adjudications ({{I-D.draft-mcguinness-mission-discovery}}).
+
 The provenance polarity is fixed. In a tainted session, a bound
 parameter the harness cannot affirmatively trace to sources on the
 content trust list MUST be treated as tainted. Parameter-granularity
@@ -834,7 +854,11 @@ egress in any session any content entered. Data-plane provenance does
 not survive model inference; the default-taint polarity above is what
 keeps a value the agent paraphrases rather than copies from shedding
 its taint, at the cost of gating untraceable parameters in a tainted
-session. The control still cannot close within-scope data laundering
+session. In an open-world session that has ingested untrusted
+content, that cost is the rule rather than the exception:
+model-composed egress is untraceable, so it is human-gated, and the
+content trust list is the lever that keeps the gate proportionate.
+The control still cannot close within-scope data laundering
 ({{I-D.draft-mcguinness-oauth-mission}},
 {{I-D.draft-mcguinness-mission-runtime}}); it raises the bar by
 forcing a human or a fresh approval between untrusted input and
@@ -882,6 +906,16 @@ retention requirements of the runtime profile
 reference: append-only integrity protection under a named mechanism, a
 per-Mission sequence indicator, no raw parameters in the record, and a
 retention window no shorter than the Mission's audit horizon.
+
+A Harness Evidence record is registrable on the Mission's
+transparency feed ({{I-D.draft-mcguinness-mission-audit}}). Its
+canonical bytes are the record's JCS canonicalization under the
+imported evidence conventions, its type identifier is
+`application/mission-harness-evidence+json` (a local-use identifier
+pending registration), and a harness that registers its evidence
+publishes its signing key in the deployment key set alongside the
+PEP key the runtime profile requires, so a relying party can verify
+the harness as the record's authoritative producer.
 
 ## Harness Evidence Object {#harness-evidence-object}
 
@@ -1038,6 +1072,17 @@ A harness MUST NOT claim conformance for work it cannot suppress. It
 MAY claim conformance for a documented subset of execution paths if it
 identifies paths outside the claim.
 
+The claims scale down honestly. A single-process harness, one
+process hosting both the agent loop and its mediation, cannot
+satisfy the isolation the runtime profile's
+agent-compromise-resistant claim requires; a harness whose tools
+include arbitrary code execution it does not egress-confine cannot
+represent the classes that execution reaches as mediated. Such a
+harness still conforms for what remains: the Mission binding, resume
+checks, queue and cache discipline, sub-agent rules, and Harness
+Evidence hold with no mediation claim at all, and its scope
+statement says exactly that.
+
 # Security Considerations {#security-considerations}
 
 ## Harness Compromise {#sec-harness-compromise}
@@ -1107,7 +1152,8 @@ Harness Evidence unless required for audit.
 
 # IANA Considerations {#iana}
 
-This document makes no IANA request.
+This document makes no IANA request. The evidence type identifier
+of {{harness-evidence}} is local-use pending registration.
 
 --- back
 

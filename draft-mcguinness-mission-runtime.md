@@ -624,6 +624,17 @@ resulting classifications comparable across deployments and auditable:
 an assignment is justified by whether its predicate holds, not by
 resemblance to the examples.
 
+Some operations have no fixed class: a shell, a generic HTTP
+client, a code interpreter, any operation whose consequence depends
+on its arguments. Such an argument-dependent operation is classified
+per invocation, from its normalized parameters, by a classifier the
+deployment declares in its enforcement-scope statement
+({{runtime-conformance}}). An invocation the classifier cannot
+affirmatively place MUST be treated as the widest class the
+operation can reach, and the floor below applies to the classifier's
+assignments as to any other: a class the deployment cannot justify
+by its predicate is not a basis to leave the invocation ungated.
+
 **Classification floor.** Actions in the **irreversible**, **external
 commitment**, and **privileged administration** classes MUST be
 treated as consequential and gated. These three are the
@@ -1289,6 +1300,18 @@ implementers of the same operation bind the same bytes:
 The rules below are the normative requirements the Operation Profile
 records; a deployment that leaves any of them unstated for a mediated
 operation has not specified that operation's binding.
+
+For a schema-bearing capability, a discovered tool that publishes
+an input schema, a deployment MAY derive the Operation Profile
+mechanically rather than author it: the parameter schema is the
+published input schema; no defaults are inserted and omitted
+optional fields stay omitted; every field of the raw arguments
+object enters the `parameter_digest`; and the single-use,
+idempotency, and lease requirements follow from the operation's
+class. A derived profile is recorded with the capability's source
+digest where the capability-source binding applies
+({{I-D.draft-mcguinness-mission-authzen}}), so the binding drifts
+with the schema that defined it.
 
 A permit for an operation does not authorize arbitrary parameter
 values. For consequential writes, irreversible actions, external
