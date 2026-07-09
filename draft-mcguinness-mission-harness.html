@@ -1779,13 +1779,14 @@ the session are still valid.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
         <h3 id="name-interaction-with-the-orches">
 <a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-interaction-with-the-orches" class="section-name selfRef">Interaction with the Orchestration Profile</a>
         </h3>
-<p id="section-7.2-1">A deployment running both this profile and the orchestration profile
-(<span>[<a href="#I-D.draft-mcguinness-mission-orchestration" class="cite xref">I-D.draft-mcguinness-mission-orchestration</a>]</span>) <span class="bcp14">MUST</span> provide a
-means for the harness to determine whether a work item is under an
-active unwind decision. The mechanism is deployment-defined.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
-<p id="section-7.2-2">Where harness stop policy and an active unwind decision would produce
-different outcomes for the same work item, the stricter outcome
-governs. The harness records its decision in Harness Evidence and the
+<p id="section-7.2-1">The orchestration profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-orchestration" class="cite xref">I-D.draft-mcguinness-mission-orchestration</a>]</span>) places the joint
+duties on a deployment running both profiles: a means for the harness
+to determine whether a work item is under an active unwind decision
+(the mechanism is deployment-defined), and the stricter outcome where
+harness stop policy and an active unwind decision would produce
+different outcomes for the same work item.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.2-2">The harness records its decision in Harness Evidence and the
 orchestrator records its decision in Orchestration Evidence, and the
 two records cross-link through their evidence identifiers.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
 </section>

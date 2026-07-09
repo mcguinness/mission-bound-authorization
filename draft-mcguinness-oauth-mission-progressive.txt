@@ -328,8 +328,8 @@ Table of Contents
    This document extends the expansion profile's closed set of expansion
    denial reasons ([I-D.draft-mcguinness-oauth-mission-expansion]) by
    specification, as that profile's IANA considerations anticipate, with
-   one value, carried in mission_expansion_status exactly as that
-   profile's reasons are:
+   one value, carried in mission_denial_reason exactly as that profile's
+   reasons are:
 
    out_of_ceiling:  The requested authority is not a subset of the
       Mission's consented authority ceiling (Section 5), so it cannot be
@@ -437,6 +437,11 @@ Table of Contents
 
 12.1.  Normative References
 
+   [I-D.draft-mcguinness-mission-runtime]
+              McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-runtime.html>.
+
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
@@ -467,11 +472,6 @@ Table of Contents
               McGuinness, K., "Mission Open-World Discovery", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-discovery.html>.
-
-   [I-D.draft-mcguinness-mission-runtime]
-              McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-mission-runtime.html>.
 
    [I-D.draft-mcguinness-mission-security-model]
               McGuinness, K., "Mission Security Model", 2026,

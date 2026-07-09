@@ -1297,6 +1297,17 @@ Normative References
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-child-delegation]
+              McGuinness, K., "Mission Child Delegation for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-child-
+              delegation.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-expansion]
+              McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-expansion.html>.
+
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -1376,22 +1387,11 @@ Informative References
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-authority-server.html>.
 
-   [I-D.draft-mcguinness-oauth-mission-child-delegation]
-              McGuinness, K., "Mission Child Delegation for OAuth 2.0",
-              2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-oauth-mission-child-
-              delegation.html>.
-
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
               McGuinness, K., "Mission Cross-Domain Projection for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-cross-
               domain.html>.
-
-   [I-D.draft-mcguinness-oauth-mission-expansion]
-              McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-oauth-mission-expansion.html>.
 
    [I-D.draft-mcguinness-oauth-mission-management]
               McGuinness, K., "Mission Management for OAuth 2.0", 2026,

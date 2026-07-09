@@ -663,10 +663,13 @@ Table of Contents
       used only by this section's operations.
 
    The profile-defined machine-readable code rides the MAS error surface
-   in the member its profile defines, mission_expansion_status for
-   expansion ([I-D.draft-mcguinness-oauth-mission-expansion]) and
-   mission_denial_reason for child creation
-   ([I-D.draft-mcguinness-oauth-mission-child-delegation]), carried as a
+   in the member its profile defines: a reconciliation status in
+   mission_expansion_status
+   ([I-D.draft-mcguinness-oauth-mission-expansion]) and an adjudication
+   denial reason, for expansion and child creation alike, in the shared
+   mission_denial_reason member that profile defines
+   ([I-D.draft-mcguinness-oauth-mission-expansion],
+   [I-D.draft-mcguinness-oauth-mission-child-delegation]), carried as a
    member of the error response body (Section 3.3) or, for a denial at
    adjudication, of the denied submission-status response (Section 3.2).
 
@@ -732,7 +735,7 @@ Table of Contents
       (Section 6).
 
    *  *Denial reasons.* That profile's closed denial-reason set applies;
-      the code rides in mission_expansion_status per Section 7.1.
+      the code rides in mission_denial_reason per Section 7.1.
 
    Approval of the successor is this document's native asynchronous
    approval event (Section 4): fresh consent for the successor's derived
@@ -1365,9 +1368,10 @@ Table of Contents
       construction, cascade, and child client identity (Section 7.4);
       and
 
-   *  carries the profiles' closed code sets in mission_expansion_status
-      and mission_denial_reason on its error and submission-status
-      surfaces (Section 7.1).
+   *  carries the profiles' closed code sets, reconciliation statuses in
+      mission_expansion_status and adjudication denial reasons in the
+      shared mission_denial_reason member, on its error and submission-
+      status surfaces (Section 7.1).
 
    A *Mission-joining PDP*:
 

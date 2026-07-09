@@ -520,9 +520,11 @@ Table of Contents
    delegation_not_permitted, child_actor_not_allowed, not_strict_subset,
    and fanout_exceeded accompany invalid_request; and policy_denied
    accompanies access_denied.  In an error response body the symbolic
-   reason rides in a mission_denial_reason member alongside the OAuth
-   error member.  A child creation request presented on the front
-   channel with parent_token MUST be rejected with invalid_request
+   reason rides in the mission_denial_reason member, the shared
+   adjudication-denial carrier defined and registered by the expansion
+   profile ([I-D.draft-mcguinness-oauth-mission-expansion]), alongside
+   the OAuth error member.  A child creation request presented on the
+   front channel with parent_token MUST be rejected with invalid_request
    (Section 6).
 
    For example, a child Mission Intent that drops the parent entry's
@@ -1125,11 +1127,13 @@ Table of Contents
    creation denial reasons (Section 6.7).  Like the issuance profile's
    restraint with mission members, these are documented in this
    specification rather than placed in a new IANA registry: they ride in
-   the mission_denial_reason member of the OAuth error response body
-   (Section 6.7) and in evidence, inside existing OAuth error responses
-   rather than on a new wire surface, and the closed set is small and
-   fully specified here.  Should interoperable extension prove
-   necessary, a future revision can create a "Mission Child Delegation
+   the shared mission_denial_reason member defined and registered by the
+   expansion profile ([I-D.draft-mcguinness-oauth-mission-expansion])
+   and in evidence, inside existing OAuth error responses rather than on
+   a new wire surface, and the closed set is small and fully specified
+   here.  This document therefore requires no registration for the
+   member.  Should interoperable extension prove necessary, the
+   expansion profile's IANA considerations anticipate a shared "Mission
    Denial Reason" registry with a Specification Required [RFC8126]
    policy; this document does not create it.
 

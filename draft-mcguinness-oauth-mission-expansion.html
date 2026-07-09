@@ -2111,14 +2111,15 @@ alongside the <code>invalid_grant</code> error:<a href="#section-9-8" class="pil
         <dt id="section-9-9.1">
 <code>mission_expansion_status</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-9-9.2">
-          <p id="section-9-9.2.1">A string carrying one code from this document's closed sets: a
-reconciliation status (<a href="#reconciliation" class="auto internal xref">Section 9</a>) or an expansion denial
-reason (<a href="#denial-reasons" class="auto internal xref">Section 10</a>). It is returned by the step that failed.
-At the PAR and token endpoints it is a member of the JSON error
-response body, alongside the OAuth <code>error</code> member. On the
+          <p id="section-9-9.2.1">A string carrying one reconciliation status from this document's
+closed set (<a href="#reconciliation" class="auto internal xref">Section 9</a>). It is returned by the step that
+failed. At the PAR and token endpoints it is a member of the JSON
+error response body, alongside the OAuth <code>error</code> member. On the
 front-channel authorization error response, which carries error
 parameters rather than a JSON body, it is carried as an error
-response parameter of the same name.<a href="#section-9-9.2.1" class="pilcrow">¶</a></p>
+response parameter of the same name. Adjudication denial reasons
+ride the separate <code>mission_denial_reason</code> member
+(<a href="#denial-reasons" class="auto internal xref">Section 10</a>).<a href="#section-9-9.2.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2168,11 +2169,19 @@ further semantics.<a href="#section-10-3" class="pilcrow">¶</a></p>
 <p id="section-10-4">A Mission Issuer <span class="bcp14">MUST NOT</span> use a reason code to disclose policy
 boundaries beyond the adjudicated request (<a href="#policy-probing" class="auto internal xref">Section 13.5</a>); omitting
 the reason code is always permitted. When present, a reason code is
-carried in <code>mission_expansion_status</code> (<a href="#reconciliation" class="auto internal xref">Section 9</a>), the same
-carrier as a reconciliation status: an error-body member at the PAR
-and token endpoints, an error response parameter on the front-channel
-authorization error response.<a href="#section-10-4" class="pilcrow">¶</a></p>
-<p id="section-10-5">Two failure classes are not denial reasons and use the issuance
+carried in a <code>mission_denial_reason</code> member: at the PAR and token
+endpoints a member of the JSON error response body alongside the OAuth
+<code>error</code> member, on the front-channel authorization error response an
+error response parameter of the same name.<a href="#section-10-4" class="pilcrow">¶</a></p>
+<p id="section-10-5"><code>mission_denial_reason</code> is the shared carrier for adjudication denial
+reasons across the profiles that mint a Mission related to an existing
+one: the child delegation profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) carries its
+own closed denial-reason set in the same member, and further such
+profiles do likewise. Each profile defines its values by
+specification; the unrecognized-code rule above applies to the member
+wherever it appears.<a href="#section-10-5" class="pilcrow">¶</a></p>
+<p id="section-10-6">Two failure classes are not denial reasons and use the issuance
 profile's error vocabulary directly: an expansion request whose
 <code>predecessor</code> does not match the grant-resolved Mission, or
 whose predecessor is not <code>active</code>, fails with <code>invalid_grant</code>
@@ -2180,7 +2189,7 @@ whose predecessor is not <code>active</code>, fails with <code>invalid_grant</co
 Intent the Mission Issuer cannot parse or cannot derive a valid
 Authority Set from fails with <code>invalid_request</code> or, where the issuance
 profile uses it, <code>invalid_authorization_details</code> (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>), exactly
-as for any Mission creation.<a href="#section-10-5" class="pilcrow">¶</a></p>
+as for any Mission creation.<a href="#section-10-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="example">
@@ -2484,19 +2493,18 @@ registry: it is a member defined by this profile, carried inside the
 already-registered <code>mission</code> claim. No new claim, parameter, or
 token-introspection registration is required for the lineage link.<a href="#section-15-1" class="pilcrow">¶</a></p>
 <p id="section-15-2">This document defines two closed sets of symbolic codes, the expansion
-reconciliation status codes (<a href="#reconciliation" class="auto internal xref">Section 9</a>) and the expansion
-denial reasons (<a href="#denial-reasons" class="auto internal xref">Section 10</a>), both conveyed in
-<code>mission_expansion_status</code> (<a href="#reconciliation" class="auto internal xref">Section 9</a>). As a member of the
-OAuth error response JSON body at the PAR and token endpoints,
-<code>mission_expansion_status</code> is namespaced to this document's error
-responses and requires no registration; its authorization error
-response parameter form is registered below. Like the issuance
-profile's restraint with <code>mission</code>
-members, the codes are documented in this specification rather than
-placed in new IANA registries: the closed sets are small and fully
-specified here. Should interoperable extension of either set prove
-necessary, a future revision can create a "Mission Expansion
-Reconciliation Status" registry and a "Mission Expansion Denial Reason"
+reconciliation status codes (<a href="#reconciliation" class="auto internal xref">Section 9</a>), conveyed in
+<code>mission_expansion_status</code>, and the expansion denial reasons
+(<a href="#denial-reasons" class="auto internal xref">Section 10</a>), conveyed in the shared <code>mission_denial_reason</code>
+member. As members of the OAuth error response JSON body at the PAR
+and token endpoints, both are namespaced to their error responses and
+require no registration; their authorization error response parameter
+forms are registered below. Like the issuance profile's restraint with
+<code>mission</code> members, the codes are documented in their defining
+specifications rather than placed in new IANA registries: the closed
+sets are small and fully specified. Should interoperable extension
+prove necessary, a future revision can create a "Mission Expansion
+Reconciliation Status" registry and a shared "Mission Denial Reason"
 registry with a Specification Required <span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span> policy; this document
 does not create them.<a href="#section-15-2" class="pilcrow">¶</a></p>
 <p id="section-15-3">This document registers the following parameters in the "OAuth
@@ -2537,6 +2545,20 @@ Parameters" registry:<a href="#section-15-3" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-4.12">
           <p id="section-15-4.12.1">Reference: this document, <a href="#reconciliation" class="auto internal xref">Section 9</a><a href="#section-15-4.12.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.13">
+          <p id="section-15-4.13.1">Name: <code>mission_denial_reason</code><a href="#section-15-4.13.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.14">
+          <p id="section-15-4.14.1">Parameter Usage Location: authorization response<a href="#section-15-4.14.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.15">
+          <p id="section-15-4.15.1">Change Controller: IETF<a href="#section-15-4.15.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-4.16">
+          <p id="section-15-4.16.1">Reference: this document, <a href="#denial-reasons" class="auto internal xref">Section 10</a>; also carried by the
+child delegation profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>)<a href="#section-15-4.16.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-15-5">As with <code>mission_intent</code> in the issuance profile, PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>

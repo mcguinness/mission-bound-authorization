@@ -2079,10 +2079,13 @@ HTTP 409. <code>conflict</code> extends the error code set of
 </li>
         </ul>
 <p id="section-7.1-8">The profile-defined machine-readable code rides the MAS error surface
-in the member its profile defines, <code>mission_expansion_status</code> for
-expansion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>) and
-<code>mission_denial_reason</code> for child creation
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), carried as
+in the member its profile defines: a reconciliation status in
+<code>mission_expansion_status</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>) and an adjudication
+denial reason, for expansion and child creation alike, in the shared
+<code>mission_denial_reason</code> member that profile defines
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), carried as
 a member of the error response body (<a href="#submission-errors" class="auto internal xref">Section 3.3</a>) or, for a
 denial at adjudication, of the <code>denied</code> submission-status response
 (<a href="#submission-status" class="auto internal xref">Section 3.2</a>).<a href="#section-7.1-8" class="pilcrow">¶</a></p>
@@ -2163,7 +2166,7 @@ responses; <code>superseded</code> enters the state space the MAS reports
 </li>
           <li class="normal" id="section-7.3-2.4">
             <p id="section-7.3-2.4.1"><strong>Denial reasons.</strong> That profile's closed denial-reason set applies;
-the code rides in <code>mission_expansion_status</code> per
+the code rides in <code>mission_denial_reason</code> per
 <a href="#native-carriage" class="auto internal xref">Section 7.1</a>.<a href="#section-7.3-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
@@ -2962,9 +2965,10 @@ construction, cascade, and child client identity (<a href="#native-child" class=
 and<a href="#section-12-5.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-5.5">
-          <p id="section-12-5.5.1">carries the profiles' closed code sets in <code>mission_expansion_status</code>
-and <code>mission_denial_reason</code> on its error and submission-status
-surfaces (<a href="#native-carriage" class="auto internal xref">Section 7.1</a>).<a href="#section-12-5.5.1" class="pilcrow">¶</a></p>
+          <p id="section-12-5.5.1">carries the profiles' closed code sets, reconciliation statuses in
+<code>mission_expansion_status</code> and adjudication denial reasons in the
+shared <code>mission_denial_reason</code> member, on its error and
+submission-status surfaces (<a href="#native-carriage" class="auto internal xref">Section 7.1</a>).<a href="#section-12-5.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-12-6">A <strong>Mission-joining PDP</strong>:<a href="#section-12-6" class="pilcrow">¶</a></p>

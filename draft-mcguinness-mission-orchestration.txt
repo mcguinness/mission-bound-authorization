@@ -767,6 +767,13 @@ Table of Contents
    consequential action at the last controllable boundary, whichever
    execution profile stops or unwinds the work.
 
+   A deployment running both this profile and the harness profile MUST
+   provide a means for the harness to determine whether a work item is
+   under an active unwind decision; the mechanism is deployment-defined.
+   Where harness stop policy and an active unwind decision would produce
+   different outcomes for the same work item, the stricter outcome
+   governs.
+
 13.  Conformance
 
    A conforming Mission-aware orchestrator MUST:
@@ -844,6 +851,12 @@ Table of Contents
 
 17.1.  Normative References
 
+   [I-D.draft-mcguinness-mission-authzen]
+              McGuinness, K., "Mission-Bound Runtime Enforcement:
+              AuthZEN Profile", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-mission-
+              authzen.html>.
+
    [I-D.draft-mcguinness-mission-harness]
               McGuinness, K., "Mission-Aware Agent Harnesses", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -898,12 +911,6 @@ Table of Contents
               Authorization", 2026, <https://mcguinness.github.io/
               mission-bound-authorization/draft-mcguinness-mission-
               architecture.html>.
-
-   [I-D.draft-mcguinness-mission-authzen]
-              McGuinness, K., "Mission-Bound Runtime Enforcement:
-              AuthZEN Profile", 2026, <https://mcguinness.github.io/
-              mission-bound-authorization/draft-mcguinness-mission-
-              authzen.html>.
 
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,

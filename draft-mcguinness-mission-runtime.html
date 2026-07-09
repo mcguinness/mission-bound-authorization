@@ -3236,10 +3236,12 @@ approval-rendering condition is stated only by this claim.<a href="#section-12.1
 the agent component (<a href="#custody" class="auto internal xref">Section 4.6</a>);<a href="#section-12.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.1-2.2">
-            <p id="section-12.1-2.2.1">governed work runs under a harness conforming to the harness profile
-(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>) whose published
-execution-environment scope statement covers the mediated classes, so
-there is no unmediated path to those actions;<a href="#section-12.1-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-12.1-2.2.1">governed work runs in a mediated execution environment with no
+unmediated path to the mediated classes, documented by a published
+execution-environment scope statement covering those classes; a
+harness conforming to the harness profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>) is the defined way to
+establish and document this, and the claim binds to the property;<a href="#section-12.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.1-2.3">
             <p id="section-12.1-2.3.1">each such action requires an action-bound approval
@@ -3329,8 +3331,9 @@ Mission, and credential material stays out of the agent for every
 mediated class (<a href="#custody" class="auto internal xref">Section 4.6</a>).<a href="#section-12.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.2-2.2">
-            <p id="section-12.2-2.2.1"><strong>Untrusted content.</strong> The harness taint policy
-(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>) is in force and its
+            <p id="section-12.2-2.2.1"><strong>Untrusted content.</strong> A taint policy for untrusted content, as the
+harness profile defines one
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), is in force and its
 egress rule is enforced, not advisory: a consequential
 external-communication or external-commitment action whose bound
 parameters derive from tainted content (or, under session-level

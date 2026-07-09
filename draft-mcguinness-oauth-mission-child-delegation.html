@@ -1855,7 +1855,9 @@ layered on the OAuth error codes the issuance profile uses:
 <code>delegation_not_permitted</code>, <code>child_actor_not_allowed</code>,
 <code>not_strict_subset</code>, and <code>fanout_exceeded</code> accompany <code>invalid_request</code>;
 and <code>policy_denied</code> accompanies <code>access_denied</code>. In an error response
-body the symbolic reason rides in a <code>mission_denial_reason</code> member
+body the symbolic reason rides in the <code>mission_denial_reason</code> member,
+the shared adjudication-denial carrier defined and registered by the
+expansion profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>),
 alongside the OAuth <code>error</code> member. A child creation request presented
 on the front channel with <code>parent_token</code> <span class="bcp14">MUST</span> be rejected with
 <code>invalid_request</code> (<a href="#child-creation" class="auto internal xref">Section 6</a>).<a href="#section-6.7-3" class="pilcrow">¶</a></p>
@@ -2707,13 +2709,16 @@ member defined by this profile, carried inside the already-registered
 creation denial reasons (<a href="#denial-reasons" class="auto internal xref">Section 6.7</a>). Like the issuance
 profile's restraint with <code>mission</code> members, these are documented in
 this specification rather than placed in a new IANA registry: they ride
-in the <code>mission_denial_reason</code> member of the OAuth error response body
-(<a href="#denial-reasons" class="auto internal xref">Section 6.7</a>) and in evidence, inside existing OAuth error
-responses rather than on a new wire surface, and the closed set is small
-and fully specified here. Should interoperable extension
-prove necessary, a future revision can create a "Mission Child
-Delegation Denial Reason" registry with a Specification Required
-<span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span> policy; this document does not create it.<a href="#section-19-7" class="pilcrow">¶</a></p>
+in the shared <code>mission_denial_reason</code> member defined and registered by
+the expansion profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>) and in evidence,
+inside existing OAuth error responses rather than on a new wire
+surface, and the closed set is small and fully specified here. This
+document therefore requires no registration for the member. Should
+interoperable extension prove necessary, the expansion profile's IANA
+considerations anticipate a shared "Mission Denial Reason" registry
+with a Specification Required <span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span> policy; this document does
+not create it.<a href="#section-19-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
