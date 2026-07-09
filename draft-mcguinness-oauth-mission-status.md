@@ -981,6 +981,16 @@ mechanisms to match. When the member is absent, no propagation bound
 is declared: a consumer MUST size reliance to token lifetime alone
 and MUST NOT assume a tighter bound.
 
+Where the member is present, a status response's `mission.fresh_until`
+MUST NOT exceed the response's issuance time plus the advertised
+bound: the advertisement is the ceiling on every reliance window
+built from these surfaces, including a runtime permit's validity
+window, which is capped by the state view's freshness. As sizing
+guidance, the runtime enforcement profile's recommended defaults
+target an effective bound under 300 seconds for the high-consequence
+classes; the 60-second value in this document's examples is a tight
+deployment's choice, not a floor.
+
 ## Recommended Access-Token TTL
 
 Where Mission revocation must take effect but only the baseline
