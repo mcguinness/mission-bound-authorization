@@ -85,7 +85,8 @@ Table of Contents
    5.  Progressive Authorization
      5.1.  In-ceiling expansion
      5.2.  What it bounds, and what it does not
-     5.3.  Realizing an approved access request
+     5.3.  The Ceiling Review
+     5.4.  Realizing an approved access request
    6.  The out_of_ceiling Denial Reason
    7.  Audit Linkage
    8.  Conformance
@@ -327,7 +328,40 @@ Table of Contents
    a misconfigured policy can over-grant within the ceiling, so it is
    reviewed and versioned like other approval policy.
 
-5.3.  Realizing an approved access request
+5.3.  The Ceiling Review
+
+   A pre-consented ceiling is standing consent, and standing consent
+   decays: a chain renewed forever on policy alone is a standing grant
+   with a calendar.  This profile therefore bounds the chain in time,
+   not only per drawdown and per unit rate (Section 5.1).
+
+   A deployment MUST publish a *ceiling review cadence* in its Mission
+   Deployment Profile, and the Mission Issuer MUST NOT policy-adjudicate
+   an in-ceiling drawdown for a chain whose most recent human approval
+   of the ceiling is older than that cadence: the request falls back to
+   a fresh human approval, exactly as a request the drawdown policy does
+   not authorize does (Section 5.1).  The review approval is an ordinary
+   expansion approval that re-consents, or narrows, the ceiling, and its
+   consent disclosure MUST render the chain's record since the prior
+   review: the drawdown count and rate, the guard exceptions escalated
+   to human approval, the out_of_ceiling refusals, the entries
+   discharged under the completion profile
+   ([I-D.draft-mcguinness-oauth-mission-completion]), and, where the
+   metering profile runs, consumption against its bounds
+   ([I-D.draft-mcguinness-mission-metering]).  Where consent evidence is
+   claimed, that disclosure is committed like any other
+   ([I-D.draft-mcguinness-oauth-mission-consent-evidence]), so the
+   record shows the reviewer saw the cycle they renewed.
+
+   The review is where decay is caught, and the tells are checkable from
+   the chain's own records: reviews that never narrow the ceiling,
+   ceilings that only grow, guard exceptions trending toward zero
+   because the policy was quietly widened, and discharge that never
+   fires because no unit of work is scoped tightly enough to complete.
+   A review that cannot cite the evidence of the cycle it renews has not
+   reviewed it.
+
+5.4.  Realizing an approved access request
 
    Progressive authorization grows authority that a deployment
    anticipated well enough to express as a ceiling.  The runtime
@@ -428,13 +462,18 @@ Table of Contents
       Deployment Profile (Section 5.1);
 
    *  require a fresh human approval for an in-ceiling drawdown while
-      the predecessor has non-terminal Child Missions (Section 5.1); and
+      the predecessor has non-terminal Child Missions (Section 5.1);
 
    *  rate-bound policy-adjudicated drawdowns per expansion chain, keyed
       by the chain's root Mission and counted across predecessor links,
       publish the concrete rate bound in the Mission Deployment Profile,
       and record each as an approval event carrying the chain's
-      cumulative drawdown count (Section 5.1, Section 7).
+      cumulative drawdown count (Section 5.1, Section 7); and
+
+   *  bound each chain by the published ceiling review cadence, refusing
+      policy adjudication past it and rendering the chain's record since
+      the prior review in the review approval's disclosure
+      (Section 5.3).
 
 9.  Security Considerations
 
@@ -458,6 +497,13 @@ Table of Contents
       expansion is policy-adjudicated (Section 5); a ceiling the
       Approver did not knowingly consent to is standing authority
       obtained by omission.
+
+   *  Consent decays even when nothing is misconfigured.  The per-
+      drawdown and rate bounds cap what a chain draws per unit time, not
+      for how long it keeps drawing; the ceiling review (Section 5.3) is
+      the temporal bound, and a deployment that renews it without the
+      chain's record in front of the reviewer has re-created the
+      standing grant this profile exists to avoid.
 
 10.  Privacy Considerations
 
@@ -517,6 +563,11 @@ Table of Contents
               McGuinness, K., "Mission Open-World Discovery", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-discovery.html>.
+
+   [I-D.draft-mcguinness-mission-metering]
+              McGuinness, K., "Mission Consumption Metering", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-metering.html>.
 
    [I-D.draft-mcguinness-mission-security-model]
               McGuinness, K., "Mission Security Model", 2026,
