@@ -1550,9 +1550,11 @@ claim. For each mediated class the statement <span class="bcp14">MUST</span> als
 secondary egress channel classes the environment offers, at minimum
 DNS resolution, log and error output, shared stores another process
 reads, shared vector stores or long-term memory, operating-system
-processes the agent spawns, provider-side model context, and the
-inference API itself, stating for each whether it is mediated, excluded
-by the isolation mechanism, or outside the claim. The enumeration is
+processes the agent spawns, provider-side model context, the
+inference API itself, and rendering surfaces that dereference remote
+references (a rendered image fetch is an egress performed for the
+agent), stating for each whether it is mediated, excluded by the
+isolation mechanism, or outside the claim. The enumeration is
 not static where open-world discovery is deployed: a channel created
 by a discovery binding enters it at binding, recorded in Harness
 Evidence, and an egress channel that entered neither way is a
@@ -1725,6 +1727,12 @@ semantics.<a href="#section-7-4.4.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
 <p id="section-7-5">If the harness cannot establish active state within the bound, it <span class="bcp14">MUST NOT</span> resume governed work.<a href="#section-7-5" class="pilcrow">¶</a></p>
+<p id="section-7-6">A resume check is a freshness-bound check, not a mandatory network
+call: within one valid window, a status response inside its
+<code>fresh_until</code> or a maintained event-driven cache satisfies every
+resume point that falls inside it, so a harness resuming many items,
+or continuing many tool calls, pays the wire once per window, not
+once per resume.<a href="#section-7-6" class="pilcrow">¶</a></p>
 <div id="resume-algorithm">
 <section id="section-7.1">
         <h3 id="name-resume-algorithm">
@@ -2357,7 +2365,16 @@ entered. Session-level taint persists for the governed session's
 lifetime and clears only with a fresh session or an explicit
 Subject-directed reset recorded in Harness Evidence
 (<a href="#harness-evidence" class="auto internal xref">Section 15</a>).<a href="#section-14-4" class="pilcrow">¶</a></p>
-<p id="section-14-5">The provenance polarity is fixed. In a tainted session, a bound
+<p id="section-14-5">Taint follows derivation across session boundaries with the same
+polarity. A sub-agent session spawned from a tainted session
+inherits taint, because its task and context were composed there,
+unless every input the child receives is affirmatively of trusted
+provenance; and a session seeded with content derived from a tainted
+session (a compaction summary, carried-over working notes) is not a
+fresh session and inherits the taint. Where the child runs under its
+own Mission, the inherited state is what the harness reports at that
+Mission's adjudications (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>).<a href="#section-14-5" class="pilcrow">¶</a></p>
+<p id="section-14-6">The provenance polarity is fixed. In a tainted session, a bound
 parameter the harness cannot affirmatively trace to sources on the
 content trust list <span class="bcp14">MUST</span> be treated as tainted. Parameter-granularity
 provenance therefore only exempts an egress whose bound parameters
@@ -2369,8 +2386,8 @@ parameter unmodified; once the model transforms, summarizes, or
 rephrases a value, data-plane provenance is lost and the parameter is
 tainted. This default-taint polarity is a condition of the runtime
 profile's trifecta-containment claim
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-14-5" class="pilcrow">¶</a></p>
-<p id="section-14-6">The rule: the harness <span class="bcp14">SHOULD</span> either require a fresh action-bound
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-14-6" class="pilcrow">¶</a></p>
+<p id="section-14-7">The rule: the harness <span class="bcp14">SHOULD</span> either require a fresh action-bound
 approval (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) or downgrade that
 authority (suppress the action), rather than let the agent egress on
 the strength of injected content. This is the plan-then-execute
@@ -2379,14 +2396,14 @@ pattern: untrusted content may inform the agent's planning, but it
 deployment <span class="bcp14">MAY</span> instead route the taint determination through the
 decision request where the binding carries it
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); the PDP then enforces
-this rule and records the taint context in Decision Evidence.<a href="#section-14-6" class="pilcrow">¶</a></p>
-<p id="section-14-7">The taint policy <span class="bcp14">MUST</span> be declared in the execution-environment scope
+this rule and records the taint context in Decision Evidence.<a href="#section-14-7" class="pilcrow">¶</a></p>
+<p id="section-14-8">The taint policy <span class="bcp14">MUST</span> be declared in the execution-environment scope
 statement (<a href="#mediated-egress" class="auto internal xref">Section 5</a>): the content trust list, the trigger
 granularity (parameter provenance, session-level, or both), and the
 fallback where provenance is unavailable. The claim is then
 inspectable: an auditor reads what taints, what triggers, and what
-happens when tracking runs out.<a href="#section-14-7" class="pilcrow">¶</a></p>
-<p id="section-14-8">This remains a coarse control, not information-flow control, though
+happens when tracking runs out.<a href="#section-14-8" class="pilcrow">¶</a></p>
+<p id="section-14-9">This remains a coarse control, not information-flow control, though
 source classing and parameter provenance give it discriminating power:
 it gates the egress whose inputs derive from untrusted content and
 leaves trusted-provenance egress ungated, instead of gating every
@@ -2394,13 +2411,17 @@ egress in any session any content entered. Data-plane provenance does
 not survive model inference; the default-taint polarity above is what
 keeps a value the agent paraphrases rather than copies from shedding
 its taint, at the cost of gating untraceable parameters in a tainted
-session. The control still cannot close within-scope data laundering
+session. In an open-world session that has ingested untrusted
+content, that cost is the rule rather than the exception:
+model-composed egress is untraceable, so it is human-gated, and the
+content trust list is the lever that keeps the gate proportionate.
+The control still cannot close within-scope data laundering
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); it raises the bar by
 forcing a human or a fresh approval between untrusted input and
 egress. A harness that applies it records the taint source class, the
 provenance where established, and the resulting downgrade or approval
-in Harness Evidence (<a href="#harness-evidence" class="auto internal xref">Section 15</a>).<a href="#section-14-8" class="pilcrow">¶</a></p>
+in Harness Evidence (<a href="#harness-evidence" class="auto internal xref">Section 15</a>).<a href="#section-14-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="harness-evidence">
@@ -2461,6 +2482,15 @@ retention requirements of the runtime profile
 reference: append-only integrity protection under a named mechanism, a
 per-Mission sequence indicator, no raw parameters in the record, and a
 retention window no shorter than the Mission's audit horizon.<a href="#section-15-6" class="pilcrow">¶</a></p>
+<p id="section-15-7">A Harness Evidence record is registrable on the Mission's
+transparency feed (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). Its
+canonical bytes are the record's JCS canonicalization under the
+imported evidence conventions, its type identifier is
+<code>application/mission-harness-evidence+json</code> (a local-use identifier
+pending registration), and a harness that registers its evidence
+publishes its signing key in the deployment key set alongside the
+PEP key the runtime profile requires, so a relying party can verify
+the harness as the record's authoritative producer.<a href="#section-15-7" class="pilcrow">¶</a></p>
 <div id="harness-evidence-object">
 <section id="section-15.1">
         <h3 id="name-harness-evidence-object">
@@ -2688,6 +2718,16 @@ reference for these per-action-class bounds.<a href="#section-17-3" class="pilcr
 <p id="section-17-4">A harness <span class="bcp14">MUST NOT</span> claim conformance for work it cannot suppress. It
 <span class="bcp14">MAY</span> claim conformance for a documented subset of execution paths if it
 identifies paths outside the claim.<a href="#section-17-4" class="pilcrow">¶</a></p>
+<p id="section-17-5">The claims scale down honestly. A single-process harness, one
+process hosting both the agent loop and its mediation, cannot
+satisfy the isolation the runtime profile's
+agent-compromise-resistant claim requires; a harness whose tools
+include arbitrary code execution it does not egress-confine cannot
+represent the classes that execution reaches as mediated. Such a
+harness still conforms for what remains: the Mission binding, resume
+checks, queue and cache discipline, sub-agent rules, and Harness
+Evidence hold with no mediation claim at all, and its scope
+statement says exactly that.<a href="#section-17-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
@@ -2804,7 +2844,8 @@ Harness Evidence unless required for audit.<a href="#section-19-1" class="pilcro
       <h2 id="name-iana-considerations">
 <a href="#section-20" class="section-number selfRef">20. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-20-1">This document makes no IANA request.<a href="#section-20-1" class="pilcrow">¶</a></p>
+<p id="section-20-1">This document makes no IANA request. The evidence type identifier
+of <a href="#harness-evidence" class="auto internal xref">Section 15</a> is local-use pending registration.<a href="#section-20-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
@@ -2855,6 +2896,10 @@ Harness Evidence unless required for audit.<a href="#section-19-1" class="pilcro
 <a href="#section-21.2" class="section-number selfRef">21.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-audit">[I-D.draft-mcguinness-mission-audit]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Audit Transparency"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>

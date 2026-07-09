@@ -1525,12 +1525,14 @@ drive every floor of this document; the requesting actor; and the
 session's taint state. The taint state <span class="bcp14">MUST</span> be obtained from the
 harness through a channel the agent does not mediate (a harness
 attestation, <span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), never from
-the encounter request; where the Mission Issuer cannot obtain a
-trustworthy taint state, it <span class="bcp14">MUST</span> treat the session as tainted. An
-operation the deployment's classification cannot assign an action
-class <span class="bcp14">MUST NOT</span> bind by policy: with no class the floors cannot be
-applied, so the encounter routes to a human or is refused. The
-adjudication returns exactly one of:<a href="#section-7-1" class="pilcrow">¶</a></p>
+the encounter request, and the adjudicator <span class="bcp14">MUST</span> treat a missing,
+stale, or unverifiable taint state as tainted: the floor of
+<a href="#injection-discovery" class="auto internal xref">Section 9</a> keys on the harness's report, and an absent
+report is not an untainted one. An operation the deployment's
+classification cannot assign an action class <span class="bcp14">MUST NOT</span> bind by
+policy: with no class the floors cannot be applied, so the encounter
+routes to a human or is refused. The adjudication returns exactly
+one of:<a href="#section-7-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-7-2">
         <dt id="section-7-2.1"><strong>Bind.</strong></dt>
         <dd style="margin-left: 1.5em" id="section-7-2.2">
@@ -1904,16 +1906,17 @@ opportunity, not work in flight.<a href="#section-12-5" class="pilcrow">¶</a></
       <h2 id="name-privacy-considerations">
 <a href="#section-13" class="section-number selfRef">13. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
-<p id="section-13-1">Encounters reveal where an agent goes: the adjudicator, and the
-transparency log where evidence registers, learn every resource an
-agent met, including refused ones. That trail is the point for
-audit, and a hazard for the Subject. A deployment minimizes by
-registering digests rather than declarations, restricting Discovery
-Evidence access as it does other Mission evidence, and applying the
-issuance profile's identifier guidance where correlation across
-feeds matters. A self-declaration may itself contain third-party
-information; committing its digest rather than its bytes keeps that
-content out of the log.<a href="#section-13-1" class="pilcrow">¶</a></p>
+<p id="section-13-1">Encounters reveal where an agent goes: the adjudicator learns every
+resource an agent met, including refused ones, and the transparency
+log, which receives only hash commitments
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>), still learns the Mission's
+feed, its registration cadence, and that encounters occurred. That
+trail is the point for audit, and a hazard for the Subject. A
+deployment minimizes by restricting Discovery Evidence access as it
+does other Mission evidence and applying the issuance profile's
+identifier guidance where correlation across feeds matters. A
+self-declaration may itself contain third-party information; the
+digest commitment keeps that content out of the log.<a href="#section-13-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana">

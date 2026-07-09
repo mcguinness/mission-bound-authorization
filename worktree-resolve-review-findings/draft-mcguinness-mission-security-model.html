@@ -1240,10 +1240,13 @@ considerations of each profile rather than restating them.<a href="#section-abst
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
-            <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-owasp-agentic-threat-covera" class="internal xref">OWASP Agentic Threat Coverage</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
-            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19">
+            <p id="section-toc.1-1.19.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1591,7 +1594,11 @@ log that issues inclusion receipts. It must not equivocate. A single
 compromised service can present different histories to different
 auditors; registering with more than one service makes equivocation
 detectable, but the non-equivocation guarantee is per-service
-(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-6-2.28.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). The structural case needs
+no compromise: a service operated by the producer whose records it
+holds returns the auditor to trusting that producer's
+infrastructure, so the audit profile's cross-domain claim rests on
+operator independence or a second, independent service.<a href="#section-6-2.28.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.29">Event source:</dt>
@@ -2234,6 +2241,12 @@ that a deployment claiming the Mission suite extend that documentation to
 its full trusted base: which of the components in <a href="#trusted-base" class="auto internal xref">Section 6</a> it
 relies on, which it does not deploy, and, for each consequential action
 class, which components must be intact for the class's guarantee to hold.
+The statement covers key custody: for each key class the deployment
+operates (issuer signing, evidence signing, agent sender-constraint,
+mediating-PEP custody, attenuation roots), where the key is held, at
+what custody grade, and the compromise-recovery procedure, since the
+model's strongest assumption reduces to those keys
+(<a href="#trusted-base" class="auto internal xref">Section 6</a>).
 This documentation is what lets a relying party or auditor reason about
 the deployment's actual security posture rather than the model's
 idealized one.<a href="#section-11-1" class="pilcrow">¶</a></p>
@@ -2459,26 +2472,236 @@ handles.<a href="#section-14-1" class="pilcrow">¶</a></p>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="OWASP-AGENTIC">[OWASP-AGENTIC]</dt>
+        <dd>
+<span class="refAuthor">OWASP GenAI Security Project, Agentic Security Initiative</span>, <span class="refTitle">"Agentic AI - Threats and Mitigations, Version 1.0"</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://genai.owasp.org/resource/agentic-ai-threats-and-mitigations/">https://genai.owasp.org/resource/agentic-ai-threats-and-mitigations/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="OWASP-LLM10">[OWASP-LLM10]</dt>
+      <dd>
+<span class="refAuthor">OWASP GenAI Security Project</span>, <span class="refTitle">"OWASP Top 10 for LLM Applications 2025"</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://genai.owasp.org/llm-top-10/">https://genai.owasp.org/llm-top-10/</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
 </div>
 </section>
 </div>
-<div id="acknowledgments">
+<div id="owasp-coverage">
 <section id="appendix-A">
+      <h2 id="name-owasp-agentic-threat-covera">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-owasp-agentic-threat-covera" class="section-name selfRef">OWASP Agentic Threat Coverage</a>
+      </h2>
+<p id="appendix-A-1">This appendix is informative. It maps the fifteen threats of the
+OWASP Agentic AI Threats and Mitigations taxonomy <span>[<a href="#OWASP-AGENTIC" class="cite xref">OWASP-AGENTIC</a>]</span>
+onto the model, followed by the OWASP Top 10 for LLM Applications
+<span>[<a href="#OWASP-LLM10" class="cite xref">OWASP-LLM10</a>]</span>, which predates the agentic taxonomy and mixes
+layers. Threat names and numbering follow the cited versions; the
+taxonomies evolve, and a reader should expect drift. Each threat gets
+one of three verdicts rather than a blanket claim:<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="appendix-A-2">
+        <dt id="appendix-A-2.1">
+<strong>Contained</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">the threat lands on machinery built for it, with a named profile
+behind it.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="appendix-A-2.3">
+<strong>Bounded</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">the cause is outside the authorization layer's reach, and the
+blast radius is capped at the enforcement gate.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="appendix-A-2.5">
+<strong>Delegated</strong>:</dt>
+        <dd style="margin-left: 1.5em" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1">the threat belongs to a layer this family never claimed, and a
+named complement owns it.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="appendix-A-3">The pattern behind the verdicts follows the model's one commitment:
+authority is fixed at approval, and every consequential action is
+checked against it fresh. Threats that attack authority are
+contained. Threats that attack the model, its memory, or its inputs
+are bounded, because a fully fooled agent still cannot out-argue a
+parameter check. Threats that attack other layers are delegated by
+name.<a href="#appendix-A-3" class="pilcrow">¶</a></p>
+<table class="center" id="table-3">
+        <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Threat</th>
+            <th class="text-left" rowspan="1" colspan="1">The model's answer</th>
+            <th class="text-left" rowspan="1" colspan="1">Verdict</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">T1 Memory Poisoning</td>
+            <td class="text-left" rowspan="1" colspan="1">Poisoned memory steers proposals, not authority: shaping output is untrusted input (<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>), and every consequential action still needs a fresh parameter-bound permit against the approved Mission</td>
+            <td class="text-left" rowspan="1" colspan="1">Bounded</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">T2 Tool Misuse</td>
+            <td class="text-left" rowspan="1" colspan="1">Per-action PEP/PDP enforcement with the parameters bound into the permit, applied at the tool boundary (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Contained</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">T3 Privilege Compromise</td>
+            <td class="text-left" rowspan="1" colspan="1">Every derivation is a strict subset of the Mission's Authority Set, child Missions only narrow (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), and there is no ambient inheritance to escalate into</td>
+            <td class="text-left" rowspan="1" colspan="1">Contained</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">T4 Resource Overload</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>expires_at</code> on every Mission, fan-out bounded by count and depth, and consumption metering (experimental) for spend (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Bounded</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">T5 Cascading Hallucination Attacks</td>
+            <td class="text-left" rowspan="1" colspan="1">Authorization gates consequence, not truth: hallucinated content reaches the world only through consequential actions, each needing its own permit</td>
+            <td class="text-left" rowspan="1" colspan="1">Bounded</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">T6 Intent Breaking and Goal Manipulation</td>
+            <td class="text-left" rowspan="1" colspan="1">An injected goal cannot widen the committed one: the PDP checks actions against the approved Mission, not against the agent's current intent</td>
+            <td class="text-left" rowspan="1" colspan="1">Contained</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">T7 Misaligned and Deceptive Behaviors</td>
+            <td class="text-left" rowspan="1" colspan="1">Deception is out-evidenced rather than detected: only approved action classes execute, and Decision and Execution Evidence come from the gate, not from the agent's self-report</td>
+            <td class="text-left" rowspan="1" colspan="1">Bounded</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">T8 Repudiation and Untraceability</td>
+            <td class="text-left" rowspan="1" colspan="1">The <code>act</code> chain on every hop, the evidence family joined on the Mission identifier, and transparency keeping the feed tamper-evident (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Contained</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">T9 Identity Spoofing and Impersonation</td>
+            <td class="text-left" rowspan="1" colspan="1">Attested instance identity, sender-constrained tokens, and mediated custody keeping the credential out of the agent entirely for mediated classes</td>
+            <td class="text-left" rowspan="1" colspan="1">Contained</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">T10 Overwhelming the Human in the Loop</td>
+            <td class="text-left" rowspan="1" colspan="1">Humans approve Missions, machines approve actions: the grain keeps human decisions rare and consequential, with deferred approval absorbing volume (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Bounded</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">T11 Unexpected RCE and Code Attacks</td>
+            <td class="text-left" rowspan="1" colspan="1">Sandboxing owns execution; the model gates what executed code can reach, since consequential effects still need permits and capabilities are bound to source digests with drift failing closed</td>
+            <td class="text-left" rowspan="1" colspan="1">Bounded</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">T12 Agent Communication Poisoning</td>
+            <td class="text-left" rowspan="1" colspan="1">Messages can lie, authority cannot: influence carries no authority between agents, because delegation only narrows and every hop is enforced against its own child Mission</td>
+            <td class="text-left" rowspan="1" colspan="1">Bounded</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">T13 Rogue Agents</td>
+            <td class="text-left" rowspan="1" colspan="1">A rogue instance holds only mission-bound, instance-bound, revocable authority, and termination cascades through the delegation tree to issuance, permits, and the harness</td>
+            <td class="text-left" rowspan="1" colspan="1">Contained</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">T14 Human Attacks on Multi-Agent Systems</td>
+            <td class="text-left" rowspan="1" colspan="1">Social engineering is out of authorization's reach; a manipulated operator can still only approve what shaping rendered, and the approval is attributed to them</td>
+            <td class="text-left" rowspan="1" colspan="1">Bounded</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">T15 Human Manipulation</td>
+            <td class="text-left" rowspan="1" colspan="1">Consent Evidence commits the disclosure as rendered (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>); an accurately disclosed bad idea remains the human's decision, and the record says so</td>
+            <td class="text-left" rowspan="1" colspan="1">Bounded</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="appendix-A-5">The agentic tally is six contained, nine bounded, none waved away.
+The threats that attack authority (tools, privilege, goals,
+attribution, identity, rogue delegates) land on machinery built for
+them, and the threats that attack the model or the humans are capped
+rather than cured, because capping is what a deterministic gate can
+truthfully offer. No agentic threat lands delegated; that verdict is
+exercised by the LLM Top 10, where half the list belongs to the
+model and pipeline layers, and saying so is the point:<a href="#appendix-A-5" class="pilcrow">¶</a></p>
+<table class="center" id="table-4">
+        <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Entry</th>
+            <th class="text-left" rowspan="1" colspan="1">The model's answer</th>
+            <th class="text-left" rowspan="1" colspan="1">Verdict</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">LLM01 Prompt Injection</td>
+            <td class="text-left" rowspan="1" colspan="1">The injected instruction cannot widen committed authority, and external egress needs a fresh parameter-bound permit; <a href="#untrusted-agent" class="auto internal xref">Section 5</a> carries the taint posture</td>
+            <td class="text-left" rowspan="1" colspan="1">Bounded</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">LLM02 Sensitive Information Disclosure</td>
+            <td class="text-left" rowspan="1" colspan="1">Exposure discipline bounds what the agent may see as deliberately as what it may do, and mediated custody keeps credentials out of the leakable set</td>
+            <td class="text-left" rowspan="1" colspan="1">Bounded</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">LLM03 Supply Chain</td>
+            <td class="text-left" rowspan="1" colspan="1">Model and dependency provenance belong to supply-chain security; the one authorization-shaped edge is capabilities bound to source digests, failing closed on drift</td>
+            <td class="text-left" rowspan="1" colspan="1">Delegated</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">LLM04 Data and Model Poisoning</td>
+            <td class="text-left" rowspan="1" colspan="1">Training and embedding pipeline security, upstream of any authorization decision</td>
+            <td class="text-left" rowspan="1" colspan="1">Delegated</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">LLM05 Improper Output Handling</td>
+            <td class="text-left" rowspan="1" colspan="1">Output is dangerous only when it acts, and nothing crosses the consequential boundary without a permit</td>
+            <td class="text-left" rowspan="1" colspan="1">Bounded</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">LLM06 Excessive Agency</td>
+            <td class="text-left" rowspan="1" colspan="1">The direct hit: this family is the treatment for this entry</td>
+            <td class="text-left" rowspan="1" colspan="1">Contained</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">LLM07 System Prompt Leakage</td>
+            <td class="text-left" rowspan="1" colspan="1">Authority lives in the Mission and its tokens, not in the prompt, so a leaked prompt discloses instructions, not power</td>
+            <td class="text-left" rowspan="1" colspan="1">Delegated</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">LLM08 Vector and Embedding Weaknesses</td>
+            <td class="text-left" rowspan="1" colspan="1">Retrieval pipeline security; what retrieval returns is untrusted content, and the taint response treats it that way</td>
+            <td class="text-left" rowspan="1" colspan="1">Delegated</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">LLM09 Misinformation</td>
+            <td class="text-left" rowspan="1" colspan="1">Content truth is semantic, and the gate is structural</td>
+            <td class="text-left" rowspan="1" colspan="1">Delegated</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">LLM10 Unbounded Consumption</td>
+            <td class="text-left" rowspan="1" colspan="1">Expiry on every Mission and metering (experimental) on spend</td>
+            <td class="text-left" rowspan="1" colspan="1">Bounded</td>
+          </tr>
+        </tbody>
+      </table>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-B">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-A-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
+<p id="appendix-B-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
 work and consolidates the trusted base and security assumptions that its
-profiles establish individually.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+profiles establish individually.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-B">
+<section id="appendix-C">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

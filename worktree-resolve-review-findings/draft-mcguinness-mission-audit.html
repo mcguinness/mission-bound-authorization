@@ -1203,6 +1203,9 @@ commit to the evidence by hash rather than carrying it.<a href="#section-abstrac
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2.2.2">
                     <p id="section-toc.1-1.6.2.2.2.2.1"><a href="#section-6.2.2" class="auto internal xref">6.2.2</a>.  <a href="#name-the-derivation-record" class="internal xref">The Derivation Record</a></p>
 </li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2.2.3">
+                    <p id="section-toc.1-1.6.2.2.2.3.1"><a href="#section-6.2.3" class="auto internal xref">6.2.3</a>.  <a href="#name-the-erasure-record" class="internal xref">The Erasure Record</a></p>
+</li>
                 </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
@@ -1571,6 +1574,23 @@ record as part of the Mission's feed.<a href="#section-6.2-1" class="pilcrow">¶
                 <code>issuer</code>
 </td>
             </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Harness Evidence</td>
+              <td class="text-left" rowspan="1" colspan="1">Harness Evidence object (JCS), as the harness profile fixes</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>application/mission-harness-evidence+json</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">harness key</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Erasure record</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <a href="#erasure-record" class="auto internal xref">Section 6.2.3</a> (JCS)</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>application/mission-erasure-record+json</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">producer of the erased record's type</td>
+            </tr>
           </tbody>
         </table>
 <p id="section-6.2-3">The table is extensible by specification: a profile <span class="bcp14">MAY</span> define an
@@ -1835,6 +1855,45 @@ and the same <code>iss</code> and <code>sub</code> as <a href="#transition-vecto
 </div>
 </section>
 </div>
+<div id="erasure-record">
+<section id="section-6.2.3">
+          <h4 id="name-the-erasure-record">
+<a href="#section-6.2.3" class="section-number selfRef">6.2.3. </a><a href="#name-the-erasure-record" class="section-name selfRef">The Erasure Record</a>
+          </h4>
+<p id="section-6.2.3-1">When retained evidence is destroyed inside its retention window, under
+a data-subject request or a retention limit, the erasure itself is
+registered, so the resulting audit failure is explained on the feed
+rather than indistinguishable from convenient loss
+(<a href="#privacy-considerations" class="auto internal xref">Section 13</a>). The canonical bytes are the JCS
+serialization of a JSON object with:<a href="#section-6.2.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.2.3-2.1">
+              <p id="section-6.2.3-2.1.1"><code>erased</code> (string, required): the committed digest, from the Signed
+Statement's payload, of the record whose evidence was erased.<a href="#section-6.2.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.2.3-2.2">
+              <p id="section-6.2.3-2.2.1"><code>basis</code> (string, required): the erasure basis:
+<code>data_subject_request</code>, <code>retention_limit</code>, or a deployment-defined
+value.<a href="#section-6.2.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.2.3-2.3">
+              <p id="section-6.2.3-2.3.1"><code>erased_at</code> (string, required): an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time.<a href="#section-6.2.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.2.3-2.4">
+              <p id="section-6.2.3-2.4.1"><code>salt</code> (string, required): a random salt of at least 128 bits,
+base64url encoded, per the enumerable-shape rule of
+<a href="#privacy-considerations" class="auto internal xref">Section 13</a>.<a href="#section-6.2.3-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-6.2.3-3">The record's producer is the authoritative producer of the erased
+record's type, and it registers on the same Mission feed. A relying
+party that finds an erasure record covering an unretrievable
+commitment treats the audit failure as explained (recorded-basis
+erasure, still not content-verified); an unexplained gap, in a
+deployment that registers erasures, remains worth recording
+(<a href="#verification-failures" class="auto internal xref">Section 8.1</a>).<a href="#section-6.2.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="registration-policy">
@@ -1858,11 +1917,13 @@ Authorization Server's metadata <code>jwks_uri</code> in the OAuth binding
 Server's discovery <code>jwks_uri</code> in the standalone binding
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), or the AAuth
 Person Server's existing <code>jwks_uri</code> in the AAuth binding
-(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>). A PDP or PEP key
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>). A PDP, PEP, or harness key
 is resolved
 through the deployment-published key sets the runtime and AuthZEN
 profiles require (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-6.3-3" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); the harness profile
+requires the same publication of a harness that registers its
+evidence (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-6.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="availability">
@@ -1875,7 +1936,12 @@ Service being reachable or on a Receipt being returned; the governed
 operation proceeds and the record is registered out of band. A conforming
 deployment registers each record within a documented time bound and
 records its registration backlog, so a gap between an event and its
-registration is visible rather than silent.<a href="#section-6.4-1" class="pilcrow">¶</a></p>
+registration is visible rather than silent. The bound, the backlog
+metric, and the component that alerts when the bound is exceeded are
+published with the deployment's registration schedule in its Mission
+Deployment Profile (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>),
+mirroring the runtime profile's orphaned-evidence obligations
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6.4-1" class="pilcrow">¶</a></p>
 <p id="section-6.4-2">A record registered late is transparent only from its registration time:
 the Receipt proves inclusion from when the log received the Signed
 Statement, not from when the event occurred. A deployment that needs the
@@ -1898,6 +1964,15 @@ wants an auditor to retrieve all of a Mission's records by <code>sub</code> prov
 that enumeration itself, out of band, over the records it registered;
 this profile fixes the <code>sub</code> so those records share one correlator
 (<a href="#feed" class="auto internal xref">Section 7</a>), not a standardized feed query.<a href="#section-6.5-1" class="pilcrow">¶</a></p>
+<p id="section-6.5-2">Out of band is not undocumented. A deployment claiming this profile
+<span class="bcp14">MUST</span> document its feed-enumeration mechanism: how an authorized
+auditor retrieves every record registered for a <code>sub</code>, in what order,
+with what completeness relative to <a href="#what-to-register" class="auto internal xref">Section 6.6</a>, and under
+what auditor authentication. The mechanism is deployment-chosen (a
+SCRAPI extension, a log export, a query surface over retained
+Transparent Statements); an undocumented one leaves the feed
+assembled only by the deployment itself, which is the trust this
+profile exists to remove.<a href="#section-6.5-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="what-to-register">
@@ -1991,7 +2066,10 @@ its cross-domain producers register with one shared service.<a href="#section-7-
 inclusion proof (<span>[<a href="#RFC9943" class="cite xref">RFC9943</a>]</span>). The producer
 <span class="bcp14">SHOULD</span> retain the Receipt with the evidence, or on the Mission record,
 as a Transparent Statement (the Signed Statement augmented with its
-Receipt).<a href="#section-8-1" class="pilcrow">¶</a></p>
+Receipt). A producer that claims offline verifiability for a record
+<span class="bcp14">MUST</span> retain its Receipt, or an entry identifier the service
+guarantees resolvable for the audit horizon; a registered record
+with neither is verifiable only against the live service.<a href="#section-8-1" class="pilcrow">¶</a></p>
 <p id="section-8-2">A relying party verifies a Transparent Statement offline, without
 contacting the producer or the service:<a href="#section-8-2" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-8-3">
@@ -2043,7 +2121,10 @@ through 3 still establish that the record was registered, at a
 committed time, in a non-equivocating log; only the content check is
 incomplete. The relying party <span class="bcp14">MUST NOT</span> treat the record as
 content-verified, and <span class="bcp14">MUST NOT</span> treat unretrievable evidence as
-evidence of tampering.<a href="#section-8.1-2.2.1" class="pilcrow">¶</a></p>
+evidence of tampering. An erasure record on the feed
+(<a href="#erasure-record" class="auto internal xref">Section 6.2.3</a>) explains the gap as recorded-basis erasure;
+a gap without one, in a deployment that registers erasures, is
+itself worth recording, though still not proof of tampering.<a href="#section-8.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-8.1-2.3">
             <p id="section-8.1-2.3.1">A producer or Transparency Service key that the relying party cannot
@@ -2063,6 +2144,13 @@ which must not differ in ways the append-only property forbids. A service
 that presents inconsistent Receipts for one statement, or a subject
 listing that diverges from another service's, is equivocating, and the
 relying party can rely on the others.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
+<p id="section-8.1-4">Detection is a duty, not a side effect. A deployment claiming this
+profile <span class="bcp14">MUST</span> designate the party that periodically re-verifies feed
+consistency (retained Receipts and the <code>sub</code> listing, against each
+service it registers with) and that party's alerting obligation on
+failure. A deployment with a single service and no designated monitor
+obtains tamper evidence only against alteration after registration,
+not against a split view, and <span class="bcp14">MUST NOT</span> claim non-equivocation.<a href="#section-8.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2236,29 +2324,49 @@ equivocate; a deployment that needs that property checked <span class="bcp14">SH
 register with multiple independent services (<a href="#receipts" class="auto internal xref">Section 8</a>).<a href="#section-12-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-2.3">
-          <p id="section-12-2.3.1">Completeness. Transparency proves what was registered, not that
+          <p id="section-12-2.3.1">Operator independence. The cross-domain value of transparency is
+verification without trust in the producer's own infrastructure
+(<a href="#limits" class="auto internal xref">Section 10</a>); a service operated by the producer whose records it
+holds returns the auditor to exactly that trust. The Transparency
+Service <span class="bcp14">SHOULD</span> be operated independently of the authoritative
+producers for the feeds it holds. Where producer and service share
+an operator, registration with a second, independent service is
+the compensating control, and a deployment without one <span class="bcp14">MUST NOT</span>
+claim cross-domain verifiability for the affected records. A
+deployment states its service topology (self-run, vendor-shared,
+or third-party) and each operator's relationship to the producers
+in its Mission Deployment Profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-12-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.4">
+          <p id="section-12-2.4.1">Completeness. Transparency proves what was registered, not that
 everything was registered. A producer that omits a record cannot
 forge inclusion, but the gap is visible only if an auditor expects the
 record; a deployment <span class="bcp14">SHOULD</span> register evidence on a predictable schedule
-so omissions stand out in the feed.<a href="#section-12-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-12-2.4">
-          <p id="section-12-2.4.1">Receipt and key management. A Receipt is only as trustworthy as the
-Transparency Service key that signs it; relying parties manage those
-trust anchors as they do the producers'.<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
+so omissions stand out in the feed.<a href="#section-12-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-2.5">
-          <p id="section-12-2.5.1">Log lifecycle. Transparency Service key rotation, log retirement, and
+          <p id="section-12-2.5.1">Receipt and key management. A Receipt is only as trustworthy as the
+Transparency Service key that signs it; relying parties manage those
+trust anchors as they do the producers'.<a href="#section-12-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-12-2.6">
+          <p id="section-12-2.6.1">Log lifecycle. Transparency Service key rotation, log retirement, and
 migration of a Mission's feed between services are deferred to future
 work, and a deployment whose Missions outlive a single log instance
-handles them by local arrangement until then. Because a Receipt is
-the longest-lived artifact this profile produces and is the
+handles them by local arrangement until then. One interim rule
+holds now, matching the family's retired-key posture: a service key
+that signed any retained Receipt stays resolvable in the service's
+published key material for the audit horizon of the feeds it
+covers, so rotation retires a key from signing, never from Receipt
+verifiability within that bound. Because a Receipt is the
+longest-lived artifact this profile produces and is the
 compensating control for issuer key compromise
-(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>), a deployment <span class="bcp14">MUST</span> pin and
-retain the Transparency Service verification keys that validate its
-retained Receipts for the audit horizon of the Missions registered
-under them; a Receipt whose signing key is no longer resolvable
-cannot be verified offline, and the compensating control is lost.<a href="#section-12-2.5.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>), a deployment <span class="bcp14">MUST</span> also
+pin and retain the Transparency Service verification keys that
+validate its retained Receipts for that horizon; a Receipt whose
+signing key is no longer resolvable cannot be verified offline, and
+the compensating control is lost.<a href="#section-12-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2301,7 +2409,11 @@ content can never again be checked against the commitment. A deployment
 that may need to erase evidence, for a data-subject request or a
 retention limit, weighs this before registering. Registration does not
 prevent erasure; it converts an erased record into a permanent, visible
-gap rather than a silent one.<a href="#section-13-3" class="pilcrow">¶</a></p>
+gap rather than a silent one. A deployment that erases committed
+evidence <span class="bcp14">MUST</span> register an erasure record (<a href="#erasure-record" class="auto internal xref">Section 6.2.3</a>) on the
+same feed, so the gap carries its basis: lawful erasure and
+convenient loss are otherwise indistinguishable, and the
+verification taxonomy forbids reading the gap as tampering.<a href="#section-13-3" class="pilcrow">¶</a></p>
 <div id="evidence-minimization">
 <section id="section-13.1">
         <h3 id="name-evidence-minimization">
@@ -2355,87 +2467,19 @@ beyond the recipient's need.<a href="#section-13.1-2.6.1" class="pilcrow">¶</a>
       <h2 id="name-iana-considerations">
 <a href="#section-14" class="section-number selfRef">14. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-14-1">This document requests registration of three media types per
-<span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>, for the evidence types of <a href="#evidence-types" class="auto internal xref">Section 6.2</a> that no other
-profile defines: <code>application/mission-approval-record+json</code> for the
-approval-event record, <code>application/mission-lifecycle-transition+json</code>
-for the minimal lifecycle-transition object (<a href="#transition-object" class="auto internal xref">Section 6.2.1</a>),
-and <code>application/mission-derivation-record+json</code> for the derivation
-record (<a href="#derivation-record" class="auto internal xref">Section 6.2.2</a>). Each is carried in the
-<code>payload-preimage-content-type</code> header a relying party <span class="bcp14">MUST</span> verify
-(<a href="#hash-commitment" class="auto internal xref">Section 6.1</a>, <a href="#evidence-types" class="auto internal xref">Section 6.2</a>), so they are registered
-rather than left to local agreement. The three share the following
-template, differing only in subtype name:<a href="#section-14-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-14-2.1">
-          <p id="section-14-2.1.1">Type name: application<a href="#section-14-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-14-2.2">
-          <p id="section-14-2.2.1">Subtype name: mission-approval-record+json,
-mission-lifecycle-transition+json, or
-mission-derivation-record+json<a href="#section-14-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-14-2.3">
-          <p id="section-14-2.3.1">Required parameters: none<a href="#section-14-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-14-2.4">
-          <p id="section-14-2.4.1">Optional parameters: none<a href="#section-14-2.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-14-2.5">
-          <p id="section-14-2.5.1">Encoding considerations: binary; JSON canonicalized per this document<a href="#section-14-2.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-14-2.6">
-          <p id="section-14-2.6.1">Security considerations: see <a href="#security-considerations" class="auto internal xref">Section 12</a><a href="#section-14-2.6.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-14-2.7">
-          <p id="section-14-2.7.1">Interoperability considerations: see this document<a href="#section-14-2.7.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-14-2.8">
-          <p id="section-14-2.8.1">Published specification: this document<a href="#section-14-2.8.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-14-2.9">
-          <p id="section-14-2.9.1">Applications that use this media type: Mission-Bound Authorization
-audit deployments registering Mission evidence with a Transparency
-Service<a href="#section-14-2.9.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-14-2.10">
-          <p id="section-14-2.10.1">Fragment identifier considerations: not applicable<a href="#section-14-2.10.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-14-2.11">
-          <p id="section-14-2.11.1">Additional information:<a href="#section-14-2.11.1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-14-2.11.2.1">
-              <p id="section-14-2.11.2.1.1">Deprecated alias names for this type: none<a href="#section-14-2.11.2.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-14-2.11.2.2">
-              <p id="section-14-2.11.2.2.1">Magic number(s): none<a href="#section-14-2.11.2.2.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-14-2.11.2.3">
-              <p id="section-14-2.11.2.3.1">File extension(s): none<a href="#section-14-2.11.2.3.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-14-2.11.2.4">
-              <p id="section-14-2.11.2.4.1">Macintosh file type code(s): none<a href="#section-14-2.11.2.4.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-</li>
-        <li class="normal" id="section-14-2.12">
-          <p id="section-14-2.12.1">Person &amp; email address to contact for further information:
-Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness.com</a><a href="#section-14-2.12.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-14-2.13">
-          <p id="section-14-2.13.1">Intended usage: COMMON<a href="#section-14-2.13.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-14-2.14">
-          <p id="section-14-2.14.1">Restrictions on usage: none<a href="#section-14-2.14.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-14-2.15">
-          <p id="section-14-2.15.1">Author: IETF<a href="#section-14-2.15.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-14-2.16">
-          <p id="section-14-2.16.1">Change controller: IETF<a href="#section-14-2.16.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<p id="section-14-3">The other evidence media types this profile registers into a Transparency
+<p id="section-14-1">This document defines four media types for the evidence types of
+<a href="#evidence-types" class="auto internal xref">Section 6.2</a> that no other profile defines:
+<code>application/mission-approval-record+json</code> for the approval-event record,
+<code>application/mission-lifecycle-transition+json</code> for the minimal
+lifecycle-transition object (<a href="#transition-object" class="auto internal xref">Section 6.2.1</a>),
+<code>application/mission-derivation-record+json</code> for the derivation record
+(<a href="#derivation-record" class="auto internal xref">Section 6.2.2</a>), and
+<code>application/mission-erasure-record+json</code> for the erasure record
+(<a href="#erasure-record" class="auto internal xref">Section 6.2.3</a>). This document makes
+no registration request for them yet; registration is deferred pending a
+demonstrated cross-domain interoperability need, and deployments using
+these media types do so by local agreement until then.<a href="#section-14-1" class="pilcrow">¶</a></p>
+<p id="section-14-2">The other evidence media types this profile registers into a Transparency
 Service are defined elsewhere: the runtime decision, execution, and
 refusal evidence types by the AuthZEN profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), the consent evidence
@@ -2444,13 +2488,15 @@ type by the consent evidence profile
 Mission Mandate media type by the Mandate profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>), the Child Evidence type
 identifier by the child-delegation profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), and the
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), the
+Harness Evidence type identifier by the harness profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), and the
 Signals SET media type <code>application/secevent+jwt</code> by RFC 8417, which the
 Signals profile carries the event in
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>). The Signed Statement
 and Receipt media types are the transparency substrate's (<span>[<a href="#RFC9943" class="cite xref">RFC9943</a>]</span>).
 This profile derives the <code>sub</code> by profile rather than registering a new
-identifier.<a href="#section-14-3" class="pilcrow">¶</a></p>
+identifier.<a href="#section-14-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
@@ -2496,10 +2542,6 @@ identifier.<a href="#section-14-3" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">Eastlake 3rd, D.</span> and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"US Secure Hash Algorithms (SHA and SHA-based HMAC and HKDF)"</span>, <span class="seriesInfo">RFC 6234</span>, <span class="seriesInfo">DOI 10.17487/RFC6234</span>, <time datetime="2011-05" class="refDate">May 2011</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6234">https://www.rfc-editor.org/rfc/rfc6234</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="RFC6838">[RFC6838]</dt>
-        <dd>
-<span class="refAuthor">Freed, N.</span>, <span class="refAuthor">Klensin, J.</span>, and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"Media Type Specifications and Registration Procedures"</span>, <span class="seriesInfo">BCP 13</span>, <span class="seriesInfo">RFC 6838</span>, <span class="seriesInfo">DOI 10.17487/RFC6838</span>, <time datetime="2013-01" class="refDate">January 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6838">https://www.rfc-editor.org/rfc/rfc6838</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="RFC8174">[RFC8174]</dt>
         <dd>
 <span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
@@ -2533,6 +2575,10 @@ identifier.<a href="#section-14-3" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for AAuth"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"An Architecture for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html</a>&gt;</span>. </dd>
@@ -2540,6 +2586,10 @@ identifier.<a href="#section-14-3" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-mission-discovery">[I-D.draft-mcguinness-mission-discovery]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Open-World Discovery"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-mandate">[I-D.draft-mcguinness-mission-mandate]</dt>
         <dd>

@@ -364,6 +364,14 @@ Table of Contents
    authority_set when the recipient does not recompute the anchor
    (Section 12), and SHOULD record minted_for.
 
+   Each minting is a Mandate evidence event: the issuer MUST record the
+   authenticated requester, the jti, the iat, and the minted_for value
+   where present, retained for the Mandate's evidence lifetime.  Leak
+   attribution rests on this record: a Mandate found where it should not
+   be names its first recipient only if the issuer can answer a
+   repudiating one (the Join Assertion's minting evidence is the same
+   pattern, [I-D.draft-mcguinness-mission-authority-server]).
+
    The mandatory freshness check (Section 5.3) is reachable only if the
    recipient has standing to a state surface.  An issuer that mints a
    Mandate whose recipient's reliance requires an active Mission MUST
@@ -380,23 +388,12 @@ Table of Contents
    keep the key that verifies each minted Mandate resolvable by its kid
    in the published key material for that Mandate's evidence lifetime:
    until mandate_exp, or for the Mission's audit horizon when
-   mandate_exp is absent.  Routine rotation retires a key from signing,
-   never from resolvability within that bound: a key retired from
-   signing stays published as valid for verification.
-
-   Revocation for compromise is distinct from routine retirement.  When
-   a signing key is known or suspected compromised, the issuer MUST
-   publish it as revoked, not merely retired: either remove it from the
-   verify-as-valid key material outright, or mark it there with a
-   compromise time.  A key removed outright can no longer verify any
-   Mandate, genuine or forged; a key marked with a compromise time stays
-   resolvable, so genuine Mandates it signed before that time remain
-   verifiable, and a verifier MUST reject any Mandate under that key
-   whose iat is at or after the compromise time (the invalid class of
-   Section 7.1).  A key-holding attacker can backdate iat to before the
-   compromise time, so the compromise time alone does not separate a
-   genuine pre-compromise Mandate from a backdated forgery; audit
-   registration and its Receipt do (Section 8.3, Section 11).
+   mandate_exp is absent.  Rotation retires a key from signing, never
+   from resolvability within that bound; the status profile states the
+   matching retention rule for the issuer's jwks_uri
+   ([I-D.draft-mcguinness-oauth-mission-status]).  Revocation for a key
+   known or suspected compromised is distinct from routine retirement
+   and is treated in Section 11.
 
 5.5.  Example
 
@@ -652,9 +649,11 @@ Table of Contents
       complete, and MUST NOT treat the mismatch as tampering.
 
    Unverifiable:  Verification cannot complete: the issuer's key
-      material is unreachable, the kid does not resolve, or no trust
-      anchor covers the Mission's issuer.  This is not evidence of
-      tampering, mirroring the audit profile's classification
+      material is unreachable, the kid does not resolve, no trust anchor
+      covers the Mission's issuer, or the signing key is issuer-flagged
+      as compromised and the Mandate's iat is not anchored before the
+      compromise time (Section 11).  This is not evidence of tampering,
+      mirroring the audit profile's classification
       ([I-D.draft-mcguinness-mission-audit]); the verifier MUST NOT
       treat the Mandate as verified and MUST NOT treat the failure as
       proof the artifact is false.  Within a Mandate's evidence lifetime
@@ -845,24 +844,20 @@ Table of Contents
    consistent Mandate: not only over Missions that never existed, but
    over a real, active Mission, with facts drawn from the record and
    state_at_issuance set to active, so it passes every artifact-level
-   step of Section 7.  The key-retention rule of Section 5.4 keeps
-   genuine Mandates verifiable for their evidence lifetime, so an issuer
-   cannot recover by simply dropping the key from the published set
-   without also breaking the genuine Mandates that key signed.
-
-   The issuer bounds this by publishing the compromised key as revoked,
-   distinct from routine retirement (Section 5.4): removed from the
-   verify-as-valid material, or marked with a compromise time so a
-   verifier rejects any Mandate under it minted at or after that time
-   (step 3 of Section 7).  Because a key-holding attacker can backdate
-   iat to before the compromise time, that cutoff alone does not catch a
-   backdated forgery.  Audit registration (Section 8.3) does: a genuine
-   Mandate has an independent, timestamped existence proof predating the
-   compromise, and a forged one either goes unregistered or carries a
-   registration time after the compromise, a permanent, attributable
-   trace.  A verifier relying on a Mandate for a high-consequence
-   decision MUST confirm that existence proof (step 9 of Section 7), and
-   a deployment whose Mandates feed such decisions MUST register them.
+   step of Section 7.  Rotation does not bound the exposure: within each
+   Mandate's evidence lifetime the verification key stays resolvable
+   (Section 5.4), so a forged Mandate with a backdated iat verifies
+   exactly as a genuine one does, and an issuer cannot recover by simply
+   dropping the key from the published set without also breaking the
+   genuine Mandates that key signed.  Audit registration (Section 8.3)
+   is the bound: a genuine Mandate has an independent, timestamped
+   existence proof, and a forged one either goes unregistered or leaves
+   a permanent, attributable trace.  A deployment whose Mandates feed
+   high-consequence decisions SHOULD register them.  An issuer that
+   learns a signing key was compromised SHOULD record and publish the
+   compromise time; a verifier then treats an unregistered Mandate under
+   that kid whose iat cannot be anchored before that time as
+   unverifiable (Section 7.1), never as verified evidence.
 
 11.4.  Confusion with the Cross-Domain Grant
 

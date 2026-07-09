@@ -1726,7 +1726,13 @@ budget; for a non-idempotent action class, expiry forces reconciliation
 or human review rather than release. An unsettled reservation remains
 charged against the bound until it is reconciled, and is released only
 on affirmative evidence of non-execution; timeout alone never releases a
-reservation for a non-idempotent action class.<a href="#section-10.1-2" class="pilcrow">¶</a></p>
+reservation for a non-idempotent action class. The operational
+consequence: a lossy evidence channel accumulates reservations
+against <code>max_budget</code> and <code>max_calls</code> until the Mission starves on
+<code>quota_exceeded</code>, a self-inflicted denial of service. A deployment
+<span class="bcp14">SHOULD</span> run orphaned-evidence reconciliation on a published cadence
+sized to its evidence-channel loss rate; the reconciliation window
+it publishes is how long leaked budget stays leaked.<a href="#section-10.1-2" class="pilcrow">¶</a></p>
 <p id="section-10.1-3">For a duration-metered action the PEP reports the measured duration in
 the Execution Evidence <code>measured_duration</code> member, and the PDP commits
 that duration against <code>max_duration</code>. A duration-lease renewal is a new
@@ -1734,7 +1740,10 @@ re-evaluation request that carries the prior permit's <code>decision_id</code> i
 <code>context.prior_decision_id</code>, so the PDP continues the same metered
 activity rather than opening a new reservation. The PDP <span class="bcp14">MUST</span> verify
 that the renewal's Mission, subject, action, and audience match the
-decision named by <code>prior_decision_id</code>. This exchange requires
+decision named by <code>prior_decision_id</code>. A deployment sizes lease
+intervals to amortize renewals: an interval materially shorter than
+the action class's staleness bound adds decision load without
+tightening the revocation cutoff. This exchange requires
 one request member and one evidence member:<a href="#section-10.1-3" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-10.1-4">
           <dt id="section-10.1-4.1">

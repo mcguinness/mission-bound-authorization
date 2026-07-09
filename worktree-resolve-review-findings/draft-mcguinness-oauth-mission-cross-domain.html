@@ -1553,6 +1553,11 @@ profile requires.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
 Resource AS resolves the conveyed Subject in its own namespace
 (<a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>).<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
 </li>
+        <li class="normal" id="section-7-2.6">
+          <p id="section-7-2.6.1">Derivation records: whether the Resource AS keeps the per-token
+derivation record of <a href="#validation-at-resource-as" class="auto internal xref">Section 9</a>. An originating
+AS <span class="bcp14">MAY</span> condition projection on it.<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
+</li>
       </ul>
 <p id="section-7-3">A deployment that publishes a Mission Deployment Profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>) records its
@@ -1824,7 +1829,10 @@ digest (<code>jti</code>), <code>iss</code>, <code>aud</code>, <code>iat</code>,
 <code>authorization_details</code>. The issuer cannot observe local tokens
 (<a href="#cross-domain-revocation" class="auto internal xref">Section 13.1</a>), so this record is the only evidence
 tying a local token to the grant it was minted from and showing
-its authority did not widen.<a href="#section-9-2.9.1" class="pilcrow">¶</a></p>
+its authority did not widen; without it, cross-domain minting is
+unaccountable to both domains. Whether the Resource AS keeps this
+record is a pre-established trust input
+(<a href="#pre-established-trust" class="auto internal xref">Section 7</a>).<a href="#section-9-2.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-9-3">A grant that carries no <code>mission</code> claim is outside this profile: the

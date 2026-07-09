@@ -1860,7 +1860,15 @@ with a coarse staleness bound limits exposure.<a href="#section-13-2.2.1" class=
 child within its authority, offline and unobserved. The bound is that
 it can only narrow, never broaden (capability monotonicity), and that
 the runtime layer still gates every action against the Mission; the
-compromise does not widen authority or evade revocation.<a href="#section-13-2.3.1" class="pilcrow">¶</a></p>
+compromise does not widen authority or evade revocation. The <code>cnf</code>
+key of an attenuation root is nonetheless two things at once: the
+presentation key for one token and the offline minting key for its
+whole subtree, and a key whose theft mints credentials warrants a
+higher custody class than one whose theft replays a credential. A
+deployment <span class="bcp14">SHOULD</span> hold attenuation-root keys under the mediating
+component's custody (the runtime profile's mediated custody,
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), hardware-backed where
+available, rather than loose in the agent process.<a href="#section-13-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.4">
           <p id="section-13-2.4.1">Depth and fan-out. <code>del_max_depth</code> bounds chain depth; a deployment

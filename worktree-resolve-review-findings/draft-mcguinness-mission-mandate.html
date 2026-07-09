@@ -1651,7 +1651,15 @@ discipline of the family's status surfaces
 mint narrowly for the recipient's need, in particular omitting
 <code>authority_set</code> when the recipient does not recompute the anchor
 (<a href="#privacy-considerations" class="auto internal xref">Section 12</a>), and <span class="bcp14">SHOULD</span> record <code>minted_for</code>.<a href="#section-5.4-2" class="pilcrow">¶</a></p>
-<p id="section-5.4-3">The mandatory freshness check (<a href="#state-at-issuance" class="auto internal xref">Section 5.3</a>) is reachable
+<p id="section-5.4-3">Each minting is a Mandate evidence event: the issuer <span class="bcp14">MUST</span> record the
+authenticated requester, the <code>jti</code>, the <code>iat</code>, and the <code>minted_for</code>
+value where present, retained for the Mandate's evidence lifetime.
+Leak attribution rests on this record: a Mandate found where it
+should not be names its first recipient only if the issuer can
+answer a repudiating one (the Join Assertion's minting evidence is
+the same pattern,
+<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-5.4-3" class="pilcrow">¶</a></p>
+<p id="section-5.4-4">The mandatory freshness check (<a href="#state-at-issuance" class="auto internal xref">Section 5.3</a>) is reachable
 only if the recipient has standing to a state surface. An issuer that
 mints a Mandate whose recipient's reliance requires an active Mission
 <span class="bcp14">MUST</span> provision that standing together with the Mandate: grant the
@@ -1661,28 +1669,17 @@ Lifecycle Signals stream
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), or offer a
 state-only surface that returns the Mission's lifecycle state and
 nothing else. Minting evidence a cross-domain recipient can verify but
-never refresh leaves the required check unreachable.<a href="#section-5.4-3" class="pilcrow">¶</a></p>
-<p id="section-5.4-4">A Mandate outlives signing-key rotation schedules. The issuer <span class="bcp14">MUST</span>
+never refresh leaves the required check unreachable.<a href="#section-5.4-4" class="pilcrow">¶</a></p>
+<p id="section-5.4-5">A Mandate outlives signing-key rotation schedules. The issuer <span class="bcp14">MUST</span>
 keep the key that verifies each minted Mandate resolvable by its
 <code>kid</code> in the published key material for that Mandate's evidence
 lifetime: until <code>mandate_exp</code>, or for the Mission's audit horizon
-when <code>mandate_exp</code> is absent. Routine rotation retires a key from
-signing, never from resolvability within that bound: a key retired
-from signing stays published as valid for verification.<a href="#section-5.4-4" class="pilcrow">¶</a></p>
-<p id="section-5.4-5">Revocation for compromise is distinct from routine retirement. When a
-signing key is known or suspected compromised, the issuer <span class="bcp14">MUST</span> publish
-it as revoked, not merely retired: either remove it from the
-verify-as-valid key material outright, or mark it there with a
-compromise time. A key removed outright can no longer verify any
-Mandate, genuine or forged; a key marked with a compromise time stays
-resolvable, so genuine Mandates it signed before that time remain
-verifiable, and a verifier <span class="bcp14">MUST</span> reject any Mandate under that key
-whose <code>iat</code> is at or after the compromise time (the invalid class of
-<a href="#failures" class="auto internal xref">Section 7.1</a>). A key-holding attacker can backdate <code>iat</code> to before the
-compromise time, so the compromise time alone does not separate a
-genuine pre-compromise Mandate from a backdated forgery; audit
-registration and its Receipt do (<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>,
-<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-5.4-5" class="pilcrow">¶</a></p>
+when <code>mandate_exp</code> is absent. Rotation retires a key from signing,
+never from resolvability within that bound; the status profile
+states the matching retention rule for the issuer's <code>jwks_uri</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). Revocation for a
+key known or suspected compromised is distinct from routine
+retirement and is treated in <a href="#security-considerations" class="auto internal xref">Section 11</a>.<a href="#section-5.4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="example">
@@ -1983,8 +1980,11 @@ were complete, and <span class="bcp14">MUST NOT</span> treat the mismatch as tam
 <dt id="section-7.1-2.5">Unverifiable:</dt>
           <dd style="margin-left: 1.5em" id="section-7.1-2.6">
             <p id="section-7.1-2.6.1">Verification cannot complete: the issuer's key material is
-unreachable, the <code>kid</code> does not resolve, or no trust anchor covers
-the Mission's issuer. This is not evidence of tampering, mirroring the audit
+unreachable, the <code>kid</code> does not resolve, no trust anchor covers
+the Mission's issuer, or the signing key is issuer-flagged as
+compromised and the Mandate's <code>iat</code> is not anchored before the
+compromise time (<a href="#security-considerations" class="auto internal xref">Section 11</a>). This is not
+evidence of tampering, mirroring the audit
 profile's classification (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>);
 the verifier <span class="bcp14">MUST NOT</span> treat the Mandate as verified and <span class="bcp14">MUST NOT</span>
 treat the failure as proof the artifact is false. Within a
@@ -2252,24 +2252,21 @@ makes the omission a named failure rather than a silent acceptance.<a href="#sec
 self-consistent Mandate: not only over Missions that never existed,
 but over a real, active Mission, with facts drawn from the record and
 <code>state_at_issuance</code> set to <code>active</code>, so it passes every artifact-level
-step of <a href="#verification" class="auto internal xref">Section 7</a>. The key-retention rule of <a href="#minting" class="auto internal xref">Section 5.4</a> keeps
-genuine Mandates verifiable for their evidence lifetime, so an issuer
-cannot recover by simply dropping the key from the published set
-without also breaking the genuine Mandates that key signed.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
-<p id="section-11.3-2">The issuer bounds this by publishing the compromised key as revoked,
-distinct from routine retirement (<a href="#minting" class="auto internal xref">Section 5.4</a>): removed from the
-verify-as-valid material, or marked with a compromise time so a
-verifier rejects any Mandate under it minted at or after that time
-(step 3 of <a href="#verification" class="auto internal xref">Section 7</a>). Because a key-holding attacker can
-backdate <code>iat</code> to before the compromise time, that cutoff alone does
-not catch a backdated forgery. Audit registration (<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>)
-does: a genuine Mandate has an independent, timestamped existence proof
-predating the compromise, and a forged one either goes unregistered or
-carries a registration time after the compromise, a permanent,
-attributable trace. A verifier relying on a Mandate for a
-high-consequence decision <span class="bcp14">MUST</span> confirm that existence proof (step 9 of
-<a href="#verification" class="auto internal xref">Section 7</a>), and a deployment whose Mandates feed such decisions
-<span class="bcp14">MUST</span> register them.<a href="#section-11.3-2" class="pilcrow">¶</a></p>
+step of <a href="#verification" class="auto internal xref">Section 7</a>. Rotation does not bound the exposure:
+within each Mandate's evidence lifetime the verification key stays
+resolvable (<a href="#minting" class="auto internal xref">Section 5.4</a>), so a forged Mandate with a backdated <code>iat</code>
+verifies exactly as a genuine one does, and an issuer cannot recover
+by simply dropping the key from the published set without also
+breaking the genuine Mandates that key signed. Audit registration
+(<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>) is the bound: a genuine Mandate has an
+independent, timestamped existence proof, and a forged one either
+goes unregistered or leaves a permanent, attributable trace. A
+deployment whose Mandates feed high-consequence decisions <span class="bcp14">SHOULD</span>
+register them. An issuer that learns a signing key was compromised
+<span class="bcp14">SHOULD</span> record and publish the compromise time; a verifier then
+treats an unregistered Mandate under that <code>kid</code> whose <code>iat</code> cannot
+be anchored before that time as unverifiable (<a href="#failures" class="auto internal xref">Section 7.1</a>), never
+as verified evidence.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="confusion-with-the-cross-domain-grant">

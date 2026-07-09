@@ -2035,8 +2035,10 @@ mapping of <a href="#redemption-errors" class="auto internal xref">Section 6.1</
 <a href="#par-carriage" class="auto internal xref">Section 6.2</a> is <span class="bcp14">OPTIONAL</span>.<a href="#section-9-2" class="pilcrow">¶</a></p>
 <p id="section-9-3">A deployment claiming this profile states, alongside its
 enforcement-scope statement, which Authorization Servers consume
-grants and the staleness bound of each one's refresh gating. A
-consuming AS advertises its support with the
+grants, the staleness bound of each one's refresh gating, and its
+reconciliation posture (<a href="#security-considerations" class="auto internal xref">Section 10</a>): the window
+within which minting and redemption logs are reconciled, or that
+they are not. A consuming AS advertises its support with the
 <code>mission_issuance_grant_supported</code> metadata member, and its PAR
 carriage with <code>mission_issuance_grant_par_supported</code> (<a href="#iana" class="auto internal xref">Section 12</a>).<a href="#section-9-3" class="pilcrow">¶</a></p>
 </section>
@@ -2060,8 +2062,14 @@ profile it additionally mints grants every consuming AS honors:
 compromise reaches token issuance across the estate. The consuming
 ASs' audit logs of redeemed grants (each with <code>jti</code> and Mission
 reference) are the independent record that bounds and exposes such
-minting; deployments <span class="bcp14">SHOULD</span> reconcile MAS minting evidence against
-consuming-AS redemption logs.<a href="#section-10-2" class="pilcrow">¶</a></p>
+minting; a deployment <span class="bcp14">SHOULD</span> reconcile MAS minting evidence against
+consuming-AS redemption logs and treat a redemption with no matching
+minting record as a security event, and states its reconciliation
+posture in its conformance statement (<a href="#conformance" class="auto internal xref">Section 9</a>). A deployment
+operating under the Enterprise Mission Authority Profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>) <span class="bcp14">MUST</span> reconcile,
+within the window its statement declares: at estate scale,
+reconciliation is the only check on this compromise class.<a href="#section-10-2" class="pilcrow">¶</a></p>
 <p id="section-10-3"><strong>Trust inversion.</strong> The consuming AS accepts externally derived
 authority. Its exposure is bounded by the profile's own rules: it
 mints only within the grant's <code>authorization_details</code>, only for the

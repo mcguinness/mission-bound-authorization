@@ -1383,7 +1383,11 @@ its stream with the SSF add-subject operation, using the Mission subject
 identifier (<a href="#lifecycle-event" class="auto internal xref">Section 4</a>). The transmitter <span class="bcp14">MUST</span> accept an
 add-subject only for a Mission the receiver is authorized for under
 deployment policy, for example a receiver whose audience is an audience
-of the Mission's authority. Absent explicit subjects, a deployment <span class="bcp14">MAY</span>
+of the Mission's authority. The executing side is an intended
+receiver class: a deployment <span class="bcp14">SHOULD</span> authorize the harness executing
+a Mission as a receiver for it, since the harness profile's
+event-driven state cache (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>)
+is a consumer of this stream. Absent explicit subjects, a deployment <span class="bcp14">MAY</span>
 provision an authorization-derived default stream (delivering the events
 for the Missions a receiver is authorized for) and <span class="bcp14">MUST</span> document that
 stream's scope.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
@@ -1450,8 +1454,10 @@ counter the Mission Issuer maintains and increments on each committed
 lifecycle transition (the approval-event emission is version 1) and on
 each committed metadata-only change (for example a suspend-metadata
 update, below), letting a consumer order events and detect gaps. This
-profile defines the counter here; it is not surfaced by the issuance
-or status profiles.<a href="#section-4-6.4.1" class="pilcrow">¶</a></p>
+profile defines the counter here; the issuance profile does not
+surface it, and the Status profile returns it only where the
+deployment also runs this profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-4-6.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-4-6.5">
           <p id="section-4-6.5.1"><code>committed_at</code> (string, required): an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time
@@ -1657,7 +1663,9 @@ consumer <span class="bcp14">MAY</span> rely on events alone, each carrying the 
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) on a detected
 <code>version</code> gap (a received <code>version</code> more than one greater than the
 last applied for that <code>mission.id</code>), rather than rely on the cached
-state that spans the gap.<a href="#section-6-2.5.1" class="pilcrow">¶</a></p>
+state that spans the gap. The Status response's <code>version</code> member
+re-seats gap detection: the consumer sets its last-applied version
+to the returned value and measures the next gap from it.<a href="#section-6-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-2.6">
           <p id="section-6-2.6.1">Acknowledge the event per the SSF delivery method in use.<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
@@ -2023,6 +2031,10 @@ IETF; Reference this document, <a href="#as-metadata" class="auto internal xref"
 <dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
         <dd>
