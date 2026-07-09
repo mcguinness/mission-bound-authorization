@@ -124,8 +124,9 @@ Table of Contents
      15.3.  Expansion and Child-Creation Binding
      15.4.  Ambient Authority of Ungated Tokens
      15.5.  MAS Availability
-     15.6.  MAS Compromise
-     15.7.  Approval Surface Authentication
+     15.6.  Signing-Key Custody
+     15.7.  MAS Compromise
+     15.8.  Approval Surface Authentication
    16. Privacy Considerations
    17. IANA Considerations
      17.1.  Well-Known URI Registration
@@ -1154,6 +1155,17 @@ Table of Contents
    not_found, so the join_failed (403) and not_found (404) split never
    acts as a mapping oracle for callers outside that set.
 
+   Assertion lifetime is capped by the token's, so short token lifetimes
+   put minting on the rotation path: each rotation needs a fresh
+   assertion and its introspection call, per Mission and per workload.
+   A deployment amortizes deliberately: it sizes agent token lifetimes
+   to the runtime layer's revocation cutoff rather than treating expiry
+   as the kill switch (the token-lifetime trade of
+   [I-D.draft-mcguinness-mission-runtime]), and the MAS MAY reuse an
+   introspection result across mintings of the same token within the
+   deployment's staleness bound, so re-minting for an unchanged token
+   does not repeat the AS round trip.
+
 10.2.  The Assertion
 
    On success the MAS mints a Mission Join Assertion: a signed JWT
@@ -1554,6 +1566,13 @@ Table of Contents
    *  runtime decision and execution evidence flows to the deployment's
       audit sink.
 
+   Which Mission Issuer governs a given resource is deployment
+   configuration the estate makes explicit: where more than one Mission
+   Issuer operates, the deployment documents the resource-to-issuer
+   mapping alongside its mapping contract, and a PEP treats a resource
+   with no mapped issuer as outside this profile's governance rather
+   than inventing one.
+
 14.2.  Connector Patterns
 
    The PEP is wherever consequential effects can be refused before they
@@ -1619,6 +1638,14 @@ Table of Contents
    the enduring control plane of the family's delegated-authority layer
    ([I-D.draft-mcguinness-mission-architecture]), which a deployment
    keeps even as individual Authorization Servers become Mission-aware.
+
+   The common starting estate runs bots on standing service accounts
+   with broad, durable entitlements.  The migration is per task, not per
+   account: each recurring job becomes a durable Mission whose Authority
+   Set is derived from the entitlements the job actually exercises, with
+   the deployment's entitlement catalog as the derivation policy's
+   input; the service account retains only what no Mission yet governs,
+   and that shrinking residue is the adoption metric.
 
 15.  Security Considerations
 
@@ -1711,7 +1738,21 @@ Table of Contents
    provisions MAS availability accordingly and sizes
    mission_max_stale_seconds to the caching it can tolerate.
 
-15.6.  MAS Compromise
+15.6.  Signing-Key Custody
+
+   The MAS's signing key is the estate's Mission root of trust: it signs
+   status and lifecycle responses, Join Assertions, and the issuer-
+   signed artifacts of the companions.  A MAS SHOULD hold it in a non-
+   exportable keystore (an HSM or equivalent KMS-grade custody) with
+   dual-controlled generation, and SHOULD sign high-volume surfaces
+   (status, Join Assertions) and long-lived artifacts (Mandates,
+   Issuance Grants) under distinct kids in one jwks_uri, so custody can
+   differ by blast radius.  The introspection credential the MAS holds
+   at the estate AS (Section 10.1) is secret material of the same tier:
+   its compromise forges joins
+   ([I-D.draft-mcguinness-mission-security-model]).
+
+15.7.  MAS Compromise
 
    Compromise of a MAS is equivalent to Mission Issuer compromise: it
    can forge approvals, alter records, and report false state.  One
@@ -1725,7 +1766,7 @@ Table of Contents
    profile's key-retention rules keep archived state evidence
    verifiable.
 
-15.7.  Approval Surface Authentication
+15.8.  Approval Surface Authentication
 
    The MAS's review surface is the approval event surface, and the
    issuance profile's approval rules apply to it unchanged: the Approver

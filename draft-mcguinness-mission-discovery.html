@@ -1853,16 +1853,17 @@ opportunity, not work in flight.<a href="#section-12-5" class="pilcrow">¶</a></
       <h2 id="name-privacy-considerations">
 <a href="#section-13" class="section-number selfRef">13. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
-<p id="section-13-1">Encounters reveal where an agent goes: the adjudicator, and the
-transparency log where evidence registers, learn every resource an
-agent met, including refused ones. That trail is the point for
-audit, and a hazard for the Subject. A deployment minimizes by
-registering digests rather than declarations, restricting Discovery
-Evidence access as it does other Mission evidence, and applying the
-issuance profile's identifier guidance where correlation across
-feeds matters. A self-declaration may itself contain third-party
-information; committing its digest rather than its bytes keeps that
-content out of the log.<a href="#section-13-1" class="pilcrow">¶</a></p>
+<p id="section-13-1">Encounters reveal where an agent goes: the adjudicator learns every
+resource an agent met, including refused ones, and the transparency
+log, which receives only hash commitments
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>), still learns the Mission's
+feed, its registration cadence, and that encounters occurred. That
+trail is the point for audit, and a hazard for the Subject. A
+deployment minimizes by restricting Discovery Evidence access as it
+does other Mission evidence and applying the issuance profile's
+identifier guidance where correlation across feeds matters. A
+self-declaration may itself contain third-party information; the
+digest commitment keeps that content out of the log.<a href="#section-13-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana">

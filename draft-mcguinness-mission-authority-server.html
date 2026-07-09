@@ -1321,10 +1321,13 @@ Mission Authority Profile for that role.<a href="#section-abstract-1" class="pil
                 <p id="section-toc.1-1.15.2.5.1"><a href="#section-15.5" class="auto internal xref">15.5</a>.  <a href="#name-mas-availability" class="internal xref">MAS Availability</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.6">
-                <p id="section-toc.1-1.15.2.6.1"><a href="#section-15.6" class="auto internal xref">15.6</a>.  <a href="#name-mas-compromise" class="internal xref">MAS Compromise</a></p>
+                <p id="section-toc.1-1.15.2.6.1"><a href="#section-15.6" class="auto internal xref">15.6</a>.  <a href="#name-signing-key-custody" class="internal xref">Signing-Key Custody</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.7">
-                <p id="section-toc.1-1.15.2.7.1"><a href="#section-15.7" class="auto internal xref">15.7</a>.  <a href="#name-approval-surface-authentica" class="internal xref">Approval Surface Authentication</a></p>
+                <p id="section-toc.1-1.15.2.7.1"><a href="#section-15.7" class="auto internal xref">15.7</a>.  <a href="#name-mas-compromise" class="internal xref">MAS Compromise</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.8">
+                <p id="section-toc.1-1.15.2.8.1"><a href="#section-15.8" class="auto internal xref">15.8</a>.  <a href="#name-approval-surface-authentica" class="internal xref">Approval Surface Authentication</a></p>
 </li>
             </ul>
 </li>
@@ -2691,6 +2694,16 @@ anti-oracle property.<a href="#section-10.1-6" class="pilcrow">¶</a></p>
 for the Mission's enforcement scope. Any other caller <span class="bcp14">MUST</span> receive
 <code>not_found</code>, so the <code>join_failed</code> (403) and <code>not_found</code> (404) split
 never acts as a mapping oracle for callers outside that set.<a href="#section-10.1-7" class="pilcrow">¶</a></p>
+<p id="section-10.1-8">Assertion lifetime is capped by the token's, so short token lifetimes
+put minting on the rotation path: each rotation needs a fresh
+assertion and its introspection call, per Mission and per workload. A
+deployment amortizes deliberately: it sizes agent token lifetimes to
+the runtime layer's revocation cutoff rather than treating expiry as
+the kill switch (the token-lifetime trade of
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and the MAS <span class="bcp14">MAY</span> reuse an
+introspection result across mintings of the same token within the
+deployment's staleness bound, so re-minting for an unchanged token
+does not repeat the AS round trip.<a href="#section-10.1-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="join-assertion-artifact">
@@ -3212,6 +3225,12 @@ table; and<a href="#section-14.1-2.4.1" class="pilcrow">¶</a></p>
 audit sink.<a href="#section-14.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
+<p id="section-14.1-3">Which Mission Issuer governs a given resource is deployment
+configuration the estate makes explicit: where more than one Mission
+Issuer operates, the deployment documents the resource-to-issuer
+mapping alongside its mapping contract, and a PEP treats a resource
+with no mapped issuer as outside this profile's governance rather
+than inventing one.<a href="#section-14.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="deployment-connectors">
@@ -3301,6 +3320,13 @@ floor is required to begin. The MAS is not a throwaway bridge but the
 enduring control plane of the family's delegated-authority layer
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>), which a deployment
 keeps even as individual Authorization Servers become Mission-aware.<a href="#section-14.3-3" class="pilcrow">¶</a></p>
+<p id="section-14.3-4">The common starting estate runs bots on standing service accounts
+with broad, durable entitlements. The migration is per task, not per
+account: each recurring job becomes a durable Mission whose Authority
+Set is derived from the entitlements the job actually exercises, with
+the deployment's entitlement catalog as the derivation policy's
+input; the service account retains only what no Mission yet governs,
+and that shrinking residue is the adoption metric.<a href="#section-14.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3419,12 +3445,30 @@ provisions MAS availability accordingly and sizes
 <code>mission_max_stale_seconds</code> to the caching it can tolerate.<a href="#section-15.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="mas-compromise">
+<div id="signing-key-custody">
 <section id="section-15.6">
-        <h3 id="name-mas-compromise">
-<a href="#section-15.6" class="section-number selfRef">15.6. </a><a href="#name-mas-compromise" class="section-name selfRef">MAS Compromise</a>
+        <h3 id="name-signing-key-custody">
+<a href="#section-15.6" class="section-number selfRef">15.6. </a><a href="#name-signing-key-custody" class="section-name selfRef">Signing-Key Custody</a>
         </h3>
-<p id="section-15.6-1">Compromise of a MAS is equivalent to Mission Issuer compromise: it can
+<p id="section-15.6-1">The MAS's signing key is the estate's Mission root of trust: it signs
+status and lifecycle responses, Join Assertions, and the issuer-signed
+artifacts of the companions. A MAS <span class="bcp14">SHOULD</span> hold it in a non-exportable
+keystore (an HSM or equivalent KMS-grade custody) with dual-controlled
+generation, and <span class="bcp14">SHOULD</span> sign high-volume surfaces (status, Join
+Assertions) and long-lived artifacts (Mandates, Issuance Grants) under
+distinct <code>kid</code>s in one <code>jwks_uri</code>, so custody can differ by blast
+radius. The introspection credential the MAS holds at the estate AS
+(<a href="#join-assertion-request" class="auto internal xref">Section 10.1</a>) is secret material of the same tier: its
+compromise forges joins
+(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-15.6-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mas-compromise">
+<section id="section-15.7">
+        <h3 id="name-mas-compromise">
+<a href="#section-15.7" class="section-number selfRef">15.7. </a><a href="#name-mas-compromise" class="section-name selfRef">MAS Compromise</a>
+        </h3>
+<p id="section-15.7-1">Compromise of a MAS is equivalent to Mission Issuer compromise: it can
 forge approvals, alter records, and report false state. One
 consequence is specific to this mode: the PDP join is the only
 credential-to-Mission binding, so a compromised MAS combined with the
@@ -3433,22 +3477,22 @@ credential the join accepts. Consent Evidence commitments
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>) and audit
 transparency (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>) make forgery
 detectable after the fact; signing-key custody and the status
-profile's key-retention rules keep archived state evidence verifiable.<a href="#section-15.6-1" class="pilcrow">¶</a></p>
+profile's key-retention rules keep archived state evidence verifiable.<a href="#section-15.7-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="approval-surface-authentication">
-<section id="section-15.7">
+<section id="section-15.8">
         <h3 id="name-approval-surface-authentica">
-<a href="#section-15.7" class="section-number selfRef">15.7. </a><a href="#name-approval-surface-authentica" class="section-name selfRef">Approval Surface Authentication</a>
+<a href="#section-15.8" class="section-number selfRef">15.8. </a><a href="#name-approval-surface-authentica" class="section-name selfRef">Approval Surface Authentication</a>
         </h3>
-<p id="section-15.7-1">The MAS's review surface is the approval event surface, and the
+<p id="section-15.8-1">The MAS's review surface is the approval event surface, and the
 issuance profile's approval rules apply to it unchanged: the Approver
 is authenticated to the <code>acr</code> mapping, the Subject is never taken from
 client input, client text is rendered inert, and derived authority is
 visually distinguished from it (<a href="#mission-approval" class="auto internal xref">Section 4</a>). The submission,
 status, and lifecycle endpoints reject unauthenticated callers and
 preserve the anti-oracle property
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-15.7-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-15.8-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

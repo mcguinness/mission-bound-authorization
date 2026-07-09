@@ -1271,6 +1271,11 @@ and every mechanism it names is defined by the profile it points to.<a href="#se
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
             <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-mission-deployment-patterns" class="internal xref">Mission Deployment Patterns</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
+                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-entry-ramps-by-estate" class="internal xref">Entry Ramps by Estate</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
             <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-mission-assurance-levels" class="internal xref">Mission Assurance Levels</a></p>
@@ -1332,7 +1337,16 @@ state. The Mission is not a new way to express authority: Rich
 Authorization Requests <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> and kindred mechanisms express
 authority, and the Mission is the approved task that authority
 serves.<a href="#section-1-1" class="pilcrow">¶</a></p>
-<p id="section-1-2">The model is deliberately decomposed: a core profile (the "issuance
+<p id="section-1-2">The object fills a gap current practice pays for daily. A deployment
+that cannot size authority to a task compensates with three controls,
+each with a cost: agents scoped read-only (a ceiling on value, and
+reads still steer the agent and leak what it sees), a human approving
+or executing every write (approval fatigue, and the human becomes the
+unmediated enforcement point), or pilots permanently fenced into
+sandboxes (shadow paths grow around the fence). These controls exist
+because authority cannot be sized to a task the stack cannot
+represent; the Mission is that representation.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">The model is deliberately decomposed: a core profile (the "issuance
 profile", <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, here "the core")
 defines the object and its OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> binding, a
 standalone binding hosts the same object without changing an existing
@@ -1343,14 +1357,14 @@ lifecycle (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref
 companions layer approval, lifecycle, enforcement, runtime,
 delegation, and proof capabilities on top. The decomposition keeps
 each interface small but spreads the structure across many documents
-and three bindings; this document is the single structural view.<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">Read as one system, the family defines a <strong>delegated-authority
+and three bindings; this document is the single structural view.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">Read as one system, the family defines a <strong>delegated-authority
 layer</strong>, with OAuth 2.0, the standalone Mission Authority Server, and
-AAuth as peer bindings into it (<a href="#the-mission" class="auto internal xref">Section 3</a>).<a href="#section-1-3" class="pilcrow">¶</a></p>
-<p id="section-1-4">It defines no protocol, no object, and no requirement. It is a map,
+AAuth as peer bindings into it (<a href="#the-mission" class="auto internal xref">Section 3</a>).<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">It defines no protocol, no object, and no requirement. It is a map,
 not the territory: every mechanism named points at the profile that
 normatively defines it, and where this document and a profile appear
-to differ, the profile governs.<a href="#section-1-4" class="pilcrow">¶</a></p>
+to differ, the profile governs.<a href="#section-1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="status">
@@ -1711,6 +1725,50 @@ that the derivation was the right reading of the task
 </dd>
       <dd class="break"></dd>
 </dl>
+<p id="section-7-3">Read as properties of the delegated-authority layer rather than
+mechanics of this family, the invariants carry five substrate-neutral
+laws: <strong>Durability</strong> (authority must outlive credentials),
+<strong>Attribution</strong> (every action remains attributable, and the approval
+record commits exactly what the Approver was shown), <strong>Narrowing</strong>
+(authority only narrows as work fans out), <strong>Termination</strong> (revocation
+ends authority, not merely tokens), and <strong>Containment</strong> (execution
+continuously remains inside approved purpose). The correspondence is
+informative and many-to-many:<a href="#section-7-3" class="pilcrow">¶</a></p>
+<table class="center" id="table-1">
+        <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Law</th>
+            <th class="text-left" rowspan="1" colspan="1">Carried by</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Durability</td>
+            <td class="text-left" rowspan="1" colspan="1">Authority serves an approved task: the Mission is the durable object, and credentials are projections of it</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Attribution</td>
+            <td class="text-left" rowspan="1" colspan="1">Attribution is carried, never inferred, with the anchors committing what the Approver was shown</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Narrowing</td>
+            <td class="text-left" rowspan="1" colspan="1">Authority only narrows</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Termination</td>
+            <td class="text-left" rowspan="1" colspan="1">Revocation is possession-independent, with only <code>active</code> permits carrying the reliance side</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Containment</td>
+            <td class="text-left" rowspan="1" colspan="1">Only <code>active</code> permits and enforcement fails closed, applied at the point of use</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-7-5">The last two invariants are wire-level mechanics rather than laws of
+their own: fail-closed enforcement is how a substrate carries
+Containment, and the anchor commitment is how it carries
+Attribution's approval-record clause.<a href="#section-7-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="components">
@@ -2229,8 +2287,8 @@ where the client supplies candidate authority, derivation is a subset
 of it and reproducible, which is the closest the family comes to
 portable derivation.<a href="#section-10-1" class="pilcrow">¶</a></p>
 <p id="section-10-2">The derivation modes rank by how portable their result is:<a href="#section-10-2" class="pilcrow">¶</a></p>
-<table class="center" id="table-1">
-        <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<table class="center" id="table-2">
+        <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Derivation mode</th>
@@ -2487,9 +2545,60 @@ Between the two sits the issuance join
 remains the Mission Issuer while estate Authorization Servers redeem
 Mission Issuance Grants for Mission-bound, state-gated tokens,
 restoring the token-layer chokepoint without moving approval.<a href="#section-12-2" class="pilcrow">¶</a></p>
-<p id="section-12-3">In sequence, the standalone mode runs submit, poll, approve, join,
-permit:<a href="#section-12-3" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-12-4">
+<div id="entry-ramps">
+<section id="section-12.1">
+        <h3 id="name-entry-ramps-by-estate">
+<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-entry-ramps-by-estate" class="section-name selfRef">Entry Ramps by Estate</a>
+        </h3>
+<p id="section-12.1-1">Which chokepoint a deployment builds first is decided by the estate
+it already runs, not by preference. The core's issuance ramp assumes
+an Authorization Server that supports pushed authorization requests,
+rich authorization requests, and JWT access tokens; the standalone
+ramp assumes none of that and trades it for PEP coverage. By starting
+condition:<a href="#section-12.1-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-3">
+          <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Estate starting condition</th>
+              <th class="text-left" rowspan="1" colspan="1">Entry ramp</th>
+              <th class="text-left" rowspan="1" colspan="1">Day-one delta</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">AS changeable; PAR, RAR, and JWT access tokens in place</td>
+              <td class="text-left" rowspan="1" colspan="1">Issuance profile (the core)</td>
+              <td class="text-left" rowspan="1" colspan="1">AS adds intent intake, derivation, approval, record, and gating; scope-only Resource Servers and clients continue unchanged</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">AS changeable; RAR absent or tokens opaque</td>
+              <td class="text-left" rowspan="1" colspan="1">MAS first; the core once the AS gains the token plane</td>
+              <td class="text-left" rowspan="1" colspan="1">A MAS beside the AS; nothing else changes</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">AS cannot change (shared, third-party, SaaS)</td>
+              <td class="text-left" rowspan="1" colspan="1">Standalone MAS, phase by phase</td>
+              <td class="text-left" rowspan="1" colspan="1">Records and approvals first; enforcement arrives with PEP/PDP coverage</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Many Authorization Servers, one governance point</td>
+              <td class="text-left" rowspan="1" colspan="1">MAS as estate control plane; issuance join per consuming AS</td>
+              <td class="text-left" rowspan="1" colspan="1">Each AS adds grant redemption only (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>)</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">No PEP/PDP over consequential paths</td>
+              <td class="text-left" rowspan="1" colspan="1">Issuance profile where the AS allows; runtime layer next</td>
+              <td class="text-left" rowspan="1" colspan="1">Token-layer gating only; Baseline limits stated, runtime layer planned</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-12.1-3">Every row shares the record, anchors, and lifecycle, so a ramp is an
+entry point, not a fork: Missions carry unchanged from any row to the
+rows a deployment adopts later.<a href="#section-12.1-3" class="pilcrow">¶</a></p>
+<p id="section-12.1-4">In sequence, the standalone mode runs submit, poll, approve, join,
+permit:<a href="#section-12.1-4" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-12.1-5">
 <pre>
  Client               MAS                Approver     PEP/PDP
    |                    |                  |            |
@@ -2518,14 +2627,14 @@ permit:<a href="#section-12-3" class="pilcrow">¶</a></p>
    |                    |                  |   evaluate |
    | 10 permit          |                  |            |
    |&lt;---------------------------------------------------|
-</pre><a href="#section-12-4" class="pilcrow">¶</a>
+</pre><a href="#section-12.1-5" class="pilcrow">¶</a>
 </div>
-<p id="section-12-5">The token in step 7 is an ordinary OAuth token from the unchanged AS;
+<p id="section-12.1-6">The token in step 7 is an ordinary OAuth token from the unchanged AS;
 steps 8 through 10 are the Mission Join and the runtime decision (the
 MAS's Mission Join section), and the MAS's staged walkthrough of the
 same flow is its end-to-end appendix
-(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-12-5" class="pilcrow">¶</a></p>
-<p id="section-12-6">The quarantine pattern removes a leg of the injection-to-exfiltration
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-12.1-6" class="pilcrow">¶</a></p>
+<p id="section-12.1-7">The quarantine pattern removes a leg of the injection-to-exfiltration
 chain instead of gating it. Work that ingests untrusted content (web
 pages, inbound mail, third-party documents) runs under a Mission
 whose Authority Set carries no external-communication or
@@ -2547,7 +2656,9 @@ wants the separation enforced within one Mission rather than across
 two, the metering profile's exclusivity control
 (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>) latches read-and-egress
 apart under a single approval. This turns the no-information-flow-control
-limit into a deployment architecture rather than an unmitigated gap.<a href="#section-12-6" class="pilcrow">¶</a></p>
+limit into a deployment architecture rather than an unmitigated gap.<a href="#section-12.1-7" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="assurance-levels">
@@ -2663,7 +2774,42 @@ organizational (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="ci
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-13-5">Every level above Baseline Issuance also carries the cross-cutting
+<p id="section-13-5">Read as an adoption ladder, each level makes a broader class of agent
+work defensible to grant. The mapping is informative: the action
+classes are the runtime profile's
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), resource policy remains
+authoritative for its own objects, and what a level grants varies
+with the binding; the Mission Deployment Profile
+(<a href="#deployment-profile" class="auto internal xref">Section 14</a>) is where a deployment states its own
+<code>mediated_action_classes</code> and exclusions.<a href="#section-13-5" class="pilcrow">¶</a></p>
+<table class="center" id="table-4">
+        <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Level</th>
+            <th class="text-left" rowspan="1" colspan="1">What a deployment can defensibly grant</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Baseline Issuance</td>
+            <td class="text-left" rowspan="1" colspan="1">Consequential reads that are attributable and killable at the issuance gate: the governed pilot</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Runtime-Enforced</td>
+            <td class="text-left" rowspan="1" colspan="1">Consequential writes inside approved bounds, reversible under the deployment's own authority</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Governed Agent</td>
+            <td class="text-left" rowspan="1" colspan="1">Unattended operation and delegation, with approval evidence behind every grant</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">High-Assurance Agent</td>
+            <td class="text-left" rowspan="1" colspan="1">The irreversible-action, external-commitment, and privileged-administration classes, under mediated custody and action-bound approval</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-13-7">Every level above Baseline Issuance also carries the cross-cutting
 obligations its mechanisms imply: operation-profile normalization
 where duration or parameter digests are metered
 (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>,
@@ -2672,7 +2818,7 @@ audit horizon, and a registration schedule where audit transparency is
 run (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). The evidence levels are
 accountability, not prevention: they make what was recorded
 tamper-evident, not what was perceived true or what was never recorded
-present.<a href="#section-13-5" class="pilcrow">¶</a></p>
+present.<a href="#section-13-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="deployment-profile">
@@ -2688,13 +2834,16 @@ boundary. The <strong>Mission Deployment Profile</strong> is that system-level
 artifact: a single publishable manifest that composes the per-layer
 scope statements (the runtime profile's Enforcement Scope Statement,
 the harness execution-environment scope statement, the MAS mapping
-contract where used) into one object an auditor, a procurement, or a
+contract where used, the Resource Server coverage split between
+<code>authorization_details</code> enforcement and the scope projection, and the
+transparency-service topology and registration schedule where audit
+transparency is run) into one object an auditor, a procurement, or a
 security review can read. It is non-normative in shape here; a profile
 or deployment fixes the exact serialization.<a href="#section-14-1" class="pilcrow">¶</a></p>
 <p id="section-14-2">Its distinguishing field is <code>residual_risks</code>: the profile is not
 credible unless it states, in the same object as its guarantees, what
 it does not cover. An illustrative shape:<a href="#section-14-2" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-14-3">
+<div class="breakable lang-json sourcecode" id="section-14-3">
 <pre>
 {
   "profile": "mission-governed-agent-runtime",
@@ -2729,15 +2878,26 @@ it does not cover. An illustrative shape:<a href="#section-14-2" class="pilcrow"
     "cached_credentials_revalidated": true,
     "secondary_egress_enumerated": true
   },
+  "resource_servers": {
+    "authorization_details_enforcing": ["https://erp.example.com"],
+    "scope_projection_only": ["https://mail.example.com"],
+    "constraint_enforcement_for_scope_only": "runtime_pep"
+  },
   "evidence": {
     "decision_evidence": true,
     "execution_evidence": true,
-    "retention_days": 365
+    "retention_days": 365,
+    "transparency": {
+      "service_operator": "third_party",
+      "monitor": "sec-ops",
+      "registration_time_bound_seconds": 3600
+    }
   },
   "residual_risks": [
     "unmediated local reasoning is outside enforcement",
     "revocation latency up to 30 seconds",
-    "PEP compromise is not prevented"
+    "PEP compromise is not prevented",
+    "per-entry constraints reach scope-only resources only via the PEP"
   ]
 }
 </pre><a href="#section-14-3" class="pilcrow">¶</a>
@@ -2756,8 +2916,8 @@ that level leaves.<a href="#section-14-4" class="pilcrow">¶</a></p>
       </h2>
 <p id="section-15-1">Each layer earns a specific property and leaves a specific residue.
 Stated as a table so a claim cannot be read as more than it is:<a href="#section-15-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-2">
-        <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<table class="center" id="table-5">
+        <caption><a href="#table-5" class="selfRef">Table 5</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Mechanism</th>
@@ -2815,15 +2975,38 @@ model make a deployment state rather than assume.<a href="#section-15-3" class="
 each names its answering documents by short form (<a href="#document-map" class="auto internal xref">Section 17</a>).
 They stand on their own: a reader evaluating another design can use
 them as a checklist. As a litmus, a design is Mission-based in this
-family's sense only when all of the following hold: the task is a
-durable, explicitly approved object rather than a session or a token;
-the approved intent and authority are integrity-committed at
-approval; authority is derived from the object and gated on its
-state; derived and delegated authority only narrows; consequential
-actions are checkable against the object at the point of use; and
-what was approved, shown, decided, and done is reconstructible from
-evidence. A design that relaxes one of these provides a different,
-weaker guarantee; the requirements below unpack them.<a href="#section-16-1" class="pilcrow">¶</a></p>
+family's sense only when all six of the following hold:<a href="#section-16-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-16-2">
+<li id="section-16-2.1">
+          <p id="section-16-2.1.1"><strong>An approved task object</strong>: the task is a durable, explicitly
+approved object rather than a session or a token, and its intent
+and derived authority are integrity-committed at approval.<a href="#section-16-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-16-2.2">
+          <p id="section-16-2.2.1"><strong>Authority derived from the task</strong>: credentials and decisions
+derive from that object, never minted independently of it.<a href="#section-16-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-16-2.3">
+          <p id="section-16-2.3.1"><strong>Narrow-only delegation</strong>: derived and delegated authority only
+narrows, and widening exists only as a fresh approval.<a href="#section-16-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-16-2.4">
+          <p id="section-16-2.4.1"><strong>Per-action runtime enforcement</strong>: consequential actions are
+checkable against the object at the point of use.<a href="#section-16-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-16-2.5">
+          <p id="section-16-2.5.1"><strong>Observable lifecycle state</strong>: the object's current state is
+observable and gates issuance and reliance; only <code>active</code> permits,
+and unrecognized states fail safe.<a href="#section-16-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-16-2.6">
+          <p id="section-16-2.6.1"><strong>Evidence that joins</strong>: what was approved, shown, decided, and
+done is reconstructible from evidence joined on the object's
+identity.<a href="#section-16-2.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-16-3">A design that relaxes one of these provides a different, weaker
+guarantee; the requirements below unpack them.<a href="#section-16-3" class="pilcrow">¶</a></p>
 <div id="req-context">
 <section id="section-16.1">
         <h3 id="name-context-and-intent">

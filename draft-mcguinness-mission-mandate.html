@@ -1618,14 +1618,22 @@ discipline of the family's status surfaces
 mint narrowly for the recipient's need, in particular omitting
 <code>authority_set</code> when the recipient does not recompute the anchor
 (<a href="#privacy-considerations" class="auto internal xref">Section 12</a>), and <span class="bcp14">SHOULD</span> record <code>minted_for</code>.<a href="#section-5.4-2" class="pilcrow">¶</a></p>
-<p id="section-5.4-3">A Mandate outlives signing-key rotation schedules. The issuer <span class="bcp14">MUST</span>
+<p id="section-5.4-3">Each minting is a Mandate evidence event: the issuer <span class="bcp14">MUST</span> record the
+authenticated requester, the <code>jti</code>, the <code>iat</code>, and the <code>minted_for</code>
+value where present, retained for the Mandate's evidence lifetime.
+Leak attribution rests on this record: a Mandate found where it
+should not be names its first recipient only if the issuer can
+answer a repudiating one (the Join Assertion's minting evidence is
+the same pattern,
+<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-5.4-3" class="pilcrow">¶</a></p>
+<p id="section-5.4-4">A Mandate outlives signing-key rotation schedules. The issuer <span class="bcp14">MUST</span>
 keep the key that verifies each minted Mandate resolvable by its
 <code>kid</code> in the published key material for that Mandate's evidence
 lifetime: until <code>mandate_exp</code>, or for the Mission's audit horizon
 when <code>mandate_exp</code> is absent. Rotation retires a key from signing,
 never from resolvability within that bound; the status profile
 states the matching retention rule for the issuer's <code>jwks_uri</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-5.4-3" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-5.4-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="example">
