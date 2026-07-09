@@ -1176,6 +1176,27 @@ remains the Mission Issuer while estate Authorization Servers redeem
 Mission Issuance Grants for Mission-bound, state-gated tokens,
 restoring the token-layer chokepoint without moving approval.
 
+## Entry Ramps by Estate {#entry-ramps}
+
+Which chokepoint a deployment builds first is decided by the estate
+it already runs, not by preference. The core's issuance ramp assumes
+an Authorization Server that supports pushed authorization requests,
+rich authorization requests, and JWT access tokens; the standalone
+ramp assumes none of that and trades it for PEP coverage. By starting
+condition:
+
+| Estate starting condition | Entry ramp | Day-one delta |
+|---|---|---|
+| AS changeable; PAR, RAR, and JWT access tokens in place | Issuance profile (the core) | AS adds intent intake, derivation, approval, record, and gating; scope-only Resource Servers and clients continue unchanged |
+| AS changeable; RAR absent or tokens opaque | MAS first; the core once the AS gains the token plane | A MAS beside the AS; nothing else changes |
+| AS cannot change (shared, third-party, SaaS) | Standalone MAS, phase by phase | Records and approvals first; enforcement arrives with PEP/PDP coverage |
+| Many Authorization Servers, one governance point | MAS as estate control plane; issuance join per consuming AS | Each AS adds grant redemption only ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) |
+| No PEP/PDP over consequential paths | Issuance profile where the AS allows; runtime layer next | Token-layer gating only; Baseline limits stated, runtime layer planned |
+
+Every row shares the record, anchors, and lifecycle, so a ramp is an
+entry point, not a fork: Missions carry unchanged from any row to the
+rows a deployment adopts later.
+
 In sequence, the standalone mode runs submit, poll, approve, join,
 permit:
 
@@ -1359,7 +1380,10 @@ boundary. The **Mission Deployment Profile** is that system-level
 artifact: a single publishable manifest that composes the per-layer
 scope statements (the runtime profile's Enforcement Scope Statement,
 the harness execution-environment scope statement, the MAS mapping
-contract where used) into one object an auditor, a procurement, or a
+contract where used, the Resource Server coverage split between
+`authorization_details` enforcement and the scope projection, and the
+transparency-service topology and registration schedule where audit
+transparency is run) into one object an auditor, a procurement, or a
 security review can read. It is non-normative in shape here; a profile
 or deployment fixes the exact serialization.
 
@@ -1401,15 +1425,26 @@ it does not cover. An illustrative shape:
     "cached_credentials_revalidated": true,
     "secondary_egress_enumerated": true
   },
+  "resource_servers": {
+    "authorization_details_enforcing": ["https://erp.example.com"],
+    "scope_projection_only": ["https://mail.example.com"],
+    "constraint_enforcement_for_scope_only": "runtime_pep"
+  },
   "evidence": {
     "decision_evidence": true,
     "execution_evidence": true,
-    "retention_days": 365
+    "retention_days": 365,
+    "transparency": {
+      "service_operator": "third_party",
+      "monitor": "sec-ops",
+      "registration_time_bound_seconds": 3600
+    }
   },
   "residual_risks": [
     "unmediated local reasoning is outside enforcement",
     "revocation latency up to 30 seconds",
-    "PEP compromise is not prevented"
+    "PEP compromise is not prevented",
+    "per-entry constraints reach scope-only resources only via the PEP"
   ]
 }
 ~~~
