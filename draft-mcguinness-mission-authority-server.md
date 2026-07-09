@@ -1211,6 +1211,17 @@ for the Mission's enforcement scope. Any other caller MUST receive
 `not_found`, so the `join_failed` (403) and `not_found` (404) split
 never acts as a mapping oracle for callers outside that set.
 
+Assertion lifetime is capped by the token's, so short token lifetimes
+put minting on the rotation path: each rotation needs a fresh
+assertion and its introspection call, per Mission and per workload. A
+deployment amortizes deliberately: it sizes agent token lifetimes to
+the runtime layer's revocation cutoff rather than treating expiry as
+the kill switch (the token-lifetime trade of
+{{I-D.draft-mcguinness-mission-runtime}}), and the MAS MAY reuse an
+introspection result across mintings of the same token within the
+deployment's staleness bound, so re-minting for an unchanged token
+does not repeat the AS round trip.
+
 ## The Assertion {#join-assertion-artifact}
 
 On success the MAS mints a Mission Join Assertion: a signed JWT
@@ -1589,6 +1600,13 @@ provider and Authorization Server, changing neither:
 - runtime decision and execution evidence flows to the deployment's
   audit sink.
 
+Which Mission Issuer governs a given resource is deployment
+configuration the estate makes explicit: where more than one Mission
+Issuer operates, the deployment documents the resource-to-issuer
+mapping alongside its mapping contract, and a PEP treats a resource
+with no mapped issuer as outside this profile's governance rather
+than inventing one.
+
 ## Connector Patterns {#deployment-connectors}
 
 The PEP is wherever consequential effects can be refused before they
@@ -1645,6 +1663,14 @@ floor is required to begin. The MAS is not a throwaway bridge but the
 enduring control plane of the family's delegated-authority layer
 ({{I-D.draft-mcguinness-mission-architecture}}), which a deployment
 keeps even as individual Authorization Servers become Mission-aware.
+
+The common starting estate runs bots on standing service accounts
+with broad, durable entitlements. The migration is per task, not per
+account: each recurring job becomes a durable Mission whose Authority
+Set is derived from the entitlements the job actually exercises, with
+the deployment's entitlement catalog as the derivation policy's
+input; the service account retains only what no Mission yet governs,
+and that shrinking residue is the adoption metric.
 
 # Security Considerations
 
@@ -1737,6 +1763,20 @@ work stoppage for governed actions, not into loosened enforcement
 {{I-D.draft-mcguinness-mission-security-model}}). A deployment
 provisions MAS availability accordingly and sizes
 `mission_max_stale_seconds` to the caching it can tolerate.
+
+## Signing-Key Custody
+
+The MAS's signing key is the estate's Mission root of trust: it signs
+status and lifecycle responses, Join Assertions, and the issuer-signed
+artifacts of the companions. A MAS SHOULD hold it in a non-exportable
+keystore (an HSM or equivalent KMS-grade custody) with dual-controlled
+generation, and SHOULD sign high-volume surfaces (status, Join
+Assertions) and long-lived artifacts (Mandates, Issuance Grants) under
+distinct `kid`s in one `jwks_uri`, so custody can differ by blast
+radius. The introspection credential the MAS holds at the estate AS
+({{join-assertion-request}}) is secret material of the same tier: its
+compromise forges joins
+({{I-D.draft-mcguinness-mission-security-model}}).
 
 ## MAS Compromise
 

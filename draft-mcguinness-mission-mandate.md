@@ -367,6 +367,15 @@ mint narrowly for the recipient's need, in particular omitting
 `authority_set` when the recipient does not recompute the anchor
 ({{privacy-considerations}}), and SHOULD record `minted_for`.
 
+Each minting is a Mandate evidence event: the issuer MUST record the
+authenticated requester, the `jti`, the `iat`, and the `minted_for`
+value where present, retained for the Mandate's evidence lifetime.
+Leak attribution rests on this record: a Mandate found where it
+should not be names its first recipient only if the issuer can
+answer a repudiating one (the Join Assertion's minting evidence is
+the same pattern,
+{{I-D.draft-mcguinness-mission-authority-server}}).
+
 A Mandate outlives signing-key rotation schedules. The issuer MUST
 keep the key that verifies each minted Mandate resolvable by its
 `kid` in the published key material for that Mandate's evidence
