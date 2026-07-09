@@ -309,6 +309,19 @@ The Mission Issuer MUST reject a child creation request presented on a
 front channel with `parent_token`. The parent grant is presented only
 on the authenticated back channel.
 
+Presenting the parent's refresh token as `parent_token` MUST follow
+the issuance profile's handling for that token: a sender-constrained
+refresh token MUST be presented in conformance with its sender
+constraint. Presenting the token for child creation MUST NOT rotate it
+and MUST NOT register as a replay in the deployment's refresh-token
+replay detection: the token is used here only to bind and resolve the
+parent, not to refresh. Because that carve-out would let a stolen
+bearer refresh token be presented repeatedly without detection, each
+child-creation presentation MUST be recorded and counted toward the
+deployment's anomaly detection, and a per-parent rate limit on child
+creation requests is a MUST when the presented token is not
+sender-constrained.
+
 ## Child Client Identity {#child-client-identity}
 
 The child actor is the OAuth client of the Child Mission: its
@@ -774,6 +787,12 @@ consumer-side parent-state checks, are experimental and defined in
 {{experimental-cascade}}. A cascade mode MUST NOT allow a Child Mission
 to continue deriving
 new credentials after the parent is known to be non-active.
+
+A consumer that does not recognize a Child Mission's `cascade_mode`
+value MUST verify parent state, within the deployment's declared
+freshness window, before each reliance on the child's authority: an
+unrecognized mode may place the interim verification obligation on
+the consumer.
 
 Cascade modes may differ across one lineage. The Mission Issuer MUST
 commit the terminal cascade transition for every dependent Child
