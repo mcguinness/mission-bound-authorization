@@ -2610,6 +2610,15 @@ effect, so a consumer can size token lifetimes and choose propagation
 mechanisms to match. When the member is absent, no propagation bound
 is declared: a consumer <span class="bcp14">MUST</span> size reliance to token lifetime alone
 and <span class="bcp14">MUST NOT</span> assume a tighter bound.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-5">Where the member is present, a status response's <code>mission.fresh_until</code>
+        <span class="bcp14">MUST NOT</span> exceed the response's issuance time plus the advertised
+bound: the advertisement is the ceiling on every reliance window
+built from these surfaces, including a runtime permit's validity
+window, which is capped by the state view's freshness. As sizing
+guidance, the runtime enforcement profile's recommended defaults
+target an effective bound under 300 seconds for the high-consequence
+classes; the 60-second value in this document's examples is a tight
+deployment's choice, not a floor.<a href="#section-6-5" class="pilcrow">¶</a></p>
 <div id="recommended-access-token-ttl">
 <section id="section-6.1">
         <h3 id="name-recommended-access-token-tt">
@@ -2798,14 +2807,19 @@ signed form it requires.<a href="#section-8.4-1" class="pilcrow">¶</a></p>
 <a href="#section-8.5" class="section-number selfRef">8.5. </a><a href="#name-signing-key-retention-for-a" class="section-name selfRef">Signing-Key Retention for Audit</a>
         </h3>
 <p id="section-8.5-1">The AS signs Mission Status and Lifecycle responses with a key from
-its <code>jwks_uri</code>. The AS <span class="bcp14">MUST</span> retain the public JWK for every <code>kid</code> it
-has signed such a response under, indexed by <code>kid</code>, for at least the
-Mission record retention period (even after the key is rotated out
-of the live <code>jwks_uri</code>), so an archived
-<code>application/mission-status-response+jwt</code> remains verifiable for audit
-and dispute. The AS <span class="bcp14">MAY</span> expose retired verification keys through a
-deployment-defined audit interface but <span class="bcp14">MUST NOT</span> serve them as active
-keys at <code>jwks_uri</code>.<a href="#section-8.5-1" class="pilcrow">¶</a></p>
+its <code>jwks_uri</code>. The AS <span class="bcp14">MUST</span> keep the public JWK for every <code>kid</code> it
+has signed such a response under resolvable in its <code>jwks_uri</code> for at
+least the Mission record retention period, so an archived
+<code>application/mission-status-response+jwt</code> remains verifiable for
+audit and dispute. Rotation retires a key from signing, never from
+the published set within that bound: the same rule the Mandate
+states for its evidence lifetime
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>) and the AuthZEN profile
+states for its deployment-published evidence key sets
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). A key known or suspected
+compromised is the exception: the AS removes it, and the Mandate
+profile's compromise-time rule governs how artifacts signed under it
+are then classified.<a href="#section-8.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="general-oauth-security">
@@ -3121,6 +3135,14 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
 <dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-mandate">[I-D.draft-mcguinness-mission-mandate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Mandate"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
         <dd>

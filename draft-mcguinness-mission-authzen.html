@@ -1223,6 +1223,9 @@ semantics the runtime profile owns.<a href="#section-abstract-1" class="pilcrow"
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.11">
                 <p id="section-toc.1-1.5.2.11.1"><a href="#section-5.11" class="auto internal xref">5.11</a>. <a href="#name-batch-evaluations" class="internal xref">Batch evaluations</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.12">
+                <p id="section-toc.1-1.5.2.12.1"><a href="#section-5.12" class="auto internal xref">5.12</a>. <a href="#name-timeouts-retries-and-overlo" class="internal xref">Timeouts, Retries, and Overload</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
@@ -2330,6 +2333,42 @@ Evidence <code>contributing_constraints</code>:<a href="#section-5.11-4" class="
 </div>
 </section>
 </div>
+<div id="transport-behavior">
+<section id="section-5.12">
+        <h3 id="name-timeouts-retries-and-overlo">
+<a href="#section-5.12" class="section-number selfRef">5.12. </a><a href="#name-timeouts-retries-and-overlo" class="section-name selfRef">Timeouts, Retries, and Overload</a>
+        </h3>
+<p id="section-5.12-1">An evaluation exchange carries metered and single-use consequences,
+so its transport behavior is specified, not assumed:<a href="#section-5.12-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.12-2.1">
+            <p id="section-5.12-2.1.1">A PEP <span class="bcp14">MUST</span> bound each evaluation call with a timeout inside the
+action class's staleness budget and treat expiry as
+<code>pdp_unreachable</code> (<a href="#pre-decision-refusal" class="auto internal xref">Section 7.2</a>): fail closed, never a
+permit.<a href="#section-5.12-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.12-2.2">
+            <p id="section-5.12-2.2.1">A PEP <span class="bcp14">MAY</span> retry an evaluation whose response was lost, carrying
+the same normalized parameters and idempotency key. The runtime
+profile's retransmission rule then returns the prior decision
+where its permit is unexpired and unconsumed
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and metering <span class="bcp14">MUST NOT</span>
+charge the bound twice for the retried request
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-5.12-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.12-2.3">
+            <p id="section-5.12-2.3.1">A PDP under overload sheds load explicitly: HTTP 429 with
+<code>Retry-After</code>. The PEP treats it as <code>pdp_unreachable</code> for the
+action at hand and <span class="bcp14">MUST NOT</span> retry before <code>Retry-After</code> elapses.<a href="#section-5.12-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.12-2.4">
+            <p id="section-5.12-2.4.1">A PDP <span class="bcp14">MAY</span> publish a maximum batch size and refuse an oversized
+boxcar with HTTP 413; the PEP splits the batch rather than
+dropping items.<a href="#section-5.12-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
 </section>
 </div>
 <div id="pdp-response">
@@ -2414,7 +2453,12 @@ which the permit <span class="bcp14">MUST NOT</span> be used. It <span class="bc
 freshness time or lease of the Mission state view the decision
 relied on (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); in
 particular, it <span class="bcp14">MUST NOT</span> be later than a supplied
-<code>context.freshness.mission_status_expires_at</code>.<a href="#section-6.1-2.14.1" class="pilcrow">¶</a></p>
+<code>context.freshness.mission_status_expires_at</code>. In <code>fresh</code> mode
+with no supplied <code>mission_status_expires_at</code>, the PDP derives the
+bound from its own state view: the view's freshness time or lease
+where the source reports one, otherwise the deployment's published
+staleness bound for the action's class. No mode leaves the permit
+window unbounded on the wire.<a href="#section-6.1-2.14.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-6.1-2.15">
@@ -2896,6 +2940,13 @@ acting, rather than trusting a relayed <code>decision: true</code>. A PEP permit
 cache <span class="bcp14">MUST</span> key on the complete request envelope, so a cached permit
 cannot be reused for a request whose envelope differs in any bound
 field.<a href="#section-6.7-1" class="pilcrow">¶</a></p>
+<p id="section-6.7-2">The envelope rule fixes what a permit cache is for. A parameter-bound
+class keys on <code>parameter_digest</code>, and a high-consequence permit is
+single-use, so caching amortizes only repeat-identical,
+non-single-use actions: reads and idempotent re-checks. The steady
+state for consequential writes is one evaluation per action, and a
+deployment sizes PDP capacity and placement to that rate, not to a
+cache hit ratio (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6.7-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="decision-id-propagation">
@@ -3228,66 +3279,88 @@ Evidence Object instead.<a href="#section-7.2-2.12.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.2-2.15">
-<code>parameter_digest</code>:</dt>
+<code>first_evaluated_at</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-7.2-2.16">
-            <p id="section-7.2-2.16.1">CONDITIONAL. A string. <span class="bcp14">REQUIRED</span> for a parameter-bound action class.<a href="#section-7.2-2.16.1" class="pilcrow">¶</a></p>
+            <p id="section-7.2-2.16.1"><span class="bcp14">OPTIONAL</span>. An RFC 3339 timestamp. Present on an aggregated record:
+the earliest refusal the record covers, with <code>evaluated_at</code> the
+latest.<a href="#section-7.2-2.16.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.2-2.17">
-<code>request_digest</code>:</dt>
+<code>attempt_count</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-7.2-2.18">
-            <p id="section-7.2-2.18.1">CONDITIONAL. A string. a privacy-preserving digest of the refused
-request, in the form of <a href="#request-digest-worked" class="auto internal xref">Section 7.5</a>. <span class="bcp14">REQUIRED</span> when
-<code>parameter_digest</code> is absent, so the record meets the runtime
-profile's record minimum
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-7.2-2.18.1" class="pilcrow">¶</a></p>
+            <p id="section-7.2-2.18.1"><span class="bcp14">OPTIONAL</span>. An integer. Present on an aggregated record: the number
+of refusals the record covers.<a href="#section-7.2-2.18.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.2-2.19">
-<code>mission</code>:</dt>
+<code>parameter_digest</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-7.2-2.20">
-            <p id="section-7.2-2.20.1"><span class="bcp14">OPTIONAL</span>. An object. the Mission reference (<code>id</code>, <code>issuer</code>,
-<code>authority_hash</code>), present only when the PEP verified the <code>mission</code>
-claim before the failure (for example, on <code>pdp_unreachable</code>).<a href="#section-7.2-2.20.1" class="pilcrow">¶</a></p>
+            <p id="section-7.2-2.20.1">CONDITIONAL. A string. <span class="bcp14">REQUIRED</span> for a parameter-bound action class.<a href="#section-7.2-2.20.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.2-2.21">
-<code>subject</code>, <code>actor</code>, <code>credential</code>:</dt>
+<code>request_digest</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-7.2-2.22">
-            <p id="section-7.2-2.22.1"><span class="bcp14">OPTIONAL</span>. Objects. verified facts only, in the request forms of
-<a href="#pdp-request" class="auto internal xref">Section 5</a>. For a token-validation failure, the record <span class="bcp14">MUST NOT</span>
-describe unverified token claims as authenticated facts
+            <p id="section-7.2-2.22.1">CONDITIONAL. A string. a privacy-preserving digest of the refused
+request, in the form of <a href="#request-digest-worked" class="auto internal xref">Section 7.5</a>. <span class="bcp14">REQUIRED</span> when
+<code>parameter_digest</code> is absent, so the record meets the runtime
+profile's record minimum
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-7.2-2.22.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.2-2.23">
-<code>sequence</code>:</dt>
+<code>mission</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-7.2-2.24">
-            <p id="section-7.2-2.24.1">CONDITIONAL. An integer. <span class="bcp14">REQUIRED</span> when the record carries a verified
-<code>mission</code> reference, continuing that Mission's per-record sequence;
-absent when no Mission was established.<a href="#section-7.2-2.24.1" class="pilcrow">¶</a></p>
+            <p id="section-7.2-2.24.1"><span class="bcp14">OPTIONAL</span>. An object. the Mission reference (<code>id</code>, <code>issuer</code>,
+<code>authority_hash</code>), present only when the PEP verified the <code>mission</code>
+claim before the failure (for example, on <code>pdp_unreachable</code>).<a href="#section-7.2-2.24.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.2-2.25">
-<code>evidence_envelope</code>:</dt>
+<code>subject</code>, <code>actor</code>, <code>credential</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-7.2-2.26">
-            <p id="section-7.2-2.26.1"><span class="bcp14">REQUIRED</span>. An object. integrity protection in the form of
+            <p id="section-7.2-2.26.1"><span class="bcp14">OPTIONAL</span>. Objects. verified facts only, in the request forms of
+<a href="#pdp-request" class="auto internal xref">Section 5</a>. For a token-validation failure, the record <span class="bcp14">MUST NOT</span>
+describe unverified token claims as authenticated facts
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-7.2-2.26.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-2.27">
+<code>sequence</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-2.28">
+            <p id="section-7.2-2.28.1">CONDITIONAL. An integer. <span class="bcp14">REQUIRED</span> when the record carries a verified
+<code>mission</code> reference, continuing that Mission's per-record sequence;
+absent when no Mission was established.<a href="#section-7.2-2.28.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.2-2.29">
+<code>evidence_envelope</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.2-2.30">
+            <p id="section-7.2-2.30.1"><span class="bcp14">REQUIRED</span>. An object. integrity protection in the form of
 <a href="#decision-evidence-integrity" class="auto internal xref">Section 7.3</a>, emitted by the refusing PEP, whose
 JWS protected <code>typ</code> is <code>application/mission-refusal-record+json</code>
-(<a href="#iana" class="auto internal xref">Section 14</a>).<a href="#section-7.2-2.26.1" class="pilcrow">¶</a></p>
+(<a href="#iana" class="auto internal xref">Section 14</a>).<a href="#section-7.2-2.30.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
 <p id="section-7.2-3">A Refusal Record is closed to uncoordinated extension under the same
 rule as Decision Evidence.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
-<p id="section-7.2-4">When the deployment establishes the Mission binding externally under
+<p id="section-7.2-4">A sustained failure condition with a retrying agent otherwise yields
+one signed record per attempt. A PEP <span class="bcp14">MAY</span> aggregate consecutive
+refusals sharing <code>denial_reason</code>, <code>audience</code>, <code>action</code>, and the
+parameter or request digest into one Refusal Record, carrying
+<code>first_evaluated_at</code>, <code>evaluated_at</code>, and <code>attempt_count</code>.
+Aggregation applies only to the PEP-side conditions of this section;
+PDP denials remain one Decision Evidence Object per evaluation.<a href="#section-7.2-4" class="pilcrow">¶</a></p>
+<p id="section-7.2-5">When the deployment establishes the Mission binding externally under
 the runtime profile's binding-establishment step
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), absence of the <code>mission</code>
 claim is not a pre-decision refusal and <code>mission_claim_missing</code> does
-not apply; the external join's verification governs instead.<a href="#section-7.2-4" class="pilcrow">¶</a></p>
-<p id="section-7.2-5">A PDP outage on the ERP reconciliation Mission, recorded by the PEP
-that failed closed:<a href="#section-7.2-5" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-7.2-6">
+not apply; the external join's verification governs instead.<a href="#section-7.2-5" class="pilcrow">¶</a></p>
+<p id="section-7.2-6">A PDP outage on the ERP reconciliation Mission, recorded by the PEP
+that failed closed:<a href="#section-7.2-6" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-7.2-7">
 <pre>
 {
   "refusal_id": "ref_3VtM9kQ2xN7rB4sL8eP1jY5wZc",
@@ -3312,7 +3385,7 @@ that failed closed:<a href="#section-7.2-5" class="pilcrow">¶</a></p>
     "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBlcC1rZXkt..."
   }
 }
-</pre><a href="#section-7.2-6" class="pilcrow">¶</a>
+</pre><a href="#section-7.2-7" class="pilcrow">¶</a>
 </div>
 </section>
 </div>

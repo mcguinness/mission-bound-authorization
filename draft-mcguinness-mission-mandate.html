@@ -1623,7 +1623,9 @@ keep the key that verifies each minted Mandate resolvable by its
 <code>kid</code> in the published key material for that Mandate's evidence
 lifetime: until <code>mandate_exp</code>, or for the Mission's audit horizon
 when <code>mandate_exp</code> is absent. Rotation retires a key from signing,
-never from resolvability within that bound.<a href="#section-5.4-3" class="pilcrow">¶</a></p>
+never from resolvability within that bound; the status profile
+states the matching retention rule for the issuer's <code>jwks_uri</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-5.4-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="example">
@@ -1871,8 +1873,11 @@ step 6, or an unrecognized hash prefix under step 8. The Mandate
 <dt id="section-7.1-2.3">Unverifiable:</dt>
           <dd style="margin-left: 1.5em" id="section-7.1-2.4">
             <p id="section-7.1-2.4.1">Verification cannot complete: the issuer's key material is
-unreachable, the <code>kid</code> does not resolve, or no trust anchor covers
-the Mission's issuer. This is not evidence of tampering, mirroring the audit
+unreachable, the <code>kid</code> does not resolve, no trust anchor covers
+the Mission's issuer, or the signing key is issuer-flagged as
+compromised and the Mandate's <code>iat</code> is not anchored before the
+compromise time (<a href="#security-considerations" class="auto internal xref">Section 11</a>). This is not
+evidence of tampering, mirroring the audit
 profile's classification (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>);
 the verifier <span class="bcp14">MUST NOT</span> treat the Mandate as verified and <span class="bcp14">MUST NOT</span>
 treat the failure as proof the artifact is false. Within a
@@ -2112,13 +2117,19 @@ makes the omission a named failure rather than a silent acceptance.<a href="#sec
 <a href="#section-11.3" class="section-number selfRef">11.3. </a><a href="#name-issuer-key-compromise" class="section-name selfRef">Issuer Key Compromise</a>
         </h3>
 <p id="section-11.3-1">A party holding the Mission Issuer's signing key can mint Mandates for
-Missions that never existed, until the key is rotated out of the
-published set. Verifiers bound this by resolving <code>kid</code> against live
-key material; audit registration (<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>) narrows it
-further, since a genuine Mandate has an independent, timestamped
-existence proof and a forged one either goes unregistered or leaves a
-permanent, attributable trace. A deployment whose Mandates feed
-high-consequence decisions <span class="bcp14">SHOULD</span> register them.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
+Missions that never existed. Rotation does not bound the exposure:
+within each Mandate's evidence lifetime the verification key stays
+resolvable (<a href="#minting" class="auto internal xref">Section 5.4</a>), so a forged Mandate with a backdated <code>iat</code>
+verifies exactly as a genuine one does. Audit registration
+(<a href="#audit-evidence" class="auto internal xref">Section 8.3</a>) is the bound: a genuine Mandate has an
+independent, timestamped existence proof, and a forged one either
+goes unregistered or leaves a permanent, attributable trace. A
+deployment whose Mandates feed high-consequence decisions <span class="bcp14">SHOULD</span>
+register them. An issuer that learns a signing key was compromised
+<span class="bcp14">SHOULD</span> record and publish the compromise time; a verifier then
+treats an unregistered Mandate under that <code>kid</code> whose <code>iat</code> cannot
+be anchored before that time as unverifiable (<a href="#failures" class="auto internal xref">Section 7.1</a>), never
+as verified evidence.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="confusion-with-the-cross-domain-grant">

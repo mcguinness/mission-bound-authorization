@@ -475,6 +475,11 @@ Table of Contents
    *  the Mission state source and maximum staleness bound used for each
       action class (Section 7.2);
 
+   *  the PDP-unavailability posture per mediated action class: the
+      maximum outage the deployment rides through on unexpired,
+      unconsumed permits (Section 10), and whether work suppressed by
+      fail-closed is queued for resume or dropped;
+
    *  the runtime enforcement evidence mechanism and retention window
       (Section 11);
 
@@ -1137,8 +1142,7 @@ Table of Contents
       consequence-specific, but the bound is the number that determines
       the profile's headline revocation property, so publishing it
       without its latency consequence is non-conformant.  The per-class
-      budgets recommended below are the non-normative guidance for the
-      value.
+      budgets below are the RECOMMENDED defaults for the value.
 
    *  For the high-consequence classes, the state source MUST be an
       active freshness mechanism that can reflect a revocation within
@@ -1151,8 +1155,8 @@ Table of Contents
       revoked Mission keeps deriving consequence until tokens age out,
       which is the ambient-authority gap this profile exists to close.
 
-   The following non-normative guidance illustrates freshness bounds
-   that are likely to match the risk of common action classes:
+   The following are the RECOMMENDED default freshness postures per
+   class, adopted absent a documented, consequence-specific analysis:
 
       +================+============================================+
       | Class          | Suggested freshness posture                |
@@ -1372,7 +1376,15 @@ Table of Contents
       whose normalized parameters and idempotency key match a prior
       decision whose execution outcome is unresolved or completed within
       the reconciliation window (Section 11).  Legitimate re-execution
-      of the same normalized action mints a new idempotency key.
+      of the same normalized action mints a new idempotency key.  A
+      retransmission is distinguishable from a repeat: when the matching
+      prior decision's permit is unexpired and its single-use identifier
+      unconsumed, the PDP SHOULD return that prior decision (same
+      decision identifier, same permit) rather than refuse, so a permit
+      response lost in transit does not lock the action out for the
+      reconciliation window.  Once the identifier is consumed or the
+      permit expired, the refusal above stands until the outcome is
+      reconciled.
 
    *  The executing PEP MUST verify those bindings and MUST recompute
       the parameter_digest against the parameters it is about to use.  A
@@ -1896,6 +1908,21 @@ Table of Contents
    too expensive reclassifies deliberately and records the choice in its
    Enforcement Scope Statement, rather than weakening the gate on the
    classes that matter.
+
+   *Locality ends where the Mission's shared state begins.* The single-
+   use identifier store and idempotency match (Section 8), the metering
+   counters and exclusivity latch
+   ([I-D.draft-mcguinness-mission-metering]), and the per-Mission
+   evidence sequence ([I-D.draft-mcguinness-mission-authzen]) are
+   strongly consistent state scoped to one Mission.  An embedded PDP
+   evaluating an action that consults any of them pays the round trip to
+   the Mission's consistency domain wherever the decision runs, so the
+   materialized view localizes only the actions that touch none of them;
+   for the high-consequence classes, whose permits are single-use, the
+   Mission's domain, not PDP placement, sets the latency floor.  A
+   deployment prices this deliberately: colocate a Mission's domain with
+   the PEPs that act under it, or accept the hop for the classes that
+   require it.
 
 15.  Decision API Binding
 

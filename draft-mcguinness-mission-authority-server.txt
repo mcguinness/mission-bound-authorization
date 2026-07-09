@@ -111,8 +111,9 @@ Table of Contents
    11. Limitations
    12. Conformance
    13. The Enterprise Mission Authority Profile
-     13.1.  The Enterprise Mapping Contract
-     13.2.  Policy View Distribution
+     13.1.  Estate Prerequisites
+     13.2.  The Enterprise Mapping Contract
+     13.3.  Policy View Distribution
    14. Deployment
      14.1.  Topology
      14.2.  Connector Patterns
@@ -1175,6 +1176,12 @@ Table of Contents
 
    aud:  OPTIONAL.  The PDP or PDPs the assertion is minted for.
 
+   mapping_version:  OPTIONAL.  A string.  The mapping contract version
+      (Section 13.2) under which the subject and client joins were
+      evaluated.  RECOMMENDED where the MAS publishes a mapping
+      contract, so each join is attributable to the mapping that
+      produced it.
+
    When the introspected token carries instance identity
    ([I-D.draft-mcguinness-oauth-client-instance-assertion]), the MAS
    SHOULD include the instance identifier in the token object: the act
@@ -1188,8 +1195,9 @@ Table of Contents
    The endpoint returns HTTP 200 with a JSON object whose assertion
    member carries the JWT.  Each minting is a join evidence event: the
    MAS records the Mission reference, the token digest and thumbprint,
-   the authenticated caller, and the validity window, retained for the
-   audit horizon.
+   the authenticated caller, the mapping version where one is published
+   (Section 13.2), and the validity window, retained for the audit
+   horizon.
 
    Example claims:
 
@@ -1410,7 +1418,11 @@ Table of Contents
       published staleness bound, meeting the runtime profile's
       requirement for those classes
       ([I-D.draft-mcguinness-mission-runtime]); token-lifetime expiry
-      alone does not qualify.
+      alone does not qualify.  Where per-class bounds differ, the
+      metadata's single mission_max_stale_seconds (Section 8) advertises
+      the tightest bound in force, the value a consumer may assume
+      without knowing an action's class; the per-class bounds are
+      published in the Enforcement Scope Statement.
 
    *  *Join Assertion.* The MAS MUST offer the Mission Join Assertion
       (Section 10), and for the high-consequence classes the PDP MUST
@@ -1442,7 +1454,35 @@ Table of Contents
    coverage, and residual risks as a Mission Deployment Profile
    ([I-D.draft-mcguinness-mission-architecture]).
 
-13.1.  The Enterprise Mapping Contract
+13.1.  Estate Prerequisites
+
+   The profile's mandatory path runs through the deployment's unchanged
+   Authorization Server, and it assumes capabilities there:
+   configuration rather than code, but gating nonetheless.  Before
+   claiming the profile a deployment confirms its estate AS provides:
+
+   *  *Token introspection.* [RFC7662] introspection reachable by the
+      MAS, under credentials the deployment protects (Section 15.2); the
+      MAS cannot mint a Join Assertion without it (Section 10.1).
+
+   *  *Sender-constrained issuance.* DPoP-bound or mutual-TLS-bound
+      access tokens for the agent clients acting in the high-consequence
+      classes: the join requires sender-constraint for those classes
+      (Section 9), and the MAS MUST NOT mint an assertion for a token
+      without a cnf key (Section 10.1).
+
+   *  *cnf in introspection.* Introspection responses that report the
+      token's cnf confirmation, since the assertion binds the key
+      thumbprint that response reports.
+
+   An estate whose Authorization Server cannot provide these still joins
+   under the mapping join at the conformance floor (Section 9,
+   Section 12); it does not claim this profile.  The digest pair of
+   Section 10.1 further assumes an introspection surface that resolves a
+   token by digest, which mainstream Authorization Servers do not
+   provide; a deployment plans for the access_token form.
+
+13.2.  The Enterprise Mapping Contract
 
    The dominant MAS risk is a coarse or drifting join: shared client_id
    values, many-to-one directory mappings, and workload identity that
@@ -1468,7 +1508,11 @@ Table of Contents
    *  the failure semantics, which MUST fail closed with
       mission_mismatch on any unresolved or ambiguous mapping.
 
-13.2.  Policy View Distribution
+   A MAS that mints Join Assertions SHOULD carry the version in each
+   assertion's mapping_version claim (Section 10.2), so a mapping change
+   is attributable in join evidence, not only detectable in documents.
+
+13.3.  Policy View Distribution
 
    An enterprise MAS MAY serve audience-scoped Authority Set views, or
    the runtime profile's materialized policy view
@@ -1501,7 +1545,7 @@ Table of Contents
 
    *  the PDP runs the runtime profile's decision contract and its
       AuthZEN binding, drawing authority from the MAS-served Authority
-      Set or a materialized policy view (Section 13.2);
+      Set or a materialized policy view (Section 13.3);
 
    *  the MAS mints a Join Assertion after introspecting the presented
       token, so the PDP verifies one signed proof rather than a mapping

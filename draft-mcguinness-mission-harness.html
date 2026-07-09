@@ -1719,6 +1719,12 @@ semantics.<a href="#section-7-4.4.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
 <p id="section-7-5">If the harness cannot establish active state within the bound, it <span class="bcp14">MUST NOT</span> resume governed work.<a href="#section-7-5" class="pilcrow">¶</a></p>
+<p id="section-7-6">A resume check is a freshness-bound check, not a mandatory network
+call: within one valid window, a status response inside its
+<code>fresh_until</code> or a maintained event-driven cache satisfies every
+resume point that falls inside it, so a harness resuming many items,
+or continuing many tool calls, pays the wire once per window, not
+once per resume.<a href="#section-7-6" class="pilcrow">¶</a></p>
 <div id="resume-algorithm">
 <section id="section-7.1">
         <h3 id="name-resume-algorithm">
