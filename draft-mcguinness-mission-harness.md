@@ -441,14 +441,15 @@ the session are still valid.
 
 ## Interaction with the Orchestration Profile {#orchestration-interaction}
 
-A deployment running both this profile and the orchestration profile
-({{I-D.draft-mcguinness-mission-orchestration}}) MUST provide a
-means for the harness to determine whether a work item is under an
-active unwind decision. The mechanism is deployment-defined.
+The orchestration profile
+({{I-D.draft-mcguinness-mission-orchestration}}) places the joint
+duties on a deployment running both profiles: a means for the harness
+to determine whether a work item is under an active unwind decision
+(the mechanism is deployment-defined), and the stricter outcome where
+harness stop policy and an active unwind decision would produce
+different outcomes for the same work item.
 
-Where harness stop policy and an active unwind decision would produce
-different outcomes for the same work item, the stricter outcome
-governs. The harness records its decision in Harness Evidence and the
+The harness records its decision in Harness Evidence and the
 orchestrator records its decision in Orchestration Evidence, and the
 two records cross-link through their evidence identifiers.
 

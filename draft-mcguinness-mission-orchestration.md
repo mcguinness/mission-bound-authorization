@@ -62,19 +62,19 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
-  I-D.draft-mcguinness-mission-architecture:
-    title: "An Architecture for Mission-Bound Authorization"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
+  I-D.draft-mcguinness-mission-authzen:
+    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-mission-authzen:
-    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
+
+informative:
+  I-D.draft-mcguinness-mission-architecture:
+    title: "An Architecture for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
     author:
       -
         ins: K. McGuinness
@@ -772,6 +772,13 @@ decision point; neither subsumes the other. The runtime profile
 {{I-D.draft-mcguinness-mission-runtime}} still governs each
 consequential action at the last controllable boundary, whichever
 execution profile stops or unwinds the work.
+
+A deployment running both this profile and the harness profile MUST
+provide a means for the harness to determine whether a work item is
+under an active unwind decision; the mechanism is deployment-defined.
+Where harness stop policy and an active unwind decision would produce
+different outcomes for the same work item, the stricter outcome
+governs.
 
 # Conformance {#conformance}
 

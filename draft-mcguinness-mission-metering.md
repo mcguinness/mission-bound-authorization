@@ -44,6 +44,22 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-authzen:
+    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-consent-evidence:
+    title: "Mission Consent Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   I-D.draft-mcguinness-mission-architecture:
@@ -57,22 +73,6 @@ informative:
   I-D.draft-mcguinness-mission-substrate:
     title: "Mission Substrate Requirements"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-mission-authzen:
-    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-consent-evidence:
-    title: "Mission Consent Evidence for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
     author:
       -
         ins: K. McGuinness

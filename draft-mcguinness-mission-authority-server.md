@@ -711,10 +711,13 @@ the outcomes those profiles express as `invalid_grant`:
   {{submission-errors}} and is used only by this section's operations.
 
 The profile-defined machine-readable code rides the MAS error surface
-in the member its profile defines, `mission_expansion_status` for
-expansion ({{I-D.draft-mcguinness-oauth-mission-expansion}}) and
-`mission_denial_reason` for child creation
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), carried as
+in the member its profile defines: a reconciliation status in
+`mission_expansion_status`
+({{I-D.draft-mcguinness-oauth-mission-expansion}}) and an adjudication
+denial reason, for expansion and child creation alike, in the shared
+`mission_denial_reason` member that profile defines
+({{I-D.draft-mcguinness-oauth-mission-expansion}},
+{{I-D.draft-mcguinness-oauth-mission-child-delegation}}), carried as
 a member of the error response body ({{submission-errors}}) or, for a
 denial at adjudication, of the `denied` submission-status response
 ({{submission-status}}).
@@ -777,7 +780,7 @@ reference:
   responses; `superseded` enters the state space the MAS reports
   ({{lifecycle-and-state}}).
 - **Denial reasons.** That profile's closed denial-reason set applies;
-  the code rides in `mission_expansion_status` per
+  the code rides in `mission_denial_reason` per
   {{native-carriage}}.
 
 Approval of the successor is this document's native asynchronous
@@ -1419,9 +1422,10 @@ claiming it additionally:
   `children` on-switch, strict subset, fan-out accounting, `parent`
   construction, cascade, and child client identity ({{native-child}});
   and
-- carries the profiles' closed code sets in `mission_expansion_status`
-  and `mission_denial_reason` on its error and submission-status
-  surfaces ({{native-carriage}}).
+- carries the profiles' closed code sets, reconciliation statuses in
+  `mission_expansion_status` and adjudication denial reasons in the
+  shared `mission_denial_reason` member, on its error and
+  submission-status surfaces ({{native-carriage}}).
 
 A **Mission-joining PDP**:
 

@@ -731,14 +731,15 @@ The Mission Issuer conveys the reconciliation status in a
 alongside the `invalid_grant` error:
 
 `mission_expansion_status`:
-: A string carrying one code from this document's closed sets: a
-  reconciliation status ({{reconciliation}}) or an expansion denial
-  reason ({{denial-reasons}}). It is returned by the step that failed.
-  At the PAR and token endpoints it is a member of the JSON error
-  response body, alongside the OAuth `error` member. On the
+: A string carrying one reconciliation status from this document's
+  closed set ({{reconciliation}}). It is returned by the step that
+  failed. At the PAR and token endpoints it is a member of the JSON
+  error response body, alongside the OAuth `error` member. On the
   front-channel authorization error response, which carries error
   parameters rather than a JSON body, it is carried as an error
-  response parameter of the same name.
+  response parameter of the same name. Adjudication denial reasons
+  ride the separate `mission_denial_reason` member
+  ({{denial-reasons}}).
 
 # Expansion Denial Reasons {#denial-reasons}
 
@@ -772,10 +773,19 @@ further semantics.
 A Mission Issuer MUST NOT use a reason code to disclose policy
 boundaries beyond the adjudicated request ({{policy-probing}}); omitting
 the reason code is always permitted. When present, a reason code is
-carried in `mission_expansion_status` ({{reconciliation}}), the same
-carrier as a reconciliation status: an error-body member at the PAR
-and token endpoints, an error response parameter on the front-channel
-authorization error response.
+carried in a `mission_denial_reason` member: at the PAR and token
+endpoints a member of the JSON error response body alongside the OAuth
+`error` member, on the front-channel authorization error response an
+error response parameter of the same name.
+
+`mission_denial_reason` is the shared carrier for adjudication denial
+reasons across the profiles that mint a Mission related to an existing
+one: the child delegation profile
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) carries its
+own closed denial-reason set in the same member, and further such
+profiles do likewise. Each profile defines its values by
+specification; the unrecognized-code rule above applies to the member
+wherever it appears.
 
 Two failure classes are not denial reasons and use the issuance
 profile's error vocabulary directly: an expansion request whose
@@ -1013,19 +1023,18 @@ already-registered `mission` claim. No new claim, parameter, or
 token-introspection registration is required for the lineage link.
 
 This document defines two closed sets of symbolic codes, the expansion
-reconciliation status codes ({{reconciliation}}) and the expansion
-denial reasons ({{denial-reasons}}), both conveyed in
-`mission_expansion_status` ({{reconciliation}}). As a member of the
-OAuth error response JSON body at the PAR and token endpoints,
-`mission_expansion_status` is namespaced to this document's error
-responses and requires no registration; its authorization error
-response parameter form is registered below. Like the issuance
-profile's restraint with `mission`
-members, the codes are documented in this specification rather than
-placed in new IANA registries: the closed sets are small and fully
-specified here. Should interoperable extension of either set prove
-necessary, a future revision can create a "Mission Expansion
-Reconciliation Status" registry and a "Mission Expansion Denial Reason"
+reconciliation status codes ({{reconciliation}}), conveyed in
+`mission_expansion_status`, and the expansion denial reasons
+({{denial-reasons}}), conveyed in the shared `mission_denial_reason`
+member. As members of the OAuth error response JSON body at the PAR
+and token endpoints, both are namespaced to their error responses and
+require no registration; their authorization error response parameter
+forms are registered below. Like the issuance profile's restraint with
+`mission` members, the codes are documented in their defining
+specifications rather than placed in new IANA registries: the closed
+sets are small and fully specified. Should interoperable extension
+prove necessary, a future revision can create a "Mission Expansion
+Reconciliation Status" registry and a shared "Mission Denial Reason"
 registry with a Specification Required {{RFC8126}} policy; this document
 does not create them.
 
@@ -1046,6 +1055,13 @@ Parameters" registry:
 - Parameter Usage Location: authorization response
 - Change Controller: IETF
 - Reference: this document, {{reconciliation}}
+
+- Name: `mission_denial_reason`
+- Parameter Usage Location: authorization response
+- Change Controller: IETF
+- Reference: this document, {{denial-reasons}}; also carried by the
+  child delegation profile
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
 
 As with `mission_intent` in the issuance profile, PAR {{RFC9126}}
 carries authorization-request parameters without a distinct usage

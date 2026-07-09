@@ -44,6 +44,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   I-D.draft-mcguinness-mission-discovery:
@@ -65,14 +73,6 @@ informative:
   I-D.draft-mcguinness-mission-security-model:
     title: "Mission Security Model"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-mission-runtime:
-    title: "Mission-Bound Runtime Enforcement"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
     author:
       -
         ins: K. McGuinness
@@ -345,7 +345,7 @@ no durable Mission authority.
 This document extends the expansion profile's closed set of expansion
 denial reasons ({{I-D.draft-mcguinness-oauth-mission-expansion}}) by
 specification, as that profile's IANA considerations anticipate, with
-one value, carried in `mission_expansion_status` exactly as that
+one value, carried in `mission_denial_reason` exactly as that
 profile's reasons are:
 
 `out_of_ceiling`:
