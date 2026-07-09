@@ -249,6 +249,20 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  OWASP-AGENTIC:
+    title: "Agentic AI - Threats and Mitigations, Version 1.0"
+    target: https://genai.owasp.org/resource/agentic-ai-threats-and-mitigations/
+    author:
+      -
+        org: OWASP GenAI Security Project, Agentic Security Initiative
+    date: 2025
+  OWASP-LLM10:
+    title: "OWASP Top 10 for LLM Applications 2025"
+    target: https://genai.owasp.org/llm-top-10/
+    author:
+      -
+        org: OWASP GenAI Security Project
+    date: 2025
 
 --- abstract
 
@@ -1060,6 +1074,76 @@ handles.
 This document makes no IANA request.
 
 --- back
+
+# OWASP Agentic Threat Coverage {#owasp-coverage}
+
+This appendix is informative. It maps the fifteen threats of the
+OWASP Agentic AI Threats and Mitigations taxonomy {{OWASP-AGENTIC}}
+onto the model, followed by the OWASP Top 10 for LLM Applications
+{{OWASP-LLM10}}, which predates the agentic taxonomy and mixes
+layers. Threat names and numbering follow the cited versions; the
+taxonomies evolve, and a reader should expect drift. Each threat gets
+one of three verdicts rather than a blanket claim:
+
+**Contained**:
+: the threat lands on machinery built for it, with a named profile
+  behind it.
+
+**Bounded**:
+: the cause is outside the authorization layer's reach, and the
+  blast radius is capped at the enforcement gate.
+
+**Delegated**:
+: the threat belongs to a layer this family never claimed, and a
+  named complement owns it.
+
+The pattern behind the verdicts follows the model's one commitment:
+authority is fixed at approval, and every consequential action is
+checked against it fresh. Threats that attack authority are
+contained. Threats that attack the model, its memory, or its inputs
+are bounded, because a fully fooled agent still cannot out-argue a
+parameter check. Threats that attack other layers are delegated by
+name.
+
+| Threat | The model's answer | Verdict |
+| --- | --- | --- |
+| T1 Memory Poisoning | Poisoned memory steers proposals, not authority: shaping output is untrusted input ({{I-D.draft-mcguinness-mission-shaping}}), and every consequential action still needs a fresh parameter-bound permit against the approved Mission | Bounded |
+| T2 Tool Misuse | Per-action PEP/PDP enforcement with the parameters bound into the permit, applied at the tool boundary ({{I-D.draft-mcguinness-mission-runtime}}) | Contained |
+| T3 Privilege Compromise | Every derivation is a strict subset of the Mission's Authority Set, child Missions only narrow ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), and there is no ambient inheritance to escalate into | Contained |
+| T4 Resource Overload | `expires_at` on every Mission, fan-out bounded by count and depth, and consumption metering (experimental) for spend ({{I-D.draft-mcguinness-mission-metering}}) | Bounded |
+| T5 Cascading Hallucination Attacks | Authorization gates consequence, not truth: hallucinated content reaches the world only through consequential actions, each needing its own permit | Bounded |
+| T6 Intent Breaking and Goal Manipulation | An injected goal cannot widen the committed one: the PDP checks actions against the approved Mission, not against the agent's current intent | Contained |
+| T7 Misaligned and Deceptive Behaviors | Deception is out-evidenced rather than detected: only approved action classes execute, and Decision and Execution Evidence come from the gate, not from the agent's self-report | Bounded |
+| T8 Repudiation and Untraceability | The `act` chain on every hop, the evidence family joined on the Mission identifier, and transparency keeping the feed tamper-evident ({{I-D.draft-mcguinness-mission-audit}}) | Contained |
+| T9 Identity Spoofing and Impersonation | Attested instance identity, sender-constrained tokens, and mediated custody keeping the credential out of the agent entirely for mediated classes | Contained |
+| T10 Overwhelming the Human in the Loop | Humans approve Missions, machines approve actions: the grain keeps human decisions rare and consequential, with deferred approval absorbing volume ({{I-D.draft-mcguinness-oauth-mission-approval}}) | Bounded |
+| T11 Unexpected RCE and Code Attacks | Sandboxing owns execution; the model gates what executed code can reach, since consequential effects still need permits and capabilities are bound to source digests with drift failing closed | Bounded |
+| T12 Agent Communication Poisoning | Messages can lie, authority cannot: influence carries no authority between agents, because delegation only narrows and every hop is enforced against its own child Mission | Bounded |
+| T13 Rogue Agents | A rogue instance holds only mission-bound, instance-bound, revocable authority, and termination cascades through the delegation tree to issuance, permits, and the harness | Contained |
+| T14 Human Attacks on Multi-Agent Systems | Social engineering is out of authorization's reach; a manipulated operator can still only approve what shaping rendered, and the approval is attributed to them | Bounded |
+| T15 Human Manipulation | Consent Evidence commits the disclosure as rendered ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}); an accurately disclosed bad idea remains the human's decision, and the record says so | Bounded |
+
+The agentic tally is six contained, nine bounded, none waved away.
+The threats that attack authority (tools, privilege, goals,
+attribution, identity, rogue delegates) land on machinery built for
+them, and the threats that attack the model or the humans are capped
+rather than cured, because capping is what a deterministic gate can
+truthfully offer. No agentic threat lands delegated; that verdict is
+exercised by the LLM Top 10, where half the list belongs to the
+model and pipeline layers, and saying so is the point:
+
+| Entry | The model's answer | Verdict |
+| --- | --- | --- |
+| LLM01 Prompt Injection | The injected instruction cannot widen committed authority, and external egress needs a fresh parameter-bound permit; {{untrusted-agent}} carries the taint posture | Bounded |
+| LLM02 Sensitive Information Disclosure | Exposure discipline bounds what the agent may see as deliberately as what it may do, and mediated custody keeps credentials out of the leakable set | Bounded |
+| LLM03 Supply Chain | Model and dependency provenance belong to supply-chain security; the one authorization-shaped edge is capabilities bound to source digests, failing closed on drift | Delegated |
+| LLM04 Data and Model Poisoning | Training and embedding pipeline security, upstream of any authorization decision | Delegated |
+| LLM05 Improper Output Handling | Output is dangerous only when it acts, and nothing crosses the consequential boundary without a permit | Bounded |
+| LLM06 Excessive Agency | The direct hit: this family is the treatment for this entry | Contained |
+| LLM07 System Prompt Leakage | Authority lives in the Mission and its tokens, not in the prompt, so a leaked prompt discloses instructions, not power | Delegated |
+| LLM08 Vector and Embedding Weaknesses | Retrieval pipeline security; what retrieval returns is untrusted content, and the taint response treats it that way | Delegated |
+| LLM09 Misinformation | Content truth is semantic, and the gate is structural | Delegated |
+| LLM10 Unbounded Consumption | Expiry on every Mission and metering (experimental) on spend | Bounded |
 
 # Acknowledgments
 {:numbered="false"}
