@@ -1749,11 +1749,12 @@ non-equivocation, the Transparency Service.<a href="#section-8-2.14.1" class="pi
 <p id="section-8-3">The strong claims are earned, not implied. In the base profiles two of
 the mechanisms behind agent-compromise-resistant enforcement (mediated
 credential custody and action-bound approval) are recommendations,
-not requirements, while active-state freshness for the
-high-consequence classes and the no-unmediated-path rule for mediated
-classes are already base-profile requirements; a deployment that
-leaves the recommendations as recommendations does not obtain the
-guarantee. This
+not requirements, and a third, the agent-isolated rendering of the
+approval disclosure, is required only by the claim itself, while
+active-state freshness for the high-consequence classes and the
+no-unmediated-path rule for mediated classes are already base-profile
+requirements; a deployment that leaves any of the five conditions
+unmet does not obtain the guarantee. This
 matches the suite's front-door framing: adopting the profiles does not by
 itself make a deployment resistant to a compromised agent. The model
 makes misuse bounded and, where evidence is produced, attributable.<a href="#section-8-3" class="pilcrow">¶</a></p>
@@ -1891,7 +1892,7 @@ harness leaves no unmediated path; session taint downgrades egress
 after untrusted input (optional; recommended, not required);
 least-exposure context minimization narrows what an injected agent
 sees (runtime, harness); the composite is claimable as trifecta
-containment (runtime). Residual: pEP-placement completeness; no
+containment (runtime). Residual: PEP-placement completeness; no
 information-flow control, so a sequence of in-scope steps can launder
 data; the quarantine pattern (separate ingestion and egress Missions)
 turns that limit into a deployment architecture

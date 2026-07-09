@@ -1058,15 +1058,14 @@ Table of Contents
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
-              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission-00, 6 July 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-mission-00>.
-
-   [I-D.draft-mcguinness-oauth-mission-issuance-grant]
-              McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-issuance-grant]
+              McGuinness, K., "Mission Issuance Grant for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-issuance-
+              grant.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,

@@ -2401,7 +2401,9 @@ by reference when not required for ordinary audit.<a href="#section-9.1-2" class
           <p id="section-10-2.2.1">compute <code>consent_rendering_hash</code>;<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-2.3">
-          <p id="section-10-2.3.1">record Consent Evidence for approval, decline, and narrowed decisions;<a href="#section-10-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-10-2.3.1">record Consent Evidence for approval and decline decisions, and for
+narrowed decisions where the deployment supports approval revision
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval-revision" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval-revision</a>]</span>);<a href="#section-10-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-2.4">
           <p id="section-10-2.4.1">bind approved Mission records to <code>consent_rendering_hash</code>;<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
@@ -2522,7 +2524,8 @@ per audit scope rather than use a single global counter.<a href="#section-12-2" 
 <a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-media-type-registry" class="section-name selfRef">Media Type Registry</a>
         </h3>
 <p id="section-13.1-1">IANA is requested to register one media type per <span>[<a href="#RFC6838" class="cite xref">RFC6838</a>]</span>. The
-Mission audit profile references this media type.<a href="#section-13.1-1" class="pilcrow">¶</a></p>
+Mission audit profile (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>)
+references this media type.<a href="#section-13.1-1" class="pilcrow">¶</a></p>
 <div id="applicationmission-consent-evidencejson">
 <section id="section-13.1.1">
           <h4 id="name-application-mission-consent">
@@ -2659,6 +2662,10 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <dt id="I-D.draft-mcguinness-mission-aauth">[I-D.draft-mcguinness-mission-aauth]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for AAuth"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-audit">[I-D.draft-mcguinness-mission-audit]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Audit Transparency"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
         <dd>

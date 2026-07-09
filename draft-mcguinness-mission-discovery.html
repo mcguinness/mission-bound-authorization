@@ -1736,8 +1736,9 @@ at adjudication.<a href="#section-10-2.18.1" class="pilcrow">¶</a></p>
 <p id="section-10-3">The adjudicator signs the object under the suite's evidence
 conventions: a JWS whose protected header carries <code>alg</code>, a <code>kid</code>
 resolvable in the Mission Issuer's published key material, and a
-<code>typ</code> of <code>application/mission-discovery-evidence+json</code> (a local-use
-identifier pending registration); the signature is what identifies
+<code>typ</code> of <code>mission-discovery-evidence+json</code> (a local-use identifier
+pending registration; the value omits the <code>application/</code> prefix, as
+JWS <code>typ</code> values do); the signature is what identifies
 the adjudicator, so the object carries no member for it. The
 payload's canonical bytes are its JCS canonicalization <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>.
 It is registrable in a transparency log on the Mission's feed

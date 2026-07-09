@@ -1578,6 +1578,18 @@ the requested authority.<a href="#section-6-3" class="pilcrow">¶</a></p>
 <p id="section-6-4">The Mission Issuer <span class="bcp14">MUST</span> reject a child creation request presented on a
 front channel with <code>parent_token</code>. The parent grant is presented only
 on the authenticated back channel.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-5">Presenting the parent's refresh token as <code>parent_token</code> <span class="bcp14">MUST</span> follow
+the issuance profile's handling for that token: a sender-constrained
+refresh token <span class="bcp14">MUST</span> be presented in conformance with its sender
+constraint. Presenting the token for child creation <span class="bcp14">MUST NOT</span> rotate it
+and <span class="bcp14">MUST NOT</span> register as a replay in the deployment's refresh-token
+replay detection: the token is used here only to bind and resolve the
+parent, not to refresh. Because that carve-out would let a stolen
+bearer refresh token be presented repeatedly without detection, each
+child-creation presentation <span class="bcp14">MUST</span> be recorded and counted toward the
+deployment's anomaly detection, and a per-parent rate limit on child
+creation requests is a <span class="bcp14">MUST</span> when the presented token is not
+sender-constrained.<a href="#section-6-5" class="pilcrow">¶</a></p>
 <div id="child-client-identity">
 <section id="section-6.1">
         <h3 id="name-child-client-identity">
@@ -2204,13 +2216,18 @@ consumer-side parent-state checks, are experimental and defined in
 <a href="#experimental-cascade" class="auto internal xref">Appendix A</a>. A cascade mode <span class="bcp14">MUST NOT</span> allow a Child Mission
 to continue deriving
 new credentials after the parent is known to be non-active.<a href="#section-10-6" class="pilcrow">¶</a></p>
-<p id="section-10-7">Cascade modes may differ across one lineage. The Mission Issuer <span class="bcp14">MUST</span>
+<p id="section-10-7">A consumer that does not recognize a Child Mission's <code>cascade_mode</code>
+value <span class="bcp14">MUST</span> verify parent state, within the deployment's declared
+freshness window, before each reliance on the child's authority: an
+unrecognized mode may place the interim verification obligation on
+the consumer.<a href="#section-10-7" class="pilcrow">¶</a></p>
+<p id="section-10-8">Cascade modes may differ across one lineage. The Mission Issuer <span class="bcp14">MUST</span>
 commit the terminal cascade transition for every dependent Child
 Mission regardless of its cascade mode; the mode governs only what
 consumers must verify in the interim. An <code>immediate</code>-mode descendant
 under a consumer-verified parent is therefore never orphaned: its own
-transition is committed even where the parent's is consumer-observed.<a href="#section-10-7" class="pilcrow">¶</a></p>
-<p id="section-10-8">The cascade behavior by trigger:<a href="#section-10-8" class="pilcrow">¶</a></p>
+transition is committed even where the parent's is consumer-observed.<a href="#section-10-8" class="pilcrow">¶</a></p>
+<p id="section-10-9">The cascade behavior by trigger:<a href="#section-10-9" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
         <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
 <thead>

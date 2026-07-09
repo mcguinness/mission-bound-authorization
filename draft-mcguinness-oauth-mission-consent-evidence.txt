@@ -906,8 +906,9 @@ Table of Contents
 
    *  compute consent_rendering_hash;
 
-   *  record Consent Evidence for approval, decline, and narrowed
-      decisions;
+   *  record Consent Evidence for approval and decline decisions, and
+      for narrowed decisions where the deployment supports approval
+      revision ([I-D.draft-mcguinness-oauth-mission-approval-revision]);
 
    *  bind approved Mission records to consent_rendering_hash;
 
@@ -988,7 +989,8 @@ Table of Contents
 13.1.  Media Type Registry
 
    IANA is requested to register one media type per [RFC6838].  The
-   Mission audit profile references this media type.
+   Mission audit profile ([I-D.draft-mcguinness-mission-audit])
+   references this media type.
 
 13.1.1.  application/mission-consent-evidence+json
 
@@ -1087,6 +1089,11 @@ Table of Contents
               McGuinness, K., "Mission-Bound Authorization for AAuth",
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-mission-aauth.html>.
+
+   [I-D.draft-mcguinness-mission-audit]
+              McGuinness, K., "Mission Audit Transparency", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-audit.html>.
 
    [I-D.draft-mcguinness-mission-authority-server]
               McGuinness, K., "Mission Authority Server", 2026,
