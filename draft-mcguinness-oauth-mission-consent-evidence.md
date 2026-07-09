@@ -346,6 +346,12 @@ A Consent Disclosure object has these members:
 `approver`:
 : REQUIRED. The rendered identity of the Approver.
 
+`requesting_client`:
+: REQUIRED. The rendered identity of the client or agent that requested
+  the Mission and will wield the granted authority. It is the party the
+  Approver most needs to identify to resist consent phishing, so it is
+  committed by `consent_rendering_hash` and rendered for consent.
+
 `shaping_evidence_hash`:
 : OPTIONAL. A string. A commitment to Shaping Evidence when shaping was
   used ({{I-D.draft-mcguinness-mission-shaping}}).
@@ -428,10 +434,12 @@ bound. For each material notice of a high-risk class,
 acknowledgment action identifying that notice, and the Mission Issuer
 MUST NOT record an `approved` decision unless the Approver completed
 every acknowledgment the disclosure carries. The acknowledgment is per
-notice and is recorded in the evidence through the committed
-disclosure; a single blanket confirmation does not satisfy it. The same
-classes key the minimum approval-authentication strength the issuance
-profile's deployment floor sets
+notice: the disclosure commits the required action, and the Mission
+Issuer MUST record each completion in the evidence's `acknowledgments`
+member ({{consent-evidence}}), so completion is auditable and not only
+the requirement. A single blanket confirmation does not satisfy it. The
+same classes key the minimum approval-authentication strength the
+issuance profile's deployment floor sets
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
 ## Layered Rendering {#layered-rendering}
@@ -489,8 +497,9 @@ unverifiable" to "did the rendering layer execute a published
 deterministic template," which the higher rungs of
 {{rendering-assurance}} then address.
 
-The Mission Issuer SHOULD record `consent_rendering_hash` on the
-Mission record. When the Mission claim is extended to carry the value,
+A Mission Issuer claiming this profile MUST record
+`consent_rendering_hash` on the Mission record. When the Mission claim
+is extended to carry the value,
 it MUST carry the same prefixed integrity-anchor form, and consumers
 MUST treat it as audit data only; it MUST NOT grant or widen
 authority.
@@ -665,6 +674,16 @@ A Consent Evidence object has these members:
 : OPTIONAL. A string. Present when `decision` is `declined` and the
   deployment records a reason.
 
+`acknowledgments`:
+: REQUIRED when `decision` is `approved` and the rendered disclosure
+  carried acknowledgment actions ({{material-notices}}). An array with
+  one entry per acknowledgment the
+  Approver completed, each identifying the acknowledged notice by its
+  `condition` and the Authority Set entry it applies to, and carrying an
+  RFC 3339 {{RFC3339}} completion timestamp. It makes the per-notice
+  acknowledgment requirement auditable in the evidence itself, not only
+  through the committed disclosure.
+
 `refused_dimensions`:
 : REQUIRED when `decision` is `narrowed`. An object identifying the
   dimensions the review refused. It carries one or both of
@@ -718,7 +737,7 @@ Example, over the worked disclosure of {{disclosure-vector}}:
     "authority_hash":
       "sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro",
     "consent_rendering_hash":
-      "sha-256:W-aXkM2quCh07XvdixCTk8qHoMWOs2tA0hZej4kLGr0"
+      "sha-256:dUuA6ioErHALo02bwESKBt4Yq0RrWSTOT0bBGuRBog0"
   },
   "approver": {
     "iss": "https://idp.example.com",
@@ -731,12 +750,18 @@ Example, over the worked disclosure of {{disclosure-vector}}:
   },
   "approved_at": "2026-06-30T17:55:00Z",
   "decision": "approved",
+  "acknowledgments": [
+    { "condition": "irreversible_action",
+      "applies_to": { "resource": "https://erp.example.com",
+        "action": "journal-entries.write" },
+      "acknowledged_at": "2026-06-30T17:54:50Z" }
+  ],
   "policy_version": "approval-policy:v12",
   "sequence": 88127,
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:W-aXkM2quCh07XvdixCTk8qHoMWOs2tA0hZej4kLGr0"
+      "sha-256:dUuA6ioErHALo02bwESKBt4Yq0RrWSTOT0bBGuRBog0"
   },
   "evidence_envelope": {
     "format": "jws-compact",
@@ -902,7 +927,7 @@ the full Consent Disclosure object rather than the object itself. A
 durable reference is an absolute HTTPS URI paired with the
 `consent_rendering_hash` the retrieved disclosure MUST verify against.
 The minimal retrieval profile is an authenticated HTTPS GET that returns
-the disclosure as `application/mission-consent-evidence+json`; the
+the disclosure as `application/mission-consent-disclosure+json`; the
 authorization it requires is deployment-defined. A verifier with
 authorization MUST be able to retrieve or reconstruct the disclosure for
 the retention period and MUST verify the retrieved object against
@@ -924,8 +949,8 @@ A conforming Consent-Evidence-capable Mission Issuer MUST:
   ({{I-D.draft-mcguinness-oauth-mission-approval-revision}});
 - bind approved Mission records to `consent_rendering_hash`;
 - include material notices for high-risk authority, with the
-  per-notice acknowledgment the high-risk classes require
-  ({{material-notices}}); and
+  per-notice acknowledgment the high-risk classes require, and record
+  each acknowledgment completion ({{material-notices}}); and
 - retain evidence for audit reconstruction.
 
 A conforming verifier of Consent Evidence MUST implement the checks in
@@ -949,8 +974,9 @@ intended form re-renderable (Rung 1), and the experimental rungs
 ({{experimental-rungs}}) bind an attested renderer (Rung 2) or the
 Approver's own authenticator (Rung 3). A deployment that needs
 assurance
-that the Approver approved a specific disclosure SHOULD evaluate Rung 3
-for its high-risk classes; no rung proves perception, which remains
+that the Approver's authenticator confirmed a specific disclosure
+commitment SHOULD evaluate Rung 3 for its high-risk classes; no rung
+proves perception, which remains
 outside
 reach for any electronic-signature scheme.
 
@@ -1000,14 +1026,41 @@ per audit scope rather than use a single global counter.
 
 ## Media Type Registry
 
-IANA is requested to register one media type per {{RFC6838}}. The
-Mission audit profile ({{I-D.draft-mcguinness-mission-audit}})
-references this media type.
+IANA is requested to register two media types per {{RFC6838}}: one for
+the Consent Evidence object and a distinct one for the Consent
+Disclosure object it may reference ({{minimization}}). The Mission audit
+profile ({{I-D.draft-mcguinness-mission-audit}}) references the Consent
+Evidence media type.
 
 ### application/mission-consent-evidence+json
 
 - Type name: application
 - Subtype name: mission-consent-evidence+json
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: binary; JSON encoded in UTF-8
+- Security considerations: see {{security-considerations}}
+- Interoperability considerations: see this document
+- Published specification: this document
+- Applications that use this media type: OAuth Mission-Bound consent and
+  audit deployments
+- Fragment identifier considerations: same as for `application/json`
+- Additional information:
+  - Deprecated alias names for this type: none
+  - Magic number(s): none
+  - File extension(s): `.json`
+  - Macintosh file type code(s): TEXT
+- Person & email address to contact for further information:
+  Karl McGuinness <public@karlmcguinness.com>
+- Intended usage: COMMON
+- Restrictions on usage: none
+- Author: IETF
+- Change controller: IETF
+
+### application/mission-consent-disclosure+json
+
+- Type name: application
+- Subtype name: mission-consent-disclosure+json
 - Required parameters: none
 - Optional parameters: none
 - Encoding considerations: binary; JSON encoded in UTF-8
@@ -1054,13 +1107,16 @@ Rung 3, Approver confirmation:
 : The Consent Evidence carries a `rendering_confirmation`
   ({{consent-evidence}}): a signature produced by the Approver's
   authenticator over the `consent_rendering_hash` at approval, binding
-  the approval credential itself to the exact committed disclosure. The
-  claim that the Approver approved this disclosure then rests on the
-  Approver's authenticator, not on the Authorization Server. This is the
-  what-you-see-is-what-you-sign rung, as in authenticator
-  transaction-confirmation schemes. A deployment claiming this rung
-  SHOULD apply it to a Mission whose Authority Set carries a high-risk
-  material-notice class ({{material-notices}}).
+  the approval credential itself to the exact committed disclosure. What
+  this proves is narrow but real: that the Approver's authenticator was
+  invoked over that specific `consent_rendering_hash`, and that the
+  confirmation could not be fabricated by the Authorization Server,
+  because it is signed by a credential bound to the Approver. It does
+  not by itself prove the authenticator displayed the disclosure, so it
+  is what-you-see-is-what-you-sign only when the authenticator also
+  renders a value derived from the disclosure. A deployment claiming
+  this rung SHOULD apply it to a Mission whose Authority Set carries a
+  high-risk material-notice class ({{material-notices}}).
 
 Rung 4, Out-of-band confirmation:
 : For the most material actions, confirmation is obtained at execution
@@ -1071,9 +1127,10 @@ Rung 4, Out-of-band confirmation:
   runtime-layer mechanism recorded as its own evidence; this profile
   records the approval-time rungs above.
 
-At Rung 3 the claim that the Approver approved a specific disclosure is
-verifiable up to trust in the Approver's authenticator, rather than in
-an arbitrary rendering layer. The verifier obligations for these rungs
+At Rung 3 the claim that the Approver's authenticator confirmed a
+specific disclosure commitment is verifiable up to trust in that
+authenticator, rather than in an arbitrary rendering layer. The
+verifier obligations for these rungs
 are steps 7 and 8 of {{integrity}}; their absence asserts no rung above
 the ones the record satisfies and is never an integrity failure.
 
@@ -1173,6 +1230,10 @@ The Consent Disclosure object:
     "sub": "user_3p2q8mN1a0kV7tR",
     "display": "alice"
   },
+  "requesting_client": {
+    "client_id": "s6BhdRkqt3",
+    "display": "Invoice Reconciler Agent"
+  },
   "display_context": {
     "channel": "web",
     "rendered_at": "2026-06-30T17:54:30Z"
@@ -1196,8 +1257,9 @@ risk dimension because posted journal entries are not automatically
 reversible; `constraint_provenance` attributes the `max_amount`
 bound to the Subject, who stated it in the task request. The notice is
 of a high-risk class, so `approver_actions` carries its per-notice
-acknowledgment ({{material-notices}}). The Approver is the Subject, so
-the top-level `subject` member is absent.
+acknowledgment ({{material-notices}}). The `requesting_client` names
+the agent that will wield the granted authority. The Approver is the
+Subject, so the top-level `subject` member is absent.
 
 `consent_rendering_hash` is the prefixed SHA-256 over the JCS
 {{RFC8785}} canonical bytes of the integrity-anchor envelope with
@@ -1211,40 +1273,41 @@ member names and preserves array order.
 Canonical bytes of the envelope:
 
 ~~~ text
-{"iss":"https://as.example.com","typ":"mission-consent-disclosure"
-,"value":{"approver":{"display":"alice","iss":"https://idp.example
-.com","sub":"user_3p2q8mN1a0kV7tR"},"approver_actions":[{"action":
-"acknowledge_notice","applies_to":{"action":"journal-entries.write
-","resource":"https://erp.example.com"},"condition":"irreversible_
-action"}],"authority_summary":[{"actions":["invoices.read"],"resou
-rce":"https://erp.example.com"},{"actions":["journal-entries.write
-"],"constraints":[{"constraint":"max_amount","rendered":"Each jour
-nal entry is capped at 500.00 US dollars (USD).","value":{"amount"
-:"500.00","currency":"USD"}}],"resource":"https://erp.example.com"
-}],"constraint_provenance":[{"applies_to":{"constraint":"max_amoun
-t","resource":"https://erp.example.com"},"source":"subject"}],"dis
-closure_id":"disc_4pQ9z","display_context":{"channel":"web","rende
-red_at":"2026-06-30T17:54:30Z"},"locale":"en-US","material_notices
-":[{"applies_to":{"action":"journal-entries.write","resource":"htt
-ps://erp.example.com"},"condition":"irreversible_action","statemen
-t":"Posted journal entries are not automatically reversible."}],"m
-ission_summary":{"approver_display":"alice (user_3p2q8mN1a0kV7tR)"
-,"expires_at":"2026-12-31T23:59:59Z","goal":"Reconcile Q3 invoices
-","subject_display":"alice (user_3p2q8mN1a0kV7tR)"},"risk_summary"
-:[{"dimension":"data_access","statement":"The agent can read invoi
-ces held in the ERP system."},{"dimension":"spend","statement":"Th
-e agent can post journal entries of up to 500 US dollars."},{"dime
-nsion":"irreversibility","statement":"Posted journal entries alter
- the ledger of record."}],"source_hashes":{"authority_hash":"sha-2
-56:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro","intent_hash":"sha
--256:6mIFoCz79uCHNzKLfBpBwqFjoFXdpmpuc65486IqimQ"},"template_hash"
-:"sha-256:50S2DpJfcfNGlzi_vzZJNJbJKkknFX65rhWJWLiMyok","template_i
-d":"mission-consent-standard","template_version":"2026-06"}}
+{"iss":"https://as.example.com","typ":"mission-consent-disclosure","
+value":{"approver":{"display":"alice","iss":"https://idp.example.com
+","sub":"user_3p2q8mN1a0kV7tR"},"approver_actions":[{"action":"ackno
+wledge_notice","applies_to":{"action":"journal-entries.write","resou
+rce":"https://erp.example.com"},"condition":"irreversible_action"}],
+"authority_summary":[{"actions":["invoices.read"],"resource":"https:
+//erp.example.com"},{"actions":["journal-entries.write"],"constraint
+s":[{"constraint":"max_amount","rendered":"Each journal entry is cap
+ped at 500.00 US dollars (USD).","value":{"amount":"500.00","currenc
+y":"USD"}}],"resource":"https://erp.example.com"}],"constraint_prove
+nance":[{"applies_to":{"constraint":"max_amount","resource":"https:/
+/erp.example.com"},"source":"subject"}],"disclosure_id":"disc_4pQ9z"
+,"display_context":{"channel":"web","rendered_at":"2026-06-30T17:54:
+30Z"},"locale":"en-US","material_notices":[{"applies_to":{"action":"
+journal-entries.write","resource":"https://erp.example.com"},"condit
+ion":"irreversible_action","statement":"Posted journal entries are n
+ot automatically reversible."}],"mission_summary":{"approver_display
+":"alice (user_3p2q8mN1a0kV7tR)","expires_at":"2026-12-31T23:59:59Z"
+,"goal":"Reconcile Q3 invoices","subject_display":"alice (user_3p2q8
+mN1a0kV7tR)"},"requesting_client":{"client_id":"s6BhdRkqt3","display
+":"Invoice Reconciler Agent"},"risk_summary":[{"dimension":"data_acc
+ess","statement":"The agent can read invoices held in the ERP system
+."},{"dimension":"spend","statement":"The agent can post journal ent
+ries of up to 500 US dollars."},{"dimension":"irreversibility","stat
+ement":"Posted journal entries alter the ledger of record."}],"sourc
+e_hashes":{"authority_hash":"sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqR
+lfJNCr4PzLro","intent_hash":"sha-256:6mIFoCz79uCHNzKLfBpBwqFjoFXdpmp
+uc65486IqimQ"},"template_hash":"sha-256:50S2DpJfcfNGlzi_vzZJNJbJKkkn
+FX65rhWJWLiMyok","template_id":"mission-consent-standard","template_
+version":"2026-06"}}
 ~~~
 
 ~~~ text
 consent_rendering_hash =
-  sha-256:W-aXkM2quCh07XvdixCTk8qHoMWOs2tA0hZej4kLGr0
+  sha-256:dUuA6ioErHALo02bwESKBt4Yq0RrWSTOT0bBGuRBog0
 ~~~
 
 An implementation that canonicalizes the same envelope, computes

@@ -28,6 +28,7 @@ author:
 
 normative:
   RFC3339:
+  RFC7523:
   RFC8259:
   RFC8414:
   RFC8785:
@@ -61,6 +62,14 @@ informative:
   RFC8126:
   I-D.draft-mcguinness-oauth-client-instance-assertion:
   I-D.draft-mcguinness-oauth-ai-agent-instance:
+  I-D.draft-mcguinness-oauth-mission-issuance-grant:
+    title: "Mission Issuance Grant for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-attenuation:
     title: "Mission Offline Attenuation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-attenuation.html
@@ -328,14 +337,29 @@ The child actor is the OAuth client of the Child Mission: its
 identifier is the `client_id` of the Child Mission record. The child
 actor authenticates itself at the token endpoint and redeems its own
 grant for the Child Mission's tokens. Child credentials MUST NOT transit
-the parent, and the parent MUST NOT hold child tokens. The concrete
-conveyance of the child's initial grant reference (for example, an
-authorization code or a grant handle) from the creating flow to the
-child actor is deployment-defined, subject to those rules.
+the parent, and the parent MUST NOT hold child tokens.
+
+The child's initial grant MUST be an audience-bound JWT authorization
+grant that the child actor redeems as itself under the {{RFC7523}}
+JWT-bearer grant, of the shape the Mission Issuance Grant profile
+defines ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}): on
+creating the Child Mission the Mission Issuer mints an assertion that
+names the child actor as the authorized redeemer and the Mission
+Issuer's token endpoint as the audience, and the child actor presents it
+there authenticating with its own client credential. An authorization
+code MUST NOT be used to convey the child's grant: a code and its
+`request_uri` are redeemable only by the client that pushed the request
+({{RFC9126}}), which is the parent, not the child. The child-bound
+assertion is redeemable only by the child actor it names, so conveying
+it through the parent gives the parent no ability to redeem it. How the
+assertion reaches the child actor remains deployment-defined, subject to
+the rules above.
 
 Where creation is adjudicated by policy with no front channel, the
-Mission Issuer completes the authorization without user interaction and
-the child actor redeems its grant directly at the token endpoint.
+Mission Issuer completes the authorization without user interaction,
+mints the same child-bound JWT authorization grant, and the child actor
+redeems it as itself under the {{RFC7523}} JWT-bearer grant at the token
+endpoint.
 
 ## Cross-Issuer Scope {#cross-issuer}
 
@@ -605,9 +629,28 @@ Example:
 ## Mission Record Requirements {#record-requirements}
 
 The Child Mission record MUST contain the `parent` object, the child
-actor, the child Authority Set, the child `authority_hash`, the
-delegation event identifier, the cascade mode, and the fan-out policy
-result. The `parent` value is immutable after creation.
+actor, the child Authority Set, the child `authority_hash`, the child
+Mission Intent's `intent_hash` ({{I-D.draft-mcguinness-oauth-mission}}),
+the delegation event identifier, the cascade mode, and the fan-out
+policy result. The `parent` value is immutable after creation.
+
+The delegation event ({{child-creation}}) is the Child Mission's
+approval event. It MUST commit the issuance profile's integrity anchors
+({{I-D.draft-mcguinness-oauth-mission}}): `authority_hash` over the
+child Authority Set and `intent_hash` over the child Mission Intent, and
+it MUST produce the immutable, accountable record the core approval
+event produces. A Child Mission is created under a parent grant rather
+than a first-party approval ({{issuance-relationship}}), so its human
+accountability is inherited from the Parent Mission's own approval.
+Where the deployment requires a human approval event for child creation
+({{child-creation}}), that event meets the issuance profile's
+approval-event requirements in full and its human Approver is the
+record's approver. Where creation is adjudicated by policy with no human
+interaction ({{child-client-identity}}), the record's approver is the
+adjudicating policy (identified by the `child_creation_policy` reference
+where the entry carries one, {{fanout}}) together with the Subject and
+Approver of the Parent Mission the parent grant resolves to, and the
+record MUST mark the approval as policy-adjudicated rather than human.
 
 # Attenuation Rules {#attenuation}
 
@@ -729,6 +772,16 @@ it MUST refuse child creation for that entry.
 
 The Mission Issuer MUST count non-terminal Child Missions against
 `max_children` until the child reaches a terminal state.
+
+Where a child entry is a subset of more than one parent entry, the
+Mission Issuer MUST select exactly one parent entry as that child
+entry's justification and count the child against that entry's
+`max_children` alone. The selection MUST be deterministic: the Mission
+Issuer selects the first parent entry, in Authority Set order, that the
+child entry is a subset of. The recorded justification mapping (the
+parent entry each child entry was derived from, {{child-evidence}}) is
+the accounting basis: `max_children` is counted per justifying entry,
+and the same mapping is what the child evidence records.
 
 The Mission Issuer MUST serialize child creation against the same
 parent entry and fan-out bucket so concurrent requests cannot exceed
@@ -858,6 +911,24 @@ child's own state when the parent resumes to `active`. A child whose own
 `expires_at` passes during the suspension is `expired`: expiry takes
 precedence over the projected `suspended` state.
 
+Likewise, once a terminal cascade trigger ({{cascade}}) commits at any
+ancestor, the issuer MUST report each dependent descendant's state as
+`cascaded` on every state-reporting surface (the Mission Status
+operation and token introspection,
+{{I-D.draft-mcguinness-oauth-mission-status}}) from that commit, ahead
+of each descendant's own per-generation transition. The transitive
+transitions still commit in generation order ({{cascade}}); this rule
+bounds only what a consumer reads, so a consumer keying on a
+descendant's own state never reads `active` mid-cascade.
+
+Expiry takes precedence over `cascaded` as it does over the projected
+`suspended` state: where a child's own `expires_at` coincides with a
+terminal cascade of its parent (for example, a child whose `expires_at`
+equals the parent's on parent expiry), the child's own `expired` state
+wins and it is reported `expired`, not `cascaded`. This matches the
+`cascaded` state, which a child enters only when its own expiry was not
+reached.
+
 Mission Status for a Child Mission SHOULD also include a parent
 projection for authorized callers, as additional context:
 
@@ -968,7 +1039,7 @@ object by these values.
 
 Mission Expansion
 {{I-D.draft-mcguinness-oauth-mission-expansion}} creates a successor
-Mission that replaces a predecessor for a broader task. Child Mission
+Mission that replaces a predecessor for a broader task. Mission Child
 Delegation creates a dependent Mission for a child actor with narrower
 authority. Expansion widens by fresh approval; Child Missions attenuate
 within parent authority. The two MUST NOT be conflated.
@@ -1065,6 +1136,19 @@ An attacker could try to create a child under a parent it does not
 control by naming a `parent` identifier. The Mission Issuer resolves
 the parent from `parent_token`, not from the identifier, and verifies
 the two match.
+
+## Parent Grant at Rest in PAR
+
+A child creation request carries `parent_token`, a refresh token or
+other parent grant, through PAR {{RFC9126}}, so that credential sits at
+rest in the PAR store until the pushed request is redeemed or expires. A
+deployment MUST protect the PAR store as credential storage: it SHOULD
+hold `parent_token` only until its `request_uri` is redeemed or expires
+and then delete it, MUST NOT write `parent_token` to request logs,
+traces, or audit records in the clear, and MUST redact or hash it
+wherever the pushed request is otherwise recorded. Child delegation
+evidence ({{child-evidence}}) records the parent Mission by identifier
+and authority hash, never the parent grant itself.
 
 ## Subset Bugs
 

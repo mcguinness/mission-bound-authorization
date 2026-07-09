@@ -124,8 +124,14 @@ its Experimental status reflects the maturity of the attenuation
 substrate it profiles, not a judgment that the capability is
 optional. The stable path meanwhile is issuer-mediated child
 delegation ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
+The saving is amortization, not elimination: because a root's lifetime
+is kept short ({{security-considerations}}), the holder returns to the
+issuer once per subtree per root-lifetime window to mint the root, and
+every narrowing within that window is then offline. The issuer leaves
+the per-fork hot path; it is not removed from the deployment.
 
-This document removes the issuer from that path for narrowing. It
+This document removes the issuer from that per-fork path for narrowing
+within a root's lifetime. It
 profiles Attenuating Agent Tokens
 {{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}} (the "attenuation
 substrate"), in which a token holder mints a narrower child token
@@ -218,8 +224,10 @@ A Mission-bound attenuation root is a Mission-bound token
 The Mission Issuer derives that authority from the Mission's Authority
 Set by the mapping of {{root-mapping}}. The root carries the `mission`
 claim (`id`, `issuer`, `authority_hash`) and the holder's confirmation
-key, as both profiles require. It MUST carry `aud` per the issuance
-profile's token rules ({{I-D.draft-mcguinness-oauth-mission}}),
+key, as both profiles require. The root's `iss` MUST equal its
+`mission.issuer`: only the Mission Issuer mints a Mission-bound root,
+and it signs the root with its own keys. It MUST carry `aud` per the
+issuance profile's token rules ({{I-D.draft-mcguinness-oauth-mission}}),
 identifying the Resource Server(s) authorized to consume its authority.
 
 A Mission-bound attenuation root is one shape of Mission-bound token. A
@@ -275,19 +283,36 @@ authorization server metadata {{RFC8414}}:
   attenuation roots ({{root}}) and derives their authority from the
   Mission's Authority Set ({{root-mapping}}).
 
-A client requests a Mission-bound attenuation root at the token endpoint.
-The attenuation substrate defines no OAuth Token Exchange {{RFC8693}}
-requested-token-type identifier for asking for a root; a substrate root
-is requested by carrying an `attenuating_agent_token` authorization
-detail and the holder's confirmation key
-({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}). To ask the
-Mission Issuer to bind such a root to the Mission and derive it from the
-Authority Set, a client includes the token-request parameter:
+A client requests a Mission-bound attenuation root at the token
+endpoint, on any grant the issuance profile uses to issue a
+Mission-bound token (for example, the Mission's `refresh_token` grant).
+The request combines a selector, a confirmation key, and an optional
+narrowing detail, each with a distinct role:
 
 `mission_attenuation_root`:
-: OPTIONAL boolean. When `true` on a Mission-bound token request, the
-  Mission Issuer issues the token as a Mission-bound attenuation root
-  ({{root}}) rather than an ordinary `mission_resource_access` token.
+: OPTIONAL boolean. When `true` on a Mission-bound token request it
+  selects root issuance: the Mission Issuer issues the token as a
+  Mission-bound attenuation root ({{root}}) rather than an ordinary
+  `mission_resource_access` token. A request that omits it or sets it
+  `false` is an ordinary Mission-bound token request. The attenuation
+  substrate defines no OAuth Token Exchange {{RFC8693}}
+  requested-token-type for asking for a root, so this boolean, not a
+  token-type identifier, is what asks for one.
+
+The client MUST carry the holder's confirmation key, which binds the
+root to the holder as both profiles require
+({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}, {{root}}).
+
+The client MAY carry an `attenuating_agent_token` authorization detail
+{{RFC9396}} to request a root narrower than the full mapped Authority
+Set: its tools and argument constraints are the requested subset. When
+the detail is present, the Mission Issuer MUST validate it against the
+root mapping ({{root-mapping}}) and MUST reject, with `invalid_request`,
+any tool or argument constraint not within the mapped Authority Set.
+When the detail is absent, the Mission Issuer derives the full mapped
+root from the Mission's delegable Authority Set entries
+({{root-mapping}}). A client-requested root is therefore always at most
+the mapped Authority Set, never broader.
 
 # Offline Attenuation {#attenuation}
 
@@ -304,7 +329,13 @@ the base64url encoding, without padding, of the SHA-256 digest of the
 parent token's JWS Signing Input.
 
 The child's `aud` MUST equal its parent's `aud` or be a subset of it,
-and the child's `exp` MUST NOT exceed its parent's `exp`. Because the
+and the child's `exp` MUST NOT exceed its parent's `exp`. For the `aud`
+comparison the `aud` is treated as a set of audience values: a string
+`aud` is the one-element set of that string, and an array `aud` is the
+set of its members. The child's `aud` set MUST be a subset of the
+parent's, with values compared as case-sensitive, byte-exact strings
+and no URI normalization; a single-string `aud` and a one-element array
+carrying the same value are therefore equivalent. Because the
 Mission Issuer caps the root's `exp` at the Mission's `expires_at`
 ({{I-D.draft-mcguinness-oauth-mission}}), the per-hop `exp` rule bounds
 the whole chain transitively: no descendant outlives the root, hence
@@ -341,6 +372,12 @@ substrate's chain verification, a consumer MUST:
   the lineage anchor; a link whose `mission` claim differs from the
   root's, or that omits it, MUST cause the whole chain to be refused,
   not treated as a narrower grant; and
+- reject the chain unless the root's `iss` equals its `mission.issuer`,
+  and verify the root's signature under the Mission Issuer's published
+  keys (those of that `iss`). A root whose `iss` is not its
+  `mission.issuer`, or whose signature does not verify under the Mission
+  Issuer's keys, MUST cause the whole chain to be refused: only the
+  Mission Issuer mints a Mission-bound root; and
 - treat a chain whose root carries no `mission` claim as outside this
   profile: it is an ordinary attenuation chain with no Mission binding,
   and a consumer MUST NOT apply the Mission-state kill switch
@@ -425,7 +462,7 @@ a deployment that relies on token lifetime alone.
 Offline attenuation sits beside two other narrowing mechanisms:
 Authorization-Server-mediated delegation (the issuance profile's `act`
 chain and Token Exchange), which narrows at the issuer, online, so the
-issuer observes each delegation; and Child Mission Delegation
+issuer observes each delegation; and Mission Child Delegation
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), which creates
 a separate Child Mission with its own `mission_id`, lifecycle, and
 approval. The Mission Child Delegation profile sets out how the three
@@ -597,7 +634,14 @@ profile, and the attenuation substrate apply. This profile adds:
   breadth is bounded at consumption, not at issuance: PEPs SHOULD meter
   the distinct leaf `jti` and `cnf` values they see per Mission and
   alert or refuse beyond a deployment-set bound, and issuers SHOULD keep
-  root lifetimes short.
+  root lifetimes short. This metering bound is per-PEP: each enforcement
+  point counts only the leaves it sees, so the effective breadth limit
+  is per-PEP unless the deployment aggregates leaf counters across its
+  PEPs into a shared count. An issuer-side breadth control like Child
+  Delegation's `max_children`
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) is
+  structurally unavailable here, because the issuer never observes an
+  offline mint and so cannot count children at issuance.
 - Per-branch revocation. The only kill switch is whole-Mission: revoking
   the Mission stops the entire chain, but this profile provides no way to
   revoke a single branch or leaf without revoking the Mission. Per-branch

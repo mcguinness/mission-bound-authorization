@@ -219,7 +219,10 @@ request carries:
 : REQUIRED. A string. A client-generated nonce, unique per request
   within the response lifetime, echoed in the signed response. It is
   also the idempotency key: the AS MUST deduplicate management
-  requests by (client, `nonce`) for a bounded window and, on a
+  requests by (client, `nonce`) for a bounded window, at least the
+  validity span of the signed response it would replay, as the status
+  profile's lifecycle endpoint requires
+  ({{I-D.draft-mcguinness-oauth-mission-status}}), and, on a
   retransmit, MUST replay the original response rather than
   re-execute the request.
 
@@ -351,6 +354,15 @@ carries:
   `limit` and its deployment-declared page maximum, and applies the
   maximum when `limit` is absent.
 
+`bulk_token`:
+: OPTIONAL. A string. A bulk token from a prior dry run ({{dry-run}}).
+  When present, `enumerate` returns exactly the membership that token
+  pins (the pinned set) as summaries, so the reviewed set equals the
+  set a matching `execute` will operate on; `filter` MUST equal the
+  filter the token binds, and the AS MUST refuse a mismatch with
+  `invalid_bulk_token` ({{management-errors}}). Presenting a bulk token
+  to `enumerate` is read-only and does not consume it.
+
 ## Response {#enumeration-response}
 
 The signed payload ({{management-endpoint}}) carries:
@@ -378,7 +390,8 @@ different caller or with a different filter. Result order MUST be
 stable within a cursor walk. The AS SHOULD present a consistent
 membership across a walk but MAY reflect transitions committed while
 it is in progress; a caller that needs a pinned membership uses the
-bulk dry run ({{dry-run}}), whose bulk token provides exactly that.
+bulk dry run ({{dry-run}}), whose bulk token provides exactly that and
+is reviewable by presenting the token to `enumerate`.
 
 ## Worked Example {#enumeration-example}
 
@@ -490,15 +503,22 @@ returns a signed response carrying:
   cannot silently age.
 
 A dry run commits no transition. To review the membership behind the
-count, the caller runs `enumerate` with the same filter.
+count, the caller runs `enumerate` presenting the `bulk_token`
+({{enumeration}}), which returns exactly the pinned set, so the
+reviewed membership equals the set the matching `execute` will operate
+on. Running `enumerate` with only the same filter re-evaluates it and
+MAY return a drifted set; the `bulk_token` pins the review to the
+evaluated membership.
 
 ## Execution {#execution}
 
 On `mode` `execute` the AS MUST verify that the presented `bulk_token`
 is unexpired and unused, was issued to this caller, and binds an
-`operation` and `filter` equal to the request's; on any mismatch it
-MUST refuse with `invalid_bulk_token` and execute nothing. The token
-is then consumed: it is single-use whatever the outcome.
+`operation`, `filter`, and (for a `suspend`) `suspend_until` and
+`on_expiry` all equal to the request's; an execute whose `operation`,
+`filter`, or `on_expiry` differs from what the token pins MUST be
+refused with `invalid_bulk_token`, executing nothing. The token is then
+consumed: it is single-use whatever the outcome.
 
 The AS applies the operation to each member of the bound membership
 individually, under the status profile's lifecycle semantics
@@ -626,7 +646,7 @@ are manifest outcomes ({{manifest}}), never wire errors. The codes:
 | `error` | HTTP | Description |
 |---|---|---|
 | `invalid_request` | 400 | Malformed request: unknown `operation`, unrecognized filter member, invalid member combination, or a cursor that does not match its caller and filter. |
-| `invalid_bulk_token` | 400 | The bulk token is missing, expired, already used, issued to another caller, or bound to a different operation or filter. |
+| `invalid_bulk_token` | 400 | The bulk token is missing, expired, already used, issued to another caller, or bound to a different operation, filter, `suspend_until`, or `on_expiry`. |
 | `filter_too_broad` | 400 | The filter matches more Missions than the deployment's declared bound for the requested operation. |
 | `unauthorized` | 401 | Request not authenticated. |
 | `forbidden` | 403 | Caller authenticated but not authorized for the requested operation or filter scope ({{filter-scope}}). |

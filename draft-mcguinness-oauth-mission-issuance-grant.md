@@ -35,8 +35,11 @@ normative:
   RFC7519:
   RFC7523:
   RFC7800:
+  RFC8414:
+  RFC8705:
   RFC9126:
   RFC9396:
+  RFC9449:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -64,8 +67,6 @@ normative:
 
 informative:
   RFC8693:
-  RFC8705:
-  RFC9449:
   I-D.draft-mcguinness-mission-mandate:
     title: "Mission Mandate"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
@@ -271,7 +272,8 @@ Claims:
 `cnf`:
 : OPTIONAL. A proof-of-possession key binding {{RFC7800}} for
   redemption; when present, the consuming AS MUST require proof of
-  possession of the bound key at redemption.
+  possession of the bound key at redemption, demonstrated with DPoP
+  {{RFC9449}} or mutual TLS {{RFC8705}} as the deployment configures.
 
 An illustrative decoded grant (this Mission and its anchors are not
 the core walkthrough's):
@@ -351,6 +353,86 @@ discovery metadata ({{iana}}). The Grant Minter MUST observe:
 5. **Evidence.** Each minting is recorded with the Mission record:
    the `jti`, audience, requested and granted entries, and time.
 
+## Grant Request {#minting-request}
+
+The requester POSTs an `application/json` object to the endpoint over
+TLS, authenticated as {{minting}} requires:
+
+`mission_id`:
+: REQUIRED. A string. The Mission the grant is minted for; its
+  `issuer` is this MAS.
+
+`audience`:
+: REQUIRED. A string. The consuming AS the grant is for, becoming the
+  grant's `aud`. The MAS mints only for audiences its configuration
+  names ({{issuance-join}}).
+
+`authorization_details`:
+: OPTIONAL. An array. A narrower subset the requester asks the grant to
+  carry, under the core's subset rule. Omitted, the MAS scopes the
+  grant to the entries the named audience serves ({{minting}}); present,
+  it MUST NOT widen beyond that scope.
+
+On success the endpoint returns HTTP 200 with an `application/json`
+object:
+
+`grant`:
+: REQUIRED. A string. The Mission Issuance Grant JWT of {{grant}}. Its
+  `exp` bounds redemption ({{grant}}); the requester reads the deadline
+  from the decoded grant.
+
+~~~ http-message
+POST /mas/mission/issuance-grant HTTP/1.1
+Host: mas.example.com
+Content-Type: application/json
+Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+
+{
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "audience": "https://as.example.com",
+  "authorization_details": [
+    {
+      "type": "mission_resource_access",
+      "resource": "https://api.example.com/invoices",
+      "actions": ["read"]
+    }
+  ]
+}
+~~~
+
+~~~ http-message
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "grant": "eyJ0eXAiOiJtaXNzaW9uLWlzc3VhbmNlLWdyYW50K2p3dCIs..."
+}
+~~~
+
+## Grant Errors {#minting-errors}
+
+A failure returns the MAS error object
+({{I-D.draft-mcguinness-mission-authority-server}}): a JSON body with a
+REQUIRED `error` string and an OPTIONAL `error_description`. This
+endpoint uses:
+
+| `error` | HTTP | Condition |
+|---|---|---|
+| `invalid_request` | 400 | Missing or malformed `mission_id` or `audience`, or an unparseable body. |
+| `unauthorized` | 401 | Request not authenticated. |
+| `not_found` | 404 | The `mission_id` is unknown, or the requester is not the Mission's recorded client. |
+| `invalid_audience` | 400 | `audience` names no AS this MAS mints for. |
+| `mission_not_active` | 409 | The Mission is not `active` ({{minting}}). |
+| `invalid_authorization_details` | 400 | The requested subset is not a subset of the consented Authority Set, or exceeds the audience scope. |
+| `max_derivations_exhausted` | 409 | A consented `controls.max_derivations` is reached ({{minting}}). |
+
+`not_found` covers both an unknown Mission and a requester that is not
+the recorded client, so the split never becomes a membership oracle;
+the other codes are returned only to the authenticated recorded client,
+to which Mission state is already visible.
+
 # Redemption {#redemption}
 
 The client presents the grant to the consuming AS's token endpoint
@@ -365,9 +447,13 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer
 &assertion=eyJ0eXAiOiJtaXNzaW9uLWlzc3VhbmNlLWdyYW50K2p3dCIs...
 ~~~
 
-The client authenticates as it ordinarily does at this AS; the grant
-is an authorization, not a client credential. The consuming AS MUST
-validate, in an order that fails closed:
+The grant is an authorization, not a client credential: redemption
+still requires the requester to prove it is the grant's `client_id`,
+either by authenticating to this AS as it ordinarily does or, where the
+grant carries `cnf`, by proving possession of the bound key. A public
+client that can do neither cannot redeem, since nothing then binds the
+redemption to the grant's `client_id`. The consuming AS MUST validate,
+in an order that fails closed:
 
 1. the JOSE `typ` is `mission-issuance-grant+jwt`; any other type is
    not this profile ({{relationships}});
@@ -376,8 +462,11 @@ validate, in an order that fails closed:
 3. `aud` names this AS; `exp` and `iat` are within the 300-second
    bound; the `jti` has not been seen, and is recorded until `exp`
    passes (single use);
-4. the authenticated client is the grant's `client_id`;
-5. when `cnf` is present, proof of possession of the bound key.
+4. the requester is the grant's `client_id`: the authenticated client
+   equals it, or, where `cnf` is present, the proof of possession of
+   step 5 binds the redemption to the key the grant was minted for;
+5. when `cnf` is present, proof of possession of the bound key with
+   DPoP {{RFC9449}} or mutual TLS {{RFC8705}}.
 
 On success the consuming AS mints tokens under these rules:
 
@@ -387,10 +476,28 @@ On success the consuming AS mints tokens under these rules:
 - **Subset.** Issued `authorization_details` MUST be a subset of the
   grant's; the token response SHOULD echo them as the core specifies
   for Mission-bound issuance. The consuming AS MUST NOT widen, remap,
-  or supplement them from its own policy except to narrow.
-- **Lifetime.** No access or refresh token issued under the grant
-  may have an expiry later than the `mission` object's
-  `expires_at`.
+  or supplement them from its own policy except to narrow. Carrying
+  `authorization_details` at all requires {{RFC9396}} support at the
+  consuming AS; an AS that models authority as `scope` instead projects
+  the grant's `authorization_details` to `scope` under the core's
+  scope-projection rule ({{I-D.draft-mcguinness-oauth-mission}}), where
+  every issued scope value corresponds to authority the grant conveys
+  and none conveys authority, or relaxes a constraint, that the grant
+  does not.
+- **Lifetime.** No access or refresh token issued under the grant may
+  have an expiry later than the `mission` object's `expires_at`. That
+  ceiling is the Mission horizon, not a liveness bound, so access
+  tokens issued under a grant SHOULD be short-lived: absent a
+  redemption-time state check, an issued access token's own lifetime is
+  the window in which a revoked Mission's token keeps working at the
+  token layer.
+- **State at redemption.** A consuming AS that has a Mission-state
+  integration (the one its refresh gating uses) SHOULD re-check Mission
+  state at redemption and refuse when the Mission is not established
+  `active`, so a Mission revoked between minting and redemption yields
+  no fresh access token; an AS with no state integration relies on the
+  grant's `active`-at-minting gate and the short access-token lifetime
+  above.
 - **Refresh is state-gated.** A consuming AS MAY issue refresh
   tokens only if it gates each refresh on current Mission state,
   resolved through the Mission Status operation
@@ -408,16 +515,59 @@ minting); either way, every path to new authority re-enters a
 Mission-state gate, which is the issuance-gate kill switch this
 profile restores.
 
+## Redemption Errors {#redemption-errors}
+
+The consuming AS reports redemption failures with the token endpoint's
+OAuth error codes {{RFC6749}}, so a client can tell a retryable grant
+problem from a dead Mission:
+
+| Failure | `error` |
+|---|---|
+| `typ` is not `mission-issuance-grant+jwt` | `invalid_grant` |
+| `iss` is not trusted for issuance joins | `invalid_grant` |
+| `aud` does not name this AS | `invalid_grant` |
+| grant expired, or `jti` already seen (replay) | `invalid_grant` |
+| grant authority unmappable to this AS's resources | `invalid_grant` |
+| grant `sub` unmappable to a local account | `invalid_grant` |
+| client authentication fails | `invalid_client` |
+| authenticated client is not the grant's `client_id` | `invalid_grant` |
+| `cnf` proof of possession fails | `invalid_grant` |
+| refresh refused because the Mission is not `active` | `invalid_grant` |
+
+The distinction the client needs is "get a fresh grant" versus "the
+Mission is dead." Most `invalid_grant` cases are the former: the client
+mints a fresh grant ({{minting}}) and retries. The dead-Mission case is
+a refresh refused on a non-active Mission; there the AS SHOULD make the
+response distinguishable with an `error_description` stating the
+Mission is not active, and a client that re-mints will in any case be
+refused at the MAS `active` gate with `mission_not_active`
+({{minting-errors}}), which is the authoritative signal to stop rather
+than retry.
+
 ## Authorization Code Flow Carriage {#par-carriage}
 
 Deployments whose clients must traverse the authorization code flow
 MAY carry the grant in a Pushed Authorization Request {{RFC9126}} as
-the request parameter `mission_issuance_grant`. The AS applies the
-validation of {{redemption}} at the PAR endpoint, treats the grant
-as the authorization already obtained, and MUST NOT re-prompt for
-consent; at most it renders the Mission reference. All redemption
-rules apply unchanged, with the authorization code standing between
-validation and minting.
+the request parameter `mission_issuance_grant` ({{iana}}). The AS
+applies the grant validation of {{redemption}} at the PAR endpoint,
+treats the grant as the authorization already obtained, and MUST NOT
+re-prompt for consent; at most it renders the Mission reference. It
+consumes the grant there: the 300-second `exp`, `iat`, and `aud` checks
+and the single-use `jti` are evaluated at PAR validation, and the `jti`
+is recorded as seen at that point, so the grant cannot be replayed into
+a second authorization request. The grant's window is not re-evaluated
+at code exchange; the issued authorization code carries its own
+lifetime from there, and all remaining redemption rules (subset,
+lifetime, state-gated refresh, no re-approval, and the error mapping of
+{{redemption-errors}}) apply at the token request unchanged.
+
+The AS MUST bind the resource owner authenticated at the authorization
+endpoint to the grant's `sub`: it proceeds only where the authenticated
+user is the grant's Subject under the deployment's mapping policy
+({{issuance-join}}), and MUST refuse when a different user
+authenticates, so the grant cannot mint tokens for the wrong resource
+owner. The authenticated client MUST still be the grant's `client_id`
+({{redemption}}).
 
 # Relationship to Other Artifacts {#relationships}
 
@@ -473,12 +623,16 @@ minting evidence; and grants shaped exactly as {{grant}} requires.
 full: `typ`, signature, audience, lifetime, single-use, and client
 binding validation; verbatim `mission` claim carriage;
 subset-bounded minting; `expires_at` capping; state-gated
-refresh or no refresh; no re-approval. The PAR carriage of
+refresh or no refresh; no re-approval; and the redemption error
+mapping of {{redemption-errors}}. The PAR carriage of
 {{par-carriage}} is OPTIONAL.
 
 A deployment claiming this profile states, alongside its
 enforcement-scope statement, which Authorization Servers consume
-grants and the staleness bound of each one's refresh gating.
+grants and the staleness bound of each one's refresh gating. A
+consuming AS advertises its support with the
+`mission_issuance_grant_supported` metadata member, and its PAR
+carriage with `mission_issuance_grant_par_supported` ({{iana}}).
 
 # Security Considerations {#security-considerations}
 
@@ -575,6 +729,30 @@ Authority Server Metadata" registry established by
 IETF; Reference this document, {{minting}}.
 
 - `mission_issuance_grant_endpoint`
+
+## OAuth Authorization Request Parameter Registration
+
+IANA is requested to register the following in the "OAuth Parameters"
+registry {{RFC6749}}, for the parameter carried in Pushed Authorization
+Requests ({{par-carriage}}):
+
+- Parameter name: `mission_issuance_grant`
+- Parameter usage location: authorization request
+- Change Controller: IETF
+- Reference: this document, {{par-carriage}}
+
+## OAuth Authorization Server Metadata Registration
+
+IANA is requested to register the following in the "OAuth Authorization
+Server Metadata" registry {{RFC8414}}, so a consuming AS can signal its
+support. Change Controller IETF; Reference this document, {{redemption}}
+for the first and {{par-carriage}} for the second:
+
+- `mission_issuance_grant_supported`: a JSON boolean; `true` when the
+  AS redeems Mission Issuance Grants at its token endpoint.
+- `mission_issuance_grant_par_supported`: a JSON boolean; `true` when
+  the AS accepts the `mission_issuance_grant` parameter in Pushed
+  Authorization Requests.
 
 --- back
 

@@ -456,7 +456,13 @@ Policy Enforcement Point (PEP):
   must not act without a permit; it assumes the harness leaves no
   unmediated path. A compromised PEP can decline to consult the PDP or
   ignore its decision; the suite does not prevent this, and evidence
-  makes it detectable after the fact, not in the moment
+  makes it detectable after the fact, not in the moment. Under mediated
+  custody the PEP also holds the sender-constraint keys for the mediated
+  classes, so its compromise is high-consequence credential theft: the
+  attacker gains usable keys and can take the very off-path actions
+  mediation was meant to prevent. Per-class credentials with distinct
+  `cnf` keys and a minimal custody replica topology bound how far one
+  compromised PEP reaches
   ({{I-D.draft-mcguinness-mission-runtime}}).
 
 Policy Decision Point (PDP):
@@ -584,11 +590,14 @@ that issuer.
 
 Four assumptions hold across the whole model:
 
-- **Sender-constrained credentials.** Mission-bound tokens are
-  sender-constrained ({{I-D.draft-mcguinness-oauth-mission}}); a token
-  exfiltrated without its proof-of-possession key is unusable. The model
-  assumes the proof-of-possession mechanism is sound and keys are
-  protected by their holder.
+- **Sender-constrained credentials.** Where Mission-bound tokens are
+  sender-constrained (a SHOULD in the core,
+  {{I-D.draft-mcguinness-oauth-mission}}), a token exfiltrated without
+  its proof-of-possession key is unusable, and the model assumes the
+  proof-of-possession mechanism is sound and keys are protected by
+  their holder. Where a deployment issues bearer tokens instead, an
+  exfiltrated token is usable until it expires, and the stolen-token
+  residual ({{adversary-model}}) applies in full.
 - **Fail-closed on authority, fail-safe on inert evidence.** Wherever
   a trusted component cannot establish an authority-relevant fact it
   needs (Mission state, a completion event, a verifiable decision),
@@ -638,9 +647,14 @@ Bounded authority (Baseline Issuance):
   Set and cannot move authority by influencing inert intent; authority
   grows only by a fresh approval that supersedes the prior Mission
   ({{I-D.draft-mcguinness-oauth-mission-expansion}}), not by agent
-  action. Rests on the Mission Issuer. Under the standalone binding no
-  token carries the Mission, so this guarantee and the Kill switch
-  rest additionally on PEP and PDP coverage.
+  action. Rests on the Mission Issuer and, where the binding issues
+  credentials, the issuance gate that bounds each token to the subset.
+  Under the standalone binding no token carries the Mission and no
+  issuance gate bounds it, so at Baseline nothing enforces the
+  Authority Set: this guarantee is not available under that binding
+  until runtime enforcement (the Runtime-Enforced level) supplies the
+  PEP and PDP coverage it then rests on, and the Kill switch depends on
+  the same coverage.
 
 Kill switch (Baseline Issuance for issuance; Runtime-Enforced for action):
 : Revoking or expiring a Mission stops further issuance at once and
@@ -661,11 +675,18 @@ Bounded consumption (Runtime-Enforced plus consumption metering):
 
 Agent-compromise-resistant enforcement (High-Assurance Agent):
 : A compromised agent cannot unilaterally take a high-consequence
-  action it does not hold a mediated credential for
-  ({{I-D.draft-mcguinness-mission-runtime}}). Rests on PEP key
-  custody, the agent and harness isolation boundary (the approval
-  disclosure included, never agent-composed), and an
-  active-freshness state source.
+  action it does not hold a mediated credential for, nor acquire a
+  fresh usable credential for one
+  ({{I-D.draft-mcguinness-mission-runtime}}). Rests on all five
+  conditions: mediated credential custody, with the sender-constraint
+  key generated in the PEP and never transferred from the agent; no
+  unmediated path to the mediated actions or to fresh usable
+  credentials for them, issuance for the mediated classes restricted to
+  attested mediating-PEP keys; action-bound approval for the
+  high-consequence classes; an active-freshness state source; and an
+  approval disclosure rendered by a component isolated from the agent,
+  never agent-composed. The agent and harness isolation boundary
+  underlies custody and rendering alike.
 
 Trifecta containment (High-Assurance Agent):
 : An injected agent cannot egress on the strength of untrusted content
@@ -691,9 +712,10 @@ credential custody and action-bound approval) are recommendations,
 not requirements, and a third, the agent-isolated rendering of the
 approval disclosure, is required only by the claim itself, while
 active-state freshness for the high-consequence classes and the
-no-unmediated-path rule for mediated classes are already base-profile
-requirements; a deployment that leaves any of the five conditions
-unmet does not obtain the guarantee. This
+no-unmediated-path rule for mediated classes (which covers both a path
+to those actions and a path to fresh usable credentials for them) are
+already base-profile requirements; a deployment that leaves any of the
+five conditions unmet does not obtain the guarantee. This
 matches the suite's front-door framing: adopting the profiles does not by
 itself make a deployment resistant to a compromised agent. The model
 makes misuse bounded and, where evidence is produced, attributable.
@@ -769,8 +791,9 @@ In-scope volume abuse (budget drain, call flooding, egress volume):
 Stolen or exfiltrated token:
 : Addressed by sender-constraint (proof-of-possession); the
   high-consequence key is held by the PEP, not the agent (mediated
-  execution). Residual: a token stolen together with its key; soundness
-  of the PoP mechanism.
+  execution). Residual: a token stolen together with its key; a bearer
+  token, where the deployment does not sender-constrain, usable until
+  it expires; soundness of the PoP mechanism.
 
 Token replayed at another resource (confused deputy):
 : Addressed by permit bound to audience, resource, `sub`, `client_id`,
@@ -798,6 +821,15 @@ Approver approves more than was shown:
   ladder up to an authenticator-signed commitment. Residual:
   comprehension: no server-side commitment proves what a human perceived
   or understood.
+
+Approver account, session, or authenticator compromised:
+: Addressed by the approval-event authentication floor and the Intent's
+  `controls.acr` step-up hook, which a deployment raises for
+  high-consequence Missions ({{I-D.draft-mcguinness-oauth-mission}}).
+  Residual: a phished, hijacked, or coerced Approver approves a hostile
+  Mission, and the evidence machinery then faithfully attests the
+  attacker's Mission; account security and step-up strength are the
+  deployment's.
 
 Exfiltration of private data (the third leg of the lethal trifecta):
 : Addressed by external communication is a gated consequential action;
@@ -856,7 +888,7 @@ A trusted-base component is compromised:
   Residual: not prevented; degrades the specific guarantee per
   {{trusted-base}}.
 
-Eight residuals are worth stating on their own, because they are the
+Nine residuals are worth stating on their own, because they are the
 limits most likely to matter and most often overstated away elsewhere:
 
 - **Comprehension.** The suite can commit and bind what an Approver was
@@ -875,6 +907,16 @@ limits most likely to matter and most often overstated away elsewhere:
   signature, not a per-token cryptographic proof. Enforcement value
   from the anchor accrues only to a full-set holder (an auditor, a
   Mandate verifier, a full-set Resource Server).
+- **Standalone-join ceiling.** Under the standalone binding, an
+  uncompromised join still has an assurance ceiling: the PDP's join
+  proves the acting credential belongs to the subject and client the
+  Mission names, but no mechanism in that mode proves the credential
+  was derived under the Mission, and mapping coarseness and same-party
+  misattribution remain
+  ({{I-D.draft-mcguinness-mission-authority-server}},
+  {{I-D.draft-mcguinness-mission-substrate}}). The
+  credential-to-Mission association is an inference the join bounds,
+  not a carried fact.
 - **Narrowing is typed.** The subset rule, the "authority only
   narrows" guarantee, is defined over `mission_resource_access` and
   its Common Constraints. Authority expressed in another
@@ -950,7 +992,7 @@ within each server's published staleness bound.
 | With introspection | one introspection cycle | per-request introspection at the issuer |
 | With Mission Status | the staleness bound of the status view | published status staleness bound |
 | With Mission Lifecycle Signals | event delivery latency, bounded by the poll fallback | signal delivery latency plus poll interval |
-| With runtime enforcement | the per-class freshness bound | published per-class staleness bound |
+| With runtime enforcement | the per-class freshness bound plus the permit window plus the class's execution bound | published per-class staleness bound, permit validity window, and execution bound |
 
 The token lifetime and introspection layers are the issuance profile's
 ({{I-D.draft-mcguinness-oauth-mission}}); Mission Status
@@ -971,9 +1013,9 @@ The same window, read per Mission Assurance Level
 |---|---|---|---|---|
 | Baseline Issuance | stopped at once | until token `exp` | not gated | not gated |
 | Baseline plus a freshness surface (the half-step) | stopped at once | within staleness bound | not gated | not gated |
-| Runtime-Enforced | stopped at once | stopped for mediated actions | stopped within freshness bound | only if the harness re-checks |
-| Governed Agent | stopped at once | stopped for mediated actions | stopped within freshness bound | stopped on resume re-check |
-| High-Assurance Agent | stopped at once | stopped (mediated credential custody) | stopped within the active-freshness bound | stopped on resume re-check |
+| Runtime-Enforced | stopped at once | stopped for mediated actions | stopped within freshness, permit, and execution bounds | only if the harness re-checks |
+| Governed Agent | stopped at once | stopped for mediated actions | stopped within freshness, permit, and execution bounds | stopped on resume re-check |
+| High-Assurance Agent | stopped at once | stopped (mediated credential custody) | stopped within active-freshness, permit, and execution bounds | stopped on resume re-check |
 
 Background work is bounded only where the harness re-checks Mission
 state on resume, retry, and dispatch
