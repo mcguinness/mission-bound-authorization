@@ -540,7 +540,7 @@ surface. This section adds only what the revision handshake introduces.
 
 - Narrowing only. A revision MUST NOT broaden the proposed Mission on
   any dimension. The Mission Issuer enforces the subset relation per
-  parameter (scope, resource, audience, `authorization_details`) before
+  parameter (scope, resource, `authorization_details`) before
   re-review.
 - Single-use handle. A `revision_handle` MUST be invalidated after
   one submission, success or failure. A new handle is issued on a

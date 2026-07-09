@@ -43,6 +43,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-audit:
+    title: "Mission Audit Transparency"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-shaping:
     title: "Mission Intent Shaping"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html
@@ -911,7 +919,9 @@ A conforming Consent-Evidence-capable Mission Issuer MUST:
 
 - construct a Consent Disclosure object for each approval event;
 - compute `consent_rendering_hash`;
-- record Consent Evidence for approval, decline, and narrowed decisions;
+- record Consent Evidence for approval and decline decisions, and for
+  narrowed decisions where the deployment supports approval revision
+  ({{I-D.draft-mcguinness-oauth-mission-approval-revision}});
 - bind approved Mission records to `consent_rendering_hash`;
 - include material notices for high-risk authority, with the
   per-notice acknowledgment the high-risk classes require
@@ -991,7 +1001,8 @@ per audit scope rather than use a single global counter.
 ## Media Type Registry
 
 IANA is requested to register one media type per {{RFC6838}}. The
-Mission audit profile references this media type.
+Mission audit profile ({{I-D.draft-mcguinness-mission-audit}})
+references this media type.
 
 ### application/mission-consent-evidence+json
 

@@ -688,11 +688,12 @@ Attributable action (any level, per the evidence deployed):
 The strong claims are earned, not implied. In the base profiles two of
 the mechanisms behind agent-compromise-resistant enforcement (mediated
 credential custody and action-bound approval) are recommendations,
-not requirements, while active-state freshness for the
-high-consequence classes and the no-unmediated-path rule for mediated
-classes are already base-profile requirements; a deployment that
-leaves the recommendations as recommendations does not obtain the
-guarantee. This
+not requirements, and a third, the agent-isolated rendering of the
+approval disclosure, is required only by the claim itself, while
+active-state freshness for the high-consequence classes and the
+no-unmediated-path rule for mediated classes are already base-profile
+requirements; a deployment that leaves any of the five conditions
+unmet does not obtain the guarantee. This
 matches the suite's front-door framing: adopting the profiles does not by
 itself make a deployment resistant to a compromised agent. The model
 makes misuse bounded and, where evidence is produced, attributable.
@@ -804,7 +805,7 @@ Exfiltration of private data (the third leg of the lethal trifecta):
   after untrusted input (optional; recommended, not required);
   least-exposure context minimization narrows what an injected agent
   sees (runtime, harness); the composite is claimable as trifecta
-  containment (runtime). Residual: pEP-placement completeness; no
+  containment (runtime). Residual: PEP-placement completeness; no
   information-flow control, so a sequence of in-scope steps can launder
   data; the quarantine pattern (separate ingestion and egress Missions)
   turns that limit into a deployment architecture

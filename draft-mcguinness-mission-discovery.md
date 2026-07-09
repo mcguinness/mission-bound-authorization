@@ -499,8 +499,9 @@ Evidence object:
 The adjudicator signs the object under the suite's evidence
 conventions: a JWS whose protected header carries `alg`, a `kid`
 resolvable in the Mission Issuer's published key material, and a
-`typ` of `application/mission-discovery-evidence+json` (a local-use
-identifier pending registration); the signature is what identifies
+`typ` of `mission-discovery-evidence+json` (a local-use identifier
+pending registration; the value omits the `application/` prefix, as
+JWS `typ` values do); the signature is what identifies
 the adjudicator, so the object carries no member for it. The
 payload's canonical bytes are its JCS canonicalization {{RFC8785}}.
 It is registrable in a transparency log on the Mission's feed
