@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                               8 July 2026
-Expires: 9 January 2027
+Intended status: Informational                               9 July 2026
+Expires: 10 January 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 January 2027.
+   This Internet-Draft will expire on 10 January 2027.
 
 Copyright Notice
 
@@ -925,8 +925,10 @@ Table of Contents
    widening only via an approved successor
    ([I-D.draft-mcguinness-oauth-mission-expansion]); Completion, per-
    entry discharge ([I-D.draft-mcguinness-oauth-mission-completion]);
-   and Management, fleet enumeration and bulk lifecycle for operators
-   ([I-D.draft-mcguinness-oauth-mission-management]).
+   Management, fleet enumeration and bulk lifecycle for operators
+   ([I-D.draft-mcguinness-oauth-mission-management]); and Discovery,
+   experimental, binding encountered resources within a pre-consented
+   ceiling ([I-D.draft-mcguinness-mission-discovery]).
 
 11.4.  Enforce Each Action
 
@@ -1172,10 +1174,11 @@ Table of Contents
       compromised agent.  Two named claims live at this level, each with
       proof obligations the runtime profile fixes. *Agent-compromise-
       resistant enforcement*: mediated credential custody, no unmediated
-      path, action-bound approval for the high-consequence classes, and
-      an active-freshness state source, so a compromised agent cannot
-      unilaterally take a high-consequence action for which it does not
-      hold a mediated credential. *Trifecta containment*: least
+      path, action-bound approval for the high-consequence classes, an
+      active-freshness state source, and approval disclosures rendered
+      by a component isolated from the agent, so a compromised agent
+      cannot unilaterally take a high-consequence action for which it
+      does not hold a mediated credential. *Trifecta containment*: least
       exposure, the harness taint rule enforced as a MUST, and full
       mediation of the external-communication and external-commitment
       classes with the egress-channel enumeration, so an injected agent

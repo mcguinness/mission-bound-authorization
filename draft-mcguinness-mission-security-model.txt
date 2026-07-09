@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                               8 July 2026
-Expires: 9 January 2027
+Intended status: Informational                               9 July 2026
+Expires: 10 January 2027
 
 
                          Mission Security Model
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 January 2027.
+   This Internet-Draft will expire on 10 January 2027.
 
 Copyright Notice
 
@@ -485,7 +485,8 @@ Table of Contents
       compromised agent cannot unilaterally take a high-consequence
       action it does not hold a mediated credential for
       ([I-D.draft-mcguinness-mission-runtime]).  Rests on PEP key
-      custody, the agent and harness isolation boundary, and an active-
+      custody, the agent and harness isolation boundary (the approval
+      disclosure included, never agent-composed), and an active-
       freshness state source.
 
    Trifecta containment (High-Assurance Agent):  An injected agent
