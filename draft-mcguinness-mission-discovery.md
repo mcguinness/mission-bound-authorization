@@ -276,6 +276,17 @@ An encounter is classified before it is adjudicated:
   evidenced ({{discovery-evidence}}): routed or refused, a
   foreign-domain encounter leaves the same record.
 
+How the agent met the resource is not this document's subject.
+Discovery infrastructure, a capability registry with verified
+publisher namespaces, a federated catalog served from the
+publisher's own domain, or plain search, determines what an agent
+meets and what is known about it at encounter; it changes the
+encounter's quality, never its governance. An encounter sourced from
+a curated registry is classified and adjudicated like any other. A
+deployment MAY scope a ceiling family to a registry or catalog it
+curates: membership then bounds what policy may bind, and every
+floor of this document applies within it unchanged.
+
 The encounter request is agent-influenced input by construction: the
 agent chose what to meet, and content it ingested may have chosen
 for it. Every rule in this document is written against that fact,
@@ -303,6 +314,12 @@ recorded:
    self-declaration, its content-addressed digest is computed at
    encounter and carried through adjudication and evidence
    ({{lying-resource}}).
+
+Where discovery infrastructure verified the publisher before the
+encounter, a namespace-verified registry entry or a catalog served
+from the publisher's own domain, that verification is an additional
+pinned fact: it strengthens the origin association, is recorded with
+the identity, and is rendered in any disclosure.
 
 The pinned identity travels as one shape, the **Encountered Resource
 object**, on the wire and in evidence:
@@ -403,7 +420,9 @@ rules already refuse drifted catalog capabilities at the PDP
 
 A self-declaration is self-asserted: a malicious resource declares
 itself read-only, reversible, and inconsequential, and authors
-consent text to match. Therefore:
+consent text to match. A registry listing or publisher-verified
+catalog entry is a self-declaration in this sense: verification
+proves authorship, never safety. Therefore:
 
 - A self-declaration is accountability material, never
   classification authority. The action classes of an encountered
@@ -426,7 +445,10 @@ consent text to match. Therefore:
 The sharpest open-world attack needs no authority excess: injected
 content steers the agent to encounter the attacker's resource and
 bind it in-ceiling, and the exfiltration channel is created rather
-than found. Two rules close the policy path:
+than found. Discovery infrastructure sharpens the attack rather than
+blunting it: the attacker publishes a legitimately verified entry in
+a searchable index and injected content directs the agent to it, so
+every publisher check passes. Two rules close the policy path:
 
 - In a session the harness reports tainted
   ({{I-D.draft-mcguinness-mission-harness}}), an encounter whose
