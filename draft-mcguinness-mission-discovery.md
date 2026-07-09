@@ -619,16 +619,17 @@ opportunity, not work in flight.
 
 # Privacy Considerations {#privacy-considerations}
 
-Encounters reveal where an agent goes: the adjudicator, and the
-transparency log where evidence registers, learn every resource an
-agent met, including refused ones. That trail is the point for
-audit, and a hazard for the Subject. A deployment minimizes by
-registering digests rather than declarations, restricting Discovery
-Evidence access as it does other Mission evidence, and applying the
-issuance profile's identifier guidance where correlation across
-feeds matters. A self-declaration may itself contain third-party
-information; committing its digest rather than its bytes keeps that
-content out of the log.
+Encounters reveal where an agent goes: the adjudicator learns every
+resource an agent met, including refused ones, and the transparency
+log, which receives only hash commitments
+({{I-D.draft-mcguinness-mission-audit}}), still learns the Mission's
+feed, its registration cadence, and that encounters occurred. That
+trail is the point for audit, and a hazard for the Subject. A
+deployment minimizes by restricting Discovery Evidence access as it
+does other Mission evidence and applying the issuance profile's
+identifier guidance where correlation across feeds matters. A
+self-declaration may itself contain third-party information; the
+digest commitment keeps that content out of the log.
 
 # IANA Considerations {#iana}
 
