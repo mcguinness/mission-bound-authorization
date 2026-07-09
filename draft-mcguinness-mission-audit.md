@@ -85,6 +85,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-harness:
+    title: "Mission-Aware Agent Harnesses"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-mandate:
     title: "Mission Mandate"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
@@ -296,6 +304,7 @@ record as part of the Mission's feed.
 | Mission Mandate | JWS Compact Serialization, as issued | `application/mission-mandate+jwt` | `issuer` |
 | Child Evidence | Child Evidence object (JCS), as the child-delegation profile fixes | `application/mission-child-evidence+json` | `issuer` |
 | Discovery Evidence | Discovery Evidence object (JCS), as the discovery profile fixes | `application/mission-discovery-evidence+json` | `issuer` |
+| Harness Evidence | Harness Evidence object (JCS), as the harness profile fixes | `application/mission-harness-evidence+json` | harness key |
 
 The table is extensible by specification: a profile MAY define an
 additional evidence type by fixing its canonical bytes, its
@@ -523,11 +532,13 @@ Authorization Server's metadata `jwks_uri` in the OAuth binding
 Server's discovery `jwks_uri` in the standalone binding
 ({{I-D.draft-mcguinness-mission-authority-server}}), or the AAuth
 Person Server's existing `jwks_uri` in the AAuth binding
-({{I-D.draft-mcguinness-mission-aauth}}). A PDP or PEP key
+({{I-D.draft-mcguinness-mission-aauth}}). A PDP, PEP, or harness key
 is resolved
 through the deployment-published key sets the runtime and AuthZEN
 profiles require ({{I-D.draft-mcguinness-mission-runtime}},
-{{I-D.draft-mcguinness-mission-authzen}}).
+{{I-D.draft-mcguinness-mission-authzen}}); the harness profile
+requires the same publication of a harness that registers its
+evidence ({{I-D.draft-mcguinness-mission-harness}}).
 
 ## Registration Availability {#availability}
 
@@ -918,7 +929,9 @@ type by the consent evidence profile
 Mission Mandate media type by the Mandate profile
 ({{I-D.draft-mcguinness-mission-mandate}}), the Child Evidence type
 identifier by the child-delegation profile
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), and the
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), the
+Harness Evidence type identifier by the harness profile
+({{I-D.draft-mcguinness-mission-harness}}), and the
 Signals SET media type `application/secevent+jwt` by RFC 8417, which the
 Signals profile carries the event in
 ({{I-D.draft-mcguinness-oauth-mission-signals}}). The Signed Statement

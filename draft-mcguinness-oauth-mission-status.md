@@ -406,6 +406,13 @@ The members are:
     replaced this Mission, set atomically at supersession on the
     predecessor's record
     ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
+  - `version`: OPTIONAL; REQUIRED where the deployment offers the
+    Lifecycle Signals stream
+    ({{I-D.draft-mcguinness-oauth-mission-signals}}): the Mission's
+    lifecycle transition counter as the Signals profile defines it,
+    current as of the reported `state`. An event consumer that
+    re-established state through this operation re-seats its gap
+    detection on it: the last-applied version becomes this value.
 - `authorization_details`: the audience-scoped Authority Set entries
   relevant to the requesting audience, as the `mission_resource_access`
   shape of {{I-D.draft-mcguinness-oauth-mission}} (Section "Mission
