@@ -977,7 +977,9 @@ separate posture list:
 A deployment advertises `mission_max_stale_seconds` ({{as-metadata}}),
 the maximum interval it tolerates for a Mission state change to take
 effect, so a consumer can size token lifetimes and choose propagation
-mechanisms to match.
+mechanisms to match. When the member is absent, no propagation bound
+is declared: a consumer MUST size reliance to token lifetime alone
+and MUST NOT assume a tighter bound.
 
 ## Recommended Access-Token TTL
 
@@ -1023,7 +1025,8 @@ through standard {{RFC8414}} discovery.
 `mission_max_stale_seconds`:
 : OPTIONAL. An integer. The maximum
   tolerated interval, in seconds, for revocation propagation
-  ({{revocation-enforcement-classes}}).
+  ({{revocation-enforcement-classes}}). When absent, no bound is
+  declared, and a consumer sizes reliance to token lifetime alone.
 
 DPoP and mTLS support for issued credentials are read from the
 standard `dpop_signing_alg_values_supported` {{RFC9449}} and

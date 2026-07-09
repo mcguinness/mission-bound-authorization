@@ -350,7 +350,11 @@ self-declaration digest where one exists; the authority sought, the
 entry or entries the binding would create, whose action classes
 under the deployment's classification drive every floor of this
 document; the requesting actor; and the session's taint state as the
-harness reports it. It returns exactly one of:
+harness reports it. The adjudicator MUST treat a missing, stale, or
+unverifiable taint state as tainted: the floor of
+{{injection-discovery}} keys on the harness's report, and an absent
+report is not an untainted one. The adjudication returns exactly one
+of:
 
 **Bind.**
 : The encountered resource falls within a consented ceiling entry
