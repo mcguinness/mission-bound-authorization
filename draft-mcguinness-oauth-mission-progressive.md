@@ -102,6 +102,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-metering:
+    title: "Mission Consumption Metering"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -341,6 +349,39 @@ policy is enforced by the Mission Issuer and is part of its trusted
 governance: a misconfigured policy can over-grant within the ceiling, so
 it is reviewed and versioned like other approval policy.
 
+## The Ceiling Review {#ceiling-review}
+
+A pre-consented ceiling is standing consent, and standing consent
+decays: a chain renewed forever on policy alone is a standing grant
+with a calendar. This profile therefore bounds the chain in time, not
+only per drawdown and per unit rate ({{in-ceiling-expansion}}).
+
+A deployment MUST publish a **ceiling review cadence** in its Mission
+Deployment Profile, and the Mission Issuer MUST NOT policy-adjudicate
+an in-ceiling drawdown for a chain whose most recent human approval
+of the ceiling is older than that cadence: the request falls back to
+a fresh human approval, exactly as a request the drawdown policy does
+not authorize does ({{in-ceiling-expansion}}). The review approval is
+an ordinary expansion approval that re-consents, or narrows, the
+ceiling, and its consent disclosure MUST render the chain's record
+since the prior review: the drawdown count and rate, the guard
+exceptions escalated to human approval, the `out_of_ceiling`
+refusals, the entries discharged under the completion profile
+({{I-D.draft-mcguinness-oauth-mission-completion}}), and, where the
+metering profile runs, consumption against its bounds
+({{I-D.draft-mcguinness-mission-metering}}). Where consent evidence
+is claimed, that disclosure is committed like any other
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), so the
+record shows the reviewer saw the cycle they renewed.
+
+The review is where decay is caught, and the tells are checkable from
+the chain's own records: reviews that never narrow the ceiling,
+ceilings that only grow, guard exceptions trending toward zero
+because the policy was quietly widened, and discharge that never
+fires because no unit of work is scoped tightly enough to complete. A
+review that cannot cite the evidence of the cycle it renews has not
+reviewed it.
+
 ## Realizing an approved access request {#arap-feedback}
 
 Progressive authorization grows authority that a deployment anticipated
@@ -439,12 +480,14 @@ Authorization** is a conforming expansion-capable Mission Issuer
   Deployment Profile ({{in-ceiling-expansion}});
 - require a fresh human approval for an in-ceiling drawdown while the
   predecessor has non-terminal Child Missions ({{in-ceiling-expansion}});
-  and
 - rate-bound policy-adjudicated drawdowns per expansion chain, keyed by
   the chain's root Mission and counted across `predecessor` links,
   publish the concrete rate bound in the Mission Deployment Profile, and
   record each as an approval event carrying the chain's cumulative
-  drawdown count ({{in-ceiling-expansion}}, {{audit-linkage}}).
+  drawdown count ({{in-ceiling-expansion}}, {{audit-linkage}}); and
+- bound each chain by the published ceiling review cadence, refusing
+  policy adjudication past it and rendering the chain's record since the
+  prior review in the review approval's disclosure ({{ceiling-review}}).
 
 # Security Considerations {#security-considerations}
 
@@ -466,6 +509,12 @@ document adds the drawdown surface:
   expansion is policy-adjudicated ({{progressive-authorization}}); a
   ceiling the Approver did not knowingly consent to is standing
   authority obtained by omission.
+- Consent decays even when nothing is misconfigured. The per-drawdown
+  and rate bounds cap what a chain draws per unit time, not for how
+  long it keeps drawing; the ceiling review ({{ceiling-review}}) is
+  the temporal bound, and a deployment that renews it without the
+  chain's record in front of the reviewer has re-created the standing
+  grant this profile exists to avoid.
 
 # Privacy Considerations {#privacy-considerations}
 
