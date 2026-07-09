@@ -407,6 +407,13 @@ The harness establishes state through one of:
 If the harness cannot establish active state within the bound, it MUST
 NOT resume governed work.
 
+A resume check is a freshness-bound check, not a mandatory network
+call: within one valid window, a status response inside its
+`fresh_until` or a maintained event-driven cache satisfies every
+resume point that falls inside it, so a harness resuming many items,
+or continuing many tool calls, pays the wire once per window, not
+once per resume.
+
 ## Resume Algorithm {#resume-algorithm}
 
 The resume check follows one sequence:
