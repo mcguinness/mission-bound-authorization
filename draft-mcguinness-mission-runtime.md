@@ -1594,10 +1594,12 @@ approval-rendering condition is stated only by this claim.
 
 - the sender-constraint private key is held by the mediating PEP, not by
   the agent component ({{custody}});
-- governed work runs under a harness conforming to the harness profile
-  ({{I-D.draft-mcguinness-mission-harness}}) whose published
-  execution-environment scope statement covers the mediated classes, so
-  there is no unmediated path to those actions;
+- governed work runs in a mediated execution environment with no
+  unmediated path to the mediated classes, documented by a published
+  execution-environment scope statement covering those classes; a
+  harness conforming to the harness profile
+  ({{I-D.draft-mcguinness-mission-harness}}) is the defined way to
+  establish and document this, and the claim binds to the property;
 - each such action requires an action-bound approval
   ({{action-approval}});
 - the disclosure rendered to the Approver for an action-bound approval
@@ -1653,8 +1655,9 @@ of its base-profile level:
   applied: the context surfaced to the agent is scoped to the active
   Mission, and credential material stays out of the agent for every
   mediated class ({{custody}}).
-- **Untrusted content.** The harness taint policy
-  ({{I-D.draft-mcguinness-mission-harness}}) is in force and its
+- **Untrusted content.** A taint policy for untrusted content, as the
+  harness profile defines one
+  ({{I-D.draft-mcguinness-mission-harness}}), is in force and its
   egress rule is enforced, not advisory: a consequential
   external-communication or external-commitment action whose bound
   parameters derive from tainted content (or, under session-level

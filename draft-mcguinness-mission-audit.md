@@ -41,18 +41,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
-  RFC8610:
-  I-D.draft-ietf-scitt-scrapi:
-  I-D.draft-mcguinness-oauth-mission-consent-evidence:
-    title: "Mission Consent Evidence for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
@@ -61,6 +49,26 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-consent-evidence:
+    title: "Mission Consent Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-child-delegation:
+    title: "Mission Child Delegation for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+
+informative:
+  RFC8610:
+  I-D.draft-ietf-scitt-scrapi:
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
@@ -72,14 +80,6 @@ informative:
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-child-delegation:
-    title: "Mission Child Delegation for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
     author:
       -
         ins: K. McGuinness
@@ -334,6 +334,15 @@ canonical bytes and type identifier by the child-delegation profile
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), and the
 Discovery Evidence canonical bytes and type identifier by the
 discovery profile ({{I-D.draft-mcguinness-mission-discovery}}).
+
+Each companion-defined row binds only a deployment that produces that
+evidence, so the reference is consulted only where the profile is
+adopted. Rows whose defining profile is Experimental (the Signals
+form of the lifecycle transition and the Discovery Evidence row) stay
+on that profile's maturity: this document keeps those references
+informative, and a deployment not running the Experimental profile
+uses the stable form ({{transition-object}} for lifecycle
+transitions) or omits the row.
 
 A Child Evidence record registers on the Parent Mission's feed: the
 `sub` is the parent's ({{feed}}), its producer is the `issuer`, and

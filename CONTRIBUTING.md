@@ -39,6 +39,29 @@ Here are two ways to create a pull request ("PR"):
 Document authors/editors are often happy to accept contributions of text,
 and might be willing to help you through the process. Email them and ask.
 
+## Reference Classification Convention
+
+A draft in this repository lists a reference as normative when any
+BCP 14 requirement, even one conditional on adopting an OPTIONAL
+capability or companion profile, requires implementing or consulting
+it. A conditional dependency stays normative and states its scope in
+the text ("binds only a deployment that adopts X"); the core's Actor
+Profile reference, confined to its OPTIONAL Delegation capability, is
+the template.
+
+Two bounds:
+
+- **Maturity is a dependency boundary.** A Standards-Track draft never
+  lists an Experimental draft as normative. A requirement that would
+  create such a dependency moves into the Experimental draft, which
+  places the duty on its own adopters; the Standards-Track draft keeps
+  the reference informative and, where useful, points to it.
+- **Named claims bind to properties, not documents.** Where a claim's
+  condition can be stated as a deployment property (no unmediated
+  path, isolated disclosure rendering), the profile states the
+  property and cites the companion that defines the standard way to
+  establish it; the citation may then stay informative.
+
 
 ## Working Group Information
 
