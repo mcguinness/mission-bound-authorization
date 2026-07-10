@@ -1052,6 +1052,13 @@ Deployments where revocation propagates out of band (token
 introspection, per-request status checks, or the event stream) MAY use
 longer TTLs.
 
+Sizing to the bound is itself a propagation mechanism: expiry
+performs the state check, and the consumer integrates nothing (the
+runtime profile names this token-lifetime freshness for the classes
+below its high-consequence floor). Introspection and per-request
+status checks tighten specific paths; they are upgrades, not
+prerequisites.
+
 # Authorization Server Metadata {#as-metadata}
 
 This section is OPTIONAL and applies only to a deployment that adopts

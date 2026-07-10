@@ -563,7 +563,12 @@ A deployment MUST NOT claim runtime enforcement for a resource, action
 class, `authorization_details` type, or execution path outside that
 declared scope. A Mission Issuer conforms to the issuance profile; it
 does not become a runtime-conforming deployment merely by issuing
-Mission-bound tokens.
+Mission-bound tokens. The converse is a stated posture, not a
+failure: a resource or class outside the declared scope relies on
+issuance gating and token-lifetime freshness ({{state-freshness}}),
+and the Enforcement Scope Statement says so. This profile does not
+require every resource to evaluate Mission state; it requires the
+deployment to say which do.
 
 The enforcement scope is a deployment conformance statement, not an
 OAuth Authorization Server metadata extension. This document defines no
@@ -1187,6 +1192,18 @@ is the deployment's accepted state lease.
   these classes: it bounds staleness only by the lifetime, so a revoked
   Mission keeps deriving consequence until tokens age out, which is the
   ambient-authority gap this profile exists to close.
+
+**Token-lifetime freshness.** Below the high-consequence floor, token
+expiry is itself a conforming state source: derivation and refresh
+are gated on `active` ({{I-D.draft-mcguinness-oauth-mission}}), so a
+token's remaining lifetime bounds the staleness of the authority it
+carries, and the published staleness bound for a class relying on it
+is the maximum token lifetime. Expiry is a state check performed by
+the clock: no status call, no introspection, no change at the
+consuming resource. A deployment declares it per class in its
+Enforcement Scope Statement like any other source; what it cannot do
+is reflect a revocation faster than the lifetime, which is why the
+high-consequence classes require an active source.
 
 The following are the RECOMMENDED default freshness postures per
 class, adopted absent a documented, consequence-specific analysis:
