@@ -2309,7 +2309,12 @@ profile <span class="bcp14">MUST</span> publish or otherwise make available a Re
 runtime profile for the protected resources and operations in scope.
 The Resource Server runtime profile is a deployment conformance
 statement, not an OAuth Authorization Server metadata extension and
-not a new access token format.<a href="#section-5-1" class="pilcrow">¶</a></p>
+not a new access token format. It is the family's enforcement
+adapter contract for a resource integration: the artifact two
+independent implementations name and version to agree on a
+resource's action identifiers, parameter semantics, and enforcement
+composition, so the family standardizes the adapter contract rather
+than every business action.<a href="#section-5-1" class="pilcrow">¶</a></p>
 <p id="section-5-2">The Resource Server runtime profile is a delta over the deployment's
 Enforcement Scope Statement (<a href="#runtime-conformance" class="auto internal xref">Section 4.2</a>): it inherits
 the enforcement-scope items and records only what is specific to its
@@ -2343,11 +2348,16 @@ retained;<a href="#section-5-3.4.1" class="pilcrow">¶</a></p>
         <li class="normal" id="section-5-3.5">
           <p id="section-5-3.5.1">how Resource policy is evaluated and composed with Mission authority,
 including local object authorization, tenant configuration, legal
-holds, service invariants, and risk policy; and<a href="#section-5-3.5.1" class="pilcrow">¶</a></p>
+holds, service invariants, and risk policy;<a href="#section-5-3.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-3.6">
           <p id="section-5-3.6.1">the runtime enforcement evidence fields and privacy treatment for
-decision and refusal records.<a href="#section-5-3.6.1" class="pilcrow">¶</a></p>
+decision and refusal records; and<a href="#section-5-3.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-3.7">
+          <p id="section-5-3.7.1">a profile identifier and version, so a change to any of the above
+is detectable and two independent implementations can name the same
+adapter contract.<a href="#section-5-3.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-5-4">A Resource Server <span class="bcp14">MUST NOT</span> claim this runtime profile for an operation

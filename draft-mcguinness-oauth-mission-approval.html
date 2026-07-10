@@ -1193,7 +1193,10 @@ approval sequencing.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
                 <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-pending-lifetime-and-stalen" class="internal xref">Pending Lifetime and Staleness</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5">
-                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-queue-pressure" class="internal xref">Queue Pressure</a></p>
+                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-the-approval-decision-set" class="internal xref">The Approval Decision Set</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.6">
+                <p id="section-toc.1-1.5.2.6.1"><a href="#section-5.6" class="auto internal xref">5.6</a>.  <a href="#name-queue-pressure" class="internal xref">Queue Pressure</a></p>
 </li>
             </ul>
 </li>
@@ -1494,12 +1497,83 @@ Mission Issuer <span class="bcp14">MUST NOT</span> commit an approval over a pro
 superseded policy.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="queue-pressure">
+<div id="decision-set">
 <section id="section-5.5">
-        <h3 id="name-queue-pressure">
-<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-queue-pressure" class="section-name selfRef">Queue Pressure</a>
+        <h3 id="name-the-approval-decision-set">
+<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-the-approval-decision-set" class="section-name selfRef">The Approval Decision Set</a>
         </h3>
-<p id="section-5.5-1">Deferral turns the review surface into a queue a client can flood. The
+<p id="section-5.5-1">This section is <span class="bcp14">OPTIONAL</span> and experimental. The issuance profile
+records exactly one accountable Approver and defers approval-authority
+provenance to a governance layer
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). An enterprise review
+surface often is that governance layer: the decision may involve
+several principals, a threshold rule, and a delegation-of-authority
+policy, and an auditor later needs to prove not only who approved but
+under which authority the approval was valid.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+<p id="section-5.5-2">A Mission Issuer <span class="bcp14">MAY</span> record an <strong>approval decision set</strong> alongside
+the approval event, retained with the Mission record for its audit
+horizon and joined by <code>approval_event_id</code>:<a href="#section-5.5-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.5-3.1">
+            <p id="section-5.5-3.1.1"><code>approval_policy</code>: an identifier and version for the policy
+governing who may approve this proposal (the deployment's
+delegation-of-authority matrix);<a href="#section-5.5-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.5-3.2">
+            <p id="section-5.5-3.2.1"><code>threshold</code>: the rule the recorded assertions satisfied; and<a href="#section-5.5-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.5-3.3">
+            <p id="section-5.5-3.3.1"><code>assertions</code>: one or more decision assertions, each carrying the
+asserting principal as an (<code>iss</code>, <code>sub</code>) pair, a <code>kind</code> of <code>human</code>,
+<code>service</code>, or <code>policy</code>, the decision, the decision time, and
+optionally the provenance under which that principal was authorized
+to decide and a reason.<a href="#section-5.5-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.5-4">The set is governance evidence, not a wire artifact. It never appears
+on tokens or in any protocol message; the Mission record still
+carries exactly one accountable <code>approver</code>, the principal the
+<code>approval_policy</code> designates as accountable for the committed
+decision, and every downstream projection is unchanged. An approval
+whose recorded assertions do not satisfy the declared
+<code>approval_policy</code> threshold <span class="bcp14">MUST NOT</span> commit, and a committed set is
+immutable. The ordinary one-person approval is the degenerate case, a
+single human assertion, and need not be recorded at all. Where
+consent evidence is claimed, each human assertion's disclosure is
+committed as the consent-evidence profile requires
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>); a <code>policy</code>
+assertion carries its policy identifier and version, which is the
+family's provenance chain for non-human approval (policy approves the
+instance because a human approved the policy).<a href="#section-5.5-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-5.5-5">
+<pre>
+{
+  "approval_event_id": "ape_7Kq2mR9tW4xY",
+  "approval_policy": { "id": "dlg-matrix", "version": "v7" },
+  "threshold": "2-of-2",
+  "assertions": [
+    { "approver": { "iss": "https://login.example.com",
+        "sub": "manager@example.com" },
+      "kind": "human", "decision": "approve",
+      "decided_at": "2026-09-30T16:58:11Z",
+      "provenance": "role:finance-manager" },
+    { "approver": { "iss": "https://as.example.com",
+        "sub": "policy:finance-charter" },
+      "kind": "policy", "decision": "approve",
+      "decided_at": "2026-09-30T16:58:12Z",
+      "provenance": "dlg-matrix:v7#agent-charters" }
+  ]
+}
+</pre><a href="#section-5.5-5" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="queue-pressure">
+<section id="section-5.6">
+        <h3 id="name-queue-pressure">
+<a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-queue-pressure" class="section-name selfRef">Queue Pressure</a>
+        </h3>
+<p id="section-5.6-1">Deferral turns the review surface into a queue a client can flood. The
 Mission Issuer <span class="bcp14">MUST</span> bound the number of concurrent pending proposals
 per (client, Approver) pair, refusing further submissions until the
 queue drains. It <span class="bcp14">SHOULD</span> collapse pending proposals carrying an
@@ -1507,12 +1581,12 @@ identical <code>intent_hash</code> into a single review item, <span class="bcp14
 reviewer notifications, and <span class="bcp14">SHOULD</span> log a queue flood as a security
 event, alongside the decline-suppression detection the consent
 evidence profile describes
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-5.5-1" class="pilcrow">¶</a></p>
-<p id="section-5.5-2">Collapsing identical proposals is a review-surface convenience and does
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-5.6-1" class="pilcrow">¶</a></p>
+<p id="section-5.6-2">Collapsing identical proposals is a review-surface convenience and does
 not merge their outcomes: one approval decision <span class="bcp14">MUST</span> resolve exactly
 one pending approval, and the Mission Issuer <span class="bcp14">MUST</span> re-queue or deny the
 others rather than mint a Mission for each. A single consent therefore
-mints at most one Mission.<a href="#section-5.5-2" class="pilcrow">¶</a></p>
+mints at most one Mission.<a href="#section-5.6-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1637,11 +1711,15 @@ decision; and<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.4">
           <p id="section-8-2.4.1">enforce the pending lifetime and staleness rules of
-<a href="#pending-staleness" class="auto internal xref">Section 5.4</a> and the queue bounds of <a href="#queue-pressure" class="auto internal xref">Section 5.5</a>.<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
+<a href="#pending-staleness" class="auto internal xref">Section 5.4</a> and the queue bounds of <a href="#queue-pressure" class="auto internal xref">Section 5.6</a>.<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-8-3">A client conforming to this profile <span class="bcp14">MUST</span> treat every pending response
-as unapproved and poll the <code>deferral_code</code> per the deferred substrate.<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-3">A Mission Issuer that records approval decision sets additionally
+commits only approvals whose assertions satisfy the declared
+<code>approval_policy</code> threshold, and retains each committed set,
+immutable, for the Mission's audit horizon (<a href="#decision-set" class="auto internal xref">Section 5.5</a>).<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">A client conforming to this profile <span class="bcp14">MUST</span> treat every pending response
+as unapproved and poll the <code>deferral_code</code> per the deferred substrate.<a href="#section-8-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
@@ -1659,6 +1737,13 @@ the Approver and satisfying the Mission Intent's <code>controls.acr</code>
 the synchronous event sets. Approver routing and notification, how a
 proposed Mission reaches a reviewer and how the reviewer is alerted, are
 deployment matters and are named as such here rather than specified.<a href="#section-9-2" class="pilcrow">¶</a></p>
+<p id="section-9-3">An approval decision set (<a href="#decision-set" class="auto internal xref">Section 5.5</a>) is evidence about the
+approval, never a second authorization surface: the accountable
+<code>approver</code> on the Mission record remains the principal every
+downstream check and projection uses, and a forged or padded
+assertion set changes nothing an enforcement point consumes. Its
+threat is to auditability, not authority, and its integrity rests on
+the issuer's record retention like the approval event itself.<a href="#section-9-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="privacy-considerations">
