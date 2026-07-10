@@ -308,6 +308,40 @@ Table of Contents
    composes as Resource policy at the decision point and only ever
    narrows.
 
+   The stance beneath the levers is *survivable incorrectness*. The
+   agent is probabilistic: within any envelope it will sometimes act on
+   hallucinated, injected, or misaligned reasoning, and no semantic
+   model of its intent stays complete at the scale and openness of real
+   deployments.  The family therefore never bets on the model being
+   right; it builds so that wrong is survivable, on two arms.  The
+   action arm is this envelope and its levers, wire-backed: every
+   consequential action is checked against committed authority, the
+   irreversible, external-commitment, and privileged-administration
+   classes sit behind action-bound approval, consumption is metered, and
+   in-flight work unwinds through recorded reversibility classes
+   ([I-D.draft-mcguinness-mission-orchestration]), so execution fails in
+   bounded, detectable, recoverable ways.  The input arm is *least
+   exposure*: everything the agent sees can steer it, and everything it
+   holds can leak, so a Mission is a budget for authority and for
+   disclosure at once, and mediated custody generalizes from credentials
+   to context: the agent is handed the working set the current step
+   justifies, not everything its principal can reach.  Retrieval scoped
+   to the Mission does not surface the unrelated memo; a catalog scoped
+   to the Mission does not offer the external-email tool to a task that
+   only reads and drafts; a secret scoped to the Mission is exercised by
+   the PEP, never copied into the prompt.
+
+   The two arms differ in maturity, and the difference is stated rather
+   than blurred.  The action arm has wire surfaces behind every lever.
+   The exposure arm's enforceable edges are the harness taint rule and
+   egress mediation ([I-D.draft-mcguinness-mission-harness],
+   [I-D.draft-mcguinness-mission-runtime]) and catalog filtering as
+   exposure control ([I-D.draft-mcguinness-mission-authzen]); scoping
+   retrieval, memory, and context assembly to the Mission has no
+   interoperable form yet, here or anywhere in the ecosystem, so the
+   interior of the arm is deployment discipline, declared in the
+   Deployment Profile (Section 14) rather than claimed.
+
    The envelope meets its hardest case in the open world.  The family
    inherits OAuth's ontology: authority is client-proposed and
    enumerated at approval, which presumes the resources a task touches
@@ -1429,12 +1463,14 @@ Table of Contents
    the MAS mapping contract where used, the Resource Server coverage
    split between authorization_details enforcement and the scope
    projection, the transparency-service topology and registration
-   schedule where audit transparency is run, and the standing-charter
-   posture, per-drawdown and rate bounds, the action-class mapping, and
-   the ceiling review cadence and its evidence, where standing charters
-   are run) into one object an auditor, a procurement, or a security
-   review can read.  It is non-normative in shape here; a profile or
-   deployment fixes the exact serialization.
+   schedule where audit transparency is run, the exposure posture, the
+   exposure points mediated and Mission-scoped and the ones left
+   unscoped, and the standing-charter posture, per-drawdown and rate
+   bounds, the action-class mapping, and the ceiling review cadence and
+   its evidence, where standing charters are run) into one object an
+   auditor, a procurement, or a security review can read.  It is non-
+   normative in shape here; a profile or deployment fixes the exact
+   serialization.
 
    Its distinguishing field is residual_risks: the profile is not
    credible unless it states, in the same object as its guarantees, what
@@ -1481,6 +1517,14 @@ Table of Contents
        "cached_credentials_revalidated": true,
        "secondary_egress_enumerated": true
      },
+     "exposure": {
+       "taint_rule": "enforced",
+       "egress_channels_enumerated": true,
+       "mission_scoped_exposure_points": ["retrieval",
+         "tool_catalog", "secrets_custody"],
+       "unscoped_exposure_points": ["long_term_memory",
+         "provider_model_context"]
+     },
      "standing_charters": {
        "ceiling_review_cadence_days": 90,
        "review_evidence": ["drawdowns", "guard_exceptions",
@@ -1508,7 +1552,8 @@ Table of Contents
        "unmediated local reasoning is outside enforcement",
        "revocation latency up to 30 seconds",
        "PEP compromise is not prevented",
-       "per-entry constraints reach scope-only resources only via the PEP"
+       "per-entry constraints reach scope-only resources only via the PEP",
+       "long-term memory and provider model context are not Mission-scoped exposure points"
      ]
    }
 
@@ -1561,7 +1606,12 @@ Table of Contents
    was shown, decided, or did; it does not make the human attentive, the
    producer honest, or the unmediated path disappear.  Those are the
    residues the Mission Assurance Levels (Section 13) and the security
-   model make a deployment state rather than assume.
+   model make a deployment state rather than assume.  The exposure arm
+   (Section 5) carries the same honesty in the other direction: its
+   enforceable edges are the taint rule, egress mediation, and catalog
+   filtering, and a deployment that claims Mission-scoped context beyond
+   those edges names the exposure points it mediates, and the ones it
+   does not, in its Deployment Profile (Section 14).
 
 16.  Mission Requirements
 
