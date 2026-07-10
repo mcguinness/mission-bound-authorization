@@ -2220,8 +2220,10 @@ state is non-active.<a href="#section-13-3" class="pilcrow">¶</a></p>
         <h3 id="name-stop-behavior-matrix">
 <a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-stop-behavior-matrix" class="section-name selfRef">Stop-Behavior Matrix</a>
         </h3>
-<p id="section-13.1-1">The harness <span class="bcp14">MUST</span> document a matrix mapping Mission state and action
-class to stop behavior. At minimum:<a href="#section-13.1-1" class="pilcrow">¶</a></p>
+<p id="section-13.1-1">The matrix below fixes the minimum stop behavior per Mission state
+and is a deployment's stop-behavior matrix as written: a deployment
+<span class="bcp14">MUST</span> document only the cells where it deviates, and a deviation <span class="bcp14">MUST</span>
+be at least as strict as the minimum:<a href="#section-13.1-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-2">
           <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>
@@ -2708,12 +2710,14 @@ execution-environment scope statement (<a href="#mediated-egress" class="auto in
           <p id="section-17-2.6.1">emit Harness Evidence for stop and resume decisions; and<a href="#section-17-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-17-2.7">
-          <p id="section-17-2.7.1">document a staleness bound per action class and its stop behavior.<a href="#section-17-2.7.1" class="pilcrow">¶</a></p>
+          <p id="section-17-2.7.1">apply the stop behavior for stale state under the per-action-class
+staleness bounds the Enforcement Scope Statement declares
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-17-2.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-17-3">The runtime profile's non-normative freshness table
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) is the calibration
-reference for these per-action-class bounds.<a href="#section-17-3" class="pilcrow">¶</a></p>
+reference for those bounds.<a href="#section-17-3" class="pilcrow">¶</a></p>
 <p id="section-17-4">A harness <span class="bcp14">MUST NOT</span> claim conformance for work it cannot suppress. It
 <span class="bcp14">MAY</span> claim conformance for a documented subset of execution paths if it
 identifies paths outside the claim.<a href="#section-17-4" class="pilcrow">¶</a></p>
