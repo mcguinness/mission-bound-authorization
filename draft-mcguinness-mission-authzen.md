@@ -2233,68 +2233,48 @@ binding only for the resources, action classes, and PDPs in the runtime
 enforcement scope it documents
 ({{I-D.draft-mcguinness-mission-runtime}}).
 
+Each role's obligations are normative in their owning sections; this
+checklist cites them without restating their mechanics.
+
 A PEP conforming to this binding MUST:
 
-- carry the Mission and actor decision inputs in the AuthZEN envelope
-  as defined ({{pdp-request}}), from validated token claims only, and
-  match the approved entry's `resource` against `context.audience`, not
-  the AuthZEN `resource` member;
-- supply `context.parameter_digest` for a parameter-bound action class
-  ({{parameter-digest}}), and `context.capability_source` for a
-  catalog-sourced action whose approved entry recorded a source binding
-  ({{capability-source-binding}});
-- enforce the permit lease ({{response-context}}): not act after
-  `permit_expires_at`, consume a single-use `decision_id` under the
-  runtime profile's consumed-identifier rules, treat a high-consequence
-  permit lacking `single_use` as invalid, and apply the stricter
-  class's permit controls when its own classification is stricter than
-  the returned `action_class`;
-- key any permit cache on the permit's bound fields, excluding freshness
-  telemetry, and never relay a permit as a bearer grant
-  ({{permit-binding-split}}); and
-- emit an Execution Evidence Object for each high-consequence action
-  ({{execution-evidence-object}}) and a Refusal Record for a refusal
-  before any PDP decision ({{pre-decision-refusal}}).
+- carry the Mission and actor decision inputs from validated token
+  claims only, matching the approved entry's `resource` against
+  `context.audience` ({{pdp-request}});
+- supply `context.parameter_digest` and `context.capability_source`
+  where required ({{parameter-digest}},
+  {{capability-source-binding}});
+- enforce the permit lease as {{response-context}} defines;
+- key permit caches on the permit's bound fields and never relay a
+  permit as a bearer grant ({{permit-binding-split}}); and
+- emit Execution Evidence and pre-decision Refusal Records as
+  {{execution-evidence-object}} and {{pre-decision-refusal}} require.
 
 A PDP conforming to this binding MUST:
 
-- refuse a request for an in-scope consequential action that lacks the
-  Mission decision context, rather than evaluate it as an unbound
-  AuthZEN request ({{pdp-request}});
-- perform the PDP-side consistency checks ({{pdp-request}});
-- return every denial with a denial-reason identifier from the set of
-  {{runtime-denial-classification}}, including any
-  specification-defined extension under its extensibility rule;
-- return `decision_id` and `policy_view_id` in every decision context,
-  the applied `action_class` with its `class_source`, and, on a
-  permit, `permit_expires_at` bounded by the relied-on Mission state
-  freshness and `single_use: true` for a high-consequence action
-  ({{response-context}}); and
-- emit Decision Evidence with the required members and a verifiable
-  integrity envelope ({{decision-evidence-object}},
-  {{decision-evidence-integrity}}).
+- refuse an in-scope consequential request that lacks the Mission
+  decision context, and perform the PDP-side consistency checks
+  ({{pdp-request}});
+- classify every denial per {{runtime-denial-classification}};
+- return the decision context of {{response-context}}, including the
+  permit-lease members; and
+- emit Decision Evidence per {{decision-evidence-object}} and
+  {{decision-evidence-integrity}}.
 
-An executor distinct from the requesting PEP MUST:
+An executor distinct from the requesting PEP MUST enforce the permit
+as {{permit-binding-split}} and {{execution-evidence-object}}
+require: verify the binding fields from the signed Decision Evidence
+rather than trust a relayed `decision: true`, own the
+consumed-identifier store and the lease, and recompute the
+`parameter_digest` immediately before acting, refusing with
+`parameter_mismatch` on divergence.
 
-- verify the runtime binding fields from the signed Decision Evidence
-  before acting, rather than trust a relayed `decision: true`
-  ({{permit-binding-split}});
-- honor the permit lease as the enforcing component, owning the
-  consumed-identifier store and refusing a consumed single-use
-  `decision_id` or a permit used past `permit_expires_at`, so relayed
-  Decision Evidence cannot execute twice ({{permit-binding-split}}); and
-- recompute the `parameter_digest` immediately before acting and emit
-  Execution Evidence linked by `decision_id`, refusing with
-  `parameter_mismatch` on divergence ({{execution-evidence-object}}).
-
-An audit consumer conforming to this binding MUST:
-
-- verify each evidence envelope against the emitter's published keys
-  and reject a record whose `format` is unsupported
-  ({{evidence-integrity-signing-keys}}); and
-- classify orphaned Decision Evidence and cross-record
-  `parameter_digest` divergence as {{security-considerations}} and
-  {{execution-evidence-object}} require, never as proof of action.
+An audit consumer conforming to this binding MUST verify each
+evidence envelope against the emitter's published keys
+({{evidence-integrity-signing-keys}}) and classify orphaned Decision
+Evidence and cross-record digest divergence as
+{{security-considerations}} and {{execution-evidence-object}}
+require, never as proof of action.
 
 # Security Considerations {#security-considerations}
 
