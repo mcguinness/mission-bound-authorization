@@ -1287,7 +1287,11 @@ SHA-256(JCS({
 ~~~
 
 The committed materialized view payload MUST carry the Mission's
-`mission_id` and `authority_hash` as members. A consistency check
+`mission_id` and `authority_hash` as members, and the Mission's state
+version current at materialization
+({{I-D.draft-mcguinness-oauth-mission-status}}) where the deployment
+serves one, so a consumer can tell a fresh-but-obsolete view from
+current state. A consistency check
 between a decision request's Mission reference and the loaded view is
 therefore an equality test: the request's Mission `id` and
 `authority_hash` either equal the committed values or the view does
