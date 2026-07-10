@@ -913,7 +913,12 @@ profile MUST publish or otherwise make available a Resource Server
 runtime profile for the protected resources and operations in scope.
 The Resource Server runtime profile is a deployment conformance
 statement, not an OAuth Authorization Server metadata extension and
-not a new access token format.
+not a new access token format. It is the family's enforcement
+adapter contract for a resource integration: the artifact two
+independent implementations name and version to agree on a
+resource's action identifiers, parameter semantics, and enforcement
+composition, so the family standardizes the adapter contract rather
+than every business action.
 
 The Resource Server runtime profile is a delta over the deployment's
 Enforcement Scope Statement ({{runtime-conformance}}): it inherits
@@ -939,9 +944,12 @@ MUST define:
   retained;
 - how Resource policy is evaluated and composed with Mission authority,
   including local object authorization, tenant configuration, legal
-  holds, service invariants, and risk policy; and
+  holds, service invariants, and risk policy;
 - the runtime enforcement evidence fields and privacy treatment for
-  decision and refusal records.
+  decision and refusal records; and
+- a profile identifier and version, so a change to any of the above
+  is detectable and two independent implementations can name the same
+  adapter contract.
 
 A Resource Server MUST NOT claim this runtime profile for an operation
 unless the operation's consequential effects pass through a PEP that
