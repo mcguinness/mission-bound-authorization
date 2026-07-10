@@ -1004,6 +1004,17 @@ defines the baseline mapping join; the Mission Join Assertion
 Enterprise profile requires it for the high-consequence classes
 ({{enterprise-profile}}).
 
+The join also has a ceiling no assertion raises: it proves the
+credential belongs to the Mission's parties, never that it was
+issued for the Mission ({{limitations}}). For the high-consequence
+classes, association is therefore not the terminal architecture. The
+issuance join ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}})
+or native Mission-bound issuance restores cryptographic derivation;
+a deployment claiming high-consequence enforcement in MAS mode
+SHOULD adopt one of them for those classes, and one that instead
+runs high-consequence work on an asserted join alone MUST state that
+residual in its Mission Deployment Profile's `residual_risks`.
+
 A Mission-joining PDP and its PEPs MUST observe the following:
 
 1. **The PEP supplies the Mission reference.** For governed work the
@@ -1059,6 +1070,14 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    Mission Status response or a materialized policy view), since the
    credential carries none. All other decision inputs and invariants
    of {{I-D.draft-mcguinness-mission-runtime}} apply unchanged.
+8. **The permit intersects three bounds.** A permit under a join never
+   exceeds any of three independently evaluated bounds: the authority
+   the acting credential itself carries (the token as issued, enforced
+   at the Resource Server or gateway), the Mission's approved
+   authority, and current Resource policy. The join adds the Mission
+   bound; it MUST NOT widen either of the other two, and a PEP MUST
+   NOT treat a Mission permit as overriding what the credential or
+   the resource would refuse.
 
 In the baseline mapping join the PDP compares the authenticated subject
 and client the PEP attests in the decision request, not the acting
@@ -1280,7 +1299,9 @@ claims:
   lifetime.
 
 `aud`:
-: OPTIONAL. The PDP or PDPs the assertion is minted for.
+: RECOMMENDED. The PDP or PDPs the assertion is minted for; audience
+  scoping prevents replay of an assertion to a consumer it was not
+  minted for.
 
 `mapping_version`:
 : OPTIONAL. A string. The mapping contract version
@@ -1674,7 +1695,17 @@ the runtime profile's Enforcement Scope Statement must state
 
 A MAS is adopted level by level across the Mission Assurance Levels
 ({{I-D.draft-mcguinness-mission-architecture}}), each phase
-independently useful:
+independently useful. The six phases group into three modes, and a
+deployment's claim is bounded by its mode: **records mode** (phases
+1 and 2) is inventory, approval, lifecycle, and audit, with no
+prevention claim of any kind; **enforced-paths mode** (phases 3 and
+4) prevents on exactly the paths the Enforcement Scope Statement
+enumerates and is records mode everywhere else; **issuance mode**
+(phases 5 and 6) restores the token-layer gate. "No AS code change"
+holds in every mode; what changes is the claim, and a
+high-consequence enforcement claim requires issuance mode's
+machinery or the Estate Prerequisites' AS features
+({{enterprise-prerequisites}}), never records alone:
 
 1. The MAS records Missions and approvals: governance and audit of
    what tasks were approved, with no enforcement change yet
