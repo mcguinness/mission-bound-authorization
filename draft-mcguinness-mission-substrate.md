@@ -181,17 +181,23 @@ conformance role claimed through a published Mission Substrate
 Statement ({{conformance}}). It restates no definition: each
 requirement points at the core section that owns it.
 
-## Status: A Profile for New Bindings {#status}
+## Status: The Binding Contract {#status}
 
-This document changes nothing for the existing bindings and profiles.
-The core remains self-contained and authoritative for every definition
-this document names; the existing bindings' Mission Substrate
-statements remain authoritative for those bindings, which predate this
-document and claim no conformance to it. No existing family document
-claims conformance to this one, and none needs revision on its
-account. A requirement stated here binds only a new binding that
-claims conformance to this document ({{conformance}}). Where this
-document and the core appear to differ, the core governs.
+This document is the family's binding-neutral contract. A requirement
+stated here binds a new binding that claims conformance
+({{conformance}}). The three existing bindings, the OAuth core, the
+Mission Authority Server, and the AAuth binding, predate this
+document and are its conforming instantiations: the contract was
+extracted from them, and {{crosswalk}} records where each satisfies
+it. Their own texts remain authoritative for their definitions, and
+where this document and the core appear to differ, the core governs.
+
+Ownership migrates by touch, not by relocation. When a
+binding-neutral definition next changes substantively, the change
+lands in this document and the owning binding section becomes a
+reference to it, so the contract boundary exists now while the text
+crosses it opportunistically, and no change is ever made solely to
+move words.
 
 ## Conventions and Terminology
 
@@ -640,6 +646,20 @@ the Mission Issuer; each hosted profile's own apply unchanged.
 This document has no IANA actions.
 
 --- back
+
+# Binding Crosswalk {#crosswalk}
+
+This appendix is informative. The three existing bindings are
+conforming instantiations of this contract, recorded here rather
+than through the Mission Substrate Statement ({{statement}}), which
+they predate; each binding's own Mission Substrate section is its
+authoritative statement.
+
+| Binding | Where the contract is satisfied |
+| --- | --- |
+| OAuth core ({{I-D.draft-mcguinness-oauth-mission}}) | Full provision. Each requirement of {{requirements}} points at the core section that defines it; the core's definitions are this contract's source text. |
+| Mission Authority Server ({{I-D.draft-mcguinness-mission-authority-server}}) | Partial provision by design. Its Mission Substrate section provides the identifier, lifecycle, Authority Set, anchors, and audit horizon (each the core's, unchanged), forgoes the Mission-bound credential and issuance gating, satisfies the credential requirement's join alternative with the Mission Join, and realizes approval and key publication on its own surfaces. |
+| AAuth binding ({{I-D.draft-mcguinness-mission-aauth}}) | Full provision in PS-asserted mode. Its Mission Substrate section enumerates all eight requirements point by point; federated mode is Reference-only where Access Servers do not carry the `mission` members. |
 
 # Acknowledgments
 {:numbered="false"}
