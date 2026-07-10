@@ -18,7 +18,10 @@ define a **delegated-authority layer**: authentication says who is
 acting, and entitlement governance says what a principal may hold;
 this layer governs the approved task itself, with lifecycle, bounded
 authority, per-action enforcement, delegation, evidence, and
-management surfaces.
+management surfaces. Operationally the layer splits the way that
+vocabulary implies: the Mission Issuer is the control plane, holding
+the approved task and distributing bounded authority, and tokens
+with the PEP/PDP boundary are its data plane.
 
 At a glance:
 
@@ -28,10 +31,13 @@ At a glance:
   two further bindings and normative substrate requirements, optional
   companion profiles organized by verb, and two Informational views
   (the Architecture and the Security Model).
-- **Four assurance levels** name what to deploy and what may be
-  claimed: Baseline Issuance, Runtime-Enforced (the Protocol MVP),
-  Governed Agent, and High-Assurance Agent. The first three run
-  entirely on ratified dependencies.
+- **Four assurance levels and named claims.** The levels (Baseline
+  Issuance, Runtime-Enforced the Protocol MVP, Governed Agent, and
+  High-Assurance Agent) are the adoption ladder: what to deploy, in
+  the order deployments build it. What may be claimed is the
+  orthogonal set of named assurance claims a deployment lists in its
+  Deployment Profile. The first three levels run entirely on ratified
+  dependencies.
 - **Three peer bindings, one object.** The OAuth Authorization
   Server, the standalone Mission Authority Server (the estate control
   plane where the AS cannot change or governance spans many issuers),
