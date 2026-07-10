@@ -957,11 +957,10 @@ profile adds:
   migration of a Mission's feed between services are deferred to future
   work, and a deployment whose Missions outlive a single log instance
   handles them by local arrangement until then. One interim rule
-  holds now, matching the family's retired-key posture: a service key
-  that signed any retained Receipt stays resolvable in the service's
-  published key material for the audit horizon of the feeds it
-  covers, so rotation retires a key from signing, never from Receipt
-  verifiability within that bound. Because a Receipt is the
+  holds now: the core's retired-key rule
+  ({{I-D.draft-mcguinness-oauth-mission}}) applies to the
+  Transparency Service's own keys, with the audit horizon of the
+  feeds a key covers as the retention bound. Because a Receipt is the
   longest-lived artifact this profile produces and is the
   compensating control for issuer key compromise
   ({{I-D.draft-mcguinness-mission-mandate}}), a deployment MUST also

@@ -1194,12 +1194,9 @@ its `jwks_uri`. The AS MUST keep the public JWK for every `kid` it
 has signed such a response under resolvable in its `jwks_uri` for at
 least the Mission record retention period, so an archived
 `application/mission-status-response+jwt` remains verifiable for
-audit and dispute. Rotation retires a key from signing, never from
-the published set within that bound: the same rule the Mandate
-states for its evidence lifetime
-({{I-D.draft-mcguinness-mission-mandate}}) and the AuthZEN profile
-states for its deployment-published evidence key sets
-({{I-D.draft-mcguinness-mission-authzen}}). A key known or suspected
+audit and dispute. This is the core's retired-key rule
+({{I-D.draft-mcguinness-oauth-mission}}), with the record retention
+period as the bound. A key known or suspected
 compromised is the exception: the AS removes it, and the Mandate
 profile's compromise-time rule governs how artifacts signed under it
 are then classified.

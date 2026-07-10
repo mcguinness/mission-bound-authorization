@@ -271,15 +271,11 @@ Authorization Requests {{RFC9396}} and kindred mechanisms express
 authority, and the Mission is the approved task that authority
 serves.
 
-The object fills a gap current practice pays for daily. A deployment
-that cannot size authority to a task compensates with three controls,
-each with a cost: agents scoped read-only (a ceiling on value, and
-reads still steer the agent and leak what it sees), a human approving
-or executing every write (approval fatigue, and the human becomes the
-unmediated enforcement point), or pilots permanently fenced into
-sandboxes (shadow paths grow around the fence). These controls exist
-because authority cannot be sized to a task the stack cannot
-represent; the Mission is that representation.
+The object fills a gap current practice pays for daily: an estate
+that cannot size authority to a task compensates with read-only
+scoping, a human executing every write, or permanently fenced
+pilots, and the Mission is the representation those controls
+substitute for.
 
 The model is deliberately decomposed: a core profile (the "issuance
 profile", {{I-D.draft-mcguinness-oauth-mission}}, here "the core")
@@ -361,28 +357,18 @@ than the exact value `active`, including one it does not recognize,
 as non-active, so an unrecognized state fails safe (the core's
 Mission Lifecycle and Gating section).
 
-The Mission model is the beginning of a distinct layer. Authentication
-and token issuance answer who is acting and what a single credential
-carries; governance of standing entitlements answers what access a
-principal should hold over time. Neither governs the approved task a
-delegate or agent performs on a principal's behalf: its bounded
-authority, its lifecycle, the per-action check that execution stays
-inside that boundary, and the evidence that binds back to it. That is
-the delegated-authority layer this family defines, and it composes
-with the layers below rather than replacing them. The Mission
-Authority Server ({{I-D.draft-mcguinness-mission-authority-server}})
-is that layer's binding-independent control plane: it holds the
-approved task, its lifecycle, and its authority across an estate of
-Authorization Servers, resources, and tools, whichever of them issues
-a given token. The layer's operational surface is already named: the
-Mission record and its anchors, the lifecycle and its status,
-authority distribution to the points of enforcement (the Authority
-Set and its policy views), decision evidence, the portable proof
-(the Mission Mandate, {{I-D.draft-mcguinness-mission-mandate}}), and
-the management plane for fleet-scale operation
-({{I-D.draft-mcguinness-oauth-mission-management}}). The near-term
-deployment is a control plane beside an unchanged OAuth estate; the
-direction is delegated authority management as a layer of its own.
+The Mission model is the beginning of a distinct layer.
+Authentication and token issuance answer who is acting and what a
+single credential carries; governance of standing entitlements
+answers what a principal should hold over time. Neither governs the
+approved task a delegate performs on a principal's behalf: its
+bounded authority, its lifecycle, the per-action check, and the
+evidence that binds back to it. That is the delegated-authority
+layer this family defines, composing with the layers below rather
+than replacing them, and the Mission Authority Server
+({{I-D.draft-mcguinness-mission-authority-server}}) is its
+binding-independent control plane across an estate, whichever party
+issues a given token.
 
 # Non-Goals {#non-goals}
 
@@ -441,67 +427,40 @@ facts a decision can gate on. A content evaluator a deployment adds
 composes as Resource policy at the decision point and only ever
 narrows.
 
-The stance beneath the levers is **survivable incorrectness**. The
-agent is probabilistic: within any envelope it will sometimes act on
-hallucinated, injected, or misaligned reasoning, and no semantic
-model of its intent stays complete at the scale and openness of real
-deployments. The family therefore never bets on the model being
-right; it builds so that wrong is survivable, on two arms. The
-action arm is this envelope and its levers, wire-backed: every
-consequential action is checked against committed authority, the
-irreversible, external-commitment, and privileged-administration
-classes sit behind action-bound approval, consumption is metered,
-and in-flight work unwinds through recorded reversibility classes
-({{I-D.draft-mcguinness-mission-orchestration}}), so execution fails
-in bounded, detectable, recoverable ways. The input arm is **least
-exposure**: everything the agent sees can steer it, and everything
-it holds can leak, so a Mission is a budget for authority and for
-disclosure at once, and mediated custody generalizes from
-credentials to context: the agent is handed the working set the
-current step justifies, not everything its principal can reach.
-Retrieval scoped to the Mission does not surface the unrelated memo;
-a catalog scoped to the Mission does not offer the external-email
-tool to a task that only reads and drafts; a secret scoped to the
-Mission is exercised by the PEP, never copied into the prompt.
-
-The two arms differ in maturity, and the difference is stated rather
-than blurred. The action arm has wire surfaces behind every lever.
-The exposure arm's enforceable edges are the harness taint rule and
-egress mediation ({{I-D.draft-mcguinness-mission-harness}},
-{{I-D.draft-mcguinness-mission-runtime}}) and catalog filtering as
-exposure control ({{I-D.draft-mcguinness-mission-authzen}}); scoping
-retrieval, memory, and context assembly to the Mission has no
-interoperable form yet, here or anywhere in the ecosystem, so the
-interior of the arm is deployment discipline, declared in the
-Deployment Profile ({{deployment-profile}}) rather than claimed.
+The stance beneath the levers is **survivable incorrectness**: the
+agent is probabilistic, so the family never bets on the model being
+right and builds so that wrong is survivable, on two arms. The
+action arm is this envelope and its levers, wire-backed, with
+in-flight work unwinding through recorded reversibility classes
+({{I-D.draft-mcguinness-mission-orchestration}}). The input arm is
+**least exposure**: everything the agent sees can steer it and
+everything it holds can leak, so a Mission budgets disclosure as
+well as authority, and mediated custody generalizes from credentials
+to context. The arms differ in maturity, and the difference is
+stated rather than blurred: the exposure arm's enforceable edges are
+the harness taint rule, egress mediation, and catalog filtering
+({{I-D.draft-mcguinness-mission-harness}},
+{{I-D.draft-mcguinness-mission-runtime}},
+{{I-D.draft-mcguinness-mission-authzen}}), while its interior,
+retrieval, memory, and context assembly scoped to the Mission, has
+no interoperable form yet and is deployment discipline, declared in
+the Deployment Profile ({{deployment-profile}}) rather than claimed.
 
 The envelope meets its hardest case in the open world. The family
-inherits OAuth's ontology: authority is client-proposed and
-enumerated at approval, which presumes the resources a task touches
-are knowable when it is approved. An agent that discovers resources
-at encounter time breaks that premise, and some substrates invert
-the ontology outright: the resource declares its own operations,
-meaning, and consequences, and that declaration, not the client's
-proposal, is the semantic material an approver or a policy needs
-(the AAuth binding composes one such substrate,
-{{I-D.draft-mcguinness-mission-aauth}}). The family routes the
-encounter through its existing levers: a resource within a
-pre-consented ceiling binds by policy drawdown
-({{I-D.draft-mcguinness-oauth-mission-progressive}}); a tool from a
-catalog binds through the capability-source binding
-({{I-D.draft-mcguinness-mission-authzen}}); a resource in a partner
-domain binds through projection
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}); anything else
-requires a fresh approval
-({{I-D.draft-mcguinness-oauth-mission-expansion}}). Where the
-resource self-declares, the declaration's digest is committed with
-the binding evidence, a third commitment beside `intent_hash` (what
-the client asked) and `authority_hash` (what was consented): what
-the resource claimed to be at the moment authority bound to it. The
-discovery companion ({{I-D.draft-mcguinness-mission-discovery}})
-gives the encounter its contract: identity pinning, ceiling
-adjudication, the lying-resource and tainted-session floors, and
-Discovery Evidence.
+inherits OAuth's ontology, authority client-proposed and enumerated
+at approval; an agent that discovers resources at encounter time
+breaks that premise, and some substrates invert it outright: the
+resource declares its own operations and consequences, and that
+declaration is the semantic material approval needs (the AAuth
+binding composes one such substrate,
+{{I-D.draft-mcguinness-mission-aauth}}). Where the resource
+self-declares, the declaration's digest is committed with the
+binding evidence: a third commitment beside `intent_hash` and
+`authority_hash`, recording what the resource claimed to be at the
+moment authority bound to it. The rest of the encounter, its routing
+through drawdown, catalog binding, projection, or fresh approval,
+and its identity pinning and floors, is the discovery companion's
+contract ({{I-D.draft-mcguinness-mission-discovery}}).
 
 # A Mission's Life {#mission-life}
 
@@ -633,28 +592,9 @@ profile.
   that the derivation was the right reading of the task
   ({{derivation-boundary}}).
 
-Read as properties of the delegated-authority layer rather than
-mechanics of this family, the invariants carry five substrate-neutral
-laws: **Durability** (authority must outlive credentials),
-**Attribution** (every action remains attributable, and the approval
-record commits exactly what the Approver was shown), **Narrowing**
-(authority only narrows as work fans out), **Termination** (revocation
-ends authority, not merely tokens), and **Containment** (execution
-continuously remains inside approved purpose). The correspondence is
-informative and many-to-many:
-
-| Law | Carried by |
-| --- | --- |
-| Durability | Authority serves an approved task: the Mission is the durable object, and credentials are projections of it |
-| Attribution | Attribution is carried, never inferred, with the anchors committing what the Approver was shown |
-| Narrowing | Authority only narrows |
-| Termination | Revocation is possession-independent, with only `active` permits carrying the reliance side |
-| Containment | Only `active` permits and enforcement fails closed, applied at the point of use |
-
-The last two invariants are wire-level mechanics rather than laws of
-their own: fail-closed enforcement is how a substrate carries
-Containment, and the anchor commitment is how it carries
-Attribution's approval-record clause.
+Read substrate-neutrally, the invariants carry the five laws the
+companion handbook names for the layer: durability, attribution,
+narrowing, termination, and containment.
 
 # Mission Roles and Components {#components}
 
@@ -1027,32 +967,16 @@ this section remains the informative summary, and the three existing
 bindings remain authoritative for themselves.
 
 Another mission-based protocol hosts the substrate-neutral profiles
-unchanged when it provides:
-
-1. a unique, opaque Mission identifier with an authoritative issuer;
-2. the lifecycle state space with the only-`active` rule, fail-safe
-   unrecognized states, and a freshness source with a staleness bound;
-3. an Authority Set representation with a subset rule and a shared
-   constraint vocabulary;
-4. the integrity-anchor envelope and canonicalization for every
-   object it commits;
-5. an audit horizon over the record and its evidence;
-6. published key material: the issuer's signing keys, resolvable by
-   the verifiers of its signed artifacts; and
-7. optionally, a Mission-bound credential carrying the `mission`
-   claim; a substrate that omits it composes as the standalone
-   binding does, and the credential-carriage profiles do not apply.
-
-Individual profiles name further inputs in their Mission Substrate
-sections: the evidence types and their canonical bytes for audit
-transparency, and the intent submission channel for shaping. A
-binding also owes the substrate's approval-fidelity requirement: the
-approval event it runs must produce the record, anchors, and
-disclosure with the fidelity the substrate requirements fix
-({{I-D.draft-mcguinness-mission-substrate}}). The
+unchanged when it satisfies Mission Substrate Requirements
+({{I-D.draft-mcguinness-mission-substrate}}), whose contract is the
+primitives above: identifier and issuer, the state space and
+only-`active` rule, the Authority Set and subset rule, the anchor
+envelope, the audit horizon, resolvable issuer keys, and approval
+fidelity, with the Mission-bound credential optional (a substrate
+that omits it composes as the standalone binding does). The
 per-profile Mission Substrate sections remain the authoritative
-per-consumer statements of this interface; this section consolidates
-them and adds nothing further.
+per-consumer statements of this interface, and the three existing
+bindings remain authoritative for themselves.
 
 # The Authority Derivation Boundary {#derivation-boundary}
 
@@ -1151,26 +1075,18 @@ progressive authorization companion is used, the initial approval also
 consents an authority ceiling for later staged widening
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
-Who holds the deciding side is a spectrum, not a species. The
-approval event requires an accountable principal, recorded as the
-`{iss, sub}` Approver, deciding against committed inputs before any
-authority exists, and the proposer is never the approver. A human
-approves directly, with Consent Evidence committing the disclosure. A
-deterministic, versioned policy approves at machine speed within a
-ceiling or policy a human consented to, with `policy_version` keeping
-that chain re-checkable: policy approves the instance because a human
-approved the policy. Risk scores, fraud signals, and model judgments
-compose as decision inputs that inform or narrow either approver,
-exactly as content-aware controls compose as context at the runtime
-layer ({{I-D.draft-mcguinness-mission-authzen}}): signals, never the
-approving authority. A model's generated judgment is never the sole
-authority for granting or widening, because a generated approver
-reading attacker-influenced proposals is itself an injection surface.
-The floor is the class guard: the irreversible, external-commitment,
-and privileged-administration classes keep a fresh human decision, by
-deployment policy, whatever approves the rest
-({{I-D.draft-mcguinness-oauth-mission-progressive}},
-{{I-D.draft-mcguinness-mission-runtime}}).
+Who holds the deciding side is a spectrum, not a species: the
+approval event requires an accountable principal deciding against
+committed inputs before any authority exists, and the proposer is
+never the approver. A deterministic, versioned policy can approve at
+machine speed within a ceiling a human consented to (policy approves
+the instance because a human approved the policy, with
+`policy_version` keeping that chain re-checkable), while a model's
+generated judgment is never the sole authority for granting or
+widening: a generated approver reading attacker-influenced proposals
+is itself an injection surface. The high-consequence classes stay on
+a fresh human decision, per the progressive profile's prohibited set
+({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
 ## Govern
 
@@ -1357,57 +1273,38 @@ same flow is its end-to-end appendix
 ({{I-D.draft-mcguinness-mission-authority-server}}).
 
 The quarantine pattern removes a leg of the injection-to-exfiltration
-chain instead of gating it. Work that ingests untrusted content (web
-pages, inbound mail, third-party documents) runs under a Mission
-whose Authority Set carries no external-communication or
+chain instead of gating it: no single Mission ever holds untrusted
+input and an egress path at once. Work that ingests untrusted content
+runs under a Mission with no external-communication or
 external-commitment authority; work that communicates externally runs
-under a separate Mission whose inputs are the quarantined product,
-under the harness taint policy
-({{I-D.draft-mcguinness-mission-harness}}) and, where claimed, the
-runtime profile's trifecta containment
-({{I-D.draft-mcguinness-mission-runtime}}). Per-task Missions already
-shrink blast radius; this composition uses them so that no single
-Mission ever holds untrusted input and an egress path at once. Named
-concretely: a **quarantined ingestion Mission** may read untrusted
-content but carries no external-communication authority; a **clean
-output Mission** may communicate but only over reviewed or derived
-artifacts, not the raw ingested content; and a **bridge**, a human
-review or a deterministic transformation between them, is recorded as
-evidence so the boundary crossing is auditable. Where a deployment
-wants the separation enforced within one Mission rather than across
-two, the metering profile's exclusivity control
+under a separate Mission whose inputs are the quarantined product;
+and the crossing between them, a human review or a deterministic
+transformation, is recorded as evidence, under the harness taint
+policy ({{I-D.draft-mcguinness-mission-harness}}) and, where claimed,
+the runtime profile's trifecta containment
+({{I-D.draft-mcguinness-mission-runtime}}). Where the separation must
+hold within one Mission, the metering profile's exclusivity control
 ({{I-D.draft-mcguinness-mission-metering}}) latches read-and-egress
-apart under a single approval. This turns the no-information-flow-control
-limit into a deployment architecture rather than an unmitigated gap.
+apart under a single approval.
 
 The **standing-agent pattern** governs the agent whose work never
-ends: the support-triage agent on a ticket queue, the SOC agent on an
-alert stream. The agent stands; the authority cycles. The standing
-thing is a charter: a Mission whose Approver additionally consented
-to an authority ceiling and a drawdown policy
-({{I-D.draft-mcguinness-oauth-mission-progressive}}, experimental).
-The working thing is the bounded Mission each unit of work draws
-under it: an in-ceiling successor where one agent works the stream,
-or a policy-approved Child Mission where units fan out to workers
+ends. The agent stands; the authority cycles: the standing thing is
+a charter, a Mission with a consented authority ceiling and drawdown
+policy ({{I-D.draft-mcguinness-oauth-mission-progressive}},
+experimental), and the working thing is the bounded Mission each
+unit of work draws under it, as an in-ceiling successor or a
+policy-approved Child Mission
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), each
-carrying its own expiry, each discharging its entries as the unit
-completes ({{I-D.draft-mcguinness-oauth-mission-completion}}).
-Nothing high-consequence rides the policy path: the drawdown guard
-routes the irreversible, external-commitment,
-privileged-administration, external-communication, and cross-domain
-classes to a fresh human approval even inside the ceiling. What keeps
-the charter from decaying into a standing grant with ceremony is the
-ceiling review: the chain is bounded by a published review cadence,
-and continuing past it requires a fresh human approval whose
-disclosure renders the prior cycle's record (the progressive
-profile's Ceiling Review). A deployment states the cadence and the
-evidence it consumes in its Deployment Profile
-({{deployment-profile}}). Without the progressive profile the same
-pattern runs at lower automation: each unit of work is an ordinary,
-freshly approved Mission, with deferred approval
+expiring and discharging as its unit completes
+({{I-D.draft-mcguinness-oauth-mission-completion}}). The progressive
+profile's prohibited set keeps the high-consequence classes on a
+fresh human approval inside the ceiling, and its Ceiling Review
+bounds the chain in time with an evidence-rendering renewal. Without
+the progressive profile the same pattern runs as ordinary, freshly
+approved unit Missions with deferred approval
 ({{I-D.draft-mcguinness-oauth-mission-approval}}) absorbing the
-asynchronous approvals; the experimental profile changes the unit
-economics, not the governance shape.
+volume: the experimental profile changes the unit economics, not the
+governance shape.
 
 # Mission Assurance Levels {#assurance-levels}
 
@@ -1533,7 +1430,7 @@ with the binding; the Mission Deployment Profile
 | Baseline Issuance | Consequential reads that are attributable and killable at the issuance gate: the governed pilot |
 | Runtime-Enforced | Consequential writes inside approved bounds, reversible under the deployment's own authority |
 | Governed Agent | Unattended operation and delegation, with approval evidence behind every grant |
-| High-Assurance Agent | The irreversible-action, external-commitment, and privileged-administration classes, under mediated custody and action-bound approval |
+| High-Assurance Agent | The high-consequence classes ({{I-D.draft-mcguinness-mission-runtime}}), under mediated custody and action-bound approval |
 
 Every level above Baseline Issuance also carries the cross-cutting
 obligations its mechanisms imply: operation-profile normalization
@@ -1553,19 +1450,16 @@ deploy and what may be claimed, but a claim is only checkable if a
 deployment
 states, concretely, what it enforces and what it leaves outside the
 boundary. The **Mission Deployment Profile** is that system-level
-artifact: a single publishable manifest that composes the per-layer
-scope statements (the runtime profile's Enforcement Scope Statement,
-the harness execution-environment scope statement, the MAS mapping
-contract where used, the Resource Server coverage split between
-`authorization_details` enforcement and the scope projection, the
-transparency-service topology and registration schedule where audit
-transparency is run, the exposure posture, the exposure points
-mediated and Mission-scoped and the ones left unscoped, and the
-standing-charter posture, per-drawdown and rate bounds, the
-action-class mapping, and the ceiling review cadence and its
-evidence, where standing charters are run) into one object an
-auditor, a procurement, or a security review can read. It is non-normative in shape here; a profile
-or deployment fixes the exact serialization.
+artifact: the published serialization of the per-layer statements
+the profiles themselves demand (the runtime profile's Enforcement
+Scope Statement, the harness environment statement, the MAS mapping
+contract, the Resource Server coverage split, the
+transparency-service topology and schedule, and the progressive
+profile's bounds and ceiling-review cadence, each where its profile
+is run), composed into one object an auditor, a procurement, or a
+security review can read. It is one artifact, not a second one: each
+fact's owning profile governs its meaning and normative force, and
+this document fixes no serialization.
 
 Its distinguishing field is `residual_risks`: the profile is not
 credible unless it states, in the same object as its guarantees, what
@@ -1615,17 +1509,10 @@ it does not cover. An illustrative shape:
   },
   "exposure": {
     "taint_rule": "enforced",
-    "egress_channels_enumerated": true,
-    "mission_scoped_exposure_points": ["retrieval",
-      "tool_catalog", "secrets_custody"],
-    "unscoped_exposure_points": ["long_term_memory",
-      "provider_model_context"]
+    "egress_channels_enumerated": true
   },
   "standing_charters": {
     "ceiling_review_cadence_days": 90,
-    "review_evidence": ["drawdowns", "guard_exceptions",
-      "out_of_ceiling_refusals", "discharged_entries",
-      "metering_consumption"],
     "per_drawdown_bound": "single_entry_delta",
     "drawdown_rate_bound_per_chain_per_hour": 60
   },
@@ -1677,13 +1564,9 @@ The pattern is uniform: the family commits and checks what a party
 was shown, decided, or did; it does not make the human attentive, the
 producer honest, or the unmediated path disappear. Those are the
 residues the Mission Assurance Levels ({{assurance-levels}}) and the security
-model make a deployment state rather than assume. The exposure arm
-({{capability-envelope}}) carries the same honesty in the other
-direction: its enforceable edges are the taint rule, egress
-mediation, and catalog filtering, and a deployment that claims
-Mission-scoped context beyond those edges names the exposure points
-it mediates, and the ones it does not, in its Deployment Profile
-({{deployment-profile}}).
+model make a deployment state rather than assume, and the exposure
+arm ({{capability-envelope}}) carries the same honesty in the other
+direction.
 
 # Mission Requirements {#requirements}
 
