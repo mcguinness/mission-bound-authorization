@@ -1149,7 +1149,11 @@ Table of Contents
    against a materialized policy view whose network cost is paid per
    freshness window, and only the high-consequence classes must hold a
    synchronous gate (the runtime profile's deployment considerations,
-   [I-D.draft-mcguinness-mission-runtime]).
+   [I-D.draft-mcguinness-mission-runtime]).  The composition is an
+   overlay, not a substrate swap: a deployment mediates the paths where
+   the high-consequence classes live and lets every other resource ride
+   lifetime-bounded reliance (Section 13), token lifetimes sized to the
+   tolerated staleness, with no state evaluation at the resource.
 
    The standalone mode trades the token-layer kill switch for zero
    Authorization Server changes.  A MAS creates, approves, and serves
@@ -1209,9 +1213,9 @@ Table of Contents
    |             |consuming |                                                     |
    |             |AS        |                                                     |
    +-------------+----------+-----------------------------------------------------+
-   |No PEP/PDP   |Issuance  |Token-layer gating only; Baseline limits stated,     |
-   |over         |profile   |runtime layer planned                                |
-   |consequential|where the |                                                     |
+   |No PEP/PDP   |Issuance  |Lifetime-bounded reliance (short tokens, gated       |
+   |over         |profile   |refresh); the runtime overlay added later, where the |
+   |consequential|where the |high-consequence classes live                        |
    |paths        |AS allows;|                                                     |
    |             |runtime   |                                                     |
    |             |layer next|                                                     |
@@ -1354,17 +1358,25 @@ Table of Contents
       Mission state, which grants task-bound, auditable authority and a
       possession-independent kill switch at the issuance gate; it grants
       no per-action control, and outstanding tokens run to their own
-      expiry.  Under a partial-provision binding (the standalone MAS),
-      Baseline grants governance and audit; no kill switch of any kind
-      exists until a freshness surface (the half-step) and runtime
-      enforcement (the next level) arrive, and a deployment states that;
-      the issuance join
-      ([I-D.draft-mcguinness-oauth-mission-issuance-grant]) restores
-      gated issuance at each consuming Authorization Server, and
-      Baseline with it.  Proof obligations: the anchored approval and,
-      where credentials are issued, the subset rule.  A deployment that
-      adds only a freshness surface, Mission Status or introspection
-      with a published staleness bound
+      expiry.  Sized deliberately, that expiry is the level's revocation
+      bound: *lifetime-bounded reliance*, access-token lifetimes no
+      longer than the deployment's tolerated staleness
+      ([I-D.draft-mcguinness-oauth-mission-status]), gives a quantified
+      cutoff, revocation within one token lifetime, with no Resource
+      Server changes and no status traffic; expiry is a state check
+      performed by the clock.  Revocation latency is a number, not a
+      level: what the higher levels add is per-action enforcement,
+      parameter binding, and evidence, not a faster clock.  Under a
+      partial-provision binding (the standalone MAS), Baseline grants
+      governance and audit; no kill switch of any kind exists until a
+      freshness surface (the half-step) and runtime enforcement (the
+      next level) arrive, and a deployment states that; the issuance
+      join ([I-D.draft-mcguinness-oauth-mission-issuance-grant])
+      restores gated issuance at each consuming Authorization Server,
+      and Baseline with it.  Proof obligations: the anchored approval
+      and, where credentials are issued, the subset rule.  A deployment
+      that adds only a freshness surface, Mission Status or
+      introspection with a published staleness bound
       ([I-D.draft-mcguinness-oauth-mission-status]), gains state-aware
       reliance, a revocation cutoff within that bound, without per-
       action enforcement: a half-step into the next level, not a level
@@ -1378,10 +1390,10 @@ Table of Contents
       classes, by the staleness bound plus the permit window plus the
       class's execution bound, and by token lifetime for ungated paths.
       This is the family's adoption wedge, the *Protocol MVP*: the
-      smallest deployment that makes a Mission-bound token more than
-      governance metadata, and every normative dependency it needs is
-      ratified.  Proof obligations: PEP-placement completeness and the
-      declared freshness source and bound.  Documents: Baseline plus
+      smallest deployment that turns a Mission from governed issuance
+      into action-time defense, and every normative dependency it needs
+      is ratified.  Proof obligations: PEP-placement completeness and
+      the declared freshness source and bound.  Documents: Baseline plus
       runtime, its AuthZEN binding, and a freshness source.
 
    *Governed Agent* (recommended for AI agents):  adds Consent Evidence

@@ -1872,7 +1872,12 @@ sequence-gap detection, and that component's alerting obligation
 class, <code>authorization_details</code> type, or execution path outside that
 declared scope. A Mission Issuer conforms to the issuance profile; it
 does not become a runtime-conforming deployment merely by issuing
-Mission-bound tokens.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
+Mission-bound tokens. The converse is a stated posture, not a
+failure: a resource or class outside the declared scope relies on
+issuance gating and token-lifetime freshness (<a href="#state-freshness" class="auto internal xref">Section 7.2</a>),
+and the Enforcement Scope Statement says so. This profile does not
+require every resource to evaluate Mission state; it requires the
+deployment to say which do.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
 <p id="section-4.2-5">The enforcement scope is a deployment conformance statement, not an
 OAuth Authorization Server metadata extension. This document defines no
 discovery mechanism, registry, or wire format for publishing it.
@@ -2630,8 +2635,19 @@ Mission keeps deriving consequence until tokens age out, which is the
 ambient-authority gap this profile exists to close.<a href="#section-7.2-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-7.2-3">The following are the <span class="bcp14">RECOMMENDED</span> default freshness postures per
-class, adopted absent a documented, consequence-specific analysis:<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+<p id="section-7.2-3"><strong>Token-lifetime freshness.</strong> Below the high-consequence floor, token
+expiry is itself a conforming state source: derivation and refresh
+are gated on <code>active</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), so a
+token's remaining lifetime bounds the staleness of the authority it
+carries, and the published staleness bound for a class relying on it
+is the maximum token lifetime. Expiry is a state check performed by
+the clock: no status call, no introspection, no change at the
+consuming resource. A deployment declares it per class in its
+Enforcement Scope Statement like any other source; what it cannot do
+is reflect a revocation faster than the lifetime, which is why the
+high-consequence classes require an active source.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+<p id="section-7.2-4">The following are the <span class="bcp14">RECOMMENDED</span> default freshness postures per
+class, adopted absent a documented, consequence-specific analysis:<a href="#section-7.2-4" class="pilcrow">¶</a></p>
 <table class="center" id="table-2">
           <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>
@@ -2667,8 +2683,8 @@ class, adopted absent a documented, consequence-specific analysis:<a href="#sect
             </tr>
           </tbody>
         </table>
-<p id="section-7.2-5">A deployment justifies any looser value for a high-consequence class
-in its Enforcement Scope Statement.<a href="#section-7.2-5" class="pilcrow">¶</a></p>
+<p id="section-7.2-6">A deployment justifies any looser value for a high-consequence class
+in its Enforcement Scope Statement.<a href="#section-7.2-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="policy-view">
