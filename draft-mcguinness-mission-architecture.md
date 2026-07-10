@@ -1274,7 +1274,12 @@ actions are gated, the common-case decision is a local evaluation
 against a materialized policy view whose network cost is paid per
 freshness window, and only the high-consequence classes must hold a
 synchronous gate (the runtime profile's deployment considerations,
-{{I-D.draft-mcguinness-mission-runtime}}).
+{{I-D.draft-mcguinness-mission-runtime}}). The composition is an
+overlay, not a substrate swap: a deployment mediates the paths where
+the high-consequence classes live and lets every other resource ride
+lifetime-bounded reliance ({{assurance-levels}}), token lifetimes
+sized to the tolerated staleness, with no state evaluation at the
+resource.
 
 The standalone mode trades the token-layer kill switch for zero
 Authorization Server changes. A MAS creates, approves, and serves
@@ -1306,7 +1311,7 @@ condition:
 | AS changeable; RAR absent or tokens opaque | MAS first; the core once the AS gains the token plane | A MAS beside the AS; nothing else changes |
 | AS cannot change (shared, third-party, SaaS) | Standalone MAS, phase by phase | Records and approvals first; enforcement arrives with PEP/PDP coverage |
 | Many Authorization Servers, one governance point | MAS as estate control plane; issuance join per consuming AS | Each AS adds grant redemption only ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) |
-| No PEP/PDP over consequential paths | Issuance profile where the AS allows; runtime layer next | Token-layer gating only; Baseline limits stated, runtime layer planned |
+| No PEP/PDP over consequential paths | Issuance profile where the AS allows; runtime layer next | Lifetime-bounded reliance (short tokens, gated refresh); the runtime overlay added later, where the high-consequence classes live |
 
 Every row shares the record, anchors, and lifecycle, so a ramp is an
 entry point, not a fork: Missions carry unchanged from any row to the
@@ -1446,7 +1451,16 @@ The levels, cumulative:
   is bounded by the subset rule and gated on Mission state, which
   grants task-bound, auditable authority and a possession-independent
   kill switch at the issuance gate; it grants no per-action control,
-  and outstanding tokens run to their own expiry. Under a
+  and outstanding tokens run to their own expiry. Sized deliberately,
+  that expiry is the level's revocation bound: **lifetime-bounded
+  reliance**, access-token lifetimes no longer than the deployment's
+  tolerated staleness
+  ({{I-D.draft-mcguinness-oauth-mission-status}}), gives a quantified
+  cutoff, revocation within one token lifetime, with no Resource
+  Server changes and no status traffic; expiry is a state check
+  performed by the clock. Revocation latency is a number, not a
+  level: what the higher levels add is per-action enforcement,
+  parameter binding, and evidence, not a faster clock. Under a
   partial-provision binding (the standalone MAS), Baseline grants
   governance and audit; no kill switch of any kind exists until a
   freshness surface (the half-step) and runtime enforcement (the next
@@ -1471,8 +1485,9 @@ The levels, cumulative:
   window plus the class's execution bound, and by token lifetime for
   ungated paths. This is the
   family's adoption wedge, the **Protocol MVP**: the smallest
-  deployment that makes a Mission-bound token more than governance
-  metadata, and every normative dependency it needs is ratified. Proof
+  deployment that turns a Mission from governed issuance into
+  action-time defense, and every normative dependency it needs is
+  ratified. Proof
   obligations: PEP-placement completeness and the declared freshness
   source and bound. Documents: Baseline plus runtime, its AuthZEN
   binding, and a freshness source.

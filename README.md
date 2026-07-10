@@ -221,10 +221,18 @@ below the table.
 
 | Level | Drafts | What you get |
 |---|---|---|
-| **Baseline Issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Runtime-Enforced level). The kill switch is binding-dependent: under the standalone MAS there is no issuance gate, and the cutoff arrives with the runtime layer. Audit, not action-time defense. Day-one AS prerequisites: PAR, RAR, and JWT access tokens; the standalone MAS needs none of them. |
+| **Baseline Issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Runtime-Enforced level). The kill switch is binding-dependent: under the standalone MAS there is no issuance gate, and the cutoff arrives with the runtime layer. With token lifetimes sized to the declared staleness bound (lifetime-bounded reliance), revocation takes effect within one lifetime at unmodified Resource Servers; what this level lacks is per-action enforcement and parameter binding, not a cutoff. Day-one AS prerequisites: PAR, RAR, and JWT access tokens; the standalone MAS needs none of them. |
 | **Runtime-Enforced** (the Protocol MVP) | mission + runtime + authzen + a freshness source (status or issuer token introspection; signals, experimental, adds push) | Per-action enforcement at the point of use, and prompt revocation. The smallest deployment that makes a Mission-bound token more than governance metadata, and every dependency it needs is ratified. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
 | **Governed Agent** (recommended for AI agents) | Runtime-Enforced + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. Add child-delegation for sub-agents and expansion for mid-task growth, orchestration (experimental) for safe unwinding of in-flight work, and discovery (experimental, with progressive) for agents that meet resources their approval could not name. |
 | **High-Assurance Agent** | Governed Agent + mediated custody, no unmediated path, action-bound approval, active freshness, agent-isolated approval rendering | Resistance to a compromised agent: the runtime profile's named agent-compromise-resistant enforcement and trifecta containment claims (see the note below the table), optionally bound to execution-environment attestation. |
+
+Most estates start, and many legacy resources stay, on
+**lifetime-bounded reliance**: short-lived Mission-bound tokens whose
+expiry is the state check, with no status or introspection calls at
+the resource. The runtime layer is an overlay for the paths whose
+consequence warrants it, not a prerequisite for every resource; only
+the three high-consequence classes require an active freshness
+source.
 
 The model deploys through three bindings. The OAuth binding is the
 core's own: the Authorization Server implements the
