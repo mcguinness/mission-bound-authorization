@@ -571,6 +571,22 @@ and the Enforcement Scope Statement says so. This profile does not
 require every resource to evaluate Mission state; it requires the
 deployment to say which do.
 
+Within the declared scope the duties tier by action class, and the
+tiers have names. The **core enforcement tier** is what every
+conforming deployment carries: Mission establishment, per-action
+evaluation against current Mission state and Resource policy, state
+freshness, permit or deny with a decision identifier and Decision
+Evidence, and parameter binding for the parameter-bound classes. The
+**transaction-assurance tier** is claimed per mediated class and
+required for the high-consequence classes: single-use permits and
+execution leases, Execution Evidence, and outcome reconciliation.
+The Enforcement Scope Statement names which tier covers which class.
+One bound is stated rather than implied: reconciliation detects
+divergence between decisions and outcomes; it never manufactures
+exactly-once execution, which exists only where the resource itself
+supports idempotency, as its operation profile records
+({{rs-runtime-profile}}).
+
 The enforcement scope is a deployment conformance statement, not an
 OAuth Authorization Server metadata extension. This document defines no
 discovery mechanism, registry, or wire format for publishing it.
