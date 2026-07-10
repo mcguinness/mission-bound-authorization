@@ -4289,99 +4289,64 @@ profile's enforcement contract; an implementation conforms to this
 binding only for the resources, action classes, and PDPs in the runtime
 enforcement scope it documents
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-11-1" class="pilcrow">¶</a></p>
-<p id="section-11-2">A PEP conforming to this binding <span class="bcp14">MUST</span>:<a href="#section-11-2" class="pilcrow">¶</a></p>
+<p id="section-11-2">Each role's obligations are normative in their owning sections; this
+checklist cites them without restating their mechanics.<a href="#section-11-2" class="pilcrow">¶</a></p>
+<p id="section-11-3">A PEP conforming to this binding <span class="bcp14">MUST</span>:<a href="#section-11-3" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-11-3.1">
-          <p id="section-11-3.1.1">carry the Mission and actor decision inputs in the AuthZEN envelope
-as defined (<a href="#pdp-request" class="auto internal xref">Section 5</a>), from validated token claims only, and
-match the approved entry's <code>resource</code> against <code>context.audience</code>, not
-the AuthZEN <code>resource</code> member;<a href="#section-11-3.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-11-4.1">
+          <p id="section-11-4.1.1">carry the Mission and actor decision inputs from validated token
+claims only, matching the approved entry's <code>resource</code> against
+<code>context.audience</code> (<a href="#pdp-request" class="auto internal xref">Section 5</a>);<a href="#section-11-4.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-3.2">
-          <p id="section-11-3.2.1">supply <code>context.parameter_digest</code> for a parameter-bound action class
-(<a href="#parameter-digest" class="auto internal xref">Section 5.5</a>), and <code>context.capability_source</code> for a
-catalog-sourced action whose approved entry recorded a source binding
-(<a href="#capability-source-binding" class="auto internal xref">Section 9</a>);<a href="#section-11-3.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-4.2">
+          <p id="section-11-4.2.1">supply <code>context.parameter_digest</code> and <code>context.capability_source</code>
+where required (<a href="#parameter-digest" class="auto internal xref">Section 5.5</a>,
+<a href="#capability-source-binding" class="auto internal xref">Section 9</a>);<a href="#section-11-4.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-3.3">
-          <p id="section-11-3.3.1">enforce the permit lease (<a href="#response-context" class="auto internal xref">Section 6.1</a>): not act after
-<code>permit_expires_at</code>, consume a single-use <code>decision_id</code> under the
-runtime profile's consumed-identifier rules, treat a high-consequence
-permit lacking <code>single_use</code> as invalid, and apply the stricter
-class's permit controls when its own classification is stricter than
-the returned <code>action_class</code>;<a href="#section-11-3.3.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-4.3">
+          <p id="section-11-4.3.1">enforce the permit lease as <a href="#response-context" class="auto internal xref">Section 6.1</a> defines;<a href="#section-11-4.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-3.4">
-          <p id="section-11-3.4.1">key any permit cache on the permit's bound fields, excluding freshness
-telemetry, and never relay a permit as a bearer grant
-(<a href="#permit-binding-split" class="auto internal xref">Section 6.7</a>); and<a href="#section-11-3.4.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-4.4">
+          <p id="section-11-4.4.1">key permit caches on the permit's bound fields and never relay a
+permit as a bearer grant (<a href="#permit-binding-split" class="auto internal xref">Section 6.7</a>); and<a href="#section-11-4.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-3.5">
-          <p id="section-11-3.5.1">emit an Execution Evidence Object for each high-consequence action
-(<a href="#execution-evidence-object" class="auto internal xref">Section 8</a>) and a Refusal Record for a refusal
-before any PDP decision (<a href="#pre-decision-refusal" class="auto internal xref">Section 7.2</a>).<a href="#section-11-3.5.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-4.5">
+          <p id="section-11-4.5.1">emit Execution Evidence and pre-decision Refusal Records as
+<a href="#execution-evidence-object" class="auto internal xref">Section 8</a> and <a href="#pre-decision-refusal" class="auto internal xref">Section 7.2</a> require.<a href="#section-11-4.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-11-4">A PDP conforming to this binding <span class="bcp14">MUST</span>:<a href="#section-11-4" class="pilcrow">¶</a></p>
+<p id="section-11-5">A PDP conforming to this binding <span class="bcp14">MUST</span>:<a href="#section-11-5" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-11-5.1">
-          <p id="section-11-5.1.1">refuse a request for an in-scope consequential action that lacks the
-Mission decision context, rather than evaluate it as an unbound
-AuthZEN request (<a href="#pdp-request" class="auto internal xref">Section 5</a>);<a href="#section-11-5.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-11-6.1">
+          <p id="section-11-6.1.1">refuse an in-scope consequential request that lacks the Mission
+decision context, and perform the PDP-side consistency checks
+(<a href="#pdp-request" class="auto internal xref">Section 5</a>);<a href="#section-11-6.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-5.2">
-          <p id="section-11-5.2.1">perform the PDP-side consistency checks (<a href="#pdp-request" class="auto internal xref">Section 5</a>);<a href="#section-11-5.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-6.2">
+          <p id="section-11-6.2.1">classify every denial per <a href="#runtime-denial-classification" class="auto internal xref">Section 6.4</a>;<a href="#section-11-6.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-5.3">
-          <p id="section-11-5.3.1">return every denial with a denial-reason identifier from the set of
-<a href="#runtime-denial-classification" class="auto internal xref">Section 6.4</a>, including any
-specification-defined extension under its extensibility rule;<a href="#section-11-5.3.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-6.3">
+          <p id="section-11-6.3.1">return the decision context of <a href="#response-context" class="auto internal xref">Section 6.1</a>, including the
+permit-lease members; and<a href="#section-11-6.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-5.4">
-          <p id="section-11-5.4.1">return <code>decision_id</code> and <code>policy_view_id</code> in every decision context,
-the applied <code>action_class</code> with its <code>class_source</code>, and, on a
-permit, <code>permit_expires_at</code> bounded by the relied-on Mission state
-freshness and <code>single_use: true</code> for a high-consequence action
-(<a href="#response-context" class="auto internal xref">Section 6.1</a>); and<a href="#section-11-5.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-5.5">
-          <p id="section-11-5.5.1">emit Decision Evidence with the required members and a verifiable
-integrity envelope (<a href="#decision-evidence-object" class="auto internal xref">Section 7</a>,
-<a href="#decision-evidence-integrity" class="auto internal xref">Section 7.3</a>).<a href="#section-11-5.5.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-6.4">
+          <p id="section-11-6.4.1">emit Decision Evidence per <a href="#decision-evidence-object" class="auto internal xref">Section 7</a> and
+<a href="#decision-evidence-integrity" class="auto internal xref">Section 7.3</a>.<a href="#section-11-6.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-11-6">An executor distinct from the requesting PEP <span class="bcp14">MUST</span>:<a href="#section-11-6" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-11-7.1">
-          <p id="section-11-7.1.1">verify the runtime binding fields from the signed Decision Evidence
-before acting, rather than trust a relayed <code>decision: true</code>
-(<a href="#permit-binding-split" class="auto internal xref">Section 6.7</a>);<a href="#section-11-7.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-7.2">
-          <p id="section-11-7.2.1">honor the permit lease as the enforcing component, owning the
-consumed-identifier store and refusing a consumed single-use
-<code>decision_id</code> or a permit used past <code>permit_expires_at</code>, so relayed
-Decision Evidence cannot execute twice (<a href="#permit-binding-split" class="auto internal xref">Section 6.7</a>); and<a href="#section-11-7.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-7.3">
-          <p id="section-11-7.3.1">recompute the <code>parameter_digest</code> immediately before acting and emit
-Execution Evidence linked by <code>decision_id</code>, refusing with
-<code>parameter_mismatch</code> on divergence (<a href="#execution-evidence-object" class="auto internal xref">Section 8</a>).<a href="#section-11-7.3.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<p id="section-11-8">An audit consumer conforming to this binding <span class="bcp14">MUST</span>:<a href="#section-11-8" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-11-9.1">
-          <p id="section-11-9.1.1">verify each evidence envelope against the emitter's published keys
-and reject a record whose <code>format</code> is unsupported
-(<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 12.5</a>); and<a href="#section-11-9.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-9.2">
-          <p id="section-11-9.2.1">classify orphaned Decision Evidence and cross-record
-<code>parameter_digest</code> divergence as <a href="#security-considerations" class="auto internal xref">Section 12</a> and
-<a href="#execution-evidence-object" class="auto internal xref">Section 8</a> require, never as proof of action.<a href="#section-11-9.2.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
+<p id="section-11-7">An executor distinct from the requesting PEP <span class="bcp14">MUST</span> enforce the permit
+as <a href="#permit-binding-split" class="auto internal xref">Section 6.7</a> and <a href="#execution-evidence-object" class="auto internal xref">Section 8</a>
+require: verify the binding fields from the signed Decision Evidence
+rather than trust a relayed <code>decision: true</code>, own the
+consumed-identifier store and the lease, and recompute the
+<code>parameter_digest</code> immediately before acting, refusing with
+<code>parameter_mismatch</code> on divergence.<a href="#section-11-7" class="pilcrow">¶</a></p>
+<p id="section-11-8">An audit consumer conforming to this binding <span class="bcp14">MUST</span> verify each
+evidence envelope against the emitter's published keys
+(<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 12.5</a>) and classify orphaned Decision
+Evidence and cross-record digest divergence as
+<a href="#security-considerations" class="auto internal xref">Section 12</a> and <a href="#execution-evidence-object" class="auto internal xref">Section 8</a>
+require, never as proof of action.<a href="#section-11-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">

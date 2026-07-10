@@ -14,7 +14,7 @@ ties those tokens to the one task a user actually authorized. As a
 result, an agent's authority is a collection of independently
 obtained tokens with no shared, auditable boundary, and a user's
 approval is disconnected from what the agent later does. 
-       This document defines a Mission: a structured, human-approved,
+       This document defines a Mission: a structured, explicitly approved,
 integrity-bound authorization artifact for OAuth 2.0. A client submits
 a Mission Intent through Pushed Authorization Requests; the
 Authorization Server derives Rich Authorization Requests authorization
@@ -1111,7 +1111,7 @@ ties those tokens to the one task a user actually authorized. As a
 result, an agent's authority is a collection of independently
 obtained tokens with no shared, auditable boundary, and a user's
 approval is disconnected from what the agent later does.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
-<p id="section-abstract-2">This document defines a Mission: a structured, human-approved,
+<p id="section-abstract-2">This document defines a Mission: a structured, explicitly approved,
 integrity-bound authorization artifact for OAuth 2.0. A client submits
 a Mission Intent through Pushed Authorization Requests; the
 Authorization Server derives Rich Authorization Requests authorization
@@ -1483,7 +1483,7 @@ because no OAuth object ties the token's validity to the task's
 authorization: the credential stays secure while the work it
 authorizes has quietly become unauthorized.<a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">This document specifies that missing layer. It defines a
-<strong>Mission</strong>: a structured, human-approved, integrity-bound OAuth
+<strong>Mission</strong>: a structured, explicitly approved, integrity-bound OAuth
 authorization artifact. The contribution is a single chain:<a href="#section-1-3" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-1-4">
 <li id="section-1-4.1">
@@ -1972,7 +1972,12 @@ identity and credentialing are out of scope (see
 </li>
           <li class="normal" id="section-3.1-2.2">
             <p id="section-3.1-2.2.1">The <strong>Subject</strong> and <strong>Approver</strong> are each an (<code>iss</code>,
-<code>sub</code>) pair, matching the access token <code>sub</code> model of <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span>.<a href="#section-3.1-2.2.1" class="pilcrow">¶</a></p>
+<code>sub</code>) pair, matching the access token <code>sub</code> model of <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span>.
+The Approver is the accountable principal whose approval created
+the Mission; it may be a human or an authorized policy authority,
+and the provenance standing behind a delegated or policy approval
+is governance state this document does not model
+(<a href="#multi-party-approval" class="auto internal xref">Section 6.2</a>).<a href="#section-3.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-3.1-3">On a derived token the <code>sub</code> claim is the Subject's <code>sub</code> and the
@@ -4635,7 +4640,7 @@ delegated token lifetimes short and <span class="bcp14">SHOULD</span> make only 
 need delegation delegable.<a href="#section-15.7-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="signing-and-key-rotation">
+<div id="key-rotation">
 <section id="section-15.8">
         <h3 id="name-signing-and-key-rotation">
 <a href="#section-15.8" class="section-number selfRef">15.8. </a><a href="#name-signing-and-key-rotation" class="section-name selfRef">Signing and Key Rotation</a>
@@ -4643,9 +4648,17 @@ need delegation delegable.<a href="#section-15.7-1" class="pilcrow">¶</a></p>
 <p id="section-15.8-1">The <code>mission</code> claim and <code>authorization_details</code> are carried inside
 the <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span> JWT and are covered by the AS's token signature; their
 integrity reduces to the AS's signing key. An AS <span class="bcp14">MUST</span> publish its
-verification keys (for example, via <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span> <code>jwks_uri</code>) and
-<span class="bcp14">SHOULD</span> retain the verification key for each key identifier it has
-signed under long enough to verify tokens issued before a rotation.<a href="#section-15.8-1" class="pilcrow">¶</a></p>
+verification keys (for example, via <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span> <code>jwks_uri</code>), and the
+retired-key rule is: rotation retires a key from signing, never from
+resolvability within its retention bound. For this document's
+artifacts the bound is token lifetime: a verification key stays
+resolvable while tokens signed under it remain valid. A companion
+that anchors a longer-lived artifact to the same keys (a status
+assertion, a Mandate, registered evidence) states its own retention
+bound as an extension of this rule, not a new one. Revocation for a
+known or suspected compromise is distinct from routine retirement:
+the issuer publishes the compromised key as revoked, or marks it
+with a compromise time, rather than silently rotating it out.<a href="#section-15.8-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="compromised-or-over-broad-derivation">

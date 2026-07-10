@@ -388,12 +388,11 @@ Table of Contents
    keep the key that verifies each minted Mandate resolvable by its kid
    in the published key material for that Mandate's evidence lifetime:
    until mandate_exp, or for the Mission's audit horizon when
-   mandate_exp is absent.  Rotation retires a key from signing, never
-   from resolvability within that bound; the status profile states the
-   matching retention rule for the issuer's jwks_uri
-   ([I-D.draft-mcguinness-oauth-mission-status]).  Revocation for a key
-   known or suspected compromised is distinct from routine retirement
-   and is treated in Section 11.
+   mandate_exp is absent: the core's retired-key rule
+   ([I-D.draft-mcguinness-oauth-mission]), with the Mandate's evidence
+   lifetime as the retention bound.  Revocation for a key known or
+   suspected compromised is distinct from routine retirement and is
+   treated in Section 11.
 
 5.5.  Example
 

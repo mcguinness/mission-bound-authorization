@@ -21,7 +21,7 @@ Abstract
    obtained tokens with no shared, auditable boundary, and a user's
    approval is disconnected from what the agent later does.
 
-   This document defines a Mission: a structured, human-approved,
+   This document defines a Mission: a structured, explicitly approved,
    integrity-bound authorization artifact for OAuth 2.0.  A client
    submits a Mission Intent through Pushed Authorization Requests; the
    Authorization Server derives Rich Authorization Requests
@@ -185,8 +185,8 @@ Table of Contents
    authorizes has quietly become unauthorized.
 
    This document specifies that missing layer.  It defines a *Mission*:
-   a structured, human-approved, integrity-bound OAuth authorization
-   artifact.  The contribution is a single chain:
+   a structured, explicitly approved, integrity-bound OAuth
+   authorization artifact.  The contribution is a single chain:
 
    1.  The client submits a structured *Mission Intent* describing the
        task (goal, target resources, constraints) instead of requesting
@@ -584,7 +584,11 @@ Table of Contents
       [I-D.draft-klrc-aiagent-auth]).
 
    *  The *Subject* and *Approver* are each an (iss, sub) pair, matching
-      the access token sub model of [RFC9068].
+      the access token sub model of [RFC9068].  The Approver is the
+      accountable principal whose approval created the Mission; it may
+      be a human or an authorized policy authority, and the provenance
+      standing behind a delegated or policy approval is governance state
+      this document does not model (Section 6.2).
 
    On a derived token the sub claim is the Subject's sub and the token
    iss is the AS; within the issuing AS's namespace this (iss, sub) pair
@@ -2793,9 +2797,17 @@ Table of Contents
    The mission claim and authorization_details are carried inside the
    [RFC9068] JWT and are covered by the AS's token signature; their
    integrity reduces to the AS's signing key.  An AS MUST publish its
-   verification keys (for example, via [RFC8414] jwks_uri) and SHOULD
-   retain the verification key for each key identifier it has signed
-   under long enough to verify tokens issued before a rotation.
+   verification keys (for example, via [RFC8414] jwks_uri), and the
+   retired-key rule is: rotation retires a key from signing, never from
+   resolvability within its retention bound.  For this document's
+   artifacts the bound is token lifetime: a verification key stays
+   resolvable while tokens signed under it remain valid.  A companion
+   that anchors a longer-lived artifact to the same keys (a status
+   assertion, a Mandate, registered evidence) states its own retention
+   bound as an extension of this rule, not a new one.  Revocation for a
+   known or suspected compromise is distinct from routine retirement:
+   the issuer publishes the compromised key as revoked, or marks it with
+   a compromise time, rather than silently rotating it out.
 
 15.9.  Compromised or Over-Broad Derivation
 

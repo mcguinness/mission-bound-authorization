@@ -985,8 +985,8 @@ Table of Contents
        authorizes to act under that Mission's client.  Delegate
        authorization MUST be explicit, an enumerated policy, never a
        default.  Where the AS and MAS client namespaces differ, the
-       deployment MUST document the client mapping, exactly as for
-       subjects.
+       deployment MUST record the client mapping in its mapping contract
+       (Section 13.2), exactly as for subjects.
 
    5.  *Delegate narrowing.* When the joined party is a delegate rather
        than the Mission's client_id, the PDP MUST narrow the effective
@@ -1319,6 +1319,10 @@ Table of Contents
    *  which action paths are covered by runtime enforcement, since
       nothing at the token layer covers the rest.
 
+   An enterprise deployment carries this statement inside its mapping
+   contract (Section 13.2) rather than beside it, so the join's facts
+   have one home.
+
    *No Mission-bound credentials.* Tokens carry no mission claim and no
    Mission-derived authorization_details.  Nothing cryptographically
    binds a token to the approval event, and no audit anchor travels in
@@ -1485,9 +1489,9 @@ Table of Contents
       rests on an unratified individual draft
       ([I-D.draft-mcguinness-oauth-client-instance-assertion]); where a
       deployment has no instance-identity substrate, the high-
-      consequence join binds only (subject, client), the shared-
-      client_id residual of Section 15.1 remains, and the deployment
-      MUST state that residual.
+      consequence join binds only (subject, client), and the shared-
+      client_id residual of Section 15.1 remains, stated in the Mission
+      Deployment Profile's residual_risks.
 
    *  *Runtime enforcement.* Consequential actions MUST be enforced
       under the runtime profile and its AuthZEN binding
@@ -1696,21 +1700,21 @@ Table of Contents
    coarseness.  Where the deployment's account mapping is many-to-one
    (several AS accounts map to one directory subject), any credential in
    the equivalence class joins; a deployment SHOULD keep the mapping
-   one-to-one for subjects that hold Missions and MUST document its
-   granularity.  The client join is coarse the same way where several
-   workloads share one client_id: any of them joins.  Client instance
-   assertions ([I-D.draft-mcguinness-oauth-client-instance-assertion])
-   are the standard fix: the join then binds the validated instance
-   (Section 9), and this residual remains only for deployments without
-   instance identity.  A second residual: two Missions held by the same
-   subject and client are distinguished only by the PEP-supplied
-   reference, so a faulty or compromised PEP can attribute work to the
-   wrong same-party Mission, bounded by that Mission's authority and
-   visible in evidence.  A third residual is bearer possession: with a
-   pure bearer token, possession alone presents the credential, so any
-   holder inside the (subject, client) equivalence class joins, which is
-   why Section 9 requires sender-constraint for the high-consequence
-   classes.
+   one-to-one for subjects that hold Missions, with the granularity
+   recorded in its mapping contract (Section 13.2).  The client join is
+   coarse the same way where several workloads share one client_id: any
+   of them joins.  Client instance assertions
+   ([I-D.draft-mcguinness-oauth-client-instance-assertion]) are the
+   standard fix: the join then binds the validated instance (Section 9),
+   and this residual remains only for deployments without instance
+   identity.  A second residual: two Missions held by the same subject
+   and client are distinguished only by the PEP-supplied reference, so a
+   faulty or compromised PEP can attribute work to the wrong same-party
+   Mission, bounded by that Mission's authority and visible in evidence.
+   A third residual is bearer possession: with a pure bearer token,
+   possession alone presents the credential, so any holder inside the
+   (subject, client) equivalence class joins, which is why Section 9
+   requires sender-constraint for the high-consequence classes.
 
    The Mission Join Assertion (Section 10) is the mitigation for the
    coarse-mapping and shared-client residuals: the MAS evaluates the

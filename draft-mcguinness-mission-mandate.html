@@ -1674,12 +1674,11 @@ never refresh leaves the required check unreachable.<a href="#section-5.4-4" cla
 keep the key that verifies each minted Mandate resolvable by its
 <code>kid</code> in the published key material for that Mandate's evidence
 lifetime: until <code>mandate_exp</code>, or for the Mission's audit horizon
-when <code>mandate_exp</code> is absent. Rotation retires a key from signing,
-never from resolvability within that bound; the status profile
-states the matching retention rule for the issuer's <code>jwks_uri</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). Revocation for a
-key known or suspected compromised is distinct from routine
-retirement and is treated in <a href="#security-considerations" class="auto internal xref">Section 11</a>.<a href="#section-5.4-5" class="pilcrow">¶</a></p>
+when <code>mandate_exp</code> is absent: the core's retired-key rule
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), with the Mandate's
+evidence lifetime as the retention bound. Revocation for a key known
+or suspected compromised is distinct from routine retirement and is
+treated in <a href="#security-considerations" class="auto internal xref">Section 11</a>.<a href="#section-5.4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="example">

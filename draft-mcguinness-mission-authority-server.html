@@ -2494,8 +2494,8 @@ credential's authenticated client identifier equals the Mission's
 authorizes to act under that Mission's client. Delegate
 authorization <span class="bcp14">MUST</span> be explicit, an enumerated policy, never a
 default. Where the AS and MAS client namespaces differ, the
-deployment <span class="bcp14">MUST</span> document the client mapping, exactly as for
-subjects.<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
+deployment <span class="bcp14">MUST</span> record the client mapping in its mapping contract
+(<a href="#mapping-contract" class="auto internal xref">Section 13.2</a>), exactly as for subjects.<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-9-3.5">
           <p id="section-9-3.5.1"><strong>Delegate narrowing.</strong> When the joined party is a delegate rather
@@ -2909,19 +2909,22 @@ for the high-consequence classes (<a href="#join-assertion" class="auto internal
 at the token layer covers the rest.<a href="#section-11-3.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-11-4"><strong>No Mission-bound credentials.</strong> Tokens carry no <code>mission</code> claim and
+<p id="section-11-4">An enterprise deployment carries this statement inside its mapping
+contract (<a href="#mapping-contract" class="auto internal xref">Section 13.2</a>) rather than beside it, so the join's
+facts have one home.<a href="#section-11-4" class="pilcrow">¶</a></p>
+<p id="section-11-5"><strong>No Mission-bound credentials.</strong> Tokens carry no <code>mission</code> claim and
 no Mission-derived <code>authorization_details</code>. Nothing cryptographically
 binds a token to the approval event, and no audit anchor travels in
 credentials: <code>authority_hash</code> reaches consumers only through the MAS's
 signed status responses and the PDP's evidence, never in the
 credential a resource actually accepted. Resource Servers cannot
-enforce Mission authority statelessly from the token.<a href="#section-11-4" class="pilcrow">¶</a></p>
-<p id="section-11-5"><strong>No issuance gating.</strong> The AS issues and refreshes tokens with no
+enforce Mission authority statelessly from the token.<a href="#section-11-5" class="pilcrow">¶</a></p>
+<p id="section-11-6"><strong>No issuance gating.</strong> The AS issues and refreshes tokens with no
 knowledge of Mission state. Revoking a Mission stops nothing at the
 token layer: every outstanding token, and every token the AS issues
 after revocation, remains valid OAuth. The Mission kill switch acts
-only through the runtime layer's state re-check.<a href="#section-11-5" class="pilcrow">¶</a></p>
-<p id="section-11-6">Because both properties are absent, enforcement rests entirely on PEP
+only through the runtime layer's state re-check.<a href="#section-11-6" class="pilcrow">¶</a></p>
+<p id="section-11-7">Because both properties are absent, enforcement rests entirely on PEP
 coverage. A MAS deployment <span class="bcp14">MUST</span> deploy the runtime profile's
 enforcement (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) over every
 consequential action path within the scope it claims Mission
@@ -2931,8 +2934,8 @@ is load-bearing for all of this profile's guarantees, not only for the
 runtime profile's agent-compromise-resistant enforcement claim. A
 token exercised outside PEP coverage is ungoverned: its use is
 bounded by ordinary OAuth alone, and no Mission property applies to
-it.<a href="#section-11-6" class="pilcrow">¶</a></p>
-<p id="section-11-7"><strong>Weaker expansion and child-creation binding.</strong> Mission Expansion
+it.<a href="#section-11-7" class="pilcrow">¶</a></p>
+<p id="section-11-8"><strong>Weaker expansion and child-creation binding.</strong> Mission Expansion
 and Child Delegation are carried natively in this mode
 (<a href="#native-surfaces" class="auto internal xref">Section 7</a>), so a standalone deployment can widen authority
 and delegate to sub-agents; what the mode does not provide is the
@@ -2941,15 +2944,15 @@ or parent by authenticated client identity (<a href="#native-binding" class="aut
 proves the same registered client, not a held grant
 (<a href="#sec-native-binding" class="auto internal xref">Section 15.3</a>). Offline attenuation remains inapplicable in
 this mode because it requires the Mission-bound credential
-(<a href="#mission-substrate" class="auto internal xref">Section 2</a>).<a href="#section-11-7" class="pilcrow">¶</a></p>
-<p id="section-11-8"><strong>Upgrade path.</strong> Implementing the issuance profile at the AS restores
+(<a href="#mission-substrate" class="auto internal xref">Section 2</a>).<a href="#section-11-8" class="pilcrow">¶</a></p>
+<p id="section-11-9"><strong>Upgrade path.</strong> Implementing the issuance profile at the AS restores
 what this mode lacks: Mission-bound credentials and issuance gating.
 The MAS then serves as the AS's Mission store, or merges into the AS.
 The Mission record, the integrity anchors, and the lifecycle carry
 over unchanged, because a MAS operates the issuance profile's own
 definitions of all three; the enforcement join becomes unnecessary for
-newly issued tokens, which carry the <code>mission</code> claim.<a href="#section-11-8" class="pilcrow">¶</a></p>
-<p id="section-11-9">These are the limitations of MAS-only deployment. The Mission
+newly issued tokens, which carry the <code>mission</code> claim.<a href="#section-11-9" class="pilcrow">¶</a></p>
+<p id="section-11-10">These are the limitations of MAS-only deployment. The Mission
 Issuance Grant companion
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>) defines the
 issuance join: a grant this MAS mints for an active Mission and an
@@ -2957,7 +2960,7 @@ estate Authorization Server redeems at its token endpoint for
 Mission-bound tokens, state-gated at minting and at refresh. Where
 deployed, it removes the credential and issuance-gating limitations
 for the resources of each consuming Authorization Server, while
-approval, the record, and the lifecycle remain here.<a href="#section-11-9" class="pilcrow">¶</a></p>
+approval, the record, and the lifecycle remain here.<a href="#section-11-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conformance">
@@ -3099,9 +3102,9 @@ every workload sharing a gateway <code>client_id</code>. Client-instance
 identity rests on an unratified individual draft
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>); where a
 deployment has no instance-identity substrate, the high-consequence
-join binds only (<code>subject</code>, <code>client</code>), the shared-<code>client_id</code>
-residual of <a href="#join-spoofing" class="auto internal xref">Section 15.1</a> remains, and the deployment <span class="bcp14">MUST</span> state
-that residual.<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
+join binds only (<code>subject</code>, <code>client</code>), and the shared-<code>client_id</code>
+residual of <a href="#join-spoofing" class="auto internal xref">Section 15.1</a> remains, stated in the Mission
+Deployment Profile's <code>residual_risks</code>.<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.5">
           <p id="section-13-2.5.1"><strong>Runtime enforcement.</strong> Consequential actions <span class="bcp14">MUST</span> be enforced
@@ -3384,7 +3387,8 @@ else's Mission fails with <code>mission_mismatch</code>. The residual is mapping
 deployment's account mapping is many-to-one (several AS accounts map
 to one directory subject), any credential in the equivalence class
 joins; a deployment <span class="bcp14">SHOULD</span> keep the mapping one-to-one for subjects
-that hold Missions and <span class="bcp14">MUST</span> document its granularity. The client join
+that hold Missions, with the granularity recorded in its mapping
+contract (<a href="#mapping-contract" class="auto internal xref">Section 13.2</a>). The client join
 is coarse the same way where several workloads share one <code>client_id</code>:
 any of them joins. Client instance assertions
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>) are the
