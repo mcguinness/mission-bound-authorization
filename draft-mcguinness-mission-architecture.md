@@ -1117,6 +1117,27 @@ progressive authorization companion is used, the initial approval also
 consents an authority ceiling for later staged widening
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
+Who holds the deciding side is a spectrum, not a species. The
+approval event requires an accountable principal, recorded as the
+`{iss, sub}` Approver, deciding against committed inputs before any
+authority exists, and the proposer is never the approver. A human
+approves directly, with Consent Evidence committing the disclosure. A
+deterministic, versioned policy approves at machine speed within a
+ceiling or policy a human consented to, with `policy_version` keeping
+that chain re-checkable: policy approves the instance because a human
+approved the policy. Risk scores, fraud signals, and model judgments
+compose as decision inputs that inform or narrow either approver,
+exactly as content-aware controls compose as context at the runtime
+layer ({{I-D.draft-mcguinness-mission-authzen}}): signals, never the
+approving authority. A model's generated judgment is never the sole
+authority for granting or widening, because a generated approver
+reading attacker-influenced proposals is itself an injection surface.
+The floor is the class guard: the irreversible, external-commitment,
+and privileged-administration classes keep a fresh human decision, by
+deployment policy, whatever approves the rest
+({{I-D.draft-mcguinness-oauth-mission-progressive}},
+{{I-D.draft-mcguinness-mission-runtime}}).
+
 ## Govern
 
 The question: how do consumers observe Mission state, and how does
