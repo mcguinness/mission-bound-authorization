@@ -1285,6 +1285,11 @@ and every mechanism it names is defined by the profile it points to.<a href="#se
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
             <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-mission-assurance-levels" class="internal xref">Mission Assurance Levels</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.1">
+                <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-assurance-claims" class="internal xref">Assurance Claims</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
             <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-the-mission-deployment-prof" class="internal xref">The Mission Deployment Profile</a></p>
@@ -2433,7 +2438,11 @@ hot path (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class
 Offline attenuation requires the runtime enforcement layer: its kill
 switch is the runtime state re-check. Both
 build on the actor chain of the core's Delegation Within a Mission
-section.<a href="#section-11.6-1" class="pilcrow">¶</a></p>
+section. The chooser: the core's token-exchange delegation for an
+execution hop living and dying with the parent's lifecycle; a Child
+Mission when the delegate needs its own lifecycle, approval, or
+audit identity; attenuation, experimental, only where offline
+minting is the constraint.<a href="#section-11.6-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="project">
@@ -2818,6 +2827,47 @@ run (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.
 accountability, not prevention: they make what was recorded
 tamper-evident, not what was perceived true or what was never recorded
 present.<a href="#section-13-7" class="pilcrow">¶</a></p>
+<div id="assurance-claims-axis">
+<section id="section-13.1">
+        <h3 id="name-assurance-claims">
+<a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-assurance-claims" class="section-name selfRef">Assurance Claims</a>
+        </h3>
+<p id="section-13.1-1">The levels are the adoption ladder: what a deployment has built, in
+the order deployments build it. What a deployment can prove is an
+orthogonal axis, claimed as named <strong>assurance claims</strong>, each with a
+proof obligation an existing profile fixes, and listed in the
+Deployment Profile (<a href="#deployment-profile" class="auto internal xref">Section 14</a>) rather than implied by a
+level:<a href="#section-13.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13.1-2.1">
+            <p id="section-13.1-2.1.1"><strong>Approved-record integrity</strong>: the anchors reproduce from the
+record alone (the core's integrity anchors).<a href="#section-13.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-2.2">
+            <p id="section-13.1-2.2.1"><strong>Bounded revocation latency</strong>: the published staleness bound plus
+the permit window and the class's execution bound
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-13.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-2.3">
+            <p id="section-13.1-2.3.1"><strong>Action-time enforcement</strong>: PEP coverage for the Enforcement Scope
+Statement's mediated set, and nothing outside it.<a href="#section-13.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-2.4">
+            <p id="section-13.1-2.4.1"><strong>Parameter-bound enforcement</strong>: permits bound to concrete
+parameters for the classes claimed.<a href="#section-13.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-2.5">
+            <p id="section-13.1-2.5.1"><strong>Compromise-resistant custody</strong> and <strong>trifecta containment</strong>: the
+two named High-Assurance claims, unchanged
+(<a href="#assurance-levels" class="auto internal xref">Section 13</a>).<a href="#section-13.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-13.1-3">Two deployments at the same level under different bindings can hold
+different claims; the MAS modes are the worked case
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>). The claims, not
+the level, are what a relying party compares.<a href="#section-13.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="deployment-profile">

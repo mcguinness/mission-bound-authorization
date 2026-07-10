@@ -1879,12 +1879,27 @@ issuance gating and token-lifetime freshness (<a href="#state-freshness" class="
 and the Enforcement Scope Statement says so. This profile does not
 require every resource to evaluate Mission state; it requires the
 deployment to say which do.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
-<p id="section-4.2-5">The enforcement scope is a deployment conformance statement, not an
+<p id="section-4.2-5">Within the declared scope the duties tier by action class, and the
+tiers have names. The <strong>core enforcement tier</strong> is what every
+conforming deployment carries: Mission establishment, per-action
+evaluation against current Mission state and Resource policy, state
+freshness, permit or deny with a decision identifier and Decision
+Evidence, and parameter binding for the parameter-bound classes. The
+<strong>transaction-assurance tier</strong> is claimed per mediated class and
+required for the high-consequence classes: single-use permits and
+execution leases, Execution Evidence, and outcome reconciliation.
+The Enforcement Scope Statement names which tier covers which class.
+One bound is stated rather than implied: reconciliation detects
+divergence between decisions and outcomes; it never manufactures
+exactly-once execution, which exists only where the resource itself
+supports idempotency, as its operation profile records
+(<a href="#rs-runtime-profile" class="auto internal xref">Section 5</a>).<a href="#section-4.2-5" class="pilcrow">¶</a></p>
+<p id="section-4.2-6">The enforcement scope is a deployment conformance statement, not an
 OAuth Authorization Server metadata extension. This document defines no
 discovery mechanism, registry, or wire format for publishing it.
 Different deployments can document scope through configuration,
 operational policy, resource-server metadata defined elsewhere, or a
-contractual profile.<a href="#section-4.2-5" class="pilcrow">¶</a></p>
+contractual profile.<a href="#section-4.2-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="classification">
@@ -2748,7 +2763,11 @@ SHA-256(JCS({
 </pre><a href="#section-7.3-5" class="pilcrow">¶</a>
 </div>
 <p id="section-7.3-6">The committed materialized view payload <span class="bcp14">MUST</span> carry the Mission's
-<code>mission_id</code> and <code>authority_hash</code> as members. A consistency check
+<code>mission_id</code> and <code>authority_hash</code> as members, and the Mission's state
+version current at materialization
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) where the deployment
+serves one, so a consumer can tell a fresh-but-obsolete view from
+current state. A consistency check
 between a decision request's Mission reference and the loaded view is
 therefore an equality test: the request's Mission <code>id</code> and
 <code>authority_hash</code> either equal the committed values or the view does

@@ -80,30 +80,31 @@ Table of Contents
    3.  Mission Management Endpoint
      3.1.  Authentication
      3.2.  Authorization and Filter Scope
-   4.  Mission Filter
-   5.  Mission Enumeration
-     5.1.  Response
-     5.2.  Worked Example
-   6.  Bulk Mission Lifecycle
-     6.1.  Dry Run
-     6.2.  Execution
-     6.3.  Outcome Manifest
-     6.4.  Worked Example
-   7.  Error Responses
-   8.  Incident Response Patterns
-   9.  Deferred Management Capabilities
-   10. Authorization Server Metadata
-   11. Security Considerations
-     11.1.  Blast Radius
-     11.2.  Enumeration-Oracle Inversion
-     11.3.  Bulk Token Binding
-     11.4.  General OAuth Security
-   12. Privacy Considerations
-   13. Conformance
-   14. IANA Considerations
-     14.1.  Metadata Registrations
-     14.2.  Media Type Registration
-       14.2.1.  application/mission-management-response+jwt
+   4.  Administrative Metadata
+   5.  Mission Filter
+   6.  Mission Enumeration
+     6.1.  Response
+     6.2.  Worked Example
+   7.  Bulk Mission Lifecycle
+     7.1.  Dry Run
+     7.2.  Execution
+     7.3.  Outcome Manifest
+     7.4.  Worked Example
+   8.  Error Responses
+   9.  Incident Response Patterns
+   10. Deferred Management Capabilities
+   11. Authorization Server Metadata
+   12. Security Considerations
+     12.1.  Blast Radius
+     12.2.  Enumeration-Oracle Inversion
+     12.3.  Bulk Token Binding
+     12.4.  General OAuth Security
+   13. Privacy Considerations
+   14. Conformance
+   15. IANA Considerations
+     15.1.  Metadata Registrations
+     15.2.  Media Type Registration
+       15.2.1.  application/mission-management-response+jwt
    Acknowledgments
    References
      Normative References
@@ -178,7 +179,7 @@ Table of Contents
 3.  Mission Management Endpoint
 
    The Mission Issuer publishes its Mission Management endpoint URL in
-   Authorization Server metadata (Section 10) as
+   Authorization Server metadata (Section 11) as
    mission_management_endpoint.  The endpoint MUST be served over TLS
    1.2 or later (TLS 1.3 RECOMMENDED), following the recommendations of
    [RFC9325].
@@ -188,11 +189,11 @@ Table of Contents
    encoding of the status profile's single-Mission operations.  Every
    request carries:
 
-   operation:  REQUIRED.  A string. enumerate (Section 5) or one of the
+   operation:  REQUIRED.  A string. enumerate (Section 6) or one of the
       status profile's lifecycle operations revoke, suspend, resume,
-      complete, applied in bulk (Section 6).
+      complete, applied in bulk (Section 7).
 
-   filter:  REQUIRED.  An object (Section 4) selecting the Missions the
+   filter:  REQUIRED.  An object (Section 5) selecting the Missions the
       operation addresses.
 
    nonce:  REQUIRED.  A string.  A client-generated nonce, unique per
@@ -210,21 +211,21 @@ Table of Contents
    status profile's signing discipline: the JWS header carries a kid and
    a typ of mission-management-response+jwt, the algorithm is one
    advertised in mission_status_signing_alg_values_supported
-   (Section 10), and the status profile's signing-key retention rules
+   (Section 11), and the status profile's signing-key retention rules
    apply.  Per [RFC7515] Section 4.1.9 the typ header omits the
    application/ prefix; the full media type application/mission-
-   management-response+jwt (registered in Section 14) is used as the
+   management-response+jwt (registered in Section 15) is used as the
    HTTP Content-Type, with Cache-Control: no-store.  The signed payload
    carries the envelope iss, aud (the authenticated caller), sub (the
-   acting party), nonce, iat, and exp, plus the members of Section 5.1,
-   Section 6.1, or Section 6.3.  Before honoring a response a Management
+   acting party), nonce, iat, and exp, plus the members of Section 6.1,
+   Section 7.1, or Section 7.3.  Before honoring a response a Management
    Client MUST apply the status profile's response verification checks
    (signature, iss, aud, sub, nonce, iat/exp with up to 30 seconds skew)
    and MUST verify the typ.
 
    Rate limits, the enumeration page maximum, and the bulk size bound
    are deployment-declared operational configuration; this document
-   defines the error symbols that surface them (Section 7) but no
+   defines the error symbols that surface them (Section 8) but no
    metadata for them.
 
 3.1.  Authentication
@@ -251,12 +252,12 @@ Table of Contents
 
    A deployment authorizes each Management Client for a *filter scope*:
    the Missions it may enumerate and operate on, expressed over the
-   filter members of Section 4.  A subject-scoped operator, a client-
+   filter members of Section 5.  A subject-scoped operator, a client-
    scoped operator, and a tenant-wide incident responder are distinct
    grants; the grant syntax is deployment-defined.  The AS MUST evaluate
    a request's filter against the caller's filter scope before
    evaluating it against the Mission store, and MUST refuse with
-   forbidden (Section 7) a request whose filter could match a Mission
+   forbidden (Section 8) a request whose filter could match a Mission
    outside that scope.
 
    This surface intentionally inverts the status profile's anti-oracle
@@ -271,7 +272,47 @@ Table of Contents
    computed from the caller's grant and the request alone, never from
    Mission data, so it discloses nothing about which Missions exist.
 
-4.  Mission Filter
+4.  Administrative Metadata
+
+   The Mission record identifies the parties and the authority;
+   operating an estate needs administrative context the record
+   deliberately does not carry: who owns the Mission organizationally,
+   which administrative domain and tenant it belongs to, how sensitive
+   it is, and how long its records must be kept.  A Mission Issuer MAY
+   maintain an *administrative metadata* object per Mission, management-
+   plane state associated with the record:
+
+   owner:  The accountable operator of the Mission's agent: an (iss,
+      sub) principal or a group URI.  Distinct from subject, whom the
+      task is for, and approver, who approved it.
+
+   admin_domain:  A string or URI naming the administrative boundary the
+      Mission is operated under: an organizational unit, an environment,
+      a policy domain.
+
+   tenant:  A string naming the owning tenant.  Distinct from any tenant
+      constraint inside the Authority Set, which bounds resource
+      authority rather than naming ownership.
+
+   risk_class:  A deployment-defined sensitivity or risk classification.
+
+   labels:  An array of opaque strings for deployment-defined grouping.
+
+   retention:  A reference to the retention policy governing the
+      Mission's record and evidence.
+
+   Administrative metadata is control-plane state: it MUST NOT be
+   carried on access tokens or in audience-scoped authority projections,
+   and it grants no authority.  It drives the management plane: approval
+   routing, filter scope (Section 3.2), enumeration, retention, and
+   incident response.  Enumeration summaries MAY include it for callers
+   whose filter scope covers the Mission (Section 6).  How the object is
+   populated, at issuance from deployment policy or by an authorized
+   management operation, is deployment-defined; a dedicated metadata
+   update operation is deferred until deployment experience shows the
+   shape.
+
+5.  Mission Filter
 
    The filter object selects Missions by conjunction: a Mission matches
    when it satisfies every member present.  An empty filter matches
@@ -302,11 +343,23 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission-child-delegation]): direct
       children only.  A caller walks a delegation tree level by level.
 
+   owner:  An object with iss and sub, or a string group URI.  Matches
+      the administrative metadata's owner (Section 4).
+
+   admin_domain:  A string.  Matches the administrative metadata's
+      admin_domain.
+
+   label:  A string.  Matches a Mission whose administrative labels
+      include it.
+
+   A filter member that matches against administrative metadata matches
+   no Mission where the deployment maintains none.
+
    The AS MUST refuse a filter carrying an unrecognized member with
    invalid_request, so a filter is never silently broader than the
    caller intended.
 
-5.  Mission Enumeration
+6.  Mission Enumeration
 
    The enumerate operation answers "which Missions exist" for the
    caller's filter, returning signed pages of Mission summaries.  In
@@ -324,14 +377,14 @@ Table of Contents
       applies the maximum when limit is absent.
 
    bulk_token:  OPTIONAL.  A string.  A bulk token from a prior dry run
-      (Section 6.1).  When present, enumerate returns exactly the
+      (Section 7.1).  When present, enumerate returns exactly the
       membership that token pins (the pinned set) as summaries, so the
       reviewed set equals the set a matching execute will operate on;
       filter MUST equal the filter the token binds, and the AS MUST
-      refuse a mismatch with invalid_bulk_token (Section 7).  Presenting
+      refuse a mismatch with invalid_bulk_token (Section 8).  Presenting
       a bulk token to enumerate is read-only and does not consume it.
 
-5.1.  Response
+6.1.  Response
 
    The signed payload (Section 3) carries:
 
@@ -357,10 +410,10 @@ Table of Contents
    stable within a cursor walk.  The AS SHOULD present a consistent
    membership across a walk but MAY reflect transitions committed while
    it is in progress; a caller that needs a pinned membership uses the
-   bulk dry run (Section 6.1), whose bulk token provides exactly that
+   bulk dry run (Section 7.1), whose bulk token provides exactly that
    and is reviewable by presenting the token to enumerate.
 
-5.2.  Worked Example
+6.2.  Worked Example
 
    An incident responder (client_secops-console) triages a credential
    compromise for Subject user_3p2q8mN1a0kV7tR and enumerates that
@@ -407,7 +460,7 @@ Table of Contents
    No cursor is present: the result is complete.  The AS records the
    caller, filter, purpose, and result count in its audit log.
 
-6.  Bulk Mission Lifecycle
+7.  Bulk Mission Lifecycle
 
    A bulk request applies one lifecycle operation of the status profile
    (revoke, suspend, resume, complete) to every Mission a filter
@@ -432,11 +485,11 @@ Table of Contents
       semantics, applied uniformly to every Mission in the set.
 
    The AS MAY declare a bound on the evaluated set size and refuse a dry
-   run whose match count exceeds it with filter_too_broad (Section 7);
+   run whose match count exceeds it with filter_too_broad (Section 8);
    the caller narrows the filter (for example with created_after) and
    retries.
 
-6.1.  Dry Run
+7.1.  Dry Run
 
    On mode dry_run the AS evaluates the filter within the caller's
    filter scope (Section 3.2), records the matched membership, and
@@ -451,7 +504,7 @@ Table of Contents
       binding the caller, the operation, the filter (with suspend_until
       and on_expiry when present), and the evaluated membership itself:
       the exact set of mission_id values matched at dry-run time
-      (Section 11.3).
+      (Section 12.3).
 
    bulk_token_expires_at:  REQUIRED.  An RFC 3339 [RFC3339] date-time.
       The bulk token's expiry.  Its lifetime is deployment-defined and
@@ -460,13 +513,13 @@ Table of Contents
 
    A dry run commits no transition.  To review the membership behind the
    count, the caller runs enumerate presenting the bulk_token
-   (Section 5), which returns exactly the pinned set, so the reviewed
+   (Section 6), which returns exactly the pinned set, so the reviewed
    membership equals the set the matching execute will operate on.
    Running enumerate with only the same filter re-evaluates it and MAY
    return a drifted set; the bulk_token pins the review to the evaluated
    membership.
 
-6.2.  Execution
+7.2.  Execution
 
    On mode execute the AS MUST verify that the presented bulk_token is
    unexpired and unused, was issued to this caller, and binds an
@@ -489,9 +542,9 @@ Table of Contents
    or newly matching the filter, after the dry run is not in the
    membership and MUST NOT be operated on; a member that transitioned in
    the interim yields an already_terminal or illegal_transition outcome
-   rather than a surprise transition (Section 11.3).
+   rather than a surprise transition (Section 12.3).
 
-6.3.  Outcome Manifest
+7.3.  Outcome Manifest
 
    The execute response is a signed manifest carrying operation (the
    executed operation, echoed) and:
@@ -536,11 +589,11 @@ Table of Contents
    execute: members already transitioned then report already_terminal,
    and only error members are retried.
 
-6.4.  Worked Example
+7.4.  Worked Example
 
-   Continuing Section 5.2, the responder revokes every Mission for the
+   Continuing Section 6.2, the responder revokes every Mission for the
    compromised Subject in any state, so the filter omits state.  Dry-run
-   request body (transport and authentication as in Section 5.2):
+   request body (transport and authentication as in Section 6.2):
 
    {
      "operation": "revoke",
@@ -601,12 +654,12 @@ Table of Contents
    count, and executes again: the revoked and completed members report
    already_terminal and only the failed one is retried.
 
-7.  Error Responses
+8.  Error Responses
 
    A wire error returns the matching HTTP status with a JSON object
    [RFC8259] body carrying error, error_description, and nonce, as in
    the status profile.  Per-Mission conditions during a bulk execute are
-   manifest outcomes (Section 6.3), never wire errors.  The codes:
+   manifest outcomes (Section 7.3), never wire errors.  The codes:
 
    +====================+======+=======================================+
    | error              | HTTP | Description                           |
@@ -645,7 +698,7 @@ Table of Contents
    For rate_limited, the response SHOULD include a Retry-After header
    [RFC9110] and a retry_after body member in seconds.
 
-8.  Incident Response Patterns
+9.  Incident Response Patterns
 
    This section is non-normative.  Common incident shapes compose the
    two operations directly:
@@ -675,7 +728,7 @@ Table of Contents
    off.  Bulk management changes how many Missions one request can stop,
    not how fast any one revocation propagates.
 
-9.  Deferred Management Capabilities
+10.  Deferred Management Capabilities
 
    Approver transfer, re-anchoring a Mission's consent to a different
    accountable party, is not defined here.  Administrative monotonic
@@ -685,7 +738,7 @@ Table of Contents
    Issuers, is not defined here; a Management Client queries each issuer
    it is authorized for separately.
 
-10.  Authorization Server Metadata
+11.  Authorization Server Metadata
 
    An AS that serves the Mission Management endpoint advertises it in
    its Authorization Server metadata [RFC8414]:
@@ -702,17 +755,17 @@ Table of Contents
    A standalone Mission Issuer (a Mission Authority Server
    [I-D.draft-mcguinness-mission-authority-server]) MAY serve this
    surface and, when it does, carries the same member with the same
-   semantics in its discovery document; Section 14 registers the member
+   semantics in its discovery document; Section 15 registers the member
    in the Mission Authority Server Metadata registry.
 
-11.  Security Considerations
+12.  Security Considerations
 
    The security considerations of the issuance profile
    [I-D.draft-mcguinness-oauth-mission] and the status profile
    [I-D.draft-mcguinness-oauth-mission-status] apply.  This section
    covers what is specific to fleet-scale management.
 
-11.1.  Blast Radius
+12.1.  Blast Radius
 
    This endpoint is the highest-blast-radius surface in this suite: one
    authorized request can terminate or suspend every Mission in a filter
@@ -745,7 +798,7 @@ Table of Contents
    per-Mission evidence and signals, are caller-written free text; audit
    systems MUST treat them as untrusted input.
 
-11.2.  Enumeration-Oracle Inversion
+12.2.  Enumeration-Oracle Inversion
 
    The status profile makes Mission existence unobservable to the
    unauthorized; this document makes it queryable by the authorized.
@@ -756,10 +809,10 @@ Table of Contents
    a refusal is data-independent.  The audit rule is the compensating
    control for the disclosure this surface exists to provide.
 
-11.3.  Bulk Token Binding
+12.3.  Bulk Token Binding
 
    The bulk token closes the review-to-execution gap, and each of its
-   bindings (Section 6.1) is load-bearing.  The membership binding
+   bindings (Section 7.1) is load-bearing.  The membership binding
    prevents time-of-review to time-of-execution growth: without it, a
    filter re-evaluated at execute time could match Missions created
    after the operator reviewed the dry-run count, so a reviewed "revoke
@@ -771,13 +824,13 @@ Table of Contents
    transfer, or filter substitution reduces the two-step exchange to a
    one-step sweep.
 
-11.4.  General OAuth Security
+12.4.  General OAuth Security
 
    This document inherits OAuth 2.0 Best Current Practice [RFC9700] for
    the OAuth surfaces it composes with; implementers MUST follow current
    OAuth security guidance.
 
-12.  Privacy Considerations
+13.  Privacy Considerations
 
    The privacy considerations of the issuance and status profiles apply.
    This section covers what is specific to enumeration.
@@ -786,7 +839,7 @@ Table of Contents
    row ties a Subject identifier to an Agent, a lifecycle state, and
    activity timing, and a page of rows profiles a person's delegated
    activity.  Minimization is structural: the summary shape of
-   Section 5.1 excludes the Mission Intent and the Authority Set, and
+   Section 6.1 excludes the Mission Intent and the Authority Set, and
    the filter-scope authorization of Section 3.2 bounds each Management
    Client to the population it demonstrably needs.  A deployment SHOULD
    grant tenant-wide filter scopes only to incident-response roles.
@@ -799,7 +852,7 @@ Table of Contents
    concern ([I-D.draft-mcguinness-oauth-mission]), and restrict read
    access to them at least as tightly as the management surface itself.
 
-13.  Conformance
+14.  Conformance
 
    This document is OPTIONAL.  An implementation that claims it conforms
    in one of two roles.
@@ -807,12 +860,12 @@ Table of Contents
    A *Management-capable Mission Issuer* serves the Mission Management
    endpoint over the authentication and authorization of Section 3.1 and
    Section 3.2 with signed responses per Section 3; serves enumerate
-   (Section 5) and the bulk lifecycle operations (Section 6) with dry-
-   run-then-execute and the bulk token bindings of Section 6.1; applies
+   (Section 6) and the bulk lifecycle operations (Section 7) with dry-
+   run-then-execute and the bulk token bindings of Section 7.1; applies
    bulk transitions per Mission under the status profile's lifecycle
-   semantics, emitting per-Mission evidence and signals (Section 6.2);
+   semantics, emitting per-Mission evidence and signals (Section 7.2);
    audit-logs every management request per Section 3.2; and advertises
-   mission_management_endpoint (Section 10).
+   mission_management_endpoint (Section 11).
 
    A *Management Client* authenticates per Section 3.1; sends the
    REQUIRED purpose or reason on every request, identifying the operator
@@ -824,9 +877,9 @@ Table of Contents
    An implementation that supports neither role is unaffected and
    remains a conforming issuance or status profile implementation.
 
-14.  IANA Considerations
+15.  IANA Considerations
 
-14.1.  Metadata Registrations
+15.1.  Metadata Registrations
 
    IANA is requested to register mission_management_endpoint in the
    "OAuth Authorization Server Metadata" registry [RFC8414], and in the
@@ -834,14 +887,14 @@ Table of Contents
    [I-D.draft-mcguinness-mission-authority-server], whose registration
    policy is Specification Required; this document is the specification.
    For both: Change Controller IETF; Reference this document,
-   Section 10.
+   Section 11.
 
-14.2.  Media Type Registration
+15.2.  Media Type Registration
 
    IANA is requested to register one media type per [RFC6838], mirroring
    the status profile's registration.
 
-14.2.1.  application/mission-management-response+jwt
+15.2.1.  application/mission-management-response+jwt
 
    *  Type name: application
 
@@ -853,7 +906,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JWS Compact Serialization
 
-   *  Security considerations: see Section 11
+   *  Security considerations: see Section 12
 
    *  Interoperability considerations: see this document
 

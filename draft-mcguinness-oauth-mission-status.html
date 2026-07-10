@@ -1680,13 +1680,18 @@ predecessor's record
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-3.4-10.2.2.7.1" class="pilcrow">¶</a></p>
 </li>
               <li class="normal" id="section-3.4-10.2.2.8">
-                <p id="section-3.4-10.2.2.8.1"><code>version</code>: <span class="bcp14">OPTIONAL</span>; <span class="bcp14">REQUIRED</span> where the deployment offers the
-Lifecycle Signals stream
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>): the Mission's
-lifecycle transition counter as the Signals profile defines it,
-current as of the reported <code>state</code>. An event consumer that
+                <p id="section-3.4-10.2.2.8.1"><code>version</code>: <span class="bcp14">REQUIRED</span>. The Mission's <strong>state version</strong>: a strictly
+monotonic per-Mission counter the Mission Issuer maintains,
+incremented on each committed lifecycle transition (the approval
+event is version 1) and each committed metadata-only change,
+current as of the reported <code>state</code>. It orders observations of one
+Mission across every surface: an event consumer that
 re-established state through this operation re-seats its gap
-detection on it: the last-applied version becomes this value.<a href="#section-3.4-10.2.2.8.1" class="pilcrow">¶</a></p>
+detection on it (the last-applied Signals version becomes this
+value, <span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), a
+lifecycle mutation can guard on it (<a href="#idempotency" class="auto internal xref">Section 5.7</a>), and a
+materialized policy view names the value it materialized
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-3.4-10.2.2.8.1" class="pilcrow">¶</a></p>
 </li>
             </ul>
 </li>
@@ -2553,7 +2558,18 @@ window. This makes a retransmit safe against reordering: a
 delayed <code>suspend</code> retry that arrives after a <code>resume</code> is recognized as
 a duplicate and replays the original <code>suspend</code> response, so it cannot
 re-suspend an already-resumed Mission.<a href="#section-5.7-1" class="pilcrow">¶</a></p>
-<p id="section-5.7-2">Lifecycle operations follow one rule. An operation whose resulting
+<p id="section-5.7-2">Deduplication guards a retransmitted request; it does not guard a
+valid request decided over stale state, a fresh <code>suspend</code> issued from
+a console that has not yet seen a newer <code>resume</code>. For that a
+lifecycle request <span class="bcp14">MAY</span> carry <code>expected_version</code>, the state version
+(<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>) the caller last observed: when present,
+the AS <span class="bcp14">MUST</span> refuse the operation with HTTP 409 and error symbol
+<code>stale_version</code>, leaving the Mission unchanged, when the Mission's
+current state version differs. A deployment <span class="bcp14">SHOULD</span> require
+<code>expected_version</code> on the operations it classifies high-risk. The
+<code>nonce</code> remains the replay key; the two guards are independent, one
+against duplicate delivery, one against stale decisions.<a href="#section-5.7-2" class="pilcrow">¶</a></p>
+<p id="section-5.7-3">Lifecycle operations follow one rule. An operation whose resulting
 state (<a href="#legal-transitions" class="auto internal xref">Section 5.2</a>) equals the Mission's current state is
 idempotent success, terminal or not: the AS returns the current
 Mission Status Response, with no state change and no event emitted.
@@ -2567,13 +2583,13 @@ Mission is not idempotent success but a conflict. Any other operation
 not legal from the current state is likewise a conflict (for example
 that <code>resume</code> on an <code>active</code> or terminal Mission, or <code>suspend</code> against
 a terminal state): the AS <span class="bcp14">MUST</span> refuse it with HTTP 409 and a JSON body
-whose error symbol is <code>conflict</code>, leaving the Mission state unchanged.<a href="#section-5.7-2" class="pilcrow">¶</a></p>
-<p id="section-5.7-3">One idempotent case carries metadata. A <code>suspend</code> against a
+whose error symbol is <code>conflict</code>, leaving the Mission state unchanged.<a href="#section-5.7-3" class="pilcrow">¶</a></p>
+<p id="section-5.7-4">One idempotent case carries metadata. A <code>suspend</code> against a
 <code>suspended</code> Mission whose <code>suspend_until</code> or <code>on_expiry</code> differ from
 the recorded values <span class="bcp14">MUST</span> update the recorded values, emitting the
 corresponding transition-metadata change and reporting the updated
 values in the response; silent acceptance without effect is not
-conforming.<a href="#section-5.7-3" class="pilcrow">¶</a></p>
+conforming.<a href="#section-5.7-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="relationship-to-rfc-7009">
@@ -3187,6 +3203,10 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
 <dt id="I-D.draft-mcguinness-mission-mandate">[I-D.draft-mcguinness-mission-mandate]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Mandate"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
         <dd>

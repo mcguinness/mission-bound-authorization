@@ -510,6 +510,21 @@ Table of Contents
    every resource to evaluate Mission state; it requires the deployment
    to say which do.
 
+   Within the declared scope the duties tier by action class, and the
+   tiers have names.  The *core enforcement tier* is what every
+   conforming deployment carries: Mission establishment, per-action
+   evaluation against current Mission state and Resource policy, state
+   freshness, permit or deny with a decision identifier and Decision
+   Evidence, and parameter binding for the parameter-bound classes.  The
+   *transaction-assurance tier* is claimed per mediated class and
+   required for the high-consequence classes: single-use permits and
+   execution leases, Execution Evidence, and outcome reconciliation.
+   The Enforcement Scope Statement names which tier covers which class.
+   One bound is stated rather than implied: reconciliation detects
+   divergence between decisions and outcomes; it never manufactures
+   exactly-once execution, which exists only where the resource itself
+   supports idempotency, as its operation profile records (Section 5).
+
    The enforcement scope is a deployment conformance statement, not an
    OAuth Authorization Server metadata extension.  This document defines
    no discovery mechanism, registry, or wire format for publishing it.
@@ -1266,15 +1281,18 @@ Table of Contents
    }))
 
    The committed materialized view payload MUST carry the Mission's
-   mission_id and authority_hash as members.  A consistency check
-   between a decision request's Mission reference and the loaded view is
-   therefore an equality test: the request's Mission id and
-   authority_hash either equal the committed values or the view does not
-   apply.  Because policy_view_id is a content hash, any change to the
-   view yields a new policy_view_id, so equality on policy_view_id is
-   the cache identity and freshness test.  This document defines no
-   second canonicalization and no policy-language wire form for the
-   view.
+   mission_id and authority_hash as members, and the Mission's state
+   version current at materialization
+   ([I-D.draft-mcguinness-oauth-mission-status]) where the deployment
+   serves one, so a consumer can tell a fresh-but-obsolete view from
+   current state.  A consistency check between a decision request's
+   Mission reference and the loaded view is therefore an equality test:
+   the request's Mission id and authority_hash either equal the
+   committed values or the view does not apply.  Because policy_view_id
+   is a content hash, any change to the view yields a new
+   policy_view_id, so equality on policy_view_id is the cache identity
+   and freshness test.  This document defines no second canonicalization
+   and no policy-language wire form for the view.
 
 7.4.  Semantic Evaluators
 
