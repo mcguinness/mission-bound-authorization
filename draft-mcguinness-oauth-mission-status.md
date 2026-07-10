@@ -77,6 +77,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-cross-domain:
     title: "Mission Cross-Domain Projection for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
@@ -422,13 +430,18 @@ The members are:
     replaced this Mission, set atomically at supersession on the
     predecessor's record
     ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
-  - `version`: OPTIONAL; REQUIRED where the deployment offers the
-    Lifecycle Signals stream
-    ({{I-D.draft-mcguinness-oauth-mission-signals}}): the Mission's
-    lifecycle transition counter as the Signals profile defines it,
-    current as of the reported `state`. An event consumer that
+  - `version`: REQUIRED. The Mission's **state version**: a strictly
+    monotonic per-Mission counter the Mission Issuer maintains,
+    incremented on each committed lifecycle transition (the approval
+    event is version 1) and each committed metadata-only change,
+    current as of the reported `state`. It orders observations of one
+    Mission across every surface: an event consumer that
     re-established state through this operation re-seats its gap
-    detection on it: the last-applied version becomes this value.
+    detection on it (the last-applied Signals version becomes this
+    value, {{I-D.draft-mcguinness-oauth-mission-signals}}), a
+    lifecycle mutation can guard on it ({{idempotency}}), and a
+    materialized policy view names the value it materialized
+    ({{I-D.draft-mcguinness-mission-runtime}}).
 - `authorization_details`: the audience-scoped Authority Set entries
   relevant to the requesting audience, as the `mission_resource_access`
   shape of {{I-D.draft-mcguinness-oauth-mission}} (Section "Mission
@@ -953,6 +966,18 @@ window. This makes a retransmit safe against reordering: a
 delayed `suspend` retry that arrives after a `resume` is recognized as
 a duplicate and replays the original `suspend` response, so it cannot
 re-suspend an already-resumed Mission.
+
+Deduplication guards a retransmitted request; it does not guard a
+valid request decided over stale state, a fresh `suspend` issued from
+a console that has not yet seen a newer `resume`. For that a
+lifecycle request MAY carry `expected_version`, the state version
+({{mission-status-response}}) the caller last observed: when present,
+the AS MUST refuse the operation with HTTP 409 and error symbol
+`stale_version`, leaving the Mission unchanged, when the Mission's
+current state version differs. A deployment SHOULD require
+`expected_version` on the operations it classifies high-risk. The
+`nonce` remains the replay key; the two guards are independent, one
+against duplicate delivery, one against stale decisions.
 
 Lifecycle operations follow one rule. An operation whose resulting
 state ({{legal-transitions}}) equals the Mission's current state is

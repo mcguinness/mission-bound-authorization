@@ -311,15 +311,11 @@ claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
   emission; absent only on the approval-event emission, where there is
   no prior state. A supersede transition emits `prior_state` of `active`
   and `state` of `superseded`.
-- `version` (integer, required): a strictly monotonic per-Mission
-  counter the Mission Issuer maintains and increments on each committed
-  lifecycle transition (the approval-event emission is version 1) and on
-  each committed metadata-only change (for example a suspend-metadata
-  update, below), letting a consumer order events and detect gaps. This
-  profile defines the counter here; the issuance profile does not
-  surface it, and the Status profile returns it only where the
-  deployment also runs this profile
-  ({{I-D.draft-mcguinness-oauth-mission-status}}).
+- `version` (integer, required): the Mission's state version at this
+  event's commit, letting a consumer order events and detect gaps.
+  The counter is the Status profile's state version, defined and
+  served there ({{I-D.draft-mcguinness-oauth-mission-status}}); this
+  member carries its value at the emission.
 - `committed_at` (string, required): an RFC 3339 {{RFC3339}} date-time
   at which the Mission Issuer committed the transition.
 - `expires_at` (string, required): an RFC 3339 {{RFC3339}} date-time,
