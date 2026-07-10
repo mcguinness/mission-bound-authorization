@@ -368,7 +368,15 @@ layer this family defines, composing with the layers below rather
 than replacing them, and the Mission Authority Server
 ({{I-D.draft-mcguinness-mission-authority-server}}) is its
 binding-independent control plane across an estate, whichever party
-issues a given token.
+issues a given token. The control-plane vocabulary is exact, not
+loose: the issuer side holds desired state (the record, its
+authority, its lifecycle and state version), reconciles it (gating,
+the ceiling review, evidence reconciliation), and distributes
+bounded authority (policy views, status, the management surface);
+tokens and the PEP/PDP boundary are the layer's data plane, and
+Status and Signals are the channel between the two. The plane it
+governs is authority, never operations: how an agent runs stays with
+the harness and the orchestrator.
 
 # Non-Goals {#non-goals}
 
