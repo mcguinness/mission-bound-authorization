@@ -1137,7 +1137,11 @@ hot path ({{I-D.draft-mcguinness-oauth-mission-attenuation}}).
 Offline attenuation requires the runtime enforcement layer: its kill
 switch is the runtime state re-check. Both
 build on the actor chain of the core's Delegation Within a Mission
-section.
+section. The chooser: the core's token-exchange delegation for an
+execution hop living and dying with the parent's lifecycle; a Child
+Mission when the delegate needs its own lifecycle, approval, or
+audit identity; attenuation, experimental, only where offline
+minting is the constraint.
 
 ## Project
 
@@ -1442,6 +1446,33 @@ run ({{I-D.draft-mcguinness-mission-audit}}). The evidence levels are
 accountability, not prevention: they make what was recorded
 tamper-evident, not what was perceived true or what was never recorded
 present.
+
+## Assurance Claims {#assurance-claims-axis}
+
+The levels are the adoption ladder: what a deployment has built, in
+the order deployments build it. What a deployment can prove is an
+orthogonal axis, claimed as named **assurance claims**, each with a
+proof obligation an existing profile fixes, and listed in the
+Deployment Profile ({{deployment-profile}}) rather than implied by a
+level:
+
+- **Approved-record integrity**: the anchors reproduce from the
+  record alone (the core's integrity anchors).
+- **Bounded revocation latency**: the published staleness bound plus
+  the permit window and the class's execution bound
+  ({{I-D.draft-mcguinness-mission-runtime}}).
+- **Action-time enforcement**: PEP coverage for the Enforcement Scope
+  Statement's mediated set, and nothing outside it.
+- **Parameter-bound enforcement**: permits bound to concrete
+  parameters for the classes claimed.
+- **Compromise-resistant custody** and **trifecta containment**: the
+  two named High-Assurance claims, unchanged
+  ({{assurance-levels}}).
+
+Two deployments at the same level under different bindings can hold
+different claims; the MAS modes are the worked case
+({{I-D.draft-mcguinness-mission-authority-server}}). The claims, not
+the level, are what a relying party compares.
 
 # The Mission Deployment Profile {#deployment-profile}
 
