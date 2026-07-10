@@ -301,6 +301,67 @@ been re-derived and re-rendered under the current policy and catalog; the
 Mission Issuer MUST NOT commit an approval over a proposal derived under
 superseded policy.
 
+## The Approval Decision Set {#decision-set}
+
+This section is OPTIONAL and experimental. The issuance profile
+records exactly one accountable Approver and defers approval-authority
+provenance to a governance layer
+({{I-D.draft-mcguinness-oauth-mission}}). An enterprise review
+surface often is that governance layer: the decision may involve
+several principals, a threshold rule, and a delegation-of-authority
+policy, and an auditor later needs to prove not only who approved but
+under which authority the approval was valid.
+
+A Mission Issuer MAY record an **approval decision set** alongside
+the approval event, retained with the Mission record for its audit
+horizon and joined by `approval_event_id`:
+
+- `approval_policy`: an identifier and version for the policy
+  governing who may approve this proposal (the deployment's
+  delegation-of-authority matrix);
+- `threshold`: the rule the recorded assertions satisfied; and
+- `assertions`: one or more decision assertions, each carrying the
+  asserting principal as an (`iss`, `sub`) pair, a `kind` of `human`,
+  `service`, or `policy`, the decision, the decision time, and
+  optionally the provenance under which that principal was authorized
+  to decide and a reason.
+
+The set is governance evidence, not a wire artifact. It never appears
+on tokens or in any protocol message; the Mission record still
+carries exactly one accountable `approver`, the principal the
+`approval_policy` designates as accountable for the committed
+decision, and every downstream projection is unchanged. An approval
+whose recorded assertions do not satisfy the declared
+`approval_policy` threshold MUST NOT commit, and a committed set is
+immutable. The ordinary one-person approval is the degenerate case, a
+single human assertion, and need not be recorded at all. Where
+consent evidence is claimed, each human assertion's disclosure is
+committed as the consent-evidence profile requires
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}); a `policy`
+assertion carries its policy identifier and version, which is the
+family's provenance chain for non-human approval (policy approves the
+instance because a human approved the policy).
+
+~~~ json
+{
+  "approval_event_id": "ape_7Kq2mR9tW4xY",
+  "approval_policy": { "id": "dlg-matrix", "version": "v7" },
+  "threshold": "2-of-2",
+  "assertions": [
+    { "approver": { "iss": "https://login.example.com",
+        "sub": "manager@example.com" },
+      "kind": "human", "decision": "approve",
+      "decided_at": "2026-09-30T16:58:11Z",
+      "provenance": "role:finance-manager" },
+    { "approver": { "iss": "https://as.example.com",
+        "sub": "policy:finance-charter" },
+      "kind": "policy", "decision": "approve",
+      "decided_at": "2026-09-30T16:58:12Z",
+      "provenance": "dlg-matrix:v7#agent-charters" }
+  ]
+}
+~~~
+
 ## Queue Pressure {#queue-pressure}
 
 Deferral turns the review surface into a queue a client can flood. The
@@ -414,6 +475,11 @@ A Mission Issuer conforming to this profile MUST:
 - enforce the pending lifetime and staleness rules of
   {{pending-staleness}} and the queue bounds of {{queue-pressure}}.
 
+A Mission Issuer that records approval decision sets additionally
+commits only approvals whose assertions satisfy the declared
+`approval_policy` threshold, and retains each committed set,
+immutable, for the Mission's audit horizon ({{decision-set}}).
+
 A client conforming to this profile MUST treat every pending response
 as unapproved and poll the `deferral_code` per the deferred substrate.
 
@@ -430,6 +496,14 @@ the Approver and satisfying the Mission Intent's `controls.acr`
 the synchronous event sets. Approver routing and notification, how a
 proposed Mission reaches a reviewer and how the reviewer is alerted, are
 deployment matters and are named as such here rather than specified.
+
+An approval decision set ({{decision-set}}) is evidence about the
+approval, never a second authorization surface: the accountable
+`approver` on the Mission record remains the principal every
+downstream check and projection uses, and a forged or padded
+assertion set changes nothing an enforcement point consumes. Its
+threat is to auditability, not authority, and its integrity rests on
+the issuer's record retention like the approval event itself.
 
 # Privacy Considerations {#privacy-considerations}
 
