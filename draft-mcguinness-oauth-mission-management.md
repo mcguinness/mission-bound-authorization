@@ -293,6 +293,52 @@ count or outcome manifest, and the disposition. A refusal is computed
 from the caller's grant and the request alone, never from Mission
 data, so it discloses nothing about which Missions exist.
 
+# Administrative Metadata {#admin-metadata}
+
+The Mission record identifies the parties and the authority;
+operating an estate needs administrative context the record
+deliberately does not carry: who owns the Mission organizationally,
+which administrative domain and tenant it belongs to, how sensitive
+it is, and how long its records must be kept. A Mission Issuer MAY
+maintain an **administrative metadata** object per Mission,
+management-plane state associated with the record:
+
+`owner`:
+: The accountable operator of the Mission's agent: an (`iss`, `sub`)
+  principal or a group URI. Distinct from `subject`, whom the task is
+  for, and `approver`, who approved it.
+
+`admin_domain`:
+: A string or URI naming the administrative boundary the Mission is
+  operated under: an organizational unit, an environment, a policy
+  domain.
+
+`tenant`:
+: A string naming the owning tenant. Distinct from any tenant
+  constraint inside the Authority Set, which bounds resource
+  authority rather than naming ownership.
+
+`risk_class`:
+: A deployment-defined sensitivity or risk classification.
+
+`labels`:
+: An array of opaque strings for deployment-defined grouping.
+
+`retention`:
+: A reference to the retention policy governing the Mission's record
+  and evidence.
+
+Administrative metadata is control-plane state: it MUST NOT be
+carried on access tokens or in audience-scoped authority projections,
+and it grants no authority. It drives the management plane: approval
+routing, filter scope ({{filter-scope}}), enumeration, retention, and
+incident response. Enumeration summaries MAY include it for callers
+whose filter scope covers the Mission ({{enumeration}}). How the
+object is populated, at issuance from deployment policy or by an
+authorized management operation, is deployment-defined; a dedicated
+metadata update operation is deferred until deployment experience
+shows the shape.
+
 # Mission Filter {#filter}
 
 The `filter` object selects Missions by conjunction: a Mission matches
@@ -328,6 +374,20 @@ match against the Mission record
   lineage member names it
   ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}): direct
   children only. A caller walks a delegation tree level by level.
+
+`owner`:
+: An object with `iss` and `sub`, or a string group URI. Matches the
+  administrative metadata's `owner` ({{admin-metadata}}).
+
+`admin_domain`:
+: A string. Matches the administrative metadata's `admin_domain`.
+
+`label`:
+: A string. Matches a Mission whose administrative `labels` include
+  it.
+
+A filter member that matches against administrative metadata matches
+no Mission where the deployment maintains none.
 
 The AS MUST refuse a filter carrying an unrecognized member with
 `invalid_request`, so a filter is never silently broader than the
