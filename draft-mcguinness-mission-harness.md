@@ -746,8 +746,10 @@ state is non-active.
 
 ## Stop-Behavior Matrix {#stop-matrix}
 
-The harness MUST document a matrix mapping Mission state and action
-class to stop behavior. At minimum:
+The matrix below fixes the minimum stop behavior per Mission state
+and is a deployment's stop-behavior matrix as written: a deployment
+MUST document only the cells where it deviates, and a deviation MUST
+be at least as strict as the minimum:
 
 | Mission state | Minimum behavior |
 |---|---|
@@ -1093,11 +1095,13 @@ A conforming Mission-aware harness MUST:
   execution-environment scope statement ({{mediated-egress}});
 - prevent sub-agent authority by session ancestry;
 - emit Harness Evidence for stop and resume decisions; and
-- document a staleness bound per action class and its stop behavior.
+- apply the stop behavior for stale state under the per-action-class
+  staleness bounds the Enforcement Scope Statement declares
+  ({{I-D.draft-mcguinness-mission-runtime}}).
 
 The runtime profile's non-normative freshness table
 ({{I-D.draft-mcguinness-mission-runtime}}) is the calibration
-reference for these per-action-class bounds.
+reference for those bounds.
 
 A harness MUST NOT claim conformance for work it cannot suppress. It
 MAY claim conformance for a documented subset of execution paths if it
