@@ -1035,8 +1035,8 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    authorizes to act under that Mission's client. Delegate
    authorization MUST be explicit, an enumerated policy, never a
    default. Where the AS and MAS client namespaces differ, the
-   deployment MUST document the client mapping, exactly as for
-   subjects.
+   deployment MUST record the client mapping in its mapping contract
+   ({{mapping-contract}}), exactly as for subjects.
 5. **Delegate narrowing.** When the joined party is a delegate rather
    than the Mission's `client_id`, the PDP MUST narrow the effective
    Authority Set to the delegable subset under the issuance profile's
@@ -1379,6 +1379,10 @@ enforcement-scope statement:
 - which action paths are covered by runtime enforcement, since nothing
   at the token layer covers the rest.
 
+An enterprise deployment carries this statement inside its mapping
+contract ({{mapping-contract}}) rather than beside it, so the join's
+facts have one home.
+
 **No Mission-bound credentials.** Tokens carry no `mission` claim and
 no Mission-derived `authorization_details`. Nothing cryptographically
 binds a token to the approval event, and no audit anchor travels in
@@ -1529,9 +1533,9 @@ binding, with the obligations below ({{I-D.draft-mcguinness-mission-architecture
   identity rests on an unratified individual draft
   ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}); where a
   deployment has no instance-identity substrate, the high-consequence
-  join binds only (`subject`, `client`), the shared-`client_id`
-  residual of {{join-spoofing}} remains, and the deployment MUST state
-  that residual.
+  join binds only (`subject`, `client`), and the shared-`client_id`
+  residual of {{join-spoofing}} remains, stated in the Mission
+  Deployment Profile's `residual_risks`.
 - **Runtime enforcement.** Consequential actions MUST be enforced
   under the runtime profile and its AuthZEN binding
   ({{I-D.draft-mcguinness-mission-authzen}}), with documented PEP
@@ -1721,7 +1725,8 @@ else's Mission fails with `mission_mismatch`. The residual is mapping coarseness
 deployment's account mapping is many-to-one (several AS accounts map
 to one directory subject), any credential in the equivalence class
 joins; a deployment SHOULD keep the mapping one-to-one for subjects
-that hold Missions and MUST document its granularity. The client join
+that hold Missions, with the granularity recorded in its mapping
+contract ({{mapping-contract}}). The client join
 is coarse the same way where several workloads share one `client_id`:
 any of them joins. Client instance assertions
 ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}) are the

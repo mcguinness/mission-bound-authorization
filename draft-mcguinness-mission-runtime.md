@@ -531,7 +531,8 @@ the Mission Deployment Profile, the deployment-level manifest the
 architecture defines ({{I-D.draft-mcguinness-mission-architecture}}). It MUST include:
 
 - the protected resources, action classes, and execution paths it
-  mediates;
+  mediates, and the Mission-establishment mode each enforcement scope
+  uses;
 - the PEP locations that can prevent those actions, and the unmediated
   paths explicitly excluded from the claim (the harness profile's
   execution-environment scope statement supplies these for a
@@ -914,12 +915,13 @@ The Resource Server runtime profile is a deployment conformance
 statement, not an OAuth Authorization Server metadata extension and
 not a new access token format.
 
-The Resource Server runtime profile records the enforcement-scope items
-of {{runtime-conformance}} (protected resources, action classes,
-execution paths, PEP and PDP identities, supported `authorization_details`
-types and vocabularies, Mission state source and staleness bound, and
-evidence mechanism and retention) at the
-granularity of its protected operations, and additionally MUST define:
+The Resource Server runtime profile is a delta over the deployment's
+Enforcement Scope Statement ({{runtime-conformance}}): it inherits
+the enforcement-scope items and records only what is specific to its
+protected operations, restating an inherited item only where its
+per-operation value differs. An independently operated Resource
+Server MAY instead carry the full statement as a separable annex. It
+MUST define:
 
 - the endpoint families, methods, tools, or operation identifiers in
   scope, and the minimum action class for each, including any Resource
@@ -1130,8 +1132,8 @@ deployment establishes it in one of two modes:
   binding defines it as its Reference-only verification mode
   ({{I-D.draft-mcguinness-mission-aauth}}).
 
-A deployment MUST document the mode each enforcement scope uses
-({{runtime-conformance}}). In either mode, the established Mission is
+The mode each enforcement scope uses is part of its Enforcement
+Scope Statement ({{runtime-conformance}}). In either mode, the established Mission is
 the Mission every input of this section (authority, Resource policy,
 parameters, actor, time, state) is evaluated against, and the Mission
 reference the permit and the evidence record bind.
@@ -1170,10 +1172,11 @@ is the deployment's accepted state lease.
   ({{I-D.draft-mcguinness-oauth-mission-status}}) or Mission Lifecycle
   Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}), or an
   out-of-band trusted status feed.
-- Each enforcement scope MUST publish its maximum staleness bound per
-  action class and state source, together with the revocation latency
-  that bound implies: for a PDP-gated class, a Mission's revocation
-  takes effect, in the worst case, after the staleness bound plus the
+- The maximum staleness bound per action class and state source is
+  declared in the Enforcement Scope Statement
+  ({{runtime-conformance}}), together with the revocation latency it
+  implies: for a PDP-gated class, a Mission's revocation takes
+  effect, in the worst case, after the staleness bound plus the
   permit validity window plus the class's execution bound
   ({{parameter-binding}}); the derived token's lifetime is the bound
   only for paths outside PDP gating. This document imposes no
@@ -1556,13 +1559,13 @@ one to one, so a permit that was obtained but executed more than once,
 or executed for different parameters, is detectable after the fact. The
 detailed object schema is deferred ({{deferred}}).
 
-Reconciliation is bounded in time. The enforcement scope MUST publish a
-reconciliation window within which an execution-outcome record is
-expected for each decision, and MUST name the component responsible for
-detecting orphaned evidence (a decision with no matching
-execution-outcome record within that window) and sequence gaps in a
-Mission's records ({{record-integrity}}), and that component's alerting
-obligation when it detects either.
+Reconciliation is bounded in time by the reconciliation window,
+orphan-detection component, and alerting obligation the Enforcement
+Scope Statement declares ({{runtime-conformance}}): an
+execution-outcome record is expected for each decision within the
+window, and the named component detects orphaned evidence (a decision
+with no matching execution-outcome record within it) and sequence
+gaps in a Mission's records ({{record-integrity}}).
 
 ## Mission Receipt {#mission-receipt}
 
@@ -1616,9 +1619,9 @@ The following requirements apply to every record:
 - Records for one Mission MUST carry a deployment-defined sequence
   indicator so decision order can be reconstructed without relying on
   wall-clock time alone.
-- The enforcement scope MUST publish a retention window no shorter
-  than the Mission's audit horizon, as defined in the Mission Record
-  section of {{I-D.draft-mcguinness-oauth-mission}}.
+- The retention window declared in the Enforcement Scope Statement
+  MUST be no shorter than the Mission's audit horizon, as defined in
+  the Mission Record section of {{I-D.draft-mcguinness-oauth-mission}}.
 
 Digest encoding is uniform across this document family: every digest a
 family document defines uses the `sha-256:` prefixed base64url,
@@ -1965,7 +1968,9 @@ decisions are future work ({{deferred}}).
 The strongest decision logic is void if the PEP is not at the last
 controllable boundary, or if an unmediated path can reach the action
 ({{pep-placement}}). A deployment's claim is only as strong as the set
-of execution paths it actually mediates; it MUST name that set.
+of execution paths it actually mediates, and that set is the
+Enforcement Scope Statement's mediated-paths declaration
+({{runtime-conformance}}).
 
 ## Prompt Injection and Exfiltration {#prompt-injection-exfiltration}
 
