@@ -1155,7 +1155,9 @@ checked against it fresh. Threats that attack authority are
 contained. Threats that attack the model, its memory, or its inputs
 are bounded, because a fully fooled agent still cannot out-argue a
 parameter check. Threats that attack other layers are delegated by
-name.
+name. The adversary model ({{adversary-model}}) owns coverage and
+residuals; this appendix maps its rows onto OWASP vocabulary, and
+where the two could be read to differ, the adversary model governs.
 
 | Threat | The model's answer | Verdict |
 | --- | --- | --- |

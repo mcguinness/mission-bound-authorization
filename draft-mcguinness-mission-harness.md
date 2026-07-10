@@ -468,12 +468,11 @@ duties on a deployment running both profiles: a means for the harness
 to determine whether a work item is under an active unwind decision
 (the mechanism is deployment-defined), and a precedence rule where
 harness stop policy and an active unwind decision would produce
-different outcomes for the same work item. The stage split chooses how
-to stop, not whether: where both would stop the item, the
-orchestrator's in-flight handling governs a dispatched or in-flight
-step, since only the orchestrator can unwind committed or partially
-committed work, and the harness stop policy governs an undispatched
-one; where one would stop and the other continue, the item stops. The
+different outcomes for the same work item. The precedence rule is
+the orchestration profile's
+({{I-D.draft-mcguinness-mission-orchestration}}): the stage split
+chooses how to stop, not whether, and where one would stop and the
+other continue, the item stops. The
 harness still honors an orchestrator cancel or hold under the resume
 algorithm ({{resume-algorithm}}), which forbids resuming, including
 dispatching a queued item, that the orchestrator has cancelled or is

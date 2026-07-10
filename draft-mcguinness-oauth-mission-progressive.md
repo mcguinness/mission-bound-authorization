@@ -509,12 +509,9 @@ document adds the drawdown surface:
   expansion is policy-adjudicated ({{progressive-authorization}}); a
   ceiling the Approver did not knowingly consent to is standing
   authority obtained by omission.
-- Consent decays even when nothing is misconfigured. The per-drawdown
-  and rate bounds cap what a chain draws per unit time, not for how
-  long it keeps drawing; the ceiling review ({{ceiling-review}}) is
-  the temporal bound, and a deployment that renews it without the
-  chain's record in front of the reviewer has re-created the standing
-  grant this profile exists to avoid.
+- Consent decays even when nothing is misconfigured: the drawdown
+  and rate bounds cap rate, not duration, and the ceiling review
+  ({{ceiling-review}}) is the temporal bound.
 
 # Privacy Considerations {#privacy-considerations}
 
