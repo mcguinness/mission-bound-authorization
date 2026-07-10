@@ -1,0 +1,2152 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission Substrate Requirements</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       The Mission model's substrate-neutral profiles are written against
+Mission primitives rather than against any one binding, so a binding
+of the model to a further authorization substrate hosts them
+unchanged, provided it supplies the primitives they consume. This
+document states those primitives normatively for the author of such a
+binding: the Mission record, identifier, and issuer; the lifecycle
+state space; the Authority Set representation; the integrity anchors;
+issuer key material; the audit horizon; approval-event fidelity; and
+either a Mission-bound credential or a defined join in its place.
+Each requirement points at the definition that owns it, each is
+checkable against the Mission Substrate Statement a conforming
+binding publishes, and nothing changes for the existing bindings and
+profiles. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="mission" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="substrate" name="keyword">
+<meta content="binding" name="keyword">
+<meta content="draft-mcguinness-mission-substrate-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.10.0
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.2
+-->
+<link href="draft-mcguinness-mission-substrate.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Mission Substrate</td>
+<td class="right">July 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 11 January 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-mission-substrate-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-07-10" class="published">10 July 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-01-11">11 January 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission Substrate Requirements</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">The Mission model's substrate-neutral profiles are written against
+Mission primitives rather than against any one binding, so a binding
+of the model to a further authorization substrate hosts them
+unchanged, provided it supplies the primitives they consume. This
+document states those primitives normatively for the author of such a
+binding: the Mission record, identifier, and issuer; the lifecycle
+state space; the Authority Set representation; the integrity anchors;
+issuer key material; the audit horizon; approval-event fidelity; and
+either a Mission-bound credential or a defined join in its place.
+Each requirement points at the definition that owns it, each is
+checkable against the Mission Substrate Statement a conforming
+binding publishes, and nothing changes for the existing bindings and
+profiles.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-mission-substrate/">https://datatracker.ietf.org/doc/draft-mcguinness-mission-substrate/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 11 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
+                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-status-the-binding-contract" class="internal xref">Status: The Binding Contract</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.2">
+                <p id="section-toc.1-1.1.2.2.1" class="keepWithNext"><a href="#section-1.2" class="auto internal xref">1.2</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-mission-substrate-requireme" class="internal xref">Mission Substrate Requirements</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.1">
+                <p id="section-toc.1-1.2.2.1.1"><a href="#section-2.1" class="auto internal xref">2.1</a>.  <a href="#name-mission-record-identifier-a" class="internal xref">Mission Record, Identifier, and Issuer</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.2">
+                <p id="section-toc.1-1.2.2.2.1"><a href="#section-2.2" class="auto internal xref">2.2</a>.  <a href="#name-mission-lifecycle-states" class="internal xref">Mission Lifecycle States</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.3">
+                <p id="section-toc.1-1.2.2.3.1"><a href="#section-2.3" class="auto internal xref">2.3</a>.  <a href="#name-mission-authority-represent" class="internal xref">Mission Authority Representation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.4">
+                <p id="section-toc.1-1.2.2.4.1"><a href="#section-2.4" class="auto internal xref">2.4</a>.  <a href="#name-mission-integrity-anchors" class="internal xref">Mission Integrity Anchors</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.5">
+                <p id="section-toc.1-1.2.2.5.1"><a href="#section-2.5" class="auto internal xref">2.5</a>.  <a href="#name-mission-bound-credential" class="internal xref">Mission-Bound Credential</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.6">
+                <p id="section-toc.1-1.2.2.6.1"><a href="#section-2.6" class="auto internal xref">2.6</a>.  <a href="#name-mission-key-material" class="internal xref">Mission Key Material</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.7">
+                <p id="section-toc.1-1.2.2.7.1"><a href="#section-2.7" class="auto internal xref">2.7</a>.  <a href="#name-mission-audit-horizon" class="internal xref">Mission Audit Horizon</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.8">
+                <p id="section-toc.1-1.2.2.8.1"><a href="#section-2.8" class="auto internal xref">2.8</a>.  <a href="#name-mission-approval-fidelity" class="internal xref">Mission Approval Fidelity</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-mission-composition" class="internal xref">Mission Composition</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-mission-substrate-conforman" class="internal xref">Mission Substrate Conformance</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-mission-substrate-statement" class="internal xref">Mission Substrate Statement</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-the-binding-as-trust-root" class="internal xref">The Binding as Trust Root</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-mission-join-assurance" class="internal xref">Mission Join Assurance</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-state-source-fidelity" class="internal xref">State Source Fidelity</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-binding-crosswalk" class="internal xref">Binding Crosswalk</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">A Mission is a durable governance object created by an explicit
+approval event: the approved task, with a lifecycle, that authority is
+derived for, bound to, and gated on. Mission-Bound Authorization for
+OAuth 2.0 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance
+profile", here "the core") defines the object and every primitive of
+the model, bound to the OAuth 2.0 Authorization Server. Two further
+bindings exist. The Mission Authority Server (MAS) is a standalone
+Mission Issuer beside an unchanged Authorization Server; it provides
+every primitive except the Mission-bound credential and issuance
+gating, and profiles the join that fills that gap as its Mission Join
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>). The AAuth
+binding gives that protocol's native mission concept the model's
+structure; in its PS-asserted mode it provides every primitive, and in
+its federated mode it provides them all only where the Access Server
+carries the family <code>mission</code> members, and is Reference-only otherwise
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">The family's substrate-neutral profiles (runtime enforcement and its
+decision API bindings, the harness, orchestration, intent shaping,
+consent evidence, consumption metering, open-world discovery, the
+Mandate, audit transparency, and the security model) are written
+against Mission primitives rather than against OAuth mechanics; each names what it consumes in a Mission Substrate
+section of its own, except consent evidence, whose consumption is
+stated by its approval binding. A binding that provides the
+primitives therefore hosts these profiles as written.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">The architecture document consolidates that interface
+informationally, ending in a Binding Checklist
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>). This document is the
+checklist's normative home, written for the author of a new binding:
+eight requirements (<a href="#requirements" class="auto internal xref">Section 2</a>), a composition table showing
+which profiles consume which primitives (<a href="#composition" class="auto internal xref">Section 3</a>), and a
+conformance role claimed through a published Mission Substrate
+Statement (<a href="#conformance" class="auto internal xref">Section 4</a>). It restates no definition: each
+requirement points at the core section that owns it.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<div id="status">
+<section id="section-1.1">
+        <h3 id="name-status-the-binding-contract">
+<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-status-the-binding-contract" class="section-name selfRef">Status: The Binding Contract</a>
+        </h3>
+<p id="section-1.1-1">This document is the family's binding-neutral contract. A requirement
+stated here binds a new binding that claims conformance
+(<a href="#conformance" class="auto internal xref">Section 4</a>). The three existing bindings, the OAuth core, the
+Mission Authority Server, and the AAuth binding, predate this
+document and are its conforming instantiations: the contract was
+extracted from them, and <a href="#crosswalk" class="auto internal xref">Appendix A</a> records where each satisfies
+it. Their own texts remain authoritative for their definitions, and
+where this document and the core appear to differ, the core governs.<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+<p id="section-1.1-2">Ownership migrates by touch, not by relocation. When a
+binding-neutral definition next changes substantively, the change
+lands in this document and the owning binding section becomes a
+reference to it, so the contract boundary exists now while the text
+crosses it opportunistically, and no change is ever made solely to
+move words.<a href="#section-1.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conventions-and-terminology">
+<section id="section-1.2">
+        <h3 id="name-conventions-and-terminology">
+<a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+        </h3>
+<p id="section-1.2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-1.2-1" class="pilcrow">¶</a></p>
+<p id="section-1.2-2">This document uses Mission, Mission Intent, Mission Issuer, Authority
+Set, Approver, Subject, the Mission Identifier, <code>issuer</code>, the
+<code>mission</code> claim, the integrity anchors (<code>intent_hash</code> and
+<code>authority_hash</code>), the subset rule, Common Constraints, the
+only-<code>active</code> rule, and the audit horizon as defined by the core. It uses Policy Enforcement Point
+(PEP), Policy Decision Point (PDP), consequential action, and Mission
+binding establishment as defined by
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>. A <strong>Mission Substrate
+Binding</strong> is a specification that binds the Mission model to an
+authorization substrate and claims conformance to this document
+(<a href="#conformance" class="auto internal xref">Section 4</a>). It additionally uses:<a href="#section-1.2-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-1.2-3">
+          <dt id="section-1.2-3.1">Full provision:</dt>
+          <dd style="margin-left: 1.5em" id="section-1.2-3.2">
+            <p id="section-1.2-3.2.1">Providing every primitive of <a href="#requirements" class="auto internal xref">Section 2</a>, including the
+Mission-bound credential (<a href="#credential" class="auto internal xref">Section 2.5</a>).<a href="#section-1.2-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-1.2-3.3">Partial provision:</dt>
+          <dd style="margin-left: 1.5em" id="section-1.2-3.4">
+            <p id="section-1.2-3.4.1">Providing every primitive of <a href="#requirements" class="auto internal xref">Section 2</a> except the
+Mission-bound credential, with a defined join in its place
+(<a href="#credential" class="auto internal xref">Section 2.5</a>).<a href="#section-1.2-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-1.2-3.5">Mission Substrate Statement:</dt>
+          <dd style="margin-left: 1.5em" id="section-1.2-3.6">
+            <p id="section-1.2-3.6.1">The published section of a Mission Substrate Binding that states,
+item by item, how the binding provides each primitive
+(<a href="#statement" class="auto internal xref">Section 4.1</a>).<a href="#section-1.2-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="requirements">
+<section id="section-2">
+      <h2 id="name-mission-substrate-requireme">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-mission-substrate-requireme" class="section-name selfRef">Mission Substrate Requirements</a>
+      </h2>
+<p id="section-2-1">Each subsection states the requirement on the binding, the home of the
+normative definition (a section of the core), and the consuming
+profiles; a summary here never overrides its home.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<div id="identifier">
+<section id="section-2.1">
+        <h3 id="name-mission-record-identifier-a">
+<a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-mission-record-identifier-a" class="section-name selfRef">Mission Record, Identifier, and Issuer</a>
+        </h3>
+<p id="section-2.1-1">A binding <span class="bcp14">MUST</span> require its implementations to maintain the Mission
+record as the core defines it: the durable object created at the
+approval event, immutable after creation except its lifecycle state,
+and retained per the audit horizon (<a href="#audit-horizon" class="auto internal xref">Section 2.7</a>). A binding <span class="bcp14">MUST</span> provide a Mission
+Identifier that is opaque, carries no semantic content, has at least
+128 bits of entropy, and is never reused, together with an <code>issuer</code>:
+an issuer identifier naming the approving Mission Issuer, from which
+consumers resolve the binding's state and key surfaces; together they
+name exactly one Mission.<a href="#section-2.1-1" class="pilcrow">¶</a></p>
+<p id="section-2.1-2">A binding <span class="bcp14">MAY</span> define a substrate-native reference to the same Mission,
+as the AAuth binding does with its (<code>approver</code>, <code>s256</code>) pair; the
+Mission record <span class="bcp14">MUST</span> bind both names to the same Mission.<a href="#section-2.1-2" class="pilcrow">¶</a></p>
+<p id="section-2.1-3">Home: the Mission Record and Mission Identifier Format sections of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-2.1-3" class="pilcrow">¶</a></p>
+<p id="section-2.1-4">Consumers: every substrate-neutral profile keys on the pair, from
+enforcement decisions and evidence through harness work-item bindings
+to the audit statement subject and the Mandate, whose committed
+members assume the record's immutability.<a href="#section-2.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="lifecycle">
+<section id="section-2.2">
+        <h3 id="name-mission-lifecycle-states">
+<a href="#section-2.2" class="section-number selfRef">2.2. </a><a href="#name-mission-lifecycle-states" class="section-name selfRef">Mission Lifecycle States</a>
+        </h3>
+<p id="section-2.2-1">A binding <span class="bcp14">MUST</span> provide the core's lifecycle state space: <code>active</code>,
+<code>revoked</code>, and <code>expired</code> as the minimum, with only <code>active</code> permitting
+issuance, derivation, or continued reliance. Every other state value,
+including one a consumer does not recognize, is non-active and
+non-deriving; a binding <span class="bcp14">MUST NOT</span> define a surface that fails open on
+an unrecognized state. A binding that adopts an extension state <span class="bcp14">MUST</span>
+surface its value verbatim on the binding's Mission state surfaces
+(the Mission Status operation and kin) and <span class="bcp14">MUST NOT</span> translate it
+there into a core state or a substrate-native vocabulary, because the
+fail-safe rule keys on the exact value. On a substrate-native
+protocol surface a binding <span class="bcp14">MAY</span> project states onto its native
+vocabulary, provided every non-<code>active</code> state projects to a
+non-active native signal: the projection is fail-safe.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
+<p id="section-2.2-2">A binding <span class="bcp14">MUST</span> provide an authenticated means, independent of any
+credential's possession, for the Subject, the Approver, or an
+administrator to transition a Mission to <code>revoked</code> by its Mission
+Identifier: the state space is not provided without a way to cause
+its kill-switch state.<a href="#section-2.2-2" class="pilcrow">¶</a></p>
+<p id="section-2.2-3">A binding <span class="bcp14">MUST</span> specify at least one state source from which consumers
+learn a Mission's current state, with a stated staleness bound, so
+deployments can meet the runtime profile's freshness rules. Each state
+source <span class="bcp14">MUST</span> be authenticated and integrity-protected, so a consumer
+verifies a state report's origin and detects tampering before relying
+on it: state whose origin or integrity a consumer cannot verify is
+treated as unavailable and fails closed. Verifying a signed state
+report consumes the issuer key material of <a href="#keys" class="auto internal xref">Section 2.6</a>.<a href="#section-2.2-3" class="pilcrow">¶</a></p>
+<p id="section-2.2-4">Home: the Mission Lifecycle and Gating section of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; the freshness rules are the
+runtime profile's (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and the
+Mission Status profile defines a canonical observation surface
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-2.2-4" class="pilcrow">¶</a></p>
+<p id="section-2.2-5">Consumers: the runtime layer (per-class state re-check, fail closed on
+staleness), the harness (pause, suppress, terminate), orchestration
+(the unwind trigger), and the Mandate (state only as of minting).<a href="#section-2.2-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authority">
+<section id="section-2.3">
+        <h3 id="name-mission-authority-represent">
+<a href="#section-2.3" class="section-number selfRef">2.3. </a><a href="#name-mission-authority-represent" class="section-name selfRef">Mission Authority Representation</a>
+        </h3>
+<p id="section-2.3-1">A binding <span class="bcp14">MUST</span> represent the Authority Set as an array of entries in
+the core's authorization-details shape: each entry names a resource,
+its actions, and its constraints. The binding <span class="bcp14">MUST</span> require its
+implementations to apply the subset rule at every narrowing they
+perform: no derivation, delegation, or attenuation under a Mission
+yields authority broader than the Mission's Authority Set. The binding
+<span class="bcp14">MUST</span> require its implementations to interpret Common Constraint names
+per their definitions and compare their values in value space under
+each definition's subset and intersection rules, so independent
+implementations compute the same result for the same values. Where a
+binding or its enforcement surface admits a delegate, per-entry
+<code>delegation</code> policy is evaluated by whichever surface admits the
+delegate: the issuance gate where tokens are derived, the join where
+they are not.<a href="#section-2.3-1" class="pilcrow">¶</a></p>
+<p id="section-2.3-2">Home: the Mission Authority section of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, with its Subset Rule and
+Common Constraints subsections.<a href="#section-2.3-2" class="pilcrow">¶</a></p>
+<p id="section-2.3-3">Consumers: the runtime layer and its decision API bindings
+(evaluation), consent evidence (rendering), and the Mandate (optional
+carriage).<a href="#section-2.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="anchors">
+<section id="section-2.4">
+        <h3 id="name-mission-integrity-anchors">
+<a href="#section-2.4" class="section-number selfRef">2.4. </a><a href="#name-mission-integrity-anchors" class="section-name selfRef">Mission Integrity Anchors</a>
+        </h3>
+<p id="section-2.4-1">A binding <span class="bcp14">MUST</span> require its implementations to compute <code>intent_hash</code>
+and <code>authority_hash</code> over the core's domain-separated, issuer-bound
+envelope (<code>typ</code> names the committed object, <code>iss</code> carries the binding's
+issuer identifier, <code>value</code> is the committed object), under the core's
+canonicalization rules. The computation is the core's byte for byte:
+the core's test vectors verify a binding's implementation, and only the
+envelope <code>iss</code> is the binding's own. A binding <span class="bcp14">MUST</span> require verifiers
+of its anchors to reject an anchor whose algorithm prefix they do not
+recognize and never to treat an unrecognized prefix as <code>sha-256</code>. A new committed object uses the same
+envelope with a new <code>typ</code> under the core's extension rule.<a href="#section-2.4-1" class="pilcrow">¶</a></p>
+<p id="section-2.4-2">A binding <span class="bcp14">MAY</span> additionally commit to its native artifact with a
+mechanism of its own, as the AAuth binding's <code>s256</code> commits the
+mission blob. It <span class="bcp14">MUST</span> state that commitment's relationship to the
+anchors, including whether either substitutes for the other.<a href="#section-2.4-2" class="pilcrow">¶</a></p>
+<p id="section-2.4-3">Home: the Integrity Anchors and Canonicalization Rules sections of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, with the <code>typ</code> extension rule
+in its Extensibility section.<a href="#section-2.4-3" class="pilcrow">¶</a></p>
+<p id="section-2.4-4">Consumers: consent evidence (<code>consent_rendering_hash</code>), intent shaping
+(Shaping Evidence), the runtime layer (the materialized policy view),
+orchestration (<code>unwind_plan_hash</code>), the Mandate (the encoded digest
+form), and audit transparency (the committed evidence types).<a href="#section-2.4-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="credential">
+<section id="section-2.5">
+        <h3 id="name-mission-bound-credential">
+<a href="#section-2.5" class="section-number selfRef">2.5. </a><a href="#name-mission-bound-credential" class="section-name selfRef">Mission-Bound Credential</a>
+        </h3>
+<p id="section-2.5-1">This primitive is <span class="bcp14">OPTIONAL</span>, and it is where provision levels split.<a href="#section-2.5-1" class="pilcrow">¶</a></p>
+<p id="section-2.5-2">Under full provision, the binding issues a Mission-bound credential:
+a credential under the binding's own proof-of-possession discipline
+that names exactly one Mission, through the <code>mission</code> claim (<code>id</code>,
+<code>issuer</code>, <code>authority_hash</code>) or a substrate-native reference the
+Mission record binds (<a href="#identifier" class="auto internal xref">Section 2.1</a>), issued only while the
+referenced Mission is <code>active</code>: credential issuance is gated on
+Mission state. The <code>mission</code> claim shape is the interoperable
+default. Provision may be composite: the standalone MAS binding
+together with Authorization Servers consuming its issuance grants
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>) provides
+this credential jointly.<a href="#section-2.5-2" class="pilcrow">¶</a></p>
+<p id="section-2.5-3">Under partial provision, the binding issues no such credential. It
+<span class="bcp14">MUST</span> define a join per the externally established mode of the runtime
+profile's Mission binding establishment step: how a PDP verifies a
+supplied Mission reference against the acting credential before any
+authority is evaluated. The definition <span class="bcp14">MUST</span> state what the join proves
+and what it cannot prove; an unverified reference never establishes
+the Mission. The MAS's Mission Join is the profiled example
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-2.5-3" class="pilcrow">¶</a></p>
+<p id="section-2.5-4">Profiles that ride the credential itself (offline attenuation, and the
+token-carriage aspects of delegation) apply only under full provision.
+Of the substrate-neutral profiles, those that need a
+credential-to-Mission association (the runtime layer and the harness)
+route through the binding establishment step, which is what makes
+partial provision possible; the rest consume no credential at all
+(the composition table's credential column).<a href="#section-2.5-4" class="pilcrow">¶</a></p>
+<p id="section-2.5-5">Home: the Mission-Bound Access Tokens and The Mission Claim sections
+of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; the seam is the Mission
+binding establishment section of the runtime profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-2.5-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="keys">
+<section id="section-2.6">
+        <h3 id="name-mission-key-material">
+<a href="#section-2.6" class="section-number selfRef">2.6. </a><a href="#name-mission-key-material" class="section-name selfRef">Mission Key Material</a>
+        </h3>
+<p id="section-2.6-1">A binding <span class="bcp14">MUST</span> publish the Mission Issuer's signing keys, resolvable
+from the <code>issuer</code> by verifiers of its signed artifacts. Across a
+rotation, the verification key for each key identifier <span class="bcp14">SHOULD</span> remain
+resolvable while artifacts signed under it remain within the audit
+horizon (<a href="#audit-horizon" class="auto internal xref">Section 2.7</a>).<a href="#section-2.6-1" class="pilcrow">¶</a></p>
+<p id="section-2.6-2">Home: the Signing and Key Rotation section of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; the discovery surface is the
+binding's own metadata.<a href="#section-2.6-2" class="pilcrow">¶</a></p>
+<p id="section-2.6-3">Consumers: verifiers of Mission-bound credentials under full
+provision, consent evidence (its JWS verifies under the Issuer's
+published keys), the Mandate
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>), signed state surfaces
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), and audit statements
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-2.6-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="audit-horizon">
+<section id="section-2.7">
+        <h3 id="name-mission-audit-horizon">
+<a href="#section-2.7" class="section-number selfRef">2.7. </a><a href="#name-mission-audit-horizon" class="section-name selfRef">Mission Audit Horizon</a>
+        </h3>
+<p id="section-2.7-1">A binding <span class="bcp14">MUST</span> declare an audit horizon: the retention window for the
+Mission record and its evidence, at least the Mission's lifetime plus
+a declared post-expiry period. After a Mission reaches a terminal
+state, the binding <span class="bcp14">MUST</span> require its record to be retained for the
+audit horizon.<a href="#section-2.7-1" class="pilcrow">¶</a></p>
+<p id="section-2.7-2">Home: the Mission Record section of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-2.7-2" class="pilcrow">¶</a></p>
+<p id="section-2.7-3">Consumers: consent evidence, runtime enforcement evidence, and audit
+transparency size their retention to it; the security model's
+retention analysis assumes it.<a href="#section-2.7-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="approval-fidelity">
+<section id="section-2.8">
+        <h3 id="name-mission-approval-fidelity">
+<a href="#section-2.8" class="section-number selfRef">2.8. </a><a href="#name-mission-approval-fidelity" class="section-name selfRef">Mission Approval Fidelity</a>
+        </h3>
+<p id="section-2.8-1">A binding's approval surface <span class="bcp14">MUST</span> realize the core's approval-event
+steps, whatever its native ceremony:<a href="#section-2.8-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-2.8-2">
+<li id="section-2.8-2.1">
+            <p id="section-2.8-2.1.1">authenticate the Approver, at the deployment's authentication floor
+and satisfying the Intent's <code>controls.acr</code> where present;<a href="#section-2.8-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-2.8-2.2">
+            <p id="section-2.8-2.2.1">establish the Subject, never from unauthenticated client input;<a href="#section-2.8-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-2.8-2.3">
+            <p id="section-2.8-2.3.1">derive the Authority Set and render the derived authority for
+consent, not the goal or the Intent, with the core's display
+hardening (inert client strings, direction-override and confusable
+mitigation, derived authority visually distinct from client text);<a href="#section-2.8-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-2.8-2.4">
+            <p id="section-2.8-2.4.1">compute the integrity anchors over the consented Authority Set and
+the approved Intent (<a href="#anchors" class="auto internal xref">Section 2.4</a>); and<a href="#section-2.8-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-2.8-2.5">
+            <p id="section-2.8-2.5.1">create the Mission record in the <code>active</code> state atomically with the
+approval decision.<a href="#section-2.8-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-2.8-3">The binding <span class="bcp14">MUST</span> provide a Mission Intent submission channel through
+which a client proposes the Intent that step 1 authenticates against
+and step 3 derives from, preserving the core's Intent semantics (its
+<code>resources</code>, <code>controls</code>, and inert fields carried intact); a binding
+without such a channel cannot run the approval event, and the
+intent-shaping profile consumes this channel (<a href="#composition" class="auto internal xref">Section 3</a>).<a href="#section-2.8-3" class="pilcrow">¶</a></p>
+<p id="section-2.8-4">Derivation in step 3 <span class="bcp14">MUST</span> be bounded by the approved Mission Intent
+per the core's Mission Authority rules: each derived entry's resource
+is among the Intent's <code>resources</code>, the Intent's <code>controls</code> are
+respected, and <code>proposed_authority</code> is only narrowed, so
+<code>intent_hash</code> and <code>authority_hash</code> commit a task and its authority
+with a defined relationship.<a href="#section-2.8-4" class="pilcrow">¶</a></p>
+<p id="section-2.8-5">If the derived Authority Set changes between rendering and consent,
+the binding <span class="bcp14">MUST</span> require its implementations to recompute the anchors,
+and not to create the Mission without the Approver's consent to the
+changed set.<a href="#section-2.8-5" class="pilcrow">¶</a></p>
+<p id="section-2.8-6">Home: the Mission Approval section of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. The MAS shows the steps
+re-shaped for an asynchronous surface, approval bound to the
+submission rather than an authorization code; the AAuth binding shows them
+profiled onto a propose-clarify-approve interaction.<a href="#section-2.8-6" class="pilcrow">¶</a></p>
+<p id="section-2.8-7">Consumers: consent evidence binds to this event; every downstream
+guarantee (the anchors, the gating, the record) assumes it.<a href="#section-2.8-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="composition">
+<section id="section-3">
+      <h2 id="name-mission-composition">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-mission-composition" class="section-name selfRef">Mission Composition</a>
+      </h2>
+<p id="section-3-1">The table shows which substrate-neutral profiles consume which
+primitives, so a binding author reads off what a provision level
+hosts; each row mirrors the profile's own Mission Substrate statement
+(for consent evidence, its approval binding) and adds nothing. Marks:
+<code>X</code> consumed; <code>B</code> consumed through the Mission binding establishment
+step (the credential under full provision, the join under partial
+provision); <code>.</code> not consumed. Notes follow the table.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<span id="name-primitives-consumed-per-sub"></span><table class="center" id="table-1">
+        <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-primitives-consumed-per-sub" class="selfRef">Primitives consumed per substrate-neutral profile</a>
+        </caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Profile</th>
+            <th class="text-left" rowspan="1" colspan="1">Id</th>
+            <th class="text-left" rowspan="1" colspan="1">State</th>
+            <th class="text-left" rowspan="1" colspan="1">Auth</th>
+            <th class="text-left" rowspan="1" colspan="1">Anchor</th>
+            <th class="text-left" rowspan="1" colspan="1">Cred</th>
+            <th class="text-left" rowspan="1" colspan="1">Keys</th>
+            <th class="text-left" rowspan="1" colspan="1">Horizon</th>
+            <th class="text-left" rowspan="1" colspan="1">Appr</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Runtime and its decision API bindings</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">B</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Harness</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">B</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Orchestration</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Intent Shaping</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Consent Evidence</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Mandate</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Audit Transparency</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Consumption Metering</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Open-World Discovery</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">X</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+            <td class="text-left" rowspan="1" colspan="1">.</td>
+          </tr>
+        </tbody>
+      </table>
+<ul class="normal">
+<li class="normal" id="section-3-3.1">
+          <p id="section-3-3.1.1">The credential column is the split. Under partial provision, every
+<code>B</code> composes through the join and no other cell changes.<a href="#section-3-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.2">
+          <p id="section-3-3.2.1">State verification consumes Keys: the runtime row reads a signed
+state surface and verifies it under the Issuer's published keys
+(<a href="#lifecycle" class="auto internal xref">Section 2.2</a>, <a href="#keys" class="auto internal xref">Section 2.6</a>), so its Keys cell is <code>X</code>; a binding whose
+harness or orchestration verifies state itself consumes Keys
+likewise.<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.3">
+          <p id="section-3-3.3.1">The Mandate consumes the audit horizon: an absent <code>mandate_exp</code>
+binds the Mandate's evidence validity to the Mission's audit horizon
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>), so its Horizon cell is
+<code>X</code>; its Authority Set carriage is optional.<a href="#section-3-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.4">
+          <p id="section-3-3.4.1">Open-World Discovery is experimental: it keys on the identifier and
+the only-<code>active</code> rule, adjudicates encountered resources against the
+Authority Set under the subset rule, and commits Discovery Evidence
+through the anchor envelope
+(<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>); where the Progressive
+companion supplies a pre-consented ceiling
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>), that ceiling is
+a further adjudication input, as intent shaping takes the Intent
+structure as a further input.<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.5">
+          <p id="section-3-3.5.1">Consumption Metering defines no binding of its own: its counters key
+on the identifier, its <code>call_class</code> draws on the Authority Set
+representation, and its bounds are committed through the anchor
+envelope; enforcement composes through the runtime row's binding.<a href="#section-3-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.6">
+          <p id="section-3-3.6.1">The security model is not a row: it is informational, analyzes every
+primitive, and applies to any binding
+(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-3-3.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.7">
+          <p id="section-3-3.7.1">Some profiles name further inputs in their own Mission Substrate
+sections, which remain the authoritative per-consumer statements:
+intent shaping consumes the Mission Intent structure and a
+submission channel; audit transparency consumes the evidence types
+and their canonical bytes; the harness and orchestration import the
+runtime profile's evidence conventions.<a href="#section-3-3.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-3.8">
+          <p id="section-3-3.8.1">Profiles bound to OAuth wire mechanics (expansion, child delegation,
+offline attenuation, cross-domain projection) are not
+substrate-neutral and are not rows; a binding wanting those
+capabilities defines its own surfaces. The documents behind these
+profile names are mapped by the architecture
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-3-3.8.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="conformance">
+<section id="section-4">
+      <h2 id="name-mission-substrate-conforman">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-mission-substrate-conforman" class="section-name selfRef">Mission Substrate Conformance</a>
+      </h2>
+<p id="section-4-1">This document defines one conformance role, claimed by a
+specification, not an implementation; implementations conform to the
+binding's own conformance clauses.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2">A <strong>Mission Substrate Binding</strong>:<a href="#section-4-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-4-3">
+<li id="section-4-3.1">
+          <p id="section-4-3.1.1">maintains the Mission record, immutable except its state, and
+provides the Mission Identifier and <code>issuer</code> (<a href="#identifier" class="auto internal xref">Section 2.1</a>);<a href="#section-4-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-4-3.2">
+          <p id="section-4-3.2.1">provides the lifecycle state space with the only-<code>active</code> rule,
+fail-safe treatment of unrecognized states, verbatim extension
+states, an authenticated, possession-independent means to
+transition a Mission to <code>revoked</code> by its Mission Identifier, and a
+state source with a stated staleness bound (<a href="#lifecycle" class="auto internal xref">Section 2.2</a>);<a href="#section-4-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-4-3.3">
+          <p id="section-4-3.3.1">represents the Authority Set in the core's shape and applies the
+subset rule and Common Constraint value-space semantics at every
+narrowing (<a href="#authority" class="auto internal xref">Section 2.3</a>);<a href="#section-4-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-4-3.4">
+          <p id="section-4-3.4.1">computes the integrity anchors over the core's envelope and
+canonicalization, rejects unrecognized algorithm prefixes, and
+states the relationship of any native commitment to the anchors
+(<a href="#anchors" class="auto internal xref">Section 2.4</a>);<a href="#section-4-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-4-3.5">
+          <p id="section-4-3.5.1">either provides the Mission-bound credential with issuance gating,
+or defines a join stating what it proves and what it cannot prove
+(<a href="#credential" class="auto internal xref">Section 2.5</a>);<a href="#section-4-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-4-3.6">
+          <p id="section-4-3.6.1">publishes resolvable issuer key material with rotation retention
+(<a href="#keys" class="auto internal xref">Section 2.6</a>);<a href="#section-4-3.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-4-3.7">
+          <p id="section-4-3.7.1">declares an audit horizon over the record and its evidence
+(<a href="#audit-horizon" class="auto internal xref">Section 2.7</a>); and<a href="#section-4-3.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-4-3.8">
+          <p id="section-4-3.8.1">realizes the approval-event steps on its approval surface
+(<a href="#approval-fidelity" class="auto internal xref">Section 2.8</a>).<a href="#section-4-3.8.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<div id="statement">
+<section id="section-4.1">
+        <h3 id="name-mission-substrate-statement">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-mission-substrate-statement" class="section-name selfRef">Mission Substrate Statement</a>
+        </h3>
+<p id="section-4.1-1">A Mission Substrate Binding <span class="bcp14">MUST</span> publish a Mission Substrate
+Statement: a section of the binding, following the existing bindings'
+pattern, that states how the binding provides each primitive of
+<a href="#requirements" class="auto internal xref">Section 2</a>. The statement names:<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-4.1-2">
+<li id="section-4.1-2.1">
+            <p id="section-4.1-2.1.1">the provision level: full provision, or partial provision with the
+section defining its join and the profiles that consequently do
+not apply (<a href="#credential" class="auto internal xref">Section 2.5</a>);<a href="#section-4.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.1-2.2">
+            <p id="section-4.1-2.2.1">the identifier mapping and any substrate-native Mission reference
+(<a href="#identifier" class="auto internal xref">Section 2.1</a>);<a href="#section-4.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.1-2.3">
+            <p id="section-4.1-2.3.1">each state source and its staleness bound (<a href="#lifecycle" class="auto internal xref">Section 2.2</a>);<a href="#section-4.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.1-2.4">
+            <p id="section-4.1-2.4.1">how the binding carries the Authority Set (token payload,
+status-served view, or native artifact) and where each narrowing
+occurs (<a href="#authority" class="auto internal xref">Section 2.3</a>);<a href="#section-4.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.1-2.5">
+            <p id="section-4.1-2.5.1">the value its anchors bind as the envelope <code>iss</code>, and the
+relationship of any native commitment to the anchors
+(<a href="#anchors" class="auto internal xref">Section 2.4</a>);<a href="#section-4.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.1-2.6">
+            <p id="section-4.1-2.6.1">the discovery surface for issuer key material (<a href="#keys" class="auto internal xref">Section 2.6</a>);<a href="#section-4.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.1-2.7">
+            <p id="section-4.1-2.7.1">the audit horizon (<a href="#audit-horizon" class="auto internal xref">Section 2.7</a>); and<a href="#section-4.1-2.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.1-2.8">
+            <p id="section-4.1-2.8.1">the surface that realizes each approval-event step
+(<a href="#approval-fidelity" class="auto internal xref">Section 2.8</a>).<a href="#section-4.1-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-4.1-3">Each item is checkable against the binding's own text; a claim its
+text does not support is a conformance failure.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-5">
+      <h2 id="name-security-considerations">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-5-1">This document defines no mechanism; its security posture is the core's
+plus the binding's own. Two considerations are specific to binding.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<div id="the-binding-as-trust-root">
+<section id="section-5.1">
+        <h3 id="name-the-binding-as-trust-root">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-the-binding-as-trust-root" class="section-name selfRef">The Binding as Trust Root</a>
+        </h3>
+<p id="section-5.1-1">A Mission Substrate Binding implements the Mission Issuer, the root of
+trust of the security model's trusted base: it derives authority, runs
+the approval event, commits the anchors, and gates or joins. Mission
+Issuer compromise semantics apply to any binding: a compromised issuer
+mints or attributes arbitrary authority, forges approvals, and reports
+false state; consent evidence and audit transparency make that
+detectable after the fact, not preventable
+(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>). A new binding
+re-derives only the substrate-specific entries of that model.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-join-assurance">
+<section id="section-5.2">
+        <h3 id="name-mission-join-assurance">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-mission-join-assurance" class="section-name selfRef">Mission Join Assurance</a>
+        </h3>
+<p id="section-5.2-1">Partial provision moves the credential-to-Mission binding from
+cryptographic carriage to the join, so the join's assurance bounds
+every downstream guarantee that names "this credential under this
+Mission". A binding <span class="bcp14">MUST</span> state that assurance honestly: what the join
+proves, what it cannot prove, and the residuals that remain. The MAS's
+Join Spoofing analysis is the pattern
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>): the join proves
+the credential belongs to the subject and client the Mission names, no
+mechanism in that mode proves the credential was derived under the
+Mission, and mapping coarseness and same-party misattribution remain
+as residuals.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="state-source-fidelity">
+<section id="section-5.3">
+        <h3 id="name-state-source-fidelity">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-state-source-fidelity" class="section-name selfRef">State Source Fidelity</a>
+        </h3>
+<p id="section-5.3-1">Revocation reaches a consumer only through a state source, so the
+staleness bound stated for each source (<a href="#lifecycle" class="auto internal xref">Section 2.2</a>) is what the
+runtime profile computes its freshness rules and permit lifetimes
+from (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). A source that
+cannot meet its stated bound turns those fail-closed rules into
+fail-open in effect: consumers rely on state the binding reports as
+fresher than it is. The bound is a fidelity claim about the binding's
+infrastructure, of the same kind as the join's assurance statement,
+and belongs in the Mission Substrate Statement with the same honesty.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-6">
+      <h2 id="name-privacy-considerations">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-6-1">This document introduces no data element. The core's privacy
+considerations apply to any binding: the Mission identifier is a
+correlation handle, and the Mission record concentrates task data at
+the Mission Issuer; each hosted profile's own apply unchanged.<a href="#section-6-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-7">
+      <h2 id="name-iana-considerations">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-7-1">This document has no IANA actions.<a href="#section-7-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-8">
+      <h2 id="name-references">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-8.1">
+        <h3 id="name-normative-references">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+      <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-8.2">
+        <h3 id="name-informative-references">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-aauth">[I-D.draft-mcguinness-mission-aauth]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for AAuth"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"An Architecture for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-audit">[I-D.draft-mcguinness-mission-audit]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Audit Transparency"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-discovery">[I-D.draft-mcguinness-mission-discovery]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Open-World Discovery"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-mandate">[I-D.draft-mcguinness-mission-mandate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Mandate"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-security-model">[I-D.draft-mcguinness-mission-security-model]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Security Model"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-issuance-grant">[I-D.draft-mcguinness-oauth-mission-issuance-grant]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Issuance Grant for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-progressive">[I-D.draft-mcguinness-oauth-mission-progressive]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Progressive Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="crosswalk">
+<section id="appendix-A">
+      <h2 id="name-binding-crosswalk">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-binding-crosswalk" class="section-name selfRef">Binding Crosswalk</a>
+      </h2>
+<p id="appendix-A-1">This appendix is informative. The three existing bindings are
+conforming instantiations of this contract, recorded here rather
+than through the Mission Substrate Statement (<a href="#statement" class="auto internal xref">Section 4.1</a>), which
+they predate; each binding's own Mission Substrate section is its
+authoritative statement.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-2">
+        <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Binding</th>
+            <th class="text-left" rowspan="1" colspan="1">Where the contract is satisfied</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">OAuth core (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Full provision. Each requirement of <a href="#requirements" class="auto internal xref">Section 2</a> points at the core section that defines it; the core's definitions are this contract's source text.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Mission Authority Server (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Partial provision by design. Its Mission Substrate section provides the identifier, lifecycle, Authority Set, anchors, and audit horizon (each the core's, unchanged), forgoes the Mission-bound credential and issuance gating, satisfies the credential requirement's join alternative with the Mission Join, and realizes approval and key publication on its own surfaces.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">AAuth binding (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Full provision in PS-asserted mode. Its Mission Substrate section enumerates all eight requirements point by point; federated mode is Reference-only where Access Servers do not carry the <code>mission</code> members.</td>
+          </tr>
+        </tbody>
+      </table>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-B">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-B-1">This document gives a normative home to the substrate interface first
+consolidated informationally by the architecture document. The author
+thanks the Mission-Bound Authorization implementer community for
+feedback.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-C">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
