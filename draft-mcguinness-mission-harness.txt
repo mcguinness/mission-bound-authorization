@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            10 July 2026
-Expires: 11 January 2027
+Intended status: Standards Track                            11 July 2026
+Expires: 12 January 2027
 
 
                      Mission-Aware Agent Harnesses
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 11 January 2027.
+   This Internet-Draft will expire on 12 January 2027.
 
 Copyright Notice
 
@@ -1001,7 +1001,15 @@ Table of Contents
    registration), and a harness that registers its evidence publishes
    its signing key in the deployment key set alongside the PEP key the
    runtime profile requires, so a relying party can verify the harness
-   as the record's authoritative producer.
+   as the record's authoritative producer.  That key follows the
+   issuance profile's retired-key rule, extended to this artifact's
+   retention bound ([I-D.draft-mcguinness-oauth-mission]): a retired
+   harness signing key MUST remain resolvable in the published key set
+   for at least the evidence retention window.  The compromise exception
+   carries over with it: a key known or suspected compromised is
+   published as revoked or marked with a compromise time, per the core
+   rule, and evidence signed under it after that time is unverifiable
+   rather than verified.
 
 15.1.  Harness Evidence Object
 

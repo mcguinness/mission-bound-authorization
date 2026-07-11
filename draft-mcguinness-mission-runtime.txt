@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            10 July 2026
-Expires: 11 January 2027
+Intended status: Standards Track                            11 July 2026
+Expires: 12 January 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -64,7 +64,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 11 January 2027.
+   This Internet-Draft will expire on 12 January 2027.
 
 Copyright Notice
 
@@ -470,6 +470,10 @@ Table of Contents
 
    *  the credential custody mode for each mediated class (mediated
       custody in the PEP, or agent-held, Section 4.6);
+
+   *  the conformance tier claimed for each mediated action class: the
+      core enforcement tier, or the transaction-assurance tier where
+      claimed or required (the tier vocabulary below);
 
    *  the PDP or PDPs that evaluate Mission-bound decisions;
 
@@ -2517,8 +2521,9 @@ Appendix B.  Policy View Worked Example
 
    This non-normative example shows the policy_view_id computation of
    Section 7.3 over a minimal materialized-view envelope for the same
-   Mission.  The payload here is reduced to the two members the
-   committed view is required to bind, mission_id and authority_hash; a
+   Mission.  The payload here is reduced to the two members every
+   committed view binds, mission_id and authority_hash; a deployment
+   that serves a state version also binds it (Section 7.3), and a
    deployment's payload also carries its evaluable materialized form,
    which this document does not standardize.
 

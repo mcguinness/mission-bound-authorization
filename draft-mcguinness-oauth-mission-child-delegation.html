@@ -1064,7 +1064,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 11 January 2027</td>
+<td class="center">Expires 12 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1077,12 +1077,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-child-delegation-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-10" class="published">10 July 2026</time>
+<time datetime="2026-07-11" class="published">11 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-11">11 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-12">12 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1139,7 +1139,7 @@ Mission is never created by session ancestry alone.<a href="#section-abstract-1"
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 11 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 12 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2360,7 +2360,15 @@ Mission Status operation and token introspection,
 child's own state when the parent resumes to <code>active</code>. A child whose own
 <code>expires_at</code> passes during the suspension is <code>expired</code>: expiry takes
 precedence over the projected <code>suspended</code> state.<a href="#section-10.1-7" class="pilcrow">¶</a></p>
-<p id="section-10.1-8">Likewise, once a terminal cascade trigger (<a href="#cascade" class="auto internal xref">Section 10</a>) commits at any
+<p id="section-10.1-8">Projection onset and lift are not silent. Each is a committed
+metadata-only change on every affected child for the purposes of the
+status profile's state version
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>): the child's state
+version increments at onset and again at lift, and, where the
+deployment runs Lifecycle Signals
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), a lifecycle-change
+event is emitted for each affected child.<a href="#section-10.1-8" class="pilcrow">¶</a></p>
+<p id="section-10.1-9">Likewise, once a terminal cascade trigger (<a href="#cascade" class="auto internal xref">Section 10</a>) commits at any
 ancestor, the issuer <span class="bcp14">MUST</span> report each dependent descendant's state as
 <code>cascaded</code> on every state-reporting surface (the Mission Status
 operation and token introspection,
@@ -2368,30 +2376,30 @@ operation and token introspection,
 of each descendant's own per-generation transition. The transitive
 transitions still commit in generation order (<a href="#cascade" class="auto internal xref">Section 10</a>); this rule
 bounds only what a consumer reads, so a consumer keying on a
-descendant's own state never reads <code>active</code> mid-cascade.<a href="#section-10.1-8" class="pilcrow">¶</a></p>
-<p id="section-10.1-9">Expiry takes precedence over <code>cascaded</code> as it does over the projected
+descendant's own state never reads <code>active</code> mid-cascade.<a href="#section-10.1-9" class="pilcrow">¶</a></p>
+<p id="section-10.1-10">Expiry takes precedence over <code>cascaded</code> as it does over the projected
 <code>suspended</code> state: where a child's own <code>expires_at</code> coincides with a
 terminal cascade of its parent (for example, a child whose <code>expires_at</code>
 equals the parent's on parent expiry), the child's own <code>expired</code> state
 wins and it is reported <code>expired</code>, not <code>cascaded</code>. This matches the
 <code>cascaded</code> state, which a child enters only when its own expiry was not
-reached.<a href="#section-10.1-9" class="pilcrow">¶</a></p>
-<p id="section-10.1-10">Mission Status for a Child Mission <span class="bcp14">SHOULD</span> also include a parent
-projection for authorized callers, as additional context:<a href="#section-10.1-10" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-10.1-11">
-          <dt id="section-10.1-11.1">
+reached.<a href="#section-10.1-10" class="pilcrow">¶</a></p>
+<p id="section-10.1-11">Mission Status for a Child Mission <span class="bcp14">SHOULD</span> also include a parent
+projection for authorized callers, as additional context:<a href="#section-10.1-11" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10.1-12">
+          <dt id="section-10.1-12.1">
 <code>parent</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-11.2">
-            <p id="section-10.1-11.2.1">Object containing parent <code>id</code>, <code>issuer</code>, current parent <code>state</code> when
-known, <code>cascade_mode</code>, and freshness information.<a href="#section-10.1-11.2.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-10.1-12.2">
+            <p id="section-10.1-12.2.1">Object containing parent <code>id</code>, <code>issuer</code>, current parent <code>state</code> when
+known, <code>cascade_mode</code>, and freshness information.<a href="#section-10.1-12.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-10.1-12">Under <code>immediate</code> cascade a consumer needs no parent-state check of its
+<p id="section-10.1-13">Under <code>immediate</code> cascade a consumer needs no parent-state check of its
 own: it relies on the Mission Issuer's child state transition, read
 from the child's own state surfaces. The consumer obligations of the
 experimental consumer-verified modes are defined with those modes
-(<a href="#experimental-cascade" class="auto internal xref">Appendix A</a>).<a href="#section-10.1-12" class="pilcrow">¶</a></p>
+(<a href="#experimental-cascade" class="auto internal xref">Appendix A</a>).<a href="#section-10.1-13" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

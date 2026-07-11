@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            10 July 2026
-Expires: 11 January 2027
+Intended status: Standards Track                            11 July 2026
+Expires: 12 January 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 11 January 2027.
+   This Internet-Draft will expire on 12 January 2027.
 
 Copyright Notice
 
@@ -418,6 +418,15 @@ Table of Contents
       member is absent and the PDP MUST establish state from its own
       source or deny with stale_state.
 
+   version:  OPTIONAL.  An integer. the Mission's state version as the
+      status profile defines it
+      ([I-D.draft-mcguinness-oauth-mission-status]), populated where the
+      PEP holds it, under the same conditionality as state.  It lets the
+      PDP compare the PEP's observation against the state version
+      committed in its loaded materialized policy view
+      ([I-D.draft-mcguinness-mission-runtime]) and treat a mismatch as
+      staleness.
+
    policy_version:  REQUIRED when known.  A string. the policy_version
       recorded at the approval event.  It is a Mission-record field
       ([I-D.draft-mcguinness-oauth-mission]) and is not carried on the
@@ -769,8 +778,12 @@ Table of Contents
        view_inconsistent on any inequality.  When
        context.mission.policy_view_id is present, it MUST equal the
        loaded view's policy_view_id, and the PDP returns
-       view_inconsistent on inequality.  A PDP MUST NOT fail a decision
-       solely because the optional policy_view_id or policy_version was
+       view_inconsistent on inequality.  When context.mission.version is
+       present, the PDP compares it against the state version committed
+       in the loaded view ([I-D.draft-mcguinness-mission-runtime]) and
+       treats a mismatch as staleness (stale_state): one side has missed
+       a committed change.  A PDP MUST NOT fail a decision solely
+       because the optional policy_view_id or policy_version was
        omitted; the view the PDP loaded is authoritative.
 
    3.  When context.credential.expires_at is present, it has not passed;
@@ -1922,7 +1935,11 @@ Table of Contents
    The PEP or executor emits an Execution Evidence Object after the
    authorized action's outcome is determined.  It records whether the
    permitted action was attempted, completed, failed, or suppressed,
-   linked to the Decision Evidence by decision_id.
+   linked to the Decision Evidence by decision_id.  Emission follows the
+   runtime profile's class rule: Execution Evidence is required for the
+   high-consequence classes and for every further class the deployment
+   claims under the runtime profile's transaction-assurance tier
+   ([I-D.draft-mcguinness-mission-runtime]).
 
 8.1.  Members
 
@@ -2266,8 +2283,14 @@ Table of Contents
    *  key permit caches on the permit's bound fields and never relay a
       permit as a bearer grant (Section 6.7); and
 
-   *  emit Execution Evidence and pre-decision Refusal Records as
-      Section 8 and Section 7.2 require.
+   *  emit pre-decision Refusal Records as Section 7.2 requires, and
+      Execution Evidence for the classes its emission rule covers, as
+      Section 8 requires.
+
+   Of these, the permit-lease and Execution Evidence items are the
+   machinery of the runtime profile's transaction-assurance tier
+   ([I-D.draft-mcguinness-mission-runtime]): a PEP carries them for the
+   classes that tier covers.
 
    A PDP conforming to this binding MUST:
 
@@ -2362,9 +2385,15 @@ Table of Contents
    publishes its JWKS at a deployment-published location named in the
    enforcement scope statement ([I-D.draft-mcguinness-mission-runtime]),
    and the PEP or executor key set is published and named there
-   likewise.  A retired signing key MUST remain resolvable in the
+   likewise.  The retired-key rule of the issuance profile's key
+   management ([I-D.draft-mcguinness-oauth-mission]) extends to evidence
+   signing keys: a retired signing key MUST remain resolvable in the
    published key set for at least the evidence retention window, so
-   records signed before a rotation stay verifiable after it.
+   records signed before a rotation stay verifiable after it.  The
+   compromise exception carries over with it: a key known or suspected
+   compromised is published as revoked or marked with a compromise time,
+   per the core rule, and evidence signed under it after that time is
+   unverifiable rather than verified.
 
    Implementations MUST reject evidence whose format is unsupported
    rather than accepting it unverified.
@@ -2614,6 +2643,11 @@ Table of Contents
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-status]
+              McGuinness, K., "Mission Status and Lifecycle for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-status.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,

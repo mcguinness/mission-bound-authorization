@@ -1065,7 +1065,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 11 January 2027</td>
+<td class="center">Expires 12 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1078,12 +1078,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-harness-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-10" class="published">10 July 2026</time>
+<time datetime="2026-07-11" class="published">11 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-11">11 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-12">12 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1141,7 +1141,7 @@ treats session continuity as proof that Mission authority continues.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 11 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 12 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2491,7 +2491,15 @@ imported evidence conventions, its type identifier is
 pending registration), and a harness that registers its evidence
 publishes its signing key in the deployment key set alongside the
 PEP key the runtime profile requires, so a relying party can verify
-the harness as the record's authoritative producer.<a href="#section-15-7" class="pilcrow">¶</a></p>
+the harness as the record's authoritative producer. That key follows
+the issuance profile's retired-key rule, extended to this artifact's
+retention bound (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): a retired
+harness signing key <span class="bcp14">MUST</span> remain resolvable in the published key set
+for at least the evidence retention window. The compromise exception
+carries over with it: a key known or suspected compromised is
+published as revoked or marked with a compromise time, per the core
+rule, and evidence signed under it after that time is unverifiable
+rather than verified.<a href="#section-15-7" class="pilcrow">¶</a></p>
 <div id="harness-evidence-object">
 <section id="section-15.1">
         <h3 id="name-harness-evidence-object">

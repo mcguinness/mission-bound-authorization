@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            10 July 2026
-Expires: 11 January 2027
+Intended status: Standards Track                            11 July 2026
+Expires: 12 January 2027
 
 
                  Mission Consent Evidence for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 11 January 2027.
+   This Internet-Draft will expire on 12 January 2027.
 
 Copyright Notice
 
@@ -256,7 +256,10 @@ Table of Contents
       retrieves is bound to the one used to render this disclosure.
 
    locale:  REQUIRED.  A string identifying the locale used for
-      presentation.
+      presentation, a language tag under BCP 47 [BCP47].  The model is
+      one locale, one disclosure, one hash: a deployment that presents
+      the disclosure in multiple locales commits one disclosure per
+      locale presented, each with its own rendering hash.
 
    mission_summary:  REQUIRED.  An object presenting the task to the
       Approver.  It MUST carry the rendered goal, the rendered
@@ -599,7 +602,11 @@ Table of Contents
       consent_rendering_hash.  This is an additive hook; the issuance
       profile records one accountable Approver
       ([I-D.draft-mcguinness-oauth-mission]) and that model is
-      unchanged.
+      unchanged.  Where the deferred-approval profile's Approval
+      Decision Set is recorded
+      ([I-D.draft-mcguinness-oauth-mission-approval]), the decision set
+      is authoritative for approval-governance facts and co_approvals is
+      its consent-evidence projection.
 
    approval_authority:  OPTIONAL.  A reference identifying the standing
       policy or delegation the Approver acted under.  An additive hook
@@ -1002,7 +1009,10 @@ Table of Contents
    details.  Deployments SHOULD protect it at least as strongly as
    Mission records and runtime evidence.  Where possible, portable
    records SHOULD carry hashes or references rather than full rendered
-   text, while still allowing authorized audit reconstruction.
+   text, while still allowing authorized audit reconstruction.  Evidence
+   removed under a legal basis is erased through the audit profile's
+   erasure record ([I-D.draft-mcguinness-mission-audit]), which keeps
+   the removal itself accountable.
 
    A global sequence counter leaks approval volume: a holder of two
    evidence records can read the gap between their sequence values as
@@ -1113,6 +1123,18 @@ Table of Contents
 14.  References
 
 14.1.  Normative References
+
+   [BCP47]    Best Current Practice 47,
+              <https://www.rfc-editor.org/info/bcp47>.
+              At the time of writing, this BCP comprises the following:
+
+              Phillips, A., Ed. and M. Davis, Ed., "Matching of Language
+              Tags", BCP 47, RFC 4647, DOI 10.17487/RFC4647, September
+              2006, <https://www.rfc-editor.org/info/rfc4647>.
+
+              Phillips, A., Ed. and M. Davis, Ed., "Tags for Identifying
+              Languages", BCP 47, RFC 5646, DOI 10.17487/RFC5646,
+              September 2009, <https://www.rfc-editor.org/info/rfc5646>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            10 July 2026
-Expires: 11 January 2027
+Intended status: Standards Track                            11 July 2026
+Expires: 12 January 2027
 
 
                     Mission Management for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 11 January 2027.
+   This Internet-Draft will expire on 12 January 2027.
 
 Copyright Notice
 
@@ -310,7 +310,10 @@ Table of Contents
    populated, at issuance from deployment policy or by an authorized
    management operation, is deployment-defined; a dedicated metadata
    update operation is deferred until deployment experience shows the
-   shape.
+   shape.  However populated, a change to administrative metadata that
+   affects any caller's filter scope MUST be recorded as an audited
+   management event, since it redraws who may see and operate on the
+   Mission (Section 3.2).
 
 5.  Mission Filter
 
@@ -349,6 +352,9 @@ Table of Contents
    admin_domain:  A string.  Matches the administrative metadata's
       admin_domain.
 
+   tenant:  A string.  Matches the administrative metadata's tenant
+      (Section 4).
+
    label:  A string.  Matches a Mission whose administrative labels
       include it.
 
@@ -358,6 +364,11 @@ Table of Contents
    The AS MUST refuse a filter carrying an unrecognized member with
    invalid_request, so a filter is never silently broader than the
    caller intended.
+
+   On a standalone Mission Authority Server, the filter members that
+   match subject and client_id are evaluated under the MAS mapping
+   contract for those identities
+   ([I-D.draft-mcguinness-mission-authority-server]).
 
 6.  Mission Enumeration
 
@@ -389,9 +400,10 @@ Table of Contents
    The signed payload (Section 3) carries:
 
    missions:  REQUIRED.  An array of Mission summary objects, each
-      carrying id, state, subject (an object with iss and sub),
-      client_id, created_at, and expires_at from the Mission record,
-      plus the lineage members successor, predecessor
+      carrying id, state, version (the Mission's state version,
+      [I-D.draft-mcguinness-oauth-mission-status]), subject (an object
+      with iss and sub), client_id, created_at, and expires_at from the
+      Mission record, plus the lineage members successor, predecessor
       ([I-D.draft-mcguinness-oauth-mission-expansion]), and parent
       ([I-D.draft-mcguinness-oauth-mission-child-delegation]) where
       present on the record.  A summary MUST NOT carry the Mission
@@ -543,6 +555,13 @@ Table of Contents
    membership and MUST NOT be operated on; a member that transitioned in
    the interim yields an already_terminal or illegal_transition outcome
    rather than a surprise transition (Section 12.3).
+
+   The dry-run-then-execute exchange with its pinned membership is the
+   bulk-path analog of the status profile's expected_version guard
+   ([I-D.draft-mcguinness-oauth-mission-status]), and a deployment that
+   requires expected_version for an operation it classifies high-risk
+   satisfies that requirement on the bulk path through the pinned
+   membership plus the per-member outcomes (Section 7.3).
 
 7.3.  Outcome Manifest
 

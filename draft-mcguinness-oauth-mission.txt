@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            10 July 2026
-Expires: 11 January 2027
+Intended status: Standards Track                            11 July 2026
+Expires: 12 January 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -64,7 +64,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 11 January 2027.
+   This Internet-Draft will expire on 12 January 2027.
 
 Copyright Notice
 
@@ -143,6 +143,7 @@ Table of Contents
    16. Privacy Considerations
      16.1.  Mission Identifier Correlation
      16.2.  Token Payload Disclosure
+     16.3.  Intent Retention and Anchor Disclosure
    17. IANA Considerations
      17.1.  OAuth Parameters Registration
      17.2.  The Mission Resource Access Authorization Details Type
@@ -1474,15 +1475,21 @@ Table of Contents
       is every token derived from it.  Multi-party approval raises the
       assurance of _how_ approval was obtained; it does not change the
       artifacts this document produces.  A deployment requiring dual
-      control today can obtain the additional approvals out of band and
-      record one accountable Approver under the same authority_hash;
-      this document simply does not natively represent the co-approvers.
+      control records one accountable Approver under the same
+      authority_hash; this document does not natively represent the co-
+      approvers.
 
    *  *Approval-authority provenance* (the standing policy or delegation
       an administrator or headless approval traces back to).  This is
       governance state about who stands behind a delegated approval, not
       part of binding tokens to approved authority, and is left to a
       governance layer.
+
+   Both remain out of the core.  Where a deployment needs them, they are
+   recorded by the deferred-approval profile's Approval Decision Set
+   ([I-D.draft-mcguinness-oauth-mission-approval]) and consent
+   evidence's co-approval members
+   ([I-D.draft-mcguinness-oauth-mission-consent-evidence]).
 
 6.3.  Integrity Anchors
 
@@ -2876,6 +2883,18 @@ Table of Contents
    document recommends them (Section 8).  The privacy considerations of
    [RFC9396] apply to the carried authorization_details.
 
+16.3.  Intent Retention and Anchor Disclosure
+
+   The Mission record's Intent members (goal, constraints) are personal-
+   data sinks: they carry whatever task description the user supplied.
+   Record retention and erasure follow the deployment's retention
+   policy, with the audit profile's erasure record as the transparency-
+   side mechanism ([I-D.draft-mcguinness-mission-audit]).  The integrity
+   anchors are unsalted commitments: a party holding a candidate Intent
+   can confirm it against intent_hash, so over low-entropy or guessable
+   content the anchor is a disclosure channel, and deployments treat it
+   as one when the Intent itself is sensitive.
+
 17.  IANA Considerations
 
 17.1.  OAuth Parameters Registration
@@ -3141,6 +3160,11 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-klrc-aiagent-
               auth-03>.
 
+   [I-D.draft-mcguinness-mission-audit]
+              McGuinness, K., "Mission Audit Transparency", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-audit.html>.
+
    [I-D.draft-mcguinness-mission-metering]
               McGuinness, K., "Mission Consumption Metering", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -3164,6 +3188,12 @@ Table of Contents
               client-instance-assertion-01, 24 June 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-client-instance-assertion-01>.
+
+   [I-D.draft-mcguinness-oauth-mission-approval]
+              McGuinness, K., "Mission Deferred Approval for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-
+              approval.html>.
 
    [I-D.draft-mcguinness-oauth-mission-consent-evidence]
               McGuinness, K., "Mission Consent Evidence for OAuth 2.0",

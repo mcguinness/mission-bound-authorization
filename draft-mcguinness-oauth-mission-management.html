@@ -1069,7 +1069,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 11 January 2027</td>
+<td class="center">Expires 12 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1082,12 +1082,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-management-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-10" class="published">10 July 2026</time>
+<time datetime="2026-07-11" class="published">11 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-11">11 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-12">12 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1146,7 +1146,7 @@ It is optional; a deployment that does not adopt it is unaffected.<a href="#sect
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 11 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 12 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1553,7 +1553,10 @@ whose filter scope covers the Mission (<a href="#enumeration" class="auto intern
 object is populated, at issuance from deployment policy or by an
 authorized management operation, is deployment-defined; a dedicated
 metadata update operation is deferred until deployment experience
-shows the shape.<a href="#section-4-3" class="pilcrow">¶</a></p>
+shows the shape. However populated, a change to administrative
+metadata that affects any caller's filter scope <span class="bcp14">MUST</span> be recorded as
+an audited management event, since it redraws who may see and operate
+on the Mission (<a href="#filter-scope" class="auto internal xref">Section 3.2</a>).<a href="#section-4-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="filter">
@@ -1627,10 +1630,17 @@ administrative metadata's <code>owner</code> (<a href="#admin-metadata" class="a
 </dd>
         <dd class="break"></dd>
 <dt id="section-5-2.17">
-<code>label</code>:</dt>
+<code>tenant</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-5-2.18">
-          <p id="section-5-2.18.1">A string. Matches a Mission whose administrative <code>labels</code> include
-it.<a href="#section-5-2.18.1" class="pilcrow">¶</a></p>
+          <p id="section-5-2.18.1">A string. Matches the administrative metadata's <code>tenant</code>
+(<a href="#admin-metadata" class="auto internal xref">Section 4</a>).<a href="#section-5-2.18.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.19">
+<code>label</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.20">
+          <p id="section-5-2.20.1">A string. Matches a Mission whose administrative <code>labels</code> include
+it.<a href="#section-5-2.20.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1639,6 +1649,10 @@ no Mission where the deployment maintains none.<a href="#section-5-3" class="pil
 <p id="section-5-4">The AS <span class="bcp14">MUST</span> refuse a filter carrying an unrecognized member with
 <code>invalid_request</code>, so a filter is never silently broader than the
 caller intended.<a href="#section-5-4" class="pilcrow">¶</a></p>
+<p id="section-5-5">On a standalone Mission Authority Server, the filter members that
+match <code>subject</code> and <code>client_id</code> are evaluated under the MAS mapping
+contract for those identities
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-5-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="enumeration">
@@ -1698,7 +1712,9 @@ to <code>enumerate</code> is read-only and does not consume it.<a href="#section
 <code>missions</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.1-2.2">
             <p id="section-6.1-2.2.1"><span class="bcp14">REQUIRED</span>. An array of Mission summary objects, each carrying
-<code>id</code>, <code>state</code>, <code>subject</code> (an object with <code>iss</code> and <code>sub</code>),
+<code>id</code>, <code>state</code>, <code>version</code> (the Mission's state version,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), <code>subject</code> (an
+object with <code>iss</code> and <code>sub</code>),
 <code>client_id</code>, <code>created_at</code>, and <code>expires_at</code> from the Mission
 record, plus the lineage members <code>successor</code>, <code>predecessor</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), and <code>parent</code>
@@ -1908,6 +1924,12 @@ newly matching the filter, after the dry run is not in the membership
 and <span class="bcp14">MUST NOT</span> be operated on; a member that transitioned in the interim
 yields an <code>already_terminal</code> or <code>illegal_transition</code> outcome rather
 than a surprise transition (<a href="#bulk-token-security" class="auto internal xref">Section 12.3</a>).<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+<p id="section-7.2-4">The dry-run-then-execute exchange with its pinned membership is the
+bulk-path analog of the status profile's <code>expected_version</code> guard
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), and a deployment
+that requires <code>expected_version</code> for an operation it classifies
+high-risk satisfies that requirement on the bulk path through the
+pinned membership plus the per-member outcomes (<a href="#manifest" class="auto internal xref">Section 7.3</a>).<a href="#section-7.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="manifest">

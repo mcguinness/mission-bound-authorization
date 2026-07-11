@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            10 July 2026
-Expires: 11 January 2027
+Intended status: Standards Track                            11 July 2026
+Expires: 12 January 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 11 January 2027.
+   This Internet-Draft will expire on 12 January 2027.
 
 Copyright Notice
 
@@ -331,6 +331,7 @@ Table of Contents
        "authority_hash":
          "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
        "state": "active",
+       "version": 4,
        "expires_at":  "2026-12-31T23:59:59Z",
        "fresh_until": "2026-11-02T08:00:45Z"
      },
@@ -526,31 +527,37 @@ Table of Contents
 
    Wire error codes (carried in the error member of a JSON body):
 
-   +==============+======+=============================================+
-   | error        | HTTP | Description                                 |
-   +==============+======+=============================================+
-   | unauthorized | 401  | Request not authenticated.                  |
-   +--------------+------+---------------------------------------------+
-   | not_found    | 404  | Reference does not exist                    |
-   |              |      | OR is not visible.                          |
-   +--------------+------+---------------------------------------------+
-   | rate_limited | 429  | Consumer is rate-limited.                   |
-   +--------------+------+---------------------------------------------+
-   | unavailable  | 503  | AS temporarily cannot                       |
-   |              |      | serve status.                               |
-   +--------------+------+---------------------------------------------+
+      +===============+======+======================================+
+      | error         | HTTP | Description                          |
+      +===============+======+======================================+
+      | unauthorized  | 401  | Request not authenticated.           |
+      +---------------+------+--------------------------------------+
+      | not_found     | 404  | Reference does not exist OR is not   |
+      |               |      | visible.                             |
+      +---------------+------+--------------------------------------+
+      | conflict      | 409  | Lifecycle operation not legal from   |
+      |               |      | the current state (Section 5.7).     |
+      +---------------+------+--------------------------------------+
+      | stale_version | 409  | expected_version differs from the    |
+      |               |      | current state version (Section 5.7). |
+      +---------------+------+--------------------------------------+
+      | rate_limited  | 429  | Consumer is rate-limited.            |
+      +---------------+------+--------------------------------------+
+      | unavailable   | 503  | AS temporarily cannot serve status.  |
+      +---------------+------+--------------------------------------+
 
                                   Table 2
 
    Success outcomes return HTTP 200 with the signed Mission Status
    Response carrying state.  Wire errors (unauthorized, not_found,
-   rate_limited, unavailable) return the matching HTTP status with a
-   JSON body.  Note the distinction between the two access failures:
-   unauthorized (401) means the request carried no valid authentication,
-   whereas a request that is authenticated but not authorized for the
-   referenced Mission returns not_found (404), never 401, so that an
-   unauthorized reference is indistinguishable from an unknown one
-   (Section 3.6).  The error body is:
+   conflict, stale_version, rate_limited, unavailable) return the
+   matching HTTP status with a JSON body; the two 409 symbols arise only
+   on lifecycle operations (Section 5.7).  Note the distinction between
+   the two access failures: unauthorized (401) means the request carried
+   no valid authentication, whereas a request that is authenticated but
+   not authorized for the referenced Mission returns not_found (404),
+   never 401, so that an unauthorized reference is indistinguishable
+   from an unknown one (Section 3.6).  The error body is:
 
    HTTP/1.1 404 Not Found
    Content-Type: application/json
@@ -607,9 +614,10 @@ Table of Contents
    shape: the open mission claim object of
    [I-D.draft-mcguinness-oauth-mission] (Section "The Mission Claim")
    with status members (state, fresh_until, and, on the dedicated
-   response, expires_at) added.  This projection populates the subset a
-   token-holding consumer needs; the dedicated response populates more.
-   Either way a consumer reads the same fact from the same place.
+   response, expires_at and version) added.  This projection populates
+   the subset a token-holding consumer needs; the dedicated response
+   populates more.  Either way a consumer reads the same fact from the
+   same place.
 
    Example [RFC9701]-signed introspection response (decoded payload),
    for a token whose Mission is active:
@@ -919,6 +927,7 @@ Table of Contents
        "authority_hash":
          "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
        "state": "revoked",
+       "version": 7,
        "expires_at":  "2026-12-31T23:59:59Z",
        "fresh_until": "2026-11-02T08:54:05Z"
      }
@@ -928,7 +937,9 @@ Table of Contents
    audit log; the response confirms the outcome through the updated
    state.
 
-   Suspend request with a deadline:
+   Suspend request with a deadline, here also carrying the OPTIONAL
+   expected_version guard against deciding over stale state
+   (Section 5.7):
 
    POST /as/mission/lifecycle HTTP/1.1
    Host: as.example.com
@@ -940,6 +951,7 @@ Table of Contents
    &operation=suspend
    &suspend_until=2026-11-09T08%3A15%3A00Z
    &on_expiry=revoke
+   &expected_version=5
    &reason=Pending+quarterly+access+review
    &nonce=nonce_4Dq2mV8kX1sB7nR3tW
 
@@ -960,6 +972,7 @@ Table of Contents
        "authority_hash":
          "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
        "state": "suspended",
+       "version": 6,
        "suspend_until": "2026-11-09T08:15:00Z",
        "on_expiry": "revoke",
        "expires_at":  "2026-12-31T23:59:59Z",

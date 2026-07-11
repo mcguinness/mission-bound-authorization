@@ -1066,7 +1066,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 11 January 2027</td>
+<td class="center">Expires 12 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1079,12 +1079,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-architecture-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-10" class="published">10 July 2026</time>
+<time datetime="2026-07-11" class="published">11 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-11">11 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-12">12 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1144,7 +1144,7 @@ and every mechanism it names is defined by the profile it points to.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 11 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 12 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1237,6 +1237,9 @@ and every mechanism it names is defined by the profile it points to.<a href="#se
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.11">
                 <p id="section-toc.1-1.9.2.11.1"><a href="#section-9.11" class="auto internal xref">9.11</a>. <a href="#name-the-binding-checklist" class="internal xref">The Binding Checklist</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.12">
+                <p id="section-toc.1-1.9.2.12.1"><a href="#section-9.12" class="auto internal xref">9.12</a>. <a href="#name-error-surfaces" class="internal xref">Error Surfaces</a></p>
 </li>
             </ul>
 </li>
@@ -2238,6 +2241,30 @@ per-consumer statements of this interface, and the three existing
 bindings remain authoritative for themselves.<a href="#section-9.11-2" class="pilcrow">¶</a></p>
 </section>
 </div>
+<div id="error-surfaces">
+<section id="section-9.12">
+        <h3 id="name-error-surfaces">
+<a href="#section-9.12" class="section-number selfRef">9.12. </a><a href="#name-error-surfaces" class="section-name selfRef">Error Surfaces</a>
+        </h3>
+<p id="section-9.12-1">The family has three error surfaces, each owned once. OAuth endpoints
+return OAuth error codes, owned by the core
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Lifecycle surfaces,
+including management, return the status profile's JSON error body
+(<code>error</code>, <code>error_description</code>, <code>nonce</code>)
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>). MAS-native
+surfaces return the MAS error object, which adds <code>error_reason</code> and
+omits the <code>nonce</code> (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).
+AuthZEN denial reasons are not a fourth surface: they ride the
+decision response (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). Where
+the same symbol exists as both an OAuth error code and a wire-body
+symbol (<code>invalid_request</code>), the envelope it arrives in disambiguates.<a href="#section-9.12-1" class="pilcrow">¶</a></p>
+<p id="section-9.12-2">Registration posture is likewise deliberate per artifact class:
+OAuth-facing parameters and media types register with IANA, evidence
+media types defer registration until cross-domain interoperability
+demands it, and each profile states which posture it takes.<a href="#section-9.12-2" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="derivation-boundary">
@@ -2865,9 +2892,15 @@ Statement's mediated set, and nothing outside it.<a href="#section-13.1-2.3.1" c
 parameters for the classes claimed.<a href="#section-13.1-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.1-2.5">
-            <p id="section-13.1-2.5.1"><strong>Compromise-resistant custody</strong> and <strong>trifecta containment</strong>: the
+            <p id="section-13.1-2.5.1"><strong>Transaction-grade execution</strong>: the runtime profile's
+transaction-assurance tier machinery (single-use permits, leases,
+outcome reconciliation) for the classes claimed
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-13.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-2.6">
+            <p id="section-13.1-2.6.1"><strong>Compromise-resistant custody</strong> and <strong>trifecta containment</strong>: the
 two named High-Assurance claims, unchanged
-(<a href="#assurance-levels" class="auto internal xref">Section 13</a>).<a href="#section-13.1-2.5.1" class="pilcrow">¶</a></p>
+(<a href="#assurance-levels" class="auto internal xref">Section 13</a>).<a href="#section-13.1-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-13.1-3">Two deployments at the same level under different bindings can hold

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                               10 July 2026
-Expires: 11 January 2027
+Intended status: Experimental                               11 July 2026
+Expires: 12 January 2027
 
 
                 Mission Lifecycle Signals for OAuth 2.0
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 11 January 2027.
+   This Internet-Draft will expire on 12 January 2027.
 
 Copyright Notice
 
@@ -84,7 +84,8 @@ Table of Contents
    10. Security Considerations
      10.1.  Forged or Replayed Events
      10.2.  Missed Events Are Not Fail-Open
-     10.3.  General OAuth Security
+     10.3.  Denial of Service
+     10.4.  General OAuth Security
    11. Privacy Considerations
    12. Conformance
    13. IANA Considerations
@@ -604,7 +605,18 @@ Table of Contents
    leave a Mission honored past the deployment's advertised staleness
    bound.
 
-10.3.  General OAuth Security
+10.3.  Denial of Service
+
+   Event delivery and polling are operational surfaces, with the posture
+   of Mission Status [I-D.draft-mcguinness-oauth-mission-status].  The
+   party serving each surface MUST rate-limit it per authenticated peer:
+   the transmitter its poll endpoint, the receiver its push delivery
+   endpoint.  A receiver applies backpressure through its delivery
+   method's acknowledgment and error signaling rather than buffering
+   without bound, and a transmitter MUST bound its retry schedule so an
+   unavailable receiver cannot amplify delivery traffic.
+
+10.4.  General OAuth Security
 
    This document inherits OAuth 2.0 Best Current Practice [RFC9700] for
    the OAuth surfaces it composes with; implementers MUST follow current
@@ -620,7 +632,11 @@ Table of Contents
    and their delivery logs record mission_id and consumer identity over
    time; deployments MUST treat them as Mission information-disclosure
    surfaces with the privacy posture of
-   [I-D.draft-mcguinness-oauth-mission-status].
+   [I-D.draft-mcguinness-oauth-mission-status].  An event can also
+   outlive what it references: the Mission records and evidence an event
+   points to may later be erased under the audit profile's erasure
+   record ([I-D.draft-mcguinness-mission-audit]), so a retained event is
+   no guarantee the referenced record remains retrievable.
 
    The OPTIONAL reason (Section 4) is useful operational context, but
    the reason for a transition can be more sensitive than the fact of
@@ -767,6 +783,11 @@ Table of Contents
               McGuinness, K., "Mission-Bound Authorization for AAuth",
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-mission-aauth.html>.
+
+   [I-D.draft-mcguinness-mission-audit]
+              McGuinness, K., "Mission Audit Transparency", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-audit.html>.
 
    [I-D.draft-mcguinness-mission-authority-server]
               McGuinness, K., "Mission Authority Server", 2026,

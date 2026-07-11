@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            10 July 2026
-Expires: 11 January 2027
+Intended status: Standards Track                            11 July 2026
+Expires: 12 January 2027
 
 
                 Mission Deferred Approval for OAuth 2.0
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 11 January 2027.
+   This Internet-Draft will expire on 12 January 2027.
 
 Copyright Notice
 
@@ -349,7 +349,11 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-consent-evidence]); a policy
    assertion carries its policy identifier and version, which is the
    family's provenance chain for non-human approval (policy approves the
-   instance because a human approved the policy).
+   instance because a human approved the policy).  Consent evidence's
+   co_approvals and approval_authority members
+   ([I-D.draft-mcguinness-oauth-mission-consent-evidence]) are this
+   record's consent-evidence projection; where both are recorded they
+   MUST agree, and the decision set governs.
 
    {
      "approval_event_id": "ape_7Kq2mR9tW4xY",

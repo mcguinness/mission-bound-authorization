@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            10 July 2026
-Expires: 11 January 2027
+Intended status: Standards Track                            11 July 2026
+Expires: 12 January 2027
 
 
                  Mission Child Delegation for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 11 January 2027.
+   This Internet-Draft will expire on 12 January 2027.
 
 Copyright Notice
 
@@ -917,6 +917,15 @@ Table of Contents
    child's own state when the parent resumes to active.  A child whose
    own expires_at passes during the suspension is expired: expiry takes
    precedence over the projected suspended state.
+
+   Projection onset and lift are not silent.  Each is a committed
+   metadata-only change on every affected child for the purposes of the
+   status profile's state version
+   ([I-D.draft-mcguinness-oauth-mission-status]): the child's state
+   version increments at onset and again at lift, and, where the
+   deployment runs Lifecycle Signals
+   ([I-D.draft-mcguinness-oauth-mission-signals]), a lifecycle-change
+   event is emitted for each affected child.
 
    Likewise, once a terminal cascade trigger (Section 10) commits at any
    ancestor, the issuer MUST report each dependent descendant's state as

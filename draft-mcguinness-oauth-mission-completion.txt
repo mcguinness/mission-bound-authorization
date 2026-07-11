@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            10 July 2026
-Expires: 11 January 2027
+Intended status: Standards Track                            11 July 2026
+Expires: 12 January 2027
 
 
                     Mission Completion for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 11 January 2027.
+   This Internet-Draft will expire on 12 January 2027.
 
 Copyright Notice
 
@@ -305,6 +305,15 @@ Table of Contents
    NOT revert, regardless of any later report from the event source: a
    source that afterward reports the event as not occurred does not
    restore the entry's authority.
+
+   A committed discharge is a committed metadata-only change for the
+   purposes of the status profile's state version
+   ([I-D.draft-mcguinness-oauth-mission-status]): the Mission's state
+   version increments at the commit, so a materialized policy view that
+   commits a state version ([I-D.draft-mcguinness-mission-runtime]) is
+   detectably obsolete after a discharge.  A dedicated discharge signal
+   remains deferred (Section 6.2); the version movement is what makes
+   the change observable in the interim.
 
    If the Authorization Server cannot determine whether a condition has
    been met, for example because event_source is unreachable within

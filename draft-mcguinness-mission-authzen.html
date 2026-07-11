@@ -1065,7 +1065,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 11 January 2027</td>
+<td class="center">Expires 12 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1078,12 +1078,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-authzen-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-10" class="published">10 July 2026</time>
+<time datetime="2026-07-11" class="published">11 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-11">11 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-12">12 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1141,7 +1141,7 @@ semantics the runtime profile owns.<a href="#section-abstract-1" class="pilcrow"
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 11 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 12 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1760,25 +1760,37 @@ deny with <code>stale_state</code>.<a href="#section-5.2-2.8.1" class="pilcrow">
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.2-2.9">
-<code>policy_version</code>:</dt>
+<code>version</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.2-2.10">
-            <p id="section-5.2-2.10.1"><span class="bcp14">REQUIRED</span> when known. A string. the <code>policy_version</code> recorded at the
+            <p id="section-5.2-2.10.1"><span class="bcp14">OPTIONAL</span>. An integer. the Mission's state version as the status
+profile defines it (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>),
+populated where the PEP holds it, under the same conditionality as
+<code>state</code>. It lets the PDP compare the PEP's observation against the
+state version committed in its loaded materialized policy view
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) and treat a mismatch as
+staleness.<a href="#section-5.2-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.2-2.11">
+<code>policy_version</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.2-2.12">
+            <p id="section-5.2-2.12.1"><span class="bcp14">REQUIRED</span> when known. A string. the <code>policy_version</code> recorded at the
 approval event. It is a Mission-record field
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and is not carried on the
 <code>mission</code> claim or the introspection projection, so a PEP that is not
 co-located with the Mission record may not have it; such a PEP omits
 it and relies on <code>policy_view_id</code> for view correlation. A PEP that can
-obtain it (for example, co-located with the issuer) includes it.<a href="#section-5.2-2.10.1" class="pilcrow">¶</a></p>
+obtain it (for example, co-located with the issuer) includes it.<a href="#section-5.2-2.12.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-5.2-2.11">
+<dt id="section-5.2-2.13">
 <code>policy_view_id</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-5.2-2.12">
-            <p id="section-5.2-2.12.1"><span class="bcp14">OPTIONAL</span>. A string. the materialized view identifier
+          <dd style="margin-left: 1.5em" id="section-5.2-2.14">
+            <p id="section-5.2-2.14.1"><span class="bcp14">OPTIONAL</span>. A string. the materialized view identifier
 (<a href="#mission-to-policy-materialization" class="auto internal xref">Section 4</a>). The PDP is authoritative for
 the current view, so a PEP need not supply it; a PEP that has the
 value supplies it and the PDP uses it as a content-addressed
-correlator. When present it is checked as in <a href="#pdp-request" class="auto internal xref">Section 5</a>.<a href="#section-5.2-2.12.1" class="pilcrow">¶</a></p>
+correlator. When present it is checked as in <a href="#pdp-request" class="auto internal xref">Section 5</a>.<a href="#section-5.2-2.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2265,7 +2277,12 @@ policy view the PDP has loaded for this Mission
 <code>view_inconsistent</code> on any inequality. When
 <code>context.mission.policy_view_id</code>
 is present, it <span class="bcp14">MUST</span> equal the loaded view's <code>policy_view_id</code>, and the
-PDP returns <code>view_inconsistent</code> on inequality. A PDP <span class="bcp14">MUST NOT</span> fail a
+PDP returns <code>view_inconsistent</code> on inequality. When
+<code>context.mission.version</code> is present, the PDP compares it against
+the state version committed in the loaded view
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) and treats a mismatch as
+staleness (<code>stale_state</code>): one side has missed a committed change.
+A PDP <span class="bcp14">MUST NOT</span> fail a
 decision solely because the optional <code>policy_view_id</code> or
 <code>policy_version</code> was omitted; the view the PDP loaded is
 authoritative.<a href="#section-5.12-3.2.1" class="pilcrow">¶</a></p>
@@ -3824,7 +3841,11 @@ request_digest = sha-256:sK12VE_g01AHD2v-O1vsf1Gf_xT_htjX0UN0Oe0dDRU
 <p id="section-8-1">The PEP or executor emits an Execution Evidence Object after the
 authorized action's outcome is determined. It records whether the
 permitted action was attempted, completed, failed, or suppressed,
-linked to the Decision Evidence by <code>decision_id</code>.<a href="#section-8-1" class="pilcrow">¶</a></p>
+linked to the Decision Evidence by <code>decision_id</code>. Emission follows
+the runtime profile's class rule: Execution Evidence is required for
+the high-consequence classes and for every further class the
+deployment claims under the runtime profile's transaction-assurance
+tier (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-8-1" class="pilcrow">¶</a></p>
 <div id="members-1">
 <section id="section-8.1">
         <h3 id="name-members-2">
@@ -4311,42 +4332,47 @@ where required (<a href="#parameter-digest" class="auto internal xref">Section 5
 permit as a bearer grant (<a href="#permit-binding-split" class="auto internal xref">Section 6.7</a>); and<a href="#section-11-4.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-4.5">
-          <p id="section-11-4.5.1">emit Execution Evidence and pre-decision Refusal Records as
-<a href="#execution-evidence-object" class="auto internal xref">Section 8</a> and <a href="#pre-decision-refusal" class="auto internal xref">Section 7.2</a> require.<a href="#section-11-4.5.1" class="pilcrow">¶</a></p>
+          <p id="section-11-4.5.1">emit pre-decision Refusal Records as <a href="#pre-decision-refusal" class="auto internal xref">Section 7.2</a>
+requires, and Execution Evidence for the classes its emission rule
+covers, as <a href="#execution-evidence-object" class="auto internal xref">Section 8</a> requires.<a href="#section-11-4.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-11-5">A PDP conforming to this binding <span class="bcp14">MUST</span>:<a href="#section-11-5" class="pilcrow">¶</a></p>
+<p id="section-11-5">Of these, the permit-lease and Execution Evidence items are the
+machinery of the runtime profile's transaction-assurance tier
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>): a PEP carries them for
+the classes that tier covers.<a href="#section-11-5" class="pilcrow">¶</a></p>
+<p id="section-11-6">A PDP conforming to this binding <span class="bcp14">MUST</span>:<a href="#section-11-6" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-11-6.1">
-          <p id="section-11-6.1.1">refuse an in-scope consequential request that lacks the Mission
+<li class="normal" id="section-11-7.1">
+          <p id="section-11-7.1.1">refuse an in-scope consequential request that lacks the Mission
 decision context, and perform the PDP-side consistency checks
-(<a href="#pdp-request" class="auto internal xref">Section 5</a>);<a href="#section-11-6.1.1" class="pilcrow">¶</a></p>
+(<a href="#pdp-request" class="auto internal xref">Section 5</a>);<a href="#section-11-7.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-6.2">
-          <p id="section-11-6.2.1">classify every denial per <a href="#runtime-denial-classification" class="auto internal xref">Section 6.4</a>;<a href="#section-11-6.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-7.2">
+          <p id="section-11-7.2.1">classify every denial per <a href="#runtime-denial-classification" class="auto internal xref">Section 6.4</a>;<a href="#section-11-7.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-6.3">
-          <p id="section-11-6.3.1">return the decision context of <a href="#response-context" class="auto internal xref">Section 6.1</a>, including the
-permit-lease members; and<a href="#section-11-6.3.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-7.3">
+          <p id="section-11-7.3.1">return the decision context of <a href="#response-context" class="auto internal xref">Section 6.1</a>, including the
+permit-lease members; and<a href="#section-11-7.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-6.4">
-          <p id="section-11-6.4.1">emit Decision Evidence per <a href="#decision-evidence-object" class="auto internal xref">Section 7</a> and
-<a href="#decision-evidence-integrity" class="auto internal xref">Section 7.3</a>.<a href="#section-11-6.4.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-7.4">
+          <p id="section-11-7.4.1">emit Decision Evidence per <a href="#decision-evidence-object" class="auto internal xref">Section 7</a> and
+<a href="#decision-evidence-integrity" class="auto internal xref">Section 7.3</a>.<a href="#section-11-7.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-11-7">An executor distinct from the requesting PEP <span class="bcp14">MUST</span> enforce the permit
+<p id="section-11-8">An executor distinct from the requesting PEP <span class="bcp14">MUST</span> enforce the permit
 as <a href="#permit-binding-split" class="auto internal xref">Section 6.7</a> and <a href="#execution-evidence-object" class="auto internal xref">Section 8</a>
 require: verify the binding fields from the signed Decision Evidence
 rather than trust a relayed <code>decision: true</code>, own the
 consumed-identifier store and the lease, and recompute the
 <code>parameter_digest</code> immediately before acting, refusing with
-<code>parameter_mismatch</code> on divergence.<a href="#section-11-7" class="pilcrow">¶</a></p>
-<p id="section-11-8">An audit consumer conforming to this binding <span class="bcp14">MUST</span> verify each
+<code>parameter_mismatch</code> on divergence.<a href="#section-11-8" class="pilcrow">¶</a></p>
+<p id="section-11-9">An audit consumer conforming to this binding <span class="bcp14">MUST</span> verify each
 evidence envelope against the emitter's published keys
 (<a href="#evidence-integrity-signing-keys" class="auto internal xref">Section 12.5</a>) and classify orphaned Decision
 Evidence and cross-record digest divergence as
 <a href="#security-considerations" class="auto internal xref">Section 12</a> and <a href="#execution-evidence-object" class="auto internal xref">Section 8</a>
-require, never as proof of action.<a href="#section-11-8" class="pilcrow">¶</a></p>
+require, never as proof of action.<a href="#section-11-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
@@ -4435,10 +4461,16 @@ deployment-published key set.<a href="#section-12.5-1" class="pilcrow">¶</a></p
 <p id="section-12.5-2">This profile fixes one concrete discovery convention: the PDP publishes
 its JWKS at a deployment-published location named in the enforcement
 scope statement (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), and
-the PEP or executor key set is published and named there likewise. A
-retired signing key <span class="bcp14">MUST</span> remain resolvable in the published key set for
-at least the evidence retention window, so records signed before a
-rotation stay verifiable after it.<a href="#section-12.5-2" class="pilcrow">¶</a></p>
+the PEP or executor key set is published and named there likewise.
+The retired-key rule of the issuance profile's key management
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) extends to evidence signing
+keys: a retired signing key <span class="bcp14">MUST</span> remain resolvable in the published
+key set for at least the evidence retention window, so records signed
+before a rotation stay verifiable after it. The compromise exception
+carries over with it: a key known or suspected compromised is
+published as revoked or marked with a compromise time, per the core
+rule, and evidence signed under it after that time is unverifiable
+rather than verified.<a href="#section-12.5-2" class="pilcrow">¶</a></p>
 <p id="section-12.5-3">Implementations <span class="bcp14">MUST</span> reject evidence whose <code>format</code> is unsupported
 rather than accepting it unverified.<a href="#section-12.5-3" class="pilcrow">¶</a></p>
 </section>
@@ -4826,6 +4858,10 @@ registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite x
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
