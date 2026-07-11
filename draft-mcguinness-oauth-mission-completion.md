@@ -283,6 +283,15 @@ revert, regardless of any later report from the event source: a source
 that afterward reports the event as not occurred does not restore the
 entry's authority.
 
+A committed discharge is a committed metadata-only change for the
+purposes of the status profile's state version
+({{I-D.draft-mcguinness-oauth-mission-status}}): the Mission's state
+version increments at the commit, so a materialized policy view that
+commits a state version ({{I-D.draft-mcguinness-mission-runtime}}) is
+detectably obsolete after a discharge. A dedicated discharge signal
+remains deferred ({{visibility}}); the version movement is what makes
+the change observable in the interim.
+
 If the Authorization Server cannot determine whether a condition has been
 met, for example because `event_source` is unreachable within
 `max_staleness`, it MUST treat the entry as possibly discharged and

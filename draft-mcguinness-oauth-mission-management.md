@@ -337,7 +337,10 @@ whose filter scope covers the Mission ({{enumeration}}). How the
 object is populated, at issuance from deployment policy or by an
 authorized management operation, is deployment-defined; a dedicated
 metadata update operation is deferred until deployment experience
-shows the shape.
+shows the shape. However populated, a change to administrative
+metadata that affects any caller's filter scope MUST be recorded as
+an audited management event, since it redraws who may see and operate
+on the Mission ({{filter-scope}}).
 
 # Mission Filter {#filter}
 
@@ -382,6 +385,10 @@ match against the Mission record
 `admin_domain`:
 : A string. Matches the administrative metadata's `admin_domain`.
 
+`tenant`:
+: A string. Matches the administrative metadata's `tenant`
+  ({{admin-metadata}}).
+
 `label`:
 : A string. Matches a Mission whose administrative `labels` include
   it.
@@ -392,6 +399,11 @@ no Mission where the deployment maintains none.
 The AS MUST refuse a filter carrying an unrecognized member with
 `invalid_request`, so a filter is never silently broader than the
 caller intended.
+
+On a standalone Mission Authority Server, the filter members that
+match `subject` and `client_id` are evaluated under the MAS mapping
+contract for those identities
+({{I-D.draft-mcguinness-mission-authority-server}}).
 
 # Mission Enumeration {#enumeration}
 
@@ -429,7 +441,9 @@ The signed payload ({{management-endpoint}}) carries:
 
 `missions`:
 : REQUIRED. An array of Mission summary objects, each carrying
-  `id`, `state`, `subject` (an object with `iss` and `sub`),
+  `id`, `state`, `version` (the Mission's state version,
+  {{I-D.draft-mcguinness-oauth-mission-status}}), `subject` (an
+  object with `iss` and `sub`),
   `client_id`, `created_at`, and `expires_at` from the Mission
   record, plus the lineage members `successor`, `predecessor`
   ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and `parent`
@@ -594,6 +608,13 @@ newly matching the filter, after the dry run is not in the membership
 and MUST NOT be operated on; a member that transitioned in the interim
 yields an `already_terminal` or `illegal_transition` outcome rather
 than a surprise transition ({{bulk-token-security}}).
+
+The dry-run-then-execute exchange with its pinned membership is the
+bulk-path analog of the status profile's `expected_version` guard
+({{I-D.draft-mcguinness-oauth-mission-status}}), and a deployment
+that requires `expected_version` for an operation it classifies
+high-risk satisfies that requirement on the bulk path through the
+pinned membership plus the per-member outcomes ({{manifest}}).
 
 ## Outcome Manifest {#manifest}
 

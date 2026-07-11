@@ -70,6 +70,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-audit:
+    title: "Mission Audit Transparency"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
@@ -628,6 +636,17 @@ its reliance on event freshness and fall back to polling Mission Status
 ({{consumer-behavior}}) so a dropped revocation event does not leave a
 Mission honored past the deployment's advertised staleness bound.
 
+## Denial of Service
+
+Event delivery and polling are operational surfaces, with the posture
+of Mission Status {{I-D.draft-mcguinness-oauth-mission-status}}. The
+party serving each surface MUST rate-limit it per authenticated peer:
+the transmitter its poll endpoint, the receiver its push delivery
+endpoint. A receiver applies backpressure through its delivery
+method's acknowledgment and error signaling rather than buffering
+without bound, and a transmitter MUST bound its retry schedule so an
+unavailable receiver cannot amplify delivery traffic.
+
 ## General OAuth Security
 
 This document inherits OAuth 2.0 Best Current Practice {{RFC9700}} for
@@ -644,7 +663,11 @@ consumer never learns of Missions it is not party to. Event streams and
 their delivery logs record `mission_id` and consumer identity over
 time; deployments MUST treat them as Mission information-disclosure
 surfaces with the privacy posture of
-{{I-D.draft-mcguinness-oauth-mission-status}}.
+{{I-D.draft-mcguinness-oauth-mission-status}}. An event can also
+outlive what it references: the Mission records and evidence an event
+points to may later be erased under the audit profile's erasure
+record ({{I-D.draft-mcguinness-mission-audit}}), so a retained event
+is no guarantee the referenced record remains retrievable.
 
 The OPTIONAL `reason` ({{lifecycle-event}}) is useful operational
 context, but the reason for a transition can be more sensitive than the

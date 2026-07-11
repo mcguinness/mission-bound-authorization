@@ -948,7 +948,15 @@ imported evidence conventions, its type identifier is
 pending registration), and a harness that registers its evidence
 publishes its signing key in the deployment key set alongside the
 PEP key the runtime profile requires, so a relying party can verify
-the harness as the record's authoritative producer.
+the harness as the record's authoritative producer. That key follows
+the issuance profile's retired-key rule, extended to this artifact's
+retention bound ({{I-D.draft-mcguinness-oauth-mission}}): a retired
+harness signing key MUST remain resolvable in the published key set
+for at least the evidence retention window. The compromise exception
+carries over with it: a key known or suspected compromised is
+published as revoked or marked with a compromise time, per the core
+rule, and evidence signed under it after that time is unverifiable
+rather than verified.
 
 ## Harness Evidence Object {#harness-evidence-object}
 

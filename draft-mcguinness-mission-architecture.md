@@ -986,6 +986,27 @@ per-profile Mission Substrate sections remain the authoritative
 per-consumer statements of this interface, and the three existing
 bindings remain authoritative for themselves.
 
+## Error Surfaces {#error-surfaces}
+
+The family has three error surfaces, each owned once. OAuth endpoints
+return OAuth error codes, owned by the core
+({{I-D.draft-mcguinness-oauth-mission}}). Lifecycle surfaces,
+including management, return the status profile's JSON error body
+(`error`, `error_description`, `nonce`)
+({{I-D.draft-mcguinness-oauth-mission-status}},
+{{I-D.draft-mcguinness-oauth-mission-management}}). MAS-native
+surfaces return the MAS error object, which adds `error_reason` and
+omits the `nonce` ({{I-D.draft-mcguinness-mission-authority-server}}).
+AuthZEN denial reasons are not a fourth surface: they ride the
+decision response ({{I-D.draft-mcguinness-mission-authzen}}). Where
+the same symbol exists as both an OAuth error code and a wire-body
+symbol (`invalid_request`), the envelope it arrives in disambiguates.
+
+Registration posture is likewise deliberate per artifact class:
+OAuth-facing parameters and media types register with IANA, evidence
+media types defer registration until cross-domain interoperability
+demands it, and each profile states which posture it takes.
+
 # The Authority Derivation Boundary {#derivation-boundary}
 
 Deriving the Authority Set from the Mission Intent is the semantic
@@ -1473,6 +1494,10 @@ level:
   Statement's mediated set, and nothing outside it.
 - **Parameter-bound enforcement**: permits bound to concrete
   parameters for the classes claimed.
+- **Transaction-grade execution**: the runtime profile's
+  transaction-assurance tier machinery (single-use permits, leases,
+  outcome reconciliation) for the classes claimed
+  ({{I-D.draft-mcguinness-mission-runtime}}).
 - **Compromise-resistant custody** and **trifecta containment**: the
   two named High-Assurance claims, unchanged
   ({{assurance-levels}}).

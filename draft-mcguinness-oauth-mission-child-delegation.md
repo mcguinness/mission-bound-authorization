@@ -918,6 +918,15 @@ child's own state when the parent resumes to `active`. A child whose own
 `expires_at` passes during the suspension is `expired`: expiry takes
 precedence over the projected `suspended` state.
 
+Projection onset and lift are not silent. Each is a committed
+metadata-only change on every affected child for the purposes of the
+status profile's state version
+({{I-D.draft-mcguinness-oauth-mission-status}}): the child's state
+version increments at onset and again at lift, and, where the
+deployment runs Lifecycle Signals
+({{I-D.draft-mcguinness-oauth-mission-signals}}), a lifecycle-change
+event is emitted for each affected child.
+
 Likewise, once a terminal cascade trigger ({{cascade}}) commits at any
 ancestor, the issuer MUST report each dependent descendant's state as
 `cascaded` on every state-reporting surface (the Mission Status
