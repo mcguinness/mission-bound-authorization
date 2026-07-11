@@ -340,7 +340,11 @@ committed as the consent-evidence profile requires
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}); a `policy`
 assertion carries its policy identifier and version, which is the
 family's provenance chain for non-human approval (policy approves the
-instance because a human approved the policy).
+instance because a human approved the policy). Consent evidence's
+`co_approvals` and `approval_authority` members
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) are this
+record's consent-evidence projection; where both are recorded they
+MUST agree, and the decision set governs.
 
 ~~~ json
 {

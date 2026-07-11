@@ -27,6 +27,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  BCP47:
   RFC3339:
   RFC6234:
   RFC6838:
@@ -270,7 +271,11 @@ A Consent Disclosure object has these members:
   verifier retrieves is bound to the one used to render this disclosure.
 
 `locale`:
-: REQUIRED. A string identifying the locale used for presentation.
+: REQUIRED. A string identifying the locale used for presentation, a
+  language tag under BCP 47 {{BCP47}}. The model is one locale, one
+  disclosure, one hash: a deployment that presents the disclosure in
+  multiple locales commits one disclosure per locale presented, each
+  with its own rendering hash.
 
 `mission_summary`:
 : REQUIRED. An object presenting the task to the Approver. It MUST carry
@@ -625,6 +630,10 @@ A Consent Evidence object has these members:
   timestamp, all under the same `consent_rendering_hash`. This is an
   additive hook; the issuance profile records one accountable Approver
   ({{I-D.draft-mcguinness-oauth-mission}}) and that model is unchanged.
+  Where the deferred-approval profile's Approval Decision Set is
+  recorded ({{I-D.draft-mcguinness-oauth-mission-approval}}), the
+  decision set is authoritative for approval-governance facts and
+  `co_approvals` is its consent-evidence projection.
 
 `approval_authority`:
 : OPTIONAL. A reference identifying the standing policy or delegation the
@@ -1014,7 +1023,10 @@ context, approver identity, subject identity, and high-risk authority
 details. Deployments SHOULD protect it at least as strongly as Mission
 records and runtime evidence. Where possible, portable records SHOULD
 carry hashes or references rather than full rendered text, while still
-allowing authorized audit reconstruction.
+allowing authorized audit reconstruction. Evidence removed under a
+legal basis is erased through the audit profile's erasure record
+({{I-D.draft-mcguinness-mission-audit}}), which keeps the removal
+itself accountable.
 
 A global `sequence` counter leaks approval volume: a holder of two
 evidence records can read the gap between their `sequence` values as the

@@ -143,6 +143,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-approval:
+    title: "Mission Deferred Approval for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-audit:
+    title: "Mission Audit Transparency"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -1473,14 +1489,20 @@ are deliberately out of scope and deferred:
   every token derived from it. Multi-party approval raises the
   assurance of *how* approval was obtained; it does not change the
   artifacts this document produces. A deployment requiring dual
-  control today can obtain the additional approvals out of band and
-  record one accountable Approver under the same `authority_hash`;
-  this document simply does not natively represent the co-approvers.
+  control records one accountable Approver under the same
+  `authority_hash`; this document does not natively represent the
+  co-approvers.
 - **Approval-authority provenance** (the standing policy or delegation
   an administrator or headless approval traces back to). This is
   governance state about who stands behind a delegated approval, not
   part of binding tokens to approved authority, and is left to a
   governance layer.
+
+Both remain out of the core. Where a deployment needs them, they are
+recorded by the deferred-approval profile's Approval Decision Set
+({{I-D.draft-mcguinness-oauth-mission-approval}}) and consent
+evidence's co-approval members
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 
 ## Integrity Anchors {#integrity-anchors}
 
@@ -2870,6 +2892,18 @@ only the entries the consuming Resource Server needs, and this
 document recommends them ({{mission-bound-tokens}}). The privacy
 considerations of {{RFC9396}} apply to the carried
 `authorization_details`.
+
+## Intent Retention and Anchor Disclosure
+
+The Mission record's Intent members (`goal`, `constraints`) are
+personal-data sinks: they carry whatever task description the user
+supplied. Record retention and erasure follow the deployment's
+retention policy, with the audit profile's erasure record as the
+transparency-side mechanism ({{I-D.draft-mcguinness-mission-audit}}).
+The integrity anchors are unsalted commitments: a party holding a
+candidate Intent can confirm it against `intent_hash`, so over
+low-entropy or guessable content the anchor is a disclosure channel,
+and deployments treat it as one when the Intent itself is sensitive.
 
 # IANA Considerations
 

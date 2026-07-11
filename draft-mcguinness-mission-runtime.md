@@ -539,6 +539,9 @@ architecture defines ({{I-D.draft-mcguinness-mission-architecture}}). It MUST in
   harness-run deployment, {{I-D.draft-mcguinness-mission-harness}});
 - the credential custody mode for each mediated class (mediated
   custody in the PEP, or agent-held, {{custody}});
+- the conformance tier claimed for each mediated action class: the
+  core enforcement tier, or the transaction-assurance tier where
+  claimed or required (the tier vocabulary below);
 - the PDP or PDPs that evaluate Mission-bound decisions;
 - the `authorization_details` types, action identifiers, and constraint
   vocabularies it supports;
@@ -2218,8 +2221,9 @@ different digest and the permit is refused.
 
 This non-normative example shows the `policy_view_id` computation of
 {{policy-view}} over a minimal materialized-view envelope for the same
-Mission. The payload here is reduced to the two members the committed
-view is required to bind, `mission_id` and `authority_hash`; a
+Mission. The payload here is reduced to the two members every
+committed view binds, `mission_id` and `authority_hash`; a deployment
+that serves a state version also binds it ({{policy-view}}), and a
 deployment's payload also carries its evaluable materialized form,
 which this document does not standardize.
 

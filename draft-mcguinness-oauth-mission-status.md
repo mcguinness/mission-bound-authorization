@@ -369,6 +369,7 @@ Decoded JWS payload:
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "state": "active",
+    "version": 4,
     "expires_at":  "2026-12-31T23:59:59Z",
     "fresh_until": "2026-11-02T08:00:45Z"
   },
@@ -539,13 +540,16 @@ Wire error codes (carried in the `error` member of a JSON body):
 |---|---|---|
 | `unauthorized` | 401 | Request not authenticated. |
 | `not_found` | 404 | Reference does not exist OR is not visible. |
+| `conflict` | 409 | Lifecycle operation not legal from the current state ({{idempotency}}). |
+| `stale_version` | 409 | `expected_version` differs from the current state version ({{idempotency}}). |
 | `rate_limited` | 429 | Consumer is rate-limited. |
 | `unavailable` | 503 | AS temporarily cannot serve status. |
 
 Success outcomes return HTTP 200 with the signed Mission Status Response
-carrying `state`. Wire errors (`unauthorized`, `not_found`,
-`rate_limited`, `unavailable`) return the matching HTTP status with a
-JSON body. Note the distinction between the two access
+carrying `state`. Wire errors (`unauthorized`, `not_found`, `conflict`,
+`stale_version`, `rate_limited`, `unavailable`) return the matching
+HTTP status with a JSON body; the two 409 symbols arise only on
+lifecycle operations ({{idempotency}}). Note the distinction between the two access
 failures: `unauthorized` (401) means the request carried no valid
 authentication, whereas a request that is authenticated but not
 authorized for the referenced Mission returns `not_found` (404), never
@@ -608,7 +612,7 @@ This projection and the dedicated Mission Status Response
 of the same shape: the open `mission` claim object of
 {{I-D.draft-mcguinness-oauth-mission}} (Section "The Mission Claim")
 with status members (`state`, `fresh_until`, and, on the dedicated
-response, `expires_at`) added. This
+response, `expires_at` and `version`) added. This
 projection populates the subset a token-holding consumer needs; the
 dedicated response populates more. Either way a consumer reads the
 same fact from the same place.
@@ -894,6 +898,7 @@ Decoded JWS payload:
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "state": "revoked",
+    "version": 7,
     "expires_at":  "2026-12-31T23:59:59Z",
     "fresh_until": "2026-11-02T08:54:05Z"
   }
@@ -904,7 +909,9 @@ The AS records the operation, actor, time, and any `reason` in its
 audit log; the response confirms the outcome through the updated
 `state`.
 
-Suspend request with a deadline:
+Suspend request with a deadline, here also carrying the OPTIONAL
+`expected_version` guard against deciding over stale state
+({{idempotency}}):
 
 ~~~ http-message
 POST /as/mission/lifecycle HTTP/1.1
@@ -917,6 +924,7 @@ mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 &operation=suspend
 &suspend_until=2026-11-09T08%3A15%3A00Z
 &on_expiry=revoke
+&expected_version=5
 &reason=Pending+quarterly+access+review
 &nonce=nonce_4Dq2mV8kX1sB7nR3tW
 ~~~
@@ -939,6 +947,7 @@ and `on_expiry` in `mission` alongside `state`. Decoded JWS payload:
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
     "state": "suspended",
+    "version": 6,
     "suspend_until": "2026-11-09T08:15:00Z",
     "on_expiry": "revoke",
     "expires_at":  "2026-12-31T23:59:59Z",

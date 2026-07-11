@@ -1272,6 +1272,14 @@ introspection result across mintings of the same token within the
 deployment's staleness bound, so re-minting for an unchanged token
 does not repeat the AS round trip.
 
+That same position makes minting a denial-of-service surface: it is a
+hot, per-action-adjacent path, invoked on every rotation for every
+Mission and workload the MAS serves. The MAS MUST rate-limit
+assertion requests per caller, and SHOULD serve repeated requests for
+the same (token digest, audience) pair from cache within the
+assertion's lifetime, so a burst of re-mints for an unchanged token
+costs one evaluation rather than many.
+
 ## The Assertion {#join-assertion-artifact}
 
 On success the MAS mints a Mission Join Assertion: a signed JWT
