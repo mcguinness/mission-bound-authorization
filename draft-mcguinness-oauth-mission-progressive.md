@@ -94,9 +94,9 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-completion:
-    title: "Mission Completion for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-completion.html
+  I-D.draft-mcguinness-oauth-mission-status:
+    title: "Mission Status and Lifecycle for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
     author:
       -
         ins: K. McGuinness
@@ -324,8 +324,8 @@ in-ceiling request the drawdown policy does not authorize is not
 refused with `out_of_ceiling`; it falls back to an ordinary, freshly
 human-approved expansion. The drawdown policy MUST NOT policy-adjudicate
 a successor Authority Set entry whose authority intersects a predecessor
-entry discharged under the completion profile
-({{I-D.draft-mcguinness-oauth-mission-completion}}): any successor entry
+entry discharged under the status profile's completion machinery
+({{I-D.draft-mcguinness-oauth-mission-status}}): any successor entry
 that overlaps a discharged predecessor entry in authority, not only one
 structurally equal to it, falls back to a fresh human approval, so
 completion-discharged authority cannot be resurrected by policy.
@@ -366,8 +366,9 @@ an ordinary expansion approval that re-consents, or narrows, the
 ceiling, and its consent disclosure MUST render the chain's record
 since the prior review: the drawdown count and rate, the guard
 exceptions escalated to human approval, the `out_of_ceiling`
-refusals, the entries discharged under the completion profile
-({{I-D.draft-mcguinness-oauth-mission-completion}}), and, where the
+refusals, the entries discharged under the status profile's
+completion machinery
+({{I-D.draft-mcguinness-oauth-mission-status}}), and, where the
 metering profile runs, consumption against its bounds
 ({{I-D.draft-mcguinness-mission-metering}}). Where consent evidence
 is claimed, that disclosure is committed like any other

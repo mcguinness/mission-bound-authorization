@@ -135,8 +135,10 @@ It is optional; a deployment that does not adopt it is unaffected.
 
 # Introduction
 
-The Mission Status and Lifecycle profile
-{{I-D.draft-mcguinness-oauth-mission-status}} (the "status profile")
+This document is a satellite of the Mission Status and Lifecycle
+profile {{I-D.draft-mcguinness-oauth-mission-status}} (the "status
+profile"), the lifecycle suite's root document, adding the suite's
+operator plane. The status profile
 answers "what is the state of this Mission" and changes that state,
 one Mission per request. Its Deferred Lifecycle Capabilities section
 defers two fleet-scale capabilities: Mission enumeration ("which

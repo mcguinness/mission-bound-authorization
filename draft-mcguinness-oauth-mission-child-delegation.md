@@ -78,14 +78,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-completion:
-    title: "Mission Completion for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-completion.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
@@ -902,8 +894,9 @@ A cascade in progress ({{cascade}}) opens no window: a descendant
 whose root ancestor is non-active is refused derivation even before
 its own cascade transition commits.
 
-Where a deployment also runs the completion profile
-({{I-D.draft-mcguinness-oauth-mission-completion}}), discharge
+Where a deployment also runs the status profile's completion
+machinery ({{I-D.draft-mcguinness-oauth-mission-status}}, Completion
+section), discharge
 propagates entry-wise: when a parent Authority Set entry is
 discharged, the Mission Issuer MUST discharge every child entry
 justified by it, so spent authority does not survive in the subtree.

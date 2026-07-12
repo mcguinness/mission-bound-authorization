@@ -1223,6 +1223,17 @@ is the deployment's accepted state lease.
   Mission keeps deriving consequence until tokens age out, which is the
   ambient-authority gap this profile exists to close.
 
+For a deployment whose access tokens are short-lived and whose
+issuance and refresh are state-gated per the core
+({{I-D.draft-mcguinness-oauth-mission}}), the refresh cycle itself is
+a conforming active freshness source for any action class whose
+published staleness bound the token lifetime meets: the issuance gate
+is an active check, and a token that exists is evidence the Mission
+was `active` within the lifetime. This source's revocation latency
+floor is the token lifetime, so it conforms only for classes whose
+bound admits that floor, and the higher-frequency sources (Status,
+introspection, Signals) remain the path to tighter bounds.
+
 **Token-lifetime freshness.** Below the high-consequence floor, token
 expiry is itself a conforming state source: derivation and refresh
 are gated on `active` ({{I-D.draft-mcguinness-oauth-mission}}), so a

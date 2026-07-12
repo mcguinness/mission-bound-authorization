@@ -374,12 +374,12 @@ evidence type from being read as another.
 
 Each companion-defined row binds only a deployment that produces that
 evidence, so the reference is consulted only where the profile is
-adopted. Rows whose defining profile is Experimental (the Signals
-form of the lifecycle transition and the Discovery Evidence row) stay
-on that profile's maturity: this document keeps those references
-informative, and a deployment not running the Experimental profile
-uses the stable form ({{transition-object}} for lifecycle
-transitions) or omits the row.
+adopted. A row whose defining profile is Experimental (the Discovery
+Evidence row) stays on that profile's maturity: this document keeps
+that reference informative, and a deployment not running the
+Experimental profile omits the row. A deployment that does not run
+the Signals profile commits lifecycle transitions as the transition
+object ({{transition-object}}) instead of the Signals SET.
 
 A Child Evidence record registers on the Parent Mission's feed: the
 `sub` is the parent's ({{feed}}), its producer is the `issuer`, and
