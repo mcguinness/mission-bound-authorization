@@ -155,10 +155,10 @@ companion assumes. From there, follow the path that matches your role:
   Introduction and Overview, then the Security Model for the trust
   picture in one view.
 - **Implement issuance at an Authorization Server** (identity vendors):
-  the core, then Status (the state surface; Signals is its experimental
-  push complement), Consent
-  Evidence (approval-surface evidence), Expansion and Completion
-  (growing and retiring authority), Deferred Approval if approvals
+  the core, then Status (the state surface, including completion and
+  per-entry discharge; Signals is its push complement), Consent
+  Evidence (approval-surface evidence), Expansion
+  (growing authority), Deferred Approval if approvals
   are asynchronous, Cross-Domain Projection when Missions span
   trust domains, and Discovery (experimental, with Progressive) when
   agents meet resources mid-task: the encounter is adjudicated at
@@ -228,7 +228,7 @@ below the table.
 | Level | Drafts | What you get |
 |---|---|---|
 | **Baseline Issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Runtime-Enforced level). The kill switch is binding-dependent: under the standalone MAS there is no issuance gate, and the cutoff arrives with the runtime layer. With token lifetimes sized to the declared staleness bound (lifetime-bounded reliance), revocation takes effect within one lifetime at unmodified Resource Servers; what this level lacks is per-action enforcement and parameter binding, not a cutoff. Day-one AS prerequisites: PAR, RAR, and JWT access tokens; the standalone MAS needs none of them. |
-| **Runtime-Enforced** (the Protocol MVP) | mission + runtime + authzen + a freshness source (status or issuer token introspection; signals, experimental, adds push) | Per-action enforcement at the point of use, and prompt revocation. The smallest deployment that makes a Mission-bound token more than governance metadata, and every dependency it needs is ratified. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
+| **Runtime-Enforced** (the Protocol MVP) | mission + runtime + authzen + a freshness source (status or issuer token introspection; signals adds push) | Per-action enforcement at the point of use, and prompt revocation. The smallest deployment that makes a Mission-bound token more than governance metadata, and every dependency it needs is ratified. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
 | **Governed Agent** (recommended for AI agents) | Runtime-Enforced + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. Add child-delegation for sub-agents and expansion for mid-task growth, orchestration (experimental) for safe unwinding of in-flight work, and discovery (experimental, with progressive) for agents that meet resources their approval could not name. |
 | **High-Assurance Agent** | Governed Agent + mediated custody, no unmediated path, action-bound approval, active freshness, agent-isolated approval rendering | Resistance to a compromised agent: the runtime profile's named agent-compromise-resistant enforcement and trifecta containment claims (see the note below the table), optionally bound to execution-environment attestation. |
 
@@ -311,11 +311,11 @@ facts are the next subsection.
    estate ASs redeem MAS-minted grants for Mission-bound,
    state-gated tokens), **substrate** (for authors of new bindings).
 5. **Advanced, when the use case arrives**: **approval** (asynchronous
-   approvals), **expansion**, **completion**, **child-delegation**,
+   approvals), **expansion**, **child-delegation**,
    **cross-domain**, **management**, **mandate**, **audit**,
-   **shaping**.
-6. **Experimental, adopt for evaluation only**: **signals** (push
-   latency optimization over correctly sized status polling),
+   **shaping**, **signals** (push latency optimization over correctly
+   sized status polling).
+6. **Experimental, adopt for evaluation only**:
    **approval-revision**, **progressive**, **metering**,
    **attenuation**, **orchestration**, **discovery** (open-world
    encounters adjudicated against a pre-consented ceiling, with the
@@ -457,13 +457,18 @@ A `mission_id`-keyed status surface with signed responses, plus a
 lifecycle endpoint for explicit `revoke`, `suspend`, `resume`, and
 `complete` transitions and the `suspended` and `completed` states. It
 lets a consumer holding only a `mission_id` ask the issuer for current
-Mission state, and an authorized party change it.
+Mission state, and an authorized party change it. It also defines
+Mission Completion, the narrowing counterpart of Expansion:
+`terminal_when`, a Common Constraint that discharges a
+`mission_resource_access` entry when its completion condition fires,
+monotonic (only retires authority) and so safe against an injected
+agent.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-status) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-status) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-status.diff)
 
 #### Mission Lifecycle Signals for OAuth 2.0
 
-Experimental. A profile of the OpenID Shared Signals Framework: the
+A profile of the OpenID Shared Signals Framework: the
 Mission Issuer
 emits a signed Security Event Token on each Mission lifecycle
 transition, delivered by push or poll, so a consumer learns of a
@@ -507,19 +512,6 @@ never classifies its own consequences, and a tainted session never
 binds egress-capable authority without a human.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-discovery.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-mission-discovery) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-discovery) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-discovery.diff)
-
-#### Mission Completion for OAuth 2.0
-
-The narrowing counterpart of Expansion. Adds `terminal_when`, a
-Common Constraint that discharges a `mission_resource_access`
-entry when its completion condition fires, so the Authorization Server
-stops deriving that entry once the task it was granted for is done.
-Discharge is monotonic (only retires authority), so it is safe against
-an injected agent; it lets a multi-resource Mission complete one entry
-at a time; and it is the enforceable counterpart of the inert
-`success_criteria`.
-
-[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-completion.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-completion) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-completion) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-completion.diff)
 
 #### Mission Management for OAuth 2.0
 
