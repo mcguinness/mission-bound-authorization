@@ -25,12 +25,13 @@ with the PEP/PDP boundary are its data plane.
 
 At a glance:
 
-- **28 drafts, deliberately decomposed.** One mandatory core (the
+- **29 drafts, deliberately decomposed.** One mandatory core (the
   OAuth 2.0 issuance profile, [on the
   datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/)),
-  two further bindings and normative substrate requirements, optional
-  companion profiles organized by verb, and two Informational views
-  (the Architecture and the Security Model).
+  three further bindings (one an experimental sketch) and normative
+  substrate requirements, optional companion profiles organized by
+  verb, and two Informational views (the Architecture and the
+  Security Model).
 - **Four assurance levels and named claims.** The levels (Baseline
   Issuance, Runtime-Enforced the Protocol MVP, Governed Agent, and
   High-Assurance Agent) are the adoption ladder: what to deploy, in
@@ -38,10 +39,12 @@ At a glance:
   orthogonal set of named assurance claims a deployment lists in its
   Deployment Profile. The first three levels run entirely on ratified
   dependencies.
-- **Three peer bindings, one object.** The OAuth Authorization
-  Server, the standalone Mission Authority Server (the estate control
-  plane where the AS cannot change or governance spans many issuers),
-  and the AAuth Person Server.
+- **Three peer bindings, one object, and a sketched fourth.** The
+  OAuth Authorization Server, the standalone Mission Authority Server
+  (the estate control plane where the AS cannot change or governance
+  spans many issuers), and the AAuth Person Server, plus an
+  experimental UMA 2.0 binding: the first written against the
+  substrate contract rather than extracted into it.
 
 **Start with the
 [Architecture](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html)
@@ -77,7 +80,11 @@ that cannot yet change their AS. In the **AAuth binding**, the AAuth Person
 Server is the Mission Issuer: it gives AAuth's native mission concept
 the Mission model's structure, lifecycle, and anchors, and because the
 Person Server issues or gates every AAuth auth token, issuance gating
-holds there too. In all three, authority only narrows as it flows down
+holds there too. An experimental fourth binding is sketched for the
+**UMA 2.0** Authorization Server: the pushed Mission Intent rides UMA
+claims pushing, the resource owner's decision fills UMA's deliberately
+unspecified authorization assessment, and every RPT issuance is gated
+on Mission state. In all four, authority only narrows as it flows down
 to derived and delegated credentials; widening requires a fresh
 approval. (One carve-out: AAuth call chaining does not impose
 cross-hop subset attenuation; a chained downstream hop is its own
@@ -93,16 +100,17 @@ it.
  propose      Mission Intent Shaping (client side, untrusted proposal)
                          |
                          v
- approve      Mission Issuer, one of three peer bindings:
- and record   +------------------+ +------------------+ +------------------+
-              | OAuth AS (core): | | Standalone MAS:  | | AAuth Person     |
-              | PAR -> approval; | | async approval;  | | Server: native   |
-              | Mission-bound    | | no tokens; the   | | missions; auth   |
-              | tokens gated on  | | PDP joins tokens | | tokens gated on  |
-              | state            | | to the Mission   | | state            |
-              +------------------+ +------------------+ +------------------+
-                       \                   |                   /
-                        v                  v                  v
+ approve      Mission Issuer, one of four peer bindings:
+ and record   +-------------+ +-------------+ +-------------+ +-------------+
+              | OAuth AS    | | Standalone  | | AAuth PS:   | | UMA 2.0 AS  |
+              | (core): PAR | | MAS: async  | | native      | | (sketch):   |
+              | -> approval | | approvals,  | | missions,   | | tickets +   |
+              | tokens      | | no tokens,  | | auth tokens | | pushed      |
+              | gated on    | | PDP joins   | | gated on    | | Intent, RPT |
+              | state       | | to Mission  | | state       | | state-gated |
+              +-------------+ +-------------+ +-------------+ +-------------+
+                       \             |             |             /
+                        v            v             v            v
               THE MISSION: durable record committing intent_hash
               and authority_hash, with a lifecycle state
                          |
@@ -222,8 +230,8 @@ maps to a document described under "The documents" below (mission is
 the core; the rest are the companion profiles of the same names).
 
 The level is one axis; the binding (OAuth AS, standalone Mission
-Authority Server, or AAuth Person Server) is orthogonal and described
-below the table.
+Authority Server, AAuth Person Server, or the experimental UMA 2.0
+AS) is orthogonal and described below the table.
 
 | Level | Drafts | What you get |
 |---|---|---|
@@ -240,7 +248,8 @@ consequence warrants it, not a prerequisite for every resource; only
 the three high-consequence classes require an active freshness
 source.
 
-The model deploys through three bindings. The OAuth binding is the
+The model deploys through four bindings, one of them an experimental
+sketch. The OAuth binding is the
 core's own: the Authorization Server implements the
 issuance profile, tokens carry the `mission` claim, and issuance is
 gated on Mission state. The standalone binding runs a Mission
@@ -252,7 +261,11 @@ AS cannot yet change. The issuance grant profile is its middle path:
 estate ASs redeem MAS-minted grants for Mission-bound, state-gated
 tokens without taking on the core's approval surfaces. The AAuth binding hosts AAuth's native missions
 at the Person Server, which issues or gates every AAuth auth token,
-so issuance gating holds there as it does at a Mission-aware AS. The Mission Mandate makes a Mission portable
+so issuance gating holds there as it does at a Mission-aware AS. The
+UMA 2.0 binding (experimental) fills UMA's deliberately unspecified
+authorization assessment with the Mission: the pushed Intent rides
+claims pushing, `request_submitted` is the native deferred approval,
+and every RPT issuance and upgrade is gated on Mission state. The Mission Mandate makes a Mission portable
 across all of them: a signed, verifiable statement of what was
 approved, checkable by any party without a token exchange.
 
@@ -267,8 +280,9 @@ layers onto any level; it produces the Mission Intent and is not itself
 deployed at the Authorization Server. Mission Deferred Approval is an
 approval-time option for deployments whose approvals are asynchronous or
 whose reviewers narrow a proposed Mission; it layers onto the
-OAuth-binding levels (the Mission Authority Server and the AAuth
-Person Server are natively asynchronous and do not use it).
+OAuth-binding levels (the Mission Authority Server, the AAuth
+Person Server, and the UMA binding are natively asynchronous and do
+not use it).
 
 Each draft also states its own scoped conformance; the levels are
 guidance, not a new conformance class.
@@ -319,16 +333,18 @@ facts are the next subsection.
    **approval-revision**, **progressive**, **metering**,
    **attenuation**, **orchestration**, **discovery** (open-world
    encounters adjudicated against a pre-consented ceiling, with the
-   lying-resource and tainted-session floors). Each names a stable
-   path to prefer where one exists.
+   lying-resource and tainted-session floors), **uma** (the UMA 2.0
+   binding sketch, the first written against the substrate
+   contract). Each names a stable path to prefer where one exists.
 
 The architecture and security model are Informational companions and
 sit outside the ordering.
 
 ### Dependency stability
 
-Every normative dependency is a ratified RFC or a finalized OpenID
-specification, with these tracked exceptions: the **core** confines
+Every normative dependency is a ratified RFC, a finalized OpenID
+specification, or (for the **uma** sketch) a final Kantara Initiative
+Recommendation, with these tracked exceptions: the **core** confines
 its one Internet-Draft reference (the OAuth Actor Profile) to its
 OPTIONAL Delegation capability; **cross-domain** depends on OAuth
 identity chaining (approved, in the RFC Editor queue) and ID-JAG (a
@@ -623,6 +639,27 @@ where the Access Server carries the family `mission` members, and
 Reference-only otherwise.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-mission-aauth) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-aauth) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.diff)
+
+#### Mission-Bound Authorization for UMA 2.0
+
+Experimental sketch: the fourth binding, and the first authored
+against the Mission Substrate Requirements contract rather than
+extracted into it. UMA 2.0 standardized the plumbing of asynchronous,
+party-asymmetric authorization (the rotating permission ticket,
+`request_submitted`, claims pushing, per-use introspection, and a
+continuity token that grants nothing) and deliberately left the
+authorization assessment unspecified; this binding fills that
+interior with the Mission. The pushed Mission Intent rides claims
+pushing at the token endpoint, the resource owner's decision is the
+approval event, the lifecycle gates every RPT issuance and upgrade,
+the RPT is the Mission-bound credential (token-carried or
+introspection-carried via the core's registered `mission` member),
+and the PCT is Mission continuity that is never authority. Full
+provision on ratified substrate machinery end to end; the trades are
+UMA's thin deployed base and its scope-coarse authority grain, which
+leaves runtime enforcement's role unchanged.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-uma.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-mission-uma) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-mission-uma) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-uma.diff)
 
 #### Mission Substrate Requirements
 
