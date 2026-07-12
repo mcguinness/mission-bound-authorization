@@ -79,6 +79,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-uma:
+    title: "Mission-Bound Authorization for UMA 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-uma.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-aauth:
     title: "Mission-Bound Authorization for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
@@ -280,11 +288,12 @@ lifecycle ({{I-D.draft-mcguinness-mission-aauth}}), and optional
 companions layer approval, lifecycle, enforcement, runtime,
 delegation, and proof capabilities on top. The decomposition keeps
 each interface small but spreads the structure across many documents
-and three bindings; this document is the single structural view.
+and four bindings; this document is the single structural view.
 
 Read as one system, the family defines a **delegated-authority
-layer**, with OAuth 2.0, the standalone Mission Authority Server, and
-AAuth as peer bindings into it ({{the-mission}}).
+layer**, with OAuth 2.0, the standalone Mission Authority Server,
+AAuth, and (as an experimental sketch) UMA 2.0 as peer bindings into
+it ({{the-mission}}).
 
 It defines no protocol, no object, and no requirement. It is a map,
 not the territory: every mechanism named points at the profile that
@@ -633,7 +642,7 @@ Approver:
 
 Mission Issuer:
 : Validates the Mission Intent, runs the approval event, records the
-  Mission, and owns its state. Three bindings. OAuth Authorization
+  Mission, and owns its state. Four bindings. OAuth Authorization
   Server: every derived token carries the `mission` claim, and
   issuance and refresh are gated on Mission state
   ({{I-D.draft-mcguinness-oauth-mission}}). Mission Authority Server:
@@ -643,6 +652,10 @@ Mission Issuer:
   Server: the mission blob carries the record under AAuth's `s256`
   commitment, and the Person Server issues or gates every auth token,
   so issuance gating holds ({{I-D.draft-mcguinness-mission-aauth}}).
+  UMA 2.0 Authorization Server (experimental sketch): the pushed
+  Mission Intent rides UMA claims pushing, the resource owner's
+  decision fills UMA's authorization assessment, and RPT issuance is
+  gated on state ({{I-D.draft-mcguinness-mission-uma}}).
   Under every binding the Issuer also serves audience-scoped policy
   views, the authority-distribution artifact the runtime and MAS
   profiles define ({{I-D.draft-mcguinness-mission-runtime}},
@@ -699,17 +712,18 @@ regardless of binding:
           \             |
            \      approval event
             \           |
-  +----------------------------------------------------+
-  |                   Mission Issuer                   |
-  | +--------------+ +--------------+ +--------------+ |
-  | | OAuth AS:    | | Standalone   | | AAuth PS:    | |
-  | | Mission-     | | MAS: no      | | native       | |
-  | | bound tokens | | tokens; the  | | missions;    | |
-  | | gated on     | | PDP joins    | | auth tokens  | |
-  | | state        | | credentials  | | gated        | |
-  | +------+-------+ +------+-------+ +------+-------+ |
-  +--------|----------------|----------------|---------+
-           v                v                v
+  +-------------------------------------------------------------+
+  |                       Mission Issuer                         |
+  | +------------+ +------------+ +------------+ +------------+ |
+  | | OAuth AS:  | | Standalone | | AAuth PS:  | | UMA 2.0 AS | |
+  | | Mission-   | | MAS: no    | | native     | | (sketch):  | |
+  | | bound      | | tokens;    | | missions;  | | pushed     | |
+  | | tokens     | | the PDP    | | auth       | | Intent;    | |
+  | | gated on   | | joins to   | | tokens     | | RPTs gated | |
+  | | state      | | Mission    | | gated      | | on state   | |
+  | +------------+ +------------+ +------------+ +------------+ |
+  +-------|--------------|--------------|--------------|--------+
+          v              v              v              v
           the Mission: intent_hash,
        authority_hash, lifecycle state
                      |
@@ -1042,7 +1056,7 @@ another.
 
 For a new binding this checklist is now normatively stated by Mission
 Substrate Requirements ({{I-D.draft-mcguinness-mission-substrate}});
-this section remains the informative summary, and the three existing
+this section remains the informative summary, and the existing
 bindings remain authoritative for themselves.
 
 Another mission-based protocol hosts the substrate-neutral profiles
@@ -1054,7 +1068,7 @@ envelope, the audit horizon, resolvable issuer keys, and approval
 fidelity, with the Mission-bound credential optional (a substrate
 that omits it composes as the standalone binding does). The
 per-profile Mission Substrate sections remain the authoritative
-per-consumer statements of this interface, and the three existing
+per-consumer statements of this interface, and the existing
 bindings remain authoritative for themselves.
 
 ## Error Surfaces {#error-surfaces}
@@ -1161,10 +1175,11 @@ endpoint, or the AAuth Person Server's mission endpoint.
 
 The question: how does a proposed task become an approved, committed
 Mission? The boundary: the Mission Issuer's own; the approval event
-is where trust is created. Owners: the three bindings
+is where trust is created. Owners: the four bindings
 ({{I-D.draft-mcguinness-oauth-mission}},
 {{I-D.draft-mcguinness-mission-authority-server}},
-{{I-D.draft-mcguinness-mission-aauth}}), Consent Evidence
+{{I-D.draft-mcguinness-mission-aauth}},
+{{I-D.draft-mcguinness-mission-uma}}), Consent Evidence
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) committing
 the disclosure shown to the Approver, and Deferred Approval
 ({{I-D.draft-mcguinness-oauth-mission-approval}}), the OAuth
@@ -1427,14 +1442,22 @@ states the highest level it has earned in its Enforcement Scope
 Statement, and a consumer treats an unstated or unproven level as not
 claimed. The levels build on one another: a deployment adopts
 recording and governing the approved task (Baseline Issuance), then
-per-action enforcement (Runtime-Enforced, the Protocol MVP), then full
+per-action enforcement (Runtime-Enforced), then full
 agent safety (Governed and High-Assurance Agent), advancing to the
 level its risk warrants and stopping there.
 
+A level is a dependency bundle: which documents a deployment runs,
+in adoption order. What a deployment can prove is the orthogonal
+claims axis ({{assurance-claims-axis}}), and the proof obligations
+noted with each level below are the claims that become available at
+that level, not properties the level name itself asserts; the
+claims, not the level, are what a relying party compares.
+
 The levels are one axis; the **binding** is an orthogonal one. Every
-level is reachable under any of the three Mission Issuer bindings, the
+level is reachable under any of the Mission Issuer bindings (the
 OAuth Authorization Server, the standalone Mission Authority Server,
-or the AAuth Person Server, and a deployment names its binding
+the AAuth Person Server, or the experimental UMA 2.0 Authorization
+Server), and a deployment names its binding
 separately from its level; what a level grants varies with what the
 binding provides. The standalone MAS binding is the case that
 matters most: it provides the Mission record, lifecycle, and authority
@@ -1476,18 +1499,19 @@ The levels, cumulative:
   per-action enforcement: a half-step into the next level, not a level
   of its own.
 
-**Runtime-Enforced** (the Protocol MVP):
+**Runtime-Enforced**:
 : adds a PEP/PDP decision on every consequential action, a trusted
   state source with a published staleness bound, parameter binding, and
   runtime evidence ({{I-D.draft-mcguinness-mission-runtime}} and its
   AuthZEN binding). Grants per-action enforcement and revocation
   bounded, for gated classes, by the staleness bound plus the permit
   window plus the class's execution bound, and by token lifetime for
-  ungated paths. This is the
-  family's adoption wedge, the **Protocol MVP**: the smallest
+  ungated paths. This is the smallest
   deployment that turns a Mission from governed issuance into
   action-time defense, and every normative dependency it needs is
-  ratified. Proof
+  ratified; it is a substantial build, not a wedge, and a deployment
+  sizes the effort from the runtime profile's conformance section
+  rather than from this level's one-line summary. Proof
   obligations: PEP-placement completeness and the declared freshness
   source and bound. Documents: Baseline plus runtime, its AuthZEN
   binding, and a freshness source.
@@ -1581,12 +1605,12 @@ the level, are what a relying party compares.
 
 # The Mission Deployment Profile {#deployment-profile}
 
-The Mission Assurance Levels ({{assurance-levels}}) name both what to
-deploy and what may be claimed, but a claim is only checkable if a
-deployment
+The Mission Assurance Levels ({{assurance-levels}}) name what to
+deploy, and the assurance claims ({{assurance-claims-axis}}) name
+what may be proven; a claim is only checkable if a deployment
 states, concretely, what it enforces and what it leaves outside the
 boundary. The **Mission Deployment Profile** is that system-level
-artifact: the published serialization of the per-layer statements
+artifact: the published composition of the per-layer statements
 the profiles themselves demand (the runtime profile's Enforcement
 Scope Statement, the harness environment statement, the MAS mapping
 contract, the Resource Server coverage split, the
@@ -1595,7 +1619,10 @@ profile's bounds and ceiling-review cadence, each where its profile
 is run), composed into one object an auditor, a procurement, or a
 security review can read. It is one artifact, not a second one: each
 fact's owning profile governs its meaning and normative force, and
-this document fixes no serialization.
+this document fixes no serialization. A machine-readable manifest
+schema, with stable claim identifiers and validation rules, is
+deferred family work; until it exists, the shape below is
+illustrative and the per-profile statements are the checkable form.
 
 Its distinguishing field is `residual_risks`: the profile is not
 credible unless it states, in the same object as its guarantees, what
@@ -1742,8 +1769,14 @@ of these controls exist and who may pull each.
 The requirements the family answers, stated implementation-neutrally;
 each names its answering documents by short form ({{document-map}}).
 They stand on their own: a reader evaluating another design can use
-them as a checklist. As a litmus, a design is Mission-based in this
-family's sense only when all six of the following hold:
+them as a checklist. The litmus splits at the family's own
+conformance seam, because the family itself defines conformant
+deployments at two strengths ({{assurance-levels}}).
+
+A design provides **Mission-substrate conformance**, the bar the
+Baseline Issuance level and every binding meets
+({{I-D.draft-mcguinness-mission-substrate}}), when the first four
+properties hold:
 
 1. **An approved task object**: the task is a durable, explicitly
    approved object rather than a session or a token, and its intent
@@ -1752,17 +1785,24 @@ family's sense only when all six of the following hold:
    derive from that object, never minted independently of it.
 3. **Narrow-only delegation**: derived and delegated authority only
    narrows, and widening exists only as a fresh approval.
-4. **Per-action runtime enforcement**: consequential actions are
-   checkable against the object at the point of use.
-5. **Observable lifecycle state**: the object's current state is
+4. **Observable lifecycle state**: the object's current state is
    observable and gates issuance and reliance; only `active` permits,
    and unrecognized states fail safe.
+
+A design provides **Runtime-Enforced Mission conformance**, the bar
+a design claiming action-time defense meets, when two more hold:
+
+5. **Per-action runtime enforcement**: consequential actions are
+   checkable against the object at the point of use.
 6. **Evidence that joins**: what was approved, shown, decided, and
    done is reconstructible from evidence joined on the object's
    identity.
 
-A design that relaxes one of these provides a different, weaker
-guarantee; the requirements below unpack them.
+A design that relaxes one of the first four is not Mission-based in
+this family's sense. A design that holds the first four but not all
+six is Mission-based at issuance strength, which is what a Baseline
+deployment is, and claims nothing about action-time defense; the
+requirements below unpack all six.
 
 ## Context and Intent {#req-context}
 
@@ -1858,6 +1898,13 @@ reclassification, not by a stable document absorbing a dependency.
 : The AAuth binding: the Person Server as Mission Issuer, the mission
   blob as the record under AAuth's `s256` commitment, issuance gating
   at the token endpoint.
+
+`mission-uma`:
+: Experimental sketch. The UMA 2.0 binding: the pushed Mission Intent
+  rides claims pushing, the resource owner's decision fills UMA's
+  authorization assessment, the RPT is the Mission-bound credential,
+  and the PCT is continuity that is never authority; the first
+  binding authored against the substrate contract.
 
 `mission-substrate`:
 : Normative requirements on any further binding of the model; the
