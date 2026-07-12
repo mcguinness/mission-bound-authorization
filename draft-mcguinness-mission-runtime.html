@@ -2251,7 +2251,14 @@ holds a usable credential for that class. Mediated execution depends on
 the agent having no unmediated path to the resource; a Mission-aware
 harness establishes that execution environment
 (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-4.6-5" class="pilcrow">¶</a></p>
-<p id="section-4.6-6">Where the deployment issues tokens under the client-instance-assertion
+<p id="section-4.6-6">Mediated custody's realizable form today is <strong>gateway custody</strong>: a
+server-side gateway, an LLM gateway, an MCP gateway, or an egress
+proxy, holds the sender-constraint key and the Mission-bound tokens,
+and the agent receives no bearer credential at all. That shape is the
+claim's home: the custody properties above belong to a deployment
+built this way, and a developer laptop with a shell is outside them
+by construction, not by configuration.<a href="#section-4.6-6" class="pilcrow">¶</a></p>
+<p id="section-4.6-7">Where the deployment issues tokens under the client-instance-assertion
 profile (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>),
 the sender-constraint key is instance-specific: that profile forbids a
 key shared across a client's instances. Mediated custody composes with
@@ -2260,21 +2267,21 @@ per-instance keys, taking custody of each instance's key rather than
 one shared key; or the mediating PEP is itself the attested instance
 that obtained the token, presenting the instance assertion and holding
 the instance key. In both shapes that profile's no-shared-key rule and
-this section's custody rules are satisfied together.<a href="#section-4.6-6" class="pilcrow">¶</a></p>
-<p id="section-4.6-7">This narrows, and does not eliminate, the compromised-agent exposure.
+this section's custody rules are satisfied together.<a href="#section-4.6-7" class="pilcrow">¶</a></p>
+<p id="section-4.6-8">This narrows, and does not eliminate, the compromised-agent exposure.
 The mediating PEP becomes a trusted component whose compromise is
 out of scope here (<a href="#security-considerations" class="auto internal xref">Section 17</a>); a compromised agent can
 still request mediated actions, which are gated, and can still misuse
 any low-consequence authority it legitimately holds directly. The aim is
 that the agent is structurally unable to take a high-consequence action
-unilaterally, not that the agent is trusted.<a href="#section-4.6-7" class="pilcrow">¶</a></p>
-<p id="section-4.6-8">The set of action classes a deployment mediates is the load-bearing
+unilaterally, not that the agent is trusted.<a href="#section-4.6-8" class="pilcrow">¶</a></p>
+<p id="section-4.6-9">The set of action classes a deployment mediates is the load-bearing
 parameter here: a deployment that mediates nothing gains nothing from
 this section, however it labels itself. A deployment that relies on this
 profile to protect against agent compromise therefore <span class="bcp14">MUST</span> include the
 high-consequence classes in its mediated set; the protection is only as
-broad as that set.<a href="#section-4.6-8" class="pilcrow">¶</a></p>
-<p id="section-4.6-9">Custody has a lifecycle. A deployment <span class="bcp14">SHOULD</span> prefer per-class
+broad as that set.<a href="#section-4.6-9" class="pilcrow">¶</a></p>
+<p id="section-4.6-10">Custody has a lifecycle. A deployment <span class="bcp14">SHOULD</span> prefer per-class
 credentials with distinct <code>cnf</code> keys over sharing one key across
 mediating PEPs, so that compromise of one mediating PEP does not expose
 the authority of another. On compromise of a mediating PEP's key, the
@@ -2284,12 +2291,12 @@ re-derivation with a new <code>cnf</code> binding plus revocation or expiry of
 the tokens bound to the old key. The Enforcement Scope Statement
 <span class="bcp14">SHOULD</span> state the custody replica topology (a shared HSM-held key
 versus per-replica keys): replicating one <code>cnf</code> key across a PEP
-fleet widens the exposure custody exists to shrink.<a href="#section-4.6-9" class="pilcrow">¶</a></p>
-<p id="section-4.6-10">Mediated execution also places a controllable chokepoint on the
+fleet widens the exposure custody exists to shrink.<a href="#section-4.6-10" class="pilcrow">¶</a></p>
+<p id="section-4.6-11">Mediated execution also places a controllable chokepoint on the
 egress path itself: content-level controls this profile does not
 define (data-loss prevention, redaction, payload policy) compose
 naturally at the mediating PEP, the one component that sees the full
-payload after the decision and before presentation.<a href="#section-4.6-10" class="pilcrow">¶</a></p>
+payload after the decision and before presentation.<a href="#section-4.6-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="least-exposure">
@@ -3340,71 +3347,76 @@ are the High-Assurance Agent bar of the Mission Assurance Levels
 <a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-agent-compromise-resistant-" class="section-name selfRef">Agent-Compromise-Resistant Enforcement</a>
         </h3>
 <p id="section-12.1-1">"Protects against agent compromise" is a verifiable claim, not a label.
-A deployment claims <strong>agent-compromise-resistant enforcement</strong> only when,
-for the high-consequence classes, all of the following hold. Each
-condition below is <span class="bcp14">MUST</span> under this claim regardless of its base-profile
-level: active-state freshness for the high-consequence classes is
-already <span class="bcp14">MUST</span> in the base profile (<a href="#state-freshness" class="auto internal xref">Section 7.2</a>); the harness
-condition makes <span class="bcp14">MUST</span> the base profile's requirement that mediated
-classes have no unmediated path (<a href="#pep-placement" class="auto internal xref">Section 4.5</a>) and adds, stated
-only by this claim, that no unmediated path yields a fresh usable
-credential for those classes either; mediated custody
-and action-bound approval are <span class="bcp14">SHOULD</span> in the base profile
-(<a href="#custody" class="auto internal xref">Section 4.6</a>, <a href="#action-approval" class="auto internal xref">Section 4.4</a>) and <span class="bcp14">MUST</span> here; the
-approval-rendering condition is stated only by this claim.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
+A deployment claims <strong>agent-compromise-resistant enforcement</strong> only
+when, for the high-consequence classes, the four conditions below hold
+and the deployment's path scope is declared and audited as this
+section then states. Each condition below is <span class="bcp14">MUST</span> under this claim
+regardless of its base-profile level: mediated custody and
+action-bound approval are <span class="bcp14">SHOULD</span> in the base profile (<a href="#custody" class="auto internal xref">Section 4.6</a>,
+<a href="#action-approval" class="auto internal xref">Section 4.4</a>) and <span class="bcp14">MUST</span> here; active-state freshness for the
+high-consequence classes is already <span class="bcp14">MUST</span> in the base profile
+(<a href="#state-freshness" class="auto internal xref">Section 7.2</a>); the approval-rendering condition is stated only
+by this claim.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-12.1-2.1">
-            <p id="section-12.1-2.1.1">the sender-constraint private key is held by the mediating PEP, not by
-the agent component (<a href="#custody" class="auto internal xref">Section 4.6</a>), and is generated in the mediating
-PEP or its HSM and never transferred from the agent;<a href="#section-12.1-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-12.1-2.1.1">the sender-constraint private key is held by the mediating PEP, not
+by the agent component, gateway custody being the realizable shape
+(<a href="#custody" class="auto internal xref">Section 4.6</a>), and is generated in the mediating PEP or its HSM and
+never transferred from the agent;<a href="#section-12.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.1-2.2">
-            <p id="section-12.1-2.2.1">governed work runs in a mediated execution environment with no
-unmediated path to the mediated classes and no unmediated path to
-fresh usable credentials for them: issuance of Mission-bound tokens
-for the mediated classes is restricted to keys the mediating PEP
-attests (for example, client-instance attestation), with no
-token-endpoint, refresh, or exchange path by which the agent obtains
-such a credential bound to a key it controls. A published
-execution-environment scope statement covering those classes documents
-this; a harness conforming to the harness profile
-(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>) is the defined way to
-establish and document it, and the claim binds to the property;<a href="#section-12.1-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-12.1-2.2.1">each such action requires an action-bound approval
+(<a href="#action-approval" class="auto internal xref">Section 4.4</a>);<a href="#section-12.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.1-2.3">
-            <p id="section-12.1-2.3.1">each such action requires an action-bound approval
-(<a href="#action-approval" class="auto internal xref">Section 4.4</a>);<a href="#section-12.1-2.3.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-12.1-2.4">
-            <p id="section-12.1-2.4.1">the disclosure rendered to the Approver for an action-bound approval
+            <p id="section-12.1-2.3.1">the disclosure rendered to the Approver for an action-bound approval
 is derived from the bound normalized parameters by a component
 isolated from the agent (the approval service or the mediating PEP),
 never composed by the agent, and the rendering <span class="bcp14">SHOULD</span> be committed
 as Consent Evidence, raising the base profile's <span class="bcp14">MAY</span>
-(<a href="#action-approval" class="auto internal xref">Section 4.4</a>); and<a href="#section-12.1-2.4.1" class="pilcrow">¶</a></p>
+(<a href="#action-approval" class="auto internal xref">Section 4.4</a>); and<a href="#section-12.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-12.1-2.5">
-            <p id="section-12.1-2.5.1">the Mission state source for those classes is an active freshness
-mechanism, not token-lifetime expiry (<a href="#state-freshness" class="auto internal xref">Section 7.2</a>).<a href="#section-12.1-2.5.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-12.1-2.4">
+            <p id="section-12.1-2.4.1">the Mission state source for those classes is an active freshness
+mechanism, not token-lifetime expiry (<a href="#state-freshness" class="auto internal xref">Section 7.2</a>).<a href="#section-12.1-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-12.1-3">A deployment <span class="bcp14">MAY</span> satisfy the action-bound approval condition for a
+<p id="section-12.1-3">The fifth term of the claim is the path scope, and it is not a
+protocol-verifiable conformance condition; this claim does not present
+it as one. That governed work runs with no unmediated path to the
+mediated classes, and with no token-endpoint, refresh, or exchange
+path by which the agent obtains a fresh usable credential for them
+bound to a key it controls, is the deployment audit obligation the
+harness profile already names
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>). It is declared in the
+Enforcement Scope Statement, in the mediated-paths declaration and the
+unmediated-path exclusions (<a href="#runtime-conformance" class="auto internal xref">Section 4.2</a>), with the
+declared scope covering fresh-credential paths as well as action
+paths, and it is audited organizationally, with the negative tests of
+<a href="#negative-conformance" class="auto internal xref">Section 13</a> as its observable check. The claim therefore
+reads: the four conditions above, each verifiable, plus the
+declared-and-audited path scope. The weakest term of that conjunction
+is a self-declared scope statement, and a deployment making this claim
+states that plainly rather than implying a stronger term.<a href="#section-12.1-3" class="pilcrow">¶</a></p>
+<p id="section-12.1-4">A deployment <span class="bcp14">MAY</span> satisfy the action-bound approval condition for a
 batch through one approval that binds an enumerated list of parameter
 digests, each consumed single-use, so the human pause stays meaningful
 at volume rather than degrading into per-action rubber-stamping
-(<a href="#action-approval" class="auto internal xref">Section 4.4</a>).<a href="#section-12.1-3" class="pilcrow">¶</a></p>
-<p id="section-12.1-4">A deployment that leaves any of these unmet <span class="bcp14">MUST NOT</span> claim
-agent-compromise-resistant enforcement; it may still claim base runtime
-conformance. The claim names exactly the set of classes it covers.<a href="#section-12.1-4" class="pilcrow">¶</a></p>
-<p id="section-12.1-5">The guarantee is the conjunction of these conditions, not any one of
+(<a href="#action-approval" class="auto internal xref">Section 4.4</a>).<a href="#section-12.1-4" class="pilcrow">¶</a></p>
+<p id="section-12.1-5">A deployment that leaves any of the four conditions unmet, or whose
+Enforcement Scope Statement does not declare the path scope, <span class="bcp14">MUST NOT</span>
+claim agent-compromise-resistant enforcement; it may still claim base
+runtime conformance. The claim names exactly the set of classes it
+covers.<a href="#section-12.1-5" class="pilcrow">¶</a></p>
+<p id="section-12.1-6">The guarantee is the conjunction of these conditions, not any one of
 them. Mediated custody alone prevents only off-path presentation of
 the credential: the agent still initiates every action and supplies
 every parameter, and the mediating PEP executes any in-scope action
 the agent requests. What bounds a compromised agent is custody
 <strong>and</strong> complete PEP placement <strong>and</strong> correct classification acting
 together, so the claim is no stronger than the weakest of the three,
-and "mediated custody" on its own is not the property.<a href="#section-12.1-5" class="pilcrow">¶</a></p>
-<p id="section-12.1-6">Each unmet condition loses a specific property:<a href="#section-12.1-6" class="pilcrow">¶</a></p>
+and "mediated custody" on its own is not the property.<a href="#section-12.1-6" class="pilcrow">¶</a></p>
+<p id="section-12.1-7">Each unmet condition loses a specific property:<a href="#section-12.1-7" class="pilcrow">¶</a></p>
 <table class="center" id="table-4">
           <caption><a href="#table-4" class="selfRef">Table 4</a></caption>
 <thead>
@@ -3419,7 +3431,7 @@ and "mediated custody" on its own is not the property.<a href="#section-12.1-5" 
               <td class="text-left" rowspan="1" colspan="1">Key exfiltration</td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">No unmediated path to the actions or to fresh credentials for them</td>
+              <td class="text-left" rowspan="1" colspan="1">Path scope declared and audited (no unmediated path to the actions or to fresh credentials for them)</td>
               <td class="text-left" rowspan="1" colspan="1">Off-path execution or fresh-credential acquisition</td>
             </tr>
             <tr>
@@ -3466,8 +3478,13 @@ egress rule is enforced, not advisory: a consequential
 external-communication or external-commitment action whose bound
 parameters derive from tainted content (or, under session-level
 taint, any such action in a tainted session) obtains a fresh
-action-bound approval (<a href="#action-approval" class="auto internal xref">Section 4.4</a>) or is refused. Where
-the decision-API binding carries taint context
+action-bound approval (<a href="#action-approval" class="auto internal xref">Section 4.4</a>) or is refused. The
+harness profile's pre-consented egress carve-out applies: a send to
+a destination the Approver concretely named at approval is not
+human-gated on taint grounds alone, and for content-derived
+destinations, those outside the approved set, the full polarity,
+every tainted egress human-gated, remains a condition of this
+claim. Where the decision-API binding carries taint context
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), the PDP enforces the
 rule; otherwise the harness does, and the scope statement says
 which.<a href="#section-12.2-2.2.1" class="pilcrow">¶</a></p>
