@@ -105,18 +105,19 @@ Table of Contents
      14.2.  Runtime Enforcement
    15. Exposing Shaping as a Service
    16. What Shaping Adds and Does Not
-   17. Security Considerations
-     17.1.  Model Output Is Not Authority
-     17.2.  Shaper Compromise Does Not Directly Grant Authority
-     17.3.  Prompt Injection and Untrusted Content
-     17.4.  Silent Broadening and Stale Capability Sources
-     17.5.  Shaper-to-Client Integrity in a Multi-Process Client
-     17.6.  Confidentiality of Prompt Content
-   18. Privacy Considerations
-   19. IANA Considerations
-   20. References
-     20.1.  Normative References
-     20.2.  Informative References
+   17. Conformance
+   18. Security Considerations
+     18.1.  Model Output Is Not Authority
+     18.2.  Shaper Compromise Does Not Directly Grant Authority
+     18.3.  Prompt Injection and Untrusted Content
+     18.4.  Silent Broadening and Stale Capability Sources
+     18.5.  Shaper-to-Client Integrity in a Multi-Process Client
+     18.6.  Confidentiality of Prompt Content
+   19. Privacy Considerations
+   20. IANA Considerations
+   21. References
+     21.1.  Normative References
+     21.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -178,7 +179,7 @@ Table of Contents
 
 2.  Relationship to the Issuance Profile
 
-   This document is OPTIONAL and layered on
+   This document is optional and layered on
    [I-D.draft-mcguinness-oauth-mission].  A deployment that accepts only
    hand-authored Mission Intent values is fully conformant to the
    issuance profile and is unaffected by this document.
@@ -326,7 +327,7 @@ Table of Contents
       role and is NOT RECOMMENDED.  A deployment MAY integrity-protect
       shaper output for client-internal reasons (for example, to detect
       tampering between the shaper and the submission step in a multi-
-      process client, Section 17.5), but that protection has no
+      process client, Section 18.5), but that protection has no
       authority semantics at the Mission Issuer and MUST NOT be relied
       upon beyond the client.
 
@@ -539,7 +540,7 @@ Table of Contents
      |                  | consent; preserve the   | contains         |
      |                  | user's framing so the   | instructions or  |
      |                  | disclosure matches      | commands         |
-     |                  | their understanding.    | (Section 17.3).  |
+     |                  | their understanding.    | (Section 18.3).  |
      +------------------+-------------------------+------------------+
      | resources        | Enumerate, as absolute  | SHOULD NOT widen |
      |                  | URIs, the resources,    | beyond what the  |
@@ -762,7 +763,7 @@ Table of Contents
 
    model_trace:  Model prompts, outputs, or tool calls used during
       shaping.  When retained it MUST be treated as sensitive audit data
-      (Section 18) and MUST NOT be rendered as authority.
+      (Section 19) and MUST NOT be rendered as authority.
 
 10.1.  Integrity and the Evidence Hash
 
@@ -926,7 +927,7 @@ Table of Contents
    propose the same authority under different names: a shaper SHOULD NOT
    re-encode refused authority in new vocabulary, and it MUST NOT use
    iterative resubmission to probe the Mission Issuer's policy boundary
-   (Section 17.4).  Where a narrower proposal can no longer complete the
+   (Section 18.4).  Where a narrower proposal can no longer complete the
    task, the outcomes this profile already defines apply: clarification
    or refusal (Section 8).  A task that needs more than was refused is a
    new proposal through the normal flow, not a widened retry.
@@ -1049,13 +1050,19 @@ Table of Contents
    in the same artifact as the deployment's other claims, and its
    absence is legible rather than assumed.
 
-17.  Security Considerations
+17.  Conformance
+
+   This document is Informational and defines no conformance class
+   (Section 1.1).  "Sound shaper" names recommended behaviors, not a
+   conformance target.
+
+18.  Security Considerations
 
    The shaper sits at the prompt-to-Intent boundary.  Its security
    properties follow from the role contract: the shaper proposes, and
    authority is created only at the Mission Issuer's approval event.
 
-17.1.  Model Output Is Not Authority
+18.1.  Model Output Is Not Authority
 
    A model-based shaper can draft a Mission Intent, but the model MUST
    NOT be the authority that grants or widens access.  The approved
@@ -1068,7 +1075,7 @@ Table of Contents
    identifier and version in Shaping Evidence so failures can be
    attributed.
 
-17.2.  Shaper Compromise Does Not Directly Grant Authority
+18.2.  Shaper Compromise Does Not Directly Grant Authority
 
    A compromised shaper can produce arbitrary Mission Intent and can
    suppress ambiguity, but it cannot, by itself, cause the Mission
@@ -1082,7 +1089,7 @@ Table of Contents
    validate and narrow the proposal; deployments SHOULD monitor shaper
    versions and evidence for anomalous broadening.
 
-17.3.  Prompt Injection and Untrusted Content
+18.3.  Prompt Injection and Untrusted Content
 
    The shaper's input is, by assumption, partially or wholly attacker-
    influenceable: prompts may contain pasted content, content the user
@@ -1123,7 +1130,7 @@ Table of Contents
    Mission Issuer that renders disclosure truthfully together make
    injection visible at the approval step.
 
-17.4.  Silent Broadening and Stale Capability Sources
+18.4.  Silent Broadening and Stale Capability Sources
 
    The primary failure mode is silent broadening: a vague goal becomes a
    wide Authority Set. The ambiguity rules of Section 8 are intended to
@@ -1141,7 +1148,7 @@ Table of Contents
    for one task broaden, and Shaping Evidence chained across re-
    proposals is the record that makes such a pattern visible.
 
-17.5.  Shaper-to-Client Integrity in a Multi-Process Client
+18.5.  Shaper-to-Client Integrity in a Multi-Process Client
 
    In a client where the shaper runs in a different process or machine
    from the OAuth submission code, the shaper-to-submission step is an
@@ -1156,7 +1163,7 @@ Table of Contents
    MUST NOT be carried into the Mission Intent as if it did
    (Section 5.2).
 
-17.6.  Confidentiality of Prompt Content
+18.6.  Confidentiality of Prompt Content
 
    Prompts may carry sensitive content (personal data, business data,
    free-form expression).  The shaper SHOULD apply the requesting
@@ -1166,7 +1173,7 @@ Table of Contents
    same controls the client applies to any other prompt or user-content
    log.
 
-18.  Privacy Considerations
+19.  Privacy Considerations
 
    The shaper sits where a user's natural-language prompt, which may
    carry personal data, business-confidential content, or free-form
@@ -1197,7 +1204,7 @@ Table of Contents
    processes and the requesting-client identity the Mission Issuer
    already sees.
 
-19.  IANA Considerations
+20.  IANA Considerations
 
    This document has no IANA actions.  The Mission Intent Shaping
    profile is Informational; it registers no media type, claim name,
@@ -1206,9 +1213,9 @@ Table of Contents
    would be a separate document and would carry its own registrations
    there.
 
-20.  References
+21.  References
 
-20.1.  Normative References
+21.1.  Normative References
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
@@ -1238,7 +1245,7 @@ Table of Contents
               DOI 10.17487/RFC8785, June 2020,
               <https://www.rfc-editor.org/rfc/rfc8785>.
 
-20.2.  Informative References
+21.2.  Informative References
 
    [I-D.draft-mcguinness-mission-aauth]
               McGuinness, K., "Mission-Bound Authorization for AAuth",

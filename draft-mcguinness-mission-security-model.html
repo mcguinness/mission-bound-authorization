@@ -1633,7 +1633,7 @@ that issuer.<a href="#section-6-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-2.1">
           <p id="section-7-2.1.1"><strong>Sender-constrained credentials.</strong> Where Mission-bound tokens are
-sender-constrained (a SHOULD in the core,
+sender-constrained (recommended by the core,
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), a token exfiltrated without
 its proof-of-possession key is unusable, and the model assumes the
 proof-of-possession mechanism is sound and keys are protected by
@@ -1755,8 +1755,9 @@ underlies custody and rendering alike.<a href="#section-8-2.10.1" class="pilcrow
 <dt id="section-8-2.11">Trifecta containment (High-Assurance Agent):</dt>
         <dd style="margin-left: 1.5em" id="section-8-2.12">
           <p id="section-8-2.12.1">An injected agent cannot egress on the strength of untrusted content
-alone: least exposure and the harness taint rule are enforced as
-MUSTs, and the external-communication and external-commitment
+alone: least exposure and the harness taint rule are mandatory
+requirements of the runtime profile, and the
+external-communication and external-commitment
 classes are fully mediated
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>). Rests on the harness and
@@ -2019,7 +2020,7 @@ provides it.<a href="#section-9-5.1.1" class="pilcrow">¶</a></p>
 not the relationship between them: <code>intent_hash</code> commits the
 approved intent, <code>authority_hash</code> the consented Authority Set, and
 that the authority faithfully serves the intent is a derivation
-policy fact (a SHOULD, auditable via <code>policy_version</code>), not
+policy fact (a recommendation, auditable via <code>policy_version</code>), not
 something either hash proves. And <code>authority_hash</code> commits the full
 consented set, which a per-Resource-Server token, carrying a
 narrowed subset, does not contain: at such a Resource Server the

@@ -113,19 +113,19 @@ Table of Contents
      8.1.  Recommended Access-Token TTL
    9.  Authorization Server Metadata
      9.1.  Worked Metadata Example
-   10. Security Considerations
-     10.1.  Mission Status Enumeration
-     10.2.  Mission Status Response Replay
-     10.3.  Mission Status Denial of Service
-     10.4.  RFC 9701 vs. New Media Type
-     10.5.  Signing-Key Retention for Audit
-     10.6.  Entry Discharge
-     10.7.  General OAuth Security
-   11. Privacy Considerations
-     11.1.  Status and Lifecycle as Disclosure Surfaces
-     11.2.  Status Audit Logging
-     11.3.  Completion Condition Disclosure
-   12. Conformance
+   10. Conformance
+   11. Security Considerations
+     11.1.  Mission Status Enumeration
+     11.2.  Mission Status Response Replay
+     11.3.  Mission Status Denial of Service
+     11.4.  RFC 9701 vs. New Media Type
+     11.5.  Signing-Key Retention for Audit
+     11.6.  Entry Discharge
+     11.7.  General OAuth Security
+   12. Privacy Considerations
+     12.1.  Status and Lifecycle as Disclosure Surfaces
+     12.2.  Status Audit Logging
+     12.3.  Completion Condition Disclosure
    13. IANA Considerations
      13.1.  OAuth Authorization Server Metadata Registration
      13.2.  Media Type Registration
@@ -153,7 +153,7 @@ Table of Contents
    and defers a standardized management endpoint for lifecycle
    transitions to this document.
 
-   This document specifies those surfaces as OPTIONAL extensions that
+   This document specifies those surfaces as optional extensions that
    build on the issuance profile.  The capabilities are:
 
    *  A dedicated *Mission Status operation* (Section 3), which any
@@ -182,7 +182,7 @@ Table of Contents
 
    Each capability is independently optional.  An implementation states
    which it supports through the metadata of Section 9 and the
-   conformance language of Section 12.  An implementation that supports
+   conformance language of Section 10.  An implementation that supports
    none of them is unaffected and remains a conforming issuance profile.
 
    This document does not restate the issuance profile.  The Mission
@@ -322,7 +322,7 @@ Table of Contents
    [RFC9701] signed introspection responses are scoped to token
    introspection and do not apply to a lookup keyed by mission_id; the
    dedicated Mission Status operation therefore uses a new media type
-   and a JWS, not [RFC9701] (see Section 10.4).  Implementations MUST
+   and a JWS, not [RFC9701] (see Section 11.4).  Implementations MUST
    NOT use [RFC9701] for the dedicated Mission Status operation.
 
    The signed payload reports the Mission's current state and the
@@ -1166,7 +1166,7 @@ Table of Contents
       therefore cannot use it to escalate: the worst it can do is spend
       its own authority sooner, which is not an escalation, though a
       forced premature discharge is an availability and guardrail-
-      retirement concern (Section 10.6).
+      retirement concern (Section 11.6).
 
    *  *Discharge composes with the subset rule.* A derived entry carries
       its parent's completion conditions unchanged and MAY add more, the
@@ -1626,13 +1626,48 @@ Table of Contents
      "mission_max_stale_seconds": 60
    }
 
-10.  Security Considerations
+10.  Conformance
+
+   An implementation conforms to the issuance profile
+   [I-D.draft-mcguinness-oauth-mission] or implements the Mission Issuer
+   role of a binding that serves these surfaces, such as the standalone
+   Mission Authority Server
+   [I-D.draft-mcguinness-mission-authority-server].  Each extension in
+   this document is independently OPTIONAL; an implementation names the
+   ones it supports (for example, "issuance profile with Mission Status
+   and Mission Lifecycle"), and an implementation that supports none of
+   them is still a conforming issuance profile.
+
+   An implementation claiming an extension MUST meet its requirements:
+
+   *  *Mission Status*: serve the dedicated Mission Status operation
+      (Section 3) with JWS-signed responses (application/mission-status-
+      response+jwt), the authentication of Section 3.2, the anti-oracle
+      property (Section 3.6), and the error shape of Section 3.7; and
+      advertise mission_status_endpoint.
+
+   *  *Introspection projection*: carry the Mission projection on the
+      introspection response (Section 4), returning it as a [RFC9701]-
+      signed response where end-to-end integrity is required.
+
+   *  *Mission Lifecycle*: serve the management endpoint (Section 6),
+      gate the suspended and completed states it introduces exactly as
+      the issuance profile gates on non-active state, and advertise
+      mission_lifecycle_endpoint.
+
+   *  *Mission Completion*: issue and gate terminal_when entries per
+      Section 7, meeting the requirements of Section 7.9.
+
+   *  *Revocation propagation*: advertise mission_max_stale_seconds and
+      size Mission-bound access-token TTLs to it (Section 8).
+
+11.  Security Considerations
 
    The security considerations of the issuance profile
    [I-D.draft-mcguinness-oauth-mission] apply in full.  This section
    covers threats specific to the extensions defined here.
 
-10.1.  Mission Status Enumeration
+11.1.  Mission Status Enumeration
 
    Per the anti-oracle property (Section 3.6), the AS MUST NOT let a
    caller readily distinguish an unknown mission_id from a known-but-
@@ -1644,7 +1679,7 @@ Table of Contents
    implementation that leaks the distinction exposes the Mission space
    to enumeration.
 
-10.2.  Mission Status Response Replay
+11.2.  Mission Status Response Replay
 
    A Mission Status Response is bound to (caller sub, audience, nonce,
    issuance time).  Replay against a different caller or audience, or
@@ -1655,7 +1690,7 @@ Table of Contents
    to a fresh response; a consumer MUST NOT use a cached response after
    mission.fresh_until, with the skew tolerance of Section 3.5.
 
-10.3.  Mission Status Denial of Service
+11.3.  Mission Status Denial of Service
 
    The Mission Status operation is on the consumption path of every
    Mission-bound credential validation in deployments where consumers
@@ -1663,7 +1698,7 @@ Table of Contents
    rate limiting (returning rate_limited, Section 3.7) and SHOULD
    encourage consumer-side caching (Section 3.5) to reduce traffic.
 
-10.4.  RFC 9701 vs. New Media Type
+11.4.  RFC 9701 vs. New Media Type
 
    When the introspection projection is signed (Section 4), it uses
    [RFC9701], which is scoped to token introspection.  The dedicated
@@ -1675,7 +1710,7 @@ Table of Contents
    dedicated Mission Status operation in place of the signed form it
    requires.
 
-10.5.  Signing-Key Retention for Audit
+11.5.  Signing-Key Retention for Audit
 
    The AS signs Mission Status and Lifecycle responses with a key from
    its jwks_uri.  The AS MUST keep the public JWK for every kid it has
@@ -1688,7 +1723,7 @@ Table of Contents
    exception: the AS removes it, and the Mandate profile's compromise-
    time rule governs how artifacts signed under it are then classified.
 
-10.6.  Entry Discharge
+11.6.  Entry Discharge
 
    The completion capability (Section 7) adds the following:
 
@@ -1736,19 +1771,19 @@ Table of Contents
       short token lifetimes or runtime point-of-use denial
       (Section 7.7), the same caveat revocation carries.
 
-10.7.  General OAuth Security
+11.7.  General OAuth Security
 
    This document inherits OAuth 2.0 Best Current Practice [RFC9700] for
    the OAuth surfaces it composes with; implementers MUST follow current
    OAuth security guidance.
 
-11.  Privacy Considerations
+12.  Privacy Considerations
 
    The privacy considerations of the issuance profile
    [I-D.draft-mcguinness-oauth-mission] apply in full.  This section
    covers privacy specific to the extensions here.
 
-11.1.  Status and Lifecycle as Disclosure Surfaces
+12.1.  Status and Lifecycle as Disclosure Surfaces
 
    The Mission Status operation (Section 3) and the introspection
    projection (Section 4) disclose Mission state, the authority_hash,
@@ -1758,14 +1793,14 @@ Table of Contents
    audience-filtering the disclosed authority so a consumer never sees
    entries addressed to other audiences (Section 3.4).
 
-11.2.  Status Audit Logging
+12.2.  Status Audit Logging
 
    The AS records Status and Lifecycle requests (containing mission_id,
    audience, caller, and timing) in audit logs.  Deployments MUST treat
    these logs as PII sinks per the issuance profile's privacy
    considerations.
 
-11.3.  Completion Condition Disclosure
+12.3.  Completion Condition Disclosure
 
    A terminal_when condition can reveal task structure: event_type and
    event_source may name a business event, a case, or a record whose
@@ -1776,41 +1811,6 @@ Table of Contents
    reveals the Authorization Server's interest in that event; a
    deployment SHOULD weigh that exposure when the source is operated by
    another party.
-
-12.  Conformance
-
-   An implementation conforms to the issuance profile
-   [I-D.draft-mcguinness-oauth-mission] or implements the Mission Issuer
-   role of a binding that serves these surfaces, such as the standalone
-   Mission Authority Server
-   [I-D.draft-mcguinness-mission-authority-server].  Each extension in
-   this document is independently OPTIONAL; an implementation names the
-   ones it supports (for example, "issuance profile with Mission Status
-   and Mission Lifecycle"), and an implementation that supports none of
-   them is still a conforming issuance profile.
-
-   An implementation claiming an extension MUST meet its requirements:
-
-   *  *Mission Status*: serve the dedicated Mission Status operation
-      (Section 3) with JWS-signed responses (application/mission-status-
-      response+jwt), the authentication of Section 3.2, the anti-oracle
-      property (Section 3.6), and the error shape of Section 3.7; and
-      advertise mission_status_endpoint.
-
-   *  *Introspection projection*: carry the Mission projection on the
-      introspection response (Section 4), returning it as a [RFC9701]-
-      signed response where end-to-end integrity is required.
-
-   *  *Mission Lifecycle*: serve the management endpoint (Section 6),
-      gate the suspended and completed states it introduces exactly as
-      the issuance profile gates on non-active state, and advertise
-      mission_lifecycle_endpoint.
-
-   *  *Mission Completion*: issue and gate terminal_when entries per
-      Section 7, meeting the requirements of Section 7.9.
-
-   *  *Revocation propagation*: advertise mission_max_stale_seconds and
-      size Mission-bound access-token TTLs to it (Section 8).
 
 13.  IANA Considerations
 
@@ -1850,7 +1850,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JWS Compact Serialization
 
-   *  Security considerations: see Section 10
+   *  Security considerations: see Section 11
 
    *  Interoperability considerations: see this document
 

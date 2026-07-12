@@ -78,7 +78,7 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An EXPERIMENTAL Extension
+   2.  Status: An Experimental Extension
    3.  Relationship to the Issuance Profile
    4.  Conventions and Terminology
    5.  Mission-Bound Attenuation Roots
@@ -145,16 +145,16 @@ Table of Contents
    and authority_hash rides the chain as a lineage anchor, not as the
    child's own authority commitment.
 
-2.  Status: An EXPERIMENTAL Extension
+2.  Status: An Experimental Extension
 
-   This document is OPTIONAL and *experimental*: adopt it for
-   evaluation, not as a stable interface.  A deployment that narrows
-   authority only through the Authorization Server is fully conformant
-   to the issuance profile and is unaffected by this document.  It
-   places no new requirement on the issuance profile, and it does not
-   replace Authorization-Server-mediated delegation; a deployment offers
-   offline attenuation in addition, for the fan-out paths where issuer
-   round-trips are the bottleneck.
+   This document is optional and experimental: adopt it for evaluation,
+   not as a stable interface.  A deployment that narrows authority only
+   through the Authorization Server is fully conformant to the issuance
+   profile and is unaffected by this document.  It places no new
+   requirement on the issuance profile, and it does not replace
+   Authorization-Server-mediated delegation; a deployment offers offline
+   attenuation in addition, for the fan-out paths where issuer round-
+   trips are the bottleneck.
 
    A deployment claims this profile only when it issues or accepts
    Mission-bound attenuation-substrate tokens.  Because the Mission kill

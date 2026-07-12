@@ -76,7 +76,6 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-     1.1.  Requirements Language
    2.  Conventions and Terminology
    3.  The Issuance Join
    4.  The Mission Issuance Grant
@@ -138,15 +137,13 @@ Table of Contents
    where its cost is warranted
    ([I-D.draft-mcguinness-mission-authority-server]).
 
-1.1.  Requirements Language
+2.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
    "OPTIONAL" in this document are to be interpreted as described in
    BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
    capitals, as shown here.
-
-2.  Conventions and Terminology
 
    This document uses Mission, Mission Intent, Authority Set, Mission
    Issuer, the mission claim, the subset rule, and the integrity anchors
@@ -635,8 +632,8 @@ Table of Contents
    approval; and the redemption error mapping of Section 6.1.  The PAR
    carriage of Section 6.2 is OPTIONAL.
 
-   A deployment claiming this profile states, alongside its enforcement-
-   scope statement, which Authorization Servers consume grants, the
+   A deployment claiming this profile states, alongside its Enforcement
+   Scope Statement, which Authorization Servers consume grants, the
    staleness bound of each one's refresh gating, and its reconciliation
    posture (Section 10): the window within which minting and redemption
    logs are reconciled, or that they are not.  A consuming AS advertises

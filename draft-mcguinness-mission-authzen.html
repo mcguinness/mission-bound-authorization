@@ -1172,17 +1172,12 @@ semantics the runtime profile owns.<a href="#section-abstract-1" class="pilcrow"
 <nav class="toc"><ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
             <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
-                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-requirements-language" class="internal xref">Requirements Language</a></p>
-</li>
-            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
             <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
-            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-mission-substrate" class="internal xref">Mission Substrate</a></p>
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-mission-substrate" class="internal xref">Mission Substrate</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
             <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-mission-to-policy-materiali" class="internal xref">Mission-to-Policy Materialization</a></p>
@@ -1494,17 +1489,6 @@ not duplicated, here.<a href="#section-1-5" class="pilcrow">¶</a></p>
    |           |- re-evaluate -&gt;|                     |
 </pre><a href="#section-1-7" class="pilcrow">¶</a>
 </div>
-<div id="requirements-language">
-<section id="section-1.1">
-        <h3 id="name-requirements-language">
-<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-requirements-language" class="section-name selfRef">Requirements Language</a>
-        </h3>
-<p id="section-1.1-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
-"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
-described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
-appear in all capitals, as shown here.<a href="#section-1.1-1" class="pilcrow">¶</a></p>
-</section>
-</div>
 </section>
 </div>
 <div id="conventions-and-definitions">
@@ -1512,16 +1496,36 @@ appear in all capitals, as shown here.<a href="#section-1.1-1" class="pilcrow">�
       <h2 id="name-conventions-and-terminology">
 <a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
       </h2>
-<p id="section-2-1">This document uses JSON <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> as the data model for all PDP
+<p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">Two member-presence conventions extend that vocabulary:<a href="#section-2-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-3">
+        <dt id="section-2-3.1">CONDITIONAL:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.2">
+          <p id="section-2-3.2.1">The member is present when the stated condition holds and absent
+otherwise. The condition accompanies each member so marked.<a href="#section-2-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.3">
+<span class="bcp14">REQUIRED</span> when known:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.4">
+          <p id="section-2-3.4.1">The sender includes the member when it holds the member's value. A
+receiver <span class="bcp14">MUST NOT</span> infer meaning from the member's absence.<a href="#section-2-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-2-4">This document uses JSON <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> as the data model for all PDP
 requests, responses, and evidence objects. JCS canonicalization
 <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> applies wherever an integrity hash is computed, under the
 canonicalization rules of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; this
-document does not define a second canonicalization.<a href="#section-2-1" class="pilcrow">¶</a></p>
-<p id="section-2-2">"SHA-256" refers to <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span>. A digest is encoded in the
+document does not define a second canonicalization.<a href="#section-2-4" class="pilcrow">¶</a></p>
+<p id="section-2-5">"SHA-256" refers to <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span>. A digest is encoded in the
 integrity-anchor encoded form of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>: <code>sha-256:</code> followed by the
-base64url, no-padding encoding of the digest.<a href="#section-2-2" class="pilcrow">¶</a></p>
-<p id="section-2-3">The terms Policy Enforcement Point (PEP), Policy Decision Point (PDP),
+base64url, no-padding encoding of the digest.<a href="#section-2-5" class="pilcrow">¶</a></p>
+<p id="section-2-6">The terms Policy Enforcement Point (PEP), Policy Decision Point (PDP),
 consequential action, Resource policy, decision, Mission state source,
 enforcement scope, high-consequence classes, parameter-bound, and the
 action-class names (consequential read, consequential write,
@@ -1531,63 +1535,63 @@ administration) are used as defined in
 (<code>id</code>, <code>issuer</code>, <code>authority_hash</code>), the integrity anchors
 (<code>intent_hash</code>, <code>authority_hash</code>), and <code>authorization_details</code>
 entries of type <code>mission_resource_access</code> are used as defined in
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-2-3" class="pilcrow">¶</a></p>
-<p id="section-2-4">Additional terms specific to this binding:<a href="#section-2-4" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-2-5">
-        <dt id="section-2-5.1">Materialized policy view, trusted compiler:</dt>
-        <dd style="margin-left: 1.5em" id="section-2-5.2">
-          <p id="section-2-5.2.1">Defined by the runtime profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-2-6" class="pilcrow">¶</a></p>
+<p id="section-2-7">Additional terms specific to this binding:<a href="#section-2-7" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-8">
+        <dt id="section-2-8.1">Materialized policy view, trusted compiler:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-8.2">
+          <p id="section-2-8.2.1">Defined by the runtime profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). This binding carries
 only the wire member <code>policy_view_id</code>
-(<a href="#mission-to-policy-materialization" class="auto internal xref">Section 4</a>).<a href="#section-2-5.2.1" class="pilcrow">¶</a></p>
+(<a href="#mission-to-policy-materialization" class="auto internal xref">Section 4</a>).<a href="#section-2-8.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-5.3">Validating server:</dt>
-        <dd style="margin-left: 1.5em" id="section-2-5.4">
-          <p id="section-2-5.4.1">The component that, at derivation, validates the Mission's authority
+<dt id="section-2-8.3">Validating server:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-8.4">
+          <p id="section-2-8.4.1">The component that, at derivation, validates the Mission's authority
 and records the derivation-time facts the PDP later checks (such as a
 capability <code>source_digest</code>, <a href="#capability-source-binding" class="auto internal xref">Section 9</a>). In the
 issuance profile this is the Mission Issuer; this profile uses the
-term where the recording role is what matters.<a href="#section-2-5.4.1" class="pilcrow">¶</a></p>
+term where the recording role is what matters.<a href="#section-2-8.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-5.5">Decision Evidence:</dt>
-        <dd style="margin-left: 1.5em" id="section-2-5.6">
-          <p id="section-2-5.6.1">The runtime enforcement evidence record emitted by the PDP, in the
-concrete object form of <a href="#decision-evidence-object" class="auto internal xref">Section 7</a>.<a href="#section-2-5.6.1" class="pilcrow">¶</a></p>
+<dt id="section-2-8.5">Decision Evidence:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-8.6">
+          <p id="section-2-8.6.1">The runtime enforcement evidence record emitted by the PDP, in the
+concrete object form of <a href="#decision-evidence-object" class="auto internal xref">Section 7</a>.<a href="#section-2-8.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-5.7">Execution Evidence:</dt>
-        <dd style="margin-left: 1.5em" id="section-2-5.8">
-          <p id="section-2-5.8.1">The record emitted by the PEP or executor after the authorized
-action's outcome is determined (<a href="#execution-evidence-object" class="auto internal xref">Section 8</a>).<a href="#section-2-5.8.1" class="pilcrow">¶</a></p>
+<dt id="section-2-8.7">Execution Evidence:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-8.8">
+          <p id="section-2-8.8.1">The record emitted by the PEP or executor after the authorized
+action's outcome is determined (<a href="#execution-evidence-object" class="auto internal xref">Section 8</a>).<a href="#section-2-8.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-5.9">Refusal Record:</dt>
-        <dd style="margin-left: 1.5em" id="section-2-5.10">
-          <p id="section-2-5.10.1">The record a PEP emits for a refusal that occurs before any PDP
-decision (<a href="#pre-decision-refusal" class="auto internal xref">Section 7.2</a>).<a href="#section-2-5.10.1" class="pilcrow">¶</a></p>
+<dt id="section-2-8.9">Refusal Record:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-8.10">
+          <p id="section-2-8.10.1">The record a PEP emits for a refusal that occurs before any PDP
+decision (<a href="#pre-decision-refusal" class="auto internal xref">Section 7.2</a>).<a href="#section-2-8.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-5.11">Executor:</dt>
-        <dd style="margin-left: 1.5em" id="section-2-5.12">
-          <p id="section-2-5.12.1">The component that carries out a permitted action and emits Execution
+<dt id="section-2-8.11">Executor:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-8.12">
+          <p id="section-2-8.12.1">The component that carries out a permitted action and emits Execution
 Evidence. It is the PEP in the common case, or a distinct component
 where the requesting PEP and the executing component differ
-(<a href="#execution-evidence-object" class="auto internal xref">Section 8</a>).<a href="#section-2-5.12.1" class="pilcrow">¶</a></p>
+(<a href="#execution-evidence-object" class="auto internal xref">Section 8</a>).<a href="#section-2-8.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-5.13">Audit consumer:</dt>
-        <dd style="margin-left: 1.5em" id="section-2-5.14">
-          <p id="section-2-5.14.1">A component or role that reads Decision Evidence and Execution
-Evidence to reconstruct or verify a decision after the fact.<a href="#section-2-5.14.1" class="pilcrow">¶</a></p>
+<dt id="section-2-8.13">Audit consumer:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-8.14">
+          <p id="section-2-8.14.1">A component or role that reads Decision Evidence and Execution
+Evidence to reconstruct or verify a decision after the fact.<a href="#section-2-8.14.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-2-6">HTTP message examples follow the AuthZEN specification <span>[<a href="#AUTHZEN" class="cite xref">AUTHZEN</a>]</span> for
+<p id="section-2-9">HTTP message examples follow the AuthZEN specification <span>[<a href="#AUTHZEN" class="cite xref">AUTHZEN</a>]</span> for
 the decision request and response, and <span>[<a href="#RFC9457" class="cite xref">RFC9457</a>]</span> for problem-details
 error bodies where a deployment carries them outside the AuthZEN
-envelope.<a href="#section-2-6" class="pilcrow">¶</a></p>
+envelope.<a href="#section-2-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-substrate">

@@ -1201,27 +1201,27 @@ issuance profile; a deployment that does not adopt it is unaffected.<a href="#se
             <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-authorization-server-metada" class="internal xref">Authorization Server Metadata</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
-            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
-                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-forged-or-replayed-events" class="internal xref">Forged or Replayed Events</a></p>
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-forged-or-replayed-events" class="internal xref">Forged or Replayed Events</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
-                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-missed-events-are-not-fail-" class="internal xref">Missed Events Are Not Fail-Open</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-missed-events-are-not-fail-" class="internal xref">Missed Events Are Not Fail-Open</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
-                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-denial-of-service" class="internal xref">Denial of Service</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.3">
+                <p id="section-toc.1-1.11.2.3.1"><a href="#section-11.3" class="auto internal xref">11.3</a>.  <a href="#name-denial-of-service" class="internal xref">Denial of Service</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.4">
-                <p id="section-toc.1-1.10.2.4.1"><a href="#section-10.4" class="auto internal xref">10.4</a>.  <a href="#name-general-oauth-security" class="internal xref">General OAuth Security</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.4">
+                <p id="section-toc.1-1.11.2.4.1"><a href="#section-11.4" class="auto internal xref">11.4</a>.  <a href="#name-general-oauth-security" class="internal xref">General OAuth Security</a></p>
 </li>
             </ul>
 </li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
-            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
-</li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
-            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
             <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
@@ -1283,7 +1283,7 @@ consumer that receives a non-<code>active</code> transition stops honoring the
 Mission (<a href="#consumer-behavior" class="auto internal xref">Section 6</a>). A deployment offers this channel by
 publishing the event stream (<a href="#event-stream" class="auto internal xref">Section 3</a>); consumers discover it
 from <code>mission_event_stream_endpoint</code> (<a href="#as-metadata" class="auto internal xref">Section 9</a>).<a href="#section-1-3" class="pilcrow">¶</a></p>
-<p id="section-1-4">This document is <span class="bcp14">OPTIONAL</span>. Push delivery is a propagation-latency
+<p id="section-1-4">This document is optional. Push delivery is a propagation-latency
 acceleration over correctly sized pull: a consumer that polls the
 Status profile's surfaces within the deployment's published staleness
 bound, and fails safe on the Mission's <code>expires_at</code>, already meets
@@ -1682,7 +1682,15 @@ state at the Mission Issuer; the Mission Issuer is authoritative
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). A consumer that
 believes the reported state is wrong re-checks through Mission Status
 rather than inventing a state.<a href="#section-6-3" class="pilcrow">¶</a></p>
-<p id="section-6-4">A consumer anchors freshness to stream liveness, not to per-Mission
+<p id="section-6-4">A consumer <span class="bcp14">MUST</span> ignore event members it does not understand. It <span class="bcp14">MUST NOT</span> reject an event solely for a missing <span class="bcp14">OPTIONAL</span> member (notably
+<code>tenant</code>). A consumer matches the event type by the exact URI the
+Mission Issuer's Transmitter Configuration Metadata advertises, so
+the event-type namespace can change without a change to this
+profile's semantics: on adoption, the URI <span class="bcp14">SHOULD</span> migrate to an IETF-
+or foundation-controlled namespace (for example a <code>urn:ietf:params</code>
+URN or an OpenID Foundation schema URI), and a provisional
+<code>urn:ietf:params</code> URN <span class="bcp14">MAY</span> be used in the interim.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-5">A consumer anchors freshness to stream liveness, not to per-Mission
 age. The Shared Signals Framework <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span> provides a stream
 verification event, and a Mission Issuer <span class="bcp14">MAY</span> additionally emit a
 periodic stream-status heartbeat. A verified verification or heartbeat
@@ -1692,8 +1700,8 @@ subjects would have been delivered; it therefore extends freshness for
 those subjects up to the next heartbeat interval. On a stream verified
 live, silence is freshness-preserving: the consumer <span class="bcp14">MAY</span> continue to
 rely on cached Mission state and does not poll Mission Status per
-Mission.<a href="#section-6-4" class="pilcrow">¶</a></p>
-<p id="section-6-5">The staleness fallback applies to a stream that is not verified live. A
+Mission.<a href="#section-6-5" class="pilcrow">¶</a></p>
+<p id="section-6-6">The staleness fallback applies to a stream that is not verified live. A
 consumer <span class="bcp14">MUST</span> treat cached Mission state as stale once the stream has
 gone without a verified verification or heartbeat event for longer than
 the Mission Issuer's advertised <code>mission_max_stale_seconds</code>
@@ -1701,7 +1709,7 @@ the Mission Issuer's advertised <code>mission_max_stale_seconds</code>
 current state before further reliance; the Mission Status operation is
 the <span class="bcp14">RECOMMENDED</span> fallback surface. A consumer that cannot verify its
 stream, or that was down and may have missed events, applies the same
-rule rather than continuing on possibly stale state.<a href="#section-6-5" class="pilcrow">¶</a></p>
+rule rather than continuing on possibly stale state.<a href="#section-6-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="event-driven">
@@ -1796,21 +1804,44 @@ the Mission Issuer emits events.<a href="#section-9-2.2.1" class="pilcrow">¶</a
 </dl>
 </section>
 </div>
-<div id="security-considerations">
+<div id="conformance">
 <section id="section-10">
-      <h2 id="name-security-considerations">
-<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      <h2 id="name-conformance">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
       </h2>
-<p id="section-10-1">The security considerations of the issuance profile
+<p id="section-10-1">This document is <span class="bcp14">OPTIONAL</span>. An implementation that claims it:<a href="#section-10-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10-2.1">
+          <p id="section-10-2.1.1">as a <strong>Mission Issuer</strong>, emits a signed <code>mission.lifecycle-change</code>
+SET (<a href="#lifecycle-event" class="auto internal xref">Section 4</a>, <a href="#set-protection" class="auto internal xref">Section 5</a>) on every committed
+Mission lifecycle transition, supports at least one SSF delivery
+method (<a href="#event-stream" class="auto internal xref">Section 3</a>), and advertises
+<code>mission_event_stream_endpoint</code> (<a href="#as-metadata" class="auto internal xref">Section 9</a>);<a href="#section-10-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.2">
+          <p id="section-10-2.2.1">as a <strong>consumer</strong>, verifies and applies received events per
+<a href="#set-protection" class="auto internal xref">Section 5</a> and <a href="#consumer-behavior" class="auto internal xref">Section 6</a>.<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-10-3">An implementation that supports neither role is still a conforming
+issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-10-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-11">
+      <h2 id="name-security-considerations">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-11-1">The security considerations of the issuance profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and the Status profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> apply. This section
-covers threats specific to event propagation.<a href="#section-10-1" class="pilcrow">¶</a></p>
+covers threats specific to event propagation.<a href="#section-11-1" class="pilcrow">¶</a></p>
 <div id="forged-or-replayed-events">
-<section id="section-10.1">
+<section id="section-11.1">
         <h3 id="name-forged-or-replayed-events">
-<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-forged-or-replayed-events" class="section-name selfRef">Forged or Replayed Events</a>
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-forged-or-replayed-events" class="section-name selfRef">Forged or Replayed Events</a>
         </h3>
-<p id="section-10.1-1">A forged event could suppress a Mission (a spurious <code>revoked</code>) or, more
+<p id="section-11.1-1">A forged event could suppress a Mission (a spurious <code>revoked</code>) or, more
 dangerously, mask a revocation (a spurious <code>active</code>). SET signing
 (<a href="#set-protection" class="auto internal xref">Section 5</a>) binds each event to the Mission Issuer; a consumer
 <span class="bcp14">MUST</span> verify the signature, the <code>iss</code>, and its own <code>aud</code>, and suppresses
@@ -1818,54 +1849,54 @@ a redelivered <code>jti</code> as a duplicate rather than reprocessing it
 (<a href="#set-protection" class="auto internal xref">Section 5</a>). The <code>version</code> ordering rule
 (<a href="#consumer-behavior" class="auto internal xref">Section 6</a>) prevents an old <code>active</code> event from overriding
 a newer <code>revoked</code> one, whether the old event is a forgery, a replay, or
-an at-least-once duplicate.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+an at-least-once duplicate.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="missed-events-are-not-fail-open">
-<section id="section-10.2">
+<section id="section-11.2">
         <h3 id="name-missed-events-are-not-fail-">
-<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-missed-events-are-not-fail-" class="section-name selfRef">Missed Events Are Not Fail-Open</a>
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-missed-events-are-not-fail-" class="section-name selfRef">Missed Events Are Not Fail-Open</a>
         </h3>
-<p id="section-10.2-1">Event delivery is best-effort; a consumer that treats "no event" as
+<p id="section-11.2-1">Event delivery is best-effort; a consumer that treats "no event" as
 "still active" indefinitely defeats the purpose. A consumer <span class="bcp14">MUST</span> bound
 its reliance on event freshness and fall back to polling Mission Status
 (<a href="#consumer-behavior" class="auto internal xref">Section 6</a>) so a dropped revocation event does not leave a
-Mission honored past the deployment's advertised staleness bound.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+Mission honored past the deployment's advertised staleness bound.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="denial-of-service">
-<section id="section-10.3">
+<section id="section-11.3">
         <h3 id="name-denial-of-service">
-<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-denial-of-service" class="section-name selfRef">Denial of Service</a>
+<a href="#section-11.3" class="section-number selfRef">11.3. </a><a href="#name-denial-of-service" class="section-name selfRef">Denial of Service</a>
         </h3>
-<p id="section-10.3-1">Event delivery and polling are operational surfaces, with the posture
+<p id="section-11.3-1">Event delivery and polling are operational surfaces, with the posture
 of Mission Status <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>. The
 party serving each surface <span class="bcp14">MUST</span> rate-limit it per authenticated peer:
 the transmitter its poll endpoint, the receiver its push delivery
 endpoint. A receiver applies backpressure through its delivery
 method's acknowledgment and error signaling rather than buffering
 without bound, and a transmitter <span class="bcp14">MUST</span> bound its retry schedule so an
-unavailable receiver cannot amplify delivery traffic.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+unavailable receiver cannot amplify delivery traffic.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="general-oauth-security">
-<section id="section-10.4">
+<section id="section-11.4">
         <h3 id="name-general-oauth-security">
-<a href="#section-10.4" class="section-number selfRef">10.4. </a><a href="#name-general-oauth-security" class="section-name selfRef">General OAuth Security</a>
+<a href="#section-11.4" class="section-number selfRef">11.4. </a><a href="#name-general-oauth-security" class="section-name selfRef">General OAuth Security</a>
         </h3>
-<p id="section-10.4-1">This document inherits OAuth 2.0 Best Current Practice <span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span> for
+<p id="section-11.4-1">This document inherits OAuth 2.0 Best Current Practice <span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span> for
 the OAuth surfaces it composes with; implementers <span class="bcp14">MUST</span> follow current
-OAuth security guidance.<a href="#section-10.4-1" class="pilcrow">¶</a></p>
+OAuth security guidance.<a href="#section-11.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="privacy-considerations">
-<section id="section-11">
+<section id="section-12">
       <h2 id="name-privacy-considerations">
-<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
-<p id="section-11-1">A <code>mission.lifecycle-change</code> event discloses a Mission's identifier,
+<p id="section-12-1">A <code>mission.lifecycle-change</code> event discloses a Mission's identifier,
 state transitions, and timing to its receivers. A Mission Issuer <span class="bcp14">MUST</span>
 deliver events only to consumers authorized for the Mission and <span class="bcp14">MUST</span>
 scope each SET to a single consumer audience (<a href="#set-protection" class="auto internal xref">Section 5</a>), so a
@@ -1877,8 +1908,8 @@ surfaces with the privacy posture of
 outlive what it references: the Mission records and evidence an event
 points to may later be erased under the audit profile's erasure
 record (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>), so a retained event
-is no guarantee the referenced record remains retrievable.<a href="#section-11-1" class="pilcrow">¶</a></p>
-<p id="section-11-2">The <span class="bcp14">OPTIONAL</span> <code>reason</code> (<a href="#lifecycle-event" class="auto internal xref">Section 4</a>) is useful operational
+is no guarantee the referenced record remains retrievable.<a href="#section-12-1" class="pilcrow">¶</a></p>
+<p id="section-12-2">The <span class="bcp14">OPTIONAL</span> <code>reason</code> (<a href="#lifecycle-event" class="auto internal xref">Section 4</a>) is useful operational
 context, but the reason for a transition can be more sensitive than the
 fact of it. Because each SET is audience-scoped to a single authorized
 consumer (<a href="#set-protection" class="auto internal xref">Section 5</a>), <code>reason</code> is disclosed only to a party
@@ -1886,30 +1917,7 @@ already authorized for the Mission, not broadcast. Even so, a Mission
 Issuer <span class="bcp14">SHOULD</span> include in <code>reason</code> only what that consumer needs, keep
 sensitive specifics in its own audit log rather than in the event, and
 <span class="bcp14">MAY</span> omit <code>reason</code> entirely when even a minimal reason would disclose
-more than the consumer requires.<a href="#section-11-2" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="conformance">
-<section id="section-12">
-      <h2 id="name-conformance">
-<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
-      </h2>
-<p id="section-12-1">This document is <span class="bcp14">OPTIONAL</span>. An implementation that claims it:<a href="#section-12-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-12-2.1">
-          <p id="section-12-2.1.1">as a <strong>Mission Issuer</strong>, emits a signed <code>mission.lifecycle-change</code>
-SET (<a href="#lifecycle-event" class="auto internal xref">Section 4</a>, <a href="#set-protection" class="auto internal xref">Section 5</a>) on every committed
-Mission lifecycle transition, supports at least one SSF delivery
-method (<a href="#event-stream" class="auto internal xref">Section 3</a>), and advertises
-<code>mission_event_stream_endpoint</code> (<a href="#as-metadata" class="auto internal xref">Section 9</a>);<a href="#section-12-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-12-2.2">
-          <p id="section-12-2.2.1">as a <strong>consumer</strong>, verifies and applies received events per
-<a href="#set-protection" class="auto internal xref">Section 5</a> and <a href="#consumer-behavior" class="auto internal xref">Section 6</a>.<a href="#section-12-2.2.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<p id="section-12-3">An implementation that supports neither role is still a conforming
-issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-12-3" class="pilcrow">¶</a></p>
+more than the consumer requires.<a href="#section-12-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana">
@@ -1946,18 +1954,10 @@ for the schema.<a href="#section-13.1-2.1.1" class="pilcrow">¶</a></p>
 SET shape. The standalone Mission Issuer binding
 <span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span> emits this event
 type unchanged and imposes no tenant requirement; <code>tenant</code> remains
-<span class="bcp14">OPTIONAL</span>. A consumer <span class="bcp14">MUST</span> ignore members it does not understand and
-<span class="bcp14">MUST NOT</span> reject an event solely for a missing <span class="bcp14">OPTIONAL</span> member (notably
-<code>tenant</code>).<a href="#section-13.1-3" class="pilcrow">¶</a></p>
+<span class="bcp14">OPTIONAL</span>.<a href="#section-13.1-3" class="pilcrow">¶</a></p>
 <p id="section-13.1-4">The event-type URI is under the author-controlled
 <code>schemas.karlmcguinness.com</code> namespace so this profile can be
-deployed without a registry dependency. On adoption,
-the URI <span class="bcp14">SHOULD</span> migrate to an IETF- or foundation-controlled namespace
-(for example a <code>urn:ietf:params</code> URN or an OpenID Foundation schema
-URI); a provisional <code>urn:ietf:params</code> URN <span class="bcp14">MAY</span> be used in the interim.
-A consumer matches the event type by the exact URI the Mission Issuer's
-Transmitter Configuration Metadata advertises, so the namespace can
-change without a change to this profile's semantics.<a href="#section-13.1-4" class="pilcrow">¶</a></p>
+deployed without a registry dependency.<a href="#section-13.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="oauth-authorization-server-metadata-registration">

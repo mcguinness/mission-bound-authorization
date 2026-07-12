@@ -75,8 +75,7 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An EXPERIMENTAL Extension
-     2.1.  Requirements Language
+   2.  Status: An Experimental Extension
    3.  Conventions and Terminology
    4.  Mission Substrate
    5.  The Encounter
@@ -124,7 +123,7 @@ Table of Contents
    policy: self-declarations never classify consequences, and tainted
    sessions never bind a newly discovered resource by policy alone.
 
-2.  Status: An EXPERIMENTAL Extension
+2.  Status: An Experimental Extension
 
    This document is Experimental.  It extends stable interfaces only
    through their declared seams: the progressive profile's drawdown
@@ -135,15 +134,13 @@ Table of Contents
    stable path for a resource outside every envelope is a fresh human-
    approved expansion ([I-D.draft-mcguinness-oauth-mission-expansion]).
 
-2.1.  Requirements Language
+3.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
    "OPTIONAL" in this document are to be interpreted as described in
    BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
    capitals, as shown here.
-
-3.  Conventions and Terminology
 
    This document uses Mission, Authority Set, Mission Issuer, the subset
    rule, and the integrity anchors as the core defines them; the
@@ -557,7 +554,7 @@ Table of Contents
    *  produce and sign Discovery Evidence for every adjudication,
       foreign-domain encounters included (Section 10); and
 
-   *  state in its enforcement-scope statement which encounter classes
+   *  state in its Enforcement Scope Statement which encounter classes
       it adjudicates, the ceiling families consented for them, and the
       floors as published limits.
 

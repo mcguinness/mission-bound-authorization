@@ -94,13 +94,13 @@ Table of Contents
    9.  Incident Response Patterns
    10. Deferred Management Capabilities
    11. Authorization Server Metadata
-   12. Security Considerations
-     12.1.  Blast Radius
-     12.2.  Enumeration-Oracle Inversion
-     12.3.  Bulk Token Binding
-     12.4.  General OAuth Security
-   13. Privacy Considerations
-   14. Conformance
+   12. Conformance
+   13. Security Considerations
+     13.1.  Blast Radius
+     13.2.  Enumeration-Oracle Inversion
+     13.3.  Bulk Token Binding
+     13.4.  General OAuth Security
+   14. Privacy Considerations
    15. IANA Considerations
      15.1.  Metadata Registrations
      15.2.  Media Type Registration
@@ -142,7 +142,7 @@ Table of Contents
    one audit rule; a request's operation member selects between them.
    Bulk operations apply the status profile's per-Mission lifecycle
    semantics unchanged, so this document adds no state, no transition,
-   and no event type to the lifecycle state space.  It is OPTIONAL and
+   and no event type to the lifecycle state space.  It is optional and
    does not restate the issuance profile
    [I-D.draft-mcguinness-oauth-mission] or the status profile; a
    deployment that does not adopt it is unaffected.
@@ -517,7 +517,7 @@ Table of Contents
       binding the caller, the operation, the filter (with suspend_until
       and on_expiry when present), and the evaluated membership itself:
       the exact set of mission_id values matched at dry-run time
-      (Section 12.3).
+      (Section 13.3).
 
    bulk_token_expires_at:  REQUIRED.  An RFC 3339 [RFC3339] date-time.
       The bulk token's expiry.  Its lifetime is deployment-defined and
@@ -555,7 +555,7 @@ Table of Contents
    or newly matching the filter, after the dry run is not in the
    membership and MUST NOT be operated on; a member that transitioned in
    the interim yields an already_terminal or illegal_transition outcome
-   rather than a surprise transition (Section 12.3).
+   rather than a surprise transition (Section 13.3).
 
    The dry-run-then-execute exchange with its pinned membership is the
    bulk-path analog of the status profile's expected_version guard
@@ -778,14 +778,39 @@ Table of Contents
    semantics in its discovery document; Section 15 registers the member
    in the Mission Authority Server Metadata registry.
 
-12.  Security Considerations
+12.  Conformance
+
+   This document is OPTIONAL.  An implementation that claims it conforms
+   in one of two roles.
+
+   A *Management-capable Mission Issuer* serves the Mission Management
+   endpoint over the authentication and authorization of Section 3.1 and
+   Section 3.2 with signed responses per Section 3; serves enumerate
+   (Section 6) and the bulk lifecycle operations (Section 7) with dry-
+   run-then-execute and the bulk token bindings of Section 7.1; applies
+   bulk transitions per Mission under the status profile's lifecycle
+   semantics, emitting per-Mission evidence and signals (Section 7.2);
+   audit-logs every management request per Section 3.2; and advertises
+   mission_management_endpoint (Section 11).
+
+   A *Management Client* authenticates per Section 3.1; sends the
+   REQUIRED purpose or reason on every request, identifying the operator
+   task rather than a fixed placeholder; obtains a fresh dry run for
+   every execute, surfacing the match_count to the deciding operator or
+   decision point before executing; and executes only bulk tokens from
+   dry runs it itself requested.
+
+   An implementation that supports neither role is unaffected and
+   remains a conforming issuance or status profile implementation.
+
+13.  Security Considerations
 
    The security considerations of the issuance profile
    [I-D.draft-mcguinness-oauth-mission] and the status profile
    [I-D.draft-mcguinness-oauth-mission-status] apply.  This section
    covers what is specific to fleet-scale management.
 
-12.1.  Blast Radius
+13.1.  Blast Radius
 
    This endpoint is the highest-blast-radius surface in this suite: one
    authorized request can terminate or suspend every Mission in a filter
@@ -818,7 +843,7 @@ Table of Contents
    per-Mission evidence and signals, are caller-written free text; audit
    systems MUST treat them as untrusted input.
 
-12.2.  Enumeration-Oracle Inversion
+13.2.  Enumeration-Oracle Inversion
 
    The status profile makes Mission existence unobservable to the
    unauthorized; this document makes it queryable by the authorized.
@@ -829,7 +854,7 @@ Table of Contents
    a refusal is data-independent.  The audit rule is the compensating
    control for the disclosure this surface exists to provide.
 
-12.3.  Bulk Token Binding
+13.3.  Bulk Token Binding
 
    The bulk token closes the review-to-execution gap, and each of its
    bindings (Section 7.1) is load-bearing.  The membership binding
@@ -844,13 +869,13 @@ Table of Contents
    transfer, or filter substitution reduces the two-step exchange to a
    one-step sweep.
 
-12.4.  General OAuth Security
+13.4.  General OAuth Security
 
    This document inherits OAuth 2.0 Best Current Practice [RFC9700] for
    the OAuth surfaces it composes with; implementers MUST follow current
    OAuth security guidance.
 
-13.  Privacy Considerations
+14.  Privacy Considerations
 
    The privacy considerations of the issuance and status profiles apply.
    This section covers what is specific to enumeration.
@@ -871,31 +896,6 @@ Table of Contents
    retain them for at least the audit horizon of the Missions they
    concern ([I-D.draft-mcguinness-oauth-mission]), and restrict read
    access to them at least as tightly as the management surface itself.
-
-14.  Conformance
-
-   This document is OPTIONAL.  An implementation that claims it conforms
-   in one of two roles.
-
-   A *Management-capable Mission Issuer* serves the Mission Management
-   endpoint over the authentication and authorization of Section 3.1 and
-   Section 3.2 with signed responses per Section 3; serves enumerate
-   (Section 6) and the bulk lifecycle operations (Section 7) with dry-
-   run-then-execute and the bulk token bindings of Section 7.1; applies
-   bulk transitions per Mission under the status profile's lifecycle
-   semantics, emitting per-Mission evidence and signals (Section 7.2);
-   audit-logs every management request per Section 3.2; and advertises
-   mission_management_endpoint (Section 11).
-
-   A *Management Client* authenticates per Section 3.1; sends the
-   REQUIRED purpose or reason on every request, identifying the operator
-   task rather than a fixed placeholder; obtains a fresh dry run for
-   every execute, surfacing the match_count to the deciding operator or
-   decision point before executing; and executes only bulk tokens from
-   dry runs it itself requested.
-
-   An implementation that supports neither role is unaffected and
-   remains a conforming issuance or status profile implementation.
 
 15.  IANA Considerations
 
@@ -926,7 +926,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JWS Compact Serialization
 
-   *  Security considerations: see Section 12
+   *  Security considerations: see Section 13
 
    *  Interoperability considerations: see this document
 

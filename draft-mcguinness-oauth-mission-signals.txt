@@ -81,13 +81,13 @@ Table of Contents
    7.  Relationship to Revocation Propagation
    8.  Worked Example
    9.  Authorization Server Metadata
-   10. Security Considerations
-     10.1.  Forged or Replayed Events
-     10.2.  Missed Events Are Not Fail-Open
-     10.3.  Denial of Service
-     10.4.  General OAuth Security
-   11. Privacy Considerations
-   12. Conformance
+   10. Conformance
+   11. Security Considerations
+     11.1.  Forged or Replayed Events
+     11.2.  Missed Events Are Not Fail-Open
+     11.3.  Denial of Service
+     11.4.  General OAuth Security
+   12. Privacy Considerations
    13. IANA Considerations
      13.1.  Security Event Token Type
      13.2.  OAuth Authorization Server Metadata Registration
@@ -125,7 +125,7 @@ Table of Contents
    the event stream (Section 3); consumers discover it from
    mission_event_stream_endpoint (Section 9).
 
-   This document is OPTIONAL.  Push delivery is a propagation-latency
+   This document is optional.  Push delivery is a propagation-latency
    acceleration over correctly sized pull: a consumer that polls the
    Status profile's surfaces within the deployment's published staleness
    bound, and fails safe on the Mission's expires_at, already meets the
@@ -490,6 +490,16 @@ Table of Contents
    believes the reported state is wrong re-checks through Mission Status
    rather than inventing a state.
 
+   A consumer MUST ignore event members it does not understand.  It MUST
+   NOT reject an event solely for a missing OPTIONAL member (notably
+   tenant).  A consumer matches the event type by the exact URI the
+   Mission Issuer's Transmitter Configuration Metadata advertises, so
+   the event-type namespace can change without a change to this
+   profile's semantics: on adoption, the URI SHOULD migrate to an IETF-
+   or foundation-controlled namespace (for example a urn:ietf:params URN
+   or an OpenID Foundation schema URI), and a provisional
+   urn:ietf:params URN MAY be used in the interim.
+
    A consumer anchors freshness to stream liveness, not to per-Mission
    age.  The Shared Signals Framework [OIDC-SSF] provides a stream
    verification event, and a Mission Issuer MAY additionally emit a
@@ -585,14 +595,29 @@ Table of Contents
       metadata member (Section 3).  Present when the Mission Issuer
       emits events.
 
-10.  Security Considerations
+10.  Conformance
+
+   This document is OPTIONAL.  An implementation that claims it:
+
+   *  as a *Mission Issuer*, emits a signed mission.lifecycle-change SET
+      (Section 4, Section 5) on every committed Mission lifecycle
+      transition, supports at least one SSF delivery method (Section 3),
+      and advertises mission_event_stream_endpoint (Section 9);
+
+   *  as a *consumer*, verifies and applies received events per
+      Section 5 and Section 6.
+
+   An implementation that supports neither role is still a conforming
+   issuance profile [I-D.draft-mcguinness-oauth-mission].
+
+11.  Security Considerations
 
    The security considerations of the issuance profile
    [I-D.draft-mcguinness-oauth-mission] and the Status profile
    [I-D.draft-mcguinness-oauth-mission-status] apply.  This section
    covers threats specific to event propagation.
 
-10.1.  Forged or Replayed Events
+11.1.  Forged or Replayed Events
 
    A forged event could suppress a Mission (a spurious revoked) or, more
    dangerously, mask a revocation (a spurious active).  SET signing
@@ -603,7 +628,7 @@ Table of Contents
    active event from overriding a newer revoked one, whether the old
    event is a forgery, a replay, or an at-least-once duplicate.
 
-10.2.  Missed Events Are Not Fail-Open
+11.2.  Missed Events Are Not Fail-Open
 
    Event delivery is best-effort; a consumer that treats "no event" as
    "still active" indefinitely defeats the purpose.  A consumer MUST
@@ -612,7 +637,7 @@ Table of Contents
    leave a Mission honored past the deployment's advertised staleness
    bound.
 
-10.3.  Denial of Service
+11.3.  Denial of Service
 
    Event delivery and polling are operational surfaces, with the posture
    of Mission Status [I-D.draft-mcguinness-oauth-mission-status].  The
@@ -623,13 +648,13 @@ Table of Contents
    without bound, and a transmitter MUST bound its retry schedule so an
    unavailable receiver cannot amplify delivery traffic.
 
-10.4.  General OAuth Security
+11.4.  General OAuth Security
 
    This document inherits OAuth 2.0 Best Current Practice [RFC9700] for
    the OAuth surfaces it composes with; implementers MUST follow current
    OAuth security guidance.
 
-11.  Privacy Considerations
+12.  Privacy Considerations
 
    A mission.lifecycle-change event discloses a Mission's identifier,
    state transitions, and timing to its receivers.  A Mission Issuer
@@ -654,21 +679,6 @@ Table of Contents
    sensitive specifics in its own audit log rather than in the event,
    and MAY omit reason entirely when even a minimal reason would
    disclose more than the consumer requires.
-
-12.  Conformance
-
-   This document is OPTIONAL.  An implementation that claims it:
-
-   *  as a *Mission Issuer*, emits a signed mission.lifecycle-change SET
-      (Section 4, Section 5) on every committed Mission lifecycle
-      transition, supports at least one SSF delivery method (Section 3),
-      and advertises mission_event_stream_endpoint (Section 9);
-
-   *  as a *consumer*, verifies and applies received events per
-      Section 5 and Section 6.
-
-   An implementation that supports neither role is still a conforming
-   issuance profile [I-D.draft-mcguinness-oauth-mission].
 
 13.  IANA Considerations
 
@@ -695,19 +705,10 @@ Table of Contents
    SET shape.  The standalone Mission Issuer binding
    [I-D.draft-mcguinness-mission-authority-server] emits this event type
    unchanged and imposes no tenant requirement; tenant remains OPTIONAL.
-   A consumer MUST ignore members it does not understand and MUST NOT
-   reject an event solely for a missing OPTIONAL member (notably
-   tenant).
 
    The event-type URI is under the author-controlled
    schemas.karlmcguinness.com namespace so this profile can be deployed
-   without a registry dependency.  On adoption, the URI SHOULD migrate
-   to an IETF- or foundation-controlled namespace (for example a
-   urn:ietf:params URN or an OpenID Foundation schema URI); a
-   provisional urn:ietf:params URN MAY be used in the interim.  A
-   consumer matches the event type by the exact URI the Mission Issuer's
-   Transmitter Configuration Metadata advertises, so the namespace can
-   change without a change to this profile's semantics.
+   without a registry dependency.
 
 13.2.  OAuth Authorization Server Metadata Registration
 

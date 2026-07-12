@@ -75,28 +75,28 @@ Table of Contents
 
    1.  Introduction
      1.1.  Status: The Binding Contract
-     1.2.  Conventions and Terminology
-   2.  Mission Substrate Requirements
-     2.1.  Mission Record, Identifier, and Issuer
-     2.2.  Mission Lifecycle States
-     2.3.  Mission Authority Representation
-     2.4.  Mission Integrity Anchors
-     2.5.  Mission-Bound Credential
-     2.6.  Mission Key Material
-     2.7.  Mission Audit Horizon
-     2.8.  Mission Approval Fidelity
-   3.  Mission Composition
-   4.  Mission Substrate Conformance
-     4.1.  Mission Substrate Statement
-   5.  Security Considerations
-     5.1.  The Binding as Trust Root
-     5.2.  Mission Join Assurance
-     5.3.  State Source Fidelity
-   6.  Privacy Considerations
-   7.  IANA Considerations
-   8.  References
-     8.1.  Normative References
-     8.2.  Informative References
+   2.  Conventions and Terminology
+   3.  Mission Substrate Requirements
+     3.1.  Mission Record, Identifier, and Issuer
+     3.2.  Mission Lifecycle States
+     3.3.  Mission Authority Representation
+     3.4.  Mission Integrity Anchors
+     3.5.  Mission-Bound Credential
+     3.6.  Mission Key Material
+     3.7.  Mission Audit Horizon
+     3.8.  Mission Approval Fidelity
+   4.  Mission Composition
+   5.  Mission Substrate Conformance
+     5.1.  Mission Substrate Statement
+   6.  Security Considerations
+     6.1.  The Binding as Trust Root
+     6.2.  Mission Join Assurance
+     6.3.  State Source Fidelity
+   7.  Privacy Considerations
+   8.  IANA Considerations
+   9.  References
+     9.1.  Normative References
+     9.2.  Informative References
    Appendix A.  Binding Crosswalk
    Acknowledgments
    Author's Address
@@ -134,9 +134,9 @@ Table of Contents
    informationally, ending in a Binding Checklist
    ([I-D.draft-mcguinness-mission-architecture]).  This document is the
    checklist's normative home, written for the author of a new binding:
-   eight requirements (Section 2), a composition table showing which
-   profiles consume which primitives (Section 3), and a conformance role
-   claimed through a published Mission Substrate Statement (Section 4).
+   eight requirements (Section 3), a composition table showing which
+   profiles consume which primitives (Section 4), and a conformance role
+   claimed through a published Mission Substrate Statement (Section 5).
    It restates no definition: each requirement points at the core
    section that owns it.
 
@@ -144,7 +144,7 @@ Table of Contents
 
    This document is the family's binding-neutral contract.  A
    requirement stated here binds a new binding that claims conformance
-   (Section 4).  The three existing bindings, the OAuth core, the
+   (Section 5).  The three existing bindings, the OAuth core, the
    Mission Authority Server, and the AAuth binding, predate this
    document and are its conforming instantiations: the contract was
    extracted from them, and Appendix A records where each satisfies it.
@@ -157,7 +157,7 @@ Table of Contents
    it, so the contract boundary exists now while the text crosses it
    opportunistically, and no change is ever made solely to move words.
 
-1.2.  Conventions and Terminology
+2.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -175,31 +175,31 @@ Table of Contents
    [I-D.draft-mcguinness-mission-runtime].  A *Mission Substrate
    Binding* is a specification that binds the Mission model to an
    authorization substrate and claims conformance to this document
-   (Section 4).  It additionally uses:
+   (Section 5).  It additionally uses:
 
-   Full provision:  Providing every primitive of Section 2, including
-      the Mission-bound credential (Section 2.5).
+   Full provision:  Providing every primitive of Section 3, including
+      the Mission-bound credential (Section 3.5).
 
-   Partial provision:  Providing every primitive of Section 2 except the
+   Partial provision:  Providing every primitive of Section 3 except the
       Mission-bound credential, with a defined join in its place
-      (Section 2.5).
+      (Section 3.5).
 
    Mission Substrate Statement:  The published section of a Mission
       Substrate Binding that states, item by item, how the binding
-      provides each primitive (Section 4.1).
+      provides each primitive (Section 5.1).
 
-2.  Mission Substrate Requirements
+3.  Mission Substrate Requirements
 
    Each subsection states the requirement on the binding, the home of
    the normative definition (a section of the core), and the consuming
    profiles; a summary here never overrides its home.
 
-2.1.  Mission Record, Identifier, and Issuer
+3.1.  Mission Record, Identifier, and Issuer
 
    A binding MUST require its implementations to maintain the Mission
    record as the core defines it: the durable object created at the
    approval event, immutable after creation except its lifecycle state,
-   and retained per the audit horizon (Section 2.7).  A binding MUST
+   and retained per the audit horizon (Section 3.7).  A binding MUST
    provide a Mission Identifier that is opaque, carries no semantic
    content, has at least 128 bits of entropy, and is never reused,
    together with an issuer: an issuer identifier naming the approving
@@ -218,7 +218,7 @@ Table of Contents
    to the audit statement subject and the Mandate, whose committed
    members assume the record's immutability.
 
-2.2.  Mission Lifecycle States
+3.2.  Mission Lifecycle States
 
    A binding MUST provide the core's lifecycle state space: active,
    revoked, and expired as the minimum, with only active permitting
@@ -248,7 +248,7 @@ Table of Contents
    before relying on it: state whose origin or integrity a consumer
    cannot verify is treated as unavailable and fails closed.  Verifying
    a signed state report consumes the issuer key material of
-   Section 2.6.
+   Section 3.6.
 
    Home: the Mission Lifecycle and Gating section of
    [I-D.draft-mcguinness-oauth-mission]; the freshness rules are the
@@ -261,7 +261,7 @@ Table of Contents
    orchestration (the unwind trigger), and the Mandate (state only as of
    minting).
 
-2.3.  Mission Authority Representation
+3.3.  Mission Authority Representation
 
    A binding MUST represent the Authority Set as an array of entries in
    the core's authorization-details shape: each entry names a resource,
@@ -286,7 +286,7 @@ Table of Contents
    (evaluation), consent evidence (rendering), and the Mandate (optional
    carriage).
 
-2.4.  Mission Integrity Anchors
+3.4.  Mission Integrity Anchors
 
    A binding MUST require its implementations to compute intent_hash and
    authority_hash over the core's domain-separated, issuer-bound
@@ -314,7 +314,7 @@ Table of Contents
    orchestration (unwind_plan_hash), the Mandate (the encoded digest
    form), and audit transparency (the committed evidence types).
 
-2.5.  Mission-Bound Credential
+3.5.  Mission-Bound Credential
 
    This primitive is OPTIONAL, and it is where provision levels split.
 
@@ -322,7 +322,7 @@ Table of Contents
    a credential under the binding's own proof-of-possession discipline
    that names exactly one Mission, through the mission claim (id,
    issuer, authority_hash) or a substrate-native reference the Mission
-   record binds (Section 2.1), issued only while the referenced Mission
+   record binds (Section 3.1), issued only while the referenced Mission
    is active: credential issuance is gated on Mission state.  The
    mission claim shape is the interoperable default.  Provision may be
    composite: the standalone MAS binding together with Authorization
@@ -352,13 +352,13 @@ Table of Contents
    binding establishment section of the runtime profile
    ([I-D.draft-mcguinness-mission-runtime]).
 
-2.6.  Mission Key Material
+3.6.  Mission Key Material
 
    A binding MUST publish the Mission Issuer's signing keys, resolvable
    from the issuer by verifiers of its signed artifacts.  Across a
    rotation, the verification key for each key identifier SHOULD remain
    resolvable while artifacts signed under it remain within the audit
-   horizon (Section 2.7).
+   horizon (Section 3.7).
 
    Home: the Signing and Key Rotation section of
    [I-D.draft-mcguinness-oauth-mission]; the discovery surface is the
@@ -371,7 +371,7 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-status]), and audit statements
    ([I-D.draft-mcguinness-mission-audit]).
 
-2.7.  Mission Audit Horizon
+3.7.  Mission Audit Horizon
 
    A binding MUST declare an audit horizon: the retention window for the
    Mission record and its evidence, at least the Mission's lifetime plus
@@ -386,7 +386,7 @@ Table of Contents
    transparency size their retention to it; the security model's
    retention analysis assumes it.
 
-2.8.  Mission Approval Fidelity
+3.8.  Mission Approval Fidelity
 
    A binding's approval surface MUST realize the core's approval-event
    steps, whatever its native ceremony:
@@ -403,7 +403,7 @@ Table of Contents
        client text);
 
    4.  compute the integrity anchors over the consented Authority Set
-       and the approved Intent (Section 2.4); and
+       and the approved Intent (Section 3.4); and
 
    5.  create the Mission record in the active state atomically with the
        approval decision.
@@ -413,7 +413,7 @@ Table of Contents
    and step 3 derives from, preserving the core's Intent semantics (its
    resources, controls, and inert fields carried intact); a binding
    without such a channel cannot run the approval event, and the intent-
-   shaping profile consumes this channel (Section 3).
+   shaping profile consumes this channel (Section 4).
 
    Derivation in step 3 MUST be bounded by the approved Mission Intent
    per the core's Mission Authority rules: each derived entry's resource
@@ -436,7 +436,7 @@ Table of Contents
    Consumers: consent evidence binds to this event; every downstream
    guarantee (the anchors, the gating, the record) assumes it.
 
-3.  Mission Composition
+4.  Mission Composition
 
    The table shows which substrate-neutral profiles consume which
    primitives, so a binding author reads off what a provision level
@@ -482,7 +482,7 @@ Table of Contents
 
    *  State verification consumes Keys: the runtime row reads a signed
       state surface and verifies it under the Issuer's published keys
-      (Section 2.2, Section 2.6), so its Keys cell is X; a binding whose
+      (Section 3.2, Section 3.6), so its Keys cell is X; a binding whose
       harness or orchestration verifies state itself consumes Keys
       likewise.
 
@@ -524,7 +524,7 @@ Table of Contents
       profile names are mapped by the architecture
       ([I-D.draft-mcguinness-mission-architecture]).
 
-4.  Mission Substrate Conformance
+5.  Mission Substrate Conformance
 
    This document defines one conformance role, claimed by a
    specification, not an implementation; implementations conform to the
@@ -533,76 +533,76 @@ Table of Contents
    A *Mission Substrate Binding*:
 
    1.  maintains the Mission record, immutable except its state, and
-       provides the Mission Identifier and issuer (Section 2.1);
+       provides the Mission Identifier and issuer (Section 3.1);
 
    2.  provides the lifecycle state space with the only-active rule,
        fail-safe treatment of unrecognized states, verbatim extension
        states, an authenticated, possession-independent means to
        transition a Mission to revoked by its Mission Identifier, and a
-       state source with a stated staleness bound (Section 2.2);
+       state source with a stated staleness bound (Section 3.2);
 
    3.  represents the Authority Set in the core's shape and applies the
        subset rule and Common Constraint value-space semantics at every
-       narrowing (Section 2.3);
+       narrowing (Section 3.3);
 
    4.  computes the integrity anchors over the core's envelope and
        canonicalization, rejects unrecognized algorithm prefixes, and
        states the relationship of any native commitment to the anchors
-       (Section 2.4);
+       (Section 3.4);
 
    5.  either provides the Mission-bound credential with issuance
        gating, or defines a join stating what it proves and what it
-       cannot prove (Section 2.5);
+       cannot prove (Section 3.5);
 
    6.  publishes resolvable issuer key material with rotation retention
-       (Section 2.6);
+       (Section 3.6);
 
    7.  declares an audit horizon over the record and its evidence
-       (Section 2.7); and
+       (Section 3.7); and
 
    8.  realizes the approval-event steps on its approval surface
-       (Section 2.8).
+       (Section 3.8).
 
-4.1.  Mission Substrate Statement
+5.1.  Mission Substrate Statement
 
    A Mission Substrate Binding MUST publish a Mission Substrate
    Statement: a section of the binding, following the existing bindings'
    pattern, that states how the binding provides each primitive of
-   Section 2.  The statement names:
+   Section 3.  The statement names:
 
    1.  the provision level: full provision, or partial provision with
        the section defining its join and the profiles that consequently
-       do not apply (Section 2.5);
+       do not apply (Section 3.5);
 
    2.  the identifier mapping and any substrate-native Mission reference
-       (Section 2.1);
+       (Section 3.1);
 
-   3.  each state source and its staleness bound (Section 2.2);
+   3.  each state source and its staleness bound (Section 3.2);
 
    4.  how the binding carries the Authority Set (token payload, status-
        served view, or native artifact) and where each narrowing occurs
-       (Section 2.3);
+       (Section 3.3);
 
    5.  the value its anchors bind as the envelope iss, and the
        relationship of any native commitment to the anchors
-       (Section 2.4);
+       (Section 3.4);
 
-   6.  the discovery surface for issuer key material (Section 2.6);
+   6.  the discovery surface for issuer key material (Section 3.6);
 
-   7.  the audit horizon (Section 2.7); and
+   7.  the audit horizon (Section 3.7); and
 
-   8.  the surface that realizes each approval-event step (Section 2.8).
+   8.  the surface that realizes each approval-event step (Section 3.8).
 
    Each item is checkable against the binding's own text; a claim its
    text does not support is a conformance failure.
 
-5.  Security Considerations
+6.  Security Considerations
 
    This document defines no mechanism; its security posture is the
    core's plus the binding's own.  Two considerations are specific to
    binding.
 
-5.1.  The Binding as Trust Root
+6.1.  The Binding as Trust Root
 
    A Mission Substrate Binding implements the Mission Issuer, the root
    of trust of the security model's trusted base: it derives authority,
@@ -614,7 +614,7 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-security-model]).  A new binding re-
    derives only the substrate-specific entries of that model.
 
-5.2.  Mission Join Assurance
+6.2.  Mission Join Assurance
 
    Partial provision moves the credential-to-Mission binding from
    cryptographic carriage to the join, so the join's assurance bounds
@@ -628,10 +628,10 @@ Table of Contents
    Mission, and mapping coarseness and same-party misattribution remain
    as residuals.
 
-5.3.  State Source Fidelity
+6.3.  State Source Fidelity
 
    Revocation reaches a consumer only through a state source, so the
-   staleness bound stated for each source (Section 2.2) is what the
+   staleness bound stated for each source (Section 3.2) is what the
    runtime profile computes its freshness rules and permit lifetimes
    from ([I-D.draft-mcguinness-mission-runtime]).  A source that cannot
    meet its stated bound turns those fail-closed rules into fail-open in
@@ -640,20 +640,20 @@ Table of Contents
    infrastructure, of the same kind as the join's assurance statement,
    and belongs in the Mission Substrate Statement with the same honesty.
 
-6.  Privacy Considerations
+7.  Privacy Considerations
 
    This document introduces no data element.  The core's privacy
    considerations apply to any binding: the Mission identifier is a
    correlation handle, and the Mission record concentrates task data at
    the Mission Issuer; each hosted profile's own apply unchanged.
 
-7.  IANA Considerations
+8.  IANA Considerations
 
    This document has no IANA actions.
 
-8.  References
+9.  References
 
-8.1.  Normative References
+9.1.  Normative References
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
@@ -669,7 +669,7 @@ Table of Contents
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
-8.2.  Informative References
+9.2.  Informative References
 
    [I-D.draft-mcguinness-mission-aauth]
               McGuinness, K., "Mission-Bound Authorization for AAuth",
@@ -733,7 +733,7 @@ Appendix A.  Binding Crosswalk
 
    This appendix is informative.  The three existing bindings are
    conforming instantiations of this contract, recorded here rather than
-   through the Mission Substrate Statement (Section 4.1), which they
+   through the Mission Substrate Statement (Section 5.1), which they
    predate; each binding's own Mission Substrate section is its
    authoritative statement.
 
@@ -746,7 +746,7 @@ Appendix A.  Binding Crosswalk
    |                                                   |provision.     |
    |                                                   |Each           |
    |                                                   |requirement of |
-   |                                                   |Section 2      |
+   |                                                   |Section 3      |
    |                                                   |points at the  |
    |                                                   |core section   |
    |                                                   |that defines   |

@@ -75,7 +75,6 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-     1.1.  Requirements Language
    2.  Conventions and Terminology
    3.  Mission Substrate
    4.  Mission-to-Policy Materialization
@@ -224,7 +223,7 @@ Table of Contents
       |           |<--------------- approval ------------|
       |           |- re-evaluate ->|                     |
 
-1.1.  Requirements Language
+2.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -232,7 +231,15 @@ Table of Contents
    BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
    capitals, as shown here.
 
-2.  Conventions and Terminology
+   Two member-presence conventions extend that vocabulary:
+
+   CONDITIONAL:  The member is present when the stated condition holds
+      and absent otherwise.  The condition accompanies each member so
+      marked.
+
+   REQUIRED when known:  The sender includes the member when it holds
+      the member's value.  A receiver MUST NOT infer meaning from the
+      member's absence.
 
    This document uses JSON [RFC8259] as the data model for all PDP
    requests, responses, and evidence objects.  JCS canonicalization

@@ -82,38 +82,38 @@ Table of Contents
 
    1.  Introduction
      1.1.  Applicability
-     1.2.  Conventions and Terminology
-   2.  Mission Roles
-   3.  Mission Record
-     3.1.  Two Commitments
-     3.2.  Mission Reference and Resolution
-     3.3.  Worked Example
-   4.  Mission Intent
-   5.  Mission Approval
-   6.  Mission Lifecycle
-     6.1.  Issuance Gating
-     6.2.  Mission State Surfaces
-   7.  Mission-Bound Credential
-     7.1.  The Mission Claim
-     7.2.  Authority Subset
-     7.3.  Subject Directedness
-     7.4.  Per-Request Mission Binding
-     7.5.  Worked Example
-   8.  Mission Substrate
-   9.  Limitations
-   10. Mission Verification Modes
-   11. Resource-Declared Semantics
-   12. Conformance
-   13. Security Considerations
-     13.1.  Rendering the Mission Description
-     13.2.  Two Commitments, Neither Substitutes
-     13.3.  Person Server Compromise
-     13.4.  The Mission Log as Evidence
-   14. Privacy Considerations
-   15. IANA Considerations
-   16. References
-     16.1.  Normative References
-     16.2.  Informative References
+   2.  Conventions and Terminology
+   3.  Mission Roles
+   4.  Mission Record
+     4.1.  Two Commitments
+     4.2.  Mission Reference and Resolution
+     4.3.  Worked Example
+   5.  Mission Intent
+   6.  Mission Approval
+   7.  Mission Lifecycle
+     7.1.  Issuance Gating
+     7.2.  Mission State Surfaces
+   8.  Mission-Bound Credential
+     8.1.  The Mission Claim
+     8.2.  Authority Subset
+     8.3.  Subject Directedness
+     8.4.  Per-Request Mission Binding
+     8.5.  Worked Example
+   9.  Mission Substrate
+   10. Limitations
+   11. Mission Verification Modes
+   12. Resource-Declared Semantics
+   13. Conformance
+   14. Security Considerations
+     14.1.  Rendering the Mission Description
+     14.2.  Two Commitments, Neither Substitutes
+     14.3.  Person Server Compromise
+     14.4.  The Mission Log as Evidence
+   15. Privacy Considerations
+   16. IANA Considerations
+   17. References
+     17.1.  Normative References
+     17.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -171,9 +171,9 @@ Table of Contents
    which mode a resource supports.  A deployment without a PS has no
    party to fill the Mission Issuer role and cannot implement this
    profile.  This document tracks draft-hardt-oauth-aauth-protocol-08,
-   an individual Internet-Draft (Section 9).
+   an individual Internet-Draft (Section 10).
 
-1.2.  Conventions and Terminology
+2.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -196,13 +196,13 @@ Table of Contents
 
    Mission-Bound Person Server:  A Person Server conforming to this
       profile: it implements the Mission Issuer role over AAuth's
-      mission surfaces (Section 12).
+      mission surfaces (Section 13).
 
    Mission-Bound Agent:  An AAuth agent that proposes structured intent,
       carries the Mission reference, and respects the Mission lifecycle
-      (Section 12).
+      (Section 13).
 
-2.  Mission Roles
+3.  Mission Roles
 
          +==========+===========================================+
          | AAuth    | Mission model role                        |
@@ -237,7 +237,7 @@ Table of Contents
    it supplies the acting identity the Mission's client_id records, and
    this profile adds no requirement to it.
 
-3.  Mission Record
+4.  Mission Record
 
    AAuth's mission blob is the JSON object the PS returns at approval,
    held only by the agent and the PS, and committed by s256 over its
@@ -252,7 +252,7 @@ Table of Contents
    profile's Mission Record section defines it; that section's member
    list is authoritative and is not restated here.  The record's state
    MUST NOT appear in the blob: the blob is immutable under s256, and
-   state is served by the lifecycle surfaces (Section 6).
+   state is served by the lifecycle surfaces (Section 7).
 
    The mapping into AAuth's vocabulary is fixed as follows:
 
@@ -268,7 +268,7 @@ Table of Contents
    *  intent.goal MUST equal the blob's description: the approved
       Markdown description is the recorded goal.
 
-   *  expires_at is REQUIRED (Section 6), in RFC 3339 [RFC3339] date-
+   *  expires_at is REQUIRED (Section 7), in RFC 3339 [RFC3339] date-
       time form.
 
    The AAuth-native blob members (approver, agent, approved_at,
@@ -276,7 +276,7 @@ Table of Contents
    unchanged.  The blob MAY carry additional session members per AAuth;
    they are committed by s256 but not by the integrity anchors.
 
-3.1.  Two Commitments
+4.1.  Two Commitments
 
    The blob carries two independent commitments.  AAuth's s256 is the
    unpadded base64url SHA-256 of the exact blob bytes as returned; the
@@ -288,9 +288,9 @@ Table of Contents
    intent and authority_set alone, independent of blob serialization.
    The s256 therefore commits the blob that contains the anchors; a
    verifier holding the blob can check both, and neither commitment
-   substitutes for the other (Section 13.2).
+   substitutes for the other (Section 14.2).
 
-3.2.  Mission Reference and Resolution
+4.2.  Mission Reference and Resolution
 
    The (approver, s256) pair is the AAuth-native Mission reference.  The
    AAuth-Mission header is unchanged by this binding: no new parameters
@@ -306,7 +306,7 @@ Table of Contents
    [I-D.draft-mcguinness-mission-audit]).  The two names identify the
    same Mission, and the record binds them.
 
-3.3.  Worked Example
+4.3.  Worked Example
 
    The approved mission blob for a reconciliation Mission at
    https://erp.example.com, approved by alice at https://ps.example.com
@@ -380,7 +380,7 @@ Table of Contents
    AAuth-Mission: approver="https://ps.example.com";
        s256="sN5v0poiLW85zY6tKSlxkR10yPkIr-JUr9ttwhiOc0w"
 
-4.  Mission Intent
+5.  Mission Intent
 
    The agent's proposal to the PS's mission_endpoint is the Mission
    Intent proposal.  AAuth defines the proposal as a JSON object with a
@@ -403,7 +403,7 @@ Table of Contents
    description and tools alone the derivation is generative, under that
    profile's disclosure and recording rules for generative derivation.
    In either case the PS records the approved Mission Intent, with goal
-   equal to the approved description (Section 3) and resources drawn
+   equal to the approved description (Section 4) and resources drawn
    from the tool providers and policy; when the proposal's Intent
    carries no expires_at, the PS MUST set one by policy, since the
    record requires it.
@@ -428,7 +428,7 @@ Table of Contents
    instructions into structured Intents composes here unchanged
    ([I-D.draft-mcguinness-mission-shaping]).
 
-5.  Mission Approval
+6.  Mission Approval
 
    AAuth's propose, clarify, approve interaction is the approval event.
    It is natively asynchronous: the PS returns a 202 deferred response
@@ -447,13 +447,13 @@ Table of Contents
        (iss, sub), with iss its own issuer URL, and MUST NOT take the
        Subject from unauthenticated client input.
 
-   3.  Derive the Authority Set from the proposal (Section 4) and render
+   3.  Derive the Authority Set from the proposal (Section 5) and render
        it for consent under the issuance profile's rendering rules.  The
        Markdown description and the agent's clarification messages are
        attacker-influenceable text: the PS MUST render them inert and
        sanitized, mitigate direction-override and confusable
        presentation, and visually distinguish the derived Authority Set
-       from client-supplied text (Section 13.1).
+       from client-supplied text (Section 14.1).
 
    4.  Compute the integrity anchors with the PS's issuer URL as the
        envelope iss.
@@ -477,10 +477,10 @@ Table of Contents
    to my finance folder?"), the consent-evidence profile's Disclosure
    Interrogation: an answer the PS presents in its own voice is grounded
    in recorded shaping or provenance material, the agent's chat replies
-   stay attacker-influenceable text under Section 13.1, and the chat the
-   mission log retains (Section 13.4) is the interrogation record.
+   stay attacker-influenceable text under Section 14.1, and the chat the
+   mission log retains (Section 14.4) is the interrogation record.
 
-6.  Mission Lifecycle
+7.  Mission Lifecycle
 
    AAuth gives a mission two states, active and terminated, and defers
    transitions beyond completion to a companion specification.  This
@@ -510,7 +510,7 @@ Table of Contents
    to active, and every terminal state surfaces on AAuth endpoints as
    the mission_terminated error with mission_status terminated, which
    already instructs the agent to stop.  The family surfaces
-   (Section 6.2) report the distinct state.  This binding adds to
+   (Section 7.2) report the distinct state.  This binding adds to
    AAuth's model:
 
    *  *Revocation.* The PS MUST provide an authenticated means for the
@@ -539,7 +539,7 @@ Table of Contents
       long pauses the PS SHOULD terminate and let a new proposal re-
       scope the work, per that rationale.
 
-6.1.  Issuance Gating
+7.1.  Issuance Gating
 
    This gate rests on an AAuth structural precondition: no auth token
    exists under a Mission without passing the Person Server, in either
@@ -566,7 +566,7 @@ Table of Contents
    auth-token lifetime; the state surfaces below give a tighter cutoff
    where a deployment needs one.
 
-6.2.  Mission State Surfaces
+7.2.  Mission State Surfaces
 
    A Mission-Bound Person Server SHOULD serve the Mission Status
    operation of [I-D.draft-mcguinness-oauth-mission-status], with its
@@ -589,11 +589,11 @@ Table of Contents
    the semantics those profiles define.  The PS's existing jwks_uri is
    the published key material for its signed artifacts.
 
-7.  Mission-Bound Credential
+8.  Mission-Bound Credential
 
    The AAuth auth token is this binding's Mission-bound credential.
 
-7.1.  The Mission Claim
+8.1.  The Mission Claim
 
    An auth token a Mission-Bound Person Server issues under a Mission
    MUST carry, in its mission claim, the family members id, issuer, and
@@ -612,11 +612,11 @@ Table of Contents
    copies the AAuth-native reference per AAuth.  The family members
    appear only when the Access Server supports this profile; when it
    does not, the credential still names the Mission by (approver, s256),
-   the PS's gate still holds (Section 6.1), and a consumer that needs
+   the PS's gate still holds (Section 7.1), and a consumer that needs
    the family members resolves them through the Mission Status operation
    or a Mission Mandate ([I-D.draft-mcguinness-mission-mandate]).
 
-7.2.  Authority Subset
+8.2.  Authority Subset
 
    The authority an auth token grants MUST be a subset of the Mission's
    Authority Set. The granted scope is a coarse projection under the
@@ -629,7 +629,7 @@ Table of Contents
    scope does.  The delivery check also bounds lifetime: the PS MUST NOT
    deliver an Access Server-issued token whose exp is later than the
    Mission's expires_at, so no federated credential outlives the Mission
-   (Section 6.1), and it MUST NOT initiate federation when the Mission's
+   (Section 7.1), and it MUST NOT initiate federation when the Mission's
    remaining lifetime is too short to yield a deliverable token.
 
    An auth token MAY additionally carry Mission-derived authorization
@@ -651,10 +651,10 @@ Table of Contents
    no credential from this Mission; it is a fresh decision at a new
    decision point, evaluated against its own authority source, so it
    falls outside the invariant rather than violating it.  Attenuation
-   within any one Mission's own derivations stays strict (Section 6.1,
-   Section 7).
+   within any one Mission's own derivations stays strict (Section 7.1,
+   Section 8).
 
-7.3.  Subject Directedness
+8.3.  Subject Directedness
 
    The issuance profile sets a derived token's sub to the Mission
    Subject's sub.  AAuth directs sub per resource for privacy.  This
@@ -664,7 +664,7 @@ Table of Contents
    that evidence, audit, and the status surfaces resolve the same
    principal.
 
-7.4.  Per-Request Mission Binding
+8.4.  Per-Request Mission Binding
 
    The auth token is proof-of-possession: its cnf.jwk is the agent's
    signing key, and every request carries an HTTP Message Signature
@@ -687,15 +687,15 @@ Table of Contents
    endpoints with the PS as the PDP, rather than restating that contract
    here: the decision inputs, parameter binding, denial reasons, and
    freshness rules are the runtime profile's, and the mission log is the
-   PS's runtime evidence trail (Section 13.4).  This binding adds only
+   PS's runtime evidence trail (Section 14.4).  This binding adds only
    the AAuth-specific mapping: the token or permission request is the
    decision request, the aauth-mission reference resolves the
    established Mission, and each logged decision is a runtime decision
    record.
 
-7.5.  Worked Example
+8.5.  Worked Example
 
-   An auth token for the Mission of Section 3.3, issued by the PS in the
+   An auth token for the Mission of Section 4.3, issued by the PS in the
    PS-asserted mode, narrowed to read-only authority:
 
    {
@@ -723,7 +723,7 @@ Table of Contents
    undirected for readability.  The AAuth claims (iss, dwk, aud, agent,
    cnf) are unchanged by this binding.
 
-8.  Mission Substrate
+9.  Mission Substrate
 
    The companion profiles of the Mission suite are defined against the
    Mission model's substrate primitives rather than against OAuth
@@ -732,49 +732,49 @@ Table of Contents
    provides every primitive, including the Mission-bound credential and
    issuance gating, the two the standalone binding forgoes.  In the
    federated mode full provision holds only when the Access Server
-   carries the family mission members (Section 7.1); a federated
+   carries the family mission members (Section 8.1); a federated
    deployment whose Access Servers do not is Reference-only
-   (Section 10).  Against the substrate's requirements:
+   (Section 11).  Against the substrate's requirements:
 
    1.  *Identifier and issuer*: id on the record, issuer the approver
        URL; the (approver, s256) pair is the wire-native reference to
-       the same Mission (Section 3.2).
+       the same Mission (Section 4.2).
 
    2.  *Lifecycle state space*: the issuance profile's states with the
        only-active rule and fail-safe unrecognized states, extended by
        the status profile where adopted; freshness through the status
        operation, signals, and the one-hour auth-token lifetime, with a
-       PS-declared staleness bound (Section 6).
+       PS-declared staleness bound (Section 7).
 
    3.  *Authority Set representation*: the issuance profile's, with its
        subset rule and Common Constraints, recorded in the blob
-       (Section 3).
+       (Section 4).
 
    4.  *Integrity anchors*: the family envelope and canonicalization,
        iss the PS's issuer URL, carried inside the s256-committed blob
-       (Section 3.1).
+       (Section 4.1).
 
    5.  *Mission-bound credential*: the auth token with the mission claim
        and signature-covered reference, issued only while the Mission is
-       active (Section 7, Section 6.1).
+       active (Section 8, Section 7.1).
 
    6.  *Published key material*: the PS's keys, resolvable through
-       AAuth's discovery (Section 6.2).
+       AAuth's discovery (Section 7.2).
 
    7.  *Audit horizon*: PS-declared; the record and the mission log are
        retained for it.
 
    8.  *Approval fidelity*: the propose, clarify, approve interaction
        produces the record, the anchors, and the consent disclosure with
-       the required fidelity (Section 5).
+       the required fidelity (Section 6).
 
    The composition consequences:
 
    *  The runtime profile and its AuthZEN binding compose credential-
-      carried (Section 7.4); no join is needed.
+      carried (Section 8.4); no join is needed.
 
    *  Status and signals are PS-served; the PS is the transmitting
-      Mission Issuer (Section 6.2).
+      Mission Issuer (Section 7.2).
 
    *  Shaping, consent evidence, the status profile's completion
       machinery, the Mandate, and audit transparency compose unchanged:
@@ -801,7 +801,7 @@ Table of Contents
       a Mission into a foreign issuer
       ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
 
-9.  Limitations
+10.  Limitations
 
    *Substrate maturity.* AAuth is an individual Internet-Draft, and this
    binding pins its wire behavior to draft-hardt-oauth-aauth-protocol-
@@ -824,13 +824,13 @@ Table of Contents
    arbitrary minting, and false state
    ([I-D.draft-mcguinness-mission-security-model]).  Consent evidence
    and audit transparency make forgery detectable after the fact; they
-   do not prevent it (Section 13.3).
+   do not prevent it (Section 14.3).
 
-10.  Mission Verification Modes
+11.  Mission Verification Modes
 
    AAuth's default keeps the mission blob with the agent and the PS, so
    a Resource verifies from the reference and token claims, not by
-   recomputing the anchors (Section 9).  That makes resource-side
+   recomputing the anchors (Section 10).  That makes resource-side
    verifiability an explicit axis this binding must name, one the OAuth
    binding does not have because its tokens always carry the authority
    payload.  A deployment declares which of three modes it serves; the
@@ -839,9 +839,9 @@ Table of Contents
 
    *Reference-only* (the default):  the credential names the Mission by
       (approver, s256) and carries the granted scope.  The PS gate holds
-      (Section 6.1), but a Resource cannot independently verify the
+      (Section 7.1), but a Resource cannot independently verify the
       Mission's authority; it trusts the PS's evaluation.  Federated
-      mode (Section 7.1) is at most this when the Access Server does not
+      mode (Section 8.1) is at most this when the Access Server does not
       carry the family members.
 
    *Credential-carried*:  the auth token additionally carries the
@@ -865,11 +865,11 @@ Table of Contents
    runtime-enforced or agent-compromise-resistant AAuth deployment
    claims the corresponding level there rather than a binding-specific
    name.  Full-provision Mission governance, which the PS gate already
-   provides (Section 6.1), reaches the Runtime-Enforced level only in
+   provides (Section 7.1), reaches the Runtime-Enforced level only in
    the Resource-verifiable mode with the runtime decision contract in
-   force (Section 7.4).
+   force (Section 8.4).
 
-11.  Resource-Declared Semantics
+12.  Resource-Declared Semantics
 
    This section is informative.  AAuth's exploratory Rich Resource
    Requests companion ([I-D.draft-hardt-aauth-r3]) inverts the authority
@@ -882,7 +882,7 @@ Table of Contents
    without new mechanism:
 
    *  *Encounter-time adjudication at the gate that already exists.* The
-      Person Server issues or gates every auth token (Section 6.1), so
+      Person Server issues or gates every auth token (Section 7.1), so
       the moment an agent requests a token for a newly encountered
       resource is the adjudication point: the PS evaluates the
       resource's declared operations against the Mission's Authority
@@ -913,7 +913,7 @@ Table of Contents
    contract, the identity pinning, and the floors the Person Server
    applies at that gate.
 
-12.  Conformance
+13.  Conformance
 
    An implementation conforms in one of two roles.
 
@@ -921,30 +921,30 @@ Table of Contents
 
    *  creates a Mission record for every approved mission and embeds it
       in the blob as mission_record, computing the integrity anchors
-      with its issuer URL (Section 3);
+      with its issuer URL (Section 4);
 
    *  resolves the (approver, s256) reference to the record at every PS
-      endpoint that takes one (Section 3.2);
+      endpoint that takes one (Section 4.2);
 
-   *  executes the approval event of Section 5, creating the record
+   *  executes the approval event of Section 6, creating the record
       active atomically with the approval decision;
 
-   *  operates the lifecycle of Section 6: authenticated revocation,
+   *  operates the lifecycle of Section 7: authenticated revocation,
       expires_at enforcement, completion, and the only-active gate at
-      every PS surface, atomic with issuance (Section 6.1);
+      every PS surface, atomic with issuance (Section 7.1);
 
-   *  issues auth tokens as Mission-bound credentials (Section 7.1,
-      Section 7.2), with exp bounded by the Mission's expires_at;
+   *  issues auth tokens as Mission-bound credentials (Section 8.1,
+      Section 8.2), with exp bounded by the Mission's expires_at;
 
-   *  serves Mission state per Section 6.2 and retains the record and
+   *  serves Mission state per Section 7.2 and retains the record and
       mission log for the audit horizon; and
 
-   *  declares which verification mode of Section 10 the deployment
+   *  declares which verification mode of Section 11 the deployment
       serves.
 
    A *Mission-Bound Agent*:
 
-   *  SHOULD propose a structured Mission Intent (Section 4) and treats
+   *  SHOULD propose a structured Mission Intent (Section 5) and treats
       every proposal as a proposal, never as authority;
 
    *  stores the blob bytes exactly as received, carries the Mission
@@ -958,9 +958,9 @@ Table of Contents
    *  treats mission_id and the Mission reference as references, never
       as credentials.
 
-13.  Security Considerations
+14.  Security Considerations
 
-13.1.  Rendering the Mission Description
+14.1.  Rendering the Mission Description
 
    The Markdown description, the proposal, and every justification are
    attacker-influenceable text that the PS renders to the person at the
@@ -973,7 +973,7 @@ Table of Contents
    the consent surface MUST also make clear which rendered content is
    authority and which is the agent's narrative.
 
-13.2.  Two Commitments, Neither Substitutes
+14.2.  Two Commitments, Neither Substitutes
 
    s256 commits the session-specific blob bytes, including members the
    anchors do not cover, but it has no domain separation and no issuer
@@ -988,7 +988,7 @@ Table of Contents
    that were approved".  A party without the blob relies on the signed
    status surfaces or a Mandate.
 
-13.3.  Person Server Compromise
+14.3.  Person Server Compromise
 
    A compromised PS is a compromised Mission Issuer: it can forge
    approvals, alter records before activation, issue credentials against
@@ -1001,12 +1001,12 @@ Table of Contents
    custody and the status profile's key-retention rules keep archived
    state evidence verifiable.
 
-13.4.  The Mission Log as Evidence
+14.4.  The Mission Log as Evidence
 
    The mission log is the PS's evidence trail: token requests with their
    justifications, permission requests and outcomes, audit records, and
    clarification chats, in order.  Where the PS implements the runtime
-   decision contract (Section 7.4), the log is its decision evidence,
+   decision contract (Section 8.4), the log is its decision evidence,
    and the runtime profile's record-integrity expectations apply:
    tamper-evident storage, retention for the audit horizon, and a grant
    recorded before the authority it grants is used
@@ -1025,7 +1025,7 @@ Table of Contents
    decision and execution evidence records, which is the interoperable
    form.
 
-14.  Privacy Considerations
+15.  Privacy Considerations
 
    *The blob stays with the agent and the PS.* Task text, constraints,
    and the full Authority Set do not travel in credentials unless a
@@ -1034,7 +1034,7 @@ Table of Contents
    minimization property the OAuth binding does not have, where the
    token carries the authority payload; the trade is Resource-side
    enforcement, which here requires opting into token-carried authority
-   or a Mandate (Section 9).
+   or a Mandate (Section 10).
 
    *Reference correlation.* The (approver, s256) pair rides every
    mission-context request and token, so Resources observing it can
@@ -1055,7 +1055,7 @@ Table of Contents
    both trade the stable audit anchor for unlinkability, and neither is
    a v1 property.
 
-15.  IANA Considerations
+16.  IANA Considerations
 
    This document has no IANA actions.  The registries AAuth establishes
    belong to that specification, and this binding defines no new AAuth
@@ -1067,9 +1067,9 @@ Table of Contents
    Should AAuth establish registries for those members, the members this
    document defines would be registered there.
 
-16.  References
+17.  References
 
-16.1.  Normative References
+17.1.  Normative References
 
    [I-D.draft-hardt-oauth-aauth-protocol]
               Hardt, D., "AAuth Protocol", Work in Progress, Internet-
@@ -1105,7 +1105,7 @@ Table of Contents
               Message Signatures", RFC 9421, DOI 10.17487/RFC9421,
               February 2024, <https://www.rfc-editor.org/rfc/rfc9421>.
 
-16.2.  Informative References
+17.2.  Informative References
 
    [I-D.draft-hardt-aauth-r3]
               Hardt, D., "AAuth Rich Resource Requests (R3)", 2026,

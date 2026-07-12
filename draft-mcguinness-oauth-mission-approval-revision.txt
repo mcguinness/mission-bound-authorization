@@ -71,7 +71,7 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An EXPERIMENTAL Extension
+   2.  Status: An Experimental Extension
    3.  Relationship to the Deferred Approval Profile
    4.  Conventions and Terminology
    5.  The Revision-Required State
@@ -115,18 +115,17 @@ Table of Contents
    operation with its own fresh approval
    ([I-D.draft-mcguinness-oauth-mission-expansion]).
 
-2.  Status: An EXPERIMENTAL Extension
+2.  Status: An Experimental Extension
 
-   This document is OPTIONAL and *experimental*: adopt it for
-   evaluation, not as a stable interface.  The stable path needs no
-   revision mechanism at all.  A deferred approval that cannot be
-   granted as proposed resolves to access_denied, and the client submits
-   a fresh, narrower Mission Intent via PAR [RFC9126]; the deferred
-   approval profile and the issuance profile fully specify that path.
-   What this document adds over deny-and-resubmit is continuity of a
-   single deferred approval and machine-readable refusal hints, at the
-   cost of a revision artifact and a per-dimension narrowing
-   verification.
+   This document is optional and experimental: adopt it for evaluation,
+   not as a stable interface.  The stable path needs no revision
+   mechanism at all.  A deferred approval that cannot be granted as
+   proposed resolves to access_denied, and the client submits a fresh,
+   narrower Mission Intent via PAR [RFC9126]; the deferred approval
+   profile and the issuance profile fully specify that path.  What this
+   document adds over deny-and-resubmit is continuity of a single
+   deferred approval and machine-readable refusal hints, at the cost of
+   a revision artifact and a per-dimension narrowing verification.
 
    A deployment claims this profile only when it offers or consumes the
    revision handshake.  A Mission Issuer or client that does not

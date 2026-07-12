@@ -74,7 +74,7 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An OPTIONAL Extension
+   2.  Status: An Optional Extension
    3.  Relationship to the Issuance Profile
    4.  Scope
    5.  Conventions and Terminology
@@ -137,9 +137,9 @@ Table of Contents
    escape the parent.  The child is created through an explicit
    authorization step, not by inheriting a parent harness session.
 
-2.  Status: An OPTIONAL Extension
+2.  Status: An Optional Extension
 
-   This document is OPTIONAL.  It is a layered extension to the issuance
+   This document is optional.  It is a layered extension to the issuance
    profile, not a change to it.  A deployment that implements
    [I-D.draft-mcguinness-oauth-mission] and never creates a Child
    Mission is fully conformant to that profile and is unaffected by this

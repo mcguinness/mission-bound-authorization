@@ -75,7 +75,7 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An OPTIONAL Extension
+   2.  Status: An Optional Extension
    3.  Conventions and Terminology
    4.  Cross-Domain Projection
    5.  What Crosses the Trust Boundary
@@ -87,12 +87,12 @@ Table of Contents
    10. Error Responses
    11. Introspection at a Resource AS
    12. Authorization Server Metadata
-   13. Security Considerations
-     13.1.  Cross-Domain Revocation Latency
-     13.2.  The Grant at the Trust Boundary
-     13.3.  Per-Domain Delegation Depth
-   14. Privacy Considerations
-   15. Conformance
+   13. Conformance
+   14. Security Considerations
+     14.1.  Cross-Domain Revocation Latency
+     14.2.  The Grant at the Trust Boundary
+     14.3.  Per-Domain Delegation Depth
+   15. Privacy Considerations
    16. IANA Considerations
    17. References
      17.1.  Normative References
@@ -143,13 +143,13 @@ Table of Contents
    mints may widen it (Section 9).  Honoring is session-less: the
    Resource AS verifies pre-established issuer trust and a signature, so
    the Mission Issuer is never on the partner's request path; the cost
-   of that independence is a bounded revocation lease (Section 13.1).
+   of that independence is a bounded revocation lease (Section 14.1).
 
-2.  Status: An OPTIONAL Extension
+2.  Status: An Optional Extension
 
    This document is the Cross-Domain capability named by the base
    profile's conformance model ([I-D.draft-mcguinness-oauth-mission],
-   Section "Conformance").  The capability is OPTIONAL: a deployment
+   Section "Conformance").  The capability is optional: a deployment
    whose Missions never leave their issuing AS does not implement this
    document, and the issuance profile is complete without it.
 
@@ -260,7 +260,7 @@ Table of Contents
    Nothing returns across the boundary at validation time.  The Resource
    AS honors the grant from pre-established trust (Section 7) and the
    signature alone; its assurance that the Mission was active is a lease
-   bounded by the grant lifetime (Section 13.1).
+   bounded by the grant lifetime (Section 14.1).
 
 5.1.  Audience-Scoped Authority
 
@@ -348,7 +348,7 @@ Table of Contents
    A deployment that publishes a Mission Deployment Profile
    ([I-D.draft-mcguinness-mission-architecture]) records its projection
    posture in these terms, and the accepted cross-domain revocation
-   window (Section 13.1) among its residual risks.
+   window (Section 14.1) among its residual risks.
 
 8.  Issuing the Cross-Domain Grant
 
@@ -379,7 +379,7 @@ Table of Contents
 
    *  MUST be audienced to the target Resource AS, and MUST NOT have a
       lifetime exceeding 300 seconds (a short lifetime bounds cross-
-      domain revocation latency; see Section 13.1);
+      domain revocation latency; see Section 14.1);
 
    *  MUST have an exp that does not exceed the Mission's expires_at,
       per the issuance profile's expiry rule
@@ -586,7 +586,7 @@ Table of Contents
       authorization_details, and the local token's own identifier or
       digest (jti), iss, aud, iat, exp, and issued
       authorization_details.  The issuer cannot observe local tokens
-      (Section 13.1), so this record is the only evidence tying a local
+      (Section 14.1), so this record is the only evidence tying a local
       token to the grant it was minted from and showing its authority
       did not widen; without it, cross-domain minting is unaccountable
       to both domains.  Whether the Resource AS keeps this record is a
@@ -721,13 +721,52 @@ Table of Contents
    bilateral inputs of Section 7 are not discoverable and exist before
    first use.
 
-13.  Security Considerations
+13.  Conformance
+
+   An implementation conforms in one of two roles and names the
+   capability as the issuance profile's conformance model directs (for
+   example, "Mission Issuer with Cross-Domain";
+   [I-D.draft-mcguinness-oauth-mission], Section "Conformance").
+
+   An *Originating Mission Issuer with Cross-Domain* is a conforming
+   Mission Issuer of the issuance profile that additionally:
+
+   *  issues the Mission-bound cross-domain grant per Section 8, gated
+      and counted as a derivation;
+
+   *  scopes every projection by audience (Section 5.1);
+
+   *  fails issuance with the codes of Section 10; and
+
+   *  advertises cross-domain grant issuance per Section 12.
+
+   A *Resource AS*:
+
+   *  honors the cross-domain grant per Section 9, including issuer
+      trust by local policy, explicit typing, sender-constraint and one-
+      time-use verification, and fail-closed interpretation of conveyed
+      authority;
+
+   *  bounds every local token by the grant that seeded it and issues it
+      sender-constrained and short-lived (Section 9, Section 14.1);
+
+   *  fails redemption with the codes of Section 10;
+
+   *  where it offers token introspection for its local tokens, follows
+      Section 11; and
+
+   *  never creates or alters a Mission (Section 4).
+
+   A Resource AS is not required to implement the issuance profile's
+   Mission Issuer role.
+
+14.  Security Considerations
 
    The security considerations of the issuance profile
    [I-D.draft-mcguinness-oauth-mission] and of the identity chaining
    architecture [I-D.draft-ietf-oauth-identity-chaining] apply.
 
-13.1.  Cross-Domain Revocation Latency
+14.1.  Cross-Domain Revocation Latency
 
    Single-domain revocation is prompt: the AS that issued a token also
    honors its revocation ([I-D.draft-mcguinness-oauth-mission],
@@ -756,7 +795,7 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission-signals] pushes lifecycle
    transitions to the partner domain.
 
-13.2.  The Grant at the Trust Boundary
+14.2.  The Grant at the Trust Boundary
 
    The cross-domain grant is the highest-authority credential in the
    chain and the only one that crosses a trust boundary.  The
@@ -777,7 +816,7 @@ Table of Contents
    issuer-signed hop receipts
    ([I-D.draft-mcguinness-oauth-actor-receipts]).
 
-13.3.  Per-Domain Delegation Depth
+14.3.  Per-Domain Delegation Depth
 
    Because the cross-domain grant carries no act chain (Section 8), a
    Resource AS that issues delegated tokens of its own begins its
@@ -790,7 +829,7 @@ Table of Contents
    and each Resource AS's local policy (Section 7); this profile bounds
    delegation depth only within a single domain.
 
-14.  Privacy Considerations
+15.  Privacy Considerations
 
    The cross-domain grant and every local token minted from it carry the
    canonical mission_id, mission.issuer, and authority_hash unchanged,
@@ -802,45 +841,6 @@ Table of Contents
    boundary.  Audience scoping (Section 5.1) is the minimization
    measure: a Resource AS never sees Authority Set entries addressed to
    other audiences.
-
-15.  Conformance
-
-   An implementation conforms in one of two roles and names the
-   capability as the issuance profile's conformance model directs (for
-   example, "Mission Issuer with Cross-Domain";
-   [I-D.draft-mcguinness-oauth-mission], Section "Conformance").
-
-   An *Originating Mission Issuer with Cross-Domain* is a conforming
-   Mission Issuer of the issuance profile that additionally:
-
-   *  issues the Mission-bound cross-domain grant per Section 8, gated
-      and counted as a derivation;
-
-   *  scopes every projection by audience (Section 5.1);
-
-   *  fails issuance with the codes of Section 10; and
-
-   *  advertises cross-domain grant issuance per Section 12.
-
-   A *Resource AS*:
-
-   *  honors the cross-domain grant per Section 9, including issuer
-      trust by local policy, explicit typing, sender-constraint and one-
-      time-use verification, and fail-closed interpretation of conveyed
-      authority;
-
-   *  bounds every local token by the grant that seeded it and issues it
-      sender-constrained and short-lived (Section 9, Section 13.1);
-
-   *  fails redemption with the codes of Section 10;
-
-   *  where it offers token introspection for its local tokens, follows
-      Section 11; and
-
-   *  never creates or alters a Mission (Section 4).
-
-   A Resource AS is not required to implement the issuance profile's
-   Mission Issuer role.
 
 16.  IANA Considerations
 
@@ -1129,7 +1129,7 @@ A.2.  Stage 3: The Resource AS Issues a Local Access Token
 
    Revoking the Mission now stops new ID-JAGs, but the local token the
    Resource AS minted stays usable until its exp (260 seconds), bounded
-   by the 300-second ID-JAG cap (Section 13.1).  Tighter cross-domain
+   by the 300-second ID-JAG cap (Section 14.1).  Tighter cross-domain
    revocation is opt-in, and the two companions do different things: a
    Mission Status freshness lease shortens how long the partner relies
    on stale state by forcing a pull or per-request re-check, while a
