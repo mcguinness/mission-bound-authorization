@@ -1,0 +1,2515 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission-Bound Authorization for UMA 2.0</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       User-Managed Access (UMA) 2.0 standardized the plumbing of
+asynchronous, party-asymmetric authorization: a requesting party and
+client that can only request, a resource owner who approves at the
+authorization server on their own schedule, a rotating permission
+ticket carrying the pending request, claims pushing at the token
+endpoint, a persisted claims token that carries continuity but grants
+nothing, and per-use introspection at the resource server. It
+deliberately left the object of that plumbing unspecified: the
+authorization assessment is a black box, with no artifact of what was
+approved, why, or within what bounds. This document supplies that
+interior from the Mission model of Mission-Bound Authorization for
+OAuth 2.0. The Mission Intent rides UMA claims pushing as a claim
+token, the resource owner's decision is the approval event that
+creates the Mission record with its integrity anchors, the Mission
+lifecycle gates every RPT issuance and upgrade, the RPT is the
+Mission-bound credential, and the persisted claims token is profiled
+as Mission continuity that is never authority. This is the fourth
+binding of the Mission model and the first authored against the
+Mission Substrate Requirements contract. It is an experimental
+sketch: the binding's shape and its Mission Substrate Statement are
+fixed here, and wire-level completeness is deferred. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="mission" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="authorization" name="keyword">
+<meta content="uma" name="keyword">
+<meta content="user-managed access" name="keyword">
+<meta content="governance" name="keyword">
+<meta content="draft-mcguinness-mission-uma-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.10.0
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.2
+-->
+<link href="draft-mcguinness-mission-uma.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Mission UMA</td>
+<td class="right">July 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 13 January 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Network Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-mission-uma-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-07-12" class="published">12 July 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Experimental</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-01-13">13 January 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission-Bound Authorization for UMA 2.0</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">User-Managed Access (UMA) 2.0 standardized the plumbing of
+asynchronous, party-asymmetric authorization: a requesting party and
+client that can only request, a resource owner who approves at the
+authorization server on their own schedule, a rotating permission
+ticket carrying the pending request, claims pushing at the token
+endpoint, a persisted claims token that carries continuity but grants
+nothing, and per-use introspection at the resource server. It
+deliberately left the object of that plumbing unspecified: the
+authorization assessment is a black box, with no artifact of what was
+approved, why, or within what bounds. This document supplies that
+interior from the Mission model of Mission-Bound Authorization for
+OAuth 2.0. The Mission Intent rides UMA claims pushing as a claim
+token, the resource owner's decision is the approval event that
+creates the Mission record with its integrity anchors, the Mission
+lifecycle gates every RPT issuance and upgrade, the RPT is the
+Mission-bound credential, and the persisted claims token is profiled
+as Mission continuity that is never authority. This is the fourth
+binding of the Mission model and the first authored against the
+Mission Substrate Requirements contract. It is an experimental
+sketch: the binding's shape and its Mission Substrate Statement are
+fixed here, and wire-level completeness is deferred.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-uma.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-uma.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-mission-uma/">https://datatracker.ietf.org/doc/draft-mcguinness-mission-uma/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 13 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
+                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-attempt-first-operation" class="internal xref">Attempt-First Operation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.2">
+                <p id="section-toc.1-1.1.2.2.1" class="keepWithNext"><a href="#section-1.2" class="auto internal xref">1.2</a>.  <a href="#name-applicability" class="internal xref">Applicability</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.3">
+                <p id="section-toc.1-1.1.2.3.1" class="keepWithNext"><a href="#section-1.3" class="auto internal xref">1.3</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-mission-roles" class="internal xref">Mission Roles</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-mission-flow" class="internal xref">Mission Flow</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-mission-intent" class="internal xref">Mission Intent</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-mission-approval" class="internal xref">Mission Approval</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-mission-record" class="internal xref">Mission Record</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-mission-lifecycle" class="internal xref">Mission Lifecycle</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-issuance-gating" class="internal xref">Issuance Gating</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-mission-state-surfaces" class="internal xref">Mission State Surfaces</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-mission-bound-credential" class="internal xref">Mission-Bound Credential</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-the-mission-claim" class="internal xref">The Mission Claim</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-authority-subset-and-grain" class="internal xref">Authority Subset and Grain</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.3">
+                <p id="section-toc.1-1.8.2.3.1"><a href="#section-8.3" class="auto internal xref">8.3</a>.  <a href="#name-drawdown-and-upgrade" class="internal xref">Drawdown and Upgrade</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.4">
+                <p id="section-toc.1-1.8.2.4.1"><a href="#section-8.4" class="auto internal xref">8.4</a>.  <a href="#name-mission-continuity-the-pct" class="internal xref">Mission Continuity: the PCT</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.5">
+                <p id="section-toc.1-1.8.2.5.1"><a href="#section-8.5" class="auto internal xref">8.5</a>.  <a href="#name-worked-example" class="internal xref">Worked Example</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-mission-substrate" class="internal xref">Mission Substrate</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-limitations" class="internal xref">Limitations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
+                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-the-ticket-as-deferral-hand" class="internal xref">The Ticket as Deferral Handle</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.2">
+                <p id="section-toc.1-1.12.2.2.1"><a href="#section-12.2" class="auto internal xref">12.2</a>.  <a href="#name-rendering-the-proposal" class="internal xref">Rendering the Proposal</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.3">
+                <p id="section-toc.1-1.12.2.3.1"><a href="#section-12.3" class="auto internal xref">12.3</a>.  <a href="#name-the-pct-is-not-authority" class="internal xref">The PCT Is Not Authority</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.4">
+                <p id="section-toc.1-1.12.2.4.1"><a href="#section-12.4" class="auto internal xref">12.4</a>.  <a href="#name-authorization-server-compro" class="internal xref">Authorization Server Compromise</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.5">
+                <p id="section-toc.1-1.12.2.5.1"><a href="#section-12.5" class="auto internal xref">12.5</a>.  <a href="#name-introspection-as-the-state-" class="internal xref">Introspection as the State Channel</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.1">
+                <p id="section-toc.1-1.15.2.1.1"><a href="#section-15.1" class="auto internal xref">15.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.2">
+                <p id="section-toc.1-1.15.2.2.1"><a href="#section-15.2" class="auto internal xref">15.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">User-Managed Access (UMA) 2.0 comprises two Kantara Initiative
+Recommendations. The UMA grant <span>[<a href="#UMA-GRANT" class="cite xref">UMA-GRANT</a>]</span> extends OAuth 2.0 with a
+party asymmetry OAuth does not have: the requesting party, on whose
+behalf a client seeks access, is distinct from the resource owner,
+who sets policy and decides submitted requests at the authorization
+server, on the authorization server's own surface and schedule.
+Federated authorization <span>[<a href="#UMA-FEDAUTHZ" class="cite xref">UMA-FEDAUTHZ</a>]</span> standardizes the resource
+server's contract with that authorization server: resource
+registration, the permission endpoint, and extended token
+introspection, under a protection API access token. Between them the
+two documents standardize the plumbing of asynchronous,
+party-asymmetric authorization: the tokenless first attempt, the
+rotating permission ticket, claims pushing and interactive claims
+gathering, the <code>request_submitted</code> deferral, the requesting party
+token (RPT), and the persisted claims token (PCT).<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">What UMA deliberately does not standardize is the object at the
+center. How the authorization server assesses a request, what the
+resource owner approved, in what bounds, with what durable record,
+under what lifecycle: all of it is unspecified policy behind the
+token endpoint. The Mission model of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile") is a
+specification of exactly that interior: a durable Mission record
+created by an explicit approval event, integrity anchors committing
+the approved task and its derived authority, a lifecycle whose
+only-<code>active</code> rule gates issuance, and evidence surfaces built on
+the record. This document binds the Mission model to the UMA 2.0
+authorization server by filling UMA's assessment with the Mission.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">Three mechanics the OAuth binding assembles from parts are native
+here. The pushed Mission Intent rides UMA claims pushing at the
+token endpoint rather than pushed authorization requests. The
+asynchronous approval the OAuth binding reaches through the Mission
+Deferred Approval companion, over the unratified OAuth Deferred
+Token Response (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>), is
+UMA's <code>request_submitted</code> with its rotating ticket, a ratified
+surface. And the resource server's contract with the Mission Issuer
+is the protection API, standardized by <span>[<a href="#UMA-FEDAUTHZ" class="cite xref">UMA-FEDAUTHZ</a>]</span> rather than
+assembled per deployment.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">This is the fourth binding of the Mission model: the issuance
+profile binds it to the OAuth Authorization Server, the Mission
+Authority Server to a standalone service beside an unchanged AS
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), the AAuth
+binding to the AAuth Person Server
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>), and this document to the
+UMA 2.0 authorization server. Like the AAuth binding, it provides
+issuance gating structurally: no RPT exists without passing the
+authorization server's token endpoint. It is also the first binding
+authored against the Mission Substrate Requirements contract
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>) rather than one the
+contract was extracted from; its Mission Substrate Statement
+(<a href="#mission-substrate" class="auto internal xref">Section 9</a>) is written to that document's conformance
+rules, and exercising the checklist on a substrate none of its
+source bindings resemble is part of this sketch's purpose.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<div id="inversion">
+<section id="section-1.1">
+        <h3 id="name-attempt-first-operation">
+<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-attempt-first-operation" class="section-name selfRef">Attempt-First Operation</a>
+        </h3>
+<p id="section-1.1-1">UMA inverts the OAuth binding's flow. The OAuth binding is
+intent-first: the client submits the Mission Intent, approval
+happens, and tokens follow. UMA is attempt-first: the client's first
+move is a tokenless request at a resource server, and everything
+else (the ticket, the claims, the approval) hangs off that attempt.
+This binding preserves the model's compile-once property across the
+inversion with one rule: the first ticket exchanged under a
+prospective Mission carries the whole task as a pushed Mission
+Intent, and the authorization server derives and obtains approval
+for the full Authority Set, not the ticketed slice
+(<a href="#mission-intent" class="auto internal xref">Section 4</a>). Without that rule the Approver would meet the
+Mission one resource-server slice at a time, which is the
+consent-fatigue failure the model exists to prevent. The approved
+set is then a ceiling, and each subsequent ticket a drawdown
+adjudicated by policy within it, the shape the progressive companion
+names (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>).<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="applicability">
+<section id="section-1.2">
+        <h3 id="name-applicability">
+<a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-applicability" class="section-name selfRef">Applicability</a>
+        </h3>
+<p id="section-1.2-1">This profile targets deployments that operate a UMA 2.0
+authorization server implementing <span>[<a href="#UMA-GRANT" class="cite xref">UMA-GRANT</a>]</span> and <span>[<a href="#UMA-FEDAUTHZ" class="cite xref">UMA-FEDAUTHZ</a>]</span>
+and that route an agent's access through the UMA grant. The agent is
+the UMA client; the accountable person is the resource owner.
+Resource servers participate through plain UMA: registration,
+permission requests, and introspection are unchanged, and a resource
+server needs no Mission awareness beyond what introspection already
+returns (<a href="#credential" class="auto internal xref">Section 8</a>). Both substrate documents are final Kantara
+Initiative Recommendations; <a href="#limitations" class="auto internal xref">Section 10</a> discusses what that
+dependency choice trades.<a href="#section-1.2-1" class="pilcrow">¶</a></p>
+<p id="section-1.2-2">This document is an experimental sketch. It fixes the binding's
+shape and its Mission Substrate Statement; worked test vectors and a
+per-endpoint error taxonomy are deferred to a later revision.<a href="#section-1.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conventions-and-terminology">
+<section id="section-1.3">
+        <h3 id="name-conventions-and-terminology">
+<a href="#section-1.3" class="section-number selfRef">1.3. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+        </h3>
+<p id="section-1.3-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-1.3-1" class="pilcrow">¶</a></p>
+<p id="section-1.3-2">All JSON and HTTP shown in this document is non-normative and
+illustrative; the member definitions in the surrounding text are
+authoritative.<a href="#section-1.3-2" class="pilcrow">¶</a></p>
+<p id="section-1.3-3">This document uses Mission, Mission Intent, Mission Issuer,
+Authority Set, Approver, Subject, <code>mission_id</code>, the integrity
+anchors (<code>intent_hash</code> and <code>authority_hash</code>), the subset rule, the
+only-<code>active</code> rule, and the audit horizon as defined by
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. It uses resource owner,
+requesting party, client, permission ticket, claims pushing, claim
+token, claims interaction endpoint, requesting party token (RPT),
+persisted claims token (PCT), and the <code>need_info</code>,
+<code>request_submitted</code>, and <code>request_denied</code> outcomes as defined by
+<span>[<a href="#UMA-GRANT" class="cite xref">UMA-GRANT</a>]</span>, and resource server, protection API, protection API
+access token (PAT), resource registration, permission endpoint, and
+token introspection as defined by <span>[<a href="#UMA-FEDAUTHZ" class="cite xref">UMA-FEDAUTHZ</a>]</span> and <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>.
+It additionally uses:<a href="#section-1.3-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-1.3-4">
+          <dt id="section-1.3-4.1">Mission-Bound UMA Authorization Server:</dt>
+          <dd style="margin-left: 1.5em" id="section-1.3-4.2">
+            <p id="section-1.3-4.2.1">A UMA 2.0 authorization server conforming to this profile: it
+implements the Mission Issuer role behind its token endpoint and
+owner surfaces (<a href="#conformance" class="auto internal xref">Section 11</a>).<a href="#section-1.3-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-1.3-4.3">Mission-Bound UMA Client:</dt>
+          <dd style="margin-left: 1.5em" id="section-1.3-4.4">
+            <p id="section-1.3-4.4.1">A UMA client that proposes structured intent on its first ticket
+exchange under a prospective Mission and respects the Mission
+lifecycle (<a href="#conformance" class="auto internal xref">Section 11</a>).<a href="#section-1.3-4.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="roles">
+<section id="section-2">
+      <h2 id="name-mission-roles">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-mission-roles" class="section-name selfRef">Mission Roles</a>
+      </h2>
+<table class="center" id="table-1">
+        <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">UMA role</th>
+            <th class="text-left" rowspan="1" colspan="1">Mission model role</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Authorization server</td>
+            <td class="text-left" rowspan="1" colspan="1">Mission Issuer: runs the assessment, holds the Mission record, gates RPT issuance, serves Mission state</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Resource owner</td>
+            <td class="text-left" rowspan="1" colspan="1">Approver: sets policy and decides submitted requests</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Requesting party</td>
+            <td class="text-left" rowspan="1" colspan="1">Subject: the party on whose behalf the client acts</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Client</td>
+            <td class="text-left" rowspan="1" colspan="1">Agent: its OAuth client identifier is the Mission's <code>client_id</code>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Resource server</td>
+            <td class="text-left" rowspan="1" colspan="1">Resource Server: protection API participant, no Mission awareness required</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-2-2">Two properties of this mapping are structural in UMA rather than
+profile rules. First, the proposer is never the approver on the
+wire: the client and the requesting party can only request, and
+every grant of authority is made at the authorization server by the
+resource owner or the owner's pre-registered policy. The issuance
+profile's rule that the proposing party never approves is the
+substrate's own geometry here. Second, both of the issuance
+profile's approval modes are native UMA modes: pre-registered owner
+policy at the authorization server is the authorized-policy approver
+deciding at machine speed, and <code>request_submitted</code> is the human
+Approver deciding asynchronously (<a href="#approval" class="auto internal xref">Section 5</a>).<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">UMA permits the requesting party and the resource owner to be the
+same natural person, and in the agent deployments this profile
+targets they usually are: the person's agent is the client, and the
+person is both Subject and Approver, the core's default geometry.
+Nothing in this binding requires them to differ.<a href="#section-2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="flow">
+<section id="section-3">
+      <h2 id="name-mission-flow">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-mission-flow" class="section-name selfRef">Mission Flow</a>
+      </h2>
+<p id="section-3-1">This section is informative. An agent holds the task "reconcile Q3
+invoices at the finance service and file the summary at the document
+service" for Alice, whose resources at both resource servers are
+protected by the authorization server <code>https://as.example.com</code>.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-3-2">
+<li id="section-3-2.1">
+          <p id="section-3-2.1.1">The agent attempts a tokenless request at the finance resource
+server. The resource server registers the needed permissions at
+the authorization server's permission endpoint under its PAT and
+returns the permission ticket with the authorization server's
+location, per <span>[<a href="#UMA-GRANT" class="cite xref">UMA-GRANT</a>]</span>.<a href="#section-3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-2.2">
+          <p id="section-3-2.2.1">The agent presents the ticket at the token endpoint under
+<code>grant_type</code> <code>urn:ietf:params:oauth:grant-type:uma-ticket</code>,
+pushing the Mission Intent for the whole task, both services, as
+a claim token (<a href="#mission-intent" class="auto internal xref">Section 4</a>).<a href="#section-3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-2.3">
+          <p id="section-3-2.3.1">The authorization server gathers the requesting party's identity
+claims through UMA's ordinary channels (a pushed identity claim
+token, or interactive claims gathering at the claims interaction
+endpoint), accumulating across ticket rotations.<a href="#section-3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-2.4">
+          <p id="section-3-2.4.1">The authorization server derives the full Authority Set from the
+Intent, renders it for consent on its owner surface, and returns
+<code>request_submitted</code> with a rotated ticket: the decision is
+deferred to Alice (<a href="#approval" class="auto internal xref">Section 5</a>).<a href="#section-3-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-2.5">
+          <p id="section-3-2.5.1">Alice approves on the owner surface. The Mission record is
+created <code>active</code>, the anchors are committed, and Consent
+Evidence is recorded.<a href="#section-3-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-2.6">
+          <p id="section-3-2.6.1">The agent retries the ticket and receives an RPT carrying the
+finance permissions, the first drawdown of the approved ceiling,
+plus a PCT (<a href="#pct" class="auto internal xref">Section 8.4</a>).<a href="#section-3-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-2.7">
+          <p id="section-3-2.7.1">Later the agent attempts the document service. The new ticket
+goes to the token endpoint with the PCT and the existing RPT for
+upgrading; the authorization server resolves the Mission through
+the PCT, checks the requested permissions against the Authority
+Set, and approves by policy without waking Alice (<a href="#drawdown" class="auto internal xref">Section 8.3</a>).
+The upgraded RPT carries both services' permissions.<a href="#section-3-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-2.8">
+          <p id="section-3-2.8.1">Each resource server introspects the RPT per use. Revoking the
+Mission at the authorization server takes effect at the next
+introspection everywhere: one Mission, compiled once, projected
+per resource server, killed in one place.<a href="#section-3-2.8.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+</section>
+</div>
+<div id="mission-intent">
+<section id="section-4">
+      <h2 id="name-mission-intent">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-mission-intent" class="section-name selfRef">Mission Intent</a>
+      </h2>
+<p id="section-4-1">The Mission Intent reaches the authorization server through claims
+pushing: it rides the existing <code>claim_token</code> parameter of the token
+endpoint's UMA grant, and this binding defines no new endpoint or
+parameter.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2">A Mission Intent claim token is a JWT whose payload carries a
+<code>mission_intent</code> claim: a Mission Intent object as the issuance
+profile defines it, under that profile's syntactic rules (the object
+is closed at the top level, the authorization server <span class="bcp14">MUST</span> bound its
+size and array lengths, and it is untrusted client input, never
+authority). The JWT <span class="bcp14">MAY</span> be signed by the client for attribution; a
+signature confers no authority. Its <code>claim_token_format</code> identifier
+is:<a href="#section-4-2" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-4-3">
+<pre>
+https://mcguinness.github.io/mission-bound-authorization/uma-intent-jwt
+</pre><a href="#section-4-3" class="pilcrow">¶</a>
+</div>
+<p id="section-4-4">A Mission-Bound UMA Client <span class="bcp14">MUST</span> push the Mission Intent on the first
+ticket exchange it performs under a prospective Mission, and the
+Intent <span class="bcp14">MUST</span> describe the whole task, not the slice the ticket's
+registered permissions name. The authorization server derives the
+Authority Set from the Intent, bounded by the issuance profile's
+Mission Authority rules; the ticket's permissions locate the first
+drawdown, not the Mission's extent (<a href="#inversion" class="auto internal xref">Section 1.1</a>). A ticket
+exchange with no pushed and no PCT-resolved Mission context is plain
+UMA, outside this profile's scope.<a href="#section-4-4" class="pilcrow">¶</a></p>
+<p id="section-4-5">The Intent is one claim token among UMA's ordinary ones. The
+requesting party's identity claims arrive through their own channels
+(a pushed identity token or interactive claims gathering), in the
+same or other rounds of the <code>need_info</code> rotation loop; the
+authorization server <span class="bcp14">MUST NOT</span> take the Subject from the Mission
+Intent claim token, which is unauthenticated client input
+(<a href="#approval" class="auto internal xref">Section 5</a>).<a href="#section-4-5" class="pilcrow">¶</a></p>
+<p id="section-4-6">The proposal is the shaping profile's Mission Intent proposal, and a
+deployment that shapes free-text instructions into structured
+Intents composes here unchanged
+(<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>).<a href="#section-4-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="approval">
+<section id="section-5">
+      <h2 id="name-mission-approval">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-mission-approval" class="section-name selfRef">Mission Approval</a>
+      </h2>
+<p id="section-5-1">UMA's authorization assessment is this binding's approval surface.
+Where the assessment concludes that a new Mission is proposed, it
+executes the issuance profile's approval steps:<a href="#section-5-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5-2">
+<li id="section-5-2.1">
+          <p id="section-5-2.1.1">Authenticate the Approver: the resource owner at the
+authorization server, or the principal whose pre-registered
+policy the deployment authorizes to decide. When the Intent
+carries <code>controls.acr</code>, the authentication <span class="bcp14">MUST</span> be one the
+deployment's policy maps as satisfying the named class.<a href="#section-5-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-2.2">
+          <p id="section-5-2.2.1">Establish the Subject: the requesting party, from claims the
+authorization server itself gathered and verified (pushed
+identity claim tokens, interactive claims gathering, or a PCT it
+previously issued), never from the Mission Intent claim token or
+other unauthenticated client input.<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-2.3">
+          <p id="section-5-2.3.1">Derive the Authority Set from the Intent (<a href="#mission-intent" class="auto internal xref">Section 4</a>)
+and render it for consent on the owner surface under the
+issuance profile's rendering rules (<a href="#security-rendering" class="auto internal xref">Section 12.2</a>).<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-2.4">
+          <p id="section-5-2.4.1">Compute the integrity anchors with the authorization server's
+issuer identifier as the envelope <code>iss</code>.<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-2.5">
+          <p id="section-5-2.5.1">Create the Mission record in the <code>active</code> state atomically with
+the approval decision. The token endpoint <span class="bcp14">MUST NOT</span> complete a
+ticket exchange under the Mission before the record is <code>active</code>.<a href="#section-5-2.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-5-3">Both native assessment outcomes realize the approval event:<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-4"><strong>Deferred owner decision.</strong> The authorization server returns
+<code>request_submitted</code> with a rotated permission ticket, and the
+resource owner decides on the owner surface asynchronously; the
+client retries under UMA's own discipline. The rotating ticket is
+the deferral handle (<a href="#security-ticket" class="auto internal xref">Section 12.1</a>). This is the surface the
+OAuth binding needs the Mission Deferred Approval companion for
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>); here it is the
+substrate's ratified machinery, and that companion does not apply.<a href="#section-5-4" class="pilcrow">¶</a></p>
+<p id="section-5-5"><strong>Pre-registered policy.</strong> Where the resource owner's standing
+policy at the authorization server covers the proposal, that policy
+is the issuance profile's authorized-policy approver: the approval
+event records the policy identity and version as the Approver
+context, and the anchors commit as in the interactive case. A
+deployment <span class="bcp14">SHOULD</span> reserve policy approval for Missions within bounds
+the owner has expressly pre-consented and route everything else to
+<code>request_submitted</code>.<a href="#section-5-5" class="pilcrow">¶</a></p>
+<p id="section-5-6">The <code>need_info</code> rotation loop is the clarification and narrowing
+surface: the authorization server may require further claims, and
+the owner or the authorization server may narrow the proposal across
+rounds while the rotating ticket persists the pending state. That
+loop is most of the state machine the approval-revision companion
+defines, native to the substrate
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval-revision" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval-revision</a>]</span>); where a
+deployment adopts that companion's semantics, the rotated ticket is
+its revision handle. If the derived Authority Set changes between
+rendering and consent, the authorization server <span class="bcp14">MUST</span> recompute the
+anchors and re-obtain consent, per the issuance profile.<a href="#section-5-6" class="pilcrow">¶</a></p>
+<p id="section-5-7">Mission Consent Evidence composes unchanged, with the authorization
+server as the committing issuer
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>): the owner
+surface is where the disclosure is rendered, and what was shown is
+what the evidence commits.<a href="#section-5-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-record">
+<section id="section-6">
+      <h2 id="name-mission-record">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-mission-record" class="section-name selfRef">Mission Record</a>
+      </h2>
+<p id="section-6-1">UMA has no native artifact for what was approved; the Mission record
+supplies it. A Mission-Bound UMA Authorization Server <span class="bcp14">MUST</span> create a
+Mission record, as the issuance profile's Mission Record section
+defines it, for every Mission it approves, with <code>issuer</code> its own
+issuer identifier (the <code>issuer</code> of its UMA discovery document) and
+<code>client_id</code> the client's OAuth client identifier. <code>expires_at</code> is
+<span class="bcp14">REQUIRED</span>, in RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time form; when the
+proposal's Intent carries none, the authorization server <span class="bcp14">MUST</span> set
+one by policy.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">Unlike the AAuth binding, whose substrate carries a native
+(<code>approver</code>, <code>s256</code>) reference
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>), UMA has no wire-native
+mission artifact to commit. The record is held at the authorization
+server, <code>mission_id</code> and <code>issuer</code> name the Mission, and consumers
+meet the reference in the RPT's <code>mission</code> claim or the introspection
+response (<a href="#credential" class="auto internal xref">Section 8</a>). No substrate-native commitment exists
+beside the anchors, and nothing substitutes for them.<a href="#section-6-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="lifecycle">
+<section id="section-7">
+      <h2 id="name-mission-lifecycle">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-mission-lifecycle" class="section-name selfRef">Mission Lifecycle</a>
+      </h2>
+<p id="section-7-1">The Mission lifecycle is the issuance profile's state space,
+extended by the status profile where the deployment adopts it
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), with the
+only-<code>active</code> rule governing every authorization-server surface and
+unrecognized states fail-safe non-active.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-2">
+        <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Family state</th>
+            <th class="text-left" rowspan="1" colspan="1">UMA surface</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>active</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">token endpoint serves ticket exchanges and upgrades; introspection reports the RPT active</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>completed</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">token endpoint refuses (<code>request_denied</code>); introspection reports inactive</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>revoked</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">token endpoint refuses (<code>request_denied</code>); introspection reports inactive</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>expired</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">token endpoint refuses (<code>request_denied</code>); introspection reports inactive</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>suspended</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">token endpoint defers (<code>request_submitted</code>); introspection reports inactive</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-7-3">The projection is fail-safe: every non-<code>active</code> state projects to a
+non-permitting native signal. The family surfaces report the
+distinct state, and the introspection response's <code>mission.state</code>
+member carries it verbatim (<a href="#mission-claim" class="auto internal xref">Section 8.1</a>). This binding adds to
+UMA's model:<a href="#section-7-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-4.1">
+          <p id="section-7-4.1.1"><strong>Revocation.</strong> The authorization server <span class="bcp14">MUST</span> provide an
+authenticated means for the Subject, the Approver, or an
+administrator to revoke a Mission by <code>mission_id</code>, independent of
+any token, per the issuance profile. Because resource servers
+introspect RPTs per use (<span>[<a href="#UMA-FEDAUTHZ" class="cite xref">UMA-FEDAUTHZ</a>]</span>), revocation takes
+effect at the next introspection with no further plumbing; a
+deployment that validates RPTs without introspection needs the
+state surfaces below.<a href="#section-7-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-4.2">
+          <p id="section-7-4.2.1"><strong>Expiry.</strong> When the record's <code>expires_at</code> passes, the Mission
+transitions to <code>expired</code> without a request.<a href="#section-7-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-4.3">
+          <p id="section-7-4.3.1"><strong>Completion.</strong> The authorization server commits the Mission to
+<code>completed</code> with the semantics of the status profile's <code>complete</code>
+operation. UMA has no native completion wire, so the operation is
+a family surface.<a href="#section-7-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-4.4">
+          <p id="section-7-4.4.1"><strong>Suspension.</strong> A deployment that adopts the status profile's
+<code>suspended</code> state defers rather than denies: the token endpoint
+returns <code>request_submitted</code>, so the client waits under UMA's own
+retry discipline rather than treating the Mission as dead.<a href="#section-7-4.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<div id="gating">
+<section id="section-7.1">
+        <h3 id="name-issuance-gating">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-issuance-gating" class="section-name selfRef">Issuance Gating</a>
+        </h3>
+<p id="section-7.1-1">No RPT exists without the authorization server's token endpoint, so
+issuance gating is structural, as it is at the AAuth Person Server.
+On that precondition the authorization server <span class="bcp14">MUST NOT</span> complete a
+ticket exchange, upgrade an RPT, or otherwise extend authority under
+a Mission that is not <code>active</code>, and the <code>active</code> check <span class="bcp14">MUST</span> be
+atomic with issuance. Each RPT issuance and each upgrade counts as
+one derivation under the Mission; where the Intent's
+<code>controls.max_derivations</code> is present, the authorization server <span class="bcp14">MUST</span>
+refuse the derivation that would exceed it, per the issuance
+profile's count-and-gate rule. An RPT issued under a Mission <span class="bcp14">MUST NOT</span> expire later than the Mission's <code>expires_at</code>, and the <code>exp</code> of
+each permission within it is likewise capped, so no credential
+outlives the Mission.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="state-surfaces">
+<section id="section-7.2">
+        <h3 id="name-mission-state-surfaces">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-mission-state-surfaces" class="section-name selfRef">Mission State Surfaces</a>
+        </h3>
+<p id="section-7.2-1">Per-use introspection is this binding's native state source: a
+response for an RPT under a Mission carries the <code>mission</code> member
+with its <code>state</code> (<a href="#mission-claim" class="auto internal xref">Section 8.1</a>), so a resource server that
+introspects per <span>[<a href="#UMA-FEDAUTHZ" class="cite xref">UMA-FEDAUTHZ</a>]</span> learns of revocation at the next
+access. Its staleness bound is the introspection caching the
+deployment permits, which the deployment <span class="bcp14">MUST</span> state; with caching
+disabled the bound is effectively zero.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.2-2">A deployment whose RPTs are self-contained and validated without
+introspection loses that source, and <span class="bcp14">MUST</span> either cap RPT lifetime at
+its declared staleness bound (lifetime-bounded reliance) or serve an
+active state surface. A Mission-Bound UMA Authorization Server
+<span class="bcp14">SHOULD</span> serve the Mission Status operation of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, with its signed
+responses, authentication, anti-oracle property, and caching rules,
+and <span class="bcp14">MAY</span> emit Mission Lifecycle Signals
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>) as the transmitting
+Mission Issuer. A deployment claiming runtime enforcement of the
+high-consequence classes <span class="bcp14">MUST</span> provide an active freshness source
+with a published staleness bound
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); per-use introspection
+with a stated cache bound satisfies it, and token lifetime alone
+does not.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+<p id="section-7.2-3">An authorization server that serves these surfaces publishes the
+corresponding members (<code>mission_status_endpoint</code>,
+<code>mission_status_signing_alg_values_supported</code>,
+<code>mission_lifecycle_endpoint</code>, <code>mission_event_stream_endpoint</code>,
+<code>mission_max_stale_seconds</code>) in its UMA discovery document, with the
+semantics those profiles define; its existing <code>jwks_uri</code> is the
+published key material for its signed artifacts.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="credential">
+<section id="section-8">
+      <h2 id="name-mission-bound-credential">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-mission-bound-credential" class="section-name selfRef">Mission-Bound Credential</a>
+      </h2>
+<p id="section-8-1">The RPT is this binding's Mission-bound credential.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<div id="mission-claim">
+<section id="section-8.1">
+        <h3 id="name-the-mission-claim">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-the-mission-claim" class="section-name selfRef">The Mission Claim</a>
+        </h3>
+<p id="section-8.1-1">An RPT issued under a Mission names it through the <code>mission</code> claim:
+the family members <code>id</code>, <code>issuer</code>, and <code>authority_hash</code> as the
+issuance profile defines them, and it <span class="bcp14">SHOULD</span> carry the <code>expires_at</code>
+member as the issuance-grant profile defines it
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>), a bounding
+commitment with no liveness. The claim is delivered on one of two
+carriage surfaces:<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.1-2.1">
+            <p id="section-8.1-2.1.1"><strong>Token-carried</strong>: a deployment issuing JWT-format RPTs carries
+the claim in the token per the issuance profile.<a href="#section-8.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.2">
+            <p id="section-8.1-2.2.1"><strong>Introspection-carried</strong>: a deployment issuing opaque RPTs
+carries the same object in the <code>mission</code> member of the
+introspection response, the member the issuance profile registers
+for <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>, with the <code>state</code> member per that profile's
+introspection section. FedAuthz's extended introspection object
+carries it beside <code>permissions</code> unchanged.<a href="#section-8.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-8.1-3">Both surfaces satisfy the credential primitive; they differ in who
+verifies what. A token-carried claim verifies offline under the
+authorization server's published keys; an introspection-carried
+claim is asserted by the authorization server over the authenticated
+protection API channel at each use. In both, the Mission reference
+arrives through token validation itself, so the runtime profile's
+binding establishment composes credential-carried with no join
+(<a href="#mission-substrate" class="auto internal xref">Section 9</a>). A consumer <span class="bcp14">MUST NOT</span> use any <code>mission</code>
+member to grant or widen authority, per the issuance profile.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="subset">
+<section id="section-8.2">
+        <h3 id="name-authority-subset-and-grain">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-authority-subset-and-grain" class="section-name selfRef">Authority Subset and Grain</a>
+        </h3>
+<p id="section-8.2-1">The permissions an RPT carries <span class="bcp14">MUST</span> be a subset of the Mission's
+Authority Set under the issuance profile's subset rule, projected
+onto UMA's grain: a permission is a resource and its scopes, so
+every scope a permission grants <span class="bcp14">MUST</span> correspond to authority the set
+grants at that resource, and no permission may convey authority, or
+relaxation of a constraint, that the set does not.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<p id="section-8.2-2">The projection is coarse, and this binding does not pretend
+otherwise. A UMA permission carries no parameter bounds and no
+consumption bounds: an amount cap on a payment action, argument
+constraints on a tool call, and the metering companion's cumulative
+bounds (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>) do not fit a
+<code>resource_scopes</code> array. Those constraints bind at the runtime
+layer, where the PDP evaluates each consequential action against the
+full Authority Set (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); the substrate swap leaves
+that layer untouched (<a href="#limitations" class="auto internal xref">Section 10</a>). An RPT <span class="bcp14">MAY</span> additionally
+carry Mission-derived authorization details entries per the issuance
+profile where the deployment's RPT format admits them, under the
+same subset rule.<a href="#section-8.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="drawdown">
+<section id="section-8.3">
+        <h3 id="name-drawdown-and-upgrade">
+<a href="#section-8.3" class="section-number selfRef">8.3. </a><a href="#name-drawdown-and-upgrade" class="section-name selfRef">Drawdown and Upgrade</a>
+        </h3>
+<p id="section-8.3-1">The approved Authority Set is a pre-consented ceiling, and each RPT
+issuance or upgrade is a drawdown within it: the model the
+progressive companion defines for the OAuth binding
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>), which this
+substrate runs natively. When the client presents a new ticket with
+its existing RPT and PCT, the authorization server resolves the
+Mission, checks the requested permissions against the Authority Set,
+and where they are within it <span class="bcp14">MAY</span> approve by policy without waking
+the Approver: that adjudication is a drawdown, not a new approval,
+and the anchors do not change. The upgraded RPT replaces the prior
+one and stays bounded per <a href="#gating" class="auto internal xref">Section 7.1</a>.<a href="#section-8.3-1" class="pilcrow">¶</a></p>
+<p id="section-8.3-2">A requested permission outside the Authority Set is an expansion,
+not a drawdown. The authorization server <span class="bcp14">MUST NOT</span> widen by policy:
+it routes the request to the Approver (<code>request_submitted</code>), and an
+approval revises the Mission under the expansion companion's
+semantics, recomputed anchors included
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>). The wire needs
+nothing new: widening is another ticket the owner must decide.<a href="#section-8.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="pct">
+<section id="section-8.4">
+        <h3 id="name-mission-continuity-the-pct">
+<a href="#section-8.4" class="section-number selfRef">8.4. </a><a href="#name-mission-continuity-the-pct" class="section-name selfRef">Mission Continuity: the PCT</a>
+        </h3>
+<p id="section-8.4-1">The persisted claims token is UMA's continuity artifact: it persists
+the requesting party's claims across authorization processes and
+grants nothing; every RPT still passes fresh assessment. That is the
+family's session-continuity discipline (continuity is never
+authority, as the harness profile enforces for agent sessions
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>)), pre-enforced by the
+substrate's own design. This binding leans on it: the authorization
+server <span class="bcp14">SHOULD</span> associate a PCT it issues under a Mission with the
+<code>mission_id</code>, so a later ticket presented with the PCT resolves the
+Mission without the client re-pushing the Intent. The PCT is the
+Mission continuation handle.<a href="#section-8.4-1" class="pilcrow">¶</a></p>
+<p id="section-8.4-2">Continuity is never authority. PCT possession <span class="bcp14">MUST NOT</span> substitute
+for Mission state, for the subset check, or for any approval; a PCT
+presented under a non-active Mission yields <code>request_denied</code> (or
+<code>request_submitted</code> under suspension), and a PCT never widens what
+assessment would grant without it (<a href="#security-pct" class="auto internal xref">Section 12.3</a>).<a href="#section-8.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="credential-example">
+<section id="section-8.5">
+        <h3 id="name-worked-example">
+<a href="#section-8.5" class="section-number selfRef">8.5. </a><a href="#name-worked-example" class="section-name selfRef">Worked Example</a>
+        </h3>
+<p id="section-8.5-1">The introspection response for the upgraded RPT of <a href="#flow" class="auto internal xref">Section 3</a>, after
+the document-service drawdown:<a href="#section-8.5-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-8.5-2">
+<pre>
+{
+  "active": true,
+  "exp": 1793610000,
+  "permissions": [
+    { "resource_id": "finance-q3-ledger",
+      "resource_scopes": ["invoices.read", "adjustments.post"],
+      "exp": 1793610000 },
+    { "resource_id": "board-reports",
+      "resource_scopes": ["documents.write"],
+      "exp": 1793610000 }
+  ],
+  "mission": {
+    "id": "msn_4Xq7NvR2pTb8Kd1zYw6mA3f5",
+    "issuer": "https://as.example.com",
+    "authority_hash":
+      "sha-256:Qm4dSrX0kJc2uJ9pVzWfY7hTgD1eN8oLxCAiRb63EMk",
+    "expires_at": "2026-12-31T23:59:59Z",
+    "state": "active"
+  }
+}
+</pre><a href="#section-8.5-2" class="pilcrow">¶</a>
+</div>
+<p id="section-8.5-3">The <code>permissions</code> member is FedAuthz's, unchanged; the <code>mission</code>
+member is the issuance profile's registered introspection member.
+The two permissions are the scope-grain projection of the Mission's
+Authority Set entries at each resource server; the amount bound on
+<code>adjustments.post</code> does not appear, because UMA's grain cannot carry
+it, and it binds at the runtime layer instead (<a href="#subset" class="auto internal xref">Section 8.2</a>).<a href="#section-8.5-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="mission-substrate">
+<section id="section-9">
+      <h2 id="name-mission-substrate">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-mission-substrate" class="section-name selfRef">Mission Substrate</a>
+      </h2>
+<p id="section-9-1">This section is this binding's Mission Substrate Statement
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>).<a href="#section-9-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-9-2">
+<li id="section-9-2.1">
+          <p id="section-9-2.1.1"><strong>Provision level</strong>: full provision. The RPT is the Mission-bound
+credential, and issuance gating is structural at the token
+endpoint (<a href="#gating" class="auto internal xref">Section 7.1</a>); no join is defined or needed.<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-9-2.2">
+          <p id="section-9-2.2.1"><strong>Identifier and issuer</strong>: <code>mission_id</code> on the record; <code>issuer</code>
+the <code>issuer</code> of the authorization server's UMA discovery
+document. No substrate-native Mission reference exists; the
+<code>mission</code> claim and introspection member carry the family
+reference (<a href="#mission-record" class="auto internal xref">Section 6</a>, <a href="#mission-claim" class="auto internal xref">Section 8.1</a>).<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-9-2.3">
+          <p id="section-9-2.3.1"><strong>Lifecycle and state sources</strong>: the issuance profile's states
+with the only-<code>active</code> rule, fail-safe unrecognized states, and
+fail-safe projection onto UMA's token-endpoint outcomes
+(<a href="#lifecycle" class="auto internal xref">Section 7</a>). State sources: per-use introspection, with the
+deployment's declared cache bound as its staleness bound; the
+Mission Status operation where served; and RPT lifetime as the
+floor for self-contained validation (<a href="#state-surfaces" class="auto internal xref">Section 7.2</a>).<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-9-2.4">
+          <p id="section-9-2.4.1"><strong>Authority Set carriage</strong>: the record at the authorization
+server; RPT permissions are its coarse projection, with every
+narrowing at the token endpoint (<a href="#subset" class="auto internal xref">Section 8.2</a>, <a href="#drawdown" class="auto internal xref">Section 8.3</a>); the
+full set is served to consumers that need it through the Status
+operation or a Mission Mandate
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>).<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-9-2.5">
+          <p id="section-9-2.5.1"><strong>Integrity anchors</strong>: the family envelope and canonicalization
+with the authorization server's issuer identifier as the envelope
+<code>iss</code>; no native commitment exists beside the anchors, and
+nothing substitutes for them (<a href="#mission-record" class="auto internal xref">Section 6</a>).<a href="#section-9-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-9-2.6">
+          <p id="section-9-2.6.1"><strong>Key material</strong>: the <code>jwks_uri</code> of the UMA discovery document
+(<a href="#state-surfaces" class="auto internal xref">Section 7.2</a>).<a href="#section-9-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-9-2.7">
+          <p id="section-9-2.7.1"><strong>Audit horizon</strong>: deployment-declared; the Mission record, the
+assessment log, and consent evidence are retained for it.<a href="#section-9-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-9-2.8">
+          <p id="section-9-2.8.1"><strong>Approval fidelity</strong>: the assessment surface executes the five
+approval steps across UMA's two native decision modes
+(<a href="#approval" class="auto internal xref">Section 5</a>).<a href="#section-9-2.8.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-9-3">The composition consequences:<a href="#section-9-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9-4.1">
+          <p id="section-9-4.1.1">The runtime profile and its AuthZEN binding compose against either
+carriage surface: the Mission reference arrives through token
+validation (JWT claims, or the issuer's introspection response
+that validates the opaque RPT), so binding establishment is
+credential-carried in both (<a href="#mission-claim" class="auto internal xref">Section 8.1</a>). The constraint
+grain UMA cannot carry is exactly what they enforce (<a href="#subset" class="auto internal xref">Section 8.2</a>).<a href="#section-9-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-4.2">
+          <p id="section-9-4.2.1">Shaping, consent evidence, status and signals, the Mandate, and
+audit transparency (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>)
+compose unchanged, with the authorization server as the Mission
+Issuer, committing issuer, minter, and transmitter those profiles
+name.<a href="#section-9-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-4.3">
+          <p id="section-9-4.3.1">Child delegation does not apply as profiled: its request wire is
+OAuth-bound
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), and UMA
+has no actor chain. A sub-agent operates as its own UMA client
+under its own ticket exchanges; UMA-native Child Mission creation
+is deferred work.<a href="#section-9-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-4.4">
+          <p id="section-9-4.4.1">Offline attenuation does not apply: every RPT is issuer-minted,
+and UMA defines no offline mint
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>).<a href="#section-9-4.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-4.5">
+          <p id="section-9-4.5.1">Cross-domain projection is not provided: FedAuthz federates a
+resource server to an authorization server, not one Mission Issuer
+to another, so projecting a Mission into a foreign issuer remains
+the cross-domain companion's OAuth-bound mechanism
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>). FedAuthz's
+federation does mean one Mission natively governs many resource
+servers within the authorization server's own trust domain, the
+multi-resource-server case the flow shows (<a href="#flow" class="auto internal xref">Section 3</a>).<a href="#section-9-4.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-4.6">
+          <p id="section-9-4.6.1">The family's Mission Assurance Levels layer on top unchanged
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>); a deployment
+states its level, binding, state sources, and staleness bounds in
+its Mission Deployment Profile.<a href="#section-9-4.6.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="limitations">
+<section id="section-10">
+      <h2 id="name-limitations">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-limitations" class="section-name selfRef">Limitations</a>
+      </h2>
+<p id="section-10-1"><strong>Authority grain.</strong> UMA's unit of authority is the permission, a
+resource and its scopes. The Authority Set's parameter-bound actions
+and consumption bounds cannot ride it, so the RPT is always a coarse
+projection, and the runtime layer carries the constraint enforcement
+this family treats as load-bearing (<a href="#subset" class="auto internal xref">Section 8.2</a>). The substrate swap
+replaces approval and issuance plumbing; it does not move the action
+chokepoint.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<p id="section-10-2"><strong>Attempt-triggered approval.</strong> The approval moment is the first
+ticket exchange, not a moment the client chooses before acting. The
+whole-task Intent rule (<a href="#mission-intent" class="auto internal xref">Section 4</a>) preserves compile-once,
+but the Approver decides when the agent first collides with a
+protected resource. A deployment that wants approval before the run
+starts fronts the flow with a deliberate first attempt, or uses an
+intent-first binding.<a href="#section-10-2" class="pilcrow">¶</a></p>
+<p id="section-10-3"><strong>Substrate reach.</strong> Both UMA documents are final Kantara Initiative
+Recommendations, so this binding adds no unratified dependency: the
+trade is the reverse of the AAuth binding's, which tracks an
+unratified individual draft with an active community
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>). What UMA lacks is deployed
+breadth. This binding governs estates that already run UMA; it does
+not create them, and a deployment without a UMA substrate has no
+reason to adopt one for the Mission's sake, since the OAuth binding
+exists.<a href="#section-10-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conformance">
+<section id="section-11">
+      <h2 id="name-conformance">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+      </h2>
+<p id="section-11-1">An implementation conforms in one of two roles. Resource servers
+participate through unmodified <span>[<a href="#UMA-FEDAUTHZ" class="cite xref">UMA-FEDAUTHZ</a>]</span> and have no role to
+claim.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-11-2">A <strong>Mission-Bound UMA Authorization Server</strong>:<a href="#section-11-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-3.1">
+          <p id="section-11-3.1.1">accepts the Mission Intent claim token format and bounds it as
+untrusted input (<a href="#mission-intent" class="auto internal xref">Section 4</a>);<a href="#section-11-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-3.2">
+          <p id="section-11-3.2.1">executes the approval event on its assessment surface in both
+native decision modes, creating the record <code>active</code> atomically
+with the decision and computing the anchors (<a href="#approval" class="auto internal xref">Section 5</a>,
+<a href="#mission-record" class="auto internal xref">Section 6</a>);<a href="#section-11-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-3.3">
+          <p id="section-11-3.3.1">operates the lifecycle of <a href="#lifecycle" class="auto internal xref">Section 7</a>: authenticated revocation
+by <code>mission_id</code>, expiry, completion, fail-safe projection onto
+token-endpoint outcomes, and the only-<code>active</code> gate atomic with
+every issuance and upgrade (<a href="#gating" class="auto internal xref">Section 7.1</a>);<a href="#section-11-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-3.4">
+          <p id="section-11-3.4.1">issues RPTs as Mission-bound credentials on a declared carriage
+surface, applies the subset rule at every issuance and upgrade,
+and routes out-of-set requests to the Approver (<a href="#credential" class="auto internal xref">Section 8</a>);<a href="#section-11-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-3.5">
+          <p id="section-11-3.5.1">associates PCTs with Missions as continuity, never authority
+(<a href="#pct" class="auto internal xref">Section 8.4</a>);<a href="#section-11-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-3.6">
+          <p id="section-11-3.6.1">serves Mission state with a declared staleness bound per
+<a href="#state-surfaces" class="auto internal xref">Section 7.2</a>, and retains the record and assessment log for
+the audit horizon; and<a href="#section-11-3.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-3.7">
+          <p id="section-11-3.7.1">publishes its Mission surfaces in its UMA discovery document.<a href="#section-11-3.7.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-11-4">A <strong>Mission-Bound UMA Client</strong>:<a href="#section-11-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-5.1">
+          <p id="section-11-5.1.1">pushes a whole-task Mission Intent on the first ticket exchange
+under a prospective Mission, and treats every proposal as a
+proposal, never as authority (<a href="#mission-intent" class="auto internal xref">Section 4</a>);<a href="#section-11-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-5.2">
+          <p id="section-11-5.2.1">follows UMA's retry discipline under <code>request_submitted</code> and
+<code>need_info</code>, and stops on <code>request_denied</code>;<a href="#section-11-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-5.3">
+          <p id="section-11-5.3.1">presents the PCT for continuity and never treats it, the ticket,
+or <code>mission_id</code> as a credential; and<a href="#section-11-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-5.4">
+          <p id="section-11-5.4.1">proposes completion when the task is done, where the deployment
+serves the completion operation.<a href="#section-11-5.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-12">
+      <h2 id="name-security-considerations">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<div id="security-ticket">
+<section id="section-12.1">
+        <h3 id="name-the-ticket-as-deferral-hand">
+<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-the-ticket-as-deferral-hand" class="section-name selfRef">The Ticket as Deferral Handle</a>
+        </h3>
+<p id="section-12.1-1">Between <code>request_submitted</code> and the owner's decision, the rotating
+permission ticket is the only artifact binding the client to the
+pending approval: the role the deferral code plays in the Mission
+Deferred Approval companion
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>). UMA's ticket
+properties (single-use, unguessable, rotated on every response) are
+load-bearing for the approval's integrity, and an authorization
+server <span class="bcp14">MUST</span> maintain them across the rotation loop. A replayed or
+long-lived ticket would let a stale or hijacked exchange complete
+against a decision the owner made about a different pending state.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-rendering">
+<section id="section-12.2">
+        <h3 id="name-rendering-the-proposal">
+<a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-rendering-the-proposal" class="section-name selfRef">Rendering the Proposal</a>
+        </h3>
+<p id="section-12.2-1">The Mission Intent, its goal text, and every justification are
+attacker-influenceable input rendered on the owner surface. The
+issuance profile's rendering rules apply unchanged: render client
+text inert and sanitized, mitigate direction-override and
+confusable-character presentation, and keep the derived Authority
+Set visually distinct from client-supplied narrative, so crafted
+text cannot pass as derived authority.<a href="#section-12.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-pct">
+<section id="section-12.3">
+        <h3 id="name-the-pct-is-not-authority">
+<a href="#section-12.3" class="section-number selfRef">12.3. </a><a href="#name-the-pct-is-not-authority" class="section-name selfRef">The PCT Is Not Authority</a>
+        </h3>
+<p id="section-12.3-1">The PCT is a bearer continuity artifact held by the client. Its
+theft replays claims continuity, not authority: assessment still
+runs, state still gates, and the subset rule still bounds. An
+authorization server <span class="bcp14">MUST</span> keep it that way; an optimization that
+lets a PCT skip state evaluation or the subset check converts a
+continuity token into a credential and breaks the family's
+continuity discipline (<a href="#pct" class="auto internal xref">Section 8.4</a>). UMA's own PCT rules on client
+binding and rotation apply.<a href="#section-12.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-as-compromise">
+<section id="section-12.4">
+        <h3 id="name-authorization-server-compro">
+<a href="#section-12.4" class="section-number selfRef">12.4. </a><a href="#name-authorization-server-compro" class="section-name selfRef">Authorization Server Compromise</a>
+        </h3>
+<p id="section-12.4-1">A compromised authorization server is a compromised Mission Issuer:
+forged approvals, arbitrary RPTs, false state
+(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>). UMA concentrates
+approval, issuance, introspection, and the owner surface in one
+service, so the security model's concentration analysis for the
+OAuth binding applies in full. Consent evidence and audit
+transparency make forgery detectable after the fact; they do not
+prevent it.<a href="#section-12.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-introspection">
+<section id="section-12.5">
+        <h3 id="name-introspection-as-the-state-">
+<a href="#section-12.5" class="section-number selfRef">12.5. </a><a href="#name-introspection-as-the-state-" class="section-name selfRef">Introspection as the State Channel</a>
+        </h3>
+<p id="section-12.5-1">Where opaque RPTs make introspection the Mission and state channel,
+the channel's authentication (the PAT) and its caching policy carry
+this binding's freshness claims. A resource server that caches
+introspection responses beyond the deployment's declared staleness
+bound turns fail-closed rules fail-open in effect; a deployment <span class="bcp14">MUST</span>
+size PAT protection and cache bounds to what its Mission Deployment
+Profile claims. Self-contained RPTs move the same weight onto token
+lifetime (<a href="#state-surfaces" class="auto internal xref">Section 7.2</a>).<a href="#section-12.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-13">
+      <h2 id="name-privacy-considerations">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-13-1"><strong>The task concentrates at the authorization server.</strong> The
+whole-task Intent rule sends the full task description to the
+authorization server at the first exchange, earlier and more
+completely than per-slice operation would. That is deliberate, and
+it is the concentration the issuance profile's record already
+implies; the shaping profile's minimization guidance applies to what
+the Intent says.<a href="#section-13-1" class="pilcrow">¶</a></p>
+<p id="section-13-2"><strong>Resource servers see little.</strong> An opaque RPT shows a resource
+server only the permissions relevant to it plus the <code>mission</code>
+introspection members; the Intent, the constraints, and the rest of
+the Authority Set stay at the authorization server. This is the
+minimization property the AAuth binding notes for its blob, achieved
+here by UMA's own architecture.<a href="#section-13-2" class="pilcrow">¶</a></p>
+<p id="section-13-3"><strong>The PCT is a correlation handle.</strong> UMA already names the PCT a
+correlation surface across authorization processes; associating it
+with a <code>mission_id</code> (<a href="#pct" class="auto internal xref">Section 8.4</a>) adds Mission correlation at the
+authorization server only, and nothing new crosses to resource
+servers. <code>mission_id</code> itself correlates the Mission's activity
+across resource servers through introspection responses, the
+issuance profile's deliberate stable-anchor property; that profile's
+guidance applies.<a href="#section-13-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana">
+<section id="section-14">
+      <h2 id="name-iana-considerations">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-14-1">This document has no IANA actions. The <code>mission</code> introspection
+response member and the <code>mission</code> JWT claim are registered by the
+issuance profile; UMA <code>claim_token_format</code> identifiers are URIs with
+no registry, and the identifier of <a href="#mission-intent" class="auto internal xref">Section 4</a> is under this
+document's control.<a href="#section-14-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-15">
+      <h2 id="name-references">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-15.1">
+        <h3 id="name-normative-references">
+<a href="#section-15.1" class="section-number selfRef">15.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-issuance-grant">[I-D.draft-mcguinness-oauth-mission-issuance-grant]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Issuance Grant for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC3339">[RFC3339]</dt>
+        <dd>
+<span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7662">[RFC7662]</dt>
+        <dd>
+<span class="refAuthor">Richer, J., Ed.</span>, <span class="refTitle">"OAuth 2.0 Token Introspection"</span>, <span class="seriesInfo">RFC 7662</span>, <span class="seriesInfo">DOI 10.17487/RFC7662</span>, <time datetime="2015-10" class="refDate">October 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7662">https://www.rfc-editor.org/rfc/rfc7662</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="UMA-FEDAUTHZ">[UMA-FEDAUTHZ]</dt>
+        <dd>
+<span class="refAuthor">Maler, E.</span>, <span class="refAuthor">Machulak, M.</span>, and <span class="refAuthor">J. Richer</span>, <span class="refTitle">"Federated Authorization for User-Managed Access (UMA) 2.0"</span>, <span class="seriesInfo">Kantara Initiative Recommendation</span>, <time datetime="2018" class="refDate">2018</time>, <span>&lt;<a href="https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-federated-authz-2.0.html">https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-federated-authz-2.0.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="UMA-GRANT">[UMA-GRANT]</dt>
+      <dd>
+<span class="refAuthor">Maler, E.</span>, <span class="refAuthor">Machulak, M.</span>, and <span class="refAuthor">J. Richer</span>, <span class="refTitle">"User-Managed Access (UMA) 2.0 Grant for OAuth 2.0 Authorization"</span>, <span class="seriesInfo">Kantara Initiative Recommendation</span>, <time datetime="2018" class="refDate">2018</time>, <span>&lt;<a href="https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-grant-2.0.html">https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-grant-2.0.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-15.2">
+        <h3 id="name-informative-references">
+<a href="#section-15.2" class="section-number selfRef">15.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-aauth">[I-D.draft-mcguinness-mission-aauth]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for AAuth"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"An Architecture for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-audit">[I-D.draft-mcguinness-mission-audit]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Audit Transparency"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Authority Server"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-harness">[I-D.draft-mcguinness-mission-harness]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Aware Agent Harnesses"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-mandate">[I-D.draft-mcguinness-mission-mandate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Mandate"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-metering">[I-D.draft-mcguinness-mission-metering]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consumption Metering"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-security-model">[I-D.draft-mcguinness-mission-security-model]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Security Model"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-shaping">[I-D.draft-mcguinness-mission-shaping]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Intent Shaping"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-approval">[I-D.draft-mcguinness-oauth-mission-approval]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Deferred Approval for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-approval-revision">[I-D.draft-mcguinness-oauth-mission-approval-revision]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approval Revision for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval-revision.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval-revision.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-attenuation">[I-D.draft-mcguinness-oauth-mission-attenuation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Offline Attenuation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-attenuation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-attenuation.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Child Delegation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-progressive">[I-D.draft-mcguinness-oauth-mission-progressive]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Progressive Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-A">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-A-1">This document is part of the Mission-Bound Authorization work. It
+binds the Mission model to the User-Managed Access 2.0 authorization
+server, and builds on the Mission Substrate Requirements, Mission
+Status and Lifecycle, and Mission-Bound Runtime Enforcement
+companions. UMA's requesting-party asymmetry, deferred owner
+decisions, and continuity-without-authority anticipated the geometry
+agents now present; this binding supplies the approved object those
+mechanics were built to move.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
