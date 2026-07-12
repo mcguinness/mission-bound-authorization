@@ -159,14 +159,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-completion:
-    title: "Mission Completion for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-completion.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -502,7 +494,7 @@ under the OAuth binding: an operator gives an agent the task
    growth requires an approved successor
    ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and entries
    retire as their work completes
-   ({{I-D.draft-mcguinness-oauth-mission-completion}}).
+   ({{I-D.draft-mcguinness-oauth-mission-status}}).
 7. **Stop.** Revocation or expiry turns every gate at once: issuance
    refuses, the PDP denies, the harness pauses bound sessions and
    queues, and the orchestrator unwinds in-flight work
@@ -1122,13 +1114,11 @@ a fresh human decision, per the progressive profile's prohibited set
 The question: how do consumers observe Mission state, and how does
 authority grow or retire mid-task? The boundary: between the issuer
 and every consumer relying on state. Owners: Status, the signed pull
-surface with a lifecycle endpoint
+surface with a lifecycle endpoint and per-entry completion discharge
 ({{I-D.draft-mcguinness-oauth-mission-status}}); Signals, the push
 complement ({{I-D.draft-mcguinness-oauth-mission-signals}});
 Expansion, widening only via an approved successor
-({{I-D.draft-mcguinness-oauth-mission-expansion}}); Completion,
-per-entry discharge
-({{I-D.draft-mcguinness-oauth-mission-completion}}); Management,
+({{I-D.draft-mcguinness-oauth-mission-expansion}}); Management,
 fleet enumeration and bulk lifecycle for operators
 ({{I-D.draft-mcguinness-oauth-mission-management}}); and Discovery,
 experimental, binding encountered resources within a pre-consented
@@ -1329,7 +1319,7 @@ unit of work draws under it, as an in-ceiling successor or a
 policy-approved Child Mission
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), each
 expiring and discharging as its unit completes
-({{I-D.draft-mcguinness-oauth-mission-completion}}). The progressive
+({{I-D.draft-mcguinness-oauth-mission-status}}). The progressive
 profile's prohibited set keeps the high-consequence classes on a
 fresh human approval inside the ceiling, and its Ceiling Review
 bounds the chain in time with an evidence-rendering renewal. Without
@@ -1693,7 +1683,7 @@ guarantee; the requirements below unpack them.
 - **R11**: Authority widens only through a fresh approval that
   creates a successor (oauth-mission-expansion).
 - **R12**: Authority retires per entry when the work an entry served
-  is done (oauth-mission-completion).
+  is done (oauth-mission-status).
 
 ## Delegated, Projected, and Enforced Execution {#req-execution}
 
@@ -1776,13 +1766,17 @@ reclassification, not by a stable document absorbing a dependency.
 
 **Lifecycle:**
 
+Status is the lifecycle suite's root document (state reading,
+lifecycle verbs, and completion), with Signals (the push channel) and
+Management (the operator plane) as its satellites.
+
 `oauth-mission-status`:
 : The signed pull surface and the lifecycle endpoint, with
-  `suspended` and `completed`.
+  `suspended` and `completed`, and per-entry discharge via the
+  `terminal_when` constraint.
 
 `oauth-mission-signals`:
-: Experimental: a signed event per lifecycle transition, push or
-  poll.
+: A signed event per lifecycle transition, push or poll.
 
 `oauth-mission-expansion`:
 : Widening through an approved successor Mission.
@@ -1799,9 +1793,6 @@ reclassification, not by a stable document absorbing a dependency.
 `oauth-mission-management`:
 : Fleet enumeration and bulk lifecycle operations for operators and
   incident response; dry-run-first, per-Mission semantics.
-
-`oauth-mission-completion`:
-: Per-entry discharge via the `terminal_when` constraint.
 
 `oauth-mission-cross-domain`:
 : Single-hop projection of a Mission to another trust domain via the

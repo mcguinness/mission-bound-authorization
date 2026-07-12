@@ -1,7 +1,7 @@
 ---
 title: "Mission Lifecycle Signals for OAuth 2.0"
 abbrev: "OAuth Mission Signals"
-category: exp
+category: std
 
 docname: draft-mcguinness-oauth-mission-signals-latest
 submissiontype: IETF
@@ -144,6 +144,10 @@ issuance profile; a deployment that does not adopt it is unaffected.
 
 # Introduction
 
+This document is a satellite of the Mission Status and Lifecycle
+profile {{I-D.draft-mcguinness-oauth-mission-status}}, the lifecycle
+suite's root document, adding the suite's push channel.
+
 Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") gates
 derivation on Mission state and bounds outstanding self-contained
@@ -166,15 +170,19 @@ Mission ({{consumer-behavior}}). A deployment offers this channel by
 publishing the event stream ({{event-stream}}); consumers discover it
 from `mission_event_stream_endpoint` ({{as-metadata}}).
 
-This document is OPTIONAL and **experimental**: adopt it for
-evaluation, not as a stable interface. Push delivery is a propagation
-latency optimization over correctly sized pull: a consumer that polls
-the Status profile's surfaces within the deployment's published
-staleness bound, and fails safe on the Mission's `expires_at`, already
-meets the suite's revocation-propagation model without this channel
-({{I-D.draft-mcguinness-oauth-mission-status}}). Deploy this profile
-where polling per Mission does not scale or the staleness bound must
-shrink below a practical polling interval.
+This document is OPTIONAL. Push delivery is a propagation-latency
+acceleration over correctly sized pull: a consumer that polls the
+Status profile's surfaces within the deployment's published staleness
+bound, and fails safe on the Mission's `expires_at`, already meets
+the suite's revocation-propagation model without this channel
+({{I-D.draft-mcguinness-oauth-mission-status}}). This channel is
+never the sole state source, and a missed event reads as stale state,
+never as still `active`. Deploy this profile where polling per
+Mission does not scale or the staleness bound must shrink below a
+practical polling interval. The Mission Issuer is an SSF transmitter
+and the consumer an SSF receiver in the framework's own vocabulary
+({{OIDC-SSF}}), so a deployment already operating a Shared Signals /
+CAEP stream adds this event type to infrastructure it runs today.
 
 This document defines no new Mission semantics: the
 Mission, its lifecycle states, and the `mission` claim are defined in
@@ -725,8 +733,8 @@ MUST NOT reject an event solely for a missing OPTIONAL member (notably
 `tenant`).
 
 The event-type URI is under the author-controlled
-`schemas.karlmcguinness.com` namespace so this experimental profile can
-be deployed and evaluated without a registry dependency. On adoption,
+`schemas.karlmcguinness.com` namespace so this profile can be
+deployed without a registry dependency. On adoption,
 the URI SHOULD migrate to an IETF- or foundation-controlled namespace
 (for example a `urn:ietf:params` URN or an OpenID Foundation schema
 URI); a provisional `urn:ietf:params` URN MAY be used in the interim.

@@ -136,14 +136,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-completion:
-    title: "Mission Completion for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-completion.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-mission-architecture:
     title: "An Architecture for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
@@ -608,9 +600,10 @@ AAuth's model:
 - **Completion.** AAuth's propose-completion interaction is the
   completion transition: when the user accepts the summary, the PS
   commits the Mission to `completed`, with the semantics of the
-  status profile's `complete` operation. The completion profile's
-  `terminal_when` constraint composes unchanged
-  ({{I-D.draft-mcguinness-oauth-mission-completion}}).
+  status profile's `complete` operation. The status profile's
+  `terminal_when` completion constraint composes unchanged
+  ({{I-D.draft-mcguinness-oauth-mission-status}}, Completion
+  section).
 - **Suspension.** A PS that adopts the status profile's `suspended`
   state MUST NOT report `mission_terminated` for a suspended Mission,
   since termination is permanent to the agent; it defers processing
@@ -850,8 +843,8 @@ The composition consequences:
   credential-carried ({{request-binding}}); no join is needed.
 - Status and signals are PS-served; the PS is the transmitting
   Mission Issuer ({{state-surfaces}}).
-- Shaping, consent evidence, completion, the Mandate, and audit
-  transparency compose unchanged: the PS is the Mission Issuer those
+- Shaping, consent evidence, the status profile's completion
+  machinery, the Mandate, and audit transparency compose unchanged: the PS is the Mission Issuer those
   profiles name, the committing issuer for consent evidence, the
   minter of Mandates, and the producer of audit statements.
 - Child delegation maps naturally to AAuth's `parent_agent` sub-agent

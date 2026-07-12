@@ -345,7 +345,8 @@ gated on Mission state.
 The composition consequences follow from that split:
 
 - The shaping, consent-evidence, audit-transparency, security-model,
-  status, signals, and completion profiles consume only the primitives
+  status (including its completion machinery), and signals profiles
+  consume only the primitives
   a MAS provides and compose with a MAS unchanged. Where such a
   profile names the Mission Issuer or the issuer AS, the MAS is that
   party.
