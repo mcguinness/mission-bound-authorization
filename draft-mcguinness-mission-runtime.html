@@ -1425,7 +1425,14 @@ the parameters the action executes with, and every decision and
 refusal path leaves evidence.<a href="#section-1.1-1" class="pilcrow">¶</a></p>
 <p id="section-1.1-2">Mission-bound tokens bound what authority may exist; the contract
 fixes where and how that authority is re-checked before
-consequential effects occur. The PEP is whatever component can
+consequential effects occur. The order is the point: approve the
+bounded work, then authorize every consequential action against
+that approved boundary. Per-action authorization alone cannot
+prevent individually permitted steps from composing into an outcome
+no one approved; the approved boundary bounds composition, with the
+cumulative bounds and <code>exclusive</code> latch of the metering companion
+where deployed (<a href="#metering" class="auto internal xref">Section 9</a>,
+<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). The PEP is whatever component can
 actually prevent the action: a Resource Server, an MCP server, an
 egress proxy, a workflow engine, or the orchestrator itself
 (<a href="#pep-placement" class="auto internal xref">Section 4.5</a>). The PDP's placement is a deployment choice
@@ -2536,7 +2543,18 @@ attested-instance profile, such as <code>agent_instance_id</code> and
 (<span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>), are verified
 actor context a deployment's Resource policy <span class="bcp14">MAY</span> evaluate; unlike a
 self-asserted model or instance label, they are attester-backed
-facts.<a href="#section-7-3.4.1" class="pilcrow">¶</a></p>
+facts. Where the deployment operates an agent registry, the
+immediate actor's registry state (status, revocation, approved
+deployment version) is further actor context Resource policy <span class="bcp14">MAY</span>
+require. A deployment that declares agent-state evaluation in its
+Enforcement Scope Statement treats the registry as a state source
+under this profile's freshness discipline: a declared staleness
+bound, and refusal when the acting agent or its deployment version
+is revoked or the state cannot be established within the bound
+(<a href="#state-freshness" class="auto internal xref">Section 7.2</a>). The agent, Mission, and credential
+lifecycles gate conjunctively; a valid token never overrides a
+revoked agent or a non-active Mission
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-7-3.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-3.5">
           <p id="section-7-3.5.1"><strong>Time.</strong> The PDP <span class="bcp14">MUST</span> refuse if the decision context indicates the
@@ -3145,6 +3163,12 @@ integrity requirements. The concrete record schema, any interoperable
 canonical byte representation, separate Decision Evidence and
 Execution Evidence object schemas, and the Mission Receipt's portable
 schema (<a href="#mission-receipt" class="auto internal xref">Section 11.3</a>) are out of scope (<a href="#deferred" class="auto internal xref">Section 16</a>).<a href="#section-11-1" class="pilcrow">¶</a></p>
+<p id="section-11-2">A record captures decision inputs, the applicable policy and
+authority references, the result, and the failure condition. No
+requirement in this section asks for the model's internal reasoning,
+and a deployment <span class="bcp14">SHOULD NOT</span> record model chain-of-thought in
+enforcement evidence: it is high-sensitivity content with no
+verification value the decision inputs do not already carry.<a href="#section-11-2" class="pilcrow">¶</a></p>
 <div id="required-decision-evidence">
 <section id="section-11.1">
         <h3 id="name-required-decision-evidence">
@@ -3965,7 +3989,12 @@ delegated actors, and Mission correlation identifier even when raw
 action parameters are not stored. Deployments <span class="bcp14">SHOULD</span> minimize recorded
 authority entries, store entry and parameter digests where full values
 are not needed for audit, restrict access to evidence by role, and
-document the retention window declared under <a href="#evidence" class="auto internal xref">Section 11</a>. Evidence
+document the retention window declared under <a href="#evidence" class="auto internal xref">Section 11</a>. Access to
+Mission evidence is itself a privileged operation a deployment <span class="bcp14">SHOULD</span>
+audit, and classifying evidence fields by sensitivity lets access,
+export, and retention key on the class; the audit companion's
+minimization duties apply across the evidence this layer produces
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). Evidence
 shared across resource boundaries can also correlate activity by
 <code>mission.id</code> and <code>authority_hash</code>; deployments that require
 unlinkability need an additional privacy design outside this profile.<a href="#section-18-1" class="pilcrow">¶</a></p>

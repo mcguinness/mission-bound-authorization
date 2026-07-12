@@ -86,6 +86,7 @@ Table of Contents
    8.  Mission Invariants
    9.  Mission Roles and Components
      9.1.  The Actor Chain
+     9.2.  Three Objects, Three Lifecycles
    10. The Mission Substrate
      10.1.  The Mission Identifier and Issuer
      10.2.  The Lifecycle State Space
@@ -116,6 +117,7 @@ Table of Contents
      14.1.  Assurance Claims
    15. The Mission Deployment Profile
    16. Prevention, Detection, and Residue
+     16.1.  The Containment Matrix
    17. Mission Requirements
      17.1.  Context and Intent
      17.2.  Consent and Approval
@@ -262,6 +264,12 @@ Table of Contents
    *  *Entitlement governance.* What standing access a principal should
       hold over time belongs to existing governance layers; the
       delegated-authority layer composes with them (Section 4).
+
+   *  *Agent identity and deployment governance.* Who the agent is, its
+      concrete instance, and its approved behavioral version belong to
+      the deployment's agent IAM and change governance; the family
+      authenticates against and consumes those facts without defining
+      them (Section 9.2).
 
    *  *An agent framework.* The harness constrains the execution
       environment's relationship to Mission state; it does not say how
@@ -644,6 +652,73 @@ Table of Contents
    together, in runtime evidence and the Mission Receipt
    ([I-D.draft-mcguinness-mission-runtime]), Consent Evidence, and the
    audit feed.
+
+   The chain is actor lineage, not authority lineage.  An act chain
+   records who acted through whom; it does not carry what task was
+   approved, how authority narrowed at each derivation, whether the task
+   remains active, or which parameter constraints bind.  Those travel in
+   the Mission's own constructs: the anchors, the Authority Set, the
+   lifecycle state, and Child Mission lineage
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]).  Reading an
+   actor chain as authorization provenance is the gap the Mission's
+   lineage exists to close.
+
+9.2.  Three Objects, Three Lifecycles
+
+   A deployment that runs agents under both an agent identity system and
+   this family governs three distinct objects.  Each has its own owner,
+   lifecycle, and revocation, and the model stays clean only while none
+   absorbs another's job:
+
+   Agent identity (who is acting):  The logical agent and, where the
+      instance profiles are deployed, the concrete instance (Section 9).
+      Owned by the deployment's agent IAM, a registry or directory
+      outside this family, and consumed as the client_id, the instance
+      assertion, and verified instance claims.
+
+   Agent Deployment (what is running):  The approved behavioral version
+      of the agent: its code, model, system prompt, tool allowlist, data
+      scope, and runtime configuration.  Owned by the deployment's
+      change governance; a change to any of these is a new Agent
+      Deployment, and which changes require re-approving standing
+      Missions is policy that governance records.  A Mission MAY be
+      pinned to a named Agent Deployment where the deployment defines
+      that control.  This object is distinct from the Mission Deployment
+      Profile (Section 15), which is the estate's published claims
+      manifest, not a property of an agent.
+
+   Mission (why the authority exists):  This family's object: the
+      approved task, its Authority Set, and its lifecycle.
+
+   An agent registry is a complementary dependency, not part of the
+   Mission system.  Where one exists, the Mission Issuer and the PDP
+   consume a small, stable slice of it: the agent identifier and its
+   owner, current status and revocation state, the approved Agent
+   Deployment, eligibility bounds (what the registry permits the agent
+   to be approved for, a derivation input, never a grant), and risk
+   tier.  Registry state is a state source like any other: the consuming
+   decision point treats it under the runtime profile's freshness
+   discipline, with a declared staleness bound, failing closed when it
+   cannot be established ([I-D.draft-mcguinness-mission-runtime]).
+
+   Authorization composes conjunctively across the three lifecycles: a
+   decision may depend on agent state, Mission state, and credential
+   validity, and each gates independently.  A valid credential never
+   overrides a revoked agent or a non-active Mission, and a live agent
+   under an active Mission still fails on an expired credential.  The
+   assurance levels add binding strength in the same order a deployment
+   adds it: authority is issued to an authenticated client; instance
+   assertion pins the concrete instance; sender-constraint keys pin
+   possession; attested runtimes pin the execution environment; and an
+   Agent Deployment pin holds the behavioral version (Section 14).
+
+   The division of labor with agent IAM is one sentence: agent identity
+   preserves who is acting, and the Mission preserves why their
+   authority exists.  The registry and workload identity authenticate an
+   approved agent instance; the Mission and its derived Authority Set
+   say what sanctioned work that instance carries; per-hop credentials
+   narrow; the runtime layer enforces each action and parameter; and the
+   evidence layer joins what was approved, decided, and done.
 
 10.  The Mission Substrate
 
@@ -1496,6 +1571,9 @@ Table of Contents
        "decision_evidence": true,
        "execution_evidence": true,
        "retention_days": 365,
+       "field_classification": "evidence-schema-v2",
+       "evidence_access_audited": true,
+       "erasure_policy": "erasure-records",
        "transparency": {
          "service_operator": "third_party",
          "monitor": "sec-ops",
@@ -1510,6 +1588,12 @@ Table of Contents
        "long-term memory and provider model context are not Mission-scoped exposure points"
      ]
    }
+
+   The evidence member carries the deployment's evidence-handling
+   posture beside its guarantees: the field-classification scheme its
+   records use, whether access to Mission evidence is itself audited,
+   and the erasure policy that pairs retention with deletion
+   accountability ([I-D.draft-mcguinness-mission-audit]).
 
    Two deployments that both "support Mission" but publish different
    Deployment Profiles provide different security properties, and the
@@ -1562,6 +1646,57 @@ Table of Contents
    residues the Mission Assurance Levels (Section 14) and the security
    model make a deployment state rather than assume, and the exposure
    arm (Section 6) carries the same honesty in the other direction.
+
+16.1.  The Containment Matrix
+
+   Mission termination is one control in a larger containment surface.
+   Each kill has a different blast radius, and an incident responder
+   needs the whole matrix:
+
+   +==========+=============+=======================================================+
+   |Control   |Stops        |Home                                                   |
+   +==========+=============+=======================================================+
+   |Mission   |one body of  |the core's revocation; cascades to Child Missions      |
+   |kill      |work, across |([I-D.draft-mcguinness-oauth-mission-child-delegation])|
+   |          |every        |                                                       |
+   |          |resource and |                                                       |
+   |          |derived      |                                                       |
+   |          |credential   |                                                       |
+   +----------+-------------+-------------------------------------------------------+
+   |Agent kill|all work by  |the deployment's agent IAM (Section 9.2)               |
+   |          |one agent,   |                                                       |
+   |          |across its   |                                                       |
+   |          |Missions     |                                                       |
+   +----------+-------------+-------------------------------------------------------+
+   |Agent     |every        |the deployment's change governance (Section 9.2)       |
+   |Deployment|instance     |                                                       |
+   |kill      |running a    |                                                       |
+   |          |compromised  |                                                       |
+   |          |version      |                                                       |
+   +----------+-------------+-------------------------------------------------------+
+   |Credential|credentials  |the binding's substrate, where it supports revocation; |
+   |kill      |already      |otherwise expiry (Section 10.10)                       |
+   |          |issued       |                                                       |
+   +----------+-------------+-------------------------------------------------------+
+   |Workload  |the running  |the platform                                           |
+   |kill      |compute      |                                                       |
+   |          |itself       |                                                       |
+   +----------+-------------+-------------------------------------------------------+
+   |Egress    |the          |gateway and network controls                           |
+   |kill      |communication|                                                       |
+   |          |path         |                                                       |
+   +----------+-------------+-------------------------------------------------------+
+
+                                  Table 5
+
+   Mission termination participates in incident response; it does not
+   replace it.  Revoking the Mission stops issuance at once and stops
+   mediated actions within the staleness bound (Section 10.10), but it
+   terminates no process and closes no network path.  The converse holds
+   too: killing a workload leaves the Mission active and its authority
+   derivable to a replacement instance unless the Mission is also
+   revoked.  A deployment's incident runbook names which of these
+   controls exist and who may pull each.
 
 17.  Mission Requirements
 

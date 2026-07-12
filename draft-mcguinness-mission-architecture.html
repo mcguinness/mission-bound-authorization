@@ -1203,6 +1203,9 @@ and every mechanism it names is defined by the profile it points to.<a href="#se
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
                 <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-the-actor-chain" class="internal xref">The Actor Chain</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-three-objects-three-lifecyc" class="internal xref">Three Objects, Three Lifecycles</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
@@ -1302,6 +1305,11 @@ and every mechanism it names is defined by the profile it points to.<a href="#se
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
             <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref">16</a>. <a href="#name-prevention-detection-and-re" class="internal xref">Prevention, Detection, and Residue</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.1">
+                <p id="section-toc.1-1.16.2.1.1"><a href="#section-16.1" class="auto internal xref">16.1</a>.  <a href="#name-the-containment-matrix" class="internal xref">The Containment Matrix</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
             <p id="section-toc.1-1.17.1"><a href="#section-17" class="auto internal xref">17</a>. <a href="#name-mission-requirements" class="internal xref">Mission Requirements</a></p>
@@ -1495,20 +1503,27 @@ hold over time belongs to existing governance layers; the
 delegated-authority layer composes with them (<a href="#the-mission" class="auto internal xref">Section 4</a>).<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-2.4">
-          <p id="section-5-2.4.1"><strong>An agent framework.</strong> The harness constrains the execution
-environment's relationship to Mission state; it does not say how an
-agent plans, reasons, or calls tools
-(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-5-2.4.1"><strong>Agent identity and deployment governance.</strong> Who the agent is, its
+concrete instance, and its approved behavioral version belong to
+the deployment's agent IAM and change governance; the family
+authenticates against and consumes those facts without defining
+them (<a href="#three-objects" class="auto internal xref">Section 9.2</a>).<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-2.5">
-          <p id="section-5-2.5.1"><strong>Semantic derivation.</strong> Whether a derived Authority Set is the
-right reading of the task is committed and auditable, not
-standardized (<a href="#derivation-boundary" class="auto internal xref">Section 11</a>).<a href="#section-5-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-5-2.5.1"><strong>An agent framework.</strong> The harness constrains the execution
+environment's relationship to Mission state; it does not say how an
+agent plans, reasons, or calls tools
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-5-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-2.6">
-          <p id="section-5-2.6.1"><strong>Agent trustworthiness.</strong> The family bounds what a compromised or
+          <p id="section-5-2.6.1"><strong>Semantic derivation.</strong> Whether a derived Authority Set is the
+right reading of the task is committed and auditable, not
+standardized (<a href="#derivation-boundary" class="auto internal xref">Section 11</a>).<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.7">
+          <p id="section-5-2.7.1"><strong>Agent trustworthiness.</strong> The family bounds what a compromised or
 injected agent can do; it does not make the agent trustworthy
-(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-5-2.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -1992,6 +2007,85 @@ is carried by its own construct, and the evidence layer records them
 together, in runtime evidence and the Mission Receipt
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), Consent Evidence, and
 the audit feed.<a href="#section-9.1-3" class="pilcrow">¶</a></p>
+<p id="section-9.1-4">The chain is actor lineage, not authority lineage. An <code>act</code> chain
+records who acted through whom; it does not carry what task was
+approved, how authority narrowed at each derivation, whether the
+task remains <code>active</code>, or which parameter constraints bind. Those
+travel in the Mission's own constructs: the anchors, the Authority
+Set, the lifecycle state, and Child Mission lineage
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). Reading
+an actor chain as authorization provenance is the gap the Mission's
+lineage exists to close.<a href="#section-9.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="three-objects">
+<section id="section-9.2">
+        <h3 id="name-three-objects-three-lifecyc">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-three-objects-three-lifecyc" class="section-name selfRef">Three Objects, Three Lifecycles</a>
+        </h3>
+<p id="section-9.2-1">A deployment that runs agents under both an agent identity system
+and this family governs three distinct objects. Each has its own
+owner, lifecycle, and revocation, and the model stays clean only
+while none absorbs another's job:<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9.2-2">
+          <dt id="section-9.2-2.1">Agent identity (who is acting):</dt>
+          <dd style="margin-left: 1.5em" id="section-9.2-2.2">
+            <p id="section-9.2-2.2.1">The logical agent and, where the instance profiles are deployed,
+the concrete instance (<a href="#components" class="auto internal xref">Section 9</a>). Owned by the deployment's
+agent IAM, a registry or directory outside this family, and
+consumed as the <code>client_id</code>, the instance assertion, and verified
+instance claims.<a href="#section-9.2-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.2-2.3">Agent Deployment (what is running):</dt>
+          <dd style="margin-left: 1.5em" id="section-9.2-2.4">
+            <p id="section-9.2-2.4.1">The approved behavioral version of the agent: its code, model,
+system prompt, tool allowlist, data scope, and runtime
+configuration. Owned by the deployment's change governance; a
+change to any of these is a new Agent Deployment, and which
+changes require re-approving standing Missions is policy that
+governance records. A Mission MAY be pinned to a named Agent
+Deployment where the deployment defines that control. This object
+is distinct from the Mission Deployment Profile
+(<a href="#deployment-profile" class="auto internal xref">Section 15</a>), which is the estate's published claims
+manifest, not a property of an agent.<a href="#section-9.2-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.2-2.5">Mission (why the authority exists):</dt>
+          <dd style="margin-left: 1.5em" id="section-9.2-2.6">
+            <p id="section-9.2-2.6.1">This family's object: the approved task, its Authority Set, and
+its lifecycle.<a href="#section-9.2-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-9.2-3">An agent registry is a complementary dependency, not part of the
+Mission system. Where one exists, the Mission Issuer and the PDP
+consume a small, stable slice of it: the agent identifier and its
+owner, current status and revocation state, the approved Agent
+Deployment, eligibility bounds (what the registry permits the agent
+to be approved for, a derivation input, never a grant), and risk
+tier. Registry state is a state source like any other: the consuming
+decision point treats it under the runtime profile's freshness
+discipline, with a declared staleness bound, failing closed when it
+cannot be established (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-9.2-3" class="pilcrow">¶</a></p>
+<p id="section-9.2-4">Authorization composes conjunctively across the three lifecycles: a
+decision may depend on agent state, Mission state, and credential
+validity, and each gates independently. A valid credential never
+overrides a revoked agent or a non-active Mission, and a live agent
+under an active Mission still fails on an expired credential. The
+assurance levels add binding strength in the same order a deployment
+adds it: authority is issued to an authenticated client; instance
+assertion pins the concrete instance; sender-constraint keys pin
+possession; attested runtimes pin the execution environment; and an
+Agent Deployment pin holds the behavioral version
+(<a href="#assurance-levels" class="auto internal xref">Section 14</a>).<a href="#section-9.2-4" class="pilcrow">¶</a></p>
+<p id="section-9.2-5">The division of labor with agent IAM is one sentence: agent identity
+preserves who is acting, and the Mission preserves why their
+authority exists. The registry and workload identity authenticate an
+approved agent instance; the Mission and its derived Authority Set
+say what sanctioned work that instance carries; per-hop credentials
+narrow; the runtime layer enforces each action and parameter; and
+the evidence layer joins what was approved, decided, and done.<a href="#section-9.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3009,6 +3103,9 @@ it does not cover. An illustrative shape:<a href="#section-15-2" class="pilcrow"
     "decision_evidence": true,
     "execution_evidence": true,
     "retention_days": 365,
+    "field_classification": "evidence-schema-v2",
+    "evidence_access_audited": true,
+    "erasure_policy": "erasure-records",
     "transparency": {
       "service_operator": "third_party",
       "monitor": "sec-ops",
@@ -3025,11 +3122,16 @@ it does not cover. An illustrative shape:<a href="#section-15-2" class="pilcrow"
 }
 </pre><a href="#section-15-3" class="pilcrow">¶</a>
 </div>
-<p id="section-15-4">Two deployments that both "support Mission" but publish different
+<p id="section-15-4">The <code>evidence</code> member carries the deployment's evidence-handling
+posture beside its guarantees: the field-classification scheme its
+records use, whether access to Mission evidence is itself audited,
+and the erasure policy that pairs retention with deletion
+accountability (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-15-4" class="pilcrow">¶</a></p>
+<p id="section-15-5">Two deployments that both "support Mission" but publish different
 Deployment Profiles provide different security properties, and the
 profile is what makes that difference legible. A deployment claiming
 a level (<a href="#assurance-levels" class="auto internal xref">Section 14</a>) states it here and lists the residuals
-that level leaves.<a href="#section-15-4" class="pilcrow">¶</a></p>
+that level leaves.<a href="#section-15-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="prevention-detection">
@@ -3089,6 +3191,66 @@ residues the Mission Assurance Levels (<a href="#assurance-levels" class="auto i
 model make a deployment state rather than assume, and the exposure
 arm (<a href="#capability-envelope" class="auto internal xref">Section 6</a>) carries the same honesty in the other
 direction.<a href="#section-16-3" class="pilcrow">¶</a></p>
+<div id="containment">
+<section id="section-16.1">
+        <h3 id="name-the-containment-matrix">
+<a href="#section-16.1" class="section-number selfRef">16.1. </a><a href="#name-the-containment-matrix" class="section-name selfRef">The Containment Matrix</a>
+        </h3>
+<p id="section-16.1-1">Mission termination is one control in a larger containment surface.
+Each kill has a different blast radius, and an incident responder
+needs the whole matrix:<a href="#section-16.1-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-5">
+          <caption><a href="#table-5" class="selfRef">Table 5</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Control</th>
+              <th class="text-left" rowspan="1" colspan="1">Stops</th>
+              <th class="text-left" rowspan="1" colspan="1">Home</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Mission kill</td>
+              <td class="text-left" rowspan="1" colspan="1">one body of work, across every resource and derived credential</td>
+              <td class="text-left" rowspan="1" colspan="1">the core's revocation; cascades to Child Missions (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>)</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Agent kill</td>
+              <td class="text-left" rowspan="1" colspan="1">all work by one agent, across its Missions</td>
+              <td class="text-left" rowspan="1" colspan="1">the deployment's agent IAM (<a href="#three-objects" class="auto internal xref">Section 9.2</a>)</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Agent Deployment kill</td>
+              <td class="text-left" rowspan="1" colspan="1">every instance running a compromised version</td>
+              <td class="text-left" rowspan="1" colspan="1">the deployment's change governance (<a href="#three-objects" class="auto internal xref">Section 9.2</a>)</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Credential kill</td>
+              <td class="text-left" rowspan="1" colspan="1">credentials already issued</td>
+              <td class="text-left" rowspan="1" colspan="1">the binding's substrate, where it supports revocation; otherwise expiry (<a href="#validity-model" class="auto internal xref">Section 10.10</a>)</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Workload kill</td>
+              <td class="text-left" rowspan="1" colspan="1">the running compute itself</td>
+              <td class="text-left" rowspan="1" colspan="1">the platform</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Egress kill</td>
+              <td class="text-left" rowspan="1" colspan="1">the communication path</td>
+              <td class="text-left" rowspan="1" colspan="1">gateway and network controls</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-16.1-3">Mission termination participates in incident response; it does not
+replace it. Revoking the Mission stops issuance at once and stops
+mediated actions within the staleness bound (<a href="#validity-model" class="auto internal xref">Section 10.10</a>),
+but it terminates no process and closes no network path. The
+converse holds too: killing a workload leaves the Mission <code>active</code>
+and its authority derivable to a replacement instance unless the
+Mission is also revoked. A deployment's incident runbook names which
+of these controls exist and who may pull each.<a href="#section-16.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="requirements">

@@ -2429,32 +2429,41 @@ parameters a decision turned on, not full user content or model
 input, unless the content is itself the audited artifact.<a href="#section-13.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.1-2.2">
-            <p id="section-13.1-2.2.1"><strong>Separation.</strong> Keep operational logs distinct from audit-grade
-evidence, so verbose debugging data is not retained at the audit
-horizon or committed to a transparency log.<a href="#section-13.1-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-13.1-2.2.1"><strong>Field classification.</strong> Classify evidence fields by sensitivity
+when the record is produced, so access, export, and retention key
+on the class rather than on later review; the Mission Deployment
+Profile names the scheme in use
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-13.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.1-2.3">
-            <p id="section-13.1-2.3.1"><strong>Access control.</strong> Evidence access is itself policy-governed;
-reading a Mission's evidence is a privileged operation, not a
-byproduct of holding a Mission reference.<a href="#section-13.1-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-13.1-2.3.1"><strong>Separation.</strong> Keep operational logs distinct from audit-grade
+evidence, so verbose debugging data is not retained at the audit
+horizon or committed to a transparency log.<a href="#section-13.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.1-2.4">
-            <p id="section-13.1-2.4.1"><strong>Retention.</strong> Retain for the declared audit horizon and no longer;
-the horizon is per-Mission, not indefinite.<a href="#section-13.1-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-13.1-2.4.1"><strong>Access control.</strong> Evidence access is itself policy-governed;
+reading a Mission's evidence is a privileged operation, not a
+byproduct of holding a Mission reference, and a deployment <span class="bcp14">SHOULD</span>
+record evidence reads as it records the actions the evidence
+describes: access to the audit trail is part of the audit trail.<a href="#section-13.1-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.1-2.5">
-            <p id="section-13.1-2.5.1"><strong>Identifier strategy.</strong> The durable per-Mission <code>sub</code> is a
+            <p id="section-13.1-2.5.1"><strong>Retention.</strong> Retain for the declared audit horizon and no longer;
+the horizon is per-Mission, not indefinite.<a href="#section-13.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.1-2.6">
+            <p id="section-13.1-2.6.1"><strong>Identifier strategy.</strong> The durable per-Mission <code>sub</code> is a
 cross-audience correlator; a deployment that needs to limit
 correlation adopts the directed or audience-pairwise Mission
 references named as future work by the issuance profile and the
 AAuth binding, when available
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-13.1-2.5.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-13.1-2.6.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-13.1-2.6">
-            <p id="section-13.1-2.6.1"><strong>Export.</strong> An evidence export preserves integrity (the commitments
+          <li class="normal" id="section-13.1-2.7">
+            <p id="section-13.1-2.7.1"><strong>Export.</strong> An evidence export preserves integrity (the commitments
 and their salts) without over-sharing the raw committed content
-beyond the recipient's need.<a href="#section-13.1-2.6.1" class="pilcrow">¶</a></p>
+beyond the recipient's need.<a href="#section-13.1-2.7.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
