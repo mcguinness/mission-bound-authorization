@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                              11 July 2026
-Expires: 12 January 2027
+Intended status: Informational                              12 July 2026
+Expires: 13 January 2027
 
 
                          Mission Security Model
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 January 2027.
+   This Internet-Draft will expire on 13 January 2027.
 
 Copyright Notice
 
@@ -399,7 +399,8 @@ Table of Contents
       accurately and be authenticated.  A compromised event source can
       keep a discharged entry derivable or falsely discharge one; the
       Authorization Server fails closed when it cannot determine the
-      event status ([I-D.draft-mcguinness-oauth-mission-completion]).
+      event status ([I-D.draft-mcguinness-oauth-mission-status],
+      Completion section).
 
    Instance identity is identity substrate, like agent identity
    generally.  The instance issuer or agent attester that mints instance
@@ -1115,11 +1116,6 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-child-
               delegation.html>.
-
-   [I-D.draft-mcguinness-oauth-mission-completion]
-              McGuinness, K., "Mission Completion for OAuth 2.0", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-oauth-mission-completion.html>.
 
    [I-D.draft-mcguinness-oauth-mission-consent-evidence]
               McGuinness, K., "Mission Consent Evidence for OAuth 2.0",

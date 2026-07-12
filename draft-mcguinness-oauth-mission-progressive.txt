@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                               11 July 2026
-Expires: 12 January 2027
+Intended status: Experimental                               12 July 2026
+Expires: 13 January 2027
 
 
             Mission Progressive Authorization for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 January 2027.
+   This Internet-Draft will expire on 13 January 2027.
 
 Copyright Notice
 
@@ -302,12 +302,12 @@ Table of Contents
    refused with out_of_ceiling; it falls back to an ordinary, freshly
    human-approved expansion.  The drawdown policy MUST NOT policy-
    adjudicate a successor Authority Set entry whose authority intersects
-   a predecessor entry discharged under the completion profile
-   ([I-D.draft-mcguinness-oauth-mission-completion]): any successor
-   entry that overlaps a discharged predecessor entry in authority, not
-   only one structurally equal to it, falls back to a fresh human
-   approval, so completion-discharged authority cannot be resurrected by
-   policy.
+   a predecessor entry discharged under the status profile's completion
+   machinery ([I-D.draft-mcguinness-oauth-mission-status]): any
+   successor entry that overlaps a discharged predecessor entry in
+   authority, not only one structurally equal to it, falls back to a
+   fresh human approval, so completion-discharged authority cannot be
+   resurrected by policy.
 
 5.2.  What it bounds, and what it does not
 
@@ -345,8 +345,8 @@ Table of Contents
    consent disclosure MUST render the chain's record since the prior
    review: the drawdown count and rate, the guard exceptions escalated
    to human approval, the out_of_ceiling refusals, the entries
-   discharged under the completion profile
-   ([I-D.draft-mcguinness-oauth-mission-completion]), and, where the
+   discharged under the status profile's completion machinery
+   ([I-D.draft-mcguinness-oauth-mission-status]), and, where the
    metering profile runs, consumption against its bounds
    ([I-D.draft-mcguinness-mission-metering]).  Where consent evidence is
    claimed, that disclosure is committed like any other
@@ -577,16 +577,16 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-child-
               delegation.html>.
 
-   [I-D.draft-mcguinness-oauth-mission-completion]
-              McGuinness, K., "Mission Completion for OAuth 2.0", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-oauth-mission-completion.html>.
-
    [I-D.draft-mcguinness-oauth-mission-consent-evidence]
               McGuinness, K., "Mission Consent Evidence for OAuth 2.0",
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-consent-
               evidence.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-status]
+              McGuinness, K., "Mission Status and Lifecycle for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-status.html>.
 
 Acknowledgments
 

@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            11 July 2026
-Expires: 12 January 2027
+Intended status: Standards Track                            12 July 2026
+Expires: 13 January 2027
 
 
                  Mission-Bound Authorization for AAuth
@@ -62,7 +62,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 January 2027.
+   This Internet-Draft will expire on 13 January 2027.
 
 Copyright Notice
 
@@ -521,9 +521,9 @@ Table of Contents
    *  *Completion.* AAuth's propose-completion interaction is the
       completion transition: when the user accepts the summary, the PS
       commits the Mission to completed, with the semantics of the status
-      profile's complete operation.  The completion profile's
-      terminal_when constraint composes unchanged
-      ([I-D.draft-mcguinness-oauth-mission-completion]).
+      profile's complete operation.  The status profile's terminal_when
+      completion constraint composes unchanged
+      ([I-D.draft-mcguinness-oauth-mission-status], Completion section).
 
    *  *Suspension.* A PS that adopts the status profile's suspended
       state MUST NOT report mission_terminated for a suspended Mission,
@@ -770,10 +770,11 @@ Table of Contents
    *  Status and signals are PS-served; the PS is the transmitting
       Mission Issuer (Section 6.2).
 
-   *  Shaping, consent evidence, completion, the Mandate, and audit
-      transparency compose unchanged: the PS is the Mission Issuer those
-      profiles name, the committing issuer for consent evidence, the
-      minter of Mandates, and the producer of audit statements.
+   *  Shaping, consent evidence, the status profile's completion
+      machinery, the Mandate, and audit transparency compose unchanged:
+      the PS is the Mission Issuer those profiles name, the committing
+      issuer for consent evidence, the minter of Mandates, and the
+      producer of audit statements.
 
    *  Child delegation maps naturally to AAuth's parent_agent sub-agent
       model: sub-agents are individually identified, authorization is
@@ -1168,11 +1169,6 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-child-
               delegation.html>.
-
-   [I-D.draft-mcguinness-oauth-mission-completion]
-              McGuinness, K., "Mission Completion for OAuth 2.0", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-oauth-mission-completion.html>.
 
    [I-D.draft-mcguinness-oauth-mission-consent-evidence]
               McGuinness, K., "Mission Consent Evidence for OAuth 2.0",

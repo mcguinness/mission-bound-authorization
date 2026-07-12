@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                               11 July 2026
-Expires: 12 January 2027
+Intended status: Standards Track                            12 July 2026
+Expires: 13 January 2027
 
 
                 Mission Lifecycle Signals for OAuth 2.0
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 January 2027.
+   This Internet-Draft will expire on 13 January 2027.
 
 Copyright Notice
 
@@ -99,6 +99,10 @@ Table of Contents
 
 1.  Introduction
 
+   This document is a satellite of the Mission Status and Lifecycle
+   profile [I-D.draft-mcguinness-oauth-mission-status], the lifecycle
+   suite's root document, adding the suite's push channel.
+
    Mission-Bound Authorization for OAuth 2.0
    [I-D.draft-mcguinness-oauth-mission] (the "issuance profile") gates
    derivation on Mission state and bounds outstanding self-contained
@@ -121,16 +125,19 @@ Table of Contents
    the event stream (Section 3); consumers discover it from
    mission_event_stream_endpoint (Section 9).
 
-   This document is OPTIONAL and *experimental*: adopt it for
-   evaluation, not as a stable interface.  Push delivery is a
-   propagation latency optimization over correctly sized pull: a
-   consumer that polls the Status profile's surfaces within the
-   deployment's published staleness bound, and fails safe on the
-   Mission's expires_at, already meets the suite's revocation-
-   propagation model without this channel
-   ([I-D.draft-mcguinness-oauth-mission-status]).  Deploy this profile
-   where polling per Mission does not scale or the staleness bound must
-   shrink below a practical polling interval.
+   This document is OPTIONAL.  Push delivery is a propagation-latency
+   acceleration over correctly sized pull: a consumer that polls the
+   Status profile's surfaces within the deployment's published staleness
+   bound, and fails safe on the Mission's expires_at, already meets the
+   suite's revocation-propagation model without this channel
+   ([I-D.draft-mcguinness-oauth-mission-status]).  This channel is never
+   the sole state source, and a missed event reads as stale state, never
+   as still active.  Deploy this profile where polling per Mission does
+   not scale or the staleness bound must shrink below a practical
+   polling interval.  The Mission Issuer is an SSF transmitter and the
+   consumer an SSF receiver in the framework's own vocabulary
+   ([OIDC-SSF]), so a deployment already operating a Shared Signals /
+   CAEP stream adds this event type to infrastructure it runs today.
 
    This document defines no new Mission semantics: the Mission, its
    lifecycle states, and the mission claim are defined in
@@ -693,15 +700,14 @@ Table of Contents
    tenant).
 
    The event-type URI is under the author-controlled
-   schemas.karlmcguinness.com namespace so this experimental profile can
-   be deployed and evaluated without a registry dependency.  On
-   adoption, the URI SHOULD migrate to an IETF- or foundation-controlled
-   namespace (for example a urn:ietf:params URN or an OpenID Foundation
-   schema URI); a provisional urn:ietf:params URN MAY be used in the
-   interim.  A consumer matches the event type by the exact URI the
-   Mission Issuer's Transmitter Configuration Metadata advertises, so
-   the namespace can change without a change to this profile's
-   semantics.
+   schemas.karlmcguinness.com namespace so this profile can be deployed
+   without a registry dependency.  On adoption, the URI SHOULD migrate
+   to an IETF- or foundation-controlled namespace (for example a
+   urn:ietf:params URN or an OpenID Foundation schema URI); a
+   provisional urn:ietf:params URN MAY be used in the interim.  A
+   consumer matches the event type by the exact URI the Mission Issuer's
+   Transmitter Configuration Metadata advertises, so the namespace can
+   change without a change to this profile's semantics.
 
 13.2.  OAuth Authorization Server Metadata Registration
 

@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            11 July 2026
-Expires: 12 January 2027
+Intended status: Standards Track                            12 July 2026
+Expires: 13 January 2027
 
 
                        Mission Audit Transparency
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 January 2027.
+   This Internet-Draft will expire on 13 January 2027.
 
 Copyright Notice
 
@@ -382,12 +382,12 @@ Table of Contents
 
    Each companion-defined row binds only a deployment that produces that
    evidence, so the reference is consulted only where the profile is
-   adopted.  Rows whose defining profile is Experimental (the Signals
-   form of the lifecycle transition and the Discovery Evidence row) stay
-   on that profile's maturity: this document keeps those references
-   informative, and a deployment not running the Experimental profile
-   uses the stable form (Section 6.2.1 for lifecycle transitions) or
-   omits the row.
+   adopted.  A row whose defining profile is Experimental (the Discovery
+   Evidence row) stays on that profile's maturity: this document keeps
+   that reference informative, and a deployment not running the
+   Experimental profile omits the row.  A deployment that does not run
+   the Signals profile commits lifecycle transitions as the transition
+   object (Section 6.2.1) instead of the Signals SET.
 
    A Child Evidence record registers on the Parent Mission's feed: the
    sub is the parent's (Section 7), its producer is the issuer, and the

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            11 July 2026
-Expires: 12 January 2027
+Intended status: Standards Track                            12 July 2026
+Expires: 13 January 2027
 
 
                  Mission Child Delegation for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 January 2027.
+   This Internet-Draft will expire on 13 January 2027.
 
 Copyright Notice
 
@@ -902,13 +902,13 @@ Table of Contents
    whose root ancestor is non-active is refused derivation even before
    its own cascade transition commits.
 
-   Where a deployment also runs the completion profile
-   ([I-D.draft-mcguinness-oauth-mission-completion]), discharge
-   propagates entry-wise: when a parent Authority Set entry is
-   discharged, the Mission Issuer MUST discharge every child entry
-   justified by it, so spent authority does not survive in the subtree.
-   The issuer holds both records, so the propagation needs no consumer
-   coordination.
+   Where a deployment also runs the status profile's completion
+   machinery ([I-D.draft-mcguinness-oauth-mission-status], Completion
+   section), discharge propagates entry-wise: when a parent Authority
+   Set entry is discharged, the Mission Issuer MUST discharge every
+   child entry justified by it, so spent authority does not survive in
+   the subtree.  The issuer holds both records, so the propagation needs
+   no consumer coordination.
 
    While a parent is suspended, the issuer MUST report each dependent
    child's state as suspended on every state-reporting surface (the
@@ -1311,11 +1311,6 @@ Table of Contents
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-
               attenuation.html>.
-
-   [I-D.draft-mcguinness-oauth-mission-completion]
-              McGuinness, K., "Mission Completion for OAuth 2.0", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-oauth-mission-completion.html>.
 
    [I-D.draft-mcguinness-oauth-mission-issuance-grant]
               McGuinness, K., "Mission Issuance Grant for OAuth 2.0",

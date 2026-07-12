@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            11 July 2026
-Expires: 12 January 2027
+Intended status: Standards Track                            12 July 2026
+Expires: 13 January 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -64,7 +64,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 January 2027.
+   This Internet-Draft will expire on 13 January 2027.
 
 Copyright Notice
 
@@ -1200,6 +1200,17 @@ Table of Contents
       these classes: it bounds staleness only by the lifetime, so a
       revoked Mission keeps deriving consequence until tokens age out,
       which is the ambient-authority gap this profile exists to close.
+
+   For a deployment whose access tokens are short-lived and whose
+   issuance and refresh are state-gated per the core
+   ([I-D.draft-mcguinness-oauth-mission]), the refresh cycle itself is a
+   conforming active freshness source for any action class whose
+   published staleness bound the token lifetime meets: the issuance gate
+   is an active check, and a token that exists is evidence the Mission
+   was active within the lifetime.  This source's revocation latency
+   floor is the token lifetime, so it conforms only for classes whose
+   bound admits that floor, and the higher-frequency sources (Status,
+   introspection, Signals) remain the path to tighter bounds.
 
    *Token-lifetime freshness.* Below the high-consequence floor, token
    expiry is itself a conforming state source: derivation and refresh

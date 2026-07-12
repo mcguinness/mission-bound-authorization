@@ -1074,7 +1074,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 12 January 2027</td>
+<td class="center">Expires 13 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1087,12 +1087,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-runtime-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-11" class="published">11 July 2026</time>
+<time datetime="2026-07-12" class="published">12 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-12">12 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-13">13 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1158,7 +1158,7 @@ agent-compromise-resistant enforcement and trifecta containment.<a href="#sectio
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 12 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 13 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2668,7 +2668,17 @@ Mission keeps deriving consequence until tokens age out, which is the
 ambient-authority gap this profile exists to close.<a href="#section-7.2-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-7.2-3"><strong>Token-lifetime freshness.</strong> Below the high-consequence floor, token
+<p id="section-7.2-3">For a deployment whose access tokens are short-lived and whose
+issuance and refresh are state-gated per the core
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the refresh cycle itself is
+a conforming active freshness source for any action class whose
+published staleness bound the token lifetime meets: the issuance gate
+is an active check, and a token that exists is evidence the Mission
+was <code>active</code> within the lifetime. This source's revocation latency
+floor is the token lifetime, so it conforms only for classes whose
+bound admits that floor, and the higher-frequency sources (Status,
+introspection, Signals) remain the path to tighter bounds.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+<p id="section-7.2-4"><strong>Token-lifetime freshness.</strong> Below the high-consequence floor, token
 expiry is itself a conforming state source: derivation and refresh
 are gated on <code>active</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), so a
 token's remaining lifetime bounds the staleness of the authority it
@@ -2678,9 +2688,9 @@ the clock: no status call, no introspection, no change at the
 consuming resource. A deployment declares it per class in its
 Enforcement Scope Statement like any other source; what it cannot do
 is reflect a revocation faster than the lifetime, which is why the
-high-consequence classes require an active source.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
-<p id="section-7.2-4">The following are the <span class="bcp14">RECOMMENDED</span> default freshness postures per
-class, adopted absent a documented, consequence-specific analysis:<a href="#section-7.2-4" class="pilcrow">¶</a></p>
+high-consequence classes require an active source.<a href="#section-7.2-4" class="pilcrow">¶</a></p>
+<p id="section-7.2-5">The following are the <span class="bcp14">RECOMMENDED</span> default freshness postures per
+class, adopted absent a documented, consequence-specific analysis:<a href="#section-7.2-5" class="pilcrow">¶</a></p>
 <table class="center" id="table-2">
           <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>
@@ -2716,8 +2726,8 @@ class, adopted absent a documented, consequence-specific analysis:<a href="#sect
             </tr>
           </tbody>
         </table>
-<p id="section-7.2-6">A deployment justifies any looser value for a high-consequence class
-in its Enforcement Scope Statement.<a href="#section-7.2-6" class="pilcrow">¶</a></p>
+<p id="section-7.2-7">A deployment justifies any looser value for a high-consequence class
+in its Enforcement Scope Statement.<a href="#section-7.2-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="policy-view">

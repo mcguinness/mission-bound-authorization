@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                            11 July 2026
-Expires: 12 January 2027
+Intended status: Standards Track                            12 July 2026
+Expires: 13 January 2027
 
 
                  Mission Consent Evidence for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 January 2027.
+   This Internet-Draft will expire on 13 January 2027.
 
 Copyright Notice
 
@@ -905,11 +905,12 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission]).  Declined and narrowed events
    create no Mission (Section 8.1, Section 8.2) and so have no Mission
    audit horizon; a deployment MUST retain their evidence for a
-   deployment-declared window.  Entries discharged under the completion
-   profile ([I-D.draft-mcguinness-oauth-mission-completion]) disappear
-   from status surfaces while authority_hash still commits them, so an
-   auditor reconciling the recorded approval surface against later-
-   enforced authority consults discharge state.
+   deployment-declared window.  Entries discharged under the status
+   profile's completion machinery
+   ([I-D.draft-mcguinness-oauth-mission-status]) disappear from status
+   surfaces while authority_hash still commits them, so an auditor
+   reconciling the recorded approval surface against later-enforced
+   authority consults discharge state.
 
 9.1.  Minimization and Redaction
 
@@ -1217,15 +1218,15 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-approval-
               revision.html>.
 
-   [I-D.draft-mcguinness-oauth-mission-completion]
-              McGuinness, K., "Mission Completion for OAuth 2.0", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-oauth-mission-completion.html>.
-
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-expansion.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-status]
+              McGuinness, K., "Mission Status and Lifecycle for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-status.html>.
 
 Appendix A.  Experimental Rendering-Assurance Rungs
 
