@@ -25,7 +25,7 @@ with the PEP/PDP boundary are its data plane.
 
 At a glance:
 
-- **29 drafts, deliberately decomposed.** One mandatory core (the
+- **28 drafts, deliberately decomposed.** One mandatory core (the
   OAuth 2.0 issuance profile, [on the
   datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/)),
   three further bindings (one an experimental sketch) and normative
@@ -33,7 +33,7 @@ At a glance:
   verb, and two Informational views (the Architecture and the
   Security Model).
 - **Four assurance levels and named claims.** The levels (Baseline
-  Issuance, Runtime-Enforced the Protocol MVP, Governed Agent, and
+  Issuance, Runtime-Enforced, Governed Agent, and
   High-Assurance Agent) are the adoption ladder: what to deploy, in
   the order deployments build it. What may be claimed is the
   orthogonal set of named assurance claims a deployment lists in its
@@ -236,7 +236,7 @@ AS) is orthogonal and described below the table.
 | Level | Drafts | What you get |
 |---|---|---|
 | **Baseline Issuance** | mission | Approved, integrity-bound Missions; state-gated issuance; a possession-independent kill switch (outstanding tokens run to expiry; prompt cutoff needs the Runtime-Enforced level). The kill switch is binding-dependent: under the standalone MAS there is no issuance gate, and the cutoff arrives with the runtime layer. With token lifetimes sized to the declared staleness bound (lifetime-bounded reliance), revocation takes effect within one lifetime at unmodified Resource Servers; what this level lacks is per-action enforcement and parameter binding, not a cutoff. Day-one AS prerequisites: PAR, RAR, and JWT access tokens; the standalone MAS needs none of them. |
-| **Runtime-Enforced** (the Protocol MVP) | mission + runtime + authzen + a freshness source (status or issuer token introspection; signals adds push) | Per-action enforcement at the point of use, and prompt revocation. The smallest deployment that makes a Mission-bound token more than governance metadata, and every dependency it needs is ratified. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
+| **Runtime-Enforced** | mission + runtime + authzen + a freshness source (status or issuer token introspection; signals adds push) | Per-action enforcement at the point of use, and prompt revocation. The smallest deployment that makes a Mission-bound token more than governance metadata, and every dependency it needs is ratified. For the high-consequence classes, runtime requires an active freshness source, not token-lifetime expiry. |
 | **Governed Agent** (recommended for AI agents) | Runtime-Enforced + consent-evidence + harness | Consent-rendering evidence and session-continuity stop. Add child-delegation for sub-agents and expansion for mid-task growth, orchestration (experimental) for safe unwinding of in-flight work, and discovery (experimental, with progressive) for agents that meet resources their approval could not name. |
 | **High-Assurance Agent** | Governed Agent + mediated custody, no unmediated path, action-bound approval, active freshness, agent-isolated approval rendering | Resistance to a compromised agent: the runtime profile's named agent-compromise-resistant enforcement and trifecta containment claims (see the note below the table), optionally bound to execution-environment attestation. |
 
