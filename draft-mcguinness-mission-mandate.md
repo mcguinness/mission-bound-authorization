@@ -902,7 +902,11 @@ domain boundary: omit `authority_set` unless the recipient needs
 anchor recomputation, prefer the selective-disclosure form
 ({{selective-disclosure}}) where a holder re-presents the Mandate
 onward, and avoid Intent-derived free-text extension members by
-default. Recording `minted_for` costs nothing and makes an artifact
+default. Selective disclosure is this profile's minimization tool:
+a presentation discloses the committed facts the verifier needs and
+no more, so a deployment handing Mission facts to a
+privacy-sensitive recipient prefers a selectively disclosed
+presentation over a full Mandate. Recording `minted_for` costs nothing and makes an artifact
 that travels beyond its recipient attributable to a leak path.
 
 The Mandate also extends the correlation surface the issuance

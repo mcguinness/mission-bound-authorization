@@ -2009,6 +2009,10 @@ work and are not required to enforce it:
 - action-hierarchy and resource-containment subset extensions (this
   profile uses the flat subset rule of
   {{I-D.draft-mcguinness-oauth-mission}});
+- evaluation-context binding: an extension letting a high-assurance
+  permit commit the resource version, policy-view version, and
+  decision time it was evaluated against, hardening the
+  target-drift residual of the TOCTOU considerations;
 - risk-signal and semantic intent-alignment inputs to the decision,
   which are advisory and deployment-defined ({{inspection-controls}});
   and
@@ -2175,6 +2179,19 @@ normalized parameters and a short window or single use, so a permit
 cannot be replayed for a different request or survive a parameter
 change between check and use. The executing PEP, not an upstream
 component, MUST perform the reverification.
+
+Parameter binding freezes the request, not the target. Between
+decision and execution the resource itself can change meaning: a
+revised document, a reclassified record, a query that returns a
+different set. That residual is outside `parameter_digest`'s reach,
+and the mitigations are operational: keep permit validity windows
+tight ({{parameter-binding}}), re-evaluate rather than re-present a
+permit on retry, and, where the resource exposes a version or
+revision identifier, bind it as a parameter so the permit commits
+the target state it was decided against. An extension letting a
+high-assurance permit commit its evaluation context (resource
+version, policy-view version, decision time) is deferred to
+implementation demand ({{deferred}}).
 
 ## Confused Deputy Across Resources
 
