@@ -903,8 +903,13 @@ Nine residuals are worth stating on their own, because they are the
 limits most likely to matter and most often overstated away elsewhere:
 
 - **Comprehension.** The suite can commit and bind what an Approver was
-  shown; it cannot prove what the Approver perceived or understood. No
-  electronic-consent scheme can.
+  shown; it cannot prove what the Approver perceived or understood. The
+  consent-evidence profile narrows what it can reach: authority
+  rendered as language rather than structure, and a disclosure the
+  Approver can interrogate
+  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}). Proof of
+  comprehension stays out of reach; no electronic-consent scheme
+  provides it.
 - **Anchor semantics.** The two integrity anchors commit two objects,
   not the relationship between them: `intent_hash` commits the
   approved intent, `authority_hash` the consented Authority Set, and
@@ -955,7 +960,11 @@ limits most likely to matter and most often overstated away elsewhere:
   ({{I-D.draft-mcguinness-mission-runtime}}), and use a pre-consented
   ceiling with policy-adjudicated drawdown where growth is
   anticipated ({{I-D.draft-mcguinness-oauth-mission-progressive}}),
-  so the human moments that remain are rare enough to be read.
+  so the human moments that remain are rare enough to be read. The
+  consent-evidence profile keeps those moments readable and
+  questionable: a translation floor over the rendered authority and
+  Disclosure Interrogation
+  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 - **Single-service equivocation.** Transparency is non-equivocating only
   per service; a deployment that needs that property checked registers
   with more than one independent service.

@@ -559,9 +559,16 @@ derived Authority Set changes between rendering and consent, the PS
 MUST recompute and re-obtain consent per the issuance profile.
 Mission Consent Evidence composes unchanged, with the PS as the
 committing issuer
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}); AAuth's
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}). AAuth's
 clarification chat is the shaping profile's clarification step
-({{I-D.draft-mcguinness-mission-shaping}}).
+({{I-D.draft-mcguinness-mission-shaping}}) and, when the user
+questions the proposal rather than the task ("why does this need
+write access to my finance folder?"), the consent-evidence profile's
+Disclosure Interrogation: an answer the PS presents in its own voice
+is grounded in recorded shaping or provenance material, the agent's
+chat replies stay attacker-influenceable text under
+{{security-rendering}}, and the chat the mission log retains
+({{security-mission-log}}) is the interrogation record.
 
 # Mission Lifecycle {#lifecycle}
 

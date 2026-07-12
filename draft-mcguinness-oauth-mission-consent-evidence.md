@@ -60,6 +60,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-security-model:
+    title: "Mission Security Model"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -187,6 +195,10 @@ later enforced.
 This document defines:
 
 - the consent disclosure object ({{consent-disclosure}});
+- the Intent Translation floor, rendering committed authority as
+  natural language ({{intent-translation}});
+- Disclosure Interrogation, the Approver's question channel over the
+  disclosure ({{interrogation}});
 - the `consent_rendering_hash` commitment ({{consent-rendering-hash}});
 - the Consent Evidence object ({{consent-evidence}});
 - binding and recording rules for initial approval, expansion approval,
@@ -196,7 +208,8 @@ This document defines:
   ({{conformance}}).
 
 This document does not define user-interface layout, a legal consent
-standard, or any new OAuth grant. It does not change the Authority Set
+standard, or any new OAuth grant. The translation floor constrains what
+a rendering expresses, not how it is laid out. It does not change the Authority Set
 or Mission lifecycle. Under the standalone Mission Authority Server
 binding ({{I-D.draft-mcguinness-mission-authority-server}}), the
 Mission Authority Server is the committing Mission Issuer and this
@@ -447,6 +460,44 @@ same classes key the minimum approval-authentication strength the
 issuance profile's deployment floor sets
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
+## Intent Translation {#intent-translation}
+
+Coverage says what a disclosure contains. It does not stop a deployment
+from presenting the Authority Set as serialized structure that trains
+the Approver to stop reading, and a trained Approver rubber-stamps (the
+consent-fatigue residual,
+{{I-D.draft-mcguinness-mission-security-model}}). This section sets the
+floor for translating committed authority into language.
+
+- The rendered forms the `authority_summary` elements carry MUST be
+  natural-language statements, in the disclosure's `locale`, of what
+  the agent may do: each action as a statement, each constraint and
+  consumption bound as the bound on that statement ("may not exceed
+  500 USD in total"), and each delegation right as who may receive
+  authority and how far. A raw key and value is not a rendered form.
+- A serialized Authority Set (JSON, token claims) MUST NOT be the
+  primary rendering. A deployment MAY offer one as a detail layer
+  ({{layered-rendering}}).
+- A Common Constraint ({{I-D.draft-mcguinness-oauth-mission}}) has
+  registered semantics, and its rendered form MUST state them. A
+  constraint key the template cannot translate MUST be rendered and
+  identified as untranslated, never omitted: an Approver shown an
+  untranslated bound can decline; one shown nothing cannot.
+- Where a capability source supplies a human-readable label for a
+  resource or action, the rendering SHOULD pair the label with the
+  identifier. The identifier is authoritative; a label that
+  contradicts its identifier is rendering confusion
+  ({{rendering-confusion}}).
+- Translation does not soften what the issuance profile's rendering
+  rules fix: an action family is rendered as the breadth it is, and
+  client-supplied text is rendered inert
+  ({{I-D.draft-mcguinness-oauth-mission}}).
+
+The floor is template-testable: the template testing of
+{{template-downgrade}} SHOULD include fixtures proving the template
+translates every Common Constraint key and material-notice class the
+deployment uses.
+
 ## Layered Rendering {#layered-rendering}
 
 A deployment MAY render the disclosure summary-first, with detail
@@ -462,6 +513,44 @@ behind further interaction, provided that:
 `consent_rendering_hash` ({{consent-rendering-hash}}) commits the
 disclosure object, not a layer, so layering changes presentation, not
 evidence.
+
+## Disclosure Interrogation {#interrogation}
+
+A faithful disclosure answers what the Mission may do. The question an
+Approver weighs is often why: why does a support-ticket task need write
+access to a finance folder? An Approver who cannot ask guesses, and a
+guessing Approver decides on the wrong fact.
+
+A deployment SHOULD let the Approver interrogate the disclosure before
+deciding: for any `authority_summary` entry, constraint, or material
+notice, request the basis for it. This profile defines no interaction
+surface (a per-entry detail, a question form, and a chat all serve); it
+defines what may answer and what is recorded.
+
+An answer the consent surface presents in its own voice MUST be drawn
+from recorded material: Shaping Evidence for why the task motivated an
+entry ({{I-D.draft-mcguinness-mission-shaping}}), constraint provenance
+for whose rule a bound is ({{constraint-provenance}}), and identified
+deployment policy for bounds the Mission Issuer imposed. Where the
+deployment instead relays an answer from the requesting agent (AAuth's
+clarification chat is this channel,
+{{I-D.draft-mcguinness-mission-aauth}}), the relayed text is
+attacker-influenceable: it MUST be rendered inert and visually
+distinguished from the deployment's own answers, under the issuance
+profile's rendering rules ({{I-D.draft-mcguinness-oauth-mission}}).
+
+An answer grants nothing and amends nothing. It is not part of the
+committed disclosure object, and an Approver satisfied by an answer
+approves the same committed authority. When interrogation convinces the
+Approver the authority is wrong, the path is the existing one: decline
+or require narrowing, and approval of different authority is a new
+derivation and a new disclosure ({{consent-rendering-hash}}).
+
+When the deployment offers interrogation, the evidence records it: each
+question, what it concerned, and what grounded the answer
+(`interrogation`, {{consent-evidence}}). Interrogation before a decline
+is the record's most valuable case: it preserves which entry the
+Approver probed and could not accept.
 
 # The Consent Rendering Hash {#consent-rendering-hash}
 
@@ -692,6 +781,18 @@ A Consent Evidence object has these members:
   RFC 3339 {{RFC3339}} completion timestamp. It makes the per-notice
   acknowledgment requirement auditable in the evidence itself, not only
   through the committed disclosure.
+
+`interrogation`:
+: OPTIONAL. An array recording the Approver's pre-decision questions at
+  the consent surface ({{interrogation}}), in the order asked. Each
+  entry carries `question`, the question as asked or selected;
+  `applies_to`, the Authority Set entry, constraint, or notice it
+  concerned, when one was identified; and `answer_source`, one of
+  `shaping_evidence`, `constraint_provenance`, `policy`, or `agent`.
+  When `answer_source` is `agent`, the entry MUST also carry `answer`,
+  the relayed text as rendered, which is committed nowhere else; for
+  the other sources the grounding material is already recorded, and
+  the entry SHOULD reference it.
 
 `refused_dimensions`:
 : REQUIRED when `decision` is `narrowed`. An object identifying the
@@ -953,6 +1054,7 @@ by reference when not required for ordinary audit.
 A conforming Consent-Evidence-capable Mission Issuer MUST:
 
 - construct a Consent Disclosure object for each approval event;
+- render within the translation floor ({{intent-translation}});
 - compute `consent_rendering_hash`;
 - record Consent Evidence for approval and decline decisions, and for
   narrowed decisions where the deployment supports approval revision
@@ -960,7 +1062,8 @@ A conforming Consent-Evidence-capable Mission Issuer MUST:
 - bind approved Mission records to `consent_rendering_hash`;
 - include material notices for high-risk authority, with the
   per-notice acknowledgment the high-risk classes require, and record
-  each acknowledgment completion ({{material-notices}}); and
+  each acknowledgment completion ({{material-notices}});
+- record the interrogation it offers ({{interrogation}}); and
 - retain evidence for audit reconstruction.
 
 A conforming verifier of Consent Evidence MUST implement the checks in
@@ -969,7 +1072,7 @@ disclosure during the retention window as an audit failure.
 
 # Security Considerations {#security-considerations}
 
-## Rendering Confusion
+## Rendering Confusion {#rendering-confusion}
 
 The primary threat is rendering confusion: the Approver sees one thing
 while the Mission records another. This profile mitigates that by
@@ -990,7 +1093,7 @@ proves perception, which remains
 outside
 reach for any electronic-signature scheme.
 
-## Template Downgrade
+## Template Downgrade {#template-downgrade}
 
 An attacker could use an outdated or less explicit template. The
 Consent Disclosure object includes `template_id` and
@@ -1003,12 +1106,23 @@ Consent Evidence proves what was recorded as shown and decided. It MUST
 NOT be accepted as a token, grant, or substitute for the Mission's
 `authority_hash`.
 
-## Decline Suppression
+## Decline Suppression {#decline-suppression}
 
 An attacker could repeatedly reshape and resubmit a declined Mission to
 obtain approval through fatigue. Recording declined events lets
 deployments detect repeated attempts against the same task, requester,
 or Authority Set.
+
+## Interrogation as a Persuasion Surface
+
+Disclosure Interrogation ({{interrogation}}) lets the Approver ask why;
+the same channel lets a compromised agent argue. An injected agent that
+authored a hostile goal can author the reassuring answers the goal
+provokes. The grounding rule of {{interrogation}} is the mitigation:
+the consent surface's own voice speaks only from recorded material,
+relayed agent text is rendered inert and visibly the agent's, and the
+recorded `interrogation` entries expose a persuasion pattern to the
+same audit that {{decline-suppression}} gives repeated resubmission.
 
 ## Incomplete Material Notices
 
