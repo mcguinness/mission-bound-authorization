@@ -32,6 +32,7 @@ normative:
   RFC3339:
   RFC6838:
   RFC7009:
+  I-D.draft-ietf-oauth-status-list:
   RFC7515:
   RFC7523:
   RFC7662:
@@ -455,6 +456,10 @@ The members are:
     lifecycle mutation can guard on it ({{idempotency}}), and a
     materialized policy view names the value it materialized
     ({{I-D.draft-mcguinness-mission-runtime}}).
+  - `status_list`: OPTIONAL. The referenced-token status object of
+    {{I-D.draft-ietf-oauth-status-list}} (`idx` and `uri`), present
+    where the deployment publishes a Mission Status List
+    ({{status-list}}).
 - `authorization_details`: the audience-scoped Authority Set entries
   relevant to the requesting audience, as the `mission_resource_access`
   shape of {{I-D.draft-mcguinness-oauth-mission}} (Section "Mission
@@ -623,8 +628,9 @@ This projection and the dedicated Mission Status Response
 ({{mission-status-response}}) carry Mission facts in a `mission` object
 of the same shape: the open `mission` claim object of
 {{I-D.draft-mcguinness-oauth-mission}} (Section "The Mission Claim")
-with status members (`state`, `fresh_until`, and, on the dedicated
-response, `expires_at` and `version`) added. This
+with status members (`state`, `fresh_until`, the `status_list`
+reference where the deployment publishes one ({{status-list}}), and,
+on the dedicated response, `expires_at` and `version`) added. This
 projection populates the subset a token-holding consumer needs; the
 dedicated response populates more. Either way a consumer reads the
 same fact from the same place.
@@ -665,6 +671,46 @@ Resource AS), uses the dedicated Mission Status operation
 ({{mission-status}}); the introspection projection is purely a
 same-call convenience for token-holding consumers and is never the
 sole Mission Status path.
+
+# Mission Status List {#status-list}
+
+One consumer often relies on many Missions at once: a gateway
+fronting an agent fleet holds a Mission per unit of work, and
+per-Mission status reads at that scale are a latency tax this
+profile's caching rules cannot amortize. A Mission Issuer MAY
+additionally publish Mission state as a Status List
+({{I-D.draft-ietf-oauth-status-list}}): a signed, compressed bit
+array in which each participating Mission holds an index, fetched
+once per freshness window and read locally per action.
+
+- **Reference.** A participating Mission's `status_list` member
+  (`idx` and `uri`, the referenced-token shape of
+  {{I-D.draft-ietf-oauth-status-list}}) rides the Mission Status
+  Response and the introspection projection
+  ({{mission-status-response}}, {{introspection-projection}}), so a
+  consumer learns its index from the authoritative surface it
+  already reads.
+- **Mapping.** VALID (0x00) reports `active`; SUSPENDED (0x02)
+  reports `suspended`; INVALID (0x01) reports every terminal state.
+  A consumer treats any other value as non-active, per the fail-safe
+  rule. The list carries reliance bits only: which terminal state, the
+  `successor`, and the state version stay on this profile's
+  authoritative surfaces, and a consumer that observes a bit other
+  than VALID re-establishes state there before any further reliance.
+- **Freshness.** The Status List Token's `ttl` and `exp` are a
+  published staleness bound: within them a VALID bit permits reliance
+  exactly as a fresh Mission Status Response reporting `active` does,
+  and an expired or unfetchable list is stale state, never permission
+  ({{I-D.draft-mcguinness-mission-runtime}}). A committed lifecycle
+  transition MUST be reflected in the next Status List Token
+  published for its list, and where Signals runs, the event is the
+  push complement to the list's pull floor.
+- **Privacy.** Index assignment MUST NOT be derivable from or
+  correlatable with the Mission Identifier, and the list conveys bits
+  at opaque indices only, so publishing it preserves this profile's
+  anti-oracle posture ({{mission-status-anti-oracle}}) while the
+  fetch itself, covering every index at once, reveals no per-Mission
+  interest.
 
 # Mission Lifecycle Endpoint {#mission-lifecycle-endpoint}
 

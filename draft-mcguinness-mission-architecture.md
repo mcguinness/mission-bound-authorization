@@ -1767,8 +1767,9 @@ reclassification, not by a stable document absorbing a dependency.
 **Lifecycle:**
 
 Status is the lifecycle suite's root document (state reading,
-lifecycle verbs, and completion), with Signals (the push channel) and
-Management (the operator plane) as its satellites.
+including the swarm-scale Status List, lifecycle verbs, and
+completion), with Signals (the push channel) and Management (the
+operator plane) as its satellites.
 
 `oauth-mission-status`:
 : The signed pull surface and the lifecycle endpoint, with

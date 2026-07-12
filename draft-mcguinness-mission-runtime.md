@@ -1216,7 +1216,10 @@ is the deployment's accepted state lease.
 - For the high-consequence classes, the state source MUST be an active
   freshness mechanism that can reflect a revocation within the staleness
   bound: token introspection at the issuer ({{RFC7662}}), the Mission Status
-  profile ({{I-D.draft-mcguinness-oauth-mission-status}}), or Mission
+  profile ({{I-D.draft-mcguinness-oauth-mission-status}}), a Mission
+  Status List whose Status List Token TTL is within the bound (the
+  status profile's swarm-scale pull floor,
+  {{I-D.draft-mcguinness-oauth-mission-status}}), or Mission
   Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}).
   Token-lifetime expiry alone is not an acceptable state source for
   these classes: it bounds staleness only by the lifetime, so a revoked
