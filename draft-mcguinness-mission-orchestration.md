@@ -145,7 +145,7 @@ Mission Assurance Level
 
 # Scope
 
-This document is **experimental**: adopt it for evaluation, not as a
+This document is experimental: adopt it for evaluation, not as a
 stable interface. Safe unwinding of in-flight agent work is the least
 settled layer of the suite, and this profile is expected to change with
 implementation experience.

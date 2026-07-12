@@ -150,9 +150,9 @@ issuer (the attenuation substrate defines no revocation of its own); and
 `authority_hash` rides the chain as a lineage anchor, not as the child's
 own authority commitment.
 
-# Status: An EXPERIMENTAL Extension {#optional-status}
+# Status: An Experimental Extension {#optional-status}
 
-This document is OPTIONAL and **experimental**: adopt it for
+This document is optional and experimental: adopt it for
 evaluation, not as a stable interface. A deployment that narrows
 authority only
 through the Authorization Server is fully conformant to the issuance

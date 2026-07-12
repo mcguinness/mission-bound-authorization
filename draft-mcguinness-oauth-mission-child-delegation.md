@@ -131,9 +131,9 @@ identifier and actor identity, but it cannot outlive, out-broaden, or
 escape the parent. The child is created through an explicit
 authorization step, not by inheriting a parent harness session.
 
-# Status: An OPTIONAL Extension {#optional-status}
+# Status: An Optional Extension {#optional-status}
 
-This document is OPTIONAL. It is a layered extension to the issuance
+This document is optional. It is a layered extension to the issuance
 profile, not a change to it. A deployment that implements
 {{I-D.draft-mcguinness-oauth-mission}} and never creates a Child
 Mission is fully conformant to that profile and is unaffected by this

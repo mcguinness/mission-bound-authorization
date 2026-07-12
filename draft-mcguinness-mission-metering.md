@@ -126,9 +126,9 @@ deployment enforces, and the AuthZEN wire binding
 ({{I-D.draft-mcguinness-mission-authzen}}) for settlement and
 duration-lease renewal.
 
-# Status: An EXPERIMENTAL Extension {#optional-status}
+# Status: An Experimental Extension {#optional-status}
 
-This document is OPTIONAL and **experimental**: adopt it for
+This document is optional and experimental: adopt it for
 evaluation, not as a stable interface. Metering cumulative bounds
 exactly under distributed decision points is a distributed-counting
 problem, and the reserve, commit, lease, and settlement machinery here
@@ -304,11 +304,11 @@ Consumption bounds are enforced by the runtime profile's PDP
   and increments the action count atomically with the permit and MUST
   refuse an action that would exceed either cap. Payload size is
   measured over the parameter bytes committed by `parameter_digest`
-  ({{I-D.draft-mcguinness-mission-runtime}}); the operation profile
+  ({{I-D.draft-mcguinness-mission-runtime}}); the Operation Profile
   defines the measurement so PDPs accumulate consistently. For a
   reference-typed parameter, one that carries an attachment identifier
   or URL whose referent egresses while the pointer is what
-  `parameter_digest` commits, the operation profile MUST measure the
+  `parameter_digest` commits, the Operation Profile MUST measure the
   dereferenced payload size, or the deployment MUST exclude such
   actions from a claimed `bytes` bound; counting the pointer bytes
   alone understates the egress.
@@ -331,7 +331,7 @@ Consumption bounds are enforced by the runtime profile's PDP
   ({{I-D.draft-mcguinness-mission-orchestration}}), not by severing
   the action. After execution, the PEP MUST report the measured
   duration so the PDP can commit actual use and release any unused
-  reservation. The operation profile defines how a single action's
+  reservation. The Operation Profile defines how a single action's
   duration is measured so that PDPs accumulate consistently.
 
 A per-entry `constraints` value that expresses a cumulative consumption
@@ -402,7 +402,7 @@ enforced in a single strongly consistent per-Mission latch domain
 the consistency unit, {{I-D.draft-mcguinness-mission-runtime}}), the
 sub-budget and reconciliation-window relaxations MUST NOT be applied
 to `exclusive`, and the deployment MUST name the latch domain in its
-enforcement scope statement.
+Enforcement Scope Statement.
 
 Exclusivity turns the quarantine deployment pattern
 ({{I-D.draft-mcguinness-mission-architecture}}) into consented,
@@ -431,7 +431,7 @@ postures, and refusal behavior are unchanged; only the key differs.
 
 An aggregate bound is deployment policy: it is carried on no single
 Mission Intent, is committed by no `intent_hash`, and is disclosed
-through the deployment's enforcement-scope statement rather than the
+through the deployment's Enforcement Scope Statement rather than the
 approval event. A refusal under an aggregate bound is carried as
 `quota_exceeded`, and Decision Evidence records the
 deployment-defined aggregate key class.

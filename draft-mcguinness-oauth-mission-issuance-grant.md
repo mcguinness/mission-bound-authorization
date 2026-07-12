@@ -162,11 +162,9 @@ join, the issuance join, and native Mission-awareness, each adopted
 where its cost is warranted
 ({{I-D.draft-mcguinness-mission-authority-server}}).
 
-## Requirements Language
+# Conventions and Terminology {#conventions}
 
 {::boilerplate bcp14-tagged}
-
-# Conventions and Terminology {#conventions}
 
 This document uses Mission, Mission Intent, Authority Set, Mission
 Issuer, the `mission` claim, the subset rule, and the integrity
@@ -628,7 +626,7 @@ mapping of {{redemption-errors}}. The PAR carriage of
 {{par-carriage}} is OPTIONAL.
 
 A deployment claiming this profile states, alongside its
-enforcement-scope statement, which Authorization Servers consume
+Enforcement Scope Statement, which Authorization Servers consume
 grants, the staleness bound of each one's refresh gating, and its
 reconciliation posture ({{security-considerations}}): the window
 within which minting and redemption logs are reconciled, or that

@@ -217,11 +217,19 @@ The end-to-end flow this binding realizes:
    |           |- re-evaluate ->|                     |
 ~~~
 
-## Requirements Language
+# Conventions and Terminology {#conventions-and-definitions}
 
 {::boilerplate bcp14-tagged}
 
-# Conventions and Terminology {#conventions-and-definitions}
+Two member-presence conventions extend that vocabulary:
+
+CONDITIONAL:
+: The member is present when the stated condition holds and absent
+  otherwise. The condition accompanies each member so marked.
+
+REQUIRED when known:
+: The sender includes the member when it holds the member's value. A
+  receiver MUST NOT infer meaning from the member's absence.
 
 This document uses JSON {{RFC8259}} as the data model for all PDP
 requests, responses, and evidence objects. JCS canonicalization

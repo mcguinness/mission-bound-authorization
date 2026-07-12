@@ -144,7 +144,7 @@ is not the same as tamper-evident, append-only, or independently
 verifiable: a holder of the signing key can still backdate, drop, or
 reorder records, and a cross-domain party cannot confirm what was
 recorded without trusting the issuer's own logs. This document defines
-an OPTIONAL Mission Audit Transparency profile. It registers Mission
+an optional Mission Audit Transparency profile. It registers Mission
 evidence into a SCITT Transparency Service as Signed Statements, with
 the Mission as the statement subject so a Mission's records form one
 coherent, append-only feed, and binds the resulting Receipt back so any
@@ -184,13 +184,13 @@ feed an auditor can assemble and replay as a single narrative
 ({{retrieval}}).
 
 This adds transparency to evidence the suite already defines; it defines
-no new evidence object. It is OPTIONAL, and what it proves is bounded:
+no new evidence object. It is optional, and what it proves is bounded:
 transparency makes misbehavior detectable and attributable, it does not
 make a dishonest issuer honest ({{limits}}).
 
-# Status: An OPTIONAL Extension {#optional-status}
+# Status: An Optional Extension {#optional-status}
 
-This document is OPTIONAL. A deployment that retains evidence without a
+This document is optional. A deployment that retains evidence without a
 Transparency Service is fully conformant to the issuance profile and its
 companions and is unaffected by this document. It places no new
 requirement on them and defines no new evidence; it registers the

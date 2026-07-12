@@ -114,9 +114,9 @@ can never broaden it. Widening an approved Mission is a different
 operation with its own fresh approval
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
-# Status: An EXPERIMENTAL Extension {#optional-status}
+# Status: An Experimental Extension {#optional-status}
 
-This document is OPTIONAL and **experimental**: adopt it for
+This document is optional and experimental: adopt it for
 evaluation, not as a stable interface. The stable path needs no
 revision mechanism at all. A deferred approval that cannot be granted
 as proposed resolves to `access_denied`, and the client submits a

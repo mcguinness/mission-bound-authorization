@@ -282,7 +282,7 @@ party to fill the Mission Issuer role and cannot implement this
 profile. This document tracks draft-hardt-oauth-aauth-protocol-08, an
 individual Internet-Draft ({{limitations}}).
 
-## Conventions and Terminology
+# Conventions and Terminology
 
 {::boilerplate bcp14-tagged}
 

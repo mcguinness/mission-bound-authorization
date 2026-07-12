@@ -164,7 +164,7 @@ authentication and authorization model, one signing discipline, and
 one audit rule; a request's `operation` member selects between them.
 Bulk operations apply the status profile's per-Mission lifecycle
 semantics unchanged, so this document adds no state, no transition,
-and no event type to the lifecycle state space. It is OPTIONAL and
+and no event type to the lifecycle state space. It is optional and
 does not restate the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}} or the status profile; a
 deployment that does not adopt it is unaffected.
@@ -796,6 +796,34 @@ surface and, when it does, carries the same member with the same
 semantics in its discovery document; {{iana}} registers the member in
 the Mission Authority Server Metadata registry.
 
+# Conformance {#conformance}
+
+This document is OPTIONAL. An implementation that claims it conforms
+in one of two roles.
+
+A **Management-capable Mission Issuer** serves the Mission Management
+endpoint over the authentication and authorization of
+{{management-authentication}} and {{filter-scope}} with signed
+responses per {{management-endpoint}}; serves `enumerate`
+({{enumeration}}) and the bulk lifecycle operations
+({{bulk-lifecycle}}) with dry-run-then-execute and the bulk token
+bindings of {{dry-run}}; applies bulk transitions per Mission under
+the status profile's lifecycle semantics, emitting per-Mission
+evidence and signals ({{execution}}); audit-logs every management
+request per {{filter-scope}}; and advertises
+`mission_management_endpoint` ({{as-metadata}}).
+
+A **Management Client** authenticates per
+{{management-authentication}}; sends the REQUIRED `purpose` or
+`reason` on every request, identifying the operator task rather than a
+fixed placeholder; obtains a fresh dry run for every execute,
+surfacing the `match_count` to the deciding operator or decision point
+before executing; and executes only bulk tokens from dry runs it
+itself requested.
+
+An implementation that supports neither role is unaffected and remains
+a conforming issuance or status profile implementation.
+
 # Security Considerations {#security-considerations}
 
 The security considerations of the issuance profile
@@ -891,34 +919,6 @@ treat them as PII sinks under the issuance profile's privacy rules,
 retain them for at least the audit horizon of the Missions they
 concern ({{I-D.draft-mcguinness-oauth-mission}}), and restrict read
 access to them at least as tightly as the management surface itself.
-
-# Conformance {#conformance}
-
-This document is OPTIONAL. An implementation that claims it conforms
-in one of two roles.
-
-A **Management-capable Mission Issuer** serves the Mission Management
-endpoint over the authentication and authorization of
-{{management-authentication}} and {{filter-scope}} with signed
-responses per {{management-endpoint}}; serves `enumerate`
-({{enumeration}}) and the bulk lifecycle operations
-({{bulk-lifecycle}}) with dry-run-then-execute and the bulk token
-bindings of {{dry-run}}; applies bulk transitions per Mission under
-the status profile's lifecycle semantics, emitting per-Mission
-evidence and signals ({{execution}}); audit-logs every management
-request per {{filter-scope}}; and advertises
-`mission_management_endpoint` ({{as-metadata}}).
-
-A **Management Client** authenticates per
-{{management-authentication}}; sends the REQUIRED `purpose` or
-`reason` on every request, identifying the operator task rather than a
-fixed placeholder; obtains a fresh dry run for every execute,
-surfacing the `match_count` to the deciding operator or decision point
-before executing; and executes only bulk tokens from dry runs it
-itself requested.
-
-An implementation that supports neither role is unaffected and remains
-a conforming issuance or status profile implementation.
 
 # IANA Considerations {#iana}
 

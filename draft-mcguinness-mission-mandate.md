@@ -162,9 +162,9 @@ authorizes nothing either. It lets a verifier know what was approved;
 authority remains the substrate's job
 ({{cross-domain-verification}}).
 
-# Status: An OPTIONAL Extension {#optional-status}
+# Status: An Optional Extension {#optional-status}
 
-This document is OPTIONAL. A deployment that never mints Mandates is
+This document is optional. A deployment that never mints Mandates is
 fully conformant to the issuance profile and its companions and is
 unaffected by this document; the Mandate defines no authority surface
 and places no requirement on deployments that do not claim it.

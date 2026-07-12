@@ -186,7 +186,7 @@ contract, and the two floors that hold regardless of deployment
 policy: self-declarations never classify consequences, and tainted
 sessions never bind a newly discovered resource by policy alone.
 
-# Status: An EXPERIMENTAL Extension {#optional-status}
+# Status: An Experimental Extension {#optional-status}
 
 This document is Experimental. It extends stable interfaces only
 through their declared seams: the progressive profile's drawdown
@@ -198,11 +198,9 @@ stable path for a resource outside every envelope is a fresh
 human-approved expansion
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
-## Requirements Language
+# Conventions and Terminology {#conventions}
 
 {::boilerplate bcp14-tagged}
-
-# Conventions and Terminology {#conventions}
 
 This document uses Mission, Authority Set, Mission Issuer, the
 subset rule, and the integrity anchors as the core defines them; the
@@ -629,7 +627,7 @@ A deployment claiming this profile MUST:
   Profile ({{adjudication}});
 - produce and sign Discovery Evidence for every adjudication,
   foreign-domain encounters included ({{discovery-evidence}}); and
-- state in its enforcement-scope statement which encounter classes
+- state in its Enforcement Scope Statement which encounter classes
   it adjudicates, the ceiling families consented for them, and the
   floors as published limits.
 

@@ -199,7 +199,7 @@ reference to it, so the contract boundary exists now while the text
 crosses it opportunistically, and no change is ever made solely to
 move words.
 
-## Conventions and Terminology
+# Conventions and Terminology
 
 {::boilerplate bcp14-tagged}
 

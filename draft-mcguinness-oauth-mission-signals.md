@@ -170,7 +170,7 @@ Mission ({{consumer-behavior}}). A deployment offers this channel by
 publishing the event stream ({{event-stream}}); consumers discover it
 from `mission_event_stream_endpoint` ({{as-metadata}}).
 
-This document is OPTIONAL. Push delivery is a propagation-latency
+This document is optional. Push delivery is a propagation-latency
 acceleration over correctly sized pull: a consumer that polls the
 Status profile's surfaces within the deployment's published staleness
 bound, and fails safe on the Mission's `expires_at`, already meets
@@ -519,6 +519,16 @@ state at the Mission Issuer; the Mission Issuer is authoritative
 believes the reported state is wrong re-checks through Mission Status
 rather than inventing a state.
 
+A consumer MUST ignore event members it does not understand. It MUST
+NOT reject an event solely for a missing OPTIONAL member (notably
+`tenant`). A consumer matches the event type by the exact URI the
+Mission Issuer's Transmitter Configuration Metadata advertises, so
+the event-type namespace can change without a change to this
+profile's semantics: on adoption, the URI SHOULD migrate to an IETF-
+or foundation-controlled namespace (for example a `urn:ietf:params`
+URN or an OpenID Foundation schema URI), and a provisional
+`urn:ietf:params` URN MAY be used in the interim.
+
 A consumer anchors freshness to stream liveness, not to per-Mission
 age. The Shared Signals Framework {{OIDC-SSF}} provides a stream
 verification event, and a Mission Issuer MAY additionally emit a
@@ -617,6 +627,21 @@ issuance-profile and Status-profile members it already publishes:
   than from a separate metadata member ({{event-stream}}). Present when
   the Mission Issuer emits events.
 
+# Conformance {#conformance}
+
+This document is OPTIONAL. An implementation that claims it:
+
+- as a **Mission Issuer**, emits a signed `mission.lifecycle-change`
+  SET ({{lifecycle-event}}, {{set-protection}}) on every committed
+  Mission lifecycle transition, supports at least one SSF delivery
+  method ({{event-stream}}), and advertises
+  `mission_event_stream_endpoint` ({{as-metadata}});
+- as a **consumer**, verifies and applies received events per
+  {{set-protection}} and {{consumer-behavior}}.
+
+An implementation that supports neither role is still a conforming
+issuance profile {{I-D.draft-mcguinness-oauth-mission}}.
+
 # Security Considerations {#security-considerations}
 
 The security considerations of the issuance profile
@@ -687,21 +712,6 @@ sensitive specifics in its own audit log rather than in the event, and
 MAY omit `reason` entirely when even a minimal reason would disclose
 more than the consumer requires.
 
-# Conformance {#conformance}
-
-This document is OPTIONAL. An implementation that claims it:
-
-- as a **Mission Issuer**, emits a signed `mission.lifecycle-change`
-  SET ({{lifecycle-event}}, {{set-protection}}) on every committed
-  Mission lifecycle transition, supports at least one SSF delivery
-  method ({{event-stream}}), and advertises
-  `mission_event_stream_endpoint` ({{as-metadata}});
-- as a **consumer**, verifies and applies received events per
-  {{set-protection}} and {{consumer-behavior}}.
-
-An implementation that supports neither role is still a conforming
-issuance profile {{I-D.draft-mcguinness-oauth-mission}}.
-
 # IANA Considerations {#iana}
 
 ## Security Event Token Type
@@ -728,19 +738,11 @@ This event type uses the OpenID Shared Signals Framework {{OIDC-SSF}}
 SET shape. The standalone Mission Issuer binding
 {{I-D.draft-mcguinness-mission-authority-server}} emits this event
 type unchanged and imposes no tenant requirement; `tenant` remains
-OPTIONAL. A consumer MUST ignore members it does not understand and
-MUST NOT reject an event solely for a missing OPTIONAL member (notably
-`tenant`).
+OPTIONAL.
 
 The event-type URI is under the author-controlled
 `schemas.karlmcguinness.com` namespace so this profile can be
-deployed without a registry dependency. On adoption,
-the URI SHOULD migrate to an IETF- or foundation-controlled namespace
-(for example a `urn:ietf:params` URN or an OpenID Foundation schema
-URI); a provisional `urn:ietf:params` URN MAY be used in the interim.
-A consumer matches the event type by the exact URI the Mission Issuer's
-Transmitter Configuration Metadata advertises, so the namespace can
-change without a change to this profile's semantics.
+deployed without a registry dependency.
 
 ## OAuth Authorization Server Metadata Registration
 
