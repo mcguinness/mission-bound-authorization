@@ -423,7 +423,11 @@ the proposal was produced. (Informational.)
 Commits the structured consent disclosure shown to the Approver at the
 approval event, through a `consent_rendering_hash` and a signed Consent
 Evidence object, so an auditor can reconstruct the recorded approval
-surface. It commits what the Authorization Server recorded, not the
+surface. A translation floor requires the disclosure to render
+authority as natural language rather than serialized structure, and
+Disclosure Interrogation lets the Approver ask why an entry is needed
+before deciding, answered from recorded shaping and provenance
+material. It commits what the Authorization Server recorded, not the
 pixels presented or the Approver's comprehension.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-consent-evidence.html) · [Datatracker](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-consent-evidence) · [Individual Draft](https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-consent-evidence) · [Diff](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-consent-evidence.diff)
