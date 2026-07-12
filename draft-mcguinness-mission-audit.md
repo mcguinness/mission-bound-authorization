@@ -1022,12 +1022,19 @@ profile and the runtime and consent-evidence records it aggregates:
 - **Data minimization.** Record the action class, resource, and bound
   parameters a decision turned on, not full user content or model
   input, unless the content is itself the audited artifact.
+- **Field classification.** Classify evidence fields by sensitivity
+  when the record is produced, so access, export, and retention key
+  on the class rather than on later review; the Mission Deployment
+  Profile names the scheme in use
+  ({{I-D.draft-mcguinness-mission-architecture}}).
 - **Separation.** Keep operational logs distinct from audit-grade
   evidence, so verbose debugging data is not retained at the audit
   horizon or committed to a transparency log.
 - **Access control.** Evidence access is itself policy-governed;
   reading a Mission's evidence is a privileged operation, not a
-  byproduct of holding a Mission reference.
+  byproduct of holding a Mission reference, and a deployment SHOULD
+  record evidence reads as it records the actions the evidence
+  describes: access to the audit trail is part of the audit trail.
 - **Retention.** Retain for the declared audit horizon and no longer;
   the horizon is per-Mission, not indefinite.
 - **Identifier strategy.** The durable per-Mission `sub` is a

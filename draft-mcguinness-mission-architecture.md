@@ -386,6 +386,11 @@ The model's boundary is deliberate. The family does not define:
 - **Entitlement governance.** What standing access a principal should
   hold over time belongs to existing governance layers; the
   delegated-authority layer composes with them ({{the-mission}}).
+- **Agent identity and deployment governance.** Who the agent is, its
+  concrete instance, and its approved behavioral version belong to
+  the deployment's agent IAM and change governance; the family
+  authenticates against and consumes those facts without defining
+  them ({{three-objects}}).
 - **An agent framework.** The harness constrains the execution
   environment's relationship to Mission state; it does not say how an
   agent plans, reasons, or calls tools
@@ -784,6 +789,77 @@ is carried by its own construct, and the evidence layer records them
 together, in runtime evidence and the Mission Receipt
 ({{I-D.draft-mcguinness-mission-runtime}}), Consent Evidence, and
 the audit feed.
+
+The chain is actor lineage, not authority lineage. An `act` chain
+records who acted through whom; it does not carry what task was
+approved, how authority narrowed at each derivation, whether the
+task remains `active`, or which parameter constraints bind. Those
+travel in the Mission's own constructs: the anchors, the Authority
+Set, the lifecycle state, and Child Mission lineage
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Reading
+an actor chain as authorization provenance is the gap the Mission's
+lineage exists to close.
+
+## Three Objects, Three Lifecycles {#three-objects}
+
+A deployment that runs agents under both an agent identity system
+and this family governs three distinct objects. Each has its own
+owner, lifecycle, and revocation, and the model stays clean only
+while none absorbs another's job:
+
+Agent identity (who is acting):
+: The logical agent and, where the instance profiles are deployed,
+  the concrete instance ({{components}}). Owned by the deployment's
+  agent IAM, a registry or directory outside this family, and
+  consumed as the `client_id`, the instance assertion, and verified
+  instance claims.
+
+Agent Deployment (what is running):
+: The approved behavioral version of the agent: its code, model,
+  system prompt, tool allowlist, data scope, and runtime
+  configuration. Owned by the deployment's change governance; a
+  change to any of these is a new Agent Deployment, and which
+  changes require re-approving standing Missions is policy that
+  governance records. A Mission MAY be pinned to a named Agent
+  Deployment where the deployment defines that control. This object
+  is distinct from the Mission Deployment Profile
+  ({{deployment-profile}}), which is the estate's published claims
+  manifest, not a property of an agent.
+
+Mission (why the authority exists):
+: This family's object: the approved task, its Authority Set, and
+  its lifecycle.
+
+An agent registry is a complementary dependency, not part of the
+Mission system. Where one exists, the Mission Issuer and the PDP
+consume a small, stable slice of it: the agent identifier and its
+owner, current status and revocation state, the approved Agent
+Deployment, eligibility bounds (what the registry permits the agent
+to be approved for, a derivation input, never a grant), and risk
+tier. Registry state is a state source like any other: the consuming
+decision point treats it under the runtime profile's freshness
+discipline, with a declared staleness bound, failing closed when it
+cannot be established ({{I-D.draft-mcguinness-mission-runtime}}).
+
+Authorization composes conjunctively across the three lifecycles: a
+decision may depend on agent state, Mission state, and credential
+validity, and each gates independently. A valid credential never
+overrides a revoked agent or a non-active Mission, and a live agent
+under an active Mission still fails on an expired credential. The
+assurance levels add binding strength in the same order a deployment
+adds it: authority is issued to an authenticated client; instance
+assertion pins the concrete instance; sender-constraint keys pin
+possession; attested runtimes pin the execution environment; and an
+Agent Deployment pin holds the behavioral version
+({{assurance-levels}}).
+
+The division of labor with agent IAM is one sentence: agent identity
+preserves who is acting, and the Mission preserves why their
+authority exists. The registry and workload identity authenticate an
+approved agent instance; the Mission and its derived Authority Set
+say what sanctioned work that instance carries; per-hop credentials
+narrow; the runtime layer enforces each action and parameter; and
+the evidence layer joins what was approved, decided, and done.
 
 # The Mission Substrate {#substrate}
 
@@ -1585,6 +1661,9 @@ it does not cover. An illustrative shape:
     "decision_evidence": true,
     "execution_evidence": true,
     "retention_days": 365,
+    "field_classification": "evidence-schema-v2",
+    "evidence_access_audited": true,
+    "erasure_policy": "erasure-records",
     "transparency": {
       "service_operator": "third_party",
       "monitor": "sec-ops",
@@ -1600,6 +1679,12 @@ it does not cover. An illustrative shape:
   ]
 }
 ~~~
+
+The `evidence` member carries the deployment's evidence-handling
+posture beside its guarantees: the field-classification scheme its
+records use, whether access to Mission evidence is itself audited,
+and the erasure policy that pairs retention with deletion
+accountability ({{I-D.draft-mcguinness-mission-audit}}).
 
 Two deployments that both "support Mission" but publish different
 Deployment Profiles provide different security properties, and the
@@ -1627,6 +1712,30 @@ residues the Mission Assurance Levels ({{assurance-levels}}) and the security
 model make a deployment state rather than assume, and the exposure
 arm ({{capability-envelope}}) carries the same honesty in the other
 direction.
+
+## The Containment Matrix {#containment}
+
+Mission termination is one control in a larger containment surface.
+Each kill has a different blast radius, and an incident responder
+needs the whole matrix:
+
+| Control | Stops | Home |
+|---|---|---|
+| Mission kill | one body of work, across every resource and derived credential | the core's revocation; cascades to Child Missions ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) |
+| Agent kill | all work by one agent, across its Missions | the deployment's agent IAM ({{three-objects}}) |
+| Agent Deployment kill | every instance running a compromised version | the deployment's change governance ({{three-objects}}) |
+| Credential kill | credentials already issued | the binding's substrate, where it supports revocation; otherwise expiry ({{validity-model}}) |
+| Workload kill | the running compute itself | the platform |
+| Egress kill | the communication path | gateway and network controls |
+
+Mission termination participates in incident response; it does not
+replace it. Revoking the Mission stops issuance at once and stops
+mediated actions within the staleness bound ({{validity-model}}),
+but it terminates no process and closes no network path. The
+converse holds too: killing a workload leaves the Mission `active`
+and its authority derivable to a replacement instance unless the
+Mission is also revoked. A deployment's incident runbook names which
+of these controls exist and who may pull each.
 
 # Mission Requirements {#requirements}
 

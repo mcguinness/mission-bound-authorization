@@ -240,7 +240,14 @@ refusal path leaves evidence.
 
 Mission-bound tokens bound what authority may exist; the contract
 fixes where and how that authority is re-checked before
-consequential effects occur. The PEP is whatever component can
+consequential effects occur. The order is the point: approve the
+bounded work, then authorize every consequential action against
+that approved boundary. Per-action authorization alone cannot
+prevent individually permitted steps from composing into an outcome
+no one approved; the approved boundary bounds composition, with the
+cumulative bounds and `exclusive` latch of the metering companion
+where deployed ({{metering}},
+{{I-D.draft-mcguinness-mission-metering}}). The PEP is whatever component can
 actually prevent the action: a Resource Server, an MCP server, an
 egress proxy, a workflow engine, or the orchestrator itself
 ({{pep-placement}}). The PDP's placement is a deployment choice
@@ -1118,7 +1125,18 @@ decision. Runtime enforcement MUST evaluate:
   ({{I-D.draft-mcguinness-oauth-ai-agent-instance}}), are verified
   actor context a deployment's Resource policy MAY evaluate; unlike a
   self-asserted model or instance label, they are attester-backed
-  facts.
+  facts. Where the deployment operates an agent registry, the
+  immediate actor's registry state (status, revocation, approved
+  deployment version) is further actor context Resource policy MAY
+  require. A deployment that declares agent-state evaluation in its
+  Enforcement Scope Statement treats the registry as a state source
+  under this profile's freshness discipline: a declared staleness
+  bound, and refusal when the acting agent or its deployment version
+  is revoked or the state cannot be established within the bound
+  ({{state-freshness}}). The agent, Mission, and credential
+  lifecycles gate conjunctively; a valid token never overrides a
+  revoked agent or a non-active Mission
+  ({{I-D.draft-mcguinness-mission-architecture}}).
 - **Time.** The PDP MUST refuse if the decision context indicates the
   token is expired. The issuance profile caps a derived token's `exp`
   at the Mission's `expires_at`, so the `exp` check enforces the
@@ -1555,6 +1573,13 @@ integrity requirements. The concrete record schema, any interoperable
 canonical byte representation, separate Decision Evidence and
 Execution Evidence object schemas, and the Mission Receipt's portable
 schema ({{mission-receipt}}) are out of scope ({{deferred}}).
+
+A record captures decision inputs, the applicable policy and
+authority references, the result, and the failure condition. No
+requirement in this section asks for the model's internal reasoning,
+and a deployment SHOULD NOT record model chain-of-thought in
+enforcement evidence: it is high-sensitivity content with no
+verification value the decision inputs do not already carry.
 
 ## Required Decision Evidence
 
@@ -2186,7 +2211,12 @@ delegated actors, and Mission correlation identifier even when raw
 action parameters are not stored. Deployments SHOULD minimize recorded
 authority entries, store entry and parameter digests where full values
 are not needed for audit, restrict access to evidence by role, and
-document the retention window declared under {{evidence}}. Evidence
+document the retention window declared under {{evidence}}. Access to
+Mission evidence is itself a privileged operation a deployment SHOULD
+audit, and classifying evidence fields by sensitivity lets access,
+export, and retention key on the class; the audit companion's
+minimization duties apply across the evidence this layer produces
+({{I-D.draft-mcguinness-mission-audit}}). Evidence
 shared across resource boundaries can also correlate activity by
 `mission.id` and `authority_hash`; deployments that require
 unlinkability need an additional privacy design outside this profile.
