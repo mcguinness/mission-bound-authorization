@@ -1424,20 +1424,20 @@ The levels, cumulative:
   live at this level, each with proof obligations the runtime profile
   fixes. **Agent-compromise-resistant enforcement**: mediated
   (gateway) credential custody, a declared-and-audited path scope,
-  action-bound approval for the
-  high-consequence classes, an active-freshness state source, and
-  approval disclosures rendered by a component isolated from the
-  agent, so a
-  compromised agent cannot unilaterally take a high-consequence action
-  for which it does not hold a mediated credential. **Trifecta
-  containment**: least exposure, the harness taint rule enforced as a
-  MUST, and full mediation of the external-communication and
+  action-bound approval for the high-consequence classes, an
+  active-freshness state source, and approval disclosures rendered by
+  a component isolated from the agent, so a compromised agent cannot
+  unilaterally take a high-consequence action for which it does not
+  hold a mediated credential. **Trifecta containment**: least
+  exposure, the harness taint rule enforced as a MUST, with
+  pre-consented egress to Approver-named destinations as its one
+  carve-out, and full mediation of the external-communication and
   external-commitment classes with the egress-channel enumeration, so
-  an injected agent cannot egress on the strength of untrusted content
-  alone. These are named high bars, never implied by basic adoption; a
-  deployment MAY bind its Enforcement Scope Statement to
-  execution-environment attestation so a claim is technical rather than
-  organizational ({{I-D.draft-mcguinness-mission-runtime}},
+  an injected agent cannot egress on the strength of untrusted
+  content alone. These are named high bars, never implied by basic
+  adoption; a deployment MAY bind its Enforcement Scope Statement to
+  execution-environment attestation so a claim is technical rather
+  than organizational ({{I-D.draft-mcguinness-mission-runtime}},
   {{I-D.draft-mcguinness-mission-harness}}).
 
 Read as an adoption ladder, each level makes a broader class of agent
