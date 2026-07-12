@@ -89,7 +89,7 @@ informative:
 Mission-Bound Authorization for OAuth 2.0 commits a Mission's
 authority at a single approval event and defers widening: enlarging
 authority requires a new approval, a successor Mission. This document
-defines that successor mechanism as an OPTIONAL, layered extension to
+defines that successor mechanism as an optional, layered extension to
 the issuance profile. When an action falls outside an active Mission's
 Authority Set but the deployment's governance policy permits widening,
 a client initiates expansion: it submits a new Mission Intent through
@@ -138,9 +138,9 @@ bind an expansion request to the predecessor it expands; a
 `superseded` predecessor state with the reconciliation rules that keep
 concurrent expansions consistent.
 
-## Status: an OPTIONAL extension {#optional-status}
+## Status: an optional extension {#optional-status}
 
-This document is OPTIONAL. It is a layered extension to the issuance
+This document is optional. It is a layered extension to the issuance
 profile, not a change to it. A deployment that implements
 {{I-D.draft-mcguinness-oauth-mission}} and never expands a Mission is
 fully conformant to that profile and is unaffected by this document:

@@ -602,7 +602,7 @@ that issuer.
 Four assumptions hold across the whole model:
 
 - **Sender-constrained credentials.** Where Mission-bound tokens are
-  sender-constrained (a SHOULD in the core,
+  sender-constrained (recommended by the core,
   {{I-D.draft-mcguinness-oauth-mission}}), a token exfiltrated without
   its proof-of-possession key is unusable, and the model assumes the
   proof-of-possession mechanism is sound and keys are protected by
@@ -701,8 +701,9 @@ Agent-compromise-resistant enforcement (High-Assurance Agent):
 
 Trifecta containment (High-Assurance Agent):
 : An injected agent cannot egress on the strength of untrusted content
-  alone: least exposure and the harness taint rule are enforced as
-  MUSTs, and the external-communication and external-commitment
+  alone: least exposure and the harness taint rule are mandatory
+  requirements of the runtime profile, and the
+  external-communication and external-commitment
   classes are fully mediated
   ({{I-D.draft-mcguinness-mission-runtime}},
   {{I-D.draft-mcguinness-mission-harness}}). Rests on the harness and
@@ -914,7 +915,7 @@ limits most likely to matter and most often overstated away elsewhere:
   not the relationship between them: `intent_hash` commits the
   approved intent, `authority_hash` the consented Authority Set, and
   that the authority faithfully serves the intent is a derivation
-  policy fact (a SHOULD, auditable via `policy_version`), not
+  policy fact (a recommendation, auditable via `policy_version`), not
   something either hash proves. And `authority_hash` commits the full
   consented set, which a per-Resource-Server token, carrying a
   narrowed subset, does not contain: at such a Resource Server the

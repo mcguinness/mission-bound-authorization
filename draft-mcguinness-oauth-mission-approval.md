@@ -86,7 +86,7 @@ informative:
 Mission-Bound Authorization for OAuth 2.0 (the "issuance profile")
 records an approval event at which an Approver consents to a Mission's
 derived Authority Set, but it treats that event as immediate. A human
-review of an agent's proposed Mission is often asynchronous. This
+review of an agent's Proposed Mission is often asynchronous. This
 document defines an optional Mission Deferred Approval profile. It
 profiles OAuth Deferred Token Response so a Mission approval can be
 deferred and polled. Deferral relocates the issuance profile's
@@ -106,7 +106,7 @@ Intent and records an approval event at which an Approver consents to
 that authority. It specifies what the approval commits, not how the
 approval is obtained over time. One fact about agent approval is left
 unspecified: a human Approver review is asynchronous. The agent submits
-a proposed Mission and must wait, sometimes for a long time, for a
+a Proposed Mission and must wait, sometimes for a long time, for a
 decision.
 
 This document supplies that. It profiles OAuth Deferred Token Response
@@ -121,9 +121,9 @@ in-place narrowing-revision handshake over this profile
 approved Mission is a different operation with its own fresh approval
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
-# Status: An OPTIONAL Extension {#optional-status}
+# Status: An Optional Extension {#optional-status}
 
-This document is OPTIONAL. A deployment that obtains Mission approvals
+This document is optional. A deployment that obtains Mission approvals
 synchronously is fully conformant to the issuance profile and is
 unaffected by this document. It places no new requirement on the
 issuance profile.
@@ -178,7 +178,7 @@ Intent through PAR as the issuance profile requires, and includes
 request, opting in to the deferred substrate
 ({{I-D.draft-gerber-oauth-deferred-token-response}}). When the Mission
 Issuer cannot decide the approval immediately, for example because it
-routes the proposed Mission to a human reviewer, it returns the
+routes the Proposed Mission to a human reviewer, it returns the
 substrate's deferred response (`authorization_pending` with a
 `deferral_code`) instead of a token, and the client polls with the
 deferred grant type until the approval resolves to a Mission-bound token
@@ -193,7 +193,7 @@ issuance of the authorization code
 profile relocates that approval event without weakening it, moving it
 to the asynchronous review surface:
 
-1. The client submits the proposed Mission via PAR {{RFC9126}} and the
+1. The client submits the Proposed Mission via PAR {{RFC9126}} and the
    authorization request completes into a deferred state per the
    deferred substrate ({{I-D.draft-gerber-oauth-deferred-token-response}}).
 2. Before approval only the pending request exists. The authorization
@@ -424,7 +424,7 @@ client_id=s6BhdRkqt3&
 completion_mode=deferred
 ~~~
 
-The Mission Issuer routes the proposed Mission to `alice` for review and
+The Mission Issuer routes the Proposed Mission to `alice` for review and
 defers:
 
 ~~~ http
@@ -498,7 +498,7 @@ meet the approval event's authentication requirements, authenticating
 the Approver and satisfying the Mission Intent's `controls.acr`
 ({{deferred-sequencing}}); deferring an approval does not lower the bar
 the synchronous event sets. Approver routing and notification, how a
-proposed Mission reaches a reviewer and how the reviewer is alerted, are
+Proposed Mission reaches a reviewer and how the reviewer is alerted, are
 deployment matters and are named as such here rather than specified.
 
 An approval decision set ({{decision-set}}) is evidence about the
@@ -511,7 +511,7 @@ the issuer's record retention like the approval event itself.
 
 # Privacy Considerations {#privacy-considerations}
 
-A pending proposed Mission reveals what authority an agent sought
+A pending Proposed Mission reveals what authority an agent sought
 before any approval exists. A Mission Issuer SHOULD treat pending
 proposals and their resolutions as sensitive and retain them under the
 same controls as other approval-event records.

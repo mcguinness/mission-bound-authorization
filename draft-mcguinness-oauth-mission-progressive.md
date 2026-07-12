@@ -158,9 +158,9 @@ rule for drawing authority from it, so authority can grow within the
 envelope at runtime without a fresh human approval each time, while the
 active authority any single Mission yields stays narrow.
 
-# Status: An EXPERIMENTAL Extension {#optional-status}
+# Status: An Experimental Extension {#optional-status}
 
-This document is OPTIONAL and **experimental**: adopt it for
+This document is optional and experimental: adopt it for
 evaluation, not as a stable interface. It removes the per-expansion
 human from a consented envelope, which is the highest-consequence
 capability in the expansion family; deploy it only with the rate

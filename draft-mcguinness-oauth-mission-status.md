@@ -171,7 +171,7 @@ surface (keyed by `mission_id`) and its signed status evidence, and
 defers a standardized management endpoint for lifecycle transitions to
 this document.
 
-This document specifies those surfaces as OPTIONAL extensions
+This document specifies those surfaces as optional extensions
 that build on the issuance profile. The capabilities are:
 
 - A dedicated **Mission Status operation**
@@ -1579,6 +1579,41 @@ Cache-Control: max-age=3600
 }
 ~~~
 
+# Conformance {#conformance}
+
+An implementation conforms to the issuance profile
+{{I-D.draft-mcguinness-oauth-mission}} or implements the Mission
+Issuer role of a binding that serves these surfaces, such as the
+standalone Mission Authority Server
+{{I-D.draft-mcguinness-mission-authority-server}}. Each extension in this
+document is independently OPTIONAL; an implementation names the ones it
+supports (for example, "issuance profile with Mission Status and
+Mission Lifecycle"), and an implementation that supports none of them
+is still a conforming issuance profile.
+
+An implementation claiming an extension MUST meet its requirements:
+
+- **Mission Status**: serve the dedicated Mission Status operation
+  ({{mission-status}}) with JWS-signed responses
+  (`application/mission-status-response+jwt`), the authentication of
+  {{mission-status-authentication}}, the anti-oracle property
+  ({{mission-status-anti-oracle}}), and the error shape of
+  {{mission-status-errors}}; and advertise `mission_status_endpoint`.
+- **Introspection projection**: carry the Mission projection on the
+  introspection response ({{introspection-projection}}), returning it
+  as a {{RFC9701}}-signed response where end-to-end integrity is
+  required.
+- **Mission Lifecycle**: serve the management endpoint
+  ({{mission-lifecycle-endpoint}}), gate the `suspended` and
+  `completed` states it introduces exactly as the issuance profile gates
+  on non-`active` state, and advertise `mission_lifecycle_endpoint`.
+- **Mission Completion**: issue and gate `terminal_when` entries per
+  {{completion}}, meeting the requirements of
+  {{completion-conformance}}.
+- **Revocation propagation**: advertise `mission_max_stale_seconds`
+  and size Mission-bound access-token TTLs to it
+  ({{revocation-enforcement-classes}}).
+
 # Security Considerations {#security-considerations}
 
 The security considerations of the issuance profile
@@ -1727,41 +1762,6 @@ detail, and SHOULD avoid event identifiers that disclose more than the
 consuming party needs. Consulting an `event_source` also reveals the
 Authorization Server's interest in that event; a deployment SHOULD weigh
 that exposure when the source is operated by another party.
-
-# Conformance {#conformance}
-
-An implementation conforms to the issuance profile
-{{I-D.draft-mcguinness-oauth-mission}} or implements the Mission
-Issuer role of a binding that serves these surfaces, such as the
-standalone Mission Authority Server
-{{I-D.draft-mcguinness-mission-authority-server}}. Each extension in this
-document is independently OPTIONAL; an implementation names the ones it
-supports (for example, "issuance profile with Mission Status and
-Mission Lifecycle"), and an implementation that supports none of them
-is still a conforming issuance profile.
-
-An implementation claiming an extension MUST meet its requirements:
-
-- **Mission Status**: serve the dedicated Mission Status operation
-  ({{mission-status}}) with JWS-signed responses
-  (`application/mission-status-response+jwt`), the authentication of
-  {{mission-status-authentication}}, the anti-oracle property
-  ({{mission-status-anti-oracle}}), and the error shape of
-  {{mission-status-errors}}; and advertise `mission_status_endpoint`.
-- **Introspection projection**: carry the Mission projection on the
-  introspection response ({{introspection-projection}}), returning it
-  as a {{RFC9701}}-signed response where end-to-end integrity is
-  required.
-- **Mission Lifecycle**: serve the management endpoint
-  ({{mission-lifecycle-endpoint}}), gate the `suspended` and
-  `completed` states it introduces exactly as the issuance profile gates
-  on non-`active` state, and advertise `mission_lifecycle_endpoint`.
-- **Mission Completion**: issue and gate `terminal_when` entries per
-  {{completion}}, meeting the requirements of
-  {{completion-conformance}}.
-- **Revocation propagation**: advertise `mission_max_stale_seconds`
-  and size Mission-bound access-token TTLs to it
-  ({{revocation-enforcement-classes}}).
 
 # IANA Considerations {#iana}
 

@@ -152,11 +152,11 @@ the Mission Issuer is never on the partner's request path; the cost
 of that independence is a bounded revocation lease
 ({{cross-domain-revocation}}).
 
-# Status: An OPTIONAL Extension {#status}
+# Status: An Optional Extension {#status}
 
 This document is the Cross-Domain capability named by the base
 profile's conformance model ({{I-D.draft-mcguinness-oauth-mission}},
-Section "Conformance"). The capability is OPTIONAL: a deployment whose
+Section "Conformance"). The capability is optional: a deployment whose
 Missions never leave their issuing AS does not implement this
 document, and the issuance profile is complete without it.
 
@@ -683,6 +683,39 @@ specific grant profile is discovered as that profile specifies, or
 out of band. The bilateral inputs of {{pre-established-trust}} are
 not discoverable and exist before first use.
 
+# Conformance {#conformance}
+
+An implementation conforms in one of two roles and names the
+capability as the issuance profile's conformance model directs (for
+example, "Mission Issuer with Cross-Domain";
+{{I-D.draft-mcguinness-oauth-mission}}, Section "Conformance").
+
+An **Originating Mission Issuer with Cross-Domain** is a conforming
+Mission Issuer of the issuance profile that additionally:
+
+- issues the Mission-bound cross-domain grant per
+  {{cross-domain-grant}}, gated and counted as a derivation;
+- scopes every projection by audience ({{audience-scope}});
+- fails issuance with the codes of {{error-responses}}; and
+- advertises cross-domain grant issuance per {{as-metadata}}.
+
+A **Resource AS**:
+
+- honors the cross-domain grant per {{validation-at-resource-as}},
+  including issuer trust by local policy, explicit typing,
+  sender-constraint and one-time-use verification, and fail-closed
+  interpretation of conveyed authority;
+- bounds every local token by the grant that seeded it and issues it
+  sender-constrained and short-lived ({{validation-at-resource-as}},
+  {{cross-domain-revocation}});
+- fails redemption with the codes of {{error-responses}};
+- where it offers token introspection for its local tokens, follows
+  {{introspection-at-resource-as}}; and
+- never creates or alters a Mission ({{model}}).
+
+A Resource AS is not required to implement the issuance profile's Mission
+Issuer role.
+
 # Security Considerations
 
 The security considerations of the issuance profile
@@ -767,39 +800,6 @@ property of the issuance profile
 Correlation"), extended across the trust boundary. Audience scoping
 ({{audience-scope}}) is the minimization measure: a Resource AS never
 sees Authority Set entries addressed to other audiences.
-
-# Conformance {#conformance}
-
-An implementation conforms in one of two roles and names the
-capability as the issuance profile's conformance model directs (for
-example, "Mission Issuer with Cross-Domain";
-{{I-D.draft-mcguinness-oauth-mission}}, Section "Conformance").
-
-An **Originating Mission Issuer with Cross-Domain** is a conforming
-Mission Issuer of the issuance profile that additionally:
-
-- issues the Mission-bound cross-domain grant per
-  {{cross-domain-grant}}, gated and counted as a derivation;
-- scopes every projection by audience ({{audience-scope}});
-- fails issuance with the codes of {{error-responses}}; and
-- advertises cross-domain grant issuance per {{as-metadata}}.
-
-A **Resource AS**:
-
-- honors the cross-domain grant per {{validation-at-resource-as}},
-  including issuer trust by local policy, explicit typing,
-  sender-constraint and one-time-use verification, and fail-closed
-  interpretation of conveyed authority;
-- bounds every local token by the grant that seeded it and issues it
-  sender-constrained and short-lived ({{validation-at-resource-as}},
-  {{cross-domain-revocation}});
-- fails redemption with the codes of {{error-responses}};
-- where it offers token introspection for its local tokens, follows
-  {{introspection-at-resource-as}}; and
-- never creates or alters a Mission ({{model}}).
-
-A Resource AS is not required to implement the issuance profile's Mission
-Issuer role.
 
 # IANA Considerations
 

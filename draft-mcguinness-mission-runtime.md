@@ -320,8 +320,8 @@ deployment choice does not make it an ad hoc one: the Runtime-Enforced
 level of the Mission Assurance Levels
 ({{I-D.draft-mcguinness-mission-architecture}}) requires a specified
 decision-API binding, of which the AuthZEN profile is the one this
-family defines, and a deployment that uses a different decision API MUST
-specify that binding likewise. This document is the
+family defines; a deployment that uses a different decision API
+specifies that binding likewise ({{authzen}}). This document is the
 architecture and invariant layer; the binding is the interoperability
 layer.
 
@@ -451,7 +451,7 @@ Resource Server runtime profile:
 : A deployment's Resource Server-facing conformance statement for this
   profile. It defines which protected resources and operations the
   Resource Server enforces, where the PEP sits, how local Resource
-  policy composes with Mission authority, and which operation profiles
+  policy composes with Mission authority, and which Operation Profiles
   apply.
 
 Mission state source:
@@ -545,7 +545,7 @@ architecture defines ({{I-D.draft-mcguinness-mission-architecture}}). It MUST in
 - the PDP or PDPs that evaluate Mission-bound decisions;
 - the `authorization_details` types, action identifiers, and constraint
   vocabularies it supports;
-- any Resource Server runtime profile and operation profiles it uses
+- any Resource Server runtime profile and Operation Profiles it uses
   ({{rs-runtime-profile}});
 - the Mission state source and maximum staleness bound used for each
   action class ({{state-freshness}});
@@ -587,7 +587,7 @@ The Enforcement Scope Statement names which tier covers which class.
 One bound is stated rather than implied: reconciliation detects
 divergence between decisions and outcomes; it never manufactures
 exactly-once execution, which exists only where the resource itself
-supports idempotency, as its operation profile records
+supports idempotency, as its Operation Profile records
 ({{rs-runtime-profile}}).
 
 The enforcement scope is a deployment conformance statement, not an
@@ -663,7 +663,7 @@ Some operations have no fixed class: a shell, a generic HTTP
 client, a code interpreter, any operation whose consequence depends
 on its arguments. Such an argument-dependent operation is classified
 per invocation, from its normalized parameters, by a classifier the
-deployment declares in its enforcement-scope statement
+deployment declares in its Enforcement Scope Statement
 ({{runtime-conformance}}). An invocation the classifier cannot
 affirmatively place MUST be treated as the widest class the
 operation can reach, and the floor below applies to the classifier's
@@ -962,7 +962,7 @@ MUST define:
   execution path outside the claim, and, when the PEP and PDP are
   separate components, how they authenticate and integrity-protect
   decision requests and responses;
-- the operation profile for each protected operation or family:
+- the Operation Profile for each protected operation or family:
   parameter normalization, default insertion, omitted optional fields,
   set-like array handling, and idempotency-key handling;
 - the permit validity window for each action class, and replay controls
@@ -1421,7 +1421,7 @@ that digest immediately before acting.
   shown effect-free in the Operation Profile, which records why that
   field cannot change the action's external effect; a field whose effect
   is not so justified MUST be included.
-- The operation profile MUST define default insertion, omitted
+- The Operation Profile MUST define default insertion, omitted
   optional fields, and set-like array handling before canonicalization.
 - The permit MUST also bind the Mission reference, token issuer when
   available, token audience or protected resource, `sub`, `client_id`,
@@ -1470,7 +1470,7 @@ that digest immediately before acting.
 
 A permit authorizes initiation. An action still executing when the
 permit expires MAY run to completion, unless the action class requires
-an execution lease, which the operation profile defines; when a lease
+an execution lease, which the Operation Profile defines; when a lease
 is required the executing PEP MUST stop or renew before the lease
 expires. For the irreversible-action, external-commitment, and
 privileged-administration classes the Operation Profile MUST define
@@ -1873,7 +1873,7 @@ actions that matter, and a deployment MAY extend token lifetimes for
 issuance-load reasons without silently losing the kill switch; where
 issuance gating is the only control, short lifetimes remain the
 control and the issuance profile's recommendation stands. The choice
-belongs in the enforcement-scope statement: what stops a revoked
+belongs in the Enforcement Scope Statement: what stops a revoked
 Mission, at what latency, is a fact that statement already declares
 ({{runtime-conformance}}).
 
@@ -1936,7 +1936,9 @@ normative binding is the Mission-Bound Runtime Enforcement: AuthZEN
 Profile {{I-D.draft-mcguinness-mission-authzen}}, which specifies
 how the Mission and actor inputs, the decision and evidence objects, and
 the denial classification map onto the AuthZEN request and response.
-Other decision APIs may be bound by other specifications.
+Other decision APIs may be bound by other specifications. A
+deployment that uses a different decision API MUST specify that
+binding in the same way.
 
 This document defines no binding of its own. Keeping the binding in a
 separate specification preserves substrate-independence: the enforcement
@@ -2173,7 +2175,10 @@ extends credential exposure beyond the Resource Server boundary; a
 deployment that does so needs the same credential handling, retention,
 and disclosure controls it applies at the Resource Server.
 
-## Evidence Privacy and Correlation
+General OAuth security guidance {{RFC9700}} applies to the underlying
+credentials.
+
+# Privacy Considerations
 
 Runtime enforcement evidence is intentionally durable and therefore
 sensitive. It can reveal a subject's resources, action timing,
@@ -2185,9 +2190,6 @@ document the retention window declared under {{evidence}}. Evidence
 shared across resource boundaries can also correlate activity by
 `mission.id` and `authority_hash`; deployments that require
 unlinkability need an additional privacy design outside this profile.
-
-General OAuth security guidance {{RFC9700}} applies to the underlying
-credentials.
 
 # IANA Considerations
 
@@ -2211,14 +2213,14 @@ any decision-API wire members are defined by the binding
 
 # Parameter Digest Worked Example {#parameter-digest-example}
 
-This non-normative example shows an operation profile and the
+This non-normative example shows an Operation Profile and the
 `parameter_digest` it produces ({{parameter-binding}}), so two
 implementations can confirm they normalize and digest the same way.
 
 Consider a `journal-entries.write` operation under an ERP
 reconciliation Mission (`msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`) whose
 applicable entry carries a `max_amount` ceiling of 500.00 USD. The
-operation profile fixes the parameter set and normalization: the
+Operation Profile fixes the parameter set and normalization: the
 members are `amount_usd` and `source_invoice_id`; `amount_usd` is a
 decimal string with exactly two fractional digits; no defaults are
 inserted and no optional members are omitted; there are no set-like

@@ -294,16 +294,7 @@ to differ, the profile governs.
 # Status: An Informational Architecture {#status}
 
 This document is Informational. It establishes no conformance class
-and defines no new mechanism, claim, or wire format. Where it uses
-words like "must" or "should," they carry their ordinary English
-meaning and describe what a referenced profile establishes, not a
-requirement this document places. Terms are the core's; Policy
-Enforcement Point (PEP), Policy Decision Point (PDP), and
-consequential action are the runtime profile's
-({{I-D.draft-mcguinness-mission-runtime}}); Mission Authority Server
-(MAS) is defined by
-{{I-D.draft-mcguinness-mission-authority-server}}; the AAuth binding
-is defined by {{I-D.draft-mcguinness-mission-aauth}}.
+and defines no new mechanism, claim, or wire format.
 
 Its boundary with the Mission Security Model
 ({{I-D.draft-mcguinness-mission-security-model}}) is deliberate: this
@@ -311,6 +302,18 @@ document describes components, interfaces, and data flows; the
 security model describes the trusted base and how each component's
 compromise degrades the guarantees. Each profile's own Security
 Considerations remain normative over both.
+
+# Conventions and Terminology {#conventions}
+
+Where this document uses words like "must" or "should," they carry
+their ordinary English meaning and describe what a referenced profile
+establishes, not a requirement this document places. Terms are the
+core's ({{I-D.draft-mcguinness-oauth-mission}}); Policy Enforcement
+Point (PEP), Policy Decision Point (PDP), and consequential action
+are the runtime profile's ({{I-D.draft-mcguinness-mission-runtime}});
+Mission Authority Server (MAS) is defined by
+{{I-D.draft-mcguinness-mission-authority-server}}; the AAuth binding
+is defined by {{I-D.draft-mcguinness-mission-aauth}}.
 
 # The Mission {#the-mission}
 
@@ -1211,8 +1214,9 @@ the AAuth profile defines ({{I-D.draft-mcguinness-mission-aauth}}).
 Per-action enforcement is budgeted, not blanket: only consequential
 actions are gated, the common-case decision is a local evaluation
 against a materialized policy view whose network cost is paid per
-freshness window, and only the high-consequence classes must hold a
-synchronous gate (the runtime profile's deployment considerations,
+freshness window, and only the high-consequence classes are required
+by the runtime profile to hold a synchronous gate (the runtime
+profile's deployment considerations,
 {{I-D.draft-mcguinness-mission-runtime}}). The composition is an
 overlay, not a substrate swap: a deployment mediates the paths where
 the high-consequence classes live and lets every other resource ride
@@ -1429,13 +1433,14 @@ The levels, cumulative:
   a component isolated from the agent, so a compromised agent cannot
   unilaterally take a high-consequence action for which it does not
   hold a mediated credential. **Trifecta containment**: least
-  exposure, the harness taint rule enforced as a MUST, with
-  pre-consented egress to Approver-named destinations as its one
-  carve-out, and full mediation of the external-communication and
+  exposure, the harness taint rule enforced as a mandatory
+  requirement of the harness profile, with pre-consented egress to
+  Approver-named destinations as its one carve-out, and full mediation
+  of the external-communication and
   external-commitment classes with the egress-channel enumeration, so
   an injected agent cannot egress on the strength of untrusted
   content alone. These are named high bars, never implied by basic
-  adoption; a deployment MAY bind its Enforcement Scope Statement to
+  adoption; a deployment can bind its Enforcement Scope Statement to
   execution-environment attestation so a claim is technical rather
   than organizational ({{I-D.draft-mcguinness-mission-runtime}},
   {{I-D.draft-mcguinness-mission-harness}}).
@@ -1859,6 +1864,19 @@ considerations. The consolidated trusted base and compromise analysis
 are the Mission Security Model's
 ({{I-D.draft-mcguinness-mission-security-model}}), and each profile's
 own Security Considerations remain normative.
+
+# Privacy Considerations {#privacy-considerations}
+
+The privacy properties of the Mission record and the Mission Intent
+are the core's ({{I-D.draft-mcguinness-oauth-mission}}) and each
+adopted profile's; this document describes them and adds no data
+element of its own. The core's Privacy Considerations cover Mission
+Identifier correlation, token payload disclosure, and Intent
+retention, with the audit profile's erasure record as the
+transparency-side mechanism
+({{I-D.draft-mcguinness-mission-audit}}). The status profile's
+anti-oracle property bounds what its status surfaces disclose
+({{I-D.draft-mcguinness-oauth-mission-status}}).
 
 # IANA Considerations {#iana}
 

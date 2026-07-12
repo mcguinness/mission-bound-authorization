@@ -192,7 +192,7 @@ implementation detail, not an interoperability contract.
 
 # Relationship to the Issuance Profile {#relationship}
 
-This document is OPTIONAL and layered on
+This document is optional and layered on
 {{I-D.draft-mcguinness-oauth-mission}}. A deployment that accepts only
 hand-authored Mission Intent values is fully conformant to the issuance
 profile and is unaffected by this document.
@@ -992,6 +992,12 @@ Shaping Evidence is retained and for how long, and whether Mission
 records cite `shaping_evidence_hash`. The shaping posture then lives
 in the same artifact as the deployment's other claims, and its absence
 is legible rather than assumed.
+
+# Conformance
+
+This document is Informational and defines no conformance class
+({{why-informational}}). "Sound shaper" names recommended behaviors,
+not a conformance target.
 
 # Security Considerations {#security-considerations}
 

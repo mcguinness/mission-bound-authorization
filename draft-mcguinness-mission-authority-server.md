@@ -285,7 +285,7 @@ The Mission Join ({{mission-join}}) is the newest mechanism in the
 family and not yet exercised in deployment; a deployment that can
 implement the issuance profile obtains the stronger, stable binding.
 
-## Conventions and Terminology
+# Conventions and Terminology
 
 {::boilerplate bcp14-tagged}
 
@@ -1396,7 +1396,7 @@ and no issuance gating
 ({{I-D.draft-mcguinness-mission-architecture}}).
 
 A deployment claiming this profile MUST state, alongside its
-enforcement-scope statement:
+Enforcement Scope Statement:
 
 - what the join proves (that the credential belongs to the Mission's
   subject and client) and what it does not (that the credential was
@@ -1468,69 +1468,14 @@ deployed, it removes the credential and issuance-gating limitations
 for the resources of each consuming Authorization Server, while
 approval, the record, and the lifecycle remain here.
 
-# Conformance {#conformance}
-
-An implementation conforms in one of two roles.
-
-A **Mission Authority Server**:
-
-- serves the mission submission endpoint with the validation,
-  media-type dispatch, error, and anti-oracle rules of
-  {{mission-submission}};
-- executes the approval event of {{mission-approval}}, creating the
-  Mission record `active` atomically with the approval decision;
-- records Missions per the issuance profile's Mission Record section
-  and retains each record for the audit horizon;
-- serves the Mission Status operation and the Mission Lifecycle
-  endpoint with its full operation set (`revoke`, `suspend`, `resume`,
-  `complete`) per {{lifecycle-and-state}};
-- publishes the discovery document of {{discovery}} with every
-  REQUIRED member; and
-- issues no token and no artifact that grants access by possession:
-  `submission_id` and `mission_id` are references.
-
-**Expansion and Child Creation** ({{native-surfaces}}) is a named
-OPTIONAL capability of the Mission Authority Server role. A MAS
-claiming it additionally:
-
-- accepts the `predecessor`, `parent`, and `child_actor` submission
-  members, with the dispatch and refusal rules of {{native-carriage}};
-- verifies the binding of {{native-binding}} before adjudicating: the
-  authenticated submitting client equals the predecessor's or parent's
-  recorded `client_id`, and, for expansion, the established Subject
-  equals the predecessor's `subject`;
-- applies the expansion profile's rules by reference: predecessor
-  active, reconciliation serialization, supersession atomicity, and
-  the lineage members ({{native-expansion}});
-- applies the child-delegation profile's rules by reference: the
-  `children` on-switch, strict subset, fan-out accounting, `parent`
-  construction, cascade, and child client identity ({{native-child}});
-  and
-- carries the profiles' closed code sets, reconciliation statuses in
-  `mission_expansion_status` and adjudication denial reasons in the
-  shared `mission_denial_reason` member, on its error and
-  submission-status surfaces ({{native-carriage}}).
-
-A **Mission-joining PDP**:
-
-- resolves referenced Missions at the MAS through the Mission Status
-  operation and treats the MAS as its Mission state source under the
-  runtime profile's freshness rules ({{mission-join}});
-- verifies the subject join and the client join before evaluating
-  authority, and denies with `mission_mismatch` on any join failure;
-- evaluates joined actions under the runtime profile's decision
-  contract, drawing authority from the Mission; and
-- when the AuthZEN binding is in use, emits Decision Evidence per
-  {{I-D.draft-mcguinness-mission-authzen}}, recording the Mission
-  reference the join was verified against.
-
 # The Enterprise Mission Authority Profile {#enterprise-profile}
 
-The conformance floor above makes a MAS deployable. This profile is
-the operating profile for a MAS used as an estate's Mission control
-plane: it turns the floor's SHOULDs and OPTIONALs into the guarantees
-an enterprise deployment needs. A deployment claims the Enterprise
-Mission Authority Profile only when all of the following hold; it is
+The conformance floor ({{conformance}}) makes a MAS deployable. This
+profile is the operating profile for a MAS used as an estate's
+Mission control plane: it turns the floor's SHOULDs and OPTIONALs
+into the guarantees an enterprise deployment needs. A deployment
+claims the Enterprise Mission Authority Profile only when all of the
+following hold; it is
 the Runtime-Enforced level of the Mission Assurance Levels under the MAS
 binding, with the obligations below ({{I-D.draft-mcguinness-mission-architecture}}).
 
@@ -1752,6 +1697,62 @@ Set is derived from the entitlements the job actually exercises, with
 the deployment's entitlement catalog as the derivation policy's
 input; the service account retains only what no Mission yet governs,
 and that shrinking residue is the adoption metric.
+
+# Conformance {#conformance}
+
+An implementation conforms in one of two roles.
+
+A **Mission Authority Server**:
+
+- serves the mission submission endpoint with the validation,
+  media-type dispatch, error, and anti-oracle rules of
+  {{mission-submission}};
+- executes the approval event of {{mission-approval}}, creating the
+  Mission record `active` atomically with the approval decision;
+- records Missions per the issuance profile's Mission Record section
+  and retains each record for the audit horizon;
+- serves the Mission Status operation and the Mission Lifecycle
+  endpoint with its full operation set (`revoke`, `suspend`, `resume`,
+  `complete`) per {{lifecycle-and-state}};
+- publishes the discovery document of {{discovery}} with every
+  REQUIRED member; and
+- issues no token and no artifact that grants access by possession:
+  `submission_id` and `mission_id` are references.
+
+**Expansion and Child Creation** ({{native-surfaces}}) is a named
+OPTIONAL capability of the Mission Authority Server role. A MAS
+claiming it additionally:
+
+- accepts the `predecessor`, `parent`, and `child_actor` submission
+  members, with the dispatch and refusal rules of {{native-carriage}};
+- verifies the binding of {{native-binding}} before adjudicating: the
+  authenticated submitting client equals the predecessor's or parent's
+  recorded `client_id`, and, for expansion, the established Subject
+  equals the predecessor's `subject`;
+- applies the expansion profile's rules by reference: predecessor
+  active, reconciliation serialization, supersession atomicity, and
+  the lineage members ({{native-expansion}});
+- applies the child-delegation profile's rules by reference: the
+  `children` on-switch, strict subset, fan-out accounting, `parent`
+  construction, cascade, and child client identity ({{native-child}});
+  and
+- carries the profiles' closed code sets, reconciliation statuses in
+  `mission_expansion_status` and adjudication denial reasons in the
+  shared `mission_denial_reason` member, on its error and
+  submission-status surfaces ({{native-carriage}}).
+
+A **Mission-joining PDP**:
+
+- resolves referenced Missions at the MAS through the Mission Status
+  operation and treats the MAS as its Mission state source under the
+  runtime profile's freshness rules ({{mission-join}});
+- verifies the subject join and the client join before evaluating
+  authority, and denies with `mission_mismatch` on any join failure;
+- evaluates joined actions under the runtime profile's decision
+  contract, drawing authority from the Mission; and
+- when the AuthZEN binding is in use, emits Decision Evidence per
+  {{I-D.draft-mcguinness-mission-authzen}}, recording the Mission
+  reference the join was verified against.
 
 # Security Considerations
 
