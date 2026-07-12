@@ -1423,7 +1423,8 @@ The levels, cumulative:
 : adds the guarantees that resist a compromised agent. Two named claims
   live at this level, each with proof obligations the runtime profile
   fixes. **Agent-compromise-resistant enforcement**: mediated
-  credential custody, no unmediated path, action-bound approval for the
+  (gateway) credential custody, a declared-and-audited path scope,
+  action-bound approval for the
   high-consequence classes, an active-freshness state source, and
   approval disclosures rendered by a component isolated from the
   agent, so a
