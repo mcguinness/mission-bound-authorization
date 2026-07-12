@@ -1927,6 +1927,12 @@ sufficient; "May this Mission read invoices for customer 5678 in
 addition to customer 1234?" is. A clarification <span class="bcp14">SHOULD</span> identify the
 authority consequence of each offered choice and <span class="bcp14">SHOULD</span> state what the
 shaper will do if it is left unanswered (refuse, narrow, or wait).<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-2">Clarification runs from shaper to requester and resolves task ambiguity
+before a proposal exists. The reverse channel, the Approver questioning
+the proposal at the consent surface, is Disclosure Interrogation
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>); Shaping
+Evidence, in particular <code>entry_rationales</code>, is its grounding material
+(<a href="#shaping-evidence" class="auto internal xref">Section 10</a>).<a href="#section-8.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="refusal">
@@ -2094,23 +2100,33 @@ whether human confirmation is required.<a href="#section-10-2.10.1" class="pilcr
 </dd>
         <dd class="break"></dd>
 <dt id="section-10-2.15">
-<code>ambiguities</code>:</dt>
+<code>entry_rationales</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-10-2.16">
-          <p id="section-10-2.16.1">Material ambiguities and how each was handled.<a href="#section-10-2.16.1" class="pilcrow">¶</a></p>
+          <p id="section-10-2.16.1">For each proposed resource or action (<code>applies_to</code>), the
+user-supplied or inferred fact that motivated its inclusion
+(<code>basis</code>). This is the recorded material a consent surface draws on
+to answer why the task needs an entry (Disclosure Interrogation,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-10-2.16.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-10-2.17">
-<code>excluded_authority</code>:</dt>
+<code>ambiguities</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-10-2.18">
-          <p id="section-10-2.18.1">Plausible authority the shaper deliberately excluded.<a href="#section-10-2.18.1" class="pilcrow">¶</a></p>
+          <p id="section-10-2.18.1">Material ambiguities and how each was handled.<a href="#section-10-2.18.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-10-2.19">
-<code>model_trace</code>:</dt>
+<code>excluded_authority</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-10-2.20">
-          <p id="section-10-2.20.1">Model prompts, outputs, or tool calls used during shaping. When
+          <p id="section-10-2.20.1">Plausible authority the shaper deliberately excluded.<a href="#section-10-2.20.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.21">
+<code>model_trace</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.22">
+          <p id="section-10-2.22.1">Model prompts, outputs, or tool calls used during shaping. When
 retained it <span class="bcp14">MUST</span> be treated as sensitive audit data
-(<a href="#privacy-considerations" class="auto internal xref">Section 18</a>) and <span class="bcp14">MUST NOT</span> be rendered as authority.<a href="#section-10-2.20.1" class="pilcrow">¶</a></p>
+(<a href="#privacy-considerations" class="auto internal xref">Section 18</a>) and <span class="bcp14">MUST NOT</span> be rendered as authority.<a href="#section-10-2.22.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2184,6 +2200,16 @@ reproducible for that record.<a href="#section-10.1-5" class="pilcrow">¶</a></p
       "basis": "catalog",
       "source_uri":
         "https://billing.example.com/.well-known/tools"
+    }
+  ],
+  "entry_rationales": [
+    {
+      "applies_to": {
+        "resource": "https://billing.example.com",
+        "action": "invoice.read"
+      },
+      "basis":
+        "support ticket 456 concerns an invoice for customer 1234"
     }
   ]
 }

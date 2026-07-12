@@ -1202,7 +1202,13 @@ authority grant.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
                 <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-material-notice-requirement" class="internal xref">Material Notice Requirements</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
-                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-layered-rendering" class="internal xref">Layered Rendering</a></p>
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-intent-translation" class="internal xref">Intent Translation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.4">
+                <p id="section-toc.1-1.4.2.4.1"><a href="#section-4.4" class="auto internal xref">4.4</a>.  <a href="#name-layered-rendering" class="internal xref">Layered Rendering</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.5">
+                <p id="section-toc.1-1.4.2.5.1"><a href="#section-4.5" class="auto internal xref">4.5</a>.  <a href="#name-disclosure-interrogation" class="internal xref">Disclosure Interrogation</a></p>
 </li>
             </ul>
 </li>
@@ -1261,7 +1267,10 @@ authority grant.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
                 <p id="section-toc.1-1.11.2.4.1"><a href="#section-11.4" class="auto internal xref">11.4</a>.  <a href="#name-decline-suppression" class="internal xref">Decline Suppression</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.5">
-                <p id="section-toc.1-1.11.2.5.1"><a href="#section-11.5" class="auto internal xref">11.5</a>.  <a href="#name-incomplete-material-notices" class="internal xref">Incomplete Material Notices</a></p>
+                <p id="section-toc.1-1.11.2.5.1"><a href="#section-11.5" class="auto internal xref">11.5</a>.  <a href="#name-interrogation-as-a-persuasi" class="internal xref">Interrogation as a Persuasion Surface</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.6">
+                <p id="section-toc.1-1.11.2.6.1"><a href="#section-11.6" class="auto internal xref">11.6</a>.  <a href="#name-incomplete-material-notices" class="internal xref">Incomplete Material Notices</a></p>
 </li>
             </ul>
 </li>
@@ -1346,13 +1355,17 @@ signing the exact disclosure commitment. No rung proves what pixels a
 human perceived, but the higher rungs shrink the trusted rendering base
 to a small, attestable one and let the deployment pick the assurance its
 threat model needs.<a href="#section-1-4" class="pilcrow">¶</a></p>
-<p id="section-1-5">Conformance to this profile is exactly the ladder's floor, Rung 0
-(<a href="#rendering-assurance" class="auto internal xref">Section 6</a>): commit the structured disclosure object,
-bind it to the Mission anchors, and sign the evidence. What
-conformance requires is that what was shown is committed and
-reconstructible; everything past that is a rung or a <span class="bcp14">SHOULD</span>, the
-material-notice discipline and delta rendering as recommendations and
-each rung above Rung 0 as a named optional claim (<a href="#conformance" class="auto internal xref">Section 10</a>).<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-5">Conformance to this profile is the ladder's floor, Rung 0
+(<a href="#rendering-assurance" class="auto internal xref">Section 6</a>), plus three floor duties this profile
+attaches to it: commit the structured disclosure object, rendered
+within the translation floor (<a href="#intent-translation" class="auto internal xref">Section 4.3</a>), bind it to the
+Mission anchors, sign the evidence, carry the high-risk material
+notices with their acknowledgments, and record the interrogation
+offered (<a href="#interrogation" class="auto internal xref">Section 4.5</a>). What conformance requires is that what
+was shown is committed and reconstructible; everything past that is a
+rung or a <span class="bcp14">SHOULD</span>, the broader material-notice discipline and delta
+rendering as recommendations and each rung above Rung 0 as a named
+optional claim (<a href="#conformance" class="auto internal xref">Section 10</a>).<a href="#section-1-5" class="pilcrow">¶</a></p>
 <p id="section-1-6">Consent Evidence does not grant authority. Authority remains the
 approved Mission and its Authority Set under
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. Consent Evidence lets auditors
@@ -1371,25 +1384,34 @@ later enforced.<a href="#section-1-6" class="pilcrow">¶</a></p>
           <p id="section-2-2.1.1">the consent disclosure object (<a href="#consent-disclosure" class="auto internal xref">Section 4</a>);<a href="#section-2-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-2-2.2">
-          <p id="section-2-2.2.1">the <code>consent_rendering_hash</code> commitment (<a href="#consent-rendering-hash" class="auto internal xref">Section 5</a>);<a href="#section-2-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-2-2.2.1">the Intent Translation floor, rendering committed authority as
+natural language (<a href="#intent-translation" class="auto internal xref">Section 4.3</a>);<a href="#section-2-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-2-2.3">
-          <p id="section-2-2.3.1">the Consent Evidence object (<a href="#consent-evidence" class="auto internal xref">Section 7</a>);<a href="#section-2-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-2-2.3.1">Disclosure Interrogation, the Approver's question channel over the
+disclosure (<a href="#interrogation" class="auto internal xref">Section 4.5</a>);<a href="#section-2-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-2-2.4">
-          <p id="section-2-2.4.1">binding and recording rules for initial approval, expansion approval,
-declined, and revision-required events (<a href="#binding-to-mission" class="auto internal xref">Section 8</a>);<a href="#section-2-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-2-2.4.1">the <code>consent_rendering_hash</code> commitment (<a href="#consent-rendering-hash" class="auto internal xref">Section 5</a>);<a href="#section-2-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-2-2.5">
-          <p id="section-2-2.5.1">retention and audit reconstruction requirements (<a href="#audit" class="auto internal xref">Section 9</a>); and<a href="#section-2-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-2-2.5.1">the Consent Evidence object (<a href="#consent-evidence" class="auto internal xref">Section 7</a>);<a href="#section-2-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-2-2.6">
-          <p id="section-2-2.6.1">conformance for a Consent-Evidence-capable Mission Issuer
-(<a href="#conformance" class="auto internal xref">Section 10</a>).<a href="#section-2-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-2-2.6.1">binding and recording rules for initial approval, expansion approval,
+declined, and revision-required events (<a href="#binding-to-mission" class="auto internal xref">Section 8</a>);<a href="#section-2-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-2-2.7">
+          <p id="section-2-2.7.1">retention and audit reconstruction requirements (<a href="#audit" class="auto internal xref">Section 9</a>); and<a href="#section-2-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-2-2.8">
+          <p id="section-2-2.8.1">conformance for a Consent-Evidence-capable Mission Issuer
+(<a href="#conformance" class="auto internal xref">Section 10</a>).<a href="#section-2-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-2-3">This document does not define user-interface layout, a legal consent
-standard, or any new OAuth grant. It does not change the Authority Set
+standard, or any new OAuth grant. The translation floor constrains what
+a rendering expresses, not how it is laid out. It does not change the Authority Set
 or Mission lifecycle. Under the standalone Mission Authority Server
 binding (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), the
 Mission Authority Server is the committing Mission Issuer and this
@@ -1765,30 +1787,120 @@ issuance profile's deployment floor sets
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-4.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="layered-rendering">
+<div id="intent-translation">
 <section id="section-4.3">
-        <h3 id="name-layered-rendering">
-<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-layered-rendering" class="section-name selfRef">Layered Rendering</a>
+        <h3 id="name-intent-translation">
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-intent-translation" class="section-name selfRef">Intent Translation</a>
         </h3>
-<p id="section-4.3-1">A deployment <span class="bcp14">MAY</span> render the disclosure summary-first, with detail
-behind further interaction, provided that:<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<p id="section-4.3-1">Coverage says what a disclosure contains. It does not stop a deployment
+from presenting the Authority Set as serialized structure that trains
+the Approver to stop reading, and a trained Approver rubber-stamps (the
+consent-fatigue residual,
+<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>). This section sets the
+floor for translating committed authority into language.<a href="#section-4.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-4.3-2.1">
-            <p id="section-4.3-2.1.1">the committed Consent Disclosure object retains the full coverage of
-<a href="#consent-disclosure" class="auto internal xref">Section 4</a>; layering removes nothing from the object;<a href="#section-4.3-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-4.3-2.1.1">The rendered forms the <code>authority_summary</code> elements carry <span class="bcp14">MUST</span> be
+natural-language statements, in the disclosure's <code>locale</code>, of what
+the agent may do: each action as a statement, each constraint and
+consumption bound as the bound on that statement ("may not exceed
+500 USD in total"), and each delegation right as who may receive
+authority and how far. A raw key and value is not a rendered form.<a href="#section-4.3-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.3-2.2">
-            <p id="section-4.3-2.2.1">every material notice, and any acknowledgment it carries
-(<a href="#material-notices" class="auto internal xref">Section 4.2</a>), surfaces in the first layer; and<a href="#section-4.3-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-4.3-2.2.1">A serialized Authority Set (JSON, token claims) <span class="bcp14">MUST NOT</span> be the
+primary rendering. A deployment <span class="bcp14">MAY</span> offer one as a detail layer
+(<a href="#layered-rendering" class="auto internal xref">Section 4.4</a>).<a href="#section-4.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.3-2.3">
-            <p id="section-4.3-2.3.1">the full rendering of <code>authority_summary</code> is one interaction away,
-and the first layer states that it is available.<a href="#section-4.3-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-4.3-2.3.1">A Common Constraint (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) has
+registered semantics, and its rendered form <span class="bcp14">MUST</span> state them. A
+constraint key the template cannot translate <span class="bcp14">MUST</span> be rendered and
+identified as untranslated, never omitted: an Approver shown an
+untranslated bound can decline; one shown nothing cannot.<a href="#section-4.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.3-2.4">
+            <p id="section-4.3-2.4.1">Where a capability source supplies a human-readable label for a
+resource or action, the rendering <span class="bcp14">SHOULD</span> pair the label with the
+identifier. The identifier is authoritative; a label that
+contradicts its identifier is rendering confusion
+(<a href="#rendering-confusion" class="auto internal xref">Section 11.1</a>).<a href="#section-4.3-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.3-2.5">
+            <p id="section-4.3-2.5.1">Translation does not soften what the issuance profile's rendering
+rules fix: an action family is rendered as the breadth it is, and
+client-supplied text is rendered inert
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-4.3-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-4.3-3"><code>consent_rendering_hash</code> (<a href="#consent-rendering-hash" class="auto internal xref">Section 5</a>) commits the
+<p id="section-4.3-3">The floor is template-testable: the template testing of
+<a href="#template-downgrade" class="auto internal xref">Section 11.2</a> <span class="bcp14">SHOULD</span> include fixtures proving the template
+translates every Common Constraint key and material-notice class the
+deployment uses.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="layered-rendering">
+<section id="section-4.4">
+        <h3 id="name-layered-rendering">
+<a href="#section-4.4" class="section-number selfRef">4.4. </a><a href="#name-layered-rendering" class="section-name selfRef">Layered Rendering</a>
+        </h3>
+<p id="section-4.4-1">A deployment <span class="bcp14">MAY</span> render the disclosure summary-first, with detail
+behind further interaction, provided that:<a href="#section-4.4-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.4-2.1">
+            <p id="section-4.4-2.1.1">the committed Consent Disclosure object retains the full coverage of
+<a href="#consent-disclosure" class="auto internal xref">Section 4</a>; layering removes nothing from the object;<a href="#section-4.4-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.4-2.2">
+            <p id="section-4.4-2.2.1">every material notice, and any acknowledgment it carries
+(<a href="#material-notices" class="auto internal xref">Section 4.2</a>), surfaces in the first layer; and<a href="#section-4.4-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.4-2.3">
+            <p id="section-4.4-2.3.1">the full rendering of <code>authority_summary</code> is one interaction away,
+and the first layer states that it is available.<a href="#section-4.4-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-4.4-3"><code>consent_rendering_hash</code> (<a href="#consent-rendering-hash" class="auto internal xref">Section 5</a>) commits the
 disclosure object, not a layer, so layering changes presentation, not
-evidence.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
+evidence.<a href="#section-4.4-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="interrogation">
+<section id="section-4.5">
+        <h3 id="name-disclosure-interrogation">
+<a href="#section-4.5" class="section-number selfRef">4.5. </a><a href="#name-disclosure-interrogation" class="section-name selfRef">Disclosure Interrogation</a>
+        </h3>
+<p id="section-4.5-1">A faithful disclosure answers what the Mission may do. The question an
+Approver weighs is often why: why does a support-ticket task need write
+access to a finance folder? An Approver who cannot ask guesses, and a
+guessing Approver decides on the wrong fact.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
+<p id="section-4.5-2">A deployment <span class="bcp14">SHOULD</span> let the Approver interrogate the disclosure before
+deciding: for any <code>authority_summary</code> entry, constraint, or material
+notice, request the basis for it. This profile defines no interaction
+surface (a per-entry detail, a question form, and a chat all serve); it
+defines what may answer and what is recorded.<a href="#section-4.5-2" class="pilcrow">¶</a></p>
+<p id="section-4.5-3">An answer the consent surface presents in its own voice <span class="bcp14">MUST</span> be drawn
+from recorded material: Shaping Evidence for why the task motivated an
+entry (<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>), constraint provenance
+for whose rule a bound is (<a href="#constraint-provenance" class="auto internal xref">Section 4.1</a>), and identified
+deployment policy for bounds the Mission Issuer imposed. Where the
+deployment instead relays an answer from the requesting agent (AAuth's
+clarification chat is this channel,
+<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>), the relayed text is
+attacker-influenceable: it <span class="bcp14">MUST</span> be rendered inert and visually
+distinguished from the deployment's own answers, under the issuance
+profile's rendering rules (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-4.5-3" class="pilcrow">¶</a></p>
+<p id="section-4.5-4">An answer grants nothing and amends nothing. It is not part of the
+committed disclosure object, and an Approver satisfied by an answer
+approves the same committed authority. When interrogation convinces the
+Approver the authority is wrong, the path is the existing one: decline
+or require narrowing, and approval of different authority is a new
+derivation and a new disclosure (<a href="#consent-rendering-hash" class="auto internal xref">Section 5</a>).<a href="#section-4.5-4" class="pilcrow">¶</a></p>
+<p id="section-4.5-5">When the deployment offers interrogation, the evidence records it: each
+question, what it concerned, and what grounded the answer
+(<code>interrogation</code>, <a href="#consent-evidence" class="auto internal xref">Section 7</a>). Interrogation before a decline
+is the record's most valuable case: it preserves which entry the
+Approver probed and could not accept.<a href="#section-4.5-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2071,9 +2183,24 @@ through the committed disclosure.<a href="#section-7-2.34.1" class="pilcrow">¶<
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.35">
-<code>refused_dimensions</code>:</dt>
+<code>interrogation</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.36">
-          <p id="section-7-2.36.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>narrowed</code>. An object identifying the
+          <p id="section-7-2.36.1"><span class="bcp14">OPTIONAL</span>. An array recording the Approver's pre-decision questions at
+the consent surface (<a href="#interrogation" class="auto internal xref">Section 4.5</a>), in the order asked. Each
+entry carries <code>question</code>, the question as asked or selected;
+<code>applies_to</code>, the Authority Set entry, constraint, or notice it
+concerned, when one was identified; and <code>answer_source</code>, one of
+<code>shaping_evidence</code>, <code>constraint_provenance</code>, <code>policy</code>, or <code>agent</code>.
+When <code>answer_source</code> is <code>agent</code>, the entry <span class="bcp14">MUST</span> also carry <code>answer</code>,
+the relayed text as rendered, which is committed nowhere else; for
+the other sources the grounding material is already recorded, and
+the entry <span class="bcp14">SHOULD</span> reference it.<a href="#section-7-2.36.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.37">
+<code>refused_dimensions</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.38">
+          <p id="section-7-2.38.1"><span class="bcp14">REQUIRED</span> when <code>decision</code> is <code>narrowed</code>. An object identifying the
 dimensions the review refused. It carries one or both of
 <code>rejected_scope</code>, a string of space-delimited scope tokens naming the
 refused scope, and <code>rejected_authorization_details</code>, an array of
@@ -2083,46 +2210,46 @@ it that must not survive re-derivation unchanged. These are the
 shapes the experimental approval-revision profile signals on its
 revision-required response
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval-revision" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval-revision</a>]</span>), recorded
-here as the review named them.<a href="#section-7-2.36.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-7-2.37">
-<code>predecessor_intent_hashes</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-7-2.38">
-          <p id="section-7-2.38.1"><span class="bcp14">OPTIONAL</span>. An array of <code>intent_hash</code> values committing the revision
-chain that preceded this decision. Carried on the final evidence for
-an approval reached through one or more <code>narrowed</code> outcomes.<a href="#section-7-2.38.1" class="pilcrow">¶</a></p>
+here as the review named them.<a href="#section-7-2.38.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.39">
-<code>policy_version</code>:</dt>
+<code>predecessor_intent_hashes</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.40">
-          <p id="section-7-2.40.1"><span class="bcp14">OPTIONAL</span>. A string. The approval policy version in effect at the
-approval event. The AS <span class="bcp14">MUST</span> record it when it possesses the value.
-Because the issuance profile records <code>policy_version</code> on the Mission
-record unconditionally (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the AS
-possesses it at an approval event, so it is present in practice.<a href="#section-7-2.40.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.40.1"><span class="bcp14">OPTIONAL</span>. An array of <code>intent_hash</code> values committing the revision
+chain that preceded this decision. Carried on the final evidence for
+an approval reached through one or more <code>narrowed</code> outcomes.<a href="#section-7-2.40.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.41">
-<code>sequence</code>:</dt>
+<code>policy_version</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.42">
-          <p id="section-7-2.42.1"><span class="bcp14">REQUIRED</span>. An integer. A monotonic sequence value sufficient to
-reconstruct evidence order. A deployment <span class="bcp14">MAY</span> scope it per Mission
-Issuer, per Mission, or per audit scope, provided it is monotonic
-within the scope it chooses.<a href="#section-7-2.42.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.42.1"><span class="bcp14">OPTIONAL</span>. A string. The approval policy version in effect at the
+approval event. The AS <span class="bcp14">MUST</span> record it when it possesses the value.
+Because the issuance profile records <code>policy_version</code> on the Mission
+record unconditionally (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the AS
+possesses it at an approval event, so it is present in practice.<a href="#section-7-2.42.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.43">
-<code>evidence_envelope</code>:</dt>
+<code>sequence</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.44">
-          <p id="section-7-2.44.1"><span class="bcp14">REQUIRED</span> when retained as a portable record. An object carrying
+          <p id="section-7-2.44.1"><span class="bcp14">REQUIRED</span>. An integer. A monotonic sequence value sufficient to
+reconstruct evidence order. A deployment <span class="bcp14">MAY</span> scope it per Mission
+Issuer, per Mission, or per audit scope, provided it is monotonic
+within the scope it chooses.<a href="#section-7-2.44.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-7-2.45">
+<code>evidence_envelope</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-7-2.46">
+          <p id="section-7-2.46.1"><span class="bcp14">REQUIRED</span> when retained as a portable record. An object carrying
 <code>format</code> and <code>value</code>. This document defines <code>jws-compact</code>, a JWS
 Compact Serialization <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> over the JCS canonical bytes of the
 Consent Evidence object with <code>evidence_envelope</code> removed. Its protected
 header <span class="bcp14">MUST</span> carry a <code>typ</code> of <code>mission-consent-evidence+jws</code> and a <code>kid</code>
 that resolves in the Mission Issuer's published key material (its
-<code>jwks_uri</code>); that is the verification path (<a href="#integrity" class="auto internal xref">Section 7.1</a>).<a href="#section-7-2.44.1" class="pilcrow">¶</a></p>
+<code>jwks_uri</code>); that is the verification path (<a href="#integrity" class="auto internal xref">Section 7.1</a>).<a href="#section-7-2.46.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2433,27 +2560,36 @@ reconstructible. A conforming Consent-Evidence-capable Mission Issuer
 <a href="#consent-disclosure" class="auto internal xref">Section 4</a>, for each approval event;<a href="#section-10-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-2.2">
-          <p id="section-10-2.2.1">compute <code>consent_rendering_hash</code> (<a href="#consent-rendering-hash" class="auto internal xref">Section 5</a>);<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-10-2.2.1">render within the translation floor (<a href="#intent-translation" class="auto internal xref">Section 4.3</a>);<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-2.3">
-          <p id="section-10-2.3.1">record Consent Evidence for approval and decline decisions, and for
-narrowed decisions where the deployment supports approval revision
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval-revision" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval-revision</a>]</span>);<a href="#section-10-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-10-2.3.1">compute <code>consent_rendering_hash</code> (<a href="#consent-rendering-hash" class="auto internal xref">Section 5</a>);<a href="#section-10-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-2.4">
-          <p id="section-10-2.4.1">bind approved Mission records to <code>consent_rendering_hash</code>; and<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-10-2.4.1">record Consent Evidence for approval and decline decisions, and for
+narrowed decisions where the deployment supports approval revision
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval-revision" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval-revision</a>]</span>);<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-2.5">
-          <p id="section-10-2.5.1">retain evidence for audit reconstruction (<a href="#audit" class="auto internal xref">Section 9</a>).<a href="#section-10-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-10-2.5.1">bind approved Mission records to <code>consent_rendering_hash</code>;<a href="#section-10-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.6">
+          <p id="section-10-2.6.1">for the high-risk classes, include their material notices with the
+per-notice acknowledgment those classes require, recording each
+acknowledgment completion (<a href="#material-notices" class="auto internal xref">Section 4.2</a>);<a href="#section-10-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.7">
+          <p id="section-10-2.7.1">record the interrogation it offers (<a href="#interrogation" class="auto internal xref">Section 4.5</a>); and<a href="#section-10-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-2.8">
+          <p id="section-10-2.8.1">retain evidence for audit reconstruction (<a href="#audit" class="auto internal xref">Section 9</a>).<a href="#section-10-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-10-3">Beyond the floor, a conforming Mission Issuer <span class="bcp14">SHOULD</span> include a
-material notice for each condition of <a href="#material-notices" class="auto internal xref">Section 4.2</a> present,
-<span class="bcp14">SHOULD</span> gate <code>approved</code> on the per-notice acknowledgments for the
-high-risk classes, and, where the rendered disclosure carries
-acknowledgment actions, <span class="bcp14">MUST</span> record each completion
-(<a href="#material-notices" class="auto internal xref">Section 4.2</a>); it <span class="bcp14">SHOULD</span> render expansion approvals as a
-delta (<a href="#expansion-disclosure" class="auto internal xref">Section 8.3</a>). Each rung above Rung 0 is a named
+<p id="section-10-3">Beyond that floor, a conforming Mission Issuer <span class="bcp14">SHOULD</span> include a
+material notice for each further condition of <a href="#material-notices" class="auto internal xref">Section 4.2</a>
+present, <span class="bcp14">SHOULD</span> gate <code>approved</code> on acknowledgments beyond the
+high-risk classes, and <span class="bcp14">SHOULD</span> render expansion approvals as a delta
+(<a href="#expansion-disclosure" class="auto internal xref">Section 8.3</a>). Each rung above Rung 0 is a named
 optional claim (<a href="#experimental-rungs" class="auto internal xref">Appendix A</a>), made only when its
 requirements are satisfied and its evidence recorded.<a href="#section-10-3" class="pilcrow">¶</a></p>
 <p id="section-10-4">A conforming verifier of Consent Evidence <span class="bcp14">MUST</span> implement the checks in
@@ -2522,15 +2658,30 @@ deployments detect repeated attempts against the same task, requester,
 or Authority Set.<a href="#section-11.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="incomplete-material-notices">
+<div id="interrogation-as-a-persuasion-surface">
 <section id="section-11.5">
-        <h3 id="name-incomplete-material-notices">
-<a href="#section-11.5" class="section-number selfRef">11.5. </a><a href="#name-incomplete-material-notices" class="section-name selfRef">Incomplete Material Notices</a>
+        <h3 id="name-interrogation-as-a-persuasi">
+<a href="#section-11.5" class="section-number selfRef">11.5. </a><a href="#name-interrogation-as-a-persuasi" class="section-name selfRef">Interrogation as a Persuasion Surface</a>
         </h3>
-<p id="section-11.5-1">If material notices omit high-risk authority, the Approver's consent
+<p id="section-11.5-1">Disclosure Interrogation (<a href="#interrogation" class="auto internal xref">Section 4.5</a>) lets the Approver ask why;
+the same channel lets a compromised agent argue. An injected agent that
+authored a hostile goal can author the reassuring answers the goal
+provokes. The grounding rule of <a href="#interrogation" class="auto internal xref">Section 4.5</a> is the mitigation:
+the consent surface's own voice speaks only from recorded material,
+relayed agent text is rendered inert and visibly the agent's, and the
+recorded <code>interrogation</code> entries expose a persuasion pattern to the
+same audit that <a href="#decline-suppression" class="auto internal xref">Section 11.4</a> gives repeated resubmission.<a href="#section-11.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="incomplete-material-notices">
+<section id="section-11.6">
+        <h3 id="name-incomplete-material-notices">
+<a href="#section-11.6" class="section-number selfRef">11.6. </a><a href="#name-incomplete-material-notices" class="section-name selfRef">Incomplete Material Notices</a>
+        </h3>
+<p id="section-11.6-1">If material notices omit high-risk authority, the Approver's consent
 may not be meaningful. Deployments <span class="bcp14">SHOULD</span> test disclosure templates
 against Authority Set fixtures and reject templates that cannot render
-all material notice classes.<a href="#section-11.5-1" class="pilcrow">¶</a></p>
+all material notice classes.<a href="#section-11.6-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2802,6 +2953,10 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-security-model">[I-D.draft-mcguinness-mission-security-model]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Security Model"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-shaping">[I-D.draft-mcguinness-mission-shaping]</dt>
         <dd>

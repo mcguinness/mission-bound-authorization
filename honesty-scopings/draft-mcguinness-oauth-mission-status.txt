@@ -86,51 +86,52 @@ Table of Contents
      3.6.  Anti-Oracle Property
      3.7.  Error Responses
    4.  Token Introspection Mission Projection
-   5.  Mission Lifecycle Endpoint
-     5.1.  Operations
-     5.2.  Legal Transitions
-     5.3.  Consolidated State Machine
-     5.4.  Authentication
-     5.5.  Authorization
-     5.6.  Worked Examples
-     5.7.  Idempotency and Conflicts
-     5.8.  Relationship to RFC 7009
-     5.9.  Deferred Lifecycle Capabilities
-   6.  Mission Completion and Entry Discharge
-     6.1.  Relationship to the Issuance Profile
-     6.2.  Entry Completion Conditions
-     6.3.  Discharge and Issuance Gating
-       6.3.1.  Determining Discharge
-       6.3.2.  Discharge Visibility
-     6.4.  Subset Rule
-     6.5.  Forward Compatibility
-     6.6.  Derivation Guidance
-     6.7.  Relationship to Runtime Enforcement
-     6.8.  Worked Example
-     6.9.  Completion Conformance
-   7.  Revocation Propagation
-     7.1.  Recommended Access-Token TTL
-   8.  Authorization Server Metadata
-     8.1.  Worked Metadata Example
-   9.  Security Considerations
-     9.1.  Mission Status Enumeration
-     9.2.  Mission Status Response Replay
-     9.3.  Mission Status Denial of Service
-     9.4.  RFC 9701 vs. New Media Type
-     9.5.  Signing-Key Retention for Audit
-     9.6.  Entry Discharge
-     9.7.  General OAuth Security
-   10. Privacy Considerations
-     10.1.  Status and Lifecycle as Disclosure Surfaces
-     10.2.  Status Audit Logging
-     10.3.  Completion Condition Disclosure
-   11. Conformance
-   12. IANA Considerations
-     12.1.  OAuth Authorization Server Metadata Registration
-     12.2.  Media Type Registration
-       12.2.1.  application/mission-status-response+jwt
-     12.3.  Common Constraint Definition: terminal_when
-     12.4.  Well-Known URI
+   5.  Mission Status List
+   6.  Mission Lifecycle Endpoint
+     6.1.  Operations
+     6.2.  Legal Transitions
+     6.3.  Consolidated State Machine
+     6.4.  Authentication
+     6.5.  Authorization
+     6.6.  Worked Examples
+     6.7.  Idempotency and Conflicts
+     6.8.  Relationship to RFC 7009
+     6.9.  Deferred Lifecycle Capabilities
+   7.  Mission Completion and Entry Discharge
+     7.1.  Relationship to the Issuance Profile
+     7.2.  Entry Completion Conditions
+     7.3.  Discharge and Issuance Gating
+       7.3.1.  Determining Discharge
+       7.3.2.  Discharge Visibility
+     7.4.  Subset Rule
+     7.5.  Forward Compatibility
+     7.6.  Derivation Guidance
+     7.7.  Relationship to Runtime Enforcement
+     7.8.  Worked Example
+     7.9.  Completion Conformance
+   8.  Revocation Propagation
+     8.1.  Recommended Access-Token TTL
+   9.  Authorization Server Metadata
+     9.1.  Worked Metadata Example
+   10. Security Considerations
+     10.1.  Mission Status Enumeration
+     10.2.  Mission Status Response Replay
+     10.3.  Mission Status Denial of Service
+     10.4.  RFC 9701 vs. New Media Type
+     10.5.  Signing-Key Retention for Audit
+     10.6.  Entry Discharge
+     10.7.  General OAuth Security
+   11. Privacy Considerations
+     11.1.  Status and Lifecycle as Disclosure Surfaces
+     11.2.  Status Audit Logging
+     11.3.  Completion Condition Disclosure
+   12. Conformance
+   13. IANA Considerations
+     13.1.  OAuth Authorization Server Metadata Registration
+     13.2.  Media Type Registration
+       13.2.1.  application/mission-status-response+jwt
+     13.3.  Common Constraint Definition: terminal_when
+     13.4.  Well-Known URI
    Acknowledgments
    References
      Normative References
@@ -163,25 +164,25 @@ Table of Contents
       projection, which a deployment MAY return as a [RFC9701]-signed
       response (Section 4).
 
-   *  A *Mission Lifecycle endpoint* (Section 5) for explicit revoke,
+   *  A *Mission Lifecycle endpoint* (Section 6) for explicit revoke,
       suspend, resume, and complete transitions, distinct from [RFC7009]
       token revocation.
 
-   *  *Mission completion and entry discharge* (Section 6): the
+   *  *Mission completion and entry discharge* (Section 7): the
       terminal_when completion condition, carried in a
       mission_resource_access entry's constraints, that discharges the
       entry once the task it was granted for is done.
 
-   *  *Revocation propagation* guidance (Section 7): a
+   *  *Revocation propagation* guidance (Section 8): a
       mission_max_stale_seconds bound and how to size token lifetimes to
       the propagation mechanisms in use.
 
-   *  *Authorization Server metadata* members (Section 8) advertising
+   *  *Authorization Server metadata* members (Section 9) advertising
       the endpoints above.
 
    Each capability is independently optional.  An implementation states
-   which it supports through the metadata of Section 8 and the
-   conformance language of Section 11.  An implementation that supports
+   which it supports through the metadata of Section 9 and the
+   conformance language of Section 12.  An implementation that supports
    none of them is unaffected and remains a conforming issuance profile.
 
    This document does not restate the issuance profile.  The Mission
@@ -217,7 +218,7 @@ Table of Contents
       current state and the audience-scoped evidence a consumer needs.
 
    Discharge:  The state of a mission_resource_access entry whose
-      terminal_when completion condition has been met (Section 6).  A
+      terminal_when completion condition has been met (Section 7).  A
       discharged entry's authority is spent: it is no longer derivable.
 
    All JSON shown in this document is non-normative and illustrative;
@@ -244,7 +245,7 @@ Table of Contents
    resolves it without holding a token the AS issued.
 
    The Mission Issuer publishes its Mission Status endpoint URL in
-   Authorization Server metadata (Section 8) as mission_status_endpoint,
+   Authorization Server metadata (Section 9) as mission_status_endpoint,
    which a consumer resolves from a credential's mission.issuer.  The
    endpoint MUST be served over TLS 1.2 or later (TLS 1.3 RECOMMENDED),
    following the recommendations of [RFC9325].
@@ -315,14 +316,14 @@ Table of Contents
    carries typ of mission-status-response+jwt and a kid identifying the
    signing key.  Per [RFC7515] Section 4.1.9 the typ header omits the
    application/ prefix; the full media type application/mission-status-
-   response+jwt (registered in Section 12) is used as the HTTP Content-
+   response+jwt (registered in Section 13) is used as the HTTP Content-
    Type.
 
    [RFC9701] signed introspection responses are scoped to token
    introspection and do not apply to a lookup keyed by mission_id; the
    dedicated Mission Status operation therefore uses a new media type
-   and a JWS, not [RFC9701] (see Section 9.4).  Implementations MUST NOT
-   use [RFC9701] for the dedicated Mission Status operation.
+   and a JWS, not [RFC9701] (see Section 10.4).  Implementations MUST
+   NOT use [RFC9701] for the dedicated Mission Status operation.
 
    The signed payload reports the Mission's current state and the
    audience-scoped evidence the consumer needs.
@@ -375,7 +376,7 @@ Table of Contents
       binding.  When the request omitted audience (Section 3.1), the
       response is state-only and the AS MUST set aud to the
       authenticated requester's identifier, as the Lifecycle endpoint
-      does (Section 5); the consumer's aud verification below then
+      does (Section 6); the consumer's aud verification below then
       checks that identifier. exp bounds the validity of the signed
       response itself; how long the consumer MAY rely on the reported
       state is given separately by mission.fresh_until below.
@@ -395,7 +396,7 @@ Table of Contents
          ([I-D.draft-mcguinness-oauth-mission], Section "Mission
          Lifecycle and Gating"): the core states active, revoked,
          expired, this profile's suspended and completed when the
-         Mission Lifecycle endpoint (Section 5) is deployed, and any
+         Mission Lifecycle endpoint (Section 6) is deployed, and any
          further state a companion profile defines and the deployment
          runs (superseded for an expanded predecessor
          ([I-D.draft-mcguinness-oauth-mission-expansion]); cascaded for
@@ -417,7 +418,7 @@ Table of Contents
          envelope to carry it (Section 4).
 
       -  suspend_until, on_expiry: CONDITIONAL.  Present only while the
-         Mission is suspended under a deadline (Section 5): the RFC 3339
+         Mission is suspended under a deadline (Section 6): the RFC 3339
          [RFC3339] deadline, and the transition (resume or revoke) the
          AS applies when it passes.
 
@@ -437,9 +438,13 @@ Table of Contents
          seats its gap detection on it (the last-applied Signals version
          becomes this value,
          [I-D.draft-mcguinness-oauth-mission-signals]), a lifecycle
-         mutation can guard on it (Section 5.7), and a materialized
+         mutation can guard on it (Section 6.7), and a materialized
          policy view names the value it materialized
          ([I-D.draft-mcguinness-mission-runtime]).
+
+      -  status_list: OPTIONAL.  The referenced-token status object of
+         [I-D.draft-ietf-oauth-status-list] (idx and uri), present where
+         the deployment publishes a Mission Status List (Section 5).
 
    *  authorization_details: the audience-scoped Authority Set entries
       relevant to the requesting audience, as the
@@ -457,7 +462,7 @@ Table of Contents
    1.  the JWS header typ is mission-status-response+jwt;
 
    2.  the JWS header alg is one the AS advertises in
-       mission_status_signing_alg_values_supported (Section 8),
+       mission_status_signing_alg_values_supported (Section 9),
        rejecting none and any algorithm not listed;
 
    3.  the JWS signature against a current jwks_uri entry for the issuer
@@ -482,7 +487,7 @@ Table of Contents
    on (mission_id, requester identifier) for a state-only response,
    until mission.fresh_until.  Consumers MUST NOT use a cached response
    after mission.fresh_until.  When the AS advertises
-   mission_max_stale_seconds (Section 8), it MUST NOT set
+   mission_max_stale_seconds (Section 9), it MUST NOT set
    mission.fresh_until later than the response iat plus that value, so
    report freshness never exceeds the deployment's advertised
    revocation-propagation tolerance.  When comparing the current time to
@@ -491,7 +496,7 @@ Table of Contents
    state.  This tolerance is a clock-skew allowance on the reliance
    path, bounding the disagreement between the AS's and the consumer's
    clocks, not a property of state reversibility; it MUST NOT exceed the
-   AS's advertised mission_max_stale_seconds (Section 8).  A suspended
+   AS's advertised mission_max_stale_seconds (Section 9).  A suspended
    Mission may be resumed to active, so a consumer MUST NOT extend
    reliance on a cached suspended (or any non-active) response beyond
    mission.fresh_until.
@@ -562,10 +567,10 @@ Table of Contents
       |               |      | visible.                             |
       +---------------+------+--------------------------------------+
       | conflict      | 409  | Lifecycle operation not legal from   |
-      |               |      | the current state (Section 5.7).     |
+      |               |      | the current state (Section 6.7).     |
       +---------------+------+--------------------------------------+
       | stale_version | 409  | expected_version differs from the    |
-      |               |      | current state version (Section 5.7). |
+      |               |      | current state version (Section 6.7). |
       +---------------+------+--------------------------------------+
       | rate_limited  | 429  | Consumer is rate-limited.            |
       +---------------+------+--------------------------------------+
@@ -578,7 +583,7 @@ Table of Contents
    Response carrying state.  Wire errors (unauthorized, not_found,
    conflict, stale_version, rate_limited, unavailable) return the
    matching HTTP status with a JSON body; the two 409 symbols arise only
-   on lifecycle operations (Section 5.7).  Note the distinction between
+   on lifecycle operations (Section 6.7).  Note the distinction between
    the two access failures: unauthorized (401) means the request carried
    no valid authentication, whereas a request that is authenticated but
    not authorized for the referenced Mission returns not_found (404),
@@ -639,7 +644,8 @@ Table of Contents
    (Section 3.4) carry Mission facts in a mission object of the same
    shape: the open mission claim object of
    [I-D.draft-mcguinness-oauth-mission] (Section "The Mission Claim")
-   with status members (state, fresh_until, and, on the dedicated
+   with status members (state, fresh_until, the status_list reference
+   where the deployment publishes one (Section 5), and, on the dedicated
    response, expires_at and version) added.  This projection populates
    the subset a token-holding consumer needs; the dedicated response
    populates more.  Either way a consumer reads the same fact from the
@@ -680,7 +686,49 @@ Table of Contents
    convenience for token-holding consumers and is never the sole Mission
    Status path.
 
-5.  Mission Lifecycle Endpoint
+5.  Mission Status List
+
+   One consumer often relies on many Missions at once: a gateway
+   fronting an agent fleet holds a Mission per unit of work, and per-
+   Mission status reads at that scale are a latency tax this profile's
+   caching rules cannot amortize.  A Mission Issuer MAY additionally
+   publish Mission state as a Status List
+   ([I-D.draft-ietf-oauth-status-list]): a signed, compressed bit array
+   in which each participating Mission holds an index, fetched once per
+   freshness window and read locally per action.
+
+   *  *Reference.* A participating Mission's status_list member (idx and
+      uri, the referenced-token shape of
+      [I-D.draft-ietf-oauth-status-list]) rides the Mission Status
+      Response and the introspection projection (Section 3.4,
+      Section 4), so a consumer learns its index from the authoritative
+      surface it already reads.
+
+   *  *Mapping.* VALID (0x00) reports active; SUSPENDED (0x02) reports
+      suspended; INVALID (0x01) reports every terminal state.  A
+      consumer treats any other value as non-active, per the fail-safe
+      rule.  The list carries reliance bits only: which terminal state,
+      the successor, and the state version stay on this profile's
+      authoritative surfaces, and a consumer that observes a bit other
+      than VALID re-establishes state there before any further reliance.
+
+   *  *Freshness.* The Status List Token's ttl and exp are a published
+      staleness bound: within them a VALID bit permits reliance exactly
+      as a fresh Mission Status Response reporting active does, and an
+      expired or unfetchable list is stale state, never permission
+      ([I-D.draft-mcguinness-mission-runtime]).  A committed lifecycle
+      transition MUST be reflected in the next Status List Token
+      published for its list, and where Signals runs, the event is the
+      push complement to the list's pull floor.
+
+   *  *Privacy.* Index assignment MUST NOT be derivable from or
+      correlatable with the Mission Identifier, and the list conveys
+      bits at opaque indices only, so publishing it preserves this
+      profile's anti-oracle posture (Section 3.6) while the fetch
+      itself, covering every index at once, reveals no per-Mission
+      interest.
+
+6.  Mission Lifecycle Endpoint
 
    This section is OPTIONAL.  The issuance profile lets the Subject,
    Approver, or an administrator revoke a Mission by an authenticated,
@@ -690,7 +738,7 @@ Table of Contents
    section standardizes that management surface.
 
    The AS publishes its Mission Lifecycle endpoint URL in Authorization
-   Server metadata (Section 8) as mission_lifecycle_endpoint, distinct
+   Server metadata (Section 9) as mission_lifecycle_endpoint, distinct
    from [RFC7009] token revocation.  The endpoint MUST be served over
    TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the recommendations
    of [RFC9325].
@@ -711,9 +759,9 @@ Table of Contents
    treatment of superseded
    ([I-D.draft-mcguinness-oauth-mission-expansion]).  A deployment that
    needs a prompt cutoff on outstanding tokens uses the propagation
-   mechanisms of Section 7.
+   mechanisms of Section 8.
 
-5.1.  Operations
+6.1.  Operations
 
    The endpoint accepts authenticated POST requests with a form-
    urlencoded body:
@@ -757,13 +805,13 @@ Table of Contents
    on_expiry surface in the signed Mission Status Response (Section 3.4)
    so a consumer sees the pending outcome.
 
-5.2.  Legal Transitions
+6.2.  Legal Transitions
 
    An operation is legal only from the source states below.  A terminal
    state (revoked, expired, completed, or the companion-defined
    superseded and cascaded) admits no transition; an operation whose
    resulting state equals the current state, terminal or not, is
-   idempotent success (Section 5.7). resume is the sole exception: it is
+   idempotent success (Section 6.7). resume is the sole exception: it is
    legal only from suspended (its resulting state, active, is also the
    baseline a Mission holds before any suspension), so resume on an
    active or terminal Mission is a conflict, not idempotent success.
@@ -787,7 +835,7 @@ Table of Contents
    window, so a suspended Mission need not first be resumed to be
    completed.
 
-   Requests are adjudicated by the single rule of Section 5.7: an
+   Requests are adjudicated by the single rule of Section 6.7: an
    operation whose resulting state equals the Mission's current state is
    idempotent success, with the resume exception above, and any other
    operation not legal from the current state, including resume on a
@@ -795,17 +843,17 @@ Table of Contents
    that reaches its expires_at transitions to expired independently of
    this endpoint, from active or suspended.
 
-5.3.  Consolidated State Machine
+6.3.  Consolidated State Machine
 
    This profile owns the extension of the issuance profile's lifecycle
    state space ([I-D.draft-mcguinness-oauth-mission], Section "Mission
    Lifecycle and Gating").  The table below is the authoritative view of
    that space: every state, every transition, and the source of the
    event that drives it.  Event sources are the lifecycle endpoint (an
-   operation of Section 5), the expiry clock (a deadline reached without
+   operation of Section 6), the expiry clock (a deadline reached without
    a request), and companion adjudication (a transition a companion
    profile commits).  The lifecycle-endpoint rows are exactly the
-   operations of Section 5.2.  Only active permits derivation; every
+   operations of Section 6.2.  Only active permits derivation; every
    other state is non-deriving.
 
     +===========+====================+==================+============+
@@ -866,14 +914,14 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]).  Neither
    companion state is produced by this profile's endpoint.
 
-5.4.  Authentication
+6.4.  Authentication
 
    The lifecycle endpoint uses the same authentication mechanisms as the
    Mission Status endpoint (Section 3.2): mTLS, DPoP-bound bearer, or
    private-key JWT, discovered through the AS's existing OAuth client-
    authentication metadata [RFC8414].
 
-5.5.  Authorization
+6.5.  Authorization
 
    The AS authorizes lifecycle operations against deployment policy.
    This document sets the minimum authorization semantics and leaves
@@ -908,7 +956,7 @@ Table of Contents
    found response shape of Section 3.7, so the endpoint does not act as
    a Mission enumeration oracle.
 
-5.6.  Worked Examples
+6.6.  Worked Examples
 
    Revoke request:
 
@@ -965,7 +1013,7 @@ Table of Contents
 
    Suspend request with a deadline, here also carrying the OPTIONAL
    expected_version guard against deciding over stale state
-   (Section 5.7):
+   (Section 6.7):
 
    POST /as/mission/lifecycle HTTP/1.1
    Host: as.example.com
@@ -1009,9 +1057,9 @@ Table of Contents
    When suspend_until passes without a resume, the AS applies on_expiry
    and transitions the Mission to revoked without a further request.
 
-5.7.  Idempotency and Conflicts
+6.7.  Idempotency and Conflicts
 
-   The request nonce (Section 5, Operations) is the idempotency key.
+   The request nonce (Section 6, Operations) is the idempotency key.
    The AS MUST deduplicate lifecycle requests by the triple (client,
    mission_id, nonce) for a bounded window and, on a retransmit carrying
    a nonce already seen for that client and mission_id, MUST replay the
@@ -1037,7 +1085,7 @@ Table of Contents
    stale decisions.
 
    Lifecycle operations follow one rule.  An operation whose resulting
-   state (Section 5.2) equals the Mission's current state is idempotent
+   state (Section 6.2) equals the Mission's current state is idempotent
    success, terminal or not: the AS returns the current Mission Status
    Response, with no state change and no event emitted.  This covers a
    repeat of the same transition, such as revoke on a revoked Mission,
@@ -1058,16 +1106,16 @@ Table of Contents
    transition-metadata change and reporting the updated values in the
    response; silent acceptance without effect is not conforming.
 
-5.8.  Relationship to RFC 7009
+6.8.  Relationship to RFC 7009
 
    A Mission revocation through this endpoint cascades to credentials
    derived from the Mission per the AS's advertised revocation
-   propagation (Section 7).  The AS MAY additionally invoke [RFC7009]
+   propagation (Section 8).  The AS MAY additionally invoke [RFC7009]
    token revocation for specific outstanding tokens when it knows their
    jti.  [RFC7009] alone does NOT revoke a Mission; the lifecycle
    endpoint is the authoritative Mission state change.
 
-5.9.  Deferred Lifecycle Capabilities
+6.9.  Deferred Lifecycle Capabilities
 
    This endpoint operates on one Mission at a time.  Mission enumeration
    and bulk lifecycle operations for incident response, such as revoking
@@ -1081,7 +1129,7 @@ Table of Contents
    expires_at or retiring a single Authority Set entry, is not defined
    here.
 
-6.  Mission Completion and Entry Discharge
+7.  Mission Completion and Entry Discharge
 
    This section is OPTIONAL.  A deployment that ends an entry's
    authority only by Mission revocation or expiry is fully conformant to
@@ -1118,7 +1166,7 @@ Table of Contents
       therefore cannot use it to escalate: the worst it can do is spend
       its own authority sooner, which is not an escalation, though a
       forced premature discharge is an availability and guardrail-
-      retirement concern (Section 9.6).
+      retirement concern (Section 10.6).
 
    *  *Discharge composes with the subset rule.* A derived entry carries
       its parent's completion conditions unchanged and MAY add more, the
@@ -1136,7 +1184,7 @@ Table of Contents
    clock or a revoke.  It is the enforceable counterpart of the inert
    success_criteria.
 
-6.1.  Relationship to the Issuance Profile
+7.1.  Relationship to the Issuance Profile
 
    The completion capability depends normatively on the issuance profile
    and is not implementable alone.  It reuses, without restating, the
@@ -1148,21 +1196,21 @@ Table of Contents
 
    It extends the issuance profile in one narrow, additive way: it
    registers terminal_when, an OPTIONAL Common Constraint on a
-   mission_resource_access entry (Section 6.2), whose subset rule the
-   issuance profile's existing subset comparison applies (Section 6.4).
+   mission_resource_access entry (Section 7.2), whose subset rule the
+   issuance profile's existing subset comparison applies (Section 7.4).
    It changes no Mission lifecycle state and no meaning of any existing
    member.
 
-6.2.  Entry Completion Conditions
+7.2.  Entry Completion Conditions
 
    This section defines terminal_when, a Common Constraint
    ([I-D.draft-mcguinness-oauth-mission]) carried in the constraints
    object of a mission_resource_access entry.  It is a specification-
    defined Common Constraint under the issuance profile's naming
-   convention (Section 12).
+   convention (Section 13).
 
    terminal_when:  OPTIONAL.  An array of completion conditions.  When
-      any condition is met, the entry is discharged (Section 6.3).  Each
+      any condition is met, the entry is discharged (Section 7.3).  Each
       condition is an object with these members:
 
       event_type:  REQUIRED.  A string identifying the completion event.
@@ -1172,7 +1220,7 @@ Table of Contents
 
       event_source:  OPTIONAL.  A string.  A URI the Authorization
          Server consults to determine whether the event has occurred
-         (Section 6.3.1).
+         (Section 7.3.1).
 
       max_staleness:  OPTIONAL.  A string.  An ISO 8601 duration,
          matching the duration rule in Appendix A of [RFC3339], bounding
@@ -1193,7 +1241,7 @@ Table of Contents
    consumption bound, which meters volume; a terminal_when condition is
    a single external event.
 
-6.3.  Discharge and Issuance Gating
+7.3.  Discharge and Issuance Gating
 
    When a condition in an entry's terminal_when has been met, the entry
    is discharged.  The Authorization Server MUST NOT derive a token
@@ -1209,19 +1257,19 @@ Table of Contents
    entry's task finishes.  The issuance profile's Mission states are
    unchanged; a deployment that also tracks Mission-level completion MAY
    transition a Mission whose entries are all discharged to the
-   completed state the Mission Lifecycle endpoint defines (Section 5),
+   completed state the Mission Lifecycle endpoint defines (Section 6),
    but this section does not require it.  Such a transition is performed
    through the complete operation, as an issuer-initiated lifecycle
    operation, so the consolidated state machine's event sources remain
-   authoritative (Section 5.3).
+   authoritative (Section 6.3).
 
    Discharge gates new derivations only.  A token already issued for an
    entry remains valid until it expires, as with revocation
    ([I-D.draft-mcguinness-oauth-mission]).  A deployment that needs
    prompt cutoff relies on short token lifetimes or on the runtime layer
-   denying a discharged entry at the point of use (Section 6.7).
+   denying a discharged entry at the point of use (Section 7.7).
 
-6.3.1.  Determining Discharge
+7.3.1.  Determining Discharge
 
    The Authorization Server determines whether a condition has been met
    from the event_source, within max_staleness when present.  When
@@ -1275,7 +1323,7 @@ Table of Contents
    version increments at the commit, so a materialized policy view that
    commits a state version ([I-D.draft-mcguinness-mission-runtime]) is
    detectably obsolete after a discharge.  A dedicated discharge signal
-   remains deferred (Section 6.3.2); the version movement is what makes
+   remains deferred (Section 7.3.2); the version movement is what makes
    the change observable in the interim.
 
    If the Authorization Server cannot determine whether a condition has
@@ -1285,7 +1333,7 @@ Table of Contents
    Discharge removes authority, so the conservative action when status
    is unknown is to withhold issuance, never to issue.
 
-6.3.2.  Discharge Visibility
+7.3.2.  Discharge Visibility
 
    A discharged entry is no longer derivable, so the surfaces that
    report a Mission's authority MUST reflect that.  Where the Mission
@@ -1301,7 +1349,7 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission-signals]; this document defines
    no discharge event.
 
-6.4.  Subset Rule
+7.4.  Subset Rule
 
    Because terminal_when is a Common Constraint, the issuance profile's
    subset comparison ([I-D.draft-mcguinness-oauth-mission]) applies its
@@ -1323,7 +1371,7 @@ Table of Contents
    whether the change discharges earlier or later from opaque event_type
    values.
 
-6.5.  Forward Compatibility
+7.5.  Forward Compatibility
 
    Because terminal_when is a constraints member, a consumer that does
    not recognize it fails closed by the issuance profile's Resource
@@ -1341,7 +1389,7 @@ Table of Contents
    closed rule binds a consumer that encounters the constraint without
    implementing it.
 
-6.6.  Derivation Guidance
+7.6.  Derivation Guidance
 
    This guidance is non-normative.  When the Authorization Server
    derives an entry from the Mission Intent, a reviewable rule governs
@@ -1362,7 +1410,7 @@ Table of Contents
    500 USD" is a max_amount constraint, while "until the Q3 close is
    finalized" is a completion condition.
 
-6.7.  Relationship to Runtime Enforcement
+7.7.  Relationship to Runtime Enforcement
 
    Discharge is an issuance-gating signal and is fully meaningful at the
    issuance profile alone.  It is also a natural input to the runtime
@@ -1372,11 +1420,11 @@ Table of Contents
    discharge and token expiry the same way it denies a revoked Mission.
    A Policy Enforcement Point learns that an entry is discharged from
    the Mission Status operation or the token introspection projection
-   (Section 6.3.2), the same way it learns a Mission is revoked.  A
+   (Section 7.3.2), the same way it learns a Mission is revoked.  A
    runtime Policy Enforcement Point that does not recognize
-   terminal_when fails closed for the entry per Section 6.5.
+   terminal_when fails closed for the entry per Section 7.5.
 
-6.8.  Worked Example
+7.8.  Worked Example
 
    A Mission for alice reconciles Q3 payables.  Its Authority Set has
    two entries: a read over the ledger, and a write to post journal
@@ -1400,7 +1448,7 @@ Table of Contents
 
    The event_source is on a separate close-management origin the Mission
    has no write authority to, so the agent cannot drive its own
-   discharge (Section 6.3.1).
+   discharge (Section 7.3.1).
 
    While the period is open, the Authorization Server derives both
    entries.  When the finance team finalizes the Q3 close, the
@@ -1415,36 +1463,36 @@ Table of Contents
    If the event_source were unreachable when the agent refreshed, the
    Authorization Server would treat the write entry as possibly
    discharged and omit it, rather than risk issuing authority for a task
-   that may have ended (Section 6.3.1).
+   that may have ended (Section 7.3.1).
 
-6.9.  Completion Conformance
+7.9.  Completion Conformance
 
    An Authorization Server claiming the completion capability MUST:
 
    *  treat an entry whose terminal_when has been met as discharged and
-      refuse to derive it (Section 6.3);
+      refuse to derive it (Section 7.3);
 
    *  refuse to derive an entry whose discharge status it cannot
-      determine (Section 6.3.1);
+      determine (Section 7.3.1);
 
    *  record an observed discharge as latched state that MUST NOT revert
-      on a later source report (Section 6.3.1);
+      on a later source report (Section 7.3.1);
 
    *  carry every parent completion condition into a derived entry when
-      narrowing, permitting only added conditions (Section 6.4);
+      narrowing, permitting only added conditions (Section 7.4);
 
    *  where it offers the Mission Status operation or the token
       introspection projection, omit a discharged entry from the
-      authorization_details it returns (Section 6.3.2); and
+      authorization_details it returns (Section 7.3.2); and
 
    *  keep the terminal_when condition array committed by authority_hash
-      and keep fired status out of it (Section 6.2).
+      and keep fired status out of it (Section 7.2).
 
    A consumer claiming the completion capability MUST fail closed for an
    entry carrying a terminal_when constraint it does not understand
-   (Section 6.5).
+   (Section 7.5).
 
-7.  Revocation Propagation
+8.  Revocation Propagation
 
    This section is OPTIONAL.  The issuance profile bounds outstanding
    self-contained tokens by their lifetime and OPTIONAL token
@@ -1475,7 +1523,7 @@ Table of Contents
       stream ([I-D.draft-mcguinness-oauth-mission-signals]), discovered
       from mission_event_stream_endpoint.
 
-   A deployment advertises mission_max_stale_seconds (Section 8), the
+   A deployment advertises mission_max_stale_seconds (Section 9), the
    maximum interval it tolerates for a Mission state change to take
    effect, so a consumer can size token lifetimes and choose propagation
    mechanisms to match.  When the member is absent, no propagation bound
@@ -1492,7 +1540,7 @@ Table of Contents
    classes; the 60-second value in this document's examples is a tight
    deployment's choice, not a floor.
 
-7.1.  Recommended Access-Token TTL
+8.1.  Recommended Access-Token TTL
 
    Where Mission revocation must take effect but only the baseline
    derivation-time check is in use, Mission-bound access tokens SHOULD
@@ -1508,7 +1556,7 @@ Table of Contents
    status checks tighten specific paths; they are upgrades, not
    prerequisites.
 
-8.  Authorization Server Metadata
+9.  Authorization Server Metadata
 
    This section is OPTIONAL and applies only to a deployment that adopts
    one or more of the extensions above.  An AS advertises the surfaces
@@ -1534,12 +1582,12 @@ Table of Contents
       when the AS serves any such surface.
 
    mission_lifecycle_endpoint:  OPTIONAL.  A string containing a URL.
-      The URL of the Mission Lifecycle endpoint (Section 5).  Present
+      The URL of the Mission Lifecycle endpoint (Section 6).  Present
       when the AS supports it.
 
    mission_max_stale_seconds:  OPTIONAL.  An integer.  The maximum
       tolerated interval, in seconds, for revocation propagation
-      (Section 7).  When absent, no bound is declared, and a consumer
+      (Section 8).  When absent, no bound is declared, and a consumer
       sizes reliance to token lifetime alone.
 
    DPoP and mTLS support for issued credentials are read from the
@@ -1550,7 +1598,7 @@ Table of Contents
    discovered through the standard
    introspection_signing_alg_values_supported metadata.
 
-8.1.  Worked Metadata Example
+9.1.  Worked Metadata Example
 
    A discovery response from https://as.example.com/.well-known/oauth-
    authorization-server, showing the issuance profile members plus the
@@ -1578,13 +1626,13 @@ Table of Contents
      "mission_max_stale_seconds": 60
    }
 
-9.  Security Considerations
+10.  Security Considerations
 
    The security considerations of the issuance profile
    [I-D.draft-mcguinness-oauth-mission] apply in full.  This section
    covers threats specific to the extensions defined here.
 
-9.1.  Mission Status Enumeration
+10.1.  Mission Status Enumeration
 
    Per the anti-oracle property (Section 3.6), the AS MUST NOT let a
    caller readily distinguish an unknown mission_id from a known-but-
@@ -1596,7 +1644,7 @@ Table of Contents
    implementation that leaks the distinction exposes the Mission space
    to enumeration.
 
-9.2.  Mission Status Response Replay
+10.2.  Mission Status Response Replay
 
    A Mission Status Response is bound to (caller sub, audience, nonce,
    issuance time).  Replay against a different caller or audience, or
@@ -1607,7 +1655,7 @@ Table of Contents
    to a fresh response; a consumer MUST NOT use a cached response after
    mission.fresh_until, with the skew tolerance of Section 3.5.
 
-9.3.  Mission Status Denial of Service
+10.3.  Mission Status Denial of Service
 
    The Mission Status operation is on the consumption path of every
    Mission-bound credential validation in deployments where consumers
@@ -1615,19 +1663,19 @@ Table of Contents
    rate limiting (returning rate_limited, Section 3.7) and SHOULD
    encourage consumer-side caching (Section 3.5) to reduce traffic.
 
-9.4.  RFC 9701 vs. New Media Type
+10.4.  RFC 9701 vs. New Media Type
 
    When the introspection projection is signed (Section 4), it uses
    [RFC9701], which is scoped to token introspection.  The dedicated
    Mission Status operation uses a new media type (application/mission-
-   status-response+jwt, Section 12) and a JWS [RFC7515], because
+   status-response+jwt, Section 13) and a JWS [RFC7515], because
    [RFC9701] does not apply to a lookup keyed by mission_id.
    Implementations MUST NOT use [RFC9701] for the dedicated Mission
    Status operation, and MUST NOT accept an unsigned response from the
    dedicated Mission Status operation in place of the signed form it
    requires.
 
-9.5.  Signing-Key Retention for Audit
+10.5.  Signing-Key Retention for Audit
 
    The AS signs Mission Status and Lifecycle responses with a key from
    its jwks_uri.  The AS MUST keep the public JWK for every kid it has
@@ -1640,9 +1688,9 @@ Table of Contents
    exception: the AS removes it, and the Mandate profile's compromise-
    time rule governs how artifacts signed under it are then classified.
 
-9.6.  Entry Discharge
+10.6.  Entry Discharge
 
-   The completion capability (Section 6) adds the following:
+   The completion capability (Section 7) adds the following:
 
    *  Monotonic by construction.  Discharge only removes an entry's
       authority, so it is not a path to escalation; a compromised or
@@ -1656,13 +1704,13 @@ Table of Contents
 
    *  Fail closed on unknown constraint.  A consumer that does not
       understand the terminal_when constraint MUST refuse the entry
-      (Section 6.5); ignoring the constraint would let a discharged
+      (Section 7.5); ignoring the constraint would let a discharged
       entry continue to be narrowed, projected, or enforced, defeating
       discharge.
 
    *  Fail closed on unknown status.  When discharge status is
       indeterminate the Authorization Server withholds issuance
-      (Section 6.3.1); a deployment that fails open here defeats the
+      (Section 7.3.1); a deployment that fails open here defeats the
       control.
 
    *  Trusted event source. event_source is a trusted input to issuance:
@@ -1670,37 +1718,37 @@ Table of Contents
       keep an entry derivable past its true completion, and one that can
       make it report "complete" can force a premature discharge.  The
       Mission Issuer MUST authenticate and integrity-verify an event
-      source outside its own trust domain (Section 6.3.1), and SHOULD
+      source outside its own trust domain (Section 7.3.1), and SHOULD
       prefer sources within it.  The event_source SHOULD lie outside the
       Mission's own writable authority, so an agent cannot drive or
       suppress its own discharge; the signed status document verified
       against the source identity is the interoperable integrity
-      mechanism where it cannot (Section 6.3.1).
+      mechanism where it cannot (Section 7.3.1).
 
    *  Event-source availability.  Fail-closed discharge gives issuance
       an availability dependency on event_source within max_staleness:
-      an unreachable source withholds the entry (Section 6.3.1).  Event
+      an unreachable source withholds the entry (Section 7.3.1).  Event
       sources inside the issuer's trust domain are RECOMMENDED, for
       latency as well as trust.
 
    *  Already-issued tokens.  Discharge gates new derivations only; a
       token already issued runs to expiry.  Prompt cutoff relies on
       short token lifetimes or runtime point-of-use denial
-      (Section 6.7), the same caveat revocation carries.
+      (Section 7.7), the same caveat revocation carries.
 
-9.7.  General OAuth Security
+10.7.  General OAuth Security
 
    This document inherits OAuth 2.0 Best Current Practice [RFC9700] for
    the OAuth surfaces it composes with; implementers MUST follow current
    OAuth security guidance.
 
-10.  Privacy Considerations
+11.  Privacy Considerations
 
    The privacy considerations of the issuance profile
    [I-D.draft-mcguinness-oauth-mission] apply in full.  This section
    covers privacy specific to the extensions here.
 
-10.1.  Status and Lifecycle as Disclosure Surfaces
+11.1.  Status and Lifecycle as Disclosure Surfaces
 
    The Mission Status operation (Section 3) and the introspection
    projection (Section 4) disclose Mission state, the authority_hash,
@@ -1710,14 +1758,14 @@ Table of Contents
    audience-filtering the disclosed authority so a consumer never sees
    entries addressed to other audiences (Section 3.4).
 
-10.2.  Status Audit Logging
+11.2.  Status Audit Logging
 
    The AS records Status and Lifecycle requests (containing mission_id,
    audience, caller, and timing) in audit logs.  Deployments MUST treat
    these logs as PII sinks per the issuance profile's privacy
    considerations.
 
-10.3.  Completion Condition Disclosure
+11.3.  Completion Condition Disclosure
 
    A terminal_when condition can reveal task structure: event_type and
    event_source may name a business event, a case, or a record whose
@@ -1729,7 +1777,7 @@ Table of Contents
    deployment SHOULD weigh that exposure when the source is operated by
    another party.
 
-11.  Conformance
+12.  Conformance
 
    An implementation conforms to the issuance profile
    [I-D.draft-mcguinness-oauth-mission] or implements the Mission Issuer
@@ -1753,30 +1801,30 @@ Table of Contents
       introspection response (Section 4), returning it as a [RFC9701]-
       signed response where end-to-end integrity is required.
 
-   *  *Mission Lifecycle*: serve the management endpoint (Section 5),
+   *  *Mission Lifecycle*: serve the management endpoint (Section 6),
       gate the suspended and completed states it introduces exactly as
       the issuance profile gates on non-active state, and advertise
       mission_lifecycle_endpoint.
 
    *  *Mission Completion*: issue and gate terminal_when entries per
-      Section 6, meeting the requirements of Section 6.9.
+      Section 7, meeting the requirements of Section 7.9.
 
    *  *Revocation propagation*: advertise mission_max_stale_seconds and
-      size Mission-bound access-token TTLs to it (Section 7).
+      size Mission-bound access-token TTLs to it (Section 8).
 
-12.  IANA Considerations
+13.  IANA Considerations
 
    This document requests IANA actions for OAuth AS metadata members and
    a media type.  It defines no new registry: the authentication-method
    value space is a closed set defined inline, and the terminal_when
-   Common Constraint is defined by specification (Section 12.3), not by
+   Common Constraint is defined by specification (Section 13.3), not by
    an IANA action.
 
-12.1.  OAuth Authorization Server Metadata Registration
+13.1.  OAuth Authorization Server Metadata Registration
 
    IANA is requested to register the following in the "OAuth
    Authorization Server Metadata" registry [RFC8414].  For each: Change
-   Controller IETF; Reference this document, Section 8.
+   Controller IETF; Reference this document, Section 9.
 
    *  mission_status_endpoint
 
@@ -1786,11 +1834,11 @@ Table of Contents
 
    *  mission_max_stale_seconds
 
-12.2.  Media Type Registration
+13.2.  Media Type Registration
 
    IANA is requested to register one media type per [RFC6838].
 
-12.2.1.  application/mission-status-response+jwt
+13.2.1.  application/mission-status-response+jwt
 
    *  Type name: application
 
@@ -1802,7 +1850,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JWS Compact Serialization
 
-   *  Security considerations: see Section 9
+   *  Security considerations: see Section 10
 
    *  Interoperability considerations: see this document
 
@@ -1830,9 +1878,9 @@ Table of Contents
 
    *  Author/Change controller: IETF
 
-12.3.  Common Constraint Definition: terminal_when
+13.3.  Common Constraint Definition: terminal_when
 
-   The completion capability (Section 6) defines one Common Constraint
+   The completion capability (Section 7) defines one Common Constraint
    by specification, under the issuance profile's Common Constraint
    convention ([I-D.draft-mcguinness-oauth-mission]), which requires a
    definition to fix the name, value syntax, subset rule, and
@@ -1843,19 +1891,19 @@ Table of Contents
    *  Value syntax: a JSON array of completion-condition objects, each
       with a REQUIRED event_type (string), an OPTIONAL event_source
       (string, a URI), and an OPTIONAL max_staleness (string, an ISO
-      8601 duration) (Section 6.2).
+      8601 duration) (Section 7.2).
 
    *  Subset rule: a candidate value is no broader than a reference
       value when the candidate's condition array contains every
       condition of the reference, compared structurally after the
       issuance profile's canonicalization; the candidate MAY add further
-      conditions (Section 6.4).
+      conditions (Section 7.4).
 
    *  Intersection rule: the union of the two condition arrays.
 
    *  Change Controller: IETF
 
-   *  Reference: this document, Section 6.2
+   *  Reference: this document, Section 7.2
 
    terminal_when is a constraints member of the mission_resource_access
    authorization details type defined by the issuance profile
@@ -1863,10 +1911,10 @@ Table of Contents
    deployment- or registry-defined and opaque to this document, as
    purpose is, so this document establishes no registry of event types.
 
-12.4.  Well-Known URI
+13.4.  Well-Known URI
 
    This document registers no new Well-Known URI.  The metadata members
-   of Section 8 are added to the OAuth Authorization Server Metadata
+   of Section 9 are added to the OAuth Authorization Server Metadata
    document at /.well-known/oauth-authorization-server [RFC8414].
 
 Acknowledgments
@@ -1877,6 +1925,13 @@ Acknowledgments
 References
 
 Normative References
+
+   [I-D.draft-ietf-oauth-status-list]
+              Looker, T., Bastian, P., and C. Bormann, "Token Status
+              List (TSL)", Work in Progress, Internet-Draft, draft-ietf-
+              oauth-status-list-21, 21 June 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              status-list-21>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth

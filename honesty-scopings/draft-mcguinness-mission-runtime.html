@@ -2667,7 +2667,10 @@ consequence is non-conformant. The per-class budgets below are the
             <p id="section-7.2-2.6.1">For the high-consequence classes, the state source <span class="bcp14">MUST</span> be an active
 freshness mechanism that can reflect a revocation within the staleness
 bound: token introspection at the issuer (<span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>), the Mission Status
-profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), or Mission
+profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), a Mission
+Status List whose Status List Token TTL is within the bound (the
+status profile's swarm-scale pull floor,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), or Mission
 Lifecycle Signals (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>).
 Token-lifetime expiry alone is not an acceptable state source for
 these classes: it bounds staleness only by the lifetime, so a revoked
