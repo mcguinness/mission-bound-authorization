@@ -2305,7 +2305,11 @@ domain boundary: omit <code>authority_set</code> unless the recipient needs
 anchor recomputation, prefer the selective-disclosure form
 (<a href="#selective-disclosure" class="auto internal xref">Section 6</a>) where a holder re-presents the Mandate
 onward, and avoid Intent-derived free-text extension members by
-default. Recording <code>minted_for</code> costs nothing and makes an artifact
+default. Selective disclosure is this profile's minimization tool:
+a presentation discloses the committed facts the verifier needs and
+no more, so a deployment handing Mission facts to a
+privacy-sensitive recipient prefers a selectively disclosed
+presentation over a full Mandate. Recording <code>minted_for</code> costs nothing and makes an artifact
 that travels beyond its recipient attributable to a leak path.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
 <p id="section-12.1-2">The Mandate also extends the correlation surface the issuance
 profile's privacy considerations describe: it carries <code>mission.id</code> and
