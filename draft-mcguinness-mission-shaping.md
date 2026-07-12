@@ -579,6 +579,13 @@ addition to customer 1234?" is. A clarification SHOULD identify the
 authority consequence of each offered choice and SHOULD state what the
 shaper will do if it is left unanswered (refuse, narrow, or wait).
 
+Clarification runs from shaper to requester and resolves task ambiguity
+before a proposal exists. The reverse channel, the Approver questioning
+the proposal at the consent surface, is Disclosure Interrogation
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}); Shaping
+Evidence, in particular `entry_rationales`, is its grounding material
+({{shaping-evidence}}).
+
 ## Refusal {#refusal}
 
 There are inputs a shaper SHOULD refuse to shape. Refusal is a
@@ -686,6 +693,13 @@ following members are RECOMMENDED content.
 : Each resource or action and its resolution basis
   ({{capability-resolution}}).
 
+`entry_rationales`:
+: For each proposed resource or action (`applies_to`), the
+  user-supplied or inferred fact that motivated its inclusion
+  (`basis`). This is the recorded material a consent surface draws on
+  to answer why the task needs an entry (Disclosure Interrogation,
+  {{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
+
 `ambiguities`:
 : Material ambiguities and how each was handled.
 
@@ -757,6 +771,16 @@ reproducible for that record.
       "basis": "catalog",
       "source_uri":
         "https://billing.example.com/.well-known/tools"
+    }
+  ],
+  "entry_rationales": [
+    {
+      "applies_to": {
+        "resource": "https://billing.example.com",
+        "action": "invoice.read"
+      },
+      "basis":
+        "support ticket 456 concerns an invoice for customer 1234"
     }
   ]
 }

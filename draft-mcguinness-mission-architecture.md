@@ -1756,7 +1756,9 @@ reclassification, not by a stable document absorbing a dependency.
 
 `oauth-mission-consent-evidence`:
 : The `consent_rendering_hash` anchor and signed evidence of what the
-  Approver was shown.
+  Approver was shown, with the translation floor and Disclosure
+  Interrogation that keep the approval surface readable and
+  questionable.
 
 `oauth-mission-approval`:
 : Asynchronous approval over the deferred substrate.
