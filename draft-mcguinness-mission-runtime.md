@@ -858,6 +858,14 @@ the agent having no unmediated path to the resource; a Mission-aware
 harness establishes that execution environment
 ({{I-D.draft-mcguinness-mission-harness}}).
 
+Mediated custody's realizable form today is **gateway custody**: a
+server-side gateway, an LLM gateway, an MCP gateway, or an egress
+proxy, holds the sender-constraint key and the Mission-bound tokens,
+and the agent receives no bearer credential at all. That shape is the
+claim's home: the custody properties above belong to a deployment
+built this way, and a developer laptop with a shell is outside them
+by construction, not by configuration.
+
 Where the deployment issues tokens under the client-instance-assertion
 profile ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}),
 the sender-constraint key is instance-specific: that profile forbids a
@@ -1695,33 +1703,21 @@ are the High-Assurance Agent bar of the Mission Assurance Levels
 ## Agent-Compromise-Resistant Enforcement {#compromise-resistant}
 
 "Protects against agent compromise" is a verifiable claim, not a label.
-A deployment claims **agent-compromise-resistant enforcement** only when,
-for the high-consequence classes, all of the following hold. Each
-condition below is MUST under this claim regardless of its base-profile
-level: active-state freshness for the high-consequence classes is
-already MUST in the base profile ({{state-freshness}}); the harness
-condition makes MUST the base profile's requirement that mediated
-classes have no unmediated path ({{pep-placement}}) and adds, stated
-only by this claim, that no unmediated path yields a fresh usable
-credential for those classes either; mediated custody
-and action-bound approval are SHOULD in the base profile
-({{custody}}, {{action-approval}}) and MUST here; the
-approval-rendering condition is stated only by this claim.
+A deployment claims **agent-compromise-resistant enforcement** only
+when, for the high-consequence classes, the four conditions below hold
+and the deployment's path scope is declared and audited as this
+section then states. Each condition below is MUST under this claim
+regardless of its base-profile level: mediated custody and
+action-bound approval are SHOULD in the base profile ({{custody}},
+{{action-approval}}) and MUST here; active-state freshness for the
+high-consequence classes is already MUST in the base profile
+({{state-freshness}}); the approval-rendering condition is stated only
+by this claim.
 
-- the sender-constraint private key is held by the mediating PEP, not by
-  the agent component ({{custody}}), and is generated in the mediating
-  PEP or its HSM and never transferred from the agent;
-- governed work runs in a mediated execution environment with no
-  unmediated path to the mediated classes and no unmediated path to
-  fresh usable credentials for them: issuance of Mission-bound tokens
-  for the mediated classes is restricted to keys the mediating PEP
-  attests (for example, client-instance attestation), with no
-  token-endpoint, refresh, or exchange path by which the agent obtains
-  such a credential bound to a key it controls. A published
-  execution-environment scope statement covering those classes documents
-  this; a harness conforming to the harness profile
-  ({{I-D.draft-mcguinness-mission-harness}}) is the defined way to
-  establish and document it, and the claim binds to the property;
+- the sender-constraint private key is held by the mediating PEP, not
+  by the agent component, gateway custody being the realizable shape
+  ({{custody}}), and is generated in the mediating PEP or its HSM and
+  never transferred from the agent;
 - each such action requires an action-bound approval
   ({{action-approval}});
 - the disclosure rendered to the Approver for an action-bound approval
@@ -1733,15 +1729,35 @@ approval-rendering condition is stated only by this claim.
 - the Mission state source for those classes is an active freshness
   mechanism, not token-lifetime expiry ({{state-freshness}}).
 
+The fifth term of the claim is the path scope, and it is not a
+protocol-verifiable conformance condition; this claim does not present
+it as one. That governed work runs with no unmediated path to the
+mediated classes, and with no token-endpoint, refresh, or exchange
+path by which the agent obtains a fresh usable credential for them
+bound to a key it controls, is the deployment audit obligation the
+harness profile already names
+({{I-D.draft-mcguinness-mission-harness}}). It is declared in the
+Enforcement Scope Statement, in the mediated-paths declaration and the
+unmediated-path exclusions ({{runtime-conformance}}), with the
+declared scope covering fresh-credential paths as well as action
+paths, and it is audited organizationally, with the negative tests of
+{{negative-conformance}} as its observable check. The claim therefore
+reads: the four conditions above, each verifiable, plus the
+declared-and-audited path scope. The weakest term of that conjunction
+is a self-declared scope statement, and a deployment making this claim
+states that plainly rather than implying a stronger term.
+
 A deployment MAY satisfy the action-bound approval condition for a
 batch through one approval that binds an enumerated list of parameter
 digests, each consumed single-use, so the human pause stays meaningful
 at volume rather than degrading into per-action rubber-stamping
 ({{action-approval}}).
 
-A deployment that leaves any of these unmet MUST NOT claim
-agent-compromise-resistant enforcement; it may still claim base runtime
-conformance. The claim names exactly the set of classes it covers.
+A deployment that leaves any of the four conditions unmet, or whose
+Enforcement Scope Statement does not declare the path scope, MUST NOT
+claim agent-compromise-resistant enforcement; it may still claim base
+runtime conformance. The claim names exactly the set of classes it
+covers.
 
 The guarantee is the conjunction of these conditions, not any one of
 them. Mediated custody alone prevents only off-path presentation of
@@ -1757,7 +1773,7 @@ Each unmet condition loses a specific property:
 | Condition unmet | Property lost |
 |---|---|
 | Custody in the mediating PEP | Key exfiltration |
-| No unmediated path to the actions or to fresh credentials for them | Off-path execution or fresh-credential acquisition |
+| Path scope declared and audited (no unmediated path to the actions or to fresh credentials for them) | Off-path execution or fresh-credential acquisition |
 | Action-bound approval | Unattended high-consequence action |
 | Agent-independent approval rendering | Approval decided on agent-composed disclosure |
 | Active-state freshness | Revocation lag bounded only by token lifetime |
@@ -1784,8 +1800,13 @@ of its base-profile level:
   external-communication or external-commitment action whose bound
   parameters derive from tainted content (or, under session-level
   taint, any such action in a tainted session) obtains a fresh
-  action-bound approval ({{action-approval}}) or is refused. Where
-  the decision-API binding carries taint context
+  action-bound approval ({{action-approval}}) or is refused. The
+  harness profile's pre-consented egress carve-out applies: a send to
+  a destination the Approver concretely named at approval is not
+  human-gated on taint grounds alone, and for content-derived
+  destinations, those outside the approved set, the full polarity,
+  every tainted egress human-gated, remains a condition of this
+  claim. Where the decision-API binding carries taint context
   ({{I-D.draft-mcguinness-mission-authzen}}), the PDP enforces the
   rule; otherwise the harness does, and the scope statement says
   which.

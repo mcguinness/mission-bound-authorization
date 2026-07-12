@@ -176,6 +176,14 @@ human perceived, but the higher rungs shrink the trusted rendering base
 to a small, attestable one and let the deployment pick the assurance its
 threat model needs.
 
+Conformance to this profile is exactly the ladder's floor, Rung 0
+({{rendering-assurance}}): commit the structured disclosure object,
+bind it to the Mission anchors, and sign the evidence. What
+conformance requires is that what was shown is committed and
+reconstructible; everything past that is a rung or a SHOULD, the
+material-notice discipline and delta rendering as recommendations and
+each rung above Rung 0 as a named optional claim ({{conformance}}).
+
 Consent Evidence does not grant authority. Authority remains the
 approved Mission and its Authority Set under
 {{I-D.draft-mcguinness-oauth-mission}}. Consent Evidence lets auditors
@@ -267,7 +275,7 @@ A Consent Disclosure object has these members:
 : OPTIONAL. A string committing the disclosure template content bytes,
   in the integrity-anchor encoded form of
   {{I-D.draft-mcguinness-oauth-mission}}. REQUIRED for a deployment
-  claiming Rung 1 or above ({{rendering-assurance}}), so the template a
+  claiming Rung 1 or above ({{experimental-rungs}}), so the template a
   verifier retrieves is bound to the one used to render this disclosure.
 
 `locale`:
@@ -300,9 +308,10 @@ A Consent Disclosure object has these members:
   conform.
 
 `material_notices`:
-: REQUIRED. An array. Notices that materially affect the Approver's
-  decision. A notice is required for each material-notice condition
-  present, as listed in {{material-notices}}.
+: REQUIRED. An array, possibly empty. Notices that materially affect
+  the Approver's decision. A notice SHOULD be included for each
+  material-notice condition present, as listed in
+  {{material-notices}}.
 
 `risk_summary`:
 : OPTIONAL. An array of objects, each with a `dimension` and a
@@ -374,9 +383,9 @@ A Consent Disclosure object has these members:
 `approver_actions`:
 : OPTIONAL. An array describing explicit approver interactions required
   by policy, such as checking a high-risk notice or confirming an
-  expansion delta. REQUIRED when `material_notices` carries a notice of
-  a high-risk class ({{material-notices}}); it then carries one
-  acknowledgment action per such notice.
+  expansion delta. SHOULD be present when `material_notices` carries a
+  notice of a high-risk class ({{material-notices}}), then carrying
+  one acknowledgment action per such notice.
 
 A Consent Disclosure object MUST NOT omit material authority. If the
 Authority Set includes delegation, external commitments, irreversible
@@ -413,8 +422,8 @@ author.
 
 ## Material Notice Requirements {#material-notices}
 
-A material notice is required for each of these conditions when present
-in the proposed Authority Set or Mission context:
+A material notice SHOULD be included for each of these conditions when
+present in the proposed Authority Set or Mission context:
 
 - delegation to another actor or child Mission;
 - authority that crosses an organizational or issuer boundary;
@@ -435,14 +444,15 @@ for this profile.
 Four conditions are the high-risk notice classes: irreversible action,
 external commitment, privileged administration, and a consumption
 bound. For each material notice of a high-risk class,
-`approver_actions` ({{consent-disclosure}}) MUST carry an explicit
+`approver_actions` ({{consent-disclosure}}) SHOULD carry an explicit
 acknowledgment action identifying that notice, and the Mission Issuer
-MUST NOT record an `approved` decision unless the Approver completed
+SHOULD NOT record an `approved` decision unless the Approver completed
 every acknowledgment the disclosure carries. The acknowledgment is per
-notice: the disclosure commits the required action, and the Mission
-Issuer MUST record each completion in the evidence's `acknowledgments`
+notice: the disclosure commits the acknowledgment actions it carries,
+and where the rendered disclosure carries them, the Mission Issuer
+MUST record each completion in the evidence's `acknowledgments`
 member ({{consent-evidence}}), so completion is auditable and not only
-the requirement. A single blanket confirmation does not satisfy it. The
+the commitment. A single blanket confirmation does not satisfy it. The
 same classes key the minimum approval-authentication strength the
 issuance profile's deployment floor sets
 ({{I-D.draft-mcguinness-oauth-mission}}).
@@ -454,7 +464,7 @@ behind further interaction, provided that:
 
 - the committed Consent Disclosure object retains the full coverage of
   {{consent-disclosure}}; layering removes nothing from the object;
-- every material notice, and any acknowledgment it requires
+- every material notice, and any acknowledgment it carries
   ({{material-notices}}), surfaces in the first layer; and
 - the full rendering of `authority_summary` is one interaction away,
   and the first layer states that it is available.
@@ -495,12 +505,12 @@ the rendering SHOULD be a deterministic function of the disclosure
 object and its `template_id`, `template_version`, `template_hash`, and
 `locale`, so an auditor can re-render the recorded disclosure into the
 form the Approver should have been shown. A deployment that makes this
-guarantee normative claims Rung 1 ({{rendering-assurance}}), which fixes
+guarantee normative claims Rung 1 ({{experimental-rungs}}), which fixes
 the concrete requirements. This does not prove what was displayed, but
 it reduces the gap from "the rendering layer showed something
 unverifiable" to "did the rendering layer execute a published
 deterministic template," which the higher rungs of
-{{rendering-assurance}} then address.
+{{experimental-rungs}} then address.
 
 A Mission Issuer claiming this profile MUST record
 `consent_rendering_hash` on the Mission record. When the Mission claim
@@ -515,7 +525,7 @@ the disclosure is constructed and before the decision (the Authority
 Set, the locale, the template, or the material notices), the Mission
 Issuer MUST discard the disclosure and construct a new one; it MUST NOT
 reuse the prior `consent_rendering_hash`. Rung 1 determinism
-({{rendering-assurance}}) applies per presentation modality: the same
+({{experimental-rungs}}) applies per presentation modality: the same
 inputs produce the same rendered form within a given modality, not
 across modalities.
 
@@ -539,28 +549,16 @@ Rung 0, Recorded disclosure:
   this disclosure for this authority; proves nothing about what was
   shown.
 
-Rung 1, Deterministic rendering:
-: An auditor can re-render the intended form, so the open question
-  narrows to whether the rendering layer faithfully executed a published
-  template. A deployment claiming Rung 1 MUST:
-
-  - render the disclosure as a deterministic function of the disclosure
-    object, `template_id`, `template_version`, `template_hash`, and
-    `locale`, so the same inputs produce the same rendered form within a
-    presentation modality;
-  - commit the template content bytes in `template_hash`
-    ({{consent-disclosure}}); and
-  - keep the named template retrievable or reconstructable by an
-    authorized auditor for the retention period ({{audit}}).
-
-Rungs above 1 shrink the trusted rendering base further, from any
-rendering layer to an attested renderer (Rung 2) and to the Approver's
-own authenticator (Rung 3), with out-of-band execution-time
-confirmation above that (Rung 4). Each imports a trust infrastructure
-(platform or TEE attestation; transaction-confirming authenticators)
-this profile cannot supply; they are **experimental** and defined in
-{{experimental-rungs}}. Rungs 0 and 1 are the rungs of this profile's
-conformance.
+Rung 0 is the conforming floor of this profile ({{conformance}}).
+Every rung above it is optional and defined in {{experimental-rungs}},
+so the ladder above the floor is one block a deployment opts into:
+deterministic template rendering (Rung 1), an attested renderer
+(Rung 2), the Approver's own authenticator (Rung 3), and out-of-band
+execution-time confirmation (Rung 4). Each rung above Rung 0 is a
+named optional claim, and Rungs 2 through 4 are additionally
+**experimental**, each importing a trust infrastructure (platform or
+TEE attestation; transaction-confirming authenticators) this profile
+cannot supply.
 
 No rung proves the Approver perceived or understood the disclosure; a
 compromised authenticator or trusted execution environment, or an
@@ -689,8 +687,8 @@ A Consent Evidence object has these members:
   one entry per acknowledgment the
   Approver completed, each identifying the acknowledged notice by its
   `condition` and the Authority Set entry it applies to, and carrying an
-  RFC 3339 {{RFC3339}} completion timestamp. It makes the per-notice
-  acknowledgment requirement auditable in the evidence itself, not only
+  RFC 3339 {{RFC3339}} completion timestamp. It makes per-notice
+  acknowledgment auditable in the evidence itself, not only
   through the committed disclosure.
 
 `refused_dimensions`:
@@ -858,8 +856,8 @@ At an approval event, a Consent-Evidence-capable Mission Issuer MUST:
    `consent_rendering_hash`.
 
 For expansion approvals, the disclosure MUST identify the predecessor
-Mission and distinguish retained authority from newly requested
-authority.
+Mission and SHOULD distinguish retained authority from newly requested
+authority ({{expansion-disclosure}}).
 
 ## Declined Approval Events {#declined-events}
 
@@ -893,18 +891,20 @@ reviewed proposals that preceded it.
 ## Expansion and Delta Disclosure {#expansion-disclosure}
 
 When the approval event is for Mission Expansion, the Consent
-Disclosure object MUST distinguish:
+Disclosure object MUST identify the predecessor Mission and SHOULD
+distinguish:
 
 - authority retained from the predecessor;
 - authority newly added;
 - authority removed or narrowed;
-- changes to Mission expiry;
-- changes to delegation or child-Mission rights; and
-- the predecessor Mission identifier.
+- changes to Mission expiry; and
+- changes to delegation or child-Mission rights.
 
 An expansion disclosure that renders only the final Authority Set
-without the delta is not conforming to this profile, because it fails
-to show what is being widened.
+without the delta fails to show the Approver what is being widened,
+which is what this recommendation exists to prevent; the disclosure
+it did render remains committed and reconstructible under the floor
+({{conformance}}).
 
 # Audit Reconstruction {#audit}
 
@@ -950,18 +950,29 @@ by reference when not required for ordinary audit.
 
 # Conformance {#conformance}
 
-A conforming Consent-Evidence-capable Mission Issuer MUST:
+The conforming floor is Rung 0 ({{rendering-assurance}}): what was
+shown is committed, bound to the Mission anchors, signed, and
+reconstructible. A conforming Consent-Evidence-capable Mission Issuer
+MUST:
 
-- construct a Consent Disclosure object for each approval event;
-- compute `consent_rendering_hash`;
+- construct a Consent Disclosure object, with the required members of
+  {{consent-disclosure}}, for each approval event;
+- compute `consent_rendering_hash` ({{consent-rendering-hash}});
 - record Consent Evidence for approval and decline decisions, and for
   narrowed decisions where the deployment supports approval revision
   ({{I-D.draft-mcguinness-oauth-mission-approval-revision}});
-- bind approved Mission records to `consent_rendering_hash`;
-- include material notices for high-risk authority, with the
-  per-notice acknowledgment the high-risk classes require, and record
-  each acknowledgment completion ({{material-notices}}); and
-- retain evidence for audit reconstruction.
+- bind approved Mission records to `consent_rendering_hash`; and
+- retain evidence for audit reconstruction ({{audit}}).
+
+Beyond the floor, a conforming Mission Issuer SHOULD include a
+material notice for each condition of {{material-notices}} present,
+SHOULD gate `approved` on the per-notice acknowledgments for the
+high-risk classes, and, where the rendered disclosure carries
+acknowledgment actions, MUST record each completion
+({{material-notices}}); it SHOULD render expansion approvals as a
+delta ({{expansion-disclosure}}). Each rung above Rung 0 is a named
+optional claim ({{experimental-rungs}}), made only when its
+requirements are satisfied and its evidence recorded.
 
 A conforming verifier of Consent Evidence MUST implement the checks in
 {{integrity}} and MUST treat failure to retrieve a referenced
@@ -979,9 +990,9 @@ is detectable in audit. It does not eliminate the threat: a rendering
 layer that displays pixels inconsistent with the structured disclosure
 it commits remains outside any server-side commitment ({{introduction}}).
 The assurance ladder of {{rendering-assurance}} is how a deployment
-reduces this threat by degree: deterministic rendering makes the
-intended form re-renderable (Rung 1), and the experimental rungs
-({{experimental-rungs}}) bind an attested renderer (Rung 2) or the
+reduces this threat by degree: the optional rungs
+({{experimental-rungs}}) make the intended form re-renderable
+(Rung 1), bind an attested renderer (Rung 2), or bind the
 Approver's own authenticator (Rung 3). A deployment that needs
 assurance
 that the Approver's authenticator confirmed a specific disclosure
@@ -1097,16 +1108,32 @@ Evidence media type.
 
 --- back
 
-# Experimental Rendering-Assurance Rungs {#experimental-rungs}
+# Rendering-Assurance Rungs Above the Floor {#experimental-rungs}
 
-This appendix is **experimental**: adopt it for evaluation, not as a
-stable interface. Each rung below extends the ladder of
-{{rendering-assurance}} by importing a trust infrastructure this
+This appendix defines the rungs above the conforming floor of Rung 0
+({{rendering-assurance}}). Each is a named optional claim
+({{conformance}}). Rung 1 is optional and stable; Rungs 2 through 4
+are additionally **experimental**, to adopt for evaluation, not as a
+stable interface, because each imports a trust infrastructure this
 profile does not supply: platform or trusted-execution-environment
 attestation for Rung 2, transaction-confirming authenticators for
 Rung 3. The cumulative rule of {{rendering-assurance}} applies: a rung
 is claimed only over a disclosure that also satisfies the rungs below
 it.
+
+Rung 1, Deterministic rendering:
+: An auditor can re-render the intended form, so the open question
+  narrows to whether the rendering layer faithfully executed a published
+  template. A deployment claiming Rung 1 MUST:
+
+  - render the disclosure as a deterministic function of the disclosure
+    object, `template_id`, `template_version`, `template_hash`, and
+    `locale`, so the same inputs produce the same rendered form within a
+    presentation modality;
+  - commit the template content bytes in `template_hash`
+    ({{consent-disclosure}}); and
+  - keep the named template retrievable or reconstructable by an
+    authorized auditor for the retention period ({{audit}}).
 
 Rung 2, Attested rendering:
 : The Consent Evidence carries a `rendering_attestation`
