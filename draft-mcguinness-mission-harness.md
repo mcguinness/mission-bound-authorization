@@ -290,16 +290,19 @@ The harness MUST publish an execution-environment scope statement. For
 each mediated action class it states the isolation mechanism that
 confines governed work (for example a container, virtual machine, or
 network egress policy) and names the unmediated paths excluded from the
-claim. For each mediated class the statement MUST also enumerate the
-secondary egress channel classes the environment offers, at minimum
-DNS resolution, log and error output, shared stores another process
-reads, shared vector stores or long-term memory, operating-system
-processes the agent spawns, provider-side model context, the
-inference API itself, and rendering surfaces that dereference remote
-references (a rendered image fetch is an egress performed for the
-agent), stating for each whether it is mediated, excluded by the
-isolation mechanism, or outside the claim. The enumeration is
-not static where open-world discovery is deployed: a channel created
+claim. For each mediated class the statement also enumerates the
+secondary egress channel classes the environment offers: the full
+enumeration is MUST where the deployment claims trifecta containment
+or agent-compromise-resistant enforcement for that class
+({{I-D.draft-mcguinness-mission-runtime}}), and SHOULD otherwise. It
+covers at minimum DNS resolution, log and error output, shared stores
+another process reads, shared vector stores or long-term memory,
+operating-system processes the agent spawns, provider-side model
+context, the inference API itself, and rendering surfaces that
+dereference remote references (a rendered image fetch is an egress
+performed for the agent), stating for each whether it is mediated,
+excluded by the isolation mechanism, or outside the claim. The
+enumeration is not static where open-world discovery is deployed: a channel created
 by a discovery binding enters it at binding, recorded in Harness
 Evidence, and an egress channel that entered neither way is a
 mediated-environment violation, not a discovery
@@ -909,6 +912,26 @@ decision request where the binding carries it
 ({{I-D.draft-mcguinness-mission-authzen}}); the PDP then enforces
 this rule and records the taint context in Decision Evidence.
 
+One destination class is carved out. A destination the Approver
+concretely named at approval, a recipient, endpoint, or audience that
+appears in the approved Mission Intent or in an Authority Set entry's
+constraints, is **pre-consented egress**: a tainted session's send to
+exactly that destination does not require a fresh human approval on
+taint grounds alone. Parameter binding, the per-action permit, and
+every other duty of this profile and the runtime profile still apply,
+and the destination match is on the concrete approved value, never on
+content. Anything beyond the named set, a new recipient, an
+attacker-supplied address, a destination inferred from content, keeps
+the full taint response above.
+
+The carve-out is the rule's default economics, not a weakening of the
+named claim: it is what keeps a mail agent whose recipients were
+approved with the Mission from being human-gated per send. Where a
+deployment claims the runtime profile's trifecta containment for
+content-derived destinations
+({{I-D.draft-mcguinness-mission-runtime}}), the full taint polarity,
+every tainted egress human-gated, remains a condition of that claim.
+
 The taint policy MUST be declared in the execution-environment scope
 statement ({{mediated-egress}}): the content trust list, the trigger
 granularity (parameter provenance, session-level, or both), and the
@@ -926,8 +949,9 @@ keeps a value the agent paraphrases rather than copies from shedding
 its taint, at the cost of gating untraceable parameters in a tainted
 session. In an open-world session that has ingested untrusted
 content, that cost is the rule rather than the exception:
-model-composed egress is untraceable, so it is human-gated, and the
-content trust list is the lever that keeps the gate proportionate.
+model-composed egress to an unnamed destination is untraceable, so it
+is human-gated, and the content trust list and the pre-consented
+destination set are the levers that keep the gate proportionate.
 The control still cannot close within-scope data laundering
 ({{I-D.draft-mcguinness-oauth-mission}},
 {{I-D.draft-mcguinness-mission-runtime}}); it raises the bar by
@@ -1118,11 +1142,13 @@ and invoice reference derive from ERP records; the ERP connector is a
 first-party tool on the trust list, so no bound parameter carries
 taint, and the posting proceeds under the ordinary runtime gate. Then
 the agent, steered by text in the email, tries to send an external
-message whose body derives from that text: the bound parameters carry
-tainted provenance, so the harness requires a fresh action-bound
-approval before the egress. The runtime layer would gate both calls
-against the Mission regardless; the harness adds the rule that
-untrusted input cannot, by itself, drive an egress `alice` never
+message whose body derives from that text to an address the email
+supplied: the bound parameters carry tainted provenance and the
+recipient was never named at approval, so pre-consented egress does
+not apply ({{session-taint}}) and the harness requires a fresh
+action-bound approval before the egress. The runtime layer would gate
+both calls against the Mission regardless; the harness adds the rule
+that untrusted input cannot, by itself, drive an egress `alice` never
 directed.
 
 # Conformance {#conformance}
