@@ -757,7 +757,7 @@ be at least as strict as the minimum:
 | `expired` | suppress or terminate |
 | `suspended` | pause or suppress |
 | `completed` | suppress or terminate |
-| `superseded` | suppress; rebinding requires a fresh derivation under the successor Mission |
+| `superseded` | suppress, or continue by rebinding to the successor ({{supersession-continuity}}) |
 | `cascaded` | suppress or terminate |
 | unknown or stale | suppress or pause |
 
@@ -772,6 +772,43 @@ profile's forward-compatibility rule, it treats any state other than
 `active`, including one it does not recognize, as non-active and stops
 governed continuation accordingly. The named rows are the minimum
 behavior where a deployment does run the defining profile.
+
+## Continuation Across Supersession {#supersession-continuity}
+
+An expansion supersedes its predecessor with an approved successor
+({{I-D.draft-mcguinness-oauth-mission-expansion}}), and the open-world
+case makes this routine: a governed session meets a resource its
+Mission could not name, the encounter becomes a human-approved
+expansion ({{I-D.draft-mcguinness-mission-discovery}}), and the
+running session should continue under the successor rather than
+restart. Suppressing the work and losing the task graph would defeat
+the point.
+
+For `superseded` a harness therefore MAY, instead of suppressing,
+**continue by rebinding**: it keeps the task graph, queue, and
+continuation point, and rebinds the affected item to the successor
+Mission. Continuation is not resumption of the old authority. Before
+dispatching any governed work under the successor the harness MUST:
+
+- confirm the successor is `active` and passes the resume check under
+  the successor's binding ({{resume-checks}});
+- derive a fresh Mission-bound credential under the successor and
+  discard any credential bound to the predecessor; a predecessor
+  credential MUST NOT carry across the rebinding
+  ({{cached-access}}); and
+- proceed only for the actions the successor's Authority Set
+  authorizes, refusing any that the predecessor allowed but the
+  successor does not.
+
+Session context survives; authority does not. What continues is the
+work item and its state, re-established under freshly derived
+authority, not a credential or a permit carried over from the
+predecessor. The harness records the rebinding as Harness Evidence
+with `event_type` `mission_superseded` ({{harness-evidence}}), naming
+both the predecessor and the successor, so the continuity is
+auditable. A harness that cannot establish the successor state, or for
+which the item's actions are not within the successor, suppresses per
+the matrix above.
 
 For irreversible actions, external commitments, and privileged
 administration, `handoff` or orchestration handling under a deployment
@@ -969,7 +1006,7 @@ A Harness Evidence object is a JSON object {{RFC8259}} with:
 : REQUIRED. One of `resume_allowed`, `resume_suppressed`,
   `queue_suppressed`, `cache_disabled`, `subagent_stopped`,
   `subagent_continued`, `human_review_completed`, `egress_downgraded`,
-  or `mission_state_stale`. `event_type`
+  `mission_superseded`, or `mission_state_stale`. `event_type`
   categorizes the work item the record is about; the `decision` member
   records the outcome, so the two are orthogonal.
 
