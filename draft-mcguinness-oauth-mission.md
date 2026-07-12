@@ -766,10 +766,16 @@ has the following members:
 `purpose`:
 : OPTIONAL. A string. A URI identifying the purpose of the
   task, recorded for disclosure and audit. Its semantics are
-  deployment- or registry-defined and opaque to this document; like
-  `success_criteria` it MUST NOT be used to derive, widen, or gate
-  authority. A deployment MAY consult it for out-of-band policy or
-  logging that does not affect the authority derived here.
+  deployment- or registry-defined and opaque to this document. Like
+  `goal`, it shapes authority only through the pre-approval
+  derivation whose result the Approver reads and consents to: in
+  template mode it MAY key the configured mapping
+  ({{authorization-derivation}}), and the derived set stays bounded
+  by the Intent and by policy like any derivation. It MUST NOT
+  otherwise be used to derive, widen, or gate authority, and once
+  the Mission is approved it is inert. A deployment MAY consult it
+  for out-of-band policy or logging that does not affect the
+  authority derived here.
 
 `expires_at`:
 : REQUIRED. A string. An RFC 3339 {{RFC3339}}
@@ -2226,7 +2232,8 @@ its binding does not meet the resource's requirements: a step-up,
 not a widening), or `constraint_unrecognized` (an applicable entry
 carries a `constraints` key the RS cannot enforce, and the request
 fails closed). A value the client does not recognize is treated as
-`insufficient_authority`.
+`insufficient_authority`. The attribute's disclosure considerations
+are {{denial-disclosure}}'s.
 
 A Mission-unaware Resource Server that authorizes only from `scope`
 still operates within the Mission at the coarse scope level, because
@@ -3003,8 +3010,9 @@ This profile constrains the data-access leg: a Mission narrows authority
 from everything the agent's standing credentials allow to the resources
 the approved task needs, and per-task Missions ({{applicability}}) shrink
 the blast radius further. It contributes one thing against the
-untrusted-content leg: `purpose` and `success_criteria` are inert,
-granting, widening, and gating no authority, and `goal` shapes
+untrusted-content leg: `success_criteria` is inert,
+granting, widening, and gating no authority, and `goal` and
+`purpose` shape
 authority only through the pre-approval derivation whose result the
 Approver reads and consents to ({{mission-intent}},
 {{authorization-derivation}}); authority is fixed at the approval
@@ -3048,6 +3056,21 @@ this profile and is out of scope here. Which party enforces each
 Mission-carried bound is summarized in the enforcement table
 ({{mission-intent}}). Short token lifetimes and
 narrow authority bound, but do not eliminate, this exposure.
+
+## Denial Detail Disclosure {#denial-disclosure}
+
+The `mission_denial` attribute ({{rs-enforcement}}) tells a caller
+which path a denial leads into, and thereby reveals authorization
+shape: `step_up_required` confirms to the presenting party that the
+authority exists, where `insufficient_authority` denies its
+existence. Introspection guards the same class of fact behind caller
+authorization ({{caller-authorization-and-minimization}}); a Resource
+Server applies the same care here. It SHOULD return the attribute
+only on a response to a validly signed, audience-correct token whose
+holder its deployment accepts learning the distinction, and SHOULD
+omit the attribute otherwise; when in doubt,
+`insufficient_authority` is the value that reveals least, and
+omission reveals nothing.
 
 ## Token Theft
 
@@ -3259,7 +3282,12 @@ registry:
 
 PAR {{RFC9126}} carries authorization-request parameters without a
 distinct usage location, so the pushed submission of `mission_intent`
-needs no separate registration. The `mission_denial` attribute rides
+needs no separate registration. The `mission_error` member rides the
+token-endpoint error response; "token response" is the registry's
+applicable usage location, and the member relies on the error
+response's JSON extensibility rather than defining a new `error`
+code, so generic {{RFC6749}} error handling is undisturbed. The
+`mission_denial` attribute rides
 the `WWW-Authenticate` scheme's extensible auth-param space
 ({{RFC6750}}, {{rs-enforcement}}), for which no IANA registry
 exists; no action is required for it.
@@ -3741,6 +3769,12 @@ resolve before interoperating.
   and `actions` member definitions, the audience and token-response
   text, and the Mission Record introduction are tightened; the
   rendering-to-consent change rule stands as its own paragraph.
+- Post-review fixes: `purpose` is stated consistently with the
+  pre-approval shaping invariant (it may key template-mode
+  derivation; it remains inert after approval and never widens);
+  `mission_denial` gains denial-detail disclosure considerations;
+  the `mission_error` registration's usage-location choice is
+  explained.
 
 -00
 
