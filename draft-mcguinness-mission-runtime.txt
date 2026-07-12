@@ -1194,12 +1194,15 @@ Table of Contents
       active freshness mechanism that can reflect a revocation within
       the staleness bound: token introspection at the issuer
       ([RFC7662]), the Mission Status profile
-      ([I-D.draft-mcguinness-oauth-mission-status]), or Mission
-      Lifecycle Signals ([I-D.draft-mcguinness-oauth-mission-signals]).
-      Token-lifetime expiry alone is not an acceptable state source for
-      these classes: it bounds staleness only by the lifetime, so a
-      revoked Mission keeps deriving consequence until tokens age out,
-      which is the ambient-authority gap this profile exists to close.
+      ([I-D.draft-mcguinness-oauth-mission-status]), a Mission Status
+      List whose Status List Token TTL is within the bound (the status
+      profile's swarm-scale pull floor,
+      [I-D.draft-mcguinness-oauth-mission-status]), or Mission Lifecycle
+      Signals ([I-D.draft-mcguinness-oauth-mission-signals]).  Token-
+      lifetime expiry alone is not an acceptable state source for these
+      classes: it bounds staleness only by the lifetime, so a revoked
+      Mission keeps deriving consequence until tokens age out, which is
+      the ambient-authority gap this profile exists to close.
 
    For a deployment whose access tokens are short-lived and whose
    issuance and refresh are state-gated per the core

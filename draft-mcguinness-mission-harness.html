@@ -1246,7 +1246,10 @@ treats session continuity as proof that Mission authority continues.<a href="#se
                 <p id="section-toc.1-1.13.2.1.1"><a href="#section-13.1" class="auto internal xref">13.1</a>.  <a href="#name-stop-behavior-matrix" class="internal xref">Stop-Behavior Matrix</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.2">
-                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-human-review-outcomes" class="internal xref">Human-Review Outcomes</a></p>
+                <p id="section-toc.1-1.13.2.2.1"><a href="#section-13.2" class="auto internal xref">13.2</a>.  <a href="#name-continuation-across-superse" class="internal xref">Continuation Across Supersession</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.3">
+                <p id="section-toc.1-1.13.2.3.1"><a href="#section-13.3" class="auto internal xref">13.3</a>.  <a href="#name-human-review-outcomes" class="internal xref">Human-Review Outcomes</a></p>
 </li>
             </ul>
 </li>
@@ -2261,7 +2264,7 @@ be at least as strict as the minimum:<a href="#section-13.1-1" class="pilcrow">�
               <td class="text-left" rowspan="1" colspan="1">
                 <code>superseded</code>
 </td>
-              <td class="text-left" rowspan="1" colspan="1">suppress; rebinding requires a fresh derivation under the successor Mission</td>
+              <td class="text-left" rowspan="1" colspan="1">suppress, or continue by rebinding to the successor (<a href="#supersession-continuity" class="auto internal xref">Section 13.2</a>)</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
@@ -2286,43 +2289,89 @@ profile's forward-compatibility rule, it treats any state other than
 <code>active</code>, including one it does not recognize, as non-active and stops
 governed continuation accordingly. The named rows are the minimum
 behavior where a deployment does run the defining profile.<a href="#section-13.1-3" class="pilcrow">¶</a></p>
-<p id="section-13.1-4">For irreversible actions, external commitments, and privileged
+</section>
+</div>
+<div id="supersession-continuity">
+<section id="section-13.2">
+        <h3 id="name-continuation-across-superse">
+<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-continuation-across-superse" class="section-name selfRef">Continuation Across Supersession</a>
+        </h3>
+<p id="section-13.2-1">An expansion supersedes its predecessor with an approved successor
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), and the open-world
+case makes this routine: a governed session meets a resource its
+Mission could not name, the encounter becomes a human-approved
+expansion (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>), and the
+running session should continue under the successor rather than
+restart. Suppressing the work and losing the task graph would defeat
+the point.<a href="#section-13.2-1" class="pilcrow">¶</a></p>
+<p id="section-13.2-2">For <code>superseded</code> a harness therefore <span class="bcp14">MAY</span>, instead of suppressing,
+<strong>continue by rebinding</strong>: it keeps the task graph, queue, and
+continuation point, and rebinds the affected item to the successor
+Mission. Continuation is not resumption of the old authority. Before
+dispatching any governed work under the successor the harness <span class="bcp14">MUST</span>:<a href="#section-13.2-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13.2-3.1">
+            <p id="section-13.2-3.1.1">confirm the successor is <code>active</code> and passes the resume check under
+the successor's binding (<a href="#resume-checks" class="auto internal xref">Section 7</a>);<a href="#section-13.2-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.2-3.2">
+            <p id="section-13.2-3.2.1">derive a fresh Mission-bound credential under the successor and
+discard any credential bound to the predecessor; a predecessor
+credential <span class="bcp14">MUST NOT</span> carry across the rebinding
+(<a href="#cached-access" class="auto internal xref">Section 10</a>); and<a href="#section-13.2-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.2-3.3">
+            <p id="section-13.2-3.3.1">proceed only for the actions the successor's Authority Set
+authorizes, refusing any that the predecessor allowed but the
+successor does not.<a href="#section-13.2-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-13.2-4">Session context survives; authority does not. What continues is the
+work item and its state, re-established under freshly derived
+authority, not a credential or a permit carried over from the
+predecessor. The harness records the rebinding as Harness Evidence
+with <code>event_type</code> <code>mission_superseded</code> (<a href="#harness-evidence" class="auto internal xref">Section 15</a>), naming
+both the predecessor and the successor, so the continuity is
+auditable. A harness that cannot establish the successor state, or for
+which the item's actions are not within the successor, suppresses per
+the matrix above.<a href="#section-13.2-4" class="pilcrow">¶</a></p>
+<p id="section-13.2-5">For irreversible actions, external commitments, and privileged
 administration, <code>handoff</code> or orchestration handling under a deployment
-unwind plan <span class="bcp14">SHOULD</span> be used when work may already be in flight.<a href="#section-13.1-4" class="pilcrow">¶</a></p>
+unwind plan <span class="bcp14">SHOULD</span> be used when work may already be in flight.<a href="#section-13.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="review-outcomes">
-<section id="section-13.2">
+<section id="section-13.3">
         <h3 id="name-human-review-outcomes">
-<a href="#section-13.2" class="section-number selfRef">13.2. </a><a href="#name-human-review-outcomes" class="section-name selfRef">Human-Review Outcomes</a>
+<a href="#section-13.3" class="section-number selfRef">13.3. </a><a href="#name-human-review-outcomes" class="section-name selfRef">Human-Review Outcomes</a>
         </h3>
-<p id="section-13.2-1">When the harness hands off a governed item to human review, the review
-concludes with one of three outcomes:<a href="#section-13.2-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-13.2-2">
-          <dt id="section-13.2-2.1">
+<p id="section-13.3-1">When the harness hands off a governed item to human review, the review
+concludes with one of three outcomes:<a href="#section-13.3-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-13.3-2">
+          <dt id="section-13.3-2.1">
 <code>approve</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-13.2-2.2">
-            <p id="section-13.2-2.2.1">The reviewer permits the work to continue.<a href="#section-13.2-2.2.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-13.3-2.2">
+            <p id="section-13.3-2.2.1">The reviewer permits the work to continue.<a href="#section-13.3-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-13.2-2.3">
+<dt id="section-13.3-2.3">
 <code>reject</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-13.2-2.4">
-            <p id="section-13.2-2.4.1">The reviewer refuses the work.<a href="#section-13.2-2.4.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-13.3-2.4">
+            <p id="section-13.3-2.4.1">The reviewer refuses the work.<a href="#section-13.3-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-13.2-2.5">
+<dt id="section-13.3-2.5">
 <code>expire</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-13.2-2.6">
-            <p id="section-13.2-2.6.1">The item reached its parked maximum age without a review decision.<a href="#section-13.2-2.6.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-13.3-2.6">
+            <p id="section-13.3-2.6.1">The item reached its parked maximum age without a review decision.<a href="#section-13.3-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-13.2-3">A parked item <span class="bcp14">MUST</span> carry a deployment maximum age. The harness <span class="bcp14">MUST</span>
+<p id="section-13.3-3">A parked item <span class="bcp14">MUST</span> carry a deployment maximum age. The harness <span class="bcp14">MUST</span>
 record the outcome, its authority basis, and the reviewer in Harness
 Evidence. Resumed work re-enters the resume algorithm
 (<a href="#resume-algorithm" class="auto internal xref">Section 7.1</a>): review approval is not itself a Mission-state
-check.<a href="#section-13.2-3" class="pilcrow">¶</a></p>
+check.<a href="#section-13.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2519,7 +2568,7 @@ rather than verified.<a href="#section-15-7" class="pilcrow">¶</a></p>
             <p id="section-15.1-2.4.1"><span class="bcp14">REQUIRED</span>. One of <code>resume_allowed</code>, <code>resume_suppressed</code>,
 <code>queue_suppressed</code>, <code>cache_disabled</code>, <code>subagent_stopped</code>,
 <code>subagent_continued</code>, <code>human_review_completed</code>, <code>egress_downgraded</code>,
-or <code>mission_state_stale</code>. <code>event_type</code>
+<code>mission_superseded</code>, or <code>mission_state_stale</code>. <code>event_type</code>
 categorizes the work item the record is about; the <code>decision</code> member
 records the outcome, so the two are orthogonal.<a href="#section-15.1-2.4.1" class="pilcrow">¶</a></p>
 </dd>
@@ -2598,7 +2647,7 @@ decision, each a value from the harness execution states of
             <p id="section-15.1-2.26.1"><span class="bcp14">OPTIONAL</span>. An object for a <code>human_review_completed</code> event: the
 <code>outcome</code> (<code>approve</code>, <code>reject</code>, or <code>expire</code>), the reviewer
 identity, and the authority basis of the review
-(<a href="#review-outcomes" class="auto internal xref">Section 13.2</a>).<a href="#section-15.1-2.26.1" class="pilcrow">¶</a></p>
+(<a href="#review-outcomes" class="auto internal xref">Section 13.3</a>).<a href="#section-15.1-2.26.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.27">
