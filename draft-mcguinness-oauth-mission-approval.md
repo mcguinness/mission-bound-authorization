@@ -293,13 +293,14 @@ Intent via PAR {{RFC9126}}.
 
 ## Pending Lifetime and Staleness {#pending-staleness}
 
-A deferred approval MUST carry a deployment-set maximum pending lifetime,
-after which it resolves to `expired_token` per the deferred substrate. A
-decision made after a change to the derivation `policy_version`, or to
-the applicable capability catalog, MUST be made over a proposal that has
-been re-derived and re-rendered under the current policy and catalog; the
-Mission Issuer MUST NOT commit an approval over a proposal derived under
-superseded policy.
+A deferred approval MUST carry a deployment-set maximum pending
+lifetime, after which it resolves to `expired_token` per the deferred
+substrate. Staleness of the proposal itself needs no separate rule:
+derivation is mechanical and happens once, at the approval event,
+over the policy and capability catalog then in force
+({{I-D.draft-mcguinness-oauth-mission}}), so the reviewer always
+decides over an Authority Set derived and rendered under current
+policy, never one derived under superseded policy.
 
 ## The Approval Decision Set {#decision-set}
 
