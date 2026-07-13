@@ -168,7 +168,8 @@ defines them.
 
 Proposed Mission:
 : The Mission Intent and the Authority Set the Mission Issuer derived
-  from it, pending an approval decision.
+  from it, pending an approval decision. This document uses
+  "proposal" as shorthand for the Proposed Mission.
 
 # Deferred Mission Approval {#deferred-approval}
 
@@ -406,8 +407,8 @@ Consent evidence:
 
 Shaping:
 : A client-side shaper ({{I-D.draft-mcguinness-mission-shaping}})
-  narrows a proposal before submission, which reduces the chance a
-  deferred review is refused. After an `access_denied` resolution, the
+  narrows the Mission Intent before submission, which reduces the
+  chance a deferred review is refused. After an `access_denied` resolution, the
   shaper constructs the fresh, narrower Mission Intent the client
   resubmits.
 
