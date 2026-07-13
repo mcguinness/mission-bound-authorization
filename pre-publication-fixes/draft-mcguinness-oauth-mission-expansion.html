@@ -1680,7 +1680,21 @@ Issuer <span class="bcp14">MUST</span> refuse an expansion request whose <code>p
 value does not match the Mission resolved from the presented grant,
 with <code>invalid_grant</code>. A client that does not hold a grant for the named
 predecessor cannot present its refresh token and so cannot expand it.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
-<p id="section-4.2-5">Presenting the predecessor's refresh token in the PAR request <span class="bcp14">MUST</span>
+<p id="section-4.2-5">Stated as the eligibility rule rather than a consequence: this
+profile's expansion requires a refresh-token-bearing grant, and a
+deployment that issues no refresh token for a Mission forgoes it.
+Nothing else is lost. Succession stays reachable through a fresh
+approval, a new Mission whose disclosure references the work it
+continues, since the successor's authority comes only from the fresh
+consent in any case; and the Subject or an administrator acts on the
+predecessor at the management plane regardless, whose standing is
+the authenticated principal, never a token's possession
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). The grant proof
+gates the proposal channel (who may put an expansion wearing this
+predecessor's name in front of the Approver, and who may trigger the
+atomic supersession), never the authority: no proof failure can
+widen anything.<a href="#section-4.2-5" class="pilcrow">¶</a></p>
+<p id="section-4.2-6">Presenting the predecessor's refresh token in the PAR request <span class="bcp14">MUST</span>
 follow the issuance profile's handling for that token: a
 sender-constrained refresh token <span class="bcp14">MUST</span> be presented in conformance with
 its sender constraint. When the token is DPoP-bound <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>, the PAR
@@ -1698,19 +1712,19 @@ deployment's anomaly detection, and the per-predecessor rate limit
 <span class="bcp14">SHOULD</span> when the presented token is not sender-constrained. The
 successor's
 authority still comes only from the fresh consent at the approval event,
-never from authority the binding token could itself derive.<a href="#section-4.2-5" class="pilcrow">¶</a></p>
-<p id="section-4.2-6">This binding requires the predecessor to have a refresh token to
+never from authority the binding token could itself derive.<a href="#section-4.2-6" class="pilcrow">¶</a></p>
+<p id="section-4.2-7">This binding requires the predecessor to have a refresh token to
 present. A Mission issued without one (for example an
 access-token-only grant) has no <code>predecessor_token</code> to carry and so
 cannot be expanded through this binding; a deployment that must expand
 such a Mission defines an alternative grant proof by extension, or the
 task obtains its broadened authority as an ordinary new Mission under
 the issuance profile, linked by the successor's <code>related_to</code> member
-(<a href="#predecessor-member" class="auto internal xref">Section 6</a>) for lineage.<a href="#section-4.2-6" class="pilcrow">¶</a></p>
-<p id="section-4.2-7">Because expansion reuses the issuance profile's grant binding, it
+(<a href="#predecessor-member" class="auto internal xref">Section 6</a>) for lineage.<a href="#section-4.2-7" class="pilcrow">¶</a></p>
+<p id="section-4.2-8">Because expansion reuses the issuance profile's grant binding, it
 needs no opaque expansion ticket or other new bearer: the predecessor
 is identified and authorized by the grant the client already holds for
-it, and a client cannot name an arbitrary predecessor.<a href="#section-4.2-7" class="pilcrow">¶</a></p>
+it, and a client cannot name an arbitrary predecessor.<a href="#section-4.2-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="predecessor-active">
