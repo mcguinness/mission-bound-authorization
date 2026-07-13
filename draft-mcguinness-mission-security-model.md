@@ -425,17 +425,18 @@ Resource Authorization Server (cross-domain):
 
 Mission Authority Server (standalone binding):
 : When the standalone Mission Authority Server binding is used, a
-  service outside the OAuth Authorization Server implements the Mission
-  Issuer role: it must run the approval ceremony faithfully, keep the
-  Mission record and its anchors intact, and serve accurate Mission
-  state, while the deployment's tokens remain ordinary and carry no
-  Mission binding. Its compromise is equivalent to Mission Issuer
-  compromise (forged approvals, altered records, false state), with one
-  addition: in this mode the PDP's credential-to-Mission join is the
-  only binding between a presented credential and a Mission, so a
-  compromised Mission Authority Server combined with the PDP's trust in
-  it yields arbitrary attribution of authority to any credential the
-  join accepts. Where Mission Join Assertions are used, the PDP's join
+  service outside the OAuth Authorization Server implements the
+  Mission Issuer role, while the deployment's tokens remain ordinary
+  and carry no Mission binding. It must run the approval ceremony
+  faithfully, keep the Mission record and its anchors intact, and
+  serve accurate Mission state. Its compromise is equivalent to
+  Mission Issuer compromise (forged approvals, altered records, false
+  state), with one addition. In this mode the PDP's
+  credential-to-Mission join is the only binding between a presented
+  credential and a Mission, so a compromised Mission Authority Server
+  combined with the PDP's trust in it yields arbitrary attribution of
+  authority to any credential the join accepts. Where Mission Join
+  Assertions are used, the PDP's join
   trust concentrates in one MAS signature, and the MAS may hold
   introspection credentials at the Authorization Server, a
   cross-component channel whose compromise forges joins
@@ -641,8 +642,7 @@ Four assumptions hold across the whole model:
   and cannot derive, widen, or gate authority; `goal` shapes
   authority only through the pre-approval derivation whose result the
   Approver reads and consents to, and is inert once the Mission is
-  approved ({{I-D.draft-mcguinness-oauth-mission}}). Authority is
-  fixed at the approval event.
+  approved ({{I-D.draft-mcguinness-oauth-mission}}).
 
 # What the Model Does and Does Not Guarantee {#guarantees}
 
@@ -773,12 +773,13 @@ it and to what is explicitly not stopped. The residual is the honest
 part: it is what a deploying party still owns.
 
 Compromised or injected agent acts beyond its task:
-: Addressed by authority fixed at the approval event (issuance);
-  per-action PDP check (runtime). Residual: misuse within the approved
-  scope; low-consequence authority the agent legitimately holds.
+: Addressed by authority committed at the approval event
+  ({{untrusted-agent}}) (issuance); per-action PDP check (runtime).
+  Residual: misuse within the approved scope; low-consequence
+  authority the agent legitimately holds.
 
 Prompt injection tries to widen authority:
-: Addressed by authority fixed at approval: `purpose` and
+: Addressed by the same approval-time commitment: `purpose` and
   `success_criteria` are inert, and `goal` shapes authority only through
   the pre-approval derivation the Approver consents to. Residual:
   injected text can still drive actions already in scope.
@@ -888,8 +889,8 @@ Operator surface abused (fleet management):
 Audit tampered, dropped, or reordered:
 : Addressed by transparency: append-only log, inclusion receipts,
   non-equivocation. Residual: single-service equivocation (per-service
-  only; register with several); a producer can still log a false record
-  (accountability, not prevention).
+  only; register with several); a producer can still log a false
+  record.
 
 Agent fabricates results or acts on false data:
 : Addressed by not addressed. Residual: full: semantic and grounding
@@ -1152,9 +1153,10 @@ one of three verdicts rather than a blanket claim:
 : the threat belongs to a layer this family never claimed, and a
   named complement owns it.
 
-The pattern behind the verdicts follows the model's one commitment:
-authority is fixed at approval, and every consequential action is
-checked against it fresh. Threats that attack authority are
+The pattern behind the verdicts follows the model's one commitment
+({{untrusted-agent}}): authority is committed at the approval event,
+and every consequential action is checked against it fresh. Threats
+that attack authority are
 contained. Threats that attack the model, its memory, or its inputs
 are bounded, because a fully fooled agent still cannot out-argue a
 parameter check. Threats that attack other layers are delegated by
@@ -1180,7 +1182,6 @@ where the two could be read to differ, the adversary model governs.
 | T14 Human Attacks on Multi-Agent Systems | Social engineering is out of authorization's reach; a manipulated operator can still only approve what shaping rendered, and the approval is attributed to them | Bounded |
 | T15 Human Manipulation | Consent Evidence commits the disclosure as rendered ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}); an accurately disclosed bad idea remains the human's decision, and the record says so | Bounded |
 
-The agentic tally is six contained, nine bounded, none waved away.
 The threats that attack authority (tools, privilege, goals,
 attribution, identity, rogue delegates) land on machinery built for
 them, and the threats that attack the model or the humans are capped
