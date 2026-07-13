@@ -411,6 +411,58 @@ The model's boundary is deliberate. The family does not define:
   injected agent can do; it does not make the agent trustworthy
   ({{I-D.draft-mcguinness-mission-security-model}}).
 
+# The Reference Architecture {#reference-architecture}
+
+The family is a menu, but a reader should meet it as a meal. Four
+stacks, each containing the previous, are the shapes deployments
+actually take, and the second is the reference:
+
+**Protocol core**:
+: the issuance profile alone: the standardizable primitive
+  (approved, anchored, state-gated Missions), Mission-substrate
+  conformance ({{requirements}}), no per-action control.
+
+**Reference security architecture**:
+: core plus runtime enforcement, its AuthZEN binding, and a
+  freshness source (the Runtime-Enforced level,
+  {{assurance-levels}}). This is the architecture this document
+  means when it says a Mission is enforced, and the one an
+  evaluation should picture by default.
+
+**Recommended agent architecture**:
+: the reference architecture plus Consent Evidence and the harness
+  (the Governed Agent level): what a deployment running autonomous
+  AI agents should build.
+
+**High-assurance architecture**:
+: the recommended architecture plus mediated custody, no unmediated
+  path, action-bound approval, active freshness, and agent-isolated
+  approval rendering (the High-Assurance Agent level).
+
+## The Five Packages {#packages}
+
+Independent of how the drafts are cut for standardization, the
+system decomposes into five architecture packages; the document map
+({{document-map}}) names every draft, and each belongs to one
+package:
+
+1. **Mission Control**: the object, approval (including deferred and
+   revision), lifecycle, status and signals, expansion, completion,
+   management.
+2. **Authority Distribution**: the four issuer bindings, the
+   issuance grant, cross-domain projection, child delegation,
+   offline attenuation.
+3. **Runtime Enforcement**: the runtime contract, the AuthZEN
+   binding, parameter binding, custody, metering.
+4. **Agent Execution Governance**: the harness, orchestration,
+   shaping, discovery.
+5. **Evidence and Accountability**: consent evidence, the Mandate,
+   audit transparency, and the decision and execution evidence the
+   runtime package produces.
+
+A product architect deploys packages; a standards reviewer reads
+drafts; the two views name the same system.
+
 # The Capability Envelope {#capability-envelope}
 
 One tension organizes the whole family. A Mission commits its
@@ -1289,6 +1341,34 @@ Mission Security Model
 ({{I-D.draft-mcguinness-mission-security-model}}).
 
 # Mission Deployment Patterns {#deployment}
+
+## Binding Security Architectures {#binding-architectures}
+
+The bindings share one object but are not one security system: each
+is a distinct architecture with its own trust assumptions, cutoff
+behavior, and failure modes, and a deployment names its architecture,
+not only its binding. Three architectures cover the four bindings:
+**credential-carried** (the credential itself names the Mission and
+issuance is gated: the OAuth AS, the UMA AS, and AAuth's PS-asserted
+mode), **PDP-joined** (credentials are ordinary and a join
+establishes the association at the decision point: the standalone
+MAS, and AAuth's Reference-only mode), and **authority-native** (the
+substrate's own mission concept carries the model: AAuth). The
+differences that decide a design:
+
+| Property | OAuth AS | MAS | AAuth PS | UMA AS (sketch) |
+|---|---|---|---|---|
+| Credential carries the Mission | yes (`mission` claim) | no | yes (native reference) | yes (claim or introspection) |
+| Issuance gated on state | yes | no (the issuance grant restores it per consuming AS) | yes | yes |
+| Runtime PDP required for a kill switch | no (issuance gate exists; runtime tightens) | yes (runtime is the only cutoff) | no | no (per-use introspection cuts off) |
+| Join ambiguity possible | no | yes (bounded by join assurance) | in Reference-only mode | no |
+| Revocation latency source | token lifetime, status, or runtime | runtime and status only | auth-token lifetime plus status | next introspection |
+| Offline Mission verification | partial (claims verify; state does not) | limited (join assertion) | blob-private; Mandate supplies it | JWT RPTs partial; opaque RPTs none |
+
+The table is the one-page answer to a question the object-level
+framing invites: a MAS deployment does not provide AS-native
+semantics because both hold the same Mission, and a reader
+comparing deployments compares architectures first.
 
 The OAuth binding stacks two independent chokepoints. Issuance gating
 acts at the token layer: a revoked or expired Mission stops all
